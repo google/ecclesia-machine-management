@@ -1,0 +1,16 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#SoftwareInventory.SoftwareInventory",
+    "@odata.id": "/redfish/v1/UpdateService/SoftwareInventory/ecclesia_agent",
+    "@odata.type": "#SoftwareInventory.v1_1_0.SoftwareInventory",
+    "Description": "Ecclesia Management Agent Version",
+    "Id": "ecclesia_agent",
+    "Members@odata.count": 1,
+    "Name": "Ecclesia Agent software version",
+    "RelatedItem": [
+        {
+            "@odata.id": "/redfish/v1/Managers/ecclesia_agent"
+        }
+    ],
+    "Updateable": false,
+    "Version": "indus-hmb-cn-0.0.1"
+}

@@ -1,0 +1,10 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
+    "@odata.id": "/redfish/v1/Chassis/chassis",
+    "@odata.type": "#Chassis.v1_10_0.Chassis",
+    "Id": "chassis",
+    "Name": "chassis",
+    "Status": {
+        "State": "StandbyOffline"
+    }
+}

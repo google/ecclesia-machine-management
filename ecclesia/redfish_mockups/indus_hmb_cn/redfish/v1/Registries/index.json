@@ -1,0 +1,16 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#MessageRegistryFileCollection.MessageRegistryFileCollection",
+    "@odata.id": "/redfish/v1/Registries",
+    "@odata.type": "#MessageRegistryFileCollection.MessageRegistryFileCollection",
+    "Description": "Collection of MessageRegistryFiles",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Registries/Base"
+        },
+        {
+            "@odata.id": "/redfish/v1/Registries/OpenBMC"
+        }
+    ],
+    "Members@odata.count": 2,
+    "Name": "MessageRegistryFile Collection"
+}

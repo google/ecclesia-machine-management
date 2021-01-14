@@ -1,0 +1,23 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#Memory.Memory",
+    "@odata.id": "/redfish/v1/Systems/system/Memory/6",
+    "@odata.type": "#Memory.v1_8_0.Memory",
+    "Metrics": {
+        "@odata.id": "/redfish/v1/Systems/system/Memory/6/MemoryMetrics"
+    },
+    "Name": "DIMM6",
+    "Id": "DIMM6",
+    "Status": {
+        "State": "Enabled"
+    },
+    "Assembly": {
+        "@odata.id": "/redfish/v1/Systems/system/Memory/6/Assembly"
+    },
+    "CapacityMiB": 32768,
+    "LogicalSizeMiB": 32768,
+    "Manufacturer": "MemoryMaker",
+    "MemoryDeviceType": "DDR4",
+    "OperatingSpeedMhz": 2400,
+    "PartNumber": "KF27000122-001",
+    "SerialNumber": "7030B006"
+}

@@ -1,0 +1,113 @@
+--- src/queue.c	2020-03-26 13:37:18.000000000 -0700
++++ new/queue.c	2020-07-29 16:28:11.077246497 -0700
+@@ -22,8 +22,7 @@
+         free(ret);
+         return NULL;
+     }
+-    mutex_init(&ret->pushLock);
+-    mutex_init(&ret->popLock);
++    mutex_init(&ret->oneBigLock);
+ 
+     cond_init(&ret->pushed);
+ 
+@@ -38,8 +37,7 @@
+     {
+         return;
+     }
+-    mutex_lock(&q->pushLock);
+-    mutex_lock(&q->popLock);
++    mutex_lock(&q->oneBigLock);
+     while(q->first != NULL)
+     {
+         node = q->first;
+@@ -47,10 +45,8 @@
+         free(node);
+     }
+     cond_destroy(&q->pushed);
+-    mutex_unlock(&q->pushLock);
+-    mutex_destroy(&q->pushLock);
+-    mutex_unlock(&q->popLock);
+-    mutex_destroy(&q->popLock);
++    mutex_unlock(&q->oneBigLock);
++    mutex_destroy(&q->oneBigLock);
+     free(q);
+ }
+ 
+@@ -61,7 +57,7 @@
+     {
+         return 1;
+     }
+-    mutex_lock(&q->pushLock);
++    mutex_lock(&q->oneBigLock);
+     q->last->next = node;
+     if(cas(&q->last, q->last, q->last->next) == false)
+     {
+@@ -69,7 +65,7 @@
+         if(cas(&q->last, q->last, q->last->next) == false)
+         {
+             q->last = NULL;
+-            mutex_unlock(&q->pushLock);
++            mutex_unlock(&q->oneBigLock);
+             free(node);
+             return 1;
+         }
+@@ -82,16 +78,16 @@
+         free(node);
+     }
+     cond_broadcast(&q->pushed);
+-    mutex_unlock(&q->pushLock);
++    mutex_unlock(&q->oneBigLock);
+     return 0;
+ }
+ 
+ unsigned int queuePop(queue* q, void** value)
+ {
+-    mutex_lock(&q->popLock);
++    mutex_lock(&q->oneBigLock);
+     while(q->divider == q->last)
+     {
+-        cond_wait(&q->pushed, &q->popLock);
++        cond_wait(&q->pushed, &q->oneBigLock);
+     }
+     *value = q->divider->next->value;
+     if(cas(&q->divider, q->divider, q->divider->next) == false)
+@@ -100,21 +96,21 @@
+         if(cas(&q->divider, q->divider, q->divider->next) == false)
+         {
+             //Didn't really pop...
+-            mutex_unlock(&q->popLock);
++            mutex_unlock(&q->oneBigLock);
+             return 1;
+         }
+     }
+ 
+-    mutex_unlock(&q->popLock);
++    mutex_unlock(&q->oneBigLock);
+     return 0;
+ }
+ 
+ unsigned int queuePopNoWait(queue* q, void** value)
+ {
+-    mutex_lock(&q->popLock);
++    mutex_lock(&q->oneBigLock);
+     if(q->divider == q->last)
+     {
+-        mutex_unlock(&q->popLock);
++        mutex_unlock(&q->oneBigLock);
+         return 1;
+     }
+     *value = q->divider->next->value;
+@@ -124,11 +120,11 @@
+         if(cas(&q->divider, q->divider, q->divider->next) == false)
+         {
+             //Didn't really pop...
+-            mutex_unlock(&q->popLock);
++            mutex_unlock(&q->oneBigLock);
+             return 1;
+         }
+     }
+-    mutex_unlock(&q->popLock);
++    mutex_unlock(&q->oneBigLock);
+     return 0;
+ }
+ 

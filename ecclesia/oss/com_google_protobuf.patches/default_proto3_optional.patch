@@ -1,0 +1,11 @@
+--- src/google/protobuf/compiler/command_line_interface.cc
++++ src/google/protobuf/compiler/command_line_interface.cc
+@@ -1349,7 +1349,7 @@
+   source_info_in_descriptor_set_ = false;
+   disallow_services_ = false;
+   direct_dependencies_explicitly_set_ = false;
+-  allow_proto3_optional_ = false;
++  allow_proto3_optional_ = true;
+   deterministic_output_ = false;
+ }
+ 

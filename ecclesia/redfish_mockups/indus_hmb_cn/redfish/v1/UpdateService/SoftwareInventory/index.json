@@ -1,0 +1,12 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#SoftwareInventoryCollection.SoftwareInventoryCollection",
+    "@odata.id": "/redfish/v1/UpdateService/SoftwareInventory",
+    "@odata.type": "#SoftwareInventoryCollection.SoftwareInventoryCollection",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/UpdateService/SoftwareInventory/ecclesia_agent"
+        }
+    ],
+    "Members@odata.count": 1,
+    "Name": "Software Inventory Collection"
+}

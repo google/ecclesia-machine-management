@@ -1,0 +1,53 @@
+--- src/queue.h	2020-03-26 13:37:18.000000000 -0700
++++ new/queue.h	2020-07-29 16:20:15.281767931 -0700
+@@ -129,15 +129,11 @@
+ 
+ 
+ /**
+- * @brief A mostly lock free queue.
+- *
+- * A queue where the producer side shares a lock and the consumer side shares a lock. This means that as long as
+- * you only have one producer or one consumer you should not have any lock contention issues. The locks are also used
+- * in order to signal the consumer on new data rather than doing a busy wait.
++ * @brief A queue.
+  *
+  * @sa _queue_node
+  */
+-typedef struct _queue
++struct queue
+ {
+     /**
+      * @brief The first element in the queue
+@@ -162,19 +158,11 @@
+     queueNode* last;
+ 
+     /**
+-     * @brief The producer lock
+-     *
+-     * The lock aquired whenever an element is pushed onto the queue. This is normally only obtained by the
+-     * producer except both this lock and popLock are obtained by any call to freeQueue().
+-     */
+-    mutex      pushLock;
+-    /**
+-     * @brief The consumer lock
++     * @brief One big lock for queue operations
+      *
+-     * The lock aquired whenever an element is popped off the queue. This is normally only obtained by the
+-     * consumer except both this lock and pushLock are obtained by any call to freeQueue().
++     * The lock acquired whenever an element is pushed or popped off the queue.
+      */
+-    mutex      popLock;
++    mutex      oneBigLock;
+ 
+     /**
+      * @brief The pushed condition variable
+@@ -182,7 +170,8 @@
+      * The condition that is signalled anytime anything is pushed onto the queue.
+      */
+     condition  pushed;
+-} queue;
++};
++typedef struct queue queue;
+ 
+ /**
+  * @brief Create a new queue.

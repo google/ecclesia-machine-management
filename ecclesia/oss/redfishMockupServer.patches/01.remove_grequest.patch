@@ -1,0 +1,11 @@
+--- redfishMockupServer.py
++++ redfishMockupServer.py
+@@ -13,8 +13,6 @@
+ import threading
+ import datetime
+ 
+-import grequests
+-
+ import os
+ import ssl
+ import logging

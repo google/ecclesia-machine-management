@@ -1,0 +1,43 @@
+{
+   "@odata.id" : "/redfish/v1/Systems/system/Storage/U2_5/Drives/0/Assembly",
+   "@odata.type" : "#Assembly.v1_2_1.Assembly",
+   "Assemblies" : [
+      {
+         "@odata.id" : "/redfish/v1/Systems/system/Storage/U2_5/Drives/0/Assembly#/Assemblies/0",
+         "MemberId" : "0",
+         "Name" : "nvme_ssd",
+         "Oem" : {
+            "Google" : {
+               "AttachedTo" : [
+                  {
+                     "@odata.id" : "/redfish/v1/Chassis/Sleipnir/Assembly#/Assemblies/4/Oem/Google/Components/6"
+                  }
+               ],
+               "Components" : [
+                  {
+                     "@odata.id" : "/redfish/v1/Systems/system/Storage/U2_5/Drives/0/Assembly#/Assemblies/0/Oem/Google/Components/0",
+                     "AssociatedWith" : [
+                        {
+                           "@odata.id" : "/redfish/v1/Systems/system/Storage/U2_5/Drives/0"
+                        },
+                        {
+                           "@odata.id" : "/redfish/v1/Systems/system/Storage/U2_5"
+                        }
+                     ],
+                     "MemberId" : "0",
+                     "Name" : "nvme_ssd"
+                  },
+                  {
+                     "@odata.id" : "/redfish/v1/Systems/system/Storage/U2_5/Drives/0/Assembly#/Assemblies/0/Oem/Google/Components/1",
+                     "AssociatedWith" : [],
+                     "MemberId" : "1",
+                     "Name" : "nvme"
+                  }
+               ]
+            }
+         }
+      }
+   ],
+   "Id" : "Assembly",
+   "Name" : "nvme_ssd"
+}

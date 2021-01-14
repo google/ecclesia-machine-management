@@ -1,0 +1,26 @@
+--- src/asyncRaw.c	2020-03-26 13:37:18.000000000 -0700
++++ new/asyncRaw.c	2020-07-29 16:47:46.598115798 -0700
+@@ -4,7 +4,7 @@
+ // License: BSD 3-Clause License. For full text see link: https://github.com/DMTF/libredfish/blob/master/LICENSE.md
+ //----------------------------------------------------------------------------
+ #include "internal_service.h"
+-#include <redfishRawAsync.h>
++#include "redfishRawAsync.h"
+ 
+ #include <string.h>
+ #ifndef _MSC_VER
+@@ -348,9 +348,14 @@
+             curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1L);
+             curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
+         }
++        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3L);
+         curl_easy_setopt(curl, CURLOPT_TIMEOUT, workItem->request->timeout);
+         curl_easy_setopt(curl, CURLOPT_URL, workItem->request->url);
+         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
++        mutex_lock(&service->endpoint_mutex);
++        curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH,
++                         service->unix_domain_socket);
++        mutex_unlock(&service->endpoint_mutex);
+         res = curl_easy_perform(curl);
+         curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect);
+         if(redirect)

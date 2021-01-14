@@ -1,0 +1,336 @@
+[$default byte_order: "LittleEndian"]
+[(cpp) namespace: "::ecclesia"]
+# This file defines structure formats as specified by NVM-Express 1.3.
+
+
+struct PowerStateFormat:
+  0  [+2]  UInt      max_power
+    -- Max Power in centiwatts
+
+  2  [+1]  UInt      rsvd2
+  3  [+1]  UInt      flags
+  4  [+4]  UInt      entry_lat
+    -- Entry LAT in microseconds
+
+  8  [+4]  UInt      exit_lat
+    -- Exit LAT in microseconds
+
+  12 [+1]  UInt      read_tput
+  13 [+1]  UInt      read_lat
+  14 [+1]  UInt      write_tput
+  15 [+1]  UInt      write_lat
+  16 [+2]  UInt      idle_power
+  18 [+1]  UInt      idle_scale
+  19 [+1]  UInt      rsvd19
+  20 [+2]  UInt      active_power
+  22 [+1]  UInt      active_work_scale
+  23 [+9]  UInt:8[]  rsvd23
+
+
+struct LBAFormat:
+  0 [+2]         UInt  metadata_size
+    [byte_order: "BigEndian"]
+
+  # Data size in log2(number of bytes)
+  2 [+1]         UInt  data_size
+  3 [+1]  bits:
+    0 [+2]       UInt  relative_performance
+    2 [+6]       UInt  reserved
+
+
+struct IdentifyNamespaceFormat:
+  -- Format of the NVM-Express data returned from Identify Namespace request.
+  let lba_format_capacity = 16
+  let lba_format_size = lba_format_capacity*LBAFormat.$size_in_bytes
+  # Size in number of logical blocks
+  0   [+8]                UInt         size
+  # Capacity in number of logical blocks
+  8   [+8]                UInt         capacity
+  # Utilization in number of logical blocks
+  16  [+8]                UInt         utilization
+  24  [+1]                UInt         features
+  25  [+1]                UInt         num_lba_formats
+  26  [+1]                UInt         formatted_lba_size
+  27  [+1]                UInt         metadata_capabilities
+  28  [+1]                UInt         data_protection_capabilities
+  29  [+1]                UInt         data_protection_type
+  30  [+1]                UInt         multi_path
+  31  [+1]                UInt         reservation_capabilities
+  32  [+1]                UInt         format_progress_indicator
+  33  [+1]                UInt         deallocate_logical_block_features
+  34  [+2]                UInt         namespace_atomic_write_unit_normal
+  36  [+2]                UInt         namespace_atomic_write_unit_power_fail
+  38  [+2]                UInt         namespace_atomic_compare_and_write_unit
+  40  [+2]                UInt         namespace_atomic_boundary_size_normal
+  42  [+2]                UInt         namespace_atomic_boundary_offset
+  44  [+2]                UInt         namespace_atomic_boundary_size_power_fail
+  46  [+2]                UInt         namespace_optimal_io_boundary
+  # NVM capacity in bytes
+  48  [+8]                UInt         nvm_capacity
+  56  [+48]               UInt:8[]     reserved_one
+  104 [+16]               UInt:8[]     namespace_guid
+  120 [+8]                UInt         ieee_euid
+  128 [+lba_format_size]  LBAFormat[]  lba_format
+  192 [+192]              UInt:8[]     reserved_two
+  # Vendor-specific
+  384 [+3712]             UInt:8[]     reserved_eight
+
+
+struct IdentifyControllerFormat:
+  -- Format of the NVM-Express data returned from Identify Controller request.
+  -- Section 5.15 'Identify command'
+  let psd_size = 32*PowerStateFormat.$size_in_bytes
+  0    [+2]         UInt                vendor_id
+  2    [+2]         UInt                subsystem_vendor_id
+  4    [+20]        Int:8[]             serial_number
+  24   [+40]        Int:8[]             model_number
+  64   [+8]         Int:8[]             firmware_revision
+  72   [+1]         UInt                rab
+  73   [+3]         UInt:8[]            ieee
+  76   [+1]         UInt                cmic
+  77   [+1]         UInt                mdts
+  78   [+2]         UInt                cntlid
+  80   [+4]         UInt                ver
+  84   [+4]         UInt                rtd3r
+  88   [+4]         UInt                rtd3e
+  92   [+4]         UInt                oaes
+  96   [+4]         UInt                ctratt
+  100  [+2]         UInt                rrls
+  102  [+154]       UInt:8[]            rsvd102
+  256  [+2]         UInt                oacs
+  258  [+1]         UInt                acl
+  259  [+1]         UInt                aerl
+  260  [+1]         UInt                frmw
+  261  [+1]         UInt                lpa
+  262  [+1]         UInt                elpe
+  263  [+1]         UInt                npss
+  264  [+1]         UInt                avscc
+  265  [+1]         UInt                apsta
+  266  [+2]         UInt                wctemp
+  268  [+2]         UInt                cctemp
+  270  [+2]         UInt                mtfa
+  272  [+4]         UInt                hmpre
+  276  [+4]         UInt                hmmin
+  280  [+16]        UInt:8[]            tnvmcap
+  296  [+16]        UInt:8[]            unvmcap
+  312  [+4]         UInt                rpmbs
+  316  [+2]         UInt                edstt
+  318  [+1]         UInt                dsto
+  319  [+1]         UInt                fwug
+  320  [+2]         UInt                kas
+  322  [+2]         UInt                hctma
+  324  [+2]         UInt                mntmt
+  326  [+2]         UInt                mxtmt
+  328  [+4]         UInt                sanicap
+  332  [+4]         UInt                hmminds
+  336  [+2]         UInt                hmmaxd
+  338  [+2]         UInt                nsetidmax
+  340  [+2]         UInt:8[]            rsvd340
+  342  [+1]         UInt                anatt
+  343  [+1]         UInt                anacap
+  344  [+4]         UInt                anagrpmax
+  348  [+4]         UInt                nanagrpid
+  352  [+160]       UInt:8[]            rsvd352
+  512  [+1]         UInt                sqes
+  513  [+1]         UInt                cqes
+  514  [+2]         UInt                maxcmd
+  516  [+4]         UInt                nn
+  520  [+2]         UInt                oncs
+  522  [+2]         UInt                fuses
+  524  [+1]         UInt                fna
+  525  [+1]         UInt                vwc
+  526  [+2]         UInt                awun
+  528  [+2]         UInt                awupf
+  530  [+1]         UInt                nvscc
+  531  [+1]         UInt                nwpc
+  532  [+2]         UInt                acwu
+  534  [+2]         UInt:8[]            rsvd534
+  536  [+4]         UInt                sgls
+  540  [+4]         UInt                mnan
+  544  [+224]       UInt:8[]            rsvd544
+  768  [+256]       UInt:8[]            subnqn
+  1024 [+768]       UInt:8[]            rsvd1024
+  1792 [+4]         UInt                ioccsz
+  1796 [+4]         UInt                iorcsz
+  1800 [+2]         UInt                icdoff
+  1802 [+1]         UInt                ctrattr
+  1803 [+1]         UInt                msdbd
+  1804 [+244]       UInt:8[]            rsvd1804
+  2048 [+psd_size]  PowerStateFormat[]  psd
+  3072 [+1024]      UInt:8[]            vs
+
+
+struct IdentifyListNamespaceFormat:
+  -- Format of the NVM-Express data returned from Identify List Namespace request.
+  let capacity = 1024
+  0 [+4*capacity]  UInt:32[]  nsid
+
+
+struct SmartLogPageFormat:
+  -- Format of the NVM-Express data returned from Smart Log Page read request.
+  -- Section 5.14.1.2 'Smart / Health Information (Log Identifier 02h)'
+  let num_temperature_sensors = 8
+  let num_thermal_management_entries = 2
+  let temp_sensor_size = 2*num_temperature_sensors
+  let thm_temp_size = 4*num_thermal_management_entries
+  0   [+1]                 UInt       critical_warning
+  1   [+2]                 UInt       temperature
+  3   [+1]                 UInt       available_spare
+  4   [+1]                 UInt       available_spare_threshold
+  5   [+1]                 UInt       percent_used
+  6   [+1]                 UInt       endurance_cw
+  7   [+25]                UInt:8[]   rsvd6
+  32  [+16]                UInt:8[]   data_units_read
+  48  [+16]                UInt:8[]   data_units_written
+  64  [+16]                UInt:8[]   host_reads
+  80  [+16]                UInt:8[]   host_writes
+  96  [+16]                UInt:8[]   ctrl_busy_time
+  112 [+16]                UInt:8[]   power_cycles
+  128 [+16]                UInt:8[]   power_on_hours
+  144 [+16]                UInt:8[]   unsafe_shutdowns
+  160 [+16]                UInt:8[]   media_errors
+  176 [+16]                UInt:8[]   num_err_log_entries
+  192 [+4]                 UInt       warning_temp_time
+  196 [+4]                 UInt       critical_comp_time
+  200 [+temp_sensor_size]  UInt:16[]  temp_sensor
+  216 [+thm_temp_size]     UInt:32[]  thm_temp_trans_count
+  224 [+thm_temp_size]     UInt:32[]  thm_temp_total_time
+  232 [+280]               UInt:8[]   rsvd232
+
+
+struct SanitizeCDW10Format:
+  0  [+2]  bits:
+    0  [+3]       UInt      sanact
+    3  [+1]       UInt      ause
+    4  [+4]       UInt      owpass
+    8  [+1]       UInt      oipbp
+    9  [+1]       UInt      no_dealloc
+    10 [+6]       UInt      rsvd1
+
+  2  [+2]         UInt:8[]  rsvd
+
+
+struct SanitizeLogPageFormat:
+  -- Format of the NVM-Express data returned from Sanitize Status Log Page read
+  -- request. Section 5.14.1.9.2 'Sanitize Status (Log Identifier 81h)'
+  let cdw10_size = SanitizeCDW10Format.$size_in_bytes
+  0  [+2]           UInt                 progress
+  2  [+2]  bits:
+    0  [+3]         UInt                 recent_sanitize_status
+    3  [+5]         UInt                 overwrite_passes
+    8  [+1]         UInt                 global_data_erased
+    9  [+7]         UInt                 rsvd1
+
+  4  [+cdw10_size]  SanitizeCDW10Format  cdw10
+  8  [+4]           UInt                 estimate_overwrite_time
+  12 [+4]           UInt                 estimate_block_erase_time
+  16 [+4]           UInt                 estimate_crypto_erase_time
+  20 [+492]         UInt:8[]             rsvd
+
+
+struct ControllerListFormat:
+  -- A list of Controller IDs.
+  -- Used in Namespace Attachment/Detachment.
+  let capacity = 2047
+  0 [+2]           UInt       num_identifiers
+  2 [+2*capacity]  UInt:16[]  identifiers
+
+
+struct NamespaceManagementFormat:
+  -- Format of the Namespace Management command.
+  # Size in number of logical blocks
+  0    [+8]     UInt      size
+  # Capacity in number of logical blocks
+  8    [+8]     UInt      capacity
+  16   [+10]    UInt:8[]  reserved_one
+  # An index into the lba_format table
+  26   [+1]     UInt      formatted_lba_size
+  27   [+2]     UInt:8[]  reserved_two
+  29   [+1]     UInt      data_protection_type
+  30   [+1]     UInt      multi_path
+  31   [+993]   UInt:8[]  reserved_three
+  1024 [+3072]  UInt:8[]  vendor_specific
+
+
+struct ErrorLogInfoEntry:
+  -- Format of the Error Information Log Entry
+  -- Section 5.14.1.1 Error Information (Log Identifier 01h)
+  0  [+8]   UInt      error_count
+  8  [+2]   UInt      submission_queue_id
+  10 [+2]   UInt      command_id
+  12 [+2]   UInt      status
+  14 [+2]   UInt      parameter_error_location
+  16 [+8]   UInt      lba
+  24 [+4]   UInt      namespace_id
+  28 [+1]   UInt      vendor_log_page_id
+  29 [+1]   UInt      tytype
+  30 [+2]   UInt:8[]  reserved1
+  32 [+8]   UInt      command_specific_info
+  40 [+2]   UInt      trtype_specific_info
+  42 [+22]  UInt:8[]  reserved2
+
+
+struct FirmwareSlotInfoFormat:
+  -- Section 5.14.1.3 Firmware Slot Information (Log Identifier 03h)
+  struct Revision:
+    0 [+8]  UInt:8[]  value
+
+  let slots = 7
+  let frs_size = slots*Revision.$size_in_bytes
+  # Active firmware info
+  0  [+1]         UInt        afi
+  1  [+7]         UInt        reserved1
+  8  [+frs_size]  Revision[]  frs
+  64 [+448]       UInt:8[]    reserved2
+
+
+struct DeviceSelfTestResultFormat:
+  -- Section 5.14.1.6 Device Self-test (Log Identifier 06h)
+  0  [+1]         UInt  status
+  1  [+1]         UInt  segment_number
+  2  [+1]  bits:
+    0  [+1]       UInt  sc_valid
+    1  [+1]       UInt  sct_valid
+    2  [+1]       UInt  flba_valid
+    3  [+1]       UInt  nsid_valid
+    4  [+4]       UInt  reserved1
+
+  3  [+1]         UInt  reserved2
+  4  [+8]         UInt  power_on_hours
+  12 [+4]         UInt  nsid
+  16 [+8]         UInt  flba
+  24 [+1]         UInt  status_code_type
+  25 [+1]         UInt  status_code
+  26 [+2]         UInt  vendor_specific
+
+
+struct DeviceSelfTestLogFormat:
+  let max_num_self_tests = 20
+  let results_size = max_num_self_tests*DeviceSelfTestResultFormat.$size_in_bytes
+  0 [+1]             UInt                          current_self_test_operation
+  1 [+1]             UInt                          current_self_test_completion
+  2 [+2]             UInt:8[]                      reserved1
+  4 [+results_size]  DeviceSelfTestResultFormat[]  results
+
+
+enum SanitizeAction:
+  -- Section 5.24 Sanitize Action possible values.
+  EXIT_FAILURE_MODE = 0x1
+  BLOCK_ERASE       = 0x2
+  OVERWRITE         = 0x3
+  CRYPTO_ERASE      = 0x4
+
+
+enum SanitizeCapabilityMask:
+  -- Section 5.15 Identify Command Sanitize Capability mask.
+  CRYPTO_ERASE = 0x1
+  BLOCK_ERASE  = 0x2
+  OVERWRITE    = 0x4
+
+
+enum SanitizeStatus:
+  -- Section 5.14.1.9.2 Get Log Page Sanitize Status(SSTAT).
+  NEVER_BEEN_SANITIZED = 0x0
+  SUCCESS              = 0x1
+  IN_PROGRESS          = 0x2
+  FAILED               = 0x3

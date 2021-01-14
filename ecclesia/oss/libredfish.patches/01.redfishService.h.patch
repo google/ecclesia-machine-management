@@ -1,0 +1,85 @@
+--- include/redfishService.h	2020-03-26 13:37:18.000000000 -0700
++++ new/redfishService.h	2020-07-29 16:03:48.471171822 -0700
+@@ -13,8 +13,8 @@
+  */
+ #ifndef _REDFISH_SERVICE_H_
+ #define _REDFISH_SERVICE_H_
+-#include <jansson.h>
+-#include <curl/curl.h>
++#include "jansson.h"
++#include "curl/curl.h"
+ #include <stdbool.h>
+ 
+ #ifdef _MSC_VER
+@@ -140,10 +140,14 @@
+  * HTTPS           | IPv4               | https://127.0.0.1
+  * HTTP            | IPv6               | http://[::1]
+  * HTTPS           | IPv6               | https://[::1]
++ * UDS             | Unix Filepath      | unix:///var/run/my.socket
+  *
+- * @param host The host to connect to. This must contain the protocol schema see above for more details.
+- * @param rootUri The root URI of the redfish service. If NULL the connection with assume /redfish
+- * @param auth The authentication method to use for the redfish service. If NULL the connection will be made with no authentication
++ * @param host The host to connect to. This must contain the protocol schema see
++ * above for more details.
++ * @param rootUri The root URI of the redfish service. If NULL the connection
++ * with assume /redfish
++ * @param auth The authentication method to use for the redfish service. If NULL
++ * the connection will be made with no authentication
+  * @param flags Any extra flags to pass to the service
+  * @return A new redfish service structure representing the connection.
+  * @see serviceDecRef
+@@ -151,6 +155,16 @@
+  */
+ REDFISH_EXPORT redfishService* createServiceEnumerator(const char* host, const char* rootUri, enumeratorAuthentication* auth, unsigned int flags);
+ /**
++ * @brief Update the host a service is connecting to.
++ *
++ * Update the host that the service is connecting to.
++ *
++ * @param service The service to update
++ * @param host The host to connect to. This must contain the protocol schema see
++ * above for more details.
++ */
++REDFISH_EXPORT void updateServiceHost(redfishService* service, const char* host);
++/**
+  * @brief Obtain the JSON payload corresponding to the given URI on the service.
+  *
+  * Obtain the JSON payload corresponding to the given URI on the service synchronously.
+@@ -249,6 +263,18 @@
+  */
+ REDFISH_EXPORT redfishPayload* getPayloadByPath(redfishService* service, const char* path);
+ /**
++ * @brief Obtain the redfish payload corresponding to the URI.
++ *
++ * Obtain the redfish payload corresponding to the URI on the service synchronously.
++ *
++ * @param service The service to obtain data from
++ * @param uri A URI string to use to locate data.
++ * @return A payload representing the data at the URI or NULL on error
++ * @see getPayloadByUriAsync
++ * @deprecated This function if just a wrapper for the async API getPayloadByUriAsync and will not be updated for other features of the newer API.
++ */
++REDFISH_EXPORT redfishPayload* getPayloadByUri(redfishService* service, const char* uri);
++/**
+  * @brief Free the service connection.
+  *
+  * Free the redfish service connection object and associated data.
+@@ -386,10 +412,14 @@
+  * HTTPS           | IPv4               | https://127.0.0.1
+  * HTTP            | IPv6               | http://[::1]
+  * HTTPS           | IPv6               | https://[::1]
++ * UDS             | Unix Filepath      | unix:///var/run/my.socket
+  *
+- * @param host The host to connect to. This must contain the protocol schema see above for more details.
+- * @param rootUri The root URI of the redfish service. If NULL the connection with assume /redfish
+- * @param auth The authentication method to use for the redfish service. If NULL the connection will be made with no authentication
++ * @param host The host to connect to. This must contain the protocol schema see
++ * above for more details.
++ * @param rootUri The root URI of the redfish service. If NULL the connection
++ * with assume /redfish
++ * @param auth The authentication method to use for the redfish service. If NULL
++ * the connection will be made with no authentication
+  * @param flags Any extra flags to pass to the service
+  * @param callback The callback to call when the service is created
+  * @param context The context to pass to the callback

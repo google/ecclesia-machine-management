@@ -1,0 +1,47 @@
+// Copyright 2020 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Protobuf equivalents for some of the value types provides by the PCI library.
+// For use cases that require portable interchange formats like service
+// definitions these can be helpful.
+//
+// Note that in general you don't want to use these types as replacements for
+// the actual value data structures; don't use PciLocationProtobuf in your
+// internal code when you could use PciLocation, which provides both a richer
+// API and stricter validation guarnatees. Use these types for data interchange
+// but translate them to the proper types for internal use.
+
+syntax = "proto3";
+
+package ecclesia;
+
+// Protobuf version of PciLocation.
+message PciLocationProtobuf {
+  int32 domain = 1;
+  int32 bus = 2;
+  int32 device = 3;
+  int32 function = 4;
+}
+
+// Protobuf version of PciBaseSignature.
+message PciBaseSignatureProtobuf {
+  int32 vendor_id = 1;
+  int32 device_id = 2;
+}
+
+// Protobuf version of PciSubsystemSignature.
+message PciSubsystemSignatureProtobuf {
+  int32 vendor_id = 1;
+  int32 id = 2;
+}

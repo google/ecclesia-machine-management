@@ -1,0 +1,23 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#Memory.Memory",
+    "@odata.id": "/redfish/v1/Systems/system/Memory/14",
+    "@odata.type": "#Memory.v1_8_0.Memory",
+    "Assembly": {
+        "@odata.id": "/redfish/v1/Systems/system/Memory/14/Assembly"
+    },
+    "CapacityMiB": 32768,
+    "Id": "DIMM14",
+    "LogicalSizeMiB": 32768,
+    "Manufacturer": "MemoryMaker",
+    "MemoryDeviceType": "DDR4",
+    "Metrics": {
+        "@odata.id": "/redfish/v1/Systems/system/Memory/14/MemoryMetrics"
+    },
+    "Name": "DIMM14",
+    "OperatingSpeedMhz": 2400,
+    "PartNumber": "KF27000122-001",
+    "SerialNumber": "7030B014",
+    "Status": {
+        "State": "Enabled"
+    }
+}

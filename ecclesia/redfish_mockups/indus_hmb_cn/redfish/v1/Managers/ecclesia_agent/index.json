@@ -1,0 +1,20 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#Manager.Manager",
+    "@odata.id": "/redfish/v1/Managers/ecclesia_agent",
+    "@odata.type": "#Manager.v1_3_0.Manager",
+    "DateTime": "2019-08-01T16:50:22+00:00",
+    "Description": "Ecclesia Management Agent",
+    "FirmwareVersion": "indus-hmb-cn-0.0.1",
+    "Id": "ecclesia_agent",
+    "Links": {
+        "ManagerForServers": [
+            {
+                "@odata.id": "/redfish/v1/Systems/system"
+            }
+        ],
+        "ManagerForServers@odata.count": 1
+    },
+    "ManagerType": "ManagementController",
+    "Model": "indus_hmb_cn_agent",
+    "Name": "Indus HMB CN Agent"
+}

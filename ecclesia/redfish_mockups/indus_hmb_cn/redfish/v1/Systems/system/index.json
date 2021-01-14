@@ -1,0 +1,18 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#ComputerSystem.ComputerSystem",
+    "@odata.id": "/redfish/v1/Systems/system",
+    "@odata.type": "#ComputerSystem.v1_8_0_.ComputerSystem",
+    "Id": "system",
+    "Memory": {
+        "@odata.id": "/redfish/v1/Systems/system/Memory"
+    },
+    "Name": "Indus",
+    "Oem" : {
+        "Google" : {
+           "BootNumber" : 20585
+        }
+     },
+    "Processors": {
+        "@odata.id": "/redfish/v1/Systems/system/Processors"
+    }
+}

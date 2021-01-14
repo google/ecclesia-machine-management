@@ -1,0 +1,88 @@
+[$default byte_order: "LittleEndian"]
+[(cpp) namespace: "::ecclesia"]
+
+
+
+struct EntryPoint32Bit:
+  -- 32-bit entry point structure as defined in SMBIOS specification
+
+  0[+4] UInt anchor
+    -- 0x5f4d_535f is "_SM_" in ASCII, interpreted as a 4-byte little-endian value
+    [requires: this == 0x5f4d_535f]
+
+  4[+1] UInt checksum
+
+  5[+1] UInt length (ml)
+    -- length of the entry point structure
+    [requires: this == 0x1f]
+
+  6[+1] UInt major_version
+
+  7[+1] UInt minor_version
+
+  8[+2] UInt max_structure_size
+
+  10[+1] UInt entry_point_revision
+
+  11[+5] UInt:8[5] formatted_area
+
+  16[+5] UInt:8[5] intermediate_anchor
+
+  21[+1] UInt intermediate_checksum
+
+  22[+2] UInt structure_table_length
+    -- Total length of the SMBIOS structure table
+
+  24[+4] UInt structure_table_address
+
+  28[+2] UInt num_structures
+    -- number of structures in SMBIOS structure table
+
+  30[+1] UInt bcd_revision
+
+  0[+ml] UInt:8[]  checksum_bytes
+
+
+struct EntryPoint64Bit:
+  -- 64-bit entry point structure
+  0[+5] UInt anchor
+    -- 0x5f_334d_535f is "_SM3_" in ASCII, interpreted as a 4-byte little-endian value
+    [requires: this == 0x5f_334d_535f]
+
+  5[+1] UInt checksum
+
+  6[+1] UInt length (ml)
+    [requires: this == 0x18]
+
+  7[+1] UInt major_version
+
+  8[+1] UInt minor_version
+
+  9[+1] UInt docrev
+
+  10[+1] UInt entry_point_revision
+
+  11[+1] UInt reserved
+
+  12[+4] UInt structure_table_max_size
+
+  16[+8] UInt structure_table_address
+
+  0[+24] UInt:8[] checksum_bytes
+
+
+
+struct EntryPoint:
+  -- Entry point structure. Could be 32-bit or 64-bit
+
+  0[+4] UInt anchor
+   -- Anchor string is _SM_ for 32-bit and _SM3_ for 64-bit
+   -- Only take the 4 characters to select between them
+
+  if anchor == 0x5f4d_535f:
+    0[+31] EntryPoint32Bit    entry_point_32bit
+
+  if anchor == 0x334d_535f:
+    0[+24] EntryPoint64Bit    entry_point_64bit
+
+

@@ -1,0 +1,36 @@
+--- src/asyncRaw.c
++++ src/asyncRaw.c
+@@ -223,6 +223,21 @@ static void cleanupCurl(void)
+     curl_global_cleanup();
+ }
+ 
++void setUpSecureCurl(redfishService* service, CURL* curl)
++{
++    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, service->verifyPeer ? 1L : 0L);
++    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, service->verifyHostname ? 1L : 0L);
++    if (service->verifyPeer && service->caCertFile != NULL) {
++        curl_easy_setopt(curl, CURLOPT_CAINFO, service->caCertFile);
++    }
++    if (service->clientCertFile != NULL) {
++        curl_easy_setopt(curl, CURLOPT_SSLCERT, service->clientCertFile);
++    }
++    if (service->clientKeyFile != NULL) {
++        curl_easy_setopt(curl, CURLOPT_SSLKEY, service->clientKeyFile);
++    }
++}
++
+ #ifdef _MSC_VER
+ threadRet __stdcall rawAsyncWorkThread(void* data)
+ #else
+@@ -261,8 +276,9 @@ threadRet rawAsyncWorkThread(void* data)
+     }
+     //curl_easy_setopt(curl, CURLOPT_VERBOSE, true);
+     //curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
++
++    setUpSecureCurl(service, curl);
++
+     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteMemory);
+     curl_easy_setopt(curl, CURLOPT_READFUNCTION, curlReadMemory);
+     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, asyncHeaderCallback);

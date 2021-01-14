@@ -1,0 +1,23 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#Memory.Memory",
+    "@odata.id": "/redfish/v1/Systems/system/Memory/10",
+    "@odata.type": "#Memory.v1_8_0.Memory",
+    "Metrics": {
+        "@odata.id": "/redfish/v1/Systems/system/Memory/10/MemoryMetrics"
+    },
+    "Name": "DIMM10",
+    "Id": "DIMM10",
+    "Status": {
+        "State": "Enabled"
+    },
+    "Assembly": {
+        "@odata.id": "/redfish/v1/Systems/system/Memory/10/Assembly"
+    },
+    "CapacityMiB": 32768,
+    "LogicalSizeMiB": 32768,
+    "Manufacturer": "MemoryMaker",
+    "MemoryDeviceType": "DDR4",
+    "OperatingSpeedMhz": 2400,
+    "PartNumber": "KF27000122-001",
+    "SerialNumber": "7030B010"
+}

@@ -1,0 +1,183 @@
+[$default byte_order: "LittleEndian"]
+[(cpp) namespace: "::ecclesia"]
+
+enum EventType:
+  # SMBIOS standard events
+  RESERVED = 0x0
+  SINGLE_BIT_ECC_ERROR = 0x1
+  MULTI_BIT_ECC_ERROR = 0x2
+  MEMORY_PARITY_ERROR = 0x3
+  BUS_TIMEOUT = 0x4
+  IO_CHANNEL_CHECK = 0x5
+  SOFTWARE_NMI = 0x6
+  POST_MEMORY_RESIZE = 0x7
+  POST_ERROR = 0x8
+  PCI_PARITY_ERROR = 0x9
+  PCI_SUBSYSTEM_ERROR = 0xA
+  CPU_FAILURE = 0xB
+  EISA_FAILSAFE_TIMEOUT = 0xC
+  CORRECTABLE_MEMORY_LOG_DISABLED = 0xD
+  SPECIFIC_EVENT_LOG_DISABLED = 0xE
+  SYSTEM_LIMIT_EXCEEDED = 0x10
+  WATCHDOG_TIMEOUT = 0x11
+  SYSTEM_CONFIGURATION_INFORMATION = 0x12
+  HARD_DISK_INFORMATION = 0x13
+  SYSTEM_RECONFIGURED = 0x14
+  UNCORRECTABLE_CPU_COMPLEX_ERROR = 0x15
+  LOG_AREA_RESET = 0x16
+  SYSTEM_BOOT = 0x17
+
+  # OEM/Elog Events
+  OS_SHUTDOWN = 0x81
+  POWER_FAILURE = 0x82
+  POWER_ON_RESET = 0x83
+  MACHINE_CHECK = 0x84
+  OS_BOOT_HANDOFF = 0x85
+  NVRAM_RESET = 0x86
+  RTC_RESET = 0x87
+  HAMMERTIME_DATA = 0x88
+  TCO_WATCHDOG_RESET = 0x89
+  NO_BOOT_MEDIA_FOUND = 0x8A
+  EVENT_CHECKPOINT = 0x8B
+  RESET_BUTTON_RESET = 0x8C
+  SYSTEM_RESET = 0x8D
+  ERROR_DIMMS = 0x8E
+  DISABLED_DIMMS = 0x8F
+  PCIE_ERROR = 0x90
+  THERMTRIP = 0x91
+  CPU_FABRIC_ERROR = 0x92
+  SYNC_FLOOD = 0x93
+  ACPI_S_STATE = 0x94
+  DIMM_ERROR_INFO = 0x95
+  ROOT_FS_FSCK = 0x96
+  CMOS_ERROR = 0x97
+  BIOS_VERSION_CHANGE = 0x98
+  BIOS_PART_ERROR = 0x99
+  BAD_BIOS_UPDATE = 0x9A
+  BIOS_UPDATE_OVERRIDE = 0x9B
+  LAST_EXECUTED_MODULE = 0x9C
+  BIOS_FILESYSTEM_LOCATION = 0x9D
+  BIOS_REBOOT = 0x9E
+  VERIFIED_BOOT_PERSIST = 0x9F
+  BIOS_END_OF_POST = 0xA0
+  DIMM_ERROR_INFO_EXTENDED = 0xA1
+  MCE_EXTENDED = 0xA2
+  RAS_ADDDC = 0xC1
+  END_OF_LOG = 0xFF
+
+
+struct ElogHeader:
+  0[+4] UInt magic
+    [requires: this == 0x474F_4C45]
+  4[+4] Int sequence
+  8[+1] UInt version
+  9[+1] UInt size
+  10[+2] UInt reserved
+    [requires: this == 0xFFFF]
+
+
+struct SingleBitEccError:
+  0[+1] UInt dimm_number
+  1[+1] UInt checksum
+
+struct MultiBitEccError:
+  0[+1] UInt dimm_number
+  1[+1] UInt checksum
+
+struct MemoryParityError:
+  0[+1] UInt dimm_number
+  1[+1] UInt checksum
+
+struct CpuFailure:
+  0[+1] UInt sub_type
+  1[+2] UInt cpu_number
+  3[+1] UInt checksum
+
+struct CorrectableMemoryLogDisabled:
+  0[+1] UInt checksum
+
+struct UncorrectableCpuComplexError:
+  0[+1] UInt subtype
+  2[+2] UInt cpu_number
+  3[+1] UInt checksum
+
+struct LogAreaReset:
+  0[+2] UInt bytes
+  2[+4] UInt boot_num
+  6[+1] UInt checksum
+
+struct SystemBoot:
+  0[+4] UInt bootnum
+  4[+1] UInt checksum
+
+struct MachineCheckException:
+  0[+4] UInt bootnum
+  4[+1] UInt cpu
+  5[+1] UInt bank
+  6[+8] UInt mci_status
+  14[+8] UInt mci_address
+  22[+8] UInt mci_misc
+  30[+1] UInt checksum
+
+struct ErrorDimms:
+  0[+4] UInt dimmmap
+  4[+4] UInt bootnum
+  8[+1] UInt checksum
+
+struct DisabledDimms:
+  0[+4] UInt dimmmap
+  4[+4] UInt bootnum
+  8[+1] UInt checksum
+
+struct MceExtended:
+  0[+1] UInt version
+  1[+4] UInt bootnum
+  5[+4] UInt cpu
+  9[+1] UInt bank
+  10[+8] UInt mci_status
+  18[+8] UInt mci_address
+  24[+8] UInt mci_misc
+  32[+8] UInt mci_synd
+  40[+8] UInt mci_ipid
+
+
+
+struct ElogRecord:
+  0[+1] EventType id
+  1[+1] UInt size (l)
+  2[+1] UInt year
+  3[+1] UInt month
+  4[+1] UInt day
+  5[+1] UInt hour
+  6[+1] UInt minute
+  7[+1] UInt second
+  8[+l-8] UInt:8[] data
+  if id == EventType.SINGLE_BIT_ECC_ERROR:
+    8[+l-8] SingleBitEccError single_bit_ecc_error
+  if id == EventType.MULTI_BIT_ECC_ERROR:
+    8[+l-8] MultiBitEccError multi_bit_ecc_error
+  if id == EventType.MEMORY_PARITY_ERROR:
+    8[+l-8] MemoryParityError memory_parity_error
+  if id == EventType.CPU_FAILURE:
+    8[+l-8] CpuFailure cpu_failure
+  if id == EventType.CORRECTABLE_MEMORY_LOG_DISABLED:
+    8[+l-8] CorrectableMemoryLogDisabled correctable_memory_log_disabled
+  if id == EventType.UNCORRECTABLE_CPU_COMPLEX_ERROR:
+    8[+l-8] UncorrectableCpuComplexError uncorrectable_cpu_complex_error
+  if id == EventType.LOG_AREA_RESET:
+    8[+l-8] LogAreaReset log_area_reset
+  if id == EventType.SYSTEM_BOOT:
+    8[+l-8] SystemBoot system_boot
+  if id == EventType.MACHINE_CHECK:
+    8[+l-8] MachineCheckException machine_check_exception
+  if id == EventType.ERROR_DIMMS:
+    8[+l-8] ErrorDimms error_dimms
+  if id == EventType.DISABLED_DIMMS:
+    8[+l-8] DisabledDimms disabled_dimms
+  if id == EventType.MCE_EXTENDED:
+    8[+l-8] MceExtended mce_extended
+
+
+
+
+

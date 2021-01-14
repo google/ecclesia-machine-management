@@ -1,0 +1,60 @@
+--- redfishMockupServer.py
++++ redfishMockupServer.py
+@@ -17,6 +17,7 @@
+ import os
+ import ssl
+ import logging
++import socketserver
+ from http.server import BaseHTTPRequestHandler, HTTPServer
+ from urllib.parse import urlparse, urlunparse, parse_qs
+ from rfSsdpServer import RfSSDPServer
+@@ -68,6 +69,12 @@
+     return os.path.realpath(path).startswith(basedir)
+ 
+ 
++class UnixSocketHttpServer(socketserver.UnixStreamServer):
++        def get_request(self):
++            request, client_addr = super(UnixSocketHttpServer, self).get_request()
++            return (request, ["local", 0])
++
++
+ class RfMockupServer(BaseHTTPRequestHandler):
+         '''
+         returns index.json file for Serverthe specified URL
+@@ -675,6 +682,7 @@
+         parser.add_argument('-P', '--ssdp', action='store_true',
+                             help='make mockup SSDP discoverable')
+         parser.add_argument('--ipv6', action='store_true', help='use IPv6')
++        parser.add_argument('--unix', default=None, type=str, help='unix domain socket to connect to')
+ 
+         args = parser.parse_args()
+         hostname = args.host
+@@ -690,6 +698,7 @@
+         shortForm = args.short_form
+         ssdpStart = args.ssdp
+         ipv6 = args.ipv6
++        unix = args.unix
+ 
+         logger.info('Hostname: {}'.format(hostname))
+         logger.info('Port: {}'.format(port))
+@@ -723,7 +732,10 @@
+                 address_family = socket.AF_INET6
+         else:
+             ServerClass = HTTPServer
+-        myServer = ServerClass((hostname, port), RfMockupServer)
++        if unix:
++            myServer = UnixSocketHttpServer(unix, RfMockupServer)
++        else:
++            myServer = ServerClass((hostname, port), RfMockupServer)
+ 
+         if sslMode:
+             logger.info("Using SSL with certfile: {}".format(sslCert))
+@@ -774,6 +786,8 @@
+ 
+         myServer.server_close()
+         logger.info("Shutting down http server")
++        if unix:
++            os.unlink(unix)
+ 
+ 
+ # the below is only executed if the program is run as a script

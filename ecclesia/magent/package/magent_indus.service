@@ -1,0 +1,12 @@
+[Unit]
+Description=Google Machine Health Agent
+Requires=mced.service
+After=mced.service
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+ExecStart=/usr/bin/magent_indus
+[Install]
+WantedBy=multi-user.target

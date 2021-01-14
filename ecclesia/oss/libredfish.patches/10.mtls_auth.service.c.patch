@@ -1,0 +1,59 @@
+--- src/service.c
++++ src/service.c
+@@ -44,6 +44,7 @@ static redfishService* createServiceEnumeratorNoAuth(const char* host, const cha
+ static redfishService* createServiceEnumeratorBasicAuth(const char* host, const char* rootUri, const char* username, const char* password, unsigned int flags);
+ static redfishService* createServiceEnumeratorSessionAuth(const char* host, const char* rootUri, const char* username, const char* password, unsigned int flags);
+ static redfishService* createServiceEnumeratorToken(const char* host, const char* rootUri, const char* token, unsigned int flags);
++static redfishService* createServiceEnumeratorTlsAuth(const char* host, const char* rootUri, bool verifyPeer, bool verifyHostname, const char* clientCertFile, const char* clientKeyFile, const char* caCertFile, unsigned int flags);
+ static char* makeUrlForService(redfishService* service, const char* uri);
+ static json_t* getVersions(redfishService* service, const char* rootUri);
+ static char* getSSEUri(redfishService* service);
+@@ -77,6 +77,10 @@ redfishService* createServiceEnumerator(const char* host, const char* rootUri, e
+     {
+         return createServiceEnumeratorSessionAuth(host, rootUri, auth->authCodes.userPass.username, auth->authCodes.userPass.password, flags);
+     }
++    else if (auth->authType == REDFISH_AUTH_TLS)
++    {
++        return createServiceEnumeratorTlsAuth(host, rootUri, auth->authCodes.authTls.verifyPeer, auth->authCodes.authTls.verifyHostname, auth->authCodes.authTls.clientCertFile, auth->authCodes.authTls.clientKeyFile, auth->authCodes.authTls.caCertFile, flags);
++    }
+     else
+     {
+         return NULL;
+@@ -1140,6 +1144,18 @@ static void freeServicePtr(redfishService* service)
+         free(service->otherAuth);
+         service->otherAuth = NULL;
+     }
++    if (service->clientCertFile != NULL) {
++        free(service->clientCertFile);
++        service->clientCertFile = NULL;
++    }
++    if (service->clientKeyFile != NULL) {
++        free(service->clientKeyFile);
++        service->clientKeyFile = NULL;
++    }
++    if (service->caCertFile != NULL) {
++        free(service->caCertFile);
++        service->caCertFile = NULL;
++    }
+     if(service->selfTerm == false && service->eventTerm == false)
+     {
+         free(service);
+@@ -1389,6 +1405,18 @@ static redfishService* createServiceEnumeratorSessionAuth(const char* host, cons
+     return ret;
+ }
+ 
++static redfishService* createServiceEnumeratorTlsAuth(const char* host, const char* rootUri, bool verifyPeer, bool verifyHostname, const char* clientCertFile, const char* clientKeyFile, const char* caCertFile, unsigned int flags)
++{
++    redfishService* ret = createServiceEnumeratorNoAuth(host, rootUri, false, flags);
++    ret->verifyPeer = verifyPeer;
++    ret->verifyHostname = verifyHostname;
++    ret->clientCertFile = safeStrdup(clientCertFile);
++    ret->clientKeyFile = safeStrdup(clientKeyFile);
++    ret->caCertFile = safeStrdup(caCertFile);
++    ret->versions = getVersions(ret, rootUri);
++    return ret;
++}
++
+ typedef struct {
+     char* username;
+     char* password;

@@ -1,0 +1,31 @@
+--- include/redfishService.h
++++ include/redfishService.h
+@@ -69,6 +69,8 @@ typedef struct {
+ #define REDFISH_AUTH_BEARER_TOKEN 1
+ /** The connection should use Redfish service authentication as documented in the Redfish specification to authenticate to the Redfish service **/
+ #define REDFISH_AUTH_SESSION      2
++/** The connection should use mutual Tls to authenticate to the Redfish service**/
++#define REDFISH_AUTH_TLS          3
+ 
+ /**
+  * @brief A representation of how to authenticate to the service
+@@ -92,6 +94,19 @@ typedef struct {
+                 /** The bearer token to authenticate with **/
+                 char* token;
+             } authToken;
++            /** The data used for REDFISH_AUTH_TLS **/
++            struct {
++              /** Whether to verify the proxy's SSL certificate or not **/
++              bool verifyPeer;
++              /** Whether to verify the proxy certificate's name against host or not **/
++              bool verifyHostname;
++              /** PEM encoded client's certificate file **/
++              const char *clientCertFile;
++              /** PEM encoded client's private key file **/
++              const char *clientKeyFile;
++              /** The certificate authority file **/
++              const char *caCertFile;
++            } authTls;
+         } authCodes;
+ } enumeratorAuthentication;
+

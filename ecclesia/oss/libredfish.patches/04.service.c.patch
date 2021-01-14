@@ -1,0 +1,408 @@
+--- src/service.c	2020-03-26 13:37:18.000000000 -0700
++++ new/service.c	2020-07-29 16:29:54.844260196 -0700
+@@ -12,11 +12,11 @@
+ 
+ #include "internal_service.h"
+ #include "asyncEvent.h"
+-#include <redfishService.h>
+-#include <redfishPayload.h>
+-#include <redpath.h>
+-#include <redfishEvent.h>
+-#include <redfishRawAsync.h>
++#include "redfishService.h"
++#include "redfishPayload.h"
++#include "redpath.h"
++#include "redfishEvent.h"
++#include "redfishRawAsync.h"
+ 
+ #include "debug.h"
+ #include "util.h"
+@@ -40,6 +40,7 @@
+     .timeout = 20
+ };
+ 
++static void handleHostnameToRedfishService(const char* host, redfishService* service);
+ static redfishService* createServiceEnumeratorNoAuth(const char* host, const char* rootUri, bool enumerate, unsigned int flags);
+ static redfishService* createServiceEnumeratorBasicAuth(const char* host, const char* rootUri, const char* username, const char* password, unsigned int flags);
+ static redfishService* createServiceEnumeratorSessionAuth(const char* host, const char* rootUri, const char* username, const char* password, unsigned int flags);
+@@ -83,6 +84,16 @@
+     }
+ }
+ 
++void updateServiceHost(redfishService* service, const char* host) {
++  mutex_lock(&service->endpoint_mutex);
++  char* old_host = service->host;
++  char* old_unix_domain_socket = service->unix_domain_socket;
++  handleHostnameToRedfishService(host, service);
++  free(old_host);
++  free(old_unix_domain_socket);
++  mutex_unlock(&service->endpoint_mutex);
++}
++
+ /**
+  * @brief An internal structure used to convert a call from async to sync.
+  *
+@@ -94,6 +105,8 @@
+     mutex spinLock;
+     /** The condition variable to be signalled on the async call completion **/
+     condition waitForIt;
++    /** Number of threads still using this context **/
++    int refcount;
+     /** The redfishPayload that was returned **/
+     redfishPayload* data;
+     /** True means the callback returned success, otherwise false **/
+@@ -109,17 +122,33 @@
+     {
+         mutex_init(&context->spinLock);
+         cond_init(&context->waitForIt);
++        context->refcount = 1;
+         //We start out locked...
+         mutex_lock(&context->spinLock);
+     }
+     return context;
+ }
+ 
++/**
++ * Cleans up the asyncToSync context. The context lock must be held when
++ * entering this function. If the context is still being referenced elsewhere,
++ * this function will only decrement the refcount and release the lock. When
++ * no other references exist, the context's memory will be deleted.
++ */
+ static void cleanupAsyncToSyncContext(asyncToSyncContext* context)
+ {
+-    mutex_destroy(&context->spinLock);
+-    cond_destroy(&context->waitForIt);
+-    free(context);
++    context->refcount--;
++    if (context->refcount == 0) {
++      if (context->data) {
++        cleanupPayload(context->data);
++      }
++      mutex_unlock(&context->spinLock);
++      mutex_destroy(&context->spinLock);
++      cond_destroy(&context->waitForIt);
++      free(context);
++    } else {
++      mutex_unlock(&context->spinLock);
++    }
+ }
+ 
+ static bool isOnAsyncThread(redfishService* service)
+@@ -157,7 +186,62 @@
+             free(content);
+         }
+     }
++    mutex_lock(&myContext->spinLock);
+     cond_broadcast(&myContext->waitForIt);
++    cleanupAsyncToSyncContext(myContext);
++}
++
++// This method takes a JSON instance and a fragment and returns a pointer to
++// the property referenced by the fragment. JSON object ownership is managed
++// in this method; the json passed in is expected to be owned by the caller
++// and will be decref'd by this method. The JSON returned is expected to be
++// owned by the caller and will need to be decref'd in the future.
++json_t *googleJsonGetField(json_t *json, char *fragment) {
++  if (json == NULL || fragment == NULL) {
++    return NULL;
++  }
++
++  // Note that this hack will work as long as our fragments only reference
++  // object and array types. Redfish Collections are currently not supported.
++  json_t *ret = NULL;
++  if (json_is_object(json)) {
++    ret = json_object_get(json, fragment);
++  } else if (json_is_array(json)) {
++    size_t index = strtoul(fragment, NULL, 10);
++    if (index < json_array_size(json)) {
++      ret = json_array_get(json, index);
++    }
++  }
++  if (ret != NULL) {
++    json_incref(ret);
++  }
++  json_decref(json);
++  return ret;
++}
++
++json_t *googleHandleJsonFragment(const char *uri, json_t *json) {
++  if (json == NULL) {
++    return json;
++  }
++
++  // Find the # character, which indicates that we have a fragment
++  char *fragment_start = strchr(uri, '#');
++  if (fragment_start == NULL || *(++fragment_start) == '\0') {
++    return json;
++  }
++
++  // Use strtok to split the fragment string by "/" characters, then iteratively
++  // walk through the JSON property fields according to the fragment identifiers
++  char *fragment_copy = strdup(fragment_start);
++  static const char delim[] = "/";
++  char *frag = strtok(fragment_copy, delim);
++  while (frag != NULL && json != NULL) {
++    json = googleJsonGetField(json, frag);
++    frag = strtok(NULL, delim);
++  }
++  free(fragment_copy);
++
++  return json;
+ }
+ 
+ json_t* getUriFromService(redfishService* service, const char* uri)
+@@ -183,10 +267,12 @@
+         REDFISH_DEBUG_CRIT_PRINT("%s: Failed to allocate context!\n", __func__);
+         return NULL;
+     }
++    context->refcount++;
+     tmp = getUriFromServiceAsync(service,uri, NULL, asyncToSyncConverter, context);
+     if(tmp == false)
+     {
+         REDFISH_DEBUG_ERR_PRINT("%s: Async call failed immediately...\n", __func__);
++        context->refcount--;
+         cleanupAsyncToSyncContext(context);
+         return NULL;
+     }
+@@ -195,7 +281,6 @@
+     if(context->data)
+     {
+         json = json_incref(context->data->json);
+-        cleanupPayload(context->data);
+     }
+     else
+     {
+@@ -203,6 +288,11 @@
+     }
+     cleanupAsyncToSyncContext(context);
+     REDFISH_DEBUG_DEBUG_PRINT("%s: Exit. json = %p\n", __func__, json);
++
++    // GOOGLE: Hack in JSON fragment handling here. Replace the JSON we received
++    // from the server with the specific subfield requested by the URI fragment.
++    json = googleHandleJsonFragment(uri, json);
++
+     return json;
+ }
+ 
+@@ -237,11 +327,13 @@
+         cleanupAsyncToSyncContext(context);
+         return false;
+     }
++    context->refcount++;
+     tmp = patchUriFromServiceAsync(service, uri, payload, NULL, asyncToSyncConverter, context);
+     cleanupPayload(payload);
+     if(tmp == false)
+     {
+         REDFISH_DEBUG_ERR_PRINT("%s: Async call failed immediately...\n", __func__);
++        context->refcount--;
+         cleanupAsyncToSyncContext(context);
+         return NULL;
+     }
+@@ -250,7 +342,6 @@
+     if(context->data)
+     {
+         json = json_incref(context->data->json);
+-        cleanupPayload(context->data);
+     }
+     else
+     {
+@@ -292,11 +383,13 @@
+         cleanupAsyncToSyncContext(context);
+         return NULL;
+     }
++    context->refcount++;
+     tmp = postUriFromServiceAsync(service, uri, payload, NULL, asyncToSyncConverter, context);
+     cleanupPayload(payload);
+     if(tmp == false)
+     {
+         REDFISH_DEBUG_ERR_PRINT("%s: Async call failed immediately...\n", __func__);
++        context->refcount--;
+         cleanupAsyncToSyncContext(context);
+         return NULL;
+     }
+@@ -305,7 +398,6 @@
+     if(context->data)
+     {
+         json = json_incref(context->data->json);
+-        cleanupPayload(context->data);
+     }
+     else
+     {
+@@ -347,10 +439,12 @@
+         REDFISH_DEBUG_CRIT_PRINT("%s: Failed to allocate context!\n", __func__);
+         return false;
+     }
++    context->refcount++;
+     tmp = deleteUriFromServiceAsync(service, uri, NULL, asyncToSyncConverter, context);
+     if(tmp == false)
+     {
+         REDFISH_DEBUG_ERR_PRINT("%s: Async call failed immediately...\n", __func__);
++        context->refcount--;
+         cleanupAsyncToSyncContext(context);
+         return tmp;
+     }
+@@ -963,12 +1057,14 @@
+         cleanupPayload(postPayload);
+         return false;
+     }
++    asyncContext->refcount++;
+     ret = postUriFromServiceAsync(service, eventSubscriptionUri, postPayload, NULL, asyncToSyncConverter, asyncContext);
+     free(eventSubscriptionUri);
+     cleanupPayload(postPayload);
+     if(ret == false)
+     {
+         REDFISH_DEBUG_ERR_PRINT("%s: Async call failed immediately...\n", __func__);
++        asyncContext->refcount--;
+         cleanupAsyncToSyncContext(asyncContext);
+         return false;
+     }
+@@ -977,7 +1073,6 @@
+     if(asyncContext->data)
+     {
+         service->eventRegistrationUri = getPayloadUri(asyncContext->data);
+-        cleanupPayload(asyncContext->data);
+     }
+     if(asyncContext->success == false)
+     {
+@@ -1057,6 +1152,22 @@
+     return ret;
+ }
+ 
++redfishPayload* getPayloadByUri(redfishService* service, const char* uri)
++{
++    json_t* value;
++
++    if(!service || !uri)
++    {
++        return NULL;
++    }
++    value = getUriFromService(service, uri);
++    if(!value)
++    {
++        return NULL;
++    }
++    return createRedfishPayload(value, service);
++}
++
+ void cleanupServiceEnumerator(redfishService* service)
+ {
+     if(!service)
+@@ -1121,8 +1232,12 @@
+         terminateAsyncEventThread(service);
+     }
+     terminateAsyncThread(service);
++    mutex_lock(&service->endpoint_mutex);
+     free(service->host);
+     service->host = NULL;
++    free(service->unix_domain_socket);
++    mutex_unlock(&service->endpoint_mutex);
++    mutex_destroy(&service->endpoint_mutex);
+     json_decref(service->versions);
+     service->versions = NULL;
+     if(service->sessionToken != NULL)
+@@ -1210,6 +1325,33 @@
+     }
+ }
+ 
++// Sets host unix_domain_socket on service. Does not manage the memory of either
++// member, so if those members are pointing to existing allocated memory, the
++// allocated memory must be freed prior to invoking this function. Assumes that
++// endpoint_mutex is held.
++static void handleHostnameToRedfishService(const char* host,
++                                           redfishService* service) {
++#ifdef _MSC_VER
++  service->host = _strdup(host);
++  service->unix_domain_socket = NULL;
++#else
++  // If the find the prefix "unix://", then host is a domain socket.
++  size_t host_len = strlen(host);
++  if (strlen(host) > 7 && strncmp("unix://", host, 7) == 0) {
++    size_t unix_domain_len = host_len - 7 + 1;
++    char *new_domain_socket = (char*)malloc(unix_domain_len);
++    memset(new_domain_socket, 0, unix_domain_len);
++    sprintf(new_domain_socket, "%s", host + 7);
++    // CURL needs some dummy hostname to create requests.
++    service->host = strdup("uds");
++    service->unix_domain_socket = new_domain_socket;
++  } else {
++    service->host = strdup(host);
++    service->unix_domain_socket = NULL;
++  }
++#endif
++}
++
+ static redfishService* createServiceEnumeratorNoAuth(const char* host, const char* rootUri, bool enumerate, unsigned int flags)
+ {
+     redfishService* ret;
+@@ -1221,11 +1363,10 @@
+ 		return NULL;
+ 	}
+     serviceIncRef(ret);
+-#ifdef _MSC_VER
+-	ret->host = _strdup(host);
+-#else
+-    ret->host = strdup(host);
+-#endif
++    mutex_init(&ret->endpoint_mutex);
++    mutex_lock(&ret->endpoint_mutex);
++    handleHostnameToRedfishService(host, ret);
++    mutex_unlock(&ret->endpoint_mutex);
+     ret->flags = flags;
+     ret->tcpSocket = -1;
+     if(enumerate)
+@@ -1247,11 +1388,10 @@
+         return false;
+     }
+     serviceIncRef(ret);
+-#ifdef _MSC_VER
+-    ret->host = _strdup(host);
+-#else
+-    ret->host = strdup(host);
+-#endif
++    mutex_init(&ret->endpoint_mutex);
++    mutex_lock(&ret->endpoint_mutex);
++    handleHostnameToRedfishService(host, ret);
++    mutex_unlock(&ret->endpoint_mutex);
+     ret->flags = flags;
+     ret->tcpSocket = -1;
+     rc = getVersionsAsync(ret, rootUri, callback, context);
+@@ -1454,7 +1594,7 @@
+         serviceDecRef(myContext->service);
+         free(myContext);
+         return;
+-    } 
++    }
+ #ifndef _MSC_VER
+     //In order to be more useful and let callers actually cleanup things in their callback we're doing this on a seperate thread...
+     pthread_attr_init(&attr);
+@@ -1636,17 +1776,18 @@
+ 
+ static char* makeUrlForService(redfishService* service, const char* uri)
+ {
+-    char* url;
++    char* url = NULL;
+     size_t size;
++    mutex_lock(&service->endpoint_mutex);
+     if(service->host == NULL)
+     {
+-        return NULL;
++        goto done;
+     }
+     size = strlen(service->host) + strlen(uri) + 1;
+     url = (char*)malloc(size);
+     if(url == NULL)
+     {
+-        return NULL;
++        goto done;
+     }
+ #ifdef _MSC_VER
+     strcpy_s(url, size, service->host);
+@@ -1655,6 +1796,8 @@
+     strcpy(url, service->host);
+     strcat(url, uri);
+ #endif
++done:
++    mutex_unlock(&service->endpoint_mutex);
+     return url;
+ }
+ 

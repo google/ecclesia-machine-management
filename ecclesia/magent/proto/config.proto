@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package ecclesia;
+
+message MagentConfig {
+  message IpmiCredential {
+    string ipmi_interface = 1;
+    string ipmi_username = 2;
+    string ipmi_password = 3;
+    string ipmi_hostname = 4;
+    uint32 ipmi_port = 5;
+  }
+
+  IpmiCredential ipmi_cred = 1;
+}

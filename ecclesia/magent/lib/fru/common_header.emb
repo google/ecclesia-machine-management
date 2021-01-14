@@ -1,0 +1,13 @@
+[$default byte_order: "LittleEndian"]
+[(cpp) namespace: "::ecclesia"]
+
+
+struct CommonHeader:
+  0  [+1]         UInt  format_version
+  1  [+1]         UInt  internal_use_area_starting_offset
+  2  [+1]         UInt  chassis_info_area_starting_offset
+  3  [+1]         UInt  board_info_area_starting_offset
+  4  [+1]         UInt  product_info_area_starting_offset
+  5  [+1]         UInt  multirecord_area_starting_offset
+  6  [+1]         UInt  pad
+  7  [+1]         UInt  checksum

@@ -1,0 +1,69 @@
+--- redfishMockupServer.py
++++ redfishMockupServer.py
+@@ -689,10 +689,11 @@
+                             help='delay in seconds added to responses (float or int)')
+         parser.add_argument('-T', action='store_true',
+                             help='delay response based on times in time.json files in mockup')
+-        parser.add_argument('-s', '--ssl', action='store_true',
+-                            help='place server in SSL (HTTPS) mode; requires a cert and key')
+-        parser.add_argument('--cert', help='the certificate for SSL')
+-        parser.add_argument('--key', help='the key for SSL')
++        parser.add_argument('-m', '--mode', choices=['http', 'tls', 'mtls'], default='http',
++                            help='place server in different SSL modes; tls mode requires a cert and a key; mtls requires a cert, a key, and a CA cert')
++        parser.add_argument('--cert', help='the certificate for TLS')
++        parser.add_argument('--key', help='the key for TLS')
++        parser.add_argument('--ca', help='the ca certificates for mutual TLS')
+         parser.add_argument('-S', '--short-form', '--shortForm', action='store_true',
+                             help='apply short form to mockup (omit filepath /redfish/v1)')
+         parser.add_argument('-P', '--ssdp', action='store_true',
+@@ -708,14 +709,23 @@
+         headers = args.headers
+         responseTime = args.time
+         timefromJson = args.T
+-        sslMode = args.ssl
++        sslMode = args.mode
+         sslCert = args.cert
+         sslKey = args.key
++        sslCA = args.ca
+         shortForm = args.short_form
+         ssdpStart = args.ssdp
+         ipv6 = args.ipv6
+         unix = args.unix
+ 
++        if sslMode == 'tls' and (sslKey is None or sslCert is None):
++            logger.critical('ERROR: For {} mode, please specify a cert and a key. Aborting'.format(sslMode))
++            sys.exit(1)
++
++        if sslMode == 'mtls' and (sslKey is None or sslCert is None or sslCA is None):
++            logger.critical('ERROR: For {} mode, please specify a cert, a key, and a CA. Aborting'.format(sslMode))
++            sys.exit(1)
++
+         logger.info('Hostname: {}'.format(hostname))
+         logger.info('Port: {}'.format(port))
+         logger.info("Mockup directory path specified: {}".format(mockDirPath))
+@@ -753,9 +763,23 @@
+         else:
+             myServer = ServerClass((hostname, port), RfMockupServer)
+ 
+-        if sslMode:
++        if sslMode == 'tls' or sslMode == 'mtls':
+             logger.info("Using SSL with certfile: {}".format(sslCert))
+-            myServer.socket = ssl.wrap_socket(myServer.socket, certfile=sslCert, keyfile=sslKey, server_side=True)
++            logger.info("Using SSL with keyfile: {}".format(sslKey))
++            if sslMode == 'tls':
++                myServer.socket = ssl.wrap_socket(myServer.socket,
++                                                  certfile=sslCert,
++                                                  keyfile=sslKey,
++                                                  server_side=True,
++                                                  cert_reqs=ssl.CERT_NONE)
++            else:
++                logger.info("Using SSL with ca file: {}".format(sslCA))
++                myServer.socket = ssl.wrap_socket(myServer.socket,
++                                                  certfile=sslCert,
++                                                  keyfile=sslKey,
++                                                  server_side=True,
++                                                  cert_reqs=ssl.CERT_REQUIRED,
++                                                  ca_certs=sslCA)
+ 
+         # save the test flag, and real path to the mockup dir for the handler to use
+         myServer.mockDir = mockDir

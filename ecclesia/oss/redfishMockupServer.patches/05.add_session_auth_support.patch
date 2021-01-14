@@ -1,0 +1,33 @@
+--- redfishMockupServer.py
++++ redfishMockupServer.py
+@@ -535,10 +535,26 @@ class RfMockupServer(BaseHTTPRequestHandler):
+ 
+                             self.patchedLinks[newfpath] = data_received
+                             self.patchedLinks[fpath] = payload
+-                            self.send_response(204)
+-                            self.send_header("Location", newpath)
+-                            self.send_header("Content-Length", "0")
+-                            self.end_headers()
++
++                            if '/redfish/v1/SessionService/Sessions' in self.path:
++                                self.send_response(200)
++                                self.send_header("Location", newpath)
++                                session_payload = {}
++                                session_payload['@odata.id'] = newpath
++                                session_payload["@odata.type"] = "#Session.v1_0_2.Session"
++                                session_payload['Id'] = newpath.split("/")[-1]
++                                session_payload['Name'] = 'User Session'
++                                session_payload['UserName'] = data_received['UserName']
++                                encoding = bytes(json.dumps(session_payload, ensure_ascii=False), 'utf-8')
++                                self.send_header("Content-Length", len(encoding))
++                                self.send_header('X-Auth-Token', 'MagicToken')
++                                self.end_headers()
++                                self.wfile.write(encoding)
++                            else:
++                                self.send_response(204)
++                                self.send_header("Location", newpath)
++                                self.send_header("Content-Length", "0")
++                                self.end_headers()
+ 
+                     # Actions framework
+                     else:

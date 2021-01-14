@@ -1,0 +1,243 @@
+[$default byte_order: "LittleEndian"]
+[(cpp) namespace: "::ecclesia"]
+
+
+enum StructureType:
+  BIOS_INFORMATION        = 0
+  SYSTEM_EVENT_LOG        = 15
+  MEMORY_DEVICE           = 17
+  PROCESSOR_INFORMATION   = 4
+  SYSTEM_BOOT_INFORMATION = 32
+
+# _snum suffix to the field names indicate that it represents a string number
+
+
+struct BiosInformationStructure:
+  0  [+1]  UInt       vendor_snum
+    -- String number of BIOS Vendor's Name
+
+  1  [+1]  UInt       version_snum
+    -- String number of the BIOS version.
+
+  2  [+2]  UInt       starting_address_segment
+    -- Segment location of BIOS starting address
+
+  4  [+1]  UInt       release_date_snum
+    -- String number of the BIOS release date.
+
+  5  [+1]  UInt       rom_size
+    -- Size (n) where 64K * (n+1) is the size of the physical device containing
+    -- the BIOS, in bytes
+
+  6  [+8]  UInt:8[8]  characteristics
+    -- Defines which functions the BIOS supports
+
+  14 [+2]  UInt:8[2]  characteristics_extension_bytes
+  16 [+1]  UInt       major_release
+    -- Identifies the major release of the System BIOS
+
+  17 [+1]  UInt       minor_release
+    -- Identifies the minor release of the System BIOS
+
+  18 [+1]  UInt       ec_firmware_major_release
+    -- Embedded Controller Firmware Major Release
+
+  19 [+1]  UInt       ec_firmware_minor_release
+    -- Embedded Controller Firmware Minor Release
+
+
+enum MemoryType:
+  OTHER        = 0x1
+  UNKNOWN      = 0x2
+  DRAM         = 0x3
+  EDRAM        = 0x4
+  VRAM         = 0x5
+  SRAM         = 0x6
+  RAM          = 0x7
+  ROM          = 0x8
+  FLASH        = 0x9
+  EEPROM       = 0xa
+  FEPROM       = 0xb
+  EPROM        = 0xc
+  CDRAM        = 0xd
+  THREE_DRAM_  = 0xe
+  SDRAM        = 0xf
+  SGRAM        = 0x10
+  RDRAM        = 0x11
+  DDR          = 0x12
+  DDR2         = 0x13
+  DDR2_FB_DIMM = 0x14
+  RESERVED0    = 0x15
+  RESERVED1    = 0x16
+  RESERVED2    = 0x17
+  DDR3         = 0x18
+  FBD2         = 0x19
+  DDR4         = 0x1a
+  LPDDR        = 0x1b
+  LPDDR2       = 0x1c
+  LPDDR3       = 0x1d
+  LPDDR4       = 0x1e
+
+
+struct MemoryDeviceStructure:
+  0  [+2]  UInt        physical_memory_array_handle
+    -- Handle, r instance number, associated with the Physical Memory Array to
+    -- which this device belongs
+
+  2  [+2]  UInt        memory_error_information_handle
+  4  [+2]  UInt        total_width
+  6  [+2]  UInt        data_width
+  8  [+2]  UInt        size
+  10 [+1]  UInt        form_factor
+  11 [+1]  UInt        device_set
+  12 [+1]  UInt        device_locator_snum
+    -- String number of the string that identifies the physically-labeled
+    -- socket or board position where the memory device is located
+
+  13 [+1]  UInt        bank_locator_snum
+    -- String number of the string that identifies the physically labeled bank
+    -- where the memory device is located
+
+  14 [+1]  MemoryType  memory_type
+  15 [+2]  UInt        type_detail
+  17 [+2]  UInt        speed
+    -- Identifies the maximum capable speed of the device, in MHz
+
+  19 [+1]  UInt        manufacturer_snum
+    -- String number
+
+  20 [+1]  UInt        serial_number_snum
+    -- String number
+
+  21 [+1]  UInt        asset_tag_snum
+    -- String number
+
+  22 [+1]  UInt        part_number_snum
+    -- String number
+
+  23 [+1]  UInt        attributes
+  24 [+4]  UInt        extended_size
+  28 [+2]  UInt        configured_memory_clock_speed
+    -- In Mhz
+
+  30 [+2]  UInt        minimum_voltage
+    -- In Millivolts
+
+  32 [+2]  UInt        maximum_voltage
+    -- In Millivolts
+
+  34 [+2]  UInt        configured_voltage
+    -- In Millivolts
+
+
+enum AccessMethod:
+  INDEX_IO_0       = 0
+  INDEX_IO_1       = 1
+  INDEX_IO_2       = 2
+  MEMORY_MAPPED_IO = 3
+
+
+struct SystemEventLogStructure:
+  0  [+2]         UInt          log_area_length
+  2  [+2]         UInt          log_header_start_offset
+  4  [+2]         UInt          log_data_start_offset
+  6  [+1]         AccessMethod  access_method
+  7  [+1]  bits:
+    0  [+1]       Flag          log_area_valid
+    1  [+1]       Flag          log_area_full
+
+  8  [+4]         UInt          log_change_token
+  12 [+4]         UInt          access_method_address
+  16 [+1]         UInt          log_header_format
+  17 [+1]         UInt          num_supported_log_type_descriptors (x)
+  18 [+1]         UInt          log_type_descriptor_length (y)
+
+
+enum ProcessorType:
+  OTHER             = 1
+  UNKNOWN           = 2
+  CENTRAL_PROCESSOR = 3
+  MATH_PROCESSOR    = 4
+  DSP_PROCESSOR     = 5
+  VIDEO_PROCESSOR   = 6
+
+
+bits ProcessorIdx86:
+  0  [+4]  UInt  stepping_id
+  4  [+4]  UInt  model
+  8  [+4]  UInt  family_id
+  12 [+2]  UInt  processor_type
+  16 [+4]  UInt  model_ext
+  20 [+8]  UInt  family_id_ext
+  28 [+4]  UInt  reserved
+
+
+struct ProcessorInformationStructure:
+  0  [+1]    UInt            socket_designation_snum
+    -- Example: "CPU0"
+
+  1  [+1]    ProcessorType   processor_type
+  2  [+1]    UInt            processor_family
+  3  [+1]    UInt            manufacturer_snum
+  4  [+8]    UInt:8[]        processor_id
+  4  [+4]    ProcessorIdx86  processor_id_x86
+  12 [+1]    UInt            version
+  13 [+1]    UInt            voltage
+  14 [+2]    UInt            external_clk_freq_mhz
+  16 [+2]    UInt            max_speed_mhz
+  18 [+2]    UInt            current_speed_mhz
+  20 [+1]    UInt            status
+  21 [+1]    UInt            processor_upgrade
+  22 [+2]    UInt            l1_cache_handle
+  24 [+2]    UInt            l2_cache_handle
+  26 [+2]    UInt            l3_cache_handle
+  28 [+1]    UInt            serial_number_snum
+  29 [+1]    UInt            asset_tag_snum
+  30 [+1]    UInt            part_number_snum
+  31 [+1]    UInt            core_count
+  32 [+1]    UInt            core_enabled
+  33 [+1]    UInt            thread_count
+  34 [+2]    UInt            processor_characteristics
+  if processor_family == 0xfe:
+    36 [+2]  UInt            processor_family2
+
+  if core_count == 0xff:
+    38 [+2]  UInt            core_count2
+
+  if core_enabled == 0xff:
+    40 [+2]  UInt            core_enabled2
+
+  if thread_count == 0xff:
+    42 [+2]  UInt            thread_count2
+
+
+struct SystemBootInformationStructure:
+  0 [+6]    UInt:8[]  reserved
+  6 [+1]    UInt      boot_status
+  if boot_status == 0x80:
+    7 [+4]  UInt      boot_count
+
+  if boot_status != 0x80:
+    7 [+1]  UInt:8[]  boot_status_data
+
+
+struct SmbiosStructure:
+  0 [+1]       StructureType                   structure_type
+  1 [+1]       UInt                            length (ml)
+  2 [+2]       UInt                            handle
+  if structure_type == StructureType.BIOS_INFORMATION:
+    4 [+ml-4]  BiosInformationStructure        bios_information
+
+  if structure_type == StructureType.SYSTEM_EVENT_LOG:
+    4 [+ml-4]  SystemEventLogStructure         system_event_log
+
+  if structure_type == StructureType.MEMORY_DEVICE:
+    4 [+ml-4]  MemoryDeviceStructure           memory_device
+
+  if structure_type == StructureType.PROCESSOR_INFORMATION:
+    4 [+ml-4]  ProcessorInformationStructure   processor_information
+
+  if structure_type == StructureType.SYSTEM_BOOT_INFORMATION:
+    4 [+ml-4]  SystemBootInformationStructure  system_boot_information
+
+  0 [+ml]      UInt:8[]                        raw_bytes

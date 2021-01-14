@@ -1,0 +1,19 @@
+--- src/internal_service.h
++++ src/internal_service.h
+@@ -105,6 +105,16 @@ typedef struct _redfishService {
+     char* sessionUri;
+     /** The service is being free'd **/
+     bool freeing;
++    /** Whether to verify the proxy's SSL certificate or not **/
++    bool verifyPeer;
++    /** Whether to verify the proxy certificate's name against host or not **/
++    bool verifyHostname;
++    /** PEM encoded client's certificate file **/
++    char *clientCertFile;
++    /** PEM encoded client's private key file **/
++    char *clientKeyFile;
++    /** The certificate authority file **/
++    char *caCertFile;
+ } redfishService;
+ 
+ #endif

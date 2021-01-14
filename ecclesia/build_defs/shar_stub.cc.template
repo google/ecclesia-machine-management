@@ -1,0 +1,94 @@
+/*
+ * Copyright 2020 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// This stub binary implements the mechanics of executing a shar_binary. It
+// unpacks a linked-in library containing all of the data files bundled into
+// the binary and then will exec the archive script.
+//
+// The code here is not meant to be compiled directly, but instead expects that
+// the SHELL, SCRIPT and DATA_HEADER entries are expanded into a true .cc file.
+
+#include <fstream>
+#include <string>
+#include <vector>
+
+#include "absl/strings/string_view.h"
+#include "ecclesia/lib/file/dir.h"
+#include "ecclesia/lib/file/path.h"
+#include "ecclesia/lib/logging/globals.h"
+#include "ecclesia/lib/logging/logging.h"
+#include "ecclesia/lib/logging/posix.h"
+
+// Include the header that defines kSharDataFiles.
+#include "$DATA_HEADER"
+
+namespace ecclesia {
+namespace {
+
+constexpr absl::string_view kShell = "$SHELL";
+constexpr absl::string_view kScript = "$SCRIPT";
+
+int RealMain(int argc, char *argv[]) {
+  // Get a temporary directory.
+  char tempdir_buffer[] = "/tmp/shar_binary.XXXXXX";
+  if (mkdtemp(tempdir_buffer) == nullptr) {
+    FatalLog() << "unable to create temporary directory";
+  }
+  absl::string_view tempdir = tempdir_buffer;
+
+  // Unpack the contents of the archive to the temporary directory.
+  for (const EmbeddedFile &file : kSharDataFiles) {
+    std::string file_path = JoinFilePaths(tempdir, file.name);
+    absl::Status mkdir_status = MakeDirectories(GetDirname(file_path));
+    if (!mkdir_status.ok()) {
+      FatalLog() << "unable to create directory " << mkdir_status;
+    }
+    std::fstream out_f(file_path, out_f.binary | out_f.trunc | out_f.out);
+    if (!out_f.is_open()) {
+      FatalLog() << "unable to open " << file_path;
+    }
+    out_f << file.data;
+  }
+
+  // Execute the archive shell script. Insert the temporary directory path into
+  // the environment and construct a new argv which replaces replaces argv[0]
+  // with the shell executable and shell script.
+  std::string shell_path(kShell);
+  std::string script_path = JoinFilePaths(tempdir, kScript);
+  setenv("ECCLESIA_DATA_DIR", tempdir.data(), 1);
+  // The new argv adds two slots, one so that the path to the shell executable
+  // itself can be inserted at the front, and one so that we can ensure the
+  // vector terminates with a null pointer as execv() requires. We don't need a
+  // third extra slot for the shell script itself because it replaces the
+  // existing argv[0] value.
+  std::vector<char *> new_argv(argc + 2);
+  new_argv[0] = &shell_path[0];
+  new_argv[1] = &script_path[0];
+  for (int i = 1; i < argc; ++i) {
+    new_argv[i + 1] = argv[i];
+  }
+  new_argv[argc + 1] = nullptr;
+  execv(kShell.data(), new_argv.data());
+
+  // If we get here then exec'ing the shell failed somehow.
+  PosixFatalLog() << "unable to exec the shell " << shell_path
+                  << " with script " << script_path;
+}
+
+}  // namespace
+}  // namespace ecclesia
+
+int main(int argc, char *argv[]) { ecclesia::RealMain(argc, argv); }

@@ -1,0 +1,136 @@
+[$default byte_order: "LittleEndian"]
+[(cpp) namespace: "::ecclesia"]
+# This file lists the registers we would like to export for an NVMe controller
+# Refer go/nvme-spec for detailed description of the fields
+
+
+struct ControllerCapabilitiesStructure:
+  0 [+2]         UInt  mqes
+    -- Maximum Queue Entries Supported (MQES)
+
+  2 [+1]  bits:
+    0 [+1]       Flag  cqr
+      -- Contiguous Queues Required
+
+    1 [+2]       UInt  ams
+      -- Arbitration Mechanism Supported (AMS)
+
+  3 [+1]         UInt  to
+    -- Timeout (TO) in 500 ms units
+
+  4 [+2]  bits:
+    0 [+4]       UInt  dstrd
+      -- Doorbell Stride
+
+    4 [+1]       Flag  nssrs
+      -- NVM Subsystem Reset Supported (NSSRS)
+
+    5 [+8]      UInt   css
+      -- Command Sets Supported (CSS)
+
+    13 [+1]       Flag  bps
+      -- Boot Partition Support (BPS)
+
+
+  6 [+2]  bits:
+    0 [+4]       UInt  mpsmin
+      -- Memory Page Size Minimum (MPSMIN)
+
+    4 [+4]       UInt  mpsmax
+      -- Memory Page Size Maximum
+
+    8 [+1]       Flag  pmrs
+      -- Persistent Memory Region Supported (PMRS)
+
+    9 [+1]       Flag  cmbs
+      -- Controller Memory Buffer Supported (CMBS)
+
+  0 [+8]         UInt  raw
+
+
+struct VersionStructure:
+  1 [+1]  UInt  mnr
+    -- Minor Version Number (MNR)
+
+  2 [+2]  UInt  mjr
+    -- Major Version Number (MJR)
+
+  0 [+4]  UInt  raw
+
+
+struct ControllerConfigurationStructure:
+  0  [+4]  bits:
+    0  [+1]       Flag  en
+      -- Enable (EN)
+
+    4  [+3]       UInt  css
+      -- I/O Command Set Selected (CSS)
+
+    7  [+4]       UInt  mps
+      -- Memory Page Size (MPS)
+
+    11 [+3]       UInt  ams
+      -- Arbitration Mechanism Selected (AMS)
+
+    14 [+2]       UInt  shn
+      -- Shutdown Notification (SHN)
+
+    16 [+4]       UInt  iosqes
+      -- I/O Submission Queue Entry Size (IOSQES)
+
+    20[+4]        UInt  iocqes
+      -- I/O Completion Queue Entry Size (IOCQES)
+
+  0  [+4]         UInt  raw
+
+
+struct ControllerStatusStructure:
+  0 [+1]  bits:
+    0 [+1]       Flag  rdy
+      -- Ready (RDY)
+
+    1 [+1]       Flag  cfs
+      -- Controller Fatal Status (CFS)
+
+    2 [+2]       UInt  shst
+      -- Shutdown Status (SHST)
+
+    4 [+1]       Flag  nssro
+      -- NVM Subsystem Reset Occured (NSSRO)
+
+    5 [+1]       Flag  pp
+      -- Processing Paused (pp)
+
+  0 [+4]         UInt  raw
+
+
+struct AdminQueueAttributesStructure:
+  0 [+2]  bits:
+    0 [+12]      UInt  asqs
+      -- Admin Submission Queue Size (ASQS)
+
+  2 [+2]  bits:
+    0 [+12]      UInt  acqs
+      -- Admin Completion Queue Size (ACQS)
+
+  0 [+4]         UInt  raw
+
+
+struct ControllerRegistersStructure:
+  -- Register map for the controller
+  0  [+8]     ControllerCapabilitiesStructure   cap
+    -- Controller Capabilities (CAP)
+
+  8  [+4]     VersionStructure                  vs
+    -- Version (VS)
+
+  20 [+4]     ControllerConfigurationStructure  cc
+    -- Controller Configuration (CC)
+
+  28 [+4]     ControllerStatusStructure         csts
+    -- Controller Status (CSTS)
+
+  36 [+4]     AdminQueueAttributesStructure     aqa
+    -- Admin Queue Attributes (AQA)
+
+  0  [+4096]  UInt:8[]                          raw

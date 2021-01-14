@@ -1,0 +1,40 @@
+--- redfishMockupServer.py
++++ redfishMockupServer.py
+@@ -12,6 +12,7 @@
+ import json
+ import threading
+ import datetime
++import socket
+ 
+ import os
+ import ssl
+@@ -663,6 +664,7 @@
+                             help='apply short form to mockup (omit filepath /redfish/v1)')
+         parser.add_argument('-P', '--ssdp', action='store_true',
+                             help='make mockup SSDP discoverable')
++        parser.add_argument('--ipv6', action='store_true', help='use IPv6')
+ 
+         args = parser.parse_args()
+         hostname = args.host
+@@ -677,6 +679,7 @@
+         sslKey = args.key
+         shortForm = args.short_form
+         ssdpStart = args.ssdp
++        ipv6 = args.ipv6
+ 
+         logger.info('Hostname: {}'.format(hostname))
+         logger.info('Port: {}'.format(port))
+@@ -705,7 +708,12 @@
+                 sys.stderr.flush()
+                 sys.exit(1)
+ 
+-        myServer = HTTPServer((hostname, port), RfMockupServer)
++        if ipv6:
++            class ServerClass(HTTPServer):
++                address_family = socket.AF_INET6
++        else:
++            ServerClass = HTTPServer
++        myServer = ServerClass((hostname, port), RfMockupServer)
+ 
+         if sslMode:
+             logger.info("Using SSL with certfile: {}".format(sslCert))
