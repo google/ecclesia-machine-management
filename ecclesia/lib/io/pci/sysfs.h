@@ -29,7 +29,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/apifs/apifs.h"
-#include "ecclesia/lib/io/pci/config.h"
 #include "ecclesia/lib/io/pci/discovery.h"
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/pci/pci.h"

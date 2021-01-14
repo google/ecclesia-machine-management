@@ -59,7 +59,8 @@ class PciFunctionNum : public FixedRangeInteger<PciFunctionNum, int, 0, 0x7> {
   explicit constexpr PciFunctionNum(BaseType value) : BaseType(value) {}
 };
 
-// Device location information for a PCI or PCI Express device.
+// Location information for a PCI or PCI Express device. This fully identifies
+// a device address by domain+bus+device+function.
 class PciLocation {
  public:
   constexpr PciLocation(PciDomain domain, PciBusNum bus, PciDeviceNum device,
@@ -94,19 +95,15 @@ class PciLocation {
                        maybe_device.value(), maybe_function.value());
   }
 
-  std::string ToString() const {
-    return absl::StrFormat("%04x:%02x:%02x.%x", domain_.value(), bus_.value(),
-                           device_.value(), function_.value());
-  }
+  // Try and construct a location object from a string that uses the format
+  // produced by the ToString operations.
+  static absl::optional<PciLocation> FromString(absl::string_view str);
 
-  const PciDomain domain() const { return domain_; }
-  const PciBusNum bus() const { return bus_; }
-  const PciDeviceNum device() const { return device_; }
-  const PciFunctionNum function() const { return function_; }
-
-  // Convert a string to PciLocation in runtime.
-  // string format: 0000:17:08.2
-  static absl::optional<PciLocation> FromString(absl::string_view dev_str);
+  // Accessors for the individual components of the location.
+  constexpr PciDomain domain() const { return domain_; }
+  constexpr PciBusNum bus() const { return bus_; }
+  constexpr PciDeviceNum device() const { return device_; }
+  constexpr PciFunctionNum function() const { return function_; }
 
   // PciLocation relational operators.
   // Order is equivalent to that of a <domain, bus, device, function> tuple.
@@ -140,6 +137,10 @@ class PciLocation {
 
   // String conversion. This deliberately follows the
   // domain:bus:device.function format that the kernel uses in sysfs.
+  std::string ToString() const {
+    return absl::StrFormat("%04x:%02x:%02x.%x", domain_.value(), bus_.value(),
+                           device_.value(), function_.value());
+  }
   friend std::ostream &operator<<(std::ostream &os,
                                   const PciLocation &location) {
     return os << absl::StreamFormat(
@@ -155,19 +156,61 @@ class PciLocation {
   PciFunctionNum function_;
 };
 
-// A wrapper class with PCI Domain, Bus and Device numbers. A PCI device
-// normally corresponds to a set of <domain>:<bus>:<device> but may have
-// multiple <func>. Thus, there can bee multiple PciLocations
-// (<domain>:<bus>:<device>.<func>) associated one PCI device. This class is
-// used to facilitate <domain>:<bus>:<device> comparators and group those
-// PciLocations from the same PCIe device into a single one.
+// A location implementation that excludes the function part of the location. In
+// traditional PCI this is important because a domain+bus+device identifies a
+// physical device, and while in PCI Express the difference between "device" and
+// "function" is much less significant there are still APIs and operations where
+// it's useful to have a location object that represents the group of functions
+// attached to a single device number.
 class PciDeviceLocation {
  public:
-  PciDeviceLocation(const PciLocation &location)
+  // PciDeviceLocation can either be constructed directly from a triple of
+  // (domain, bus, device) or from an existing PciLocation.
+  constexpr PciDeviceLocation(PciDomain domain, PciBusNum bus,
+                              PciDeviceNum device)
+      : domain_(domain), bus_(bus), device_(device) {}
+  explicit constexpr PciDeviceLocation(const PciLocation &location)
       : domain_(location.domain()),
         bus_(location.bus()),
         device_(location.device()) {}
 
+  PciDeviceLocation(const PciDeviceLocation &) = default;
+  PciDeviceLocation &operator=(const PciDeviceLocation &) = default;
+
+  // Create an instance whose range is statically checked at compile time.
+  template <int domain, int bus, int device>
+  static constexpr PciDeviceLocation Make() {
+    return PciDeviceLocation(PciDomain::Make<domain>(), PciBusNum::Make<bus>(),
+                             PciDeviceNum::Make<device>());
+  }
+
+  // Create a PciDeviceLocation whose range is checked at run time.
+  static absl::optional<PciDeviceLocation> TryMake(int domain, int bus,
+                                                   int device) {
+    auto maybe_domain = PciDomain::TryMake(domain);
+    auto maybe_bus = PciBusNum::TryMake(bus);
+    auto maybe_device = PciDeviceNum::TryMake(device);
+
+    if (!maybe_domain.has_value() || !maybe_bus.has_value() ||
+        !maybe_device.has_value()) {
+      return absl::nullopt;
+    }
+
+    return PciDeviceLocation(maybe_domain.value(), maybe_bus.value(),
+                             maybe_device.value());
+  }
+
+  // Try and construct a location object from a string that uses the format
+  // produced by the ToString operations.
+  static absl::optional<PciDeviceLocation> FromString(absl::string_view str);
+
+  // Accessors for the individual components of the location.
+  constexpr PciDomain domain() const { return domain_; }
+  constexpr PciBusNum bus() const { return bus_; }
+  constexpr PciDeviceNum device() const { return device_; }
+
+  // PciDeviceLocation relational operators.
+  // Order is equivalent to that of a <domain, bus, device> tuple.
   friend bool operator==(const PciDeviceLocation &lhs,
                          const PciDeviceLocation &rhs) {
     return std::tie(lhs.domain_, lhs.bus_, lhs.device_) ==
@@ -177,6 +220,23 @@ class PciDeviceLocation {
                          const PciDeviceLocation &rhs) {
     return !(lhs == rhs);
   }
+  friend bool operator<(const PciDeviceLocation &lhs,
+                        const PciDeviceLocation &rhs) {
+    return std::tie(lhs.domain_, lhs.bus_, lhs.device_) <
+           std::tie(rhs.domain_, rhs.bus_, rhs.device_);
+  }
+  friend bool operator>(const PciDeviceLocation &lhs,
+                        const PciDeviceLocation &rhs) {
+    return (rhs < lhs);
+  }
+  friend bool operator<=(const PciDeviceLocation &lhs,
+                         const PciDeviceLocation &rhs) {
+    return !(rhs < lhs);
+  }
+  friend bool operator>=(const PciDeviceLocation &lhs,
+                         const PciDeviceLocation &rhs) {
+    return !(lhs < rhs);
+  }
 
   // Support hashing of <domain>:<bus>:<device> for use as a key in hash maps.
   template <typename H>
@@ -185,11 +245,17 @@ class PciDeviceLocation {
                       dev_id.device_);
   }
 
-  // The "<domain>:<bus>:<device>" is used as the unique ID/name for this PCI
-  // device.
+  // String conversion. This follows the same format that PciLocation uses for
+  // its strings, minus the final ".function" component.
   std::string ToString() const {
     return absl::StrFormat("%04x:%02x:%02x", domain_.value(), bus_.value(),
                            device_.value());
+  }
+  friend std::ostream &operator<<(std::ostream &os,
+                                  const PciDeviceLocation &location) {
+    return os << absl::StreamFormat("%04x:%02x:%02x", location.domain_.value(),
+                                    location.bus_.value(),
+                                    location.device_.value());
   }
 
  private:

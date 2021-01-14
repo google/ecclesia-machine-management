@@ -25,7 +25,6 @@
 #include <memory>
 #include <utility>
 
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/io/pci/config.h"
 #include "ecclesia/lib/io/pci/location.h"

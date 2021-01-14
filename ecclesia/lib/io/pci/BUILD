@@ -109,7 +109,6 @@ cc_library(
         ":location",
         ":region",
         "//ecclesia/lib/types:fixed_range_int",
-        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
     ],
 )
@@ -171,6 +170,7 @@ cc_library(
         "//ecclesia/lib/file:path",
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/types:fixed_range_int",
+        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
