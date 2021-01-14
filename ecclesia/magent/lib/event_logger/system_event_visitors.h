@@ -144,21 +144,6 @@ class DimmErrorCountingVisitor : public SystemEventVisitor {
   absl::flat_hash_map<int, DimmErrorCount> dimm_error_counts_;
 };
 
-// A system event visitor for finding boot number
-class BootNumberVisitor : public SystemEventVisitor {
- public:
-  BootNumberVisitor()
-      : SystemEventVisitor(SystemEventVisitor::VisitDirection::FROM_END),
-        boot_number_() {}
-
-  bool Visit(const SystemEventRecord &record) override;
-
-  absl::optional<uint32_t> GetBootNumber() const { return boot_number_; }
-
- private:
-  absl::optional<uint32_t> boot_number_;
-};
-
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_MAGENT_LIB_EVENT_LOGGER_SYSTEM_EVENT_VISITORS_H_

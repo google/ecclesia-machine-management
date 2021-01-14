@@ -37,6 +37,8 @@
 #include "ecclesia/lib/smbios/platform_translator.h"
 #include "ecclesia/lib/smbios/reader.h"
 #include "ecclesia/magent/lib/event_logger/event_logger.h"
+#include "ecclesia/magent/lib/event_reader/elog_reader.h"
+#include "ecclesia/magent/lib/event_reader/event_reader.h"
 #include "ecclesia/magent/lib/event_reader/mced_reader.h"
 #include "ecclesia/magent/lib/io/usb.h"
 #include "ecclesia/magent/sysmodel/x86/chassis.h"
@@ -199,6 +201,8 @@ class SystemModel {
   const absl::Span<const CpuMarginSensorParams> cpu_margin_params_;
 
   absl::optional<uint32_t> boot_number_;
+  // Iterate through BIOS Event Log to load boot number from events
+  void LoadBootNumberFromElogReader(ElogReader &elog_reader);
 };
 
 }  // namespace ecclesia

@@ -25,6 +25,7 @@
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
 #include "absl/types/variant.h"
+#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/mcedecoder/mce_decode.h"
 #include "ecclesia/lib/mcedecoder/mce_messages.h"
 #include "ecclesia/magent/lib/event_reader/elog.emb.h"
@@ -146,42 +147,6 @@ class DecodeAndUpdateDimmCounts {
   absl::flat_hash_map<int, DimmErrorCount> *error_counts_;
 };
 
-// Class for visiting each of the variant records
-class DecodeBootNumber {
- public:
-  void operator()(const MachineCheck &mce) {
-    if (mce.boot.has_value()) {
-      boot_number_ = mce.boot;
-    }
-  }
-  void operator()(const Elog &elog) {
-    const auto &elog_record_view = elog.GetElogRecordView();
-    // Boot number available on Machine Check records and system boot records
-    if (elog_record_view.Ok()) {
-      switch (elog_record_view.id().Read()) {
-        case EventType::MACHINE_CHECK: {
-          MachineCheck mce = TransformElogToMachineCheck(
-              elog_record_view.machine_check_exception());
-          this->operator()(mce);
-          break;
-        }
-        case EventType::SYSTEM_BOOT: {
-          if (elog_record_view.system_boot().has_bootnum().ValueOr(false)) {
-            boot_number_ = elog_record_view.system_boot().bootnum().Read();
-          }
-          break;
-        }
-        default:
-          break;
-      }
-    }
-  }
-  absl::optional<uint32_t> GetBootNumber() { return boot_number_; }
-
- private:
-  absl::optional<uint32_t> boot_number_;
-};
-
 }  // namespace
 
 absl::optional<MceDecodedMessage> MceDecoderAdapter::Decode(
@@ -224,16 +189,6 @@ bool DimmErrorCountingVisitor::Visit(const SystemEventRecord &record) {
   absl::visit(
       DecodeAndUpdateDimmCounts(mce_decoder_.get(), &dimm_error_counts_),
       record.record);
-  return true;
-}
-
-bool BootNumberVisitor::Visit(const SystemEventRecord &record) {
-  DecodeBootNumber decoder;
-  absl::visit(decoder, record.record);
-  if (decoder.GetBootNumber().has_value()) {
-    boot_number_ = decoder.GetBootNumber().value();
-    return false;
-  }
   return true;
 }
 

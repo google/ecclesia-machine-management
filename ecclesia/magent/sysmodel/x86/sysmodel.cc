@@ -17,6 +17,7 @@
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <memory>
@@ -32,6 +33,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/types/optional.h"
+#include "absl/types/variant.h"
 #include "ecclesia/lib/io/pci/config.h"
 #include "ecclesia/lib/io/pci/discovery.h"
 #include "ecclesia/lib/io/pci/location.h"
@@ -208,6 +210,40 @@ std::vector<PciLocation> SystemModel::GetPcieDeviceLocations() const {
   return pcie_device_locations_;
 }
 
+void SystemModel::LoadBootNumberFromElogReader(ElogReader &elog_reader) {
+  for (auto event = elog_reader.ReadEvent(); event.has_value();
+       event = elog_reader.ReadEvent()) {
+    auto maybe_elog = absl::get_if<Elog>(&event->record);
+    if (!maybe_elog) continue;
+    const auto &elog_record_view = maybe_elog->GetElogRecordView();
+
+    if (elog_record_view.Ok()) {
+      // 1. System Boot - The boot number will be included in the log
+      // 2. Log area reset - The boot number will be included in the log
+      //
+      // For each event log, we will at least see one of these since the
+      // system boot event must be included or it should've been cleared in
+      // which case we will get a log area reset event
+      switch (elog_record_view.id().Read()) {
+        case EventType::SYSTEM_BOOT: {
+          if (elog_record_view.system_boot().has_bootnum().ValueOr(false)) {
+            boot_number_ = elog_record_view.system_boot().bootnum().Read();
+          }
+          break;
+        }
+        case EventType::LOG_AREA_RESET: {
+          if (elog_record_view.log_area_reset().has_boot_num().ValueOr(false)) {
+            boot_number_ = elog_record_view.log_area_reset().boot_num().Read();
+          }
+          break;
+        }
+        default:
+          break;
+      }
+    }
+  }
+}
+
 absl::optional<uint32_t> SystemModel::GetBootNumber() { return boot_number_; }
 
 SystemModel::SystemModel(SysmodelParams params)
@@ -332,12 +368,13 @@ SystemModel::SystemModel(SysmodelParams params)
     WarningLog() << "Boot number unavailable in SMBIOS: "
                  << maybe_boot_number.status().message();
     // Attempt to read event log for boot number
-    BootNumberVisitor visitor;
-    event_logger_->Visit(&visitor);
-    if (visitor.GetBootNumber().has_value()) {
-      boot_number_ = visitor.GetBootNumber();
-    } else {
-      WarningLog() << "Boot number unavailable in System Event Log";
+    if (auto system_event_log = smbios_reader_->GetSystemEventLog()) {
+      auto reader =
+          ElogReader(std::move(system_event_log), params.sysfs_mem_file_path);
+      LoadBootNumberFromElogReader(reader);
+      if (!boot_number_.has_value()) {
+        WarningLog() << "Boot number unavailable in BIOS Event Log";
+      }
     }
   }
 }
