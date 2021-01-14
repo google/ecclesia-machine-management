@@ -189,6 +189,7 @@ inline constexpr char kCriticalTemperatureTimeMinute[] =
 inline constexpr char kCompositeTemperatureKelvins[] =
     "CompositeTemperatureKelvins";
 inline constexpr char kCriticalWarning[] = "CriticalWarning";
+inline constexpr char kPercentageUsed[] = "PercentageUsed";
 
 // Redfish resource URIs
 inline constexpr char kServiceRootUri[] = "/redfish/v1/";

@@ -47,7 +47,6 @@ cc_library(
         "//ecclesia/lib/io/pci:signature",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/mcedecoder:cpu_topology",
-        "//ecclesia/lib/types:fixed_range_int",
         "//ecclesia/lib/version",
         "//ecclesia/magent/lib/event_logger:intel_cpu_topology",
         "//ecclesia/magent/lib/event_logger:system_event_visitors",

@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -37,7 +38,6 @@
 #include "json/value.h"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
-#include "re2/re2.h"
 
 namespace ecclesia {
 namespace {
@@ -142,6 +142,7 @@ void Storage::AddNvmeStorageControllers(
         (*smart_log)->critical_comp_time_minutes();
     (*smart_attributes)[kCompositeTemperatureKelvins] =
         (*smart_log)->composite_temperature_kelvins();
+    (*smart_attributes)[kPercentageUsed] = (*smart_log)->percent_used();
   }
 
   storage_controllers->append(storage_controller);

@@ -18,13 +18,9 @@
 #define ECCLESIA_MAGENT_REDFISH_INDUS_PCIE_DEVICE_COLLECTION_H_
 
 #include <string>
-#include <tuple>
 
-#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
-#include "ecclesia/lib/io/pci/location.h"
-#include "ecclesia/lib/types/fixed_range_int.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
