@@ -46,6 +46,7 @@
 #include "google/protobuf/message.h"
 #include "google/protobuf/text_format.h"
 #include "google/protobuf/util/message_differencer.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_format.h"
@@ -301,6 +302,23 @@ template <typename InnerMatcher>
 inline InnerMatcher IgnoringRepeatedFieldOrdering(InnerMatcher inner_matcher) {
   inner_matcher.mutable_impl().SetIgnoreRepeatedFieldOrdering();
   return inner_matcher;
+}
+
+// Defines a helper matcher wrapper that simplifies the common pattern of
+// ElementsAre(EqualsProto(...), EqualsProto(...), ...). Each argument provided
+// to the template will be expanded into the corresponding EqualsProto argument.
+//
+// In other words, the code ElementsAreProtos(a, b, c) will be expanded into
+// the equivalent ElementsAre(EqualsProto(a), EqualsProto(b), EqualsProto(c)).
+template <typename... Args>
+auto ElementsAreProtos(Args... args) {
+  return ::testing::ElementsAre(EqualsProto(args)...);
+}
+
+// Defines an unordered equivalent to ElementsAreProtos.
+template <typename... Args>
+auto UnorderedElementsAreProtos(Args... args) {
+  return ::testing::UnorderedElementsAre(EqualsProto(args)...);
 }
 
 }  // namespace ecclesia
