@@ -8,6 +8,7 @@ cc_library(
         "pcie_device.cc",
         "pcie_device_collection.cc",
         "pcie_function.cc",
+        "uri_generation.cc",
     ],
     hdrs = [
         "assembly.h",
@@ -21,6 +22,7 @@ cc_library(
         "redfish_keywords.h",
         "resource.h",
         "service_root_resource.h",
+        "uri_generation.h",
     ],
     visibility = ["//ecclesia:magent_library_users"],
     deps = [
@@ -60,5 +62,15 @@ cc_test(
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
         "@com_jsoncpp//:json",
+    ],
+)
+
+cc_test(
+    name = "uri_generation_test",
+    srcs = ["uri_generation_test.cc"],
+    deps = [
+        ":redfish_core",
+        "//ecclesia/lib/io/pci:location",
+        "@com_google_googletest//:gtest_main",
     ],
 )

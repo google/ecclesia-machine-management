@@ -19,6 +19,7 @@
 #include "absl/strings/str_replace.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
+#include "ecclesia/magent/redfish/core/uri_generation.h"
 
 namespace ecclesia {
 
@@ -45,17 +46,8 @@ Assembly::AssemblyModifier CreateModifierToAssociatePcieFunction(
           for (auto &component : components) {
             if (component.isMember(kName) &&
                 component[kName].asString() == component_name) {
-              // Construct the PCIeFunction URI from the BDF and Redfish Schema
-              const std::string pcie_device_str = absl::StrFormat(
-                  "%04x:%02x:%02x", location.domain().value(),
-                  location.bus().value(), location.device().value());
-              const std::string pcie_function_uri = absl::StrReplaceAll(
-                  kPCIeFunctionUriPattern,
-                  {{"([\\w:]+)", pcie_device_str},
-                   {"(\\d+)", absl::StrCat(location.function().value())}});
-
               Json::Value associated_with;
-              associated_with[kOdataId] = pcie_function_uri;
+              associated_with[kOdataId] = GetPcieFunctionUri(location);
               component[kAssociatedWith].append(associated_with);
               return;
             }
