@@ -44,7 +44,7 @@ template <typename... ArgTypes>
 class IndexResource : public Resource {
  public:
   explicit IndexResource(const std::string &uri_pattern)
-      : Resource(uri_pattern) {}
+      : Resource(uri_pattern), uri_regex_(this->Uri()) {}
 
   virtual ~IndexResource() {}
 
@@ -54,8 +54,7 @@ class IndexResource : public Resource {
         [this](
             tensorflow::serving::net_http::ServerRequestInterface *http_request)
             -> tensorflow::serving::net_http::RequestHandler {
-          RE2 regex(this->Uri());
-          if (RE2::FullMatch(http_request->uri_path(), regex)) {
+          if (RE2::FullMatch(http_request->uri_path(), uri_regex_)) {
             return [this](tensorflow::serving::net_http::ServerRequestInterface
                               *req) { return this->RequestHandler(req); };
           } else {
@@ -86,7 +85,7 @@ class IndexResource : public Resource {
     // Then cast the tuple to a vector, the extracted indices will be passed as
     // parameter into the corresponding resource handler.
     auto maybe_indices_tuple =
-        RegexFullMatch<ArgTypes...>(req->uri_path(), RE2(this->Uri()));
+        RegexFullMatch<ArgTypes...>(req->uri_path(), uri_regex_);
 
     if (!maybe_indices_tuple.has_value()) {
       req->ReplyWithStatus(
@@ -117,6 +116,9 @@ class IndexResource : public Resource {
           tensorflow::serving::net_http::HTTPStatusCode::METHOD_NA);
     }
   }
+
+  // Regular expression for matching this IndexResource's URI.
+  RE2 uri_regex_;
 };
 
 }  // namespace ecclesia
