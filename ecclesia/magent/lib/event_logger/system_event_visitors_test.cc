@@ -195,6 +195,83 @@ TEST_F(SystemEventVisitorTest, CpuErrorCounts) {
   }
 }
 
+TEST_F(SystemEventVisitorTest, CpuErrorExcludeWhitelisted) {
+  // return an empty machine check, since the MceDecoder's response is mocked
+  // out
+  EXPECT_CALL(*reader_, ReadEvent)
+      .WillOnce(Return(SystemEventRecord{.record = MachineCheck{}}))
+      .WillOnce(Return(SystemEventRecord{.record = MachineCheck{}}))
+      .WillOnce(Return(SystemEventRecord{.record = MachineCheck{}}))
+      .WillOnce(Return(SystemEventRecord{.record = MachineCheck{}}))
+      .WillOnce(Return(SystemEventRecord{.record = MachineCheck{}}))
+      .WillOnce([&]() {
+        last_event_logged_.Notify();
+        return absl::nullopt;
+      })
+      .WillRepeatedly(Return(absl::nullopt));
+
+  std::unique_ptr<MockClock> clock = absl::make_unique<MockClock>();
+
+  EXPECT_CALL(*clock, Now)
+      .WillOnce(Return(absl::UnixEpoch() + absl::Seconds(1)))
+      .WillOnce(Return(absl::UnixEpoch() + absl::Seconds(2)))
+      .WillOnce(Return(absl::UnixEpoch() + absl::Seconds(3)))
+      .WillOnce(Return(absl::UnixEpoch() + absl::Seconds(4)))
+      .WillOnce(Return(absl::UnixEpoch() + absl::Seconds(5)));
+
+  std::vector<std::unique_ptr<SystemEventReader>> readers;
+  readers.push_back(absl::WrapUnique<SystemEventReader>(reader_));
+  SystemEventLogger logger(std::move(readers), clock.get());
+  // Wait for the last event to be logged before visiting the records
+  last_event_logged_.WaitForNotification();
+
+  // Mock the Mce decoding by just incrementing the dimm number and invetring
+  // the correctible bit on successive mces.
+  auto decode_message =
+      [](testing::Unused) -> absl::StatusOr<MceDecodedMessage> {
+    static bool correctable = false;
+    static int socket = 0;
+    MceDecodedMessage output;
+    output.cpu_errors.push_back(CpuError{});
+    // To emulate that all CPU errors with socket <= 2 are whitelisted.
+    if (socket <= 2) {
+      output.cpu_errors[0].cpu_error_bucket.whitelisted = true;
+    } else {
+      output.cpu_errors[0].cpu_error_bucket.whitelisted = false;
+    }
+    output.cpu_errors[0].cpu_error_bucket.socket = socket++;
+    output.cpu_errors[0].cpu_error_bucket.correctable = correctable;
+    output.cpu_errors[0].error_count = 1;
+    correctable = !correctable;
+    return output;
+  };
+
+  {
+    // Visit all of the events
+    auto mce_decoder = absl::make_unique<MockMceDecoder>();
+
+    EXPECT_CALL(*mce_decoder, DecodeMceMessage(_))
+        .WillRepeatedly(testing::Invoke(decode_message));
+
+    auto cpu_visitor = CpuErrorCountingVisitor(
+        absl::UnixEpoch(),
+        absl::make_unique<MceDecoderAdapter>(std::move(mce_decoder)));
+
+    logger.Visit(&cpu_visitor);
+
+    auto cpu_error_counts = cpu_visitor.GetCpuErrorCounts();
+
+    // The cpu errors on socket 0, 1, 2 are all whitelisted. Thus, socket 0, 1,
+    // 2 has 0 CE & UE counters.
+    absl::flat_hash_map<int, CpuErrorCount> expected_counts{
+        {3, {1, 0}},
+        {4, {0, 1}},
+    };
+
+    EXPECT_THAT(cpu_error_counts, testing::ContainerEq(expected_counts));
+  }
+}
+
 }  // namespace
 
 }  // namespace ecclesia

@@ -47,8 +47,13 @@ TEST(MceDecodeTest, DecodeCorrectableMemoryControllerWriteError) {
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 
-  MceLogMessage raw_msg{
-      0, lpu_id, bank, 0, 0x9c000040010400a1, 0x35a4456040, 0x200414a228001086};
+  MceLogMessage raw_msg{.time_stamp = 0,
+                        .lpu_id = lpu_id,
+                        .bank = bank,
+                        .mcg_status = 0,
+                        .mci_status = 0x9c000040010400a1,
+                        .mci_address = 0x35a4456040,
+                        .mci_misc = 0x200414a228001086};
   auto maybe_decoded_msg = mce_decoder.DecodeMceMessage(raw_msg);
   ASSERT_TRUE(maybe_decoded_msg.ok());
   MceDecodedMessage decoded_msg = *maybe_decoded_msg;
@@ -78,8 +83,13 @@ TEST(MceDecodeTest, DecodeUnCorrectableMemoryControllerReadError) {
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 
-  MceLogMessage raw_msg{
-      0, lpu_id, bank, 0, 0xbc00000001010090, 0x34fe426040, 0x200001c080602086};
+  MceLogMessage raw_msg{.time_stamp = 0,
+                        .lpu_id = lpu_id,
+                        .bank = bank,
+                        .mcg_status = 0,
+                        .mci_status = 0xbc00000001010090,
+                        .mci_address = 0x34fe426040,
+                        .mci_misc = 0x200001c080602086};
   auto maybe_decoded_msg = mce_decoder.DecodeMceMessage(raw_msg);
   ASSERT_TRUE(maybe_decoded_msg.ok());
   MceDecodedMessage decoded_msg = *maybe_decoded_msg;
@@ -109,8 +119,13 @@ TEST(MceDecodeTest, DecodeCorrectableMultipleMemError) {
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 
-  MceLogMessage raw_msg{
-      0, lpu_id, bank, 0, 0xc80000c100800090, 0, 0xd129e00204404400};
+  MceLogMessage raw_msg{.time_stamp = 0,
+                        .lpu_id = lpu_id,
+                        .bank = bank,
+                        .mcg_status = 0,
+                        .mci_status = 0xc80000c100800090,
+                        .mci_address = 0,
+                        .mci_misc = 0xd129e00204404400};
   auto maybe_decoded_msg = mce_decoder.DecodeMceMessage(raw_msg);
   ASSERT_TRUE(maybe_decoded_msg.ok());
   MceDecodedMessage decoded_msg = *maybe_decoded_msg;
@@ -146,8 +161,13 @@ TEST(MceDecodeTest, DecodeUnCorrectableCpuCacheError) {
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 
-  MceLogMessage raw_msg{0,           lpu_id, bank, 7, 0xbd80000000100134,
-                        0x166fab040, 0x86};
+  MceLogMessage raw_msg{.time_stamp = 0,
+                        .lpu_id = lpu_id,
+                        .bank = bank,
+                        .mcg_status = 7,
+                        .mci_status = 0xbd80000000100134,
+                        .mci_address = 0x166fab040,
+                        .mci_misc = 0x86};
   auto maybe_decoded_msg = mce_decoder.DecodeMceMessage(raw_msg);
   ASSERT_TRUE(maybe_decoded_msg.ok());
   MceDecodedMessage decoded_msg = *maybe_decoded_msg;
@@ -179,8 +199,13 @@ TEST(MceDecodeTest, DecodeUnCorrectableInstructionFetchError) {
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 
-  MceLogMessage raw_msg{0,           lpu_id, bank, 7, 0xbd800000000c0150,
-                        0x16a616040, 0x86};
+  MceLogMessage raw_msg{.time_stamp = 0,
+                        .lpu_id = lpu_id,
+                        .bank = bank,
+                        .mcg_status = 7,
+                        .mci_status = 0xbd800000000c0150,
+                        .mci_address = 0x16a616040,
+                        .mci_misc = 0x86};
   auto maybe_decoded_msg = mce_decoder.DecodeMceMessage(raw_msg);
   ASSERT_TRUE(maybe_decoded_msg.ok());
   MceDecodedMessage decoded_msg = *maybe_decoded_msg;
@@ -212,8 +237,13 @@ TEST(MceDecodeTest, DecodeCorruptedMce) {
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 
-  MceLogMessage raw_msg{0,           lpu_id, bank, 7, 0x4d800000000c0150,
-                        0x16a616040, 0x86};
+  MceLogMessage raw_msg{.time_stamp = 0,
+                        .lpu_id = lpu_id,
+                        .bank = bank,
+                        .mcg_status = 7,
+                        .mci_status = 0x4d800000000c0150,
+                        .mci_address = 0x16a616040,
+                        .mci_misc = 0x86};
   auto maybe_decoded_msg = mce_decoder.DecodeMceMessage(raw_msg);
   ASSERT_TRUE(maybe_decoded_msg.ok());
   MceDecodedMessage decoded_msg = *maybe_decoded_msg;
@@ -224,6 +254,87 @@ TEST(MceDecodeTest, DecodeCorruptedMce) {
 
   EXPECT_TRUE(decoded_msg.cpu_errors.empty());
   EXPECT_TRUE(decoded_msg.mem_errors.empty());
+}
+
+// This is to test the decoding of 3-Strike timeout error which should be
+// whitelisted.
+TEST(MceDecodeTest, Decode3StrikeTimeoutError) {
+  const int lpu_id = 10;
+  const int bank = 3;
+  const int socket_id = 1;
+  auto cpu_topology = absl::make_unique<MockCpuTopology>();
+  EXPECT_CALL(*cpu_topology, GetSocketIdForLpu(lpu_id))
+      .WillOnce(Return(socket_id));
+  auto dimm_translator = absl::make_unique<IndusDimmTranslator>();
+  MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
+                         std::move(cpu_topology), std::move(dimm_translator));
+
+  MceLogMessage raw_msg{.time_stamp = 0,
+                        .lpu_id = lpu_id,
+                        .bank = bank,
+                        .mcg_status = 0,
+                        .mci_status = 0xbe00000000800400ULL,
+                        .mci_address = 0xffffffffbc797b3aULL,
+                        .mci_misc = 0xffffffffbc797b3aULL};
+  auto maybe_decoded_msg = mce_decoder.DecodeMceMessage(raw_msg);
+  ASSERT_TRUE(maybe_decoded_msg.ok());
+  MceDecodedMessage decoded_msg = *maybe_decoded_msg;
+
+  EXPECT_EQ(decoded_msg.mce_bucket.bank, bank);
+  EXPECT_EQ(decoded_msg.mce_bucket.socket, socket_id);
+  EXPECT_FALSE(decoded_msg.mce_bucket.mce_corrupt);
+  EXPECT_TRUE(decoded_msg.mce_bucket.uncorrectable);
+  EXPECT_TRUE(decoded_msg.mce_bucket.processor_context_corrupted);
+
+  EXPECT_TRUE(decoded_msg.mem_errors.empty());
+
+  EXPECT_EQ(decoded_msg.cpu_errors.size(), 1);
+  EXPECT_EQ(decoded_msg.cpu_errors[0].error_count, 1);
+  EXPECT_EQ(decoded_msg.cpu_errors[0].cpu_error_bucket.socket, socket_id);
+  EXPECT_EQ(decoded_msg.cpu_errors[0].cpu_error_bucket.lpu_id, lpu_id);
+  EXPECT_FALSE(decoded_msg.cpu_errors[0].cpu_error_bucket.correctable);
+  EXPECT_TRUE(decoded_msg.cpu_errors[0].cpu_error_bucket.whitelisted);
+}
+
+// This is to test the decoding of TOR timeout error which should be
+// whitelisted.
+TEST(MceDecodeTest, DecodeTorTimeoutError) {
+  const int lpu_id = 20;
+  const int bank = 10;
+  const int socket_id = 1;
+  auto cpu_topology = absl::make_unique<MockCpuTopology>();
+  EXPECT_CALL(*cpu_topology, GetSocketIdForLpu(lpu_id))
+      .WillOnce(Return(socket_id));
+  auto dimm_translator = absl::make_unique<IndusDimmTranslator>();
+  MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
+                         std::move(cpu_topology), std::move(dimm_translator));
+
+  MceLogMessage raw_msg{.time_stamp = 0,
+                        .lpu_id = lpu_id,
+                        .bank = bank,
+                        .mcg_status = 0,
+                        .mci_status = 0xfe200000000c110aULL,
+                        .mci_address = 0x0000000085e00100ULL,
+                        .mci_misc = 0x00207aa600c00086ULL};
+
+  auto maybe_decoded_msg = mce_decoder.DecodeMceMessage(raw_msg);
+  ASSERT_TRUE(maybe_decoded_msg.ok());
+  MceDecodedMessage decoded_msg = *maybe_decoded_msg;
+
+  EXPECT_EQ(decoded_msg.mce_bucket.bank, bank);
+  EXPECT_EQ(decoded_msg.mce_bucket.socket, socket_id);
+  EXPECT_FALSE(decoded_msg.mce_bucket.mce_corrupt);
+  EXPECT_TRUE(decoded_msg.mce_bucket.uncorrectable);
+  EXPECT_TRUE(decoded_msg.mce_bucket.processor_context_corrupted);
+
+  EXPECT_TRUE(decoded_msg.mem_errors.empty());
+
+  EXPECT_EQ(decoded_msg.cpu_errors.size(), 1);
+  EXPECT_EQ(decoded_msg.cpu_errors[0].error_count, 1);
+  EXPECT_EQ(decoded_msg.cpu_errors[0].cpu_error_bucket.socket, socket_id);
+  EXPECT_EQ(decoded_msg.cpu_errors[0].cpu_error_bucket.lpu_id, lpu_id);
+  EXPECT_FALSE(decoded_msg.cpu_errors[0].cpu_error_bucket.correctable);
+  EXPECT_TRUE(decoded_msg.cpu_errors[0].cpu_error_bucket.whitelisted);
 }
 
 }  // namespace

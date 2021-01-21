@@ -66,6 +66,13 @@ class DecodeAndUpdateCpuCounts {
       int socket;
       for (const auto &cpu_error : decoded_mce->cpu_errors) {
         if ((socket = cpu_error.cpu_error_bucket.socket) != -1) {
+          // The counter should only account for errors that are not
+          // whitelisted. This is to avoid whitelisted errors to be propagated
+          // through these counters which may cause "false" bad-cpu symptoms
+          // (b/172862755).
+          if (cpu_error.cpu_error_bucket.whitelisted) {
+            continue;
+          }
           if (cpu_error.cpu_error_bucket.correctable) {
             (*error_counts_)[socket].correctable += cpu_error.error_count;
           } else {

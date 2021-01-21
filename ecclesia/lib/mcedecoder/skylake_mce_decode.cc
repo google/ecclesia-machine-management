@@ -352,7 +352,28 @@ bool DecodeSkylakeMce(DimmTranslatorInterface *dimm_translator,
   if (memory_unique_ids.count(unique_id)) {
     return DecodeSkylakeMemoryError(*attributes, dimm_translator, decoded_msg);
   } else {
-    return DecodeSkylakeCpuError(*attributes, decoded_msg);
+    bool success_decoded = DecodeSkylakeCpuError(*attributes, decoded_msg);
+    if (!success_decoded) {
+      return false;
+    }
+    // timeout whitelist the cpu error as this is most likely not real cpu
+    // problem.
+    uint64_t bank, mci_status;
+    if (attributes->GetAttribute(MceAttributes::kMceBank, &bank) &&
+        attributes->GetAttribute(MceAttributes::kMciStatusRegister,
+                                 &mci_status)) {
+      if ((bank >= 3 && bank <= 4 &&
+           ((mci_status & 0xFFFFFFFF) == 0x00800400)) ||
+          (bank >= 9 && bank <= 11 &&
+           ((mci_status >> 16 & 0xFFFF) == 0x000C))) {
+        for (auto &cpu_error : decoded_msg->cpu_errors) {
+          cpu_error.cpu_error_bucket.whitelisted = true;
+        }
+      }
+    } else {
+      ErrorLog() << "Failed to get bank and mci_status from MceAttributes.";
+    }
+    return true;
   }
 }
 }  // namespace ecclesia
