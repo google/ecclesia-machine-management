@@ -51,6 +51,8 @@ inline constexpr char kRfPropertyState[] = "State";
 inline constexpr char kRfPropertyStorageControllers[] = "StorageControllers";
 inline constexpr char kRfPropertyNvmeControllersProperties[] =
     "NVMeControllerProperties";
+inline constexpr char kRfPropertyNvmeSmartCriticalWarnings[] =
+    "NVMeSMARTCriticalWarnings";
 inline constexpr char kRfPropertyLinks[] = "Links";
 inline constexpr char kRfPropertyPcieDevice[] = "PCIeDevice";
 inline constexpr char kRfPropertyPcieDevices[] = "PCIeDevices";
@@ -111,6 +113,11 @@ DEFINE_REDFISH_PROPERTY(PropertyLinkStatus, std::string, "LinkStatus");
 DEFINE_REDFISH_PROPERTY(PropertySpeedMbps, int, "SpeedMbps");
 DEFINE_REDFISH_PROPERTY(PropertyMacAddress, std::string, "MACAddress");
 DEFINE_REDFISH_PROPERTY(PropertyCapacityBytes, int64_t, "CapacityBytes");
+DEFINE_REDFISH_PROPERTY(PropertySpareCapacityWornOut, bool,
+                        "SpareCapacityWornOut");
+DEFINE_REDFISH_PROPERTY(PropertyOverallSubsystemDegraded, bool,
+                        "OverallSubsystemDegraded");
+DEFINE_REDFISH_PROPERTY(PropertyMediaInReadOnly, bool, "MediaInReadOnly");
 DEFINE_REDFISH_PROPERTY(PropertyBlockSizeBytes, int, "BlockSizeBytes");
 DEFINE_REDFISH_PROPERTY(PropertyMediaType, std::string, "MediaType");
 DEFINE_REDFISH_PROPERTY(PropertyReadingCelsius, double, "ReadingCelsius");
@@ -139,6 +146,7 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyAvailableSpare, int,
                         "AvailableSparePercent");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyAvailableSpareThreshold, int,
                         "AvailableSparePercentThreshold");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyPercentageUsed, int, "PercentageUsed");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCompositeTemperatureKelvins, int,
                         "CompositeTemperatureKelvins");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCriticalTemperatureTimeMinute, int,
