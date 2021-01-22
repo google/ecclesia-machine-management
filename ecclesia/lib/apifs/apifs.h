@@ -132,11 +132,10 @@ class ApifsFile {
   absl::StatusOr<std::string> Read() const;
   absl::Status Write(absl::string_view value) const;
 
-  // Seek to offset then Read spcific number of bytes
-  absl::Status SeekAndRead(uint64_t offset, absl::Span<char> value) const;
-  // Seek to offset then Write spcific number of bytes
-  absl::Status SeekAndWrite(uint64_t offset,
-                            absl::Span<const char> value) const;
+  // Read spcific number of bytes from the given offset
+  absl::Status ReadRange(uint64_t offset, absl::Span<char> value) const;
+  // Write spcific number of bytes from the given offset
+  absl::Status WriteRange(uint64_t offset, absl::Span<const char> value) const;
 
   // Read a symlink value for a given path.
   absl::StatusOr<std::string> ReadLink() const;

@@ -214,8 +214,8 @@ absl::Status ApifsFile::Write(absl::string_view value) const {
   return absl::OkStatus();
 }
 
-absl::Status ApifsFile::SeekAndRead(uint64_t offset,
-                                    absl::Span<char> value) const {
+absl::Status ApifsFile::ReadRange(uint64_t offset,
+                                  absl::Span<char> value) const {
   if (!Exists()) {
     return absl::NotFoundError(
         absl::StrFormat("File not found at path: %s", path_));
@@ -227,14 +227,9 @@ absl::Status ApifsFile::SeekAndRead(uint64_t offset,
         "Unable to open the file at path: %s, errno: %d", path_, errno));
   }
   auto fd_closer = LambdaCleanup([fd]() { close(fd); });
-  if (lseek64(fd, offset, SEEK_SET) == static_cast<off_t>(-1)) {
-    return absl::NotFoundError(absl::StrFormat(
-        "Unable to seek to offset: %#x in file %s", offset, path_));
-  }
-
   // Read data.
   size_t size = value.size();
-  int rlen = read(fd, value.data(), size);
+  int rlen = pread(fd, value.data(), size, offset);
   if (rlen != size) {
     return absl::InternalError(absl::StrFormat(
         "Fail to read %d bytes from offset %#x. rlen: %d", size, offset, rlen));
@@ -242,8 +237,8 @@ absl::Status ApifsFile::SeekAndRead(uint64_t offset,
   return absl::OkStatus();
 }
 
-absl::Status ApifsFile::SeekAndWrite(uint64_t offset,
-                                     absl::Span<const char> value) const {
+absl::Status ApifsFile::WriteRange(uint64_t offset,
+                                   absl::Span<const char> value) const {
   if (!Exists()) {
     return absl::NotFoundError(
         absl::StrFormat("File not found at path: %s", path_));
@@ -254,13 +249,9 @@ absl::Status ApifsFile::SeekAndWrite(uint64_t offset,
         absl::StrFormat("Unable to open the file at path: %s", path_));
   }
   auto fd_closer = LambdaCleanup([fd]() { close(fd); });
-  if (lseek64(fd, offset, SEEK_SET) == static_cast<off_t>(-1)) {
-    return absl::NotFoundError(absl::StrFormat(
-        "Unable to seek to msr: %#x in file %s", offset, path_));
-  }
   // Write data.
   size_t size = value.size();
-  int wlen = write(fd, value.data(), size);
+  int wlen = pwrite(fd, value.data(), size, offset);
   if (wlen != size) {
     return absl::NotFoundError(
         absl::StrFormat("Failed to write %d bytes to msr %s", size, path_));

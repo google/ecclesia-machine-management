@@ -106,38 +106,38 @@ SysPciRegion::SysPciRegion(absl::string_view sys_pci_devices_dir,
 
 absl::StatusOr<uint8_t> SysPciRegion::Read8(OffsetType offset) const {
   std::array<char, sizeof(uint8_t)> res;
-  ECCLESIA_RETURN_IF_ERROR(apifs_.SeekAndRead(offset, absl::MakeSpan(res)));
+  ECCLESIA_RETURN_IF_ERROR(apifs_.ReadRange(offset, absl::MakeSpan(res)));
   return LittleEndian::Load8(res.data());
 }
 
 absl::Status SysPciRegion::Write8(OffsetType offset, uint8_t data) {
   char buffer[1];
   LittleEndian::Store8(data, buffer);
-  return apifs_.SeekAndWrite(offset, absl::MakeConstSpan(buffer));
+  return apifs_.WriteRange(offset, absl::MakeConstSpan(buffer));
 }
 
 absl::StatusOr<uint16_t> SysPciRegion::Read16(OffsetType offset) const {
   std::array<char, sizeof(uint16_t)> res;
-  ECCLESIA_RETURN_IF_ERROR(apifs_.SeekAndRead(offset, absl::MakeSpan(res)));
+  ECCLESIA_RETURN_IF_ERROR(apifs_.ReadRange(offset, absl::MakeSpan(res)));
   return LittleEndian::Load16(res.data());
 }
 
 absl::Status SysPciRegion::Write16(OffsetType offset, uint16_t data) {
   char buffer[2];
   LittleEndian::Store16(data, buffer);
-  return apifs_.SeekAndWrite(offset, absl::MakeConstSpan(buffer));
+  return apifs_.WriteRange(offset, absl::MakeConstSpan(buffer));
 }
 
 absl::StatusOr<uint32_t> SysPciRegion::Read32(OffsetType offset) const {
   std::array<char, sizeof(uint32_t)> res;
-  ECCLESIA_RETURN_IF_ERROR(apifs_.SeekAndRead(offset, absl::MakeSpan(res)));
+  ECCLESIA_RETURN_IF_ERROR(apifs_.ReadRange(offset, absl::MakeSpan(res)));
   return LittleEndian::Load32(res.data());
 }
 
 absl::Status SysPciRegion::Write32(OffsetType offset, uint32_t data) {
   char buffer[4];
   LittleEndian::Store32(data, buffer);
-  return apifs_.SeekAndWrite(offset, absl::MakeConstSpan(buffer));
+  return apifs_.WriteRange(offset, absl::MakeConstSpan(buffer));
 }
 
 SysfsPciResources::SysfsPciResources(PciLocation loc)

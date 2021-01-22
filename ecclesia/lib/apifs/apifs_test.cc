@@ -220,49 +220,47 @@ class MsrTest : public ::testing::Test {
   ApifsFile msr_;
 };
 
-TEST_F(MsrTest, TestSeekAndRead) {
+TEST_F(MsrTest, TestReadRange) {
   std::vector<char> out_msr_data(8);
   std::vector<char> expected(8, 0xa);
 
-  EXPECT_TRUE(msr_.SeekAndRead(2, absl::MakeSpan(out_msr_data)).ok());
+  EXPECT_TRUE(msr_.ReadRange(2, absl::MakeSpan(out_msr_data)).ok());
   EXPECT_EQ(expected, out_msr_data);
 }
 
-TEST_F(MsrTest, TestSeekAndWrite) {
+TEST_F(MsrTest, TestWriteRange) {
   std::vector<char> out_msr_data(8);
   std::vector<char> expected(8, 0xa);
 
-  EXPECT_TRUE(msr_.SeekAndRead(2, absl::MakeSpan(out_msr_data)).ok());
+  EXPECT_TRUE(msr_.ReadRange(2, absl::MakeSpan(out_msr_data)).ok());
   EXPECT_EQ(expected, out_msr_data);
 
   std::vector<char> expected_msr_data{0xD, 0xE, 0xA, 0xD, 0xB, 0xE, 0xE, 0xF};
-  EXPECT_TRUE(
-      msr_.SeekAndWrite(1, absl::MakeConstSpan(expected_msr_data)).ok());
-  EXPECT_TRUE(msr_.SeekAndRead(1, absl::MakeSpan(out_msr_data)).ok());
+  EXPECT_TRUE(msr_.WriteRange(1, absl::MakeConstSpan(expected_msr_data)).ok());
+  EXPECT_TRUE(msr_.ReadRange(1, absl::MakeSpan(out_msr_data)).ok());
   EXPECT_EQ(expected_msr_data, out_msr_data);
 }
 
 TEST(MsrTestConstruct, TestMsrNotExist) {
   ApifsFile msr_default;
   std::vector<char> out_msr_data(8);
-  EXPECT_FALSE(msr_default.SeekAndRead(2, absl::MakeSpan(out_msr_data)).ok());
+  EXPECT_FALSE(msr_default.ReadRange(2, absl::MakeSpan(out_msr_data)).ok());
 
   ApifsFile msr_non_exist(GetTestTempdirPath("dev/cpu/400/msr"));
-  EXPECT_FALSE(msr_non_exist.SeekAndRead(2, absl::MakeSpan(out_msr_data)).ok());
+  EXPECT_FALSE(msr_non_exist.ReadRange(2, absl::MakeSpan(out_msr_data)).ok());
 
   std::vector<char> msr_data{0xD, 0xE, 0xA, 0xD, 0xB, 0xE, 0xE, 0xF};
-  EXPECT_FALSE(
-      msr_non_exist.SeekAndWrite(1, absl::MakeConstSpan(msr_data)).ok());
+  EXPECT_FALSE(msr_non_exist.WriteRange(1, absl::MakeConstSpan(msr_data)).ok());
 }
 
-TEST_F(MsrTest, TestSeekFail) {
+TEST_F(MsrTest, TestReadBadOffsetFail) {
   std::vector<char> out_msr_data(8);
-  EXPECT_FALSE(msr_.SeekAndRead(20, absl::MakeSpan(out_msr_data)).ok());
+  EXPECT_FALSE(msr_.ReadRange(20, absl::MakeSpan(out_msr_data)).ok());
 }
 
-TEST_F(MsrTest, TestSeekAndReadFail) {
+TEST_F(MsrTest, TestReadRangeFail) {
   std::vector<char> out_msr_data(8);
-  EXPECT_FALSE(msr_.SeekAndRead(5, absl::MakeSpan(out_msr_data)).ok());
+  EXPECT_FALSE(msr_.ReadRange(5, absl::MakeSpan(out_msr_data)).ok());
 }
 
 }  // namespace

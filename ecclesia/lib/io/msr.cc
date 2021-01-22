@@ -36,14 +36,14 @@ bool Msr::Exists() const { return msr_file_.Exists(); }
 
 absl::StatusOr<uint64_t> Msr::Read(uint64_t reg) const {
   std::array<char, sizeof(uint64_t)> res;
-  ECCLESIA_RETURN_IF_ERROR(msr_file_.SeekAndRead(reg, absl::MakeSpan(res)));
+  ECCLESIA_RETURN_IF_ERROR(msr_file_.ReadRange(reg, absl::MakeSpan(res)));
   return LittleEndian::Load64(res.data());
 }
 
 absl::Status Msr::Write(uint64_t reg, uint64_t value) const {
   char buffer[8];
   LittleEndian::Store64(value, buffer);
-  return msr_file_.SeekAndWrite(reg, absl::MakeConstSpan(buffer));
+  return msr_file_.WriteRange(reg, absl::MakeConstSpan(buffer));
 }
 
 }  // namespace ecclesia
