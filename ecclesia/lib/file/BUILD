@@ -118,6 +118,7 @@ cc_test(
     srcs = ["lockfile_test.cc"],
     deps = [
         ":lockfile",
+        ":path",
         ":test_filesystem",
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/status:test_macros",

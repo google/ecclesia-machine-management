@@ -23,7 +23,9 @@
 #include "gtest/gtest.h"
 #include "absl/functional/bind_front.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 #include "absl/synchronization/notification.h"
+#include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/status/test_macros.h"
@@ -61,14 +63,22 @@ class LockThread {
   std::thread thread_;
 };
 
+// Sets up a temporary directory in the test directory to store lock files
+// created during each test.
 class LockFileTest : public ::testing::Test {
  protected:
-  LockFileTest() : lock_path_(GetTestTempdirPath("lockfile")) {}
-  const std::string lock_path_;
+  LockFileTest() : test_fs_(GetTestTempdirPath()) {}
+
+  static std::string LockPath(absl::string_view filename) {
+    return JoinFilePaths(GetTestTempdirPath(), filename);
+  }
+
+  TestFilesystem test_fs_;
 };
 
 TEST_F(LockFileTest, TestSharedLockfileInstance) {
-  ECCLESIA_ASSIGN_OR_FAIL(auto lock_file, LockFile::Create(lock_path_));
+  ECCLESIA_ASSIGN_OR_FAIL(auto lock_file,
+                          LockFile::Create(LockPath("shared.lock")));
   absl::Notification lock_held;
   absl::Notification end_thread;
 
@@ -84,8 +94,12 @@ TEST_F(LockFileTest, TestSharedLockfileInstance) {
 }
 
 TEST_F(LockFileTest, TestSeparateLockfileInstance) {
-  ECCLESIA_ASSIGN_OR_FAIL(auto lock_for_thread, LockFile::Create(lock_path_));
-  ECCLESIA_ASSIGN_OR_FAIL(auto lock_for_test, LockFile::Create(lock_path_));
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto lock_for_thread,
+      LockFile::Create(LockPath("separate_instance_test.lock")));
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto lock_for_test,
+      LockFile::Create(LockPath("separate_instance_test.lock")));
   absl::Notification lock_held;
   absl::Notification end_thread;
 
@@ -105,9 +119,10 @@ TEST_F(LockFileTest, TestSeparateLockfileInstance) {
 }
 
 TEST_F(LockFileTest, TestSeparateLockfiles) {
-  ECCLESIA_ASSIGN_OR_FAIL(auto lock_for_thread, LockFile::Create(lock_path_));
-  ECCLESIA_ASSIGN_OR_FAIL(auto lock_for_test, LockFile::Create(absl::StrCat(
-                                                  lock_path_, ".second")));
+  ECCLESIA_ASSIGN_OR_FAIL(auto lock_for_thread,
+                          LockFile::Create(LockPath("file1.lock")));
+  ECCLESIA_ASSIGN_OR_FAIL(auto lock_for_test,
+                          LockFile::Create(LockPath("file2.lock")));
   absl::Notification lock_held;
   absl::Notification end_thread;
 
@@ -128,20 +143,23 @@ TEST_F(LockFileTest, TestSeparateLockfiles) {
 //
 
 TEST_F(LockFileTest, ReadEmptyFileTest) {
-  ECCLESIA_ASSIGN_OR_FAIL(auto lock_file, LockFile::Create(lock_path_));
+  ECCLESIA_ASSIGN_OR_FAIL(auto lock_file,
+                          LockFile::Create(LockPath("emptyfile.lock")));
   ECCLESIA_ASSIGN_OR_FAIL(auto locked_file, lock_file->TryLock());
   EXPECT_THAT(locked_file.Read(), IsOkAndHolds(""));
 }
 
 TEST_F(LockFileTest, WrittenFileCanBeReadBackTest) {
-  ECCLESIA_ASSIGN_OR_FAIL(auto lock_file, LockFile::Create(lock_path_));
+  ECCLESIA_ASSIGN_OR_FAIL(auto lock_file,
+                          LockFile::Create(LockPath("read_write.lock")));
   ECCLESIA_ASSIGN_OR_FAIL(auto locked_file, lock_file->TryLock());
   EXPECT_THAT(locked_file.Write("device-id: abcd"), IsOk());
   EXPECT_THAT(locked_file.Read(), IsOkAndHolds("device-id: abcd"));
 }
 
 TEST_F(LockFileTest, MultipleWritesGetLastWriteTest) {
-  ECCLESIA_ASSIGN_OR_FAIL(auto lock_file, LockFile::Create(lock_path_));
+  ECCLESIA_ASSIGN_OR_FAIL(auto lock_file,
+                          LockFile::Create(LockPath("multiple_writes.lock")));
   ECCLESIA_ASSIGN_OR_FAIL(auto locked_file, lock_file->TryLock());
   EXPECT_THAT(locked_file.Write("device-id: abcd"), IsOk());
   EXPECT_THAT(locked_file.Write("device-id: pqrs"), IsOk());
@@ -151,20 +169,23 @@ TEST_F(LockFileTest, MultipleWritesGetLastWriteTest) {
 TEST_F(LockFileTest, WritesUsingTwoDifferentLocksTest) {
   {
     // Write data to the lock file
-    ECCLESIA_ASSIGN_OR_FAIL(auto lock_file, LockFile::Create(lock_path_));
+    ECCLESIA_ASSIGN_OR_FAIL(auto lock_file,
+                            LockFile::Create(LockPath("diff_write.lock")));
     ECCLESIA_ASSIGN_OR_FAIL(auto locked_file, lock_file->TryLock());
     EXPECT_THAT(locked_file.Write("device-id: abcd"), IsOk());
   }
   {
     // Ensure that lock file is unlocked. Lock it again and read data back in.
-    ECCLESIA_ASSIGN_OR_FAIL(auto lock_file, LockFile::Create(lock_path_));
+    ECCLESIA_ASSIGN_OR_FAIL(auto lock_file,
+                            LockFile::Create(LockPath("diff_write.lock")));
     ECCLESIA_ASSIGN_OR_FAIL(auto locked_file, lock_file->TryLock());
     EXPECT_THAT(locked_file.Read(), IsOkAndHolds("device-id: abcd"));
   }
 }
 
 TEST_F(LockFileTest, ClearTest) {
-  ECCLESIA_ASSIGN_OR_FAIL(auto lock_file, LockFile::Create(lock_path_));
+  ECCLESIA_ASSIGN_OR_FAIL(auto lock_file,
+                          LockFile::Create(LockPath("write_clear.lock")));
   ECCLESIA_ASSIGN_OR_FAIL(auto locked_file, lock_file->TryLock());
   EXPECT_THAT(locked_file.Write("device-id: abcd"), IsOk());
   EXPECT_THAT(locked_file.Clear(), IsOk());
