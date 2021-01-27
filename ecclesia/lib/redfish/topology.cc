@@ -284,7 +284,7 @@ absl::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
   if (attached_to && !attached_to->Empty()) {
     for (auto upstream_variant : *attached_to) {
       if (auto upstream = upstream_variant.AsObject();
-          upstream->GetUri().has_value()) {
+          upstream && upstream->GetUri().has_value()) {
         assembly.upstream_odata_ids.push_back(upstream->GetUri().value());
       }
     }
@@ -456,9 +456,12 @@ NodeTopology CreateNodeTopologyFromAssemblies(
   for (const auto &[node, attached_to] : node_to_attachedto_odata_ids) {
     auto &attached_to_nodes = node_topology.node_to_parents[node];
     for (absl::string_view odata_id : attached_to) {
-      Node *attached_to_node = odata_id_to_node.at(odata_id);
-      attached_to_nodes.push_back(attached_to_node);
-      node_topology.node_to_children[attached_to_node].push_back(node);
+      auto attached_to_node = odata_id_to_node.find(odata_id);
+      if (attached_to_node != odata_id_to_node.end()) {
+        attached_to_nodes.push_back(attached_to_node->second);
+        node_topology.node_to_children[attached_to_node->second].push_back(
+            node);
+      }
     }
   }
 
