@@ -125,7 +125,7 @@ TEST_F(ServiceRootTest, QueryServiceRoot) {
   EXPECT_EQ(expected, actual);
 }
 
-TEST_F(ServiceRootTest, QueryServiceRootRedirect) {
+TEST_F(ServiceRootTest, QueryServiceRootEquivalentUri) {
   // Read the expected json object
   Json::Value expected;
   ReadJsonFromFile(GetTestDataDependencyPath(kFileName), &expected);
@@ -136,7 +136,7 @@ TEST_F(ServiceRootTest, QueryServiceRootRedirect) {
                                   libredfish::RedfishInterface::kTrusted);
 
   // Perform an http get request on the service root resource without the
-  // trailing forward slash and expect a redirect
+  // trailing forward slash and expect the URI to be treated as equivalent.
   libredfish::RedfishVariant response =
       redfish_intf->GetUri(absl::StripSuffix(kServiceRootUri, "/"));
 
@@ -145,31 +145,6 @@ TEST_F(ServiceRootTest, QueryServiceRootRedirect) {
   Json::Value actual;
   ASSERT_TRUE(reader.parse(response.DebugString(), actual));
   EXPECT_EQ(expected, actual);
-
-  // Exercise the RequestHandler and check for redirect status
-  std::unique_ptr<tensorflow::serving::net_http::HTTPClientInterface>
-      connection = tensorflow::serving::net_http::CreateEvHTTPConnection(
-          "localhost", port_);
-
-  // For Request without trailing forward slash, redirect expected
-  tensorflow::serving::net_http::ClientRequest request = {
-      "/redfish/v1", "GET", {}, ""};
-  tensorflow::serving::net_http::ClientResponse client_response = {};
-
-  EXPECT_TRUE(connection->BlockingSendRequest(request, &client_response));
-  EXPECT_EQ(client_response.status,
-            tensorflow::serving::net_http::HTTPStatusCode::MOVED_PERM);
-
-  std::string location_header_contents;
-
-  for (const auto &keyval : client_response.headers) {
-    if (keyval.first == "Location") {
-      location_header_contents = keyval.second;
-    }
-  }
-
-  // Check that location info in response header matches correct service root.
-  EXPECT_EQ(location_header_contents, kServiceRootUri);
 }
 
 }  // namespace

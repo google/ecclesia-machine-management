@@ -39,33 +39,22 @@ class ServiceRootResource : public Resource {
 
   // Register a request handler to route requests corresponding to uri_.
   // This treats the URI with a trailing forward slash as equivalent to a
-  // request without a trailing forward slash.
+  // URI without a trailing forward slash.
   void RegisterRequestHandler(
       tensorflow::serving::net_http::HTTPServerInterface *server) override {
     server->RegisterRequestDispatcher(
         [this](
             tensorflow::serving::net_http::ServerRequestInterface *http_request)
             -> tensorflow::serving::net_http::RequestHandler {
-          if (http_request->uri_path() == this->Uri()) {
+          if (http_request->uri_path() == this->Uri() ||
+              http_request->uri_path() == absl::StripSuffix(this->Uri(), "/")) {
             return [this](tensorflow::serving::net_http::ServerRequestInterface
                               *req) { return this->RequestHandler(req); };
-          } else if (http_request->uri_path() ==
-                     absl::StripSuffix(this->Uri(), "/")) {
-            return [this](tensorflow::serving::net_http::ServerRequestInterface
-                              *req) { return this->RedirectHandler(req); };
           } else {
             return nullptr;
           }
         },
         tensorflow::serving::net_http::RequestHandlerOptions());
-  }
-
- private:
-  void RedirectHandler(
-      tensorflow::serving::net_http::ServerRequestInterface *req) {
-    req->OverwriteResponseHeader("Location", this->Uri());
-    req->ReplyWithStatus(
-        tensorflow::serving::net_http::HTTPStatusCode::MOVED_PERM);
   }
 };
 
