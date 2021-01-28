@@ -1,0 +1,11 @@
+--- third_party/libredfish/src/service.c	2020-11-14 02:25:37.000000000 +0000
++++ third_party/libredfish/src/service.c.new	2021-01-28 17:56:36.000000000 +0000
+@@ -37,7 +37,7 @@
+ /** Default asynchronous options for Redfish calls **/
+ redfishAsyncOptions gDefaultOptions = {
+     .accept = REDFISH_ACCEPT_JSON,
+-    .timeout = 20
++    .timeout = 3L
+ };
+ 
+ static void handleHostnameToRedfishService(const char* host, redfishService* service);
