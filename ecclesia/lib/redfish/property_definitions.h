@@ -68,6 +68,7 @@ inline constexpr char kRfOemPropertyComponents[] = "Components";
 inline constexpr char kRfOemPropertyMemoryErrorCounts[] = "MemoryErrorCounts";
 inline constexpr char kRfOemPropertyProcessorErrorCounts[] =
     "ProcessorErrorCounts";
+inline constexpr char kRfPropertyProcessorId[] = "ProcessorId";
 inline constexpr char kRfOemPropertySmartAttributes[] = "SMARTAttributes";
 inline constexpr char kRfOemPropertyBootNumber[] = "BootNumber";
 
@@ -134,6 +135,7 @@ DEFINE_REDFISH_PROPERTY(PropertyPcieType, std::string, "PCIeType");
 DEFINE_REDFISH_PROPERTY(PropertyMaxPcieType, std::string, "MaxPCIeType");
 DEFINE_REDFISH_PROPERTY(PropertyLanesInUse, int, "LanesInUse");
 DEFINE_REDFISH_PROPERTY(PropertyMaxLanes, int, "MaxLanes");
+DEFINE_REDFISH_PROPERTY(PropertyProcessorIdStep, std::string, "Step");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
