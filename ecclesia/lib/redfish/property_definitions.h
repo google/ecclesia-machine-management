@@ -58,6 +58,10 @@ inline constexpr char kRfPropertyPcieDevice[] = "PCIeDevice";
 inline constexpr char kRfPropertyPcieDevices[] = "PCIeDevices";
 inline constexpr char kRfPropertyPcieInterface[] = "PCIeInterface";
 inline constexpr char kRfPropertyPcieFunctions[] = "PCIeFunctions";
+inline constexpr char kRfPropertyUpstreamPcieFunction[] =
+    "UpstreamPCIeFunction";
+inline constexpr char kRfPropertyDownstreamPcieFunctions[] =
+    "DownstreamPCIeFunctions";
 inline constexpr char kRfPropertyPciLocation[] = "PciLocation";
 inline constexpr char kRfPropertyId[] = "Id";
 

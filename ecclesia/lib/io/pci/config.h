@@ -93,6 +93,13 @@ enum class PcieLinkWidth : uint8_t {
 // For invalid speed, it will return kSpeedUnknown.
 PcieLinkSpeed NumToPcieLinkSpeed(double speed_gts);
 
+// A helper function to convert the pcie link speed generation(in string format)
+// to pcie link speed. For invalid generation, it would return kSpeedUnknown.
+PcieLinkSpeed PcieGenToLinkSpeed(absl::string_view gen);
+
+// A helper function to convert the PcieLinkSpeedType to speed in unit of MT/s.
+int PcieLinkSpeedToMts(PcieLinkSpeed speed);
+
 // Helper functions to convert the width (number of lanes) to/from PcieLinkWidth
 // enum. Invalid or width-0 link will be mapped to PcieLinkWidth::kUnknown.
 PcieLinkWidth NumToPcieLinkWidth(int width);

@@ -18,8 +18,10 @@
 
 #include <cstdint>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "ecclesia/lib/codec/bits.h"
 #include "ecclesia/lib/io/pci/location.h"
@@ -56,6 +58,40 @@ PcieLinkSpeed NumToPcieLinkSpeed(double speed_gts) {
       return PcieLinkSpeed::kGen5Speed32GT;
     default:
       return PcieLinkSpeed::kUnknown;
+  }
+}
+
+PcieLinkSpeed PcieGenToLinkSpeed(absl::string_view gen) {
+  static const absl::flat_hash_map<absl::string_view, PcieLinkSpeed>
+      kGenToSpeedMap = {{"Gen1", PcieLinkSpeed::kGen1Speed2500MT},
+                        {"Gen2", PcieLinkSpeed::kGen2Speed5GT},
+                        {"Gen3", PcieLinkSpeed::kGen3Speed8GT},
+                        {"Gen4", PcieLinkSpeed::kGen4Speed16GT},
+                        {"Gen5", PcieLinkSpeed::kGen5Speed32GT}};
+
+  auto itr = kGenToSpeedMap.find(gen);
+  if (itr != kGenToSpeedMap.end()) {
+    return itr->second;
+  }
+
+  return PcieLinkSpeed::kUnknown;
+}
+
+int PcieLinkSpeedToMts(PcieLinkSpeed speed) {
+  switch (speed) {
+    case PcieLinkSpeed::kGen1Speed2500MT:
+      return 2500;
+    case PcieLinkSpeed::kGen2Speed5GT:
+      return 5000;
+    case PcieLinkSpeed::kGen3Speed8GT:
+      return 8000;
+    case PcieLinkSpeed::kGen4Speed16GT:
+      return 16000;
+    case PcieLinkSpeed::kGen5Speed32GT:
+      return 32000;
+    case PcieLinkSpeed::kUnknown:
+    default:
+      return 0;
   }
 }
 
