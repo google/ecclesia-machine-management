@@ -40,6 +40,7 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "google/protobuf/io/tokenizer.h"
@@ -65,6 +66,7 @@ class ProtoMatcherBase {
  public:
   virtual ~ProtoMatcherBase() = default;
 
+  // Base matcher, that matches against any protobuf message type.
   bool MatchAndExplain(const ::google::protobuf::Message &arg,
                        ::testing::MatchResultListener *listener) const {
     if (!arg.IsInitialized()) {
@@ -91,6 +93,28 @@ class ProtoMatcherBase {
       }
     }
     return match;
+  }
+
+  // Special overload of the matcher that also allows us to match against
+  // pointers to protobufs. Written as a somewhat complex template that can
+  // match against any pointer-like object (e.g. smart pointers).
+  template <
+      typename T,
+      std::enable_if_t<
+          // Check that the type can be dereferenced to get a Message.
+          std::is_base_of_v<
+              ::google::protobuf::Message,
+              std::remove_reference_t<decltype(*std::declval<T>())>> &&
+              // Check that the type can be compared against null.
+              std::is_same_v<decltype(std::declval<T>() == nullptr), bool>,
+          int> = 0>
+  bool MatchAndExplain(const T &arg,
+                       ::testing::MatchResultListener *listener) const {
+    if (arg == nullptr) {
+      *listener << "which is null";
+      return false;
+    }
+    return MatchAndExplain(*arg, listener);
   }
 
   void DescribeTo(std::ostream *os) const {
