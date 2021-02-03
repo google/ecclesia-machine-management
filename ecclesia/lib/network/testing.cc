@@ -18,6 +18,7 @@
 
 #include <resolv.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #include "ecclesia/lib/cleanup/cleanup.h"
 #include "ecclesia/lib/logging/globals.h"
