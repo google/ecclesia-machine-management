@@ -16,6 +16,8 @@
 
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
 
+#include <sys/sysinfo.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -245,6 +247,23 @@ void SystemModel::LoadBootNumberFromElogReader(ElogReader &elog_reader) {
 }
 
 absl::optional<uint32_t> SystemModel::GetBootNumber() { return boot_number_; }
+
+absl::StatusOr<int64_t> SystemModel::GetSystemUptimeSeconds() const {
+  struct sysinfo sys_info;
+  if (sysinfo(&sys_info) != 0) {
+    return absl::InternalError("Failed to get sysinfo");
+  }
+  return static_cast<int64_t>(sys_info.uptime);
+}
+
+absl::StatusOr<uint64_t> SystemModel::GetSystemTotalMemoryBytes() const {
+  struct sysinfo sys_info;
+  if (sysinfo(&sys_info) != 0) {
+    return absl::InternalError("Failed to get sysinfo");
+  }
+  return static_cast<uint64_t>(sys_info.totalram) *
+         static_cast<uint32_t>(sys_info.mem_unit);
+}
 
 SystemModel::SystemModel(SysmodelParams params)
     : smbios_reader_(absl::make_unique<SmbiosReader>(

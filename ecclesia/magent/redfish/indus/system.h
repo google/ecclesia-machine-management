@@ -23,9 +23,9 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"
+#include "ecclesia/magent/redfish/core/pcie_device_collection.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
-#include "ecclesia/magent/redfish/core/pcie_device_collection.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
 #include "json/value.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
@@ -60,12 +60,23 @@ class ComputerSystem : public Resource {
     Json::Value pcie_devices = GetPcieDeviceUrlsAsJsonArray(system_model_);
     json[kPCIeDevices] = pcie_devices;
 
+    auto *oem = GetJsonObject(&json, kOem);
+    auto *google = GetJsonObject(oem, kGoogle);
     // Read boot number from the System Model and return if available
     auto maybe_boot_number = system_model_->GetBootNumber();
     if (maybe_boot_number.has_value()) {
-      auto *oem = GetJsonObject(&json, kOem);
-      auto *google = GetJsonObject(oem, kGoogle);
       (*google)[kBootNumber] = maybe_boot_number.value();
+    }
+    auto sys_uptime = system_model_->GetSystemUptimeSeconds();
+    if (sys_uptime.ok()) {
+      (*google)[kSystemUptime] = sys_uptime.value();
+    }
+
+    auto total_memory_size = system_model_->GetSystemTotalMemoryBytes();
+    if (total_memory_size.ok()) {
+      auto *memory_summary = GetJsonObject(&json, kMemorySummary);
+      (*memory_summary)[kTotalSystemMemoryGiB] =
+          total_memory_size.value() >> 30;
     }
 
     JSONResponseOK(json, req);

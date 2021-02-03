@@ -6,10 +6,14 @@
     "Memory": {
         "@odata.id": "/redfish/v1/Systems/system/Memory"
     },
+    "MemorySummary" : {
+        "TotalSystemMemoryGiB" : 376
+    },
     "Name": "Indus",
     "Oem" : {
         "Google" : {
-           "BootNumber" : 20585
+           "BootNumber" : 20585,
+           "SystemUptime" : 80905
         }
      },
     "Processors": {

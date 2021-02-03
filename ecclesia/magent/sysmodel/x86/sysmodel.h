@@ -18,6 +18,7 @@
 #define ECCLESIA_MAGENT_SYSMODEL_X86_SYSMODEL_H_
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
@@ -144,6 +145,12 @@ class SystemModel {
   std::vector<PciLocation> GetPcieDeviceLocations() const;
 
   absl::optional<uint32_t> GetBootNumber();
+
+  // Returns the system uptime in unit of seconds.
+  absl::StatusOr<int64_t> GetSystemUptimeSeconds() const;
+
+  // Returns the system total memory size in unit of bytes.
+  absl::StatusOr<uint64_t> GetSystemTotalMemoryBytes() const;
 
  private:
   // Platform interfaces

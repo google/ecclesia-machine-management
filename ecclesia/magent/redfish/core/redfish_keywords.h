@@ -171,6 +171,7 @@ inline constexpr char kAssociatedWith[] = "AssociatedWith";
 inline constexpr char kAttachedTo[] = "AttachedTo";
 inline constexpr char kDevpath[] = "Devpath";
 inline constexpr char kBootNumber[] = "BootNumber";
+inline constexpr char kSystemUptime[] = "SystemUptime";
 inline constexpr char kUpstreamPCIeFunction[] = "UpstreamPCIeFunction";
 inline constexpr char kDownsteamPCIeFunctions[] = "DownsteamPCIeFunctions";
 inline constexpr char kPciLocation[] = "PciLocation";

@@ -134,5 +134,41 @@ TEST(SystemModelTest, GetCorrectNvmePlugin) {
   EXPECT_FALSE(maybe_nvme_plugin.has_value());
 }
 
+TEST(SystemModelTest, GetSystemUptime) {
+  SysmodelParams params = {
+      .field_translator = nullptr,
+      .smbios_entry_point_path = "",
+      .smbios_tables_path = "",
+      .mced_socket_path = "",
+      .sysfs_mem_file_path = "",
+      .fru_factories = absl::Span<SysmodelFruReaderFactory>(),
+      .dimm_thermal_params = absl::Span<PciSensorParams>(),
+      .cpu_margin_params = absl::Span<CpuMarginSensorParams>(),
+      .nvme_discover_getter = nullptr};
+  SystemModel sysmodel(std::move(params));
+
+  auto system_uptime = sysmodel.GetSystemUptimeSeconds();
+  EXPECT_TRUE(system_uptime.ok());
+  EXPECT_GE(*system_uptime, 0);
+}
+
+TEST(SystemModelTest, GetSystemTotalMemory) {
+  SysmodelParams params = {
+      .field_translator = nullptr,
+      .smbios_entry_point_path = "",
+      .smbios_tables_path = "",
+      .mced_socket_path = "",
+      .sysfs_mem_file_path = "",
+      .fru_factories = absl::Span<SysmodelFruReaderFactory>(),
+      .dimm_thermal_params = absl::Span<PciSensorParams>(),
+      .cpu_margin_params = absl::Span<CpuMarginSensorParams>(),
+      .nvme_discover_getter = nullptr};
+  SystemModel sysmodel(std::move(params));
+
+  auto total_memory_size = sysmodel.GetSystemTotalMemoryBytes();
+  EXPECT_TRUE(total_memory_size.ok());
+  EXPECT_GE(*total_memory_size, 0);
+}
+
 }  // namespace
 }  // namespace ecclesia
