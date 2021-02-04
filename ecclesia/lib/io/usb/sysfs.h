@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_LIB_IO_USB_SYSFS_H_
-#define ECCLESIA_MAGENT_LIB_IO_USB_SYSFS_H_
+#ifndef ECCLESIA_LIB_IO_USB_SYSFS_H_
+#define ECCLESIA_LIB_IO_USB_SYSFS_H_
 
 #include <memory>
 #include <string>
@@ -23,7 +23,7 @@
 
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/apifs/apifs.h"
-#include "ecclesia/magent/lib/io/usb.h"
+#include "ecclesia/lib/io/usb/usb.h"
 
 namespace ecclesia {
 
@@ -71,4 +71,4 @@ class SysfsUsbDevice : public UsbDevice {
 };
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_LIB_IO_USB_SYSFS_H_
+#endif  // ECCLESIA_LIB_IO_USB_SYSFS_H_

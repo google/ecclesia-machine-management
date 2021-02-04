@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/magent/lib/io/usb.h"
+#include "ecclesia/lib/io/usb/usb.h"
 
 #include <algorithm>
 #include <array>

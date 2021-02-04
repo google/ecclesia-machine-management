@@ -21,7 +21,7 @@
 #include <vector>
 
 #include "absl/types/optional.h"
-#include "ecclesia/magent/lib/io/usb.h"
+#include "ecclesia/lib/io/usb/usb.h"
 
 namespace ecclesia {
 

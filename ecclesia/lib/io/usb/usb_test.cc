@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include "ecclesia/magent/lib/io/usb.h"
+#include "ecclesia/lib/io/usb/usb.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/types/optional.h"
-#include "ecclesia/magent/lib/io/usb_mock.h"
+#include "ecclesia/lib/io/usb/mocks.h"
 
 namespace ecclesia {
 namespace {

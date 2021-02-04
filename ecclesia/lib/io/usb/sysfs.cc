@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/magent/lib/io/usb_sysfs.h"
+#include "ecclesia/lib/io/usb/sysfs.h"
 
 #include <cstddef>
 #include <memory>
@@ -32,8 +32,8 @@
 #include "absl/types/optional.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/file/path.h"
+#include "ecclesia/lib/io/usb/usb.h"
 #include "ecclesia/lib/status/macros.h"
-#include "ecclesia/magent/lib/io/usb.h"
 #include "re2/re2.h"
 
 namespace ecclesia {

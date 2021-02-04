@@ -16,8 +16,8 @@
 
 // An interface for discovering USB devices.
 
-#ifndef ECCLESIA_MAGENT_LIB_IO_USB_H_
-#define ECCLESIA_MAGENT_LIB_IO_USB_H_
+#ifndef ECCLESIA_LIB_IO_USB_USB_H_
+#define ECCLESIA_LIB_IO_USB_USB_H_
 
 #include <array>
 #include <cstddef>
@@ -217,4 +217,4 @@ absl::StatusOr<UsbLocation> FindUsbDeviceWithSignature(
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_LIB_IO_USB_H_
+#endif  // ECCLESIA_LIB_IO_USB_USB_H_

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_LIB_IO_USB_IDS_H_
-#define ECCLESIA_MAGENT_LIB_IO_USB_IDS_H_
+#ifndef ECCLESIA_LIB_IO_USB_IDS_H_
+#define ECCLESIA_LIB_IO_USB_IDS_H_
 
 #include <cstdint>
 
-#include "ecclesia/magent/lib/io/usb.h"
+#include "ecclesia/lib/io/usb/usb.h"
 
 namespace ecclesia {
 
@@ -31,4 +31,4 @@ inline constexpr UsbSignature kUsbSignatureSleipnirBmc = {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_LIB_IO_USB_IDS_H_
+#endif  // ECCLESIA_LIB_IO_USB_IDS_H_

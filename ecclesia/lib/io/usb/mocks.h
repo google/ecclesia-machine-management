@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_LIB_IO_USB_MOCK_H_
-#define ECCLESIA_MAGENT_LIB_IO_USB_MOCK_H_
+#ifndef ECCLESIA_LIB_IO_USB_MOCKS_H_
+#define ECCLESIA_LIB_IO_USB_MOCKS_H_
 
 #include <memory>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "absl/status/statusor.h"
-#include "ecclesia/magent/lib/io/usb.h"
+#include "ecclesia/lib/io/usb/usb.h"
 
 namespace ecclesia {
 
@@ -51,4 +51,4 @@ class MockUsbDevice : public UsbDevice {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_LIB_IO_USB_MOCK_H_
+#endif  // ECCLESIA_LIB_IO_USB_MOCKS_H_

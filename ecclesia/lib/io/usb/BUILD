@@ -1,18 +1,10 @@
-# Description:
-#   Various libraries for accessing low-level buses and devices present
-#   on platforms hardware.
-
 licenses(["notice"])
 
 cc_library(
     name = "usb",
-    srcs = [
-        "usb.cc",
-    ],
-    hdrs = [
-        "usb.h",
-    ],
-    visibility = ["//ecclesia:magent_library_users"],
+    srcs = ["usb.cc"],
+    hdrs = ["usb.h"],
+    visibility = ["//ecclesia:library_users"],
     deps = [
         "//ecclesia/lib/logging",
         "//ecclesia/lib/status:macros",
@@ -26,15 +18,44 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "usb_test",
+    size = "small",
+    srcs = ["usb_test.cc"],
+    deps = [
+        ":mocks",
+        ":usb",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/types:optional",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
-    name = "usb_sysfs",
-    srcs = [
-        "usb_sysfs.cc",
+    name = "mocks",
+    testonly = True,
+    hdrs = ["mocks.h"],
+    visibility = ["//ecclesia:library_users"],
+    deps = [
+        ":usb",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
     ],
-    hdrs = [
-        "usb_sysfs.h",
-    ],
-    visibility = ["//ecclesia:magent_library_users"],
+)
+
+cc_library(
+    name = "ids",
+    hdrs = ["ids.h"],
+    visibility = ["//ecclesia:library_users"],
+    deps = [":usb"],
+)
+
+cc_library(
+    name = "sysfs",
+    srcs = ["sysfs.cc"],
+    hdrs = ["sysfs.h"],
+    visibility = ["//ecclesia:library_users"],
     deps = [
         ":usb",
         "//ecclesia/lib/apifs",
@@ -49,46 +70,13 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "usb_mock",
-    testonly = True,
-    hdrs = ["usb_mock.h"],
-    visibility = ["//ecclesia:magent_library_users"],
-    deps = [
-        ":usb",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_library(
-    name = "usb_ids",
-    hdrs = ["usb_ids.h"],
-    visibility = ["//ecclesia:magent_library_users"],
-    deps = [":usb"],
-)
-
 cc_test(
-    name = "usb_test",
+    name = "sysfs_test",
     size = "small",
-    srcs = ["usb_test.cc"],
+    srcs = ["sysfs_test.cc"],
     deps = [
+        ":sysfs",
         ":usb",
-        ":usb_mock",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/types:optional",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "usb_sysfs_test",
-    size = "small",
-    srcs = ["usb_sysfs_test.cc"],
-    deps = [
-        ":usb",
-        ":usb_sysfs",
         "//ecclesia/lib/apifs",
         "//ecclesia/lib/file:test_filesystem",
         "@com_google_absl//absl/status:statusor",
