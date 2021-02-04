@@ -16,8 +16,8 @@
 
 // SMBus access routines using the kernel /dev interface.
 
-#ifndef ECCLESIA_MAGENT_LIB_IO_SMBUS_KERNEL_DEV_H_
-#define ECCLESIA_MAGENT_LIB_IO_SMBUS_KERNEL_DEV_H_
+#ifndef ECCLESIA_LIB_IO_SMBUS_KERNEL_DEV_H_
+#define ECCLESIA_LIB_IO_SMBUS_KERNEL_DEV_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -26,7 +26,7 @@
 #include "absl/status/status.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/io/ioctl.h"
-#include "ecclesia/magent/lib/io/smbus.h"
+#include "ecclesia/lib/io/smbus/smbus.h"
 
 namespace ecclesia {
 
@@ -73,4 +73,4 @@ class KernelSmbusAccess : public SmbusAccessInterface {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_LIB_IO_SMBUS_KERNEL_DEV_H_
+#endif  // ECCLESIA_LIB_IO_SMBUS_KERNEL_DEV_H_

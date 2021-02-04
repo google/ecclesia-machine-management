@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/magent/lib/io/smbus_kernel_dev.h"
+#include "ecclesia/lib/io/smbus/kernel_dev.h"
 
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
@@ -31,9 +31,9 @@
 #include "absl/types/span.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/io/ioctl.h"
+#include "ecclesia/lib/io/smbus/smbus.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/magent/lib/io/smbus.h"
 
 using ::testing::_;
 using ::testing::ElementsAre;

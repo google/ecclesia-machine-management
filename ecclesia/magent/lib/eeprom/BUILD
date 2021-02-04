@@ -12,8 +12,8 @@ cc_library(
     ],
     visibility = ["//ecclesia:library_users"],
     deps = [
+        "//ecclesia/lib/io/smbus",
         "//ecclesia/lib/logging",
-        "//ecclesia/magent/lib/io:smbus",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -29,8 +29,8 @@ cc_test(
     srcs = ["smbus_eeprom_test.cc"],
     deps = [
         ":eeprom",
-        "//ecclesia/magent/lib/io:smbus",
-        "//ecclesia/magent/lib/io:smbus_mocks",
+        "//ecclesia/lib/io/smbus",
+        "//ecclesia/lib/io/smbus:mocks",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",

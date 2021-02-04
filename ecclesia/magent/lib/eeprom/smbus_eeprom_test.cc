@@ -27,9 +27,9 @@
 #include "absl/status/status.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/io/smbus/mocks.h"
+#include "ecclesia/lib/io/smbus/smbus.h"
 #include "ecclesia/magent/lib/eeprom/eeprom.h"
-#include "ecclesia/magent/lib/io/smbus.h"
-#include "ecclesia/magent/lib/io/smbus_mocks.h"
 
 namespace ecclesia {
 namespace {

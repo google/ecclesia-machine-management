@@ -31,9 +31,9 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/io/smbus/smbus.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/magent/lib/io/smbus.h"
 
 namespace ecclesia {
 namespace {

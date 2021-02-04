@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_LIB_IO_SMBUS_MOCKS_H_
-#define ECCLESIA_MAGENT_LIB_IO_SMBUS_MOCKS_H_
+#ifndef ECCLESIA_LIB_IO_SMBUS_MOCKS_H_
+#define ECCLESIA_LIB_IO_SMBUS_MOCKS_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -24,7 +24,7 @@
 #include "gmock/gmock.h"
 #include "absl/status/status.h"
 #include "absl/types/span.h"
-#include "ecclesia/magent/lib/io/smbus.h"
+#include "ecclesia/lib/io/smbus/smbus.h"
 
 namespace ecclesia {
 
@@ -106,4 +106,4 @@ ACTION_P2(SmbusReadBlock, data, size) {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_LIB_IO_SMBUS_MOCKS_H_
+#endif  // ECCLESIA_LIB_IO_SMBUS_MOCKS_H_

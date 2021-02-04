@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/magent/lib/io/smbus.h"
+#include "ecclesia/lib/io/smbus/smbus.h"
 
 #include <string>
 #include <utility>

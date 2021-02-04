@@ -16,8 +16,8 @@
 
 // Basic read/write routines for SMBus devices.
 
-#ifndef ECCLESIA_MAGENT_LIB_IO_SMBUS_H_
-#define ECCLESIA_MAGENT_LIB_IO_SMBUS_H_
+#ifndef ECCLESIA_LIB_IO_SMBUS_SMBUS_H_
+#define ECCLESIA_LIB_IO_SMBUS_SMBUS_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -204,4 +204,4 @@ class SmbusDevice {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_LIB_IO_SMBUS_H_
+#endif  // ECCLESIA_LIB_IO_SMBUS_SMBUS_H_
