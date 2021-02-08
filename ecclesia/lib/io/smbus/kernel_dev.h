@@ -65,7 +65,7 @@ class KernelSmbusAccess : public SmbusAccessInterface {
  private:
   int OpenI2CSlaveFile(const SmbusLocation &loc) const;
   int OpenI2CMasterFile(const SmbusBus &bus) const;
-  int CheckFunctionality(int fd, uint32_t flags) const;
+  int CheckFunctionality(int fd, uint64_t flags) const;
 
   std::string dev_dir_;
   IoctlInterface *ioctl_;

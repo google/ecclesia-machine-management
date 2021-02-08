@@ -109,9 +109,9 @@ int KernelSmbusAccess::OpenI2CSlaveFile(const SmbusLocation &loc) const {
 // for the given I2C_FUNC_* flags in 'flags'
 // Returns 0 if requested functionality is supported, -EOPNOTSUPP if not
 // supported and -errno on error
-int KernelSmbusAccess::CheckFunctionality(int fd, uint32_t flags) const {
+int KernelSmbusAccess::CheckFunctionality(int fd, uint64_t flags) const {
   int ret = 0;
-  uint32_t funcs = 0;
+  uint64_t funcs = 0;
 
   int result = ioctl_->Call(fd, I2C_FUNCS, &funcs);
   if (result < 0) {
