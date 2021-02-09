@@ -52,14 +52,14 @@ class RedfishVariant final {
   class ImplIntf {
    public:
     virtual ~ImplIntf() {}
-    virtual std::unique_ptr<RedfishObject> AsObject() = 0;
-    virtual std::unique_ptr<RedfishIterable> AsIterable() = 0;
-    virtual bool GetValue(std::string *val) = 0;
-    virtual bool GetValue(int32_t *val) = 0;
-    virtual bool GetValue(int64_t *val) = 0;
-    virtual bool GetValue(double *val) = 0;
-    virtual bool GetValue(bool *val) = 0;
-    virtual std::string DebugString() = 0;
+    virtual std::unique_ptr<RedfishObject> AsObject() const = 0;
+    virtual std::unique_ptr<RedfishIterable> AsIterable() const = 0;
+    virtual bool GetValue(std::string *val) const = 0;
+    virtual bool GetValue(int32_t *val) const = 0;
+    virtual bool GetValue(int64_t *val) const = 0;
+    virtual bool GetValue(double *val) const = 0;
+    virtual bool GetValue(bool *val) const = 0;
+    virtual std::string DebugString() const = 0;
   };
 
   RedfishVariant() : ptr_(nullptr) {}
@@ -69,39 +69,39 @@ class RedfishVariant final {
   RedfishVariant(RedfishVariant &&other) = default;
   RedfishVariant &operator=(RedfishVariant &&other) = default;
 
-  std::unique_ptr<RedfishObject> AsObject() {
+  std::unique_ptr<RedfishObject> AsObject() const {
     if (!ptr_) return nullptr;
     return ptr_->AsObject();
   }
-  std::unique_ptr<RedfishIterable> AsIterable() {
+  std::unique_ptr<RedfishIterable> AsIterable() const {
     if (!ptr_) return nullptr;
     return ptr_->AsIterable();
   }
 
   // If the underlying Redfish payload is the provided val type, retrieves the
   // value into val and return true. Otherwise return false.
-  bool GetValue(std::string *val) {
+  bool GetValue(std::string *val) const {
     if (!ptr_) return false;
     return ptr_->GetValue(val);
   }
-  bool GetValue(int32_t *val) {
+  bool GetValue(int32_t *val) const {
     if (!ptr_) return false;
     return ptr_->GetValue(val);
   }
-  bool GetValue(int64_t *val) {
+  bool GetValue(int64_t *val) const {
     if (!ptr_) return false;
     return ptr_->GetValue(val);
   }
-  bool GetValue(double *val) {
+  bool GetValue(double *val) const {
     if (!ptr_) return false;
     return ptr_->GetValue(val);
   }
-  bool GetValue(bool *val) {
+  bool GetValue(bool *val) const {
     if (!ptr_) return false;
     return ptr_->GetValue(val);
   }
 
-  std::string DebugString() { return ptr_->DebugString(); }
+  std::string DebugString() const { return ptr_->DebugString(); }
 
  private:
   std::unique_ptr<ImplIntf> ptr_;

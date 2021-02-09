@@ -49,31 +49,31 @@ using MallocChar = std::unique_ptr<char, FreeDeleter>;
 class JsonMockupVariantImpl : public RedfishVariant::ImplIntf {
  public:
   explicit JsonMockupVariantImpl(json_t *json_view) : json_view_(json_view) {}
-  std::unique_ptr<RedfishObject> AsObject() override;
-  std::unique_ptr<RedfishIterable> AsIterable() override;
-  std::string DebugString() override;
+  std::unique_ptr<RedfishObject> AsObject() const override;
+  std::unique_ptr<RedfishIterable> AsIterable() const override;
+  std::string DebugString() const override;
 
-  bool GetValue(std::string *val) override {
+  bool GetValue(std::string *val) const override {
     if (json_view_ == nullptr || !json_is_string(json_view_)) return false;
     *val = std::string(json_string_value(json_view_));
     return true;
   }
-  bool GetValue(int32_t *val) override {
+  bool GetValue(int32_t *val) const override {
     if (json_view_ == nullptr || !json_is_integer(json_view_)) return false;
     *val = (int)json_integer_value(json_view_);
     return true;
   }
-  bool GetValue(int64_t *val) override {
+  bool GetValue(int64_t *val) const override {
     if (json_view_ == nullptr || !json_is_integer(json_view_)) return false;
     *val = json_integer_value(json_view_);
     return true;
   }
-  bool GetValue(double *val) override {
+  bool GetValue(double *val) const override {
     if (json_view_ == nullptr || !json_is_real(json_view_)) return false;
     *val = json_real_value(json_view_);
     return true;
   }
-  bool GetValue(bool *val) override {
+  bool GetValue(bool *val) const override {
     if (json_view_ == nullptr || !json_is_boolean(json_view_)) return false;
     *val = json_boolean_value(json_view_);
     return true;
@@ -137,14 +137,14 @@ class JsonMockupIterable : public RedfishIterable {
   json_t *json_view_;
 };
 
-std::unique_ptr<RedfishObject> JsonMockupVariantImpl::AsObject() {
+std::unique_ptr<RedfishObject> JsonMockupVariantImpl::AsObject() const {
   if (!json_view_) {
     return nullptr;
   }
   return absl::make_unique<JsonMockupObject>(json_view_);
 }
 
-std::unique_ptr<RedfishIterable> JsonMockupVariantImpl::AsIterable() {
+std::unique_ptr<RedfishIterable> JsonMockupVariantImpl::AsIterable() const {
   if (!json_view_) {
     return nullptr;
   }
@@ -161,7 +161,7 @@ std::unique_ptr<RedfishIterable> JsonMockupVariantImpl::AsIterable() {
   return nullptr;
 }
 
-std::string JsonMockupVariantImpl::DebugString() {
+std::string JsonMockupVariantImpl::DebugString() const {
   if (!json_view_) return "(null payload)";
   size_t flags = JSON_INDENT(2);
   MallocChar output(json_dumps(json_view_, flags));

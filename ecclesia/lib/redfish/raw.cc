@@ -188,29 +188,29 @@ class RawVariantImpl : public RedfishVariant::ImplIntf {
   RawVariantImpl() : payload_(nullptr) {}
   explicit RawVariantImpl(std::shared_ptr<RawPayload> payload)
       : payload_(payload) {}
-  std::unique_ptr<RedfishObject> AsObject() override;
-  std::unique_ptr<RedfishIterable> AsIterable() override;
-  bool GetValue(std::string *val) override {
+  std::unique_ptr<RedfishObject> AsObject() const override;
+  std::unique_ptr<RedfishIterable> AsIterable() const override;
+  bool GetValue(std::string *val) const override {
     if (!payload_) return false;
     return payload_->GetValue(val);
   }
-  bool GetValue(int32_t *val) override {
+  bool GetValue(int32_t *val) const override {
     if (!payload_) return false;
     return payload_->GetValue(val);
   }
-  bool GetValue(int64_t *val) override {
+  bool GetValue(int64_t *val) const override {
     if (!payload_) return false;
     return payload_->GetValue(val);
   }
-  bool GetValue(double *val) override {
+  bool GetValue(double *val) const override {
     if (!payload_) return false;
     return payload_->GetValue(val);
   }
-  bool GetValue(bool *val) override {
+  bool GetValue(bool *val) const override {
     if (!payload_) return false;
     return payload_->GetValue(val);
   }
-  std::string DebugString() override {
+  std::string DebugString() const override {
     if (!payload_) return "(null payload)";
     return payload_->DebugString();
   }
@@ -253,12 +253,12 @@ class RawIterable : public RedfishIterable {
   std::shared_ptr<RawPayload> payload_;
 };
 
-std::unique_ptr<RedfishObject> RawVariantImpl::AsObject() {
+std::unique_ptr<RedfishObject> RawVariantImpl::AsObject() const {
   if (!payload_) return nullptr;
   return absl::make_unique<RawObject>(payload_);
 }
 
-std::unique_ptr<RedfishIterable> RawVariantImpl::AsIterable() {
+std::unique_ptr<RedfishIterable> RawVariantImpl::AsIterable() const {
   if (!payload_) return nullptr;
   if (!payload_->IsIndexable()) return nullptr;
   return absl::make_unique<RawIterable>(payload_);
