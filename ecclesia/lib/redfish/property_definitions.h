@@ -38,6 +38,7 @@ inline constexpr char kRfPropertyChassis[] = "Chassis";
 inline constexpr char kRfPropertyMemory[] = "Memory";
 inline constexpr char kRfPropertyStorage[] = "Storage";
 inline constexpr char kRfPropertyDrives[] = "Drives";
+inline constexpr char kRfPropertyProtocolOem[] = "OEM";
 inline constexpr char kRfPropertyOem[] = "Oem";
 inline constexpr char kRfPropertyProcessors[] = "Processors";
 inline constexpr char kRfPropertyMetrics[] = "Metrics";
@@ -124,6 +125,7 @@ DEFINE_REDFISH_PROPERTY(PropertyOverallSubsystemDegraded, bool,
                         "OverallSubsystemDegraded");
 DEFINE_REDFISH_PROPERTY(PropertyMediaInReadOnly, bool, "MediaInReadOnly");
 DEFINE_REDFISH_PROPERTY(PropertyBlockSizeBytes, int, "BlockSizeBytes");
+DEFINE_REDFISH_PROPERTY(PropertyProtocol, std::string, "Protocol");
 DEFINE_REDFISH_PROPERTY(PropertyMediaType, std::string, "MediaType");
 DEFINE_REDFISH_PROPERTY(PropertyReadingCelsius, double, "ReadingCelsius");
 DEFINE_REDFISH_PROPERTY(PropertyThrottlingCelsius, int, "ThrottlingCelsius");
