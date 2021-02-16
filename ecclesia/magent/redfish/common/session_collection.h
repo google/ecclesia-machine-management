@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_SESSION_COLLECTION_H_
-#define ECCLESIA_MAGENT_REDFISH_INDUS_SESSION_COLLECTION_H_
+#ifndef ECCLESIA_MAGENT_REDFISH_COMMON_SESSION_COLLECTION_H_
+#define ECCLESIA_MAGENT_REDFISH_COMMON_SESSION_COLLECTION_H_
 
 #include <string>
 
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "json/value.h"
-#include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -64,4 +64,4 @@ class SessionCollection : public Resource {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_SESSION_COLLECTION_H_
+#endif  // ECCLESIA_MAGENT_REDFISH_COMMON_SESSION_COLLECTION_H_

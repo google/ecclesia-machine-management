@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_STORAGE_COLLECTION_H_
-#define ECCLESIA_MAGENT_REDFISH_INDUS_STORAGE_COLLECTION_H_
+#ifndef ECCLESIA_MAGENT_REDFISH_COMMON_MEMORY_COLLECTION_H_
+#define ECCLESIA_MAGENT_REDFISH_COMMON_MEMORY_COLLECTION_H_
 
 #include <string>
-#include <vector>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
@@ -28,41 +27,34 @@
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
 #include "json/value.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
-#include "re2/re2.h"
 
 namespace ecclesia {
 
-class StorageCollection : public Resource {
+class MemoryCollection : public Resource {
  public:
-  explicit StorageCollection(SystemModel *system_model)
-      : Resource(kStorageCollectionUri), system_model_(system_model) {}
+  explicit MemoryCollection(SystemModel *system_model)
+      : Resource(kMemoryCollectionUri), system_model_(system_model) {}
 
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override {
     Json::Value json;
     AddStaticFields(&json);
-    std::vector<std::string> nvme_locations =
-        system_model_->GetNvmePhysLocations();
+    int num_dimms = system_model_->NumDimms();
+    json[kMembersCount] = num_dimms;
     auto *members = GetJsonArray(&json, kMembers);
-    int num_members = 0;
-    for (const auto &location : nvme_locations) {
-      if (RE2::FullMatch(location, ".*U2_\\d")) {
-        AppendCollectionMember(members, absl::StrCat(Uri(), "/", location));
-        num_members++;
-      }
+    for (int i = 0; i < num_dimms; i++) {
+      AppendCollectionMember(members, absl::StrCat(Uri(), "/", i));
     }
-
-    json[kMembersCount] = num_members;
     JSONResponseOK(json, req);
   }
 
   void AddStaticFields(Json::Value *json) {
-    (*json)[kOdataType] = "#StorageCollection.StorageCollection";
+    (*json)[kOdataType] = "#MemoryCollection.MemoryCollection";
     (*json)[kOdataId] = std::string(Uri());
     (*json)[kOdataContext] =
-        "/redfish/v1/$metadata#StorageCollection.StorageCollection";
-    (*json)[kName] = "Storage Collection";
+        "/redfish/v1/$metadata#MemoryCollection.MemoryCollection";
+    (*json)[kName] = "Memory Module Collection";
   }
 
   SystemModel *const system_model_;
@@ -70,4 +62,4 @@ class StorageCollection : public Resource {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_STORAGE_COLLECTION_H_
+#endif  // ECCLESIA_MAGENT_REDFISH_COMMON_MEMORY_COLLECTION_H_

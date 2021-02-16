@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/magent/redfish/indus/session_collection.h"
+#include "ecclesia/magent/redfish/common/session_collection.h"
 
 #include <functional>
 #include <memory>
@@ -24,17 +24,14 @@
 #include "gtest/gtest.h"
 #include "absl/memory/memory.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/network/testing.h"
-#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/raw.h"
 #include "ecclesia/magent/lib/thread_pool/thread_pool.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "json/reader.h"
-#include "json/value.h"
 #include "tensorflow_serving/util/net_http/client/public/httpclient.h"
 #include "tensorflow_serving/util/net_http/client/public/httpclient_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver.h"
@@ -45,7 +42,7 @@ namespace ecclesia {
 namespace {
 
 constexpr absl::string_view kFileName =
-    "magent/redfish/indus/test_data/session_collection.json";
+    "magent/redfish/common/test_data/session_collection.json";
 
 void ReadJsonFromFile(const std::string &filename, Json::Value *value) {
   ApifsFile apifs_file((std::string(GetTestDataDependencyPath(kFileName))));
