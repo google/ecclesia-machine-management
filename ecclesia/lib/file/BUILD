@@ -136,9 +136,9 @@ cc_library(
     hdrs = ["mmap.h"],
     visibility = ["//ecclesia:library_users"],
     deps = [
-        "//ecclesia/lib/cleanup",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/logging:posix",
+        "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -192,9 +192,9 @@ cc_library(
     deps = [
         ":dir",
         ":path",
-        "//ecclesia/lib/cleanup",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/logging:posix",
+        "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
     ],
@@ -206,7 +206,7 @@ cc_test(
     deps = [
         ":path",
         ":test_filesystem",
-        "//ecclesia/lib/cleanup",
+        "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/types:optional",
         "@com_google_googletest//:gtest_main",
     ],

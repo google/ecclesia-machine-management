@@ -13,9 +13,9 @@ http_archive(
 # Abseil. Latest feature not releases yet. Picked up a commit from Sep 2, 2020
 http_archive(
     name = "com_google_absl",
-    sha256 = "fc34c6d71993827eec8e77675086563a378b24ed8072a52b50804f2c29f19709",
-    strip_prefix = "abseil-cpp-930fbec75b452af8bb8c796f5bb754e953e29cf5",
-    urls = ["https://github.com/abseil/abseil-cpp/archive/930fbec75b452af8bb8c796f5bb754e953e29cf5.zip"],
+    sha256 = "5ec35586b685eea11f198bb6e75f870e37fde62d15b95a3897c37b2d0bbd9017",
+    strip_prefix = "abseil-cpp-143a27800eb35f4568b9be51647726281916aac9",
+    urls = ["https://github.com/abseil/abseil-cpp/archive/143a27800eb35f4568b9be51647726281916aac9.zip"],
 )
 
 # Emboss. Uses the latest commit as of Oct 19, 2020.

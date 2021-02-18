@@ -29,12 +29,12 @@
 #include <utility>
 #include <vector>
 
+#include "absl/cleanup/cleanup.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
-#include "ecclesia/lib/cleanup/cleanup.h"
 #include "ecclesia/lib/file/dir.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/status/macros.h"
@@ -160,7 +160,7 @@ absl::StatusOr<std::string> ApifsFile::Read() const {
     return absl::NotFoundError(absl::StrFormat(
         "unable to open the file at path: %s, errno: %d", path_, errno));
   }
-  auto fd_closer = LambdaCleanup([fd]() { close(fd); });
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
 
   std::string value;
   while (true) {
@@ -194,7 +194,7 @@ absl::Status ApifsFile::Write(absl::string_view value) const {
     return absl::NotFoundError(
         absl::StrFormat("unable to open the file at path: %s", path_));
   }
-  auto fd_closer = LambdaCleanup([fd]() { close(fd); });
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
   const char *data = value.data();
   size_t size = value.size();
   while (size > 0) {
@@ -226,7 +226,7 @@ absl::Status ApifsFile::ReadRange(uint64_t offset,
     return absl::NotFoundError(absl::StrFormat(
         "Unable to open the file at path: %s, errno: %d", path_, errno));
   }
-  auto fd_closer = LambdaCleanup([fd]() { close(fd); });
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
   // Read data.
   size_t size = value.size();
   int rlen = pread(fd, value.data(), size, offset);
@@ -248,7 +248,7 @@ absl::Status ApifsFile::WriteRange(uint64_t offset,
     return absl::NotFoundError(
         absl::StrFormat("Unable to open the file at path: %s", path_));
   }
-  auto fd_closer = LambdaCleanup([fd]() { close(fd); });
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
   // Write data.
   size_t size = value.size();
   int wlen = pwrite(fd, value.data(), size, offset);

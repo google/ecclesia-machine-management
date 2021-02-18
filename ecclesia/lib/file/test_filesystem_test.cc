@@ -25,8 +25,8 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/cleanup/cleanup.h"
 #include "absl/types/optional.h"
-#include "ecclesia/lib/cleanup/cleanup.h"
 #include "ecclesia/lib/file/path.h"
 
 namespace ecclesia {
@@ -47,7 +47,7 @@ absl::optional<std::string> PathContents(const std::string &path) {
   if (fd == -1) {
     return absl::nullopt;
   }
-  auto fd_closer = LambdaCleanup([fd]() { close(fd); });
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
 
   // Read from the file in 4k chunks until read returns 0, or fails.
   char buffer[4096];

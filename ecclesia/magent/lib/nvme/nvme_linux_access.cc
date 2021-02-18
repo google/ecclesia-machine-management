@@ -29,12 +29,12 @@
 #include <string>
 #include <utility>
 
+#include "absl/cleanup/cleanup.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
-#include "ecclesia/lib/cleanup/cleanup.h"
 #include "ecclesia/lib/file/mmap.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
@@ -53,7 +53,7 @@ absl::Status NvmeLinuxAccess::ExecuteAdminCommand(
                         absl::StrFormat("Couldn't open device at path %s: %s",
                                         devpath_, strerror(errno)));
   }
-  auto fd_closer = LambdaCleanup([fd]() { close(fd); });
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
 
   struct stat nvme_stat;
   int err = fstat(fd, &nvme_stat);
@@ -83,7 +83,7 @@ absl::Status NvmeLinuxAccess::ResetSubsystem() {
     return absl::InternalError(
         absl::StrCat("Failed to open block device path: ", devpath_));
   }
-  auto fd_closer = LambdaCleanup([fd]() { close(fd); });
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
   const auto ret_code = ioctl(fd, NVME_IOCTL_SUBSYS_RESET);
   if (ret_code != 0) {
     return absl::InternalError(absl::StrCat(
@@ -100,7 +100,7 @@ absl::Status NvmeLinuxAccess::ResetController() {
     return absl::InternalError(
         absl::StrCat("Failed to open block device path: ", devpath_));
   }
-  auto fd_closer = LambdaCleanup([fd]() { close(fd); });
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
   const auto ret_code = ioctl(fd, NVME_IOCTL_RESET);
   if (ret_code != 0) {
     return absl::InternalError(absl::StrCat(

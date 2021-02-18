@@ -19,8 +19,8 @@
 #include <fcntl.h>
 
 #include "google/protobuf/io/zero_copy_stream_impl.h"
+#include "absl/cleanup/cleanup.h"
 #include "absl/types/optional.h"
-#include "ecclesia/lib/cleanup/cleanup.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/magent/proto/config.pb.h"
@@ -36,7 +36,7 @@ absl::optional<ecclesia::MagentConfig::IpmiCredential> GetIpmiCredentialFromPb(
     WarningLog() << "Fail to open " << path;
     return absl::nullopt;
   }
-  auto fd_closer = LambdaCleanup([fd]() { close(fd); });
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
 
   google::protobuf::io::FileInputStream input(fd);
   if (!magent_config.ParseFromZeroCopyStream(&input)) {

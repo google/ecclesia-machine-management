@@ -45,10 +45,10 @@ cc_library(
     visibility = ["//ecclesia:library_users"],
     deps = [
         ":smbus",
-        "//ecclesia/lib/cleanup",
         "//ecclesia/lib/io:ioctl",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/logging:posix",
+        "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",

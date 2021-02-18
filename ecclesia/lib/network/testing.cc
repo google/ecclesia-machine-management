@@ -20,7 +20,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "ecclesia/lib/cleanup/cleanup.h"
+#include "absl/cleanup/cleanup.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/logging/posix.h"
@@ -33,7 +33,7 @@ int FindUnusedPortOrDie() {
   if (fd < 0) {
     PosixFatalLog() << "socket() failed: ";
   }
-  auto fd_closer = LambdaCleanup([fd]() { close(fd); });
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
 
   // Set the socket as SO_REUSEADDR so that if we hand this port back to a
   // caller as an available port they can use it immediately.

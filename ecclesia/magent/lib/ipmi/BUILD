@@ -18,9 +18,9 @@ cc_library(
     hdrs = ["interface_options.h"],
     visibility = ["//ecclesia:magent_library_users"],
     deps = [
-        "//ecclesia/lib/cleanup",
         "//ecclesia/lib/logging",
         "//ecclesia/magent/proto:magent_config_cc_proto",
+        "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/types:optional",
         "@com_google_protobuf//:protobuf",
     ],

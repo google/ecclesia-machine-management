@@ -27,11 +27,11 @@
 #include <utility>
 #include <vector>
 
+#include "absl/cleanup/cleanup.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/cleanup/cleanup.h"
 #include "ecclesia/lib/file/dir.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/logging/globals.h"
@@ -62,7 +62,7 @@ void OpenAndWriteFile(const std::string &path, int flags,
   if (fd == -1) {
     PosixFatalLog() << "open() failed for file " << path;
   }
-  auto fd_closer = LambdaCleanup([fd]() { close(fd); });
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
 
   // Write the file. Fail if the write fails, OR if it's too short.
   int rc = write(fd, data.data(), data.size());

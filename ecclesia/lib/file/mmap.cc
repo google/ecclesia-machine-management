@@ -23,12 +23,12 @@
 #include <cstddef>
 #include <string>
 
+#include "absl/cleanup/cleanup.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
-#include "ecclesia/lib/cleanup/cleanup.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/posix.h"
 
@@ -60,7 +60,7 @@ absl::StatusOr<MappedMemory> MappedMemory::Create(const std::string &path,
     return absl::InternalError(
         absl::StrFormat("unable to open the file: %s", path));
   }
-  auto fd_closer = LambdaCleanup([fd]() { close(fd); });
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
 
   // Determine the offset and length to use for the memory mapping, rounding
   // to an appropriate page size.
