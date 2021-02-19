@@ -16,8 +16,12 @@
 
 #include "ecclesia/lib/strings/regex.h"
 
-#include "gmock/gmock.h"
+#include <optional>
+#include <string>
+#include <tuple>
+
 #include "gtest/gtest.h"
+#include "re2/re2.h"
 
 namespace ecclesia {
 namespace {

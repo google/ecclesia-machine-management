@@ -49,6 +49,7 @@ cc_library(
     deps = [
         "//ecclesia/lib/smbios:reader",
         "//ecclesia/lib/smbios:structures_emb",
+        "//ecclesia/lib/strings:strip",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_emboss//runtime/cpp:cpp_utils",

@@ -62,7 +62,12 @@ class Processor : public IndexResource<int> {
     }
     // Fill in the json response
     auto cpu = system_model_->GetCpu(std::get<int>(params[0]));
-    auto cpu_info = cpu->GetCpuInfo();
+    if (!cpu.has_value()) {
+      req->ReplyWithStatus(
+          tensorflow::serving::net_http::HTTPStatusCode::NOT_FOUND);
+      return;
+    }
+    const auto& cpu_info = cpu->GetCpuInfo();
     Json::Value json;
     json[kOdataType] = "#Processor.v1_7_0.Processor";
     json[kOdataId] = std::string(req->uri_path());

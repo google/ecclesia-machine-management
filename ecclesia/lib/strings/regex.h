@@ -17,8 +17,8 @@
 #ifndef ECCLESIA_LIB_STRINGS_REGEX_H_
 #define ECCLESIA_LIB_STRINGS_REGEX_H_
 
-#include <string>
-#include <vector>
+#include <tuple>
+#include <utility>
 
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"

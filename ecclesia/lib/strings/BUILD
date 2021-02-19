@@ -24,6 +24,14 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "strip",
+    srcs = ["strip.cc"],
+    hdrs = ["strip.h"],
+    visibility = ["//ecclesia:library_users"],
+    deps = ["@com_google_absl//absl/strings"],
+)
+
 cc_test(
     name = "natural_sort_test",
     size = "small",
@@ -43,7 +51,18 @@ cc_test(
     srcs = ["regex_test.cc"],
     deps = [
         ":regex",
-        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+        "@com_googlesource_code_re2//:re2",
+    ],
+)
+
+cc_test(
+    name = "strip_test",
+    size = "small",
+    timeout = "moderate",
+    srcs = ["strip_test.cc"],
+    deps = [
+        ":strip",
         "@com_google_googletest//:gtest_main",
     ],
 )

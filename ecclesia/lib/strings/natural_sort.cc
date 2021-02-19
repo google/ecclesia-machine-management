@@ -17,12 +17,11 @@
 #include "ecclesia/lib/strings/natural_sort.h"
 
 #include <cstddef>
-#include <cstdlib>
 
 #include "absl/strings/ascii.h"
 #include "absl/strings/numbers.h"
-#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 
 namespace ecclesia {

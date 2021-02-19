@@ -26,6 +26,7 @@
 #include "ecclesia/lib/smbios/platform_translator.h"
 #include "ecclesia/lib/smbios/reader.h"
 #include "ecclesia/lib/smbios/structures.emb.h"
+#include "ecclesia/lib/strings/strip.h"
 #include "runtime/cpp/emboss_cpp_util.h"
 #include "runtime/cpp/emboss_prelude.h"
 
@@ -68,14 +69,14 @@ Dimm::Dimm(const MemoryDevice &memory_device,
     dimm_info_.configured_speed_mhz =
         message_view.configured_memory_clock_speed().Read();
 
-    dimm_info_.manufacturer = std::string(
-        memory_device.GetString(message_view.manufacturer_snum().Read()));
+    dimm_info_.manufacturer = std::string(TrimString(
+        memory_device.GetString(message_view.manufacturer_snum().Read())));
 
-    dimm_info_.serial_number = std::string(
-        memory_device.GetString(message_view.serial_number_snum().Read()));
+    dimm_info_.serial_number = std::string(TrimString(
+        memory_device.GetString(message_view.serial_number_snum().Read())));
 
-    dimm_info_.part_number = std::string(
-        memory_device.GetString(message_view.part_number_snum().Read()));
+    dimm_info_.part_number = std::string(TrimString(
+        memory_device.GetString(message_view.part_number_snum().Read())));
   } else {
     dimm_info_.present = false;
   }
@@ -84,7 +85,7 @@ Dimm::Dimm(const MemoryDevice &memory_device,
 std::vector<Dimm> CreateDimms(const SmbiosReader *reader,
                               const SmbiosFieldTranslator *field_translator) {
   std::vector<Dimm> dimms;
-  for (auto &memory_device : reader->GetAllMemoryDevices()) {
+  for (const auto &memory_device : reader->GetAllMemoryDevices()) {
     dimms.emplace_back(memory_device, field_translator);
   }
   return dimms;

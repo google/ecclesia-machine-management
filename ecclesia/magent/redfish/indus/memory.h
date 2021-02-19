@@ -52,7 +52,12 @@ class Memory : public IndexResource<int> {
     }
     // Fill in the json response
     auto dimm = system_model_->GetDimm(std::get<int>(params[0]));
-    auto dimm_info = dimm->GetDimmInfo();
+    if (!dimm.has_value()) {
+      req->ReplyWithStatus(
+          tensorflow::serving::net_http::HTTPStatusCode::NOT_FOUND);
+      return;
+    }
+    const auto &dimm_info = dimm->GetDimmInfo();
     Json::Value json;
     json[kOdataType] = "#Memory.v1_8_0.Memory";
     json[kOdataId] = std::string(req->uri_path());
