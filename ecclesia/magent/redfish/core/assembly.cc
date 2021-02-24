@@ -28,6 +28,7 @@
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/dir.h"
 #include "ecclesia/lib/file/path.h"
+#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "json/json.h"
@@ -81,7 +82,9 @@ absl::flat_hash_map<std::string, Json::Value> GetAssemblies(
   }).IgnoreError();
   // Second, modify the static assemblies loaded from the files.
   for (auto &modifier : assembly_modifiers) {
-    modifier(assemblies);
+    if (auto status = modifier(assemblies); !status.ok()) {
+      ErrorLog() << "Modifier failed with message: " << status.message();
+    }
   }
   return assemblies;
 }
