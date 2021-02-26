@@ -54,6 +54,29 @@ cc_test(
 )
 
 cc_test(
+    name = "odata_metadata_test",
+    srcs = ["odata_metadata_test.cc"],
+    data = [
+        "//ecclesia/magent/redfish/metadata:index.xml",
+    ],
+    deps = [
+        ":redfish_core",
+        "//ecclesia/lib/apifs",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/network:testing",
+        "//ecclesia/magent/lib/thread_pool",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/client/public:http_client",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/client/public:http_client_api",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+    ],
+)
+
+cc_test(
     name = "uri_generation_test",
     srcs = ["uri_generation_test.cc"],
     deps = [

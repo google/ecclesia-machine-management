@@ -68,29 +68,6 @@ cc_library(
 )
 
 cc_test(
-    name = "odata_metadata_test",
-    srcs = ["odata_metadata_test.cc"],
-    data = [
-        "//ecclesia/magent/redfish/metadata:index.xml",
-    ],
-    deps = [
-        "//ecclesia/lib/apifs",
-        "//ecclesia/lib/file:test_filesystem",
-        "//ecclesia/lib/network:testing",
-        "//ecclesia/magent/lib/thread_pool",
-        "//ecclesia/magent/redfish/core:redfish_core",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
-        "@com_google_googletest//:gtest_main",
-        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/client/public:http_client",
-        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/client/public:http_client_api",
-        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
-        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-    ],
-)
-
-cc_test(
     name = "session_service_test",
     srcs = ["session_service_test.cc"],
     data = [
