@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/magent/redfish/core/pcie_function.h"
+#include "ecclesia/magent/redfish/common/pcie_function.h"
 
 #include <cstdint>
 #include <memory>

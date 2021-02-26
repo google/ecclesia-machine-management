@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_PCIE_DEVICE_H_
-#define ECCLESIA_MAGENT_REDFISH_INDUS_PCIE_DEVICE_H_
+#ifndef ECCLESIA_MAGENT_REDFISH_COMMON_PCIE_FUNCTION_H_
+#define ECCLESIA_MAGENT_REDFISH_COMMON_PCIE_FUNCTION_H_
 
 #include <string>
 
@@ -29,10 +29,10 @@
 
 namespace ecclesia {
 
-class PCIeDevice : public IndexResource<std::string> {
+class PCIeFunction : public IndexResource<std::string, int> {
  public:
-  explicit PCIeDevice(SystemModel *system_model)
-      : IndexResource(kPCIeDeviceUriPattern), system_model_(system_model) {}
+  explicit PCIeFunction(SystemModel *system_model)
+      : IndexResource(kPCIeFunctionUriPattern), system_model_(system_model) {}
 
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
@@ -43,4 +43,4 @@ class PCIeDevice : public IndexResource<std::string> {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_PCIE_DEVICE_H_
+#endif  // ECCLESIA_MAGENT_REDFISH_COMMON_PCIE_FUNCTION_H_

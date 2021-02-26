@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/magent/redfish/core/pcie_device_collection.h"
+#include "ecclesia/magent/redfish/common/pcie_device_collection.h"
 
 #include <vector>
 
