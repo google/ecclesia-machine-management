@@ -59,6 +59,7 @@
         <edmx:Include Namespace="Assembly.v1_1_0"/>
         <edmx:Include Namespace="Assembly.v1_1_1"/>
         <edmx:Include Namespace="Assembly.v1_2_0"/>
+        <edmx:Include Namespace="Assembly.v1_2_1"/>
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/AttributeRegistry_v1.xml">
         <edmx:Include Namespace="AttributeRegistry"/>
@@ -224,6 +225,7 @@
         <edmx:Include Namespace="ComputerSystem.v1_5_1"/>
         <edmx:Include Namespace="ComputerSystem.v1_5_2"/>
         <edmx:Include Namespace="ComputerSystem.v1_6_0"/>
+        <edmx:Include Namespace="ComputerSystem.v1_8_0"/>
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/ComputerSystemCollection_v1.xml">
         <edmx:Include Namespace="ComputerSystemCollection"/>
@@ -582,6 +584,7 @@
         <edmx:Include Namespace="Memory.v1_6_0"/>
         <edmx:Include Namespace="Memory.v1_6_1"/>
         <edmx:Include Namespace="Memory.v1_7_0"/>
+        <edmx:Include Namespace="Memory.v1_8_0"/>
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/MemoryChunks_v1.xml">
         <edmx:Include Namespace="MemoryChunks"/>
@@ -628,6 +631,7 @@
         <edmx:Include Namespace="MemoryMetrics.v1_1_2"/>
         <edmx:Include Namespace="MemoryMetrics.v1_1_3"/>
         <edmx:Include Namespace="MemoryMetrics.v1_1_4"/>
+        <edmx:Include Namespace="MemoryMetrics.v1_2_0"/>
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/Message_v1.xml">
         <edmx:Include Namespace="Message"/>
@@ -878,6 +882,7 @@
     <edmx:Reference Uri="/redfish/v1/schema/ProcessorMetrics_v1.xml">
         <edmx:Include Namespace="ProcessorMetrics"/>
         <edmx:Include Namespace="ProcessorMetrics.v1_0_0"/>
+        <edmx:Include Namespace="ProcessorMetrics.v1_2_0"/>
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/Protocol_v1.xml">
         <edmx:Include Namespace="Protocol"/>
@@ -1235,6 +1240,7 @@
         <edmx:Include Namespace="Thermal.v1_4_2"/>
         <edmx:Include Namespace="Thermal.v1_5_0"/>
         <edmx:Include Namespace="Thermal.v1_5_1"/>
+        <edmx:Include Namespace="Thermal.v1_6_0"/>
     </edmx:Reference>
     <edmx:Reference Uri="/redfish/v1/schema/Triggers_v1.xml">
         <edmx:Include Namespace="Triggers"/>
@@ -1330,7 +1336,4 @@
             <EntityContainer Name="Service" Extends="ServiceRoot.v1_0_0.ServiceContainer"/>
         </Schema>
     </edmx:DataServices>
-    <edmx:Reference Uri="/redfish/v1/schema/OemManager_v1.xml">
-        <edmx:Include Namespace="OemManager"/>
-    </edmx:Reference>
 </edmx:Edmx>

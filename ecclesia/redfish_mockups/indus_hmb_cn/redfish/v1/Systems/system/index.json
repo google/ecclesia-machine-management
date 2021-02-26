@@ -1,7 +1,7 @@
 {
     "@odata.context": "/redfish/v1/$metadata#ComputerSystem.ComputerSystem",
     "@odata.id": "/redfish/v1/Systems/system",
-    "@odata.type": "#ComputerSystem.v1_8_0_.ComputerSystem",
+    "@odata.type": "#ComputerSystem.v1_8_0.ComputerSystem",
     "Id": "system",
     "Memory": {
         "@odata.id": "/redfish/v1/Systems/system/Memory"
