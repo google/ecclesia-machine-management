@@ -23,6 +23,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/string_view.h"
+#include "absl/status/status.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "json/value.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
@@ -47,8 +48,8 @@ class Assembly : public Resource {
   // or not. Please note the modifier can make any change without restriction.
   // It's caller's responsibility to ensure the modifier makes the change as
   // expected.
-  using AssemblyModifier =
-      std::function<void(absl::flat_hash_map<std::string, Json::Value> &)>;
+  using AssemblyModifier = std::function<absl::Status(
+      absl::flat_hash_map<std::string, Json::Value> &)>;
 
   // This constructor simply loads all the JSON files in the assemblies_dir
   // without making any change. The static content in the JSON files will be

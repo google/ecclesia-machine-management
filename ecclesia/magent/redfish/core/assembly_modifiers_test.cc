@@ -57,10 +57,8 @@ TEST(PcieFunctionAssemblyModifier, AssemblyMissing) {
   ASSERT_TRUE(reader.parse(kStaticAssembly, value));
 
   absl::flat_hash_map<std::string, Json::Value> assemblies;
-  assemblies.insert(
-      std::make_pair(kBadUri, std::move(value)));
-  // Ensure no crash
-  CreateStandardPcieFunctionModifier()(assemblies);
+  assemblies.insert(std::make_pair(kBadUri, std::move(value)));
+  EXPECT_FALSE(CreateStandardPcieFunctionModifier()(assemblies).ok());
 
   // Check that assembly is not modified
   EXPECT_EQ(FlattenStylizedJsonString(
@@ -83,8 +81,7 @@ TEST(PcieFunctionAssemblyModifier, AssemblyNameMissing) {
 
   absl::flat_hash_map<std::string, Json::Value> assemblies;
   assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
-  // Ensure no crash
-  CreateStandardPcieFunctionModifier()(assemblies);
+  EXPECT_FALSE(CreateStandardPcieFunctionModifier()(assemblies).ok());
 
   // Check that assembly is not modified
   EXPECT_EQ(FlattenStylizedJsonString(
@@ -107,8 +104,7 @@ TEST(PcieFunctionAssemblyModifier, ComponentsMissing) {
 
   absl::flat_hash_map<std::string, Json::Value> assemblies;
   assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
-  // Ensure no crash
-  CreateStandardPcieFunctionModifier()(assemblies);
+  EXPECT_FALSE(CreateStandardPcieFunctionModifier()(assemblies).ok());
 
   // Check that assembly is not modified
   EXPECT_EQ(FlattenStylizedJsonString(
@@ -142,8 +138,7 @@ TEST(PcieFunctionAssemblyModifier, ComponentNameMissing) {
 
   absl::flat_hash_map<std::string, Json::Value> assemblies;
   assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
-  // Ensure no crash
-  CreateStandardPcieFunctionModifier()(assemblies);
+  EXPECT_FALSE(CreateStandardPcieFunctionModifier()(assemblies).ok());
 
   // Check that assembly is not modified
   EXPECT_EQ(FlattenStylizedJsonString(
@@ -177,8 +172,7 @@ TEST(PcieFunctionAssemblyModifier, ModifyAssembly) {
 
   absl::flat_hash_map<std::string, Json::Value> assemblies;
   assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
-  // Ensure no crash
-  CreateStandardPcieFunctionModifier()(assemblies);
+  EXPECT_TRUE(CreateStandardPcieFunctionModifier()(assemblies).ok());
 
   // Check that assembly is modified
   const auto& test_associated_with =

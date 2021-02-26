@@ -55,6 +55,7 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/meta:type_traits",
         "@com_google_absl//absl/numeric:int128",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
@@ -62,7 +63,6 @@ cc_library(
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:variant",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        "@com_googlesource_code_re2//:re2",
         "@com_jsoncpp//:json",
     ],
 )

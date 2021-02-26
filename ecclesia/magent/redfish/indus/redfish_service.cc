@@ -23,6 +23,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/meta/type_traits.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
@@ -87,9 +88,8 @@ Assembly::AssemblyModifier CreateModifierToAddFruInfo(
              absl::flat_hash_map<std::string, Json::Value> &assemblies) {
     auto assembly_iter = assemblies.find(assembly_url);
     if (assembly_iter == assemblies.end()) {
-      ErrorLog() << "Failed to find a matched assembly with URL: "
-                 << assembly_url;
-      return;
+      return absl::NotFoundError(absl::StrCat(
+          "Failed to find a matched assembly with URL: ", assembly_url));
     }
     auto &assembly_resource_json = assembly_iter->second;
     for (auto &assembly : assembly_resource_json[kAssemblies]) {
@@ -97,9 +97,12 @@ Assembly::AssemblyModifier CreateModifierToAddFruInfo(
         assembly[kPartNumber] = std::string(sysmodel_fru.GetPartNumber());
         assembly[kSerialNumber] = std::string(sysmodel_fru.GetSerialNumber());
         assembly[kVendor] = std::string(sysmodel_fru.GetManufacturer());
-        return;
+        return absl::OkStatus();
       }
     }
+    return absl::NotFoundError(
+        absl::StrFormat("Failed to find subassembly of name %s at URL %s",
+                        assembly_name, assembly_url));
   };
 }
 
@@ -177,12 +180,12 @@ Assembly::AssemblyModifier CreateModifierToAppendSpicy16Fru(
     const std::string target_url = absl::StrCat(kChassisUri, "/Assembly");
     auto assembly_iter = assemblies.find(target_url);
     if (assembly_iter == assemblies.end()) {
-      ErrorLog() << "Failed to find a matched assembly with URL: "
-                 << target_url;
-      return;
+      return absl::NotFoundError(absl::StrCat(
+          "Failed to find a matched assembly with URL: ", target_url));
     }
     auto &assembly_resource_json = assembly_iter->second;
     assembly_resource_json[kAssemblies].append(value);
+    return absl::OkStatus();
   };
 }
 

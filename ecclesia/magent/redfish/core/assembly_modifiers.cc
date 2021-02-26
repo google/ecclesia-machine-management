@@ -16,6 +16,8 @@
 
 #include "ecclesia/magent/redfish/core/assembly_modifiers.h"
 
+#include "absl/status/status.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/str_replace.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
@@ -38,9 +40,8 @@ Assembly::AssemblyModifier CreateModifierToAssociatePcieFunction(
           if (!assembly.isMember(kOem) || !assembly[kOem].isMember(kGoogle) ||
               !assembly[kOem][kGoogle].isMember(kComponents) ||
               assembly[kOem][kGoogle][kComponents].empty()) {
-            ErrorLog() << "Assembly " << assembly_name
-                       << " does not have components";
-            return;
+            return absl::NotFoundError(absl::StrFormat(
+                "Assembly %s does not have components", assembly_name));
           }
           auto &components = assembly[kOem][kGoogle][kComponents];
           for (auto &component : components) {
@@ -49,17 +50,18 @@ Assembly::AssemblyModifier CreateModifierToAssociatePcieFunction(
               Json::Value associated_with;
               associated_with[kOdataId] = GetPcieFunctionUri(location);
               component[kAssociatedWith].append(associated_with);
-              return;
+              return absl::OkStatus();
             }
           }
-          ErrorLog() << "Failed to find component " << component_name;
-          return;
+          return absl::NotFoundError(
+              absl::StrFormat("Failed to find component %s", component_name));
         }
       }
-      ErrorLog() << "Failed to find assembly " << assembly_name;
-      return;
+      return absl::NotFoundError(
+          absl::StrFormat("Failed to find assembly %s", assembly_name));
     }
-    ErrorLog() << "Failed to find Assembly at URI " << assembly_uri;
+    return absl::NotFoundError(
+        absl::StrFormat("Failed to find Assembly at URI %s", assembly_uri));
   };
 }
 
