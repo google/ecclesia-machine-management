@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_PROCESSOR_METRICS_H_
-#define ECCLESIA_MAGENT_REDFISH_INDUS_PROCESSOR_METRICS_H_
+#ifndef ECCLESIA_MAGENT_REDFISH_COMMON_PROCESSOR_METRICS_H_
+#define ECCLESIA_MAGENT_REDFISH_COMMON_PROCESSOR_METRICS_H_
 
 #include "ecclesia/magent/redfish/core/index_resource.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
@@ -48,4 +48,4 @@ class ProcessorMetrics : public IndexResource<int> {
 };
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_PROCESSOR_METRICS_H_
+#endif  // ECCLESIA_MAGENT_REDFISH_COMMON_PROCESSOR_METRICS_H_

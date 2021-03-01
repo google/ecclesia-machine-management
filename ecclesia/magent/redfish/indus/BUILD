@@ -5,7 +5,6 @@ cc_library(
     srcs = [
         "chassis.cc",
         "memory_metrics.cc",
-        "processor_metrics.cc",
         "redfish_service.cc",
         "storage.cc",
     ],
@@ -16,7 +15,6 @@ cc_library(
         "memory_metrics.h",
         "pcie_slots.h",
         "processor.h",
-        "processor_metrics.h",
         "redfish_service.h",
         "root.h",
         "service_root.h",

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/magent/redfish/indus/processor_metrics.h"
+#include "ecclesia/magent/redfish/common/processor_metrics.h"
 
 #include <memory>
 #include <string>
