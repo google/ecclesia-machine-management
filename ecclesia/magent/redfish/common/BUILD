@@ -15,6 +15,7 @@ cc_library(
         "pcie_function.h",
         "processor_collection.h",
         "processor_metrics.h",
+        "root.h",
         "session_collection.h",
         "storage_collection.h",
     ],

@@ -16,7 +16,6 @@ cc_library(
         "pcie_slots.h",
         "processor.h",
         "redfish_service.h",
-        "root.h",
         "service_root.h",
         "session_service.h",
         "software.h",
