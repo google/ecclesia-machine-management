@@ -18,6 +18,7 @@ cc_library(
         "root.h",
         "service_root.h",
         "session_collection.h",
+        "session_service.h",
         "storage_collection.h",
     ],
     visibility = ["//ecclesia:magent_library_users"],
@@ -95,6 +96,33 @@ cc_test(
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@com_googlesource_code_re2//:re2",
+        "@com_jsoncpp//:json",
+    ],
+)
+
+cc_test(
+    name = "session_service_test",
+    srcs = ["session_service_test.cc"],
+    data = [
+        ":test_data/session_service.json",
+    ],
+    deps = [
+        ":common",
+        "//ecclesia/lib/apifs",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/network:testing",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish:raw",
+        "//ecclesia/magent/lib/thread_pool",
+        "//ecclesia/magent/redfish/core:redfish_core",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/client/public:http_client",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/client/public:http_client_api",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@com_jsoncpp//:json",
     ],
 )
