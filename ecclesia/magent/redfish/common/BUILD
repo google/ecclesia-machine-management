@@ -23,6 +23,7 @@ cc_library(
         "storage_collection.h",
         "systems.h",
         "thermal.h",
+        "update_service.h",
     ],
     visibility = ["//ecclesia:magent_library_users"],
     deps = [

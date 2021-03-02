@@ -19,7 +19,6 @@ cc_library(
         "software.h",
         "storage.h",
         "system.h",
-        "update_service.h",
     ],
     visibility = ["//ecclesia:magent_frontend_users"],
     deps = [
