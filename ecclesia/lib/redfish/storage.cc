@@ -14,59 +14,16 @@
  * limitations under the License.
  */
 
-#include "ecclesia/lib/redfish/utils.h"
+#include "ecclesia/lib/redfish/storage.h"
 
-#include "ecclesia/lib/io/pci/location.h"
+#include <memory>
+#include <vector>
+
+#include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/property_definitions.h"
 
 namespace libredfish {
-
-absl::optional<ecclesia::PciLocation> ReadPciLocation(
-    const RedfishObject &pci_location_obj) {
-  auto maybe_domain =
-      RedfishStrTo32Base<libredfish::OemGooglePropertyDomain>(pci_location_obj);
-  if (!maybe_domain.has_value()) return absl::nullopt;
-
-  auto maybe_bus =
-      RedfishStrTo32Base<libredfish::OemGooglePropertyBus>(pci_location_obj);
-  if (!maybe_bus.has_value()) return absl::nullopt;
-
-  auto maybe_device =
-      RedfishStrTo32Base<libredfish::OemGooglePropertyDevice>(pci_location_obj);
-  if (!maybe_device.has_value()) return absl::nullopt;
-
-  auto maybe_function =
-      RedfishStrTo32Base<libredfish::OemGooglePropertyFunction>(
-          pci_location_obj);
-  if (!maybe_function.has_value()) return absl::nullopt;
-
-  return ecclesia::PciLocation::TryMake(*maybe_domain, *maybe_bus,
-                                        *maybe_device, *maybe_function);
-}
-
-absl::optional<ecclesia::PciFullSignature> ReadPciFullSignature(
-    const RedfishObject &pcie_function_obj) {
-  auto maybe_vendor_id =
-      RedfishStrTo32Base<libredfish::PropertyVendorId>(pcie_function_obj);
-  if (!maybe_vendor_id.has_value()) return absl::nullopt;
-
-  auto maybe_device_id =
-      RedfishStrTo32Base<libredfish::PropertyDeviceId>(pcie_function_obj);
-  if (!maybe_device_id.has_value()) return absl::nullopt;
-
-  auto maybe_subsystem_id =
-      RedfishStrTo32Base<libredfish::PropertySubsystemId>(pcie_function_obj);
-  if (!maybe_subsystem_id.has_value()) return absl::nullopt;
-
-  auto maybe_subsystem_vendor_id =
-      RedfishStrTo32Base<libredfish::PropertySubsystemVendorId>(
-          pcie_function_obj);
-  if (!maybe_subsystem_vendor_id.has_value()) return absl::nullopt;
-
-  return ecclesia::PciFullSignature::TryMake(*maybe_vendor_id, *maybe_device_id,
-                                             *maybe_subsystem_vendor_id,
-                                             *maybe_subsystem_id);
-}
 
 std::vector<SmartReading> ReadSmartData(const RedfishObject &obj) {
   std::vector<SmartReading> readings = {

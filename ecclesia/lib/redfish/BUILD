@@ -162,15 +162,48 @@ cc_library(
 
 cc_library(
     name = "utils",
-    srcs = ["utils.cc"],
     hdrs = ["utils.h"],
     visibility = ["//ecclesia:redfish_users"],
     deps = [
         ":interface",
         ":property_definitions",
+    ],
+)
+
+cc_library(
+    name = "numbers",
+    hdrs = ["numbers.h"],
+    visibility = ["//ecclesia:redfish_users"],
+    deps = [
+        ":interface",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:optional",
+    ],
+)
+
+cc_library(
+    name = "storage",
+    srcs = ["storage.cc"],
+    hdrs = ["storage.h"],
+    visibility = ["//ecclesia:redfish_users"],
+    deps = [
+        ":interface",
+        ":property_definitions",
+        "@com_google_absl//absl/types:optional",
+    ],
+)
+
+cc_library(
+    name = "pci",
+    srcs = ["pci.cc"],
+    hdrs = ["pci.h"],
+    visibility = ["//ecclesia:redfish_users"],
+    deps = [
+        ":interface",
+        ":numbers",
+        ":property_definitions",
         "//ecclesia/lib/io/pci:location",
         "//ecclesia/lib/io/pci:signature",
-        "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
     ],
 )
