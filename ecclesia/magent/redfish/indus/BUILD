@@ -65,6 +65,31 @@ cc_library(
 )
 
 cc_test(
+    name = "service_root_test",
+    srcs = ["service_root_test.cc"],
+    data = [
+        ":test_data/service_root.json",
+    ],
+    deps = [
+        ":indus",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/network:testing",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish:raw",
+        "//ecclesia/magent/lib/thread_pool",
+        "//ecclesia/magent/redfish/core:redfish_core",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/client/public:http_client",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/client/public:http_client_api",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+        "@com_jsoncpp//:json",
+    ],
+)
+
+cc_test(
     name = "session_service_test",
     srcs = ["session_service_test.cc"],
     data = [
