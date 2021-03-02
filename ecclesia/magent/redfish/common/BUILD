@@ -19,6 +19,7 @@ cc_library(
         "service_root.h",
         "session_collection.h",
         "session_service.h",
+        "software_inventory.h",
         "storage_collection.h",
     ],
     visibility = ["//ecclesia:magent_library_users"],

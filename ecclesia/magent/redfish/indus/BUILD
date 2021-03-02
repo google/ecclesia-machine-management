@@ -17,7 +17,6 @@ cc_library(
         "processor.h",
         "redfish_service.h",
         "software.h",
-        "software_inventory.h",
         "storage.h",
         "system.h",
         "systems.h",
