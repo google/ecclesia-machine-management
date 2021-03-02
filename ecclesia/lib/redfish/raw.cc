@@ -187,7 +187,7 @@ class RawVariantImpl : public RedfishVariant::ImplIntf {
  public:
   RawVariantImpl() : payload_(nullptr) {}
   explicit RawVariantImpl(std::shared_ptr<RawPayload> payload)
-      : payload_(payload) {}
+      : payload_(std::move(payload)) {}
   std::unique_ptr<RedfishObject> AsObject() const override;
   std::unique_ptr<RedfishIterable> AsIterable() const override;
   bool GetValue(std::string *val) const override {
@@ -221,7 +221,8 @@ class RawVariantImpl : public RedfishVariant::ImplIntf {
 
 class RawObject : public RedfishObject {
  public:
-  explicit RawObject(std::shared_ptr<RawPayload> payload) : payload_(payload) {}
+  explicit RawObject(std::shared_ptr<RawPayload> payload)
+      : payload_(std::move(payload)) {}
   RawObject(const RawObject &) = delete;
   RawObject &operator=(const RawObject &) = delete;
 
@@ -238,7 +239,7 @@ class RawObject : public RedfishObject {
 class RawIterable : public RedfishIterable {
  public:
   explicit RawIterable(std::shared_ptr<RawPayload> payload)
-      : payload_(payload) {}
+      : payload_(std::move(payload)) {}
   RawIterable(const RawIterable &) = delete;
   RawObject &operator=(const RawIterable &) = delete;
 

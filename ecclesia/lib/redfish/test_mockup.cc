@@ -54,11 +54,11 @@ constexpr absl::Duration kDaemonStartSleepDuration = absl::Milliseconds(50);
 // Tune this value until you didn't see retries very often
 constexpr absl::Duration kDaemonAuthStartEstimation = absl::Seconds(1);
 
-std::string ConfigToEndpoint(TestingMockupServer::ConfigUnix config) {
+std::string ConfigToEndpoint(const TestingMockupServer::ConfigUnix &config) {
   return absl::StrCat("unix://", config.socket_path);
 }
 
-std::string ConfigToEndpoint(TestingMockupServer::ConfigNetwork config) {
+std::string ConfigToEndpoint(const TestingMockupServer::ConfigNetwork &config) {
   return absl::StrCat(config.hostname, ":", config.port);
 }
 
