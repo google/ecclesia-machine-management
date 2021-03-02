@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_SERVICE_ROOT_H_
-#define ECCLESIA_MAGENT_REDFISH_INDUS_SERVICE_ROOT_H_
+#ifndef ECCLESIA_MAGENT_REDFISH_COMMON_SERVICE_ROOT_H_
+#define ECCLESIA_MAGENT_REDFISH_COMMON_SERVICE_ROOT_H_
 
 #include <string>
 
@@ -56,4 +56,4 @@ class ServiceRoot : public ServiceRootResource {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_SERVICE_ROOT_H_
+#endif  // ECCLESIA_MAGENT_REDFISH_COMMON_SERVICE_ROOT_H_
