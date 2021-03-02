@@ -22,6 +22,7 @@ cc_library(
         "software_inventory.h",
         "storage_collection.h",
         "systems.h",
+        "thermal.h",
     ],
     visibility = ["//ecclesia:magent_library_users"],
     deps = [
@@ -34,6 +35,8 @@ cc_library(
         "//ecclesia/magent/lib/event_logger:system_event_visitors",
         "//ecclesia/magent/lib/event_logger/indus:indus_system_event_visitors",
         "//ecclesia/magent/redfish/core:redfish_core",
+        "//ecclesia/magent/sysmodel/x86:dimm",
+        "//ecclesia/magent/sysmodel/x86:thermal",
         "//ecclesia/magent/sysmodel/x86:x86_sysmodel",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",

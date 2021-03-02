@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_THERMAL_H_
-#define ECCLESIA_MAGENT_REDFISH_INDUS_THERMAL_H_
+#ifndef ECCLESIA_MAGENT_REDFISH_COMMON_THERMAL_H_
+#define ECCLESIA_MAGENT_REDFISH_COMMON_THERMAL_H_
 
 #include <string>
 #include <utility>
@@ -98,4 +98,4 @@ class Thermal : public Resource {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_THERMAL_H_
+#endif  // ECCLESIA_MAGENT_REDFISH_COMMON_THERMAL_H_
