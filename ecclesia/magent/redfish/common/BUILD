@@ -9,6 +9,7 @@ cc_library(
         "processor_metrics.cc",
     ],
     hdrs = [
+        "memory.h",
         "memory_collection.h",
         "pcie_device.h",
         "pcie_device_collection.h",

@@ -11,7 +11,6 @@ cc_library(
     hdrs = [
         "chassis.h",
         "drive.h",
-        "memory.h",
         "memory_metrics.h",
         "pcie_slots.h",
         "processor.h",
@@ -37,7 +36,6 @@ cc_library(
         "//ecclesia/magent/redfish/core:redfish_core",
         "//ecclesia/magent/sysmodel/x86:chassis",
         "//ecclesia/magent/sysmodel/x86:cpu",
-        "//ecclesia/magent/sysmodel/x86:dimm",
         "//ecclesia/magent/sysmodel/x86:nvme",
         "//ecclesia/magent/sysmodel/x86:sysmodel_fru",
         "//ecclesia/magent/sysmodel/x86:x86_sysmodel",
