@@ -19,7 +19,6 @@ cc_library(
         "software.h",
         "storage.h",
         "system.h",
-        "systems.h",
         "thermal.h",
         "update_service.h",
     ],
