@@ -32,9 +32,9 @@ cc_library(
     visibility = ["//ecclesia:library_users"],
     deps = [
         ":smbus",
+        "//testing/base/public:gunit_for_library_testonly",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/types:span",
-        "@com_google_googletest//:gtest",
     ],
 )
 
