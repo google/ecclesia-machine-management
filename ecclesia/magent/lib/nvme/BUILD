@@ -53,9 +53,9 @@ cc_library(
         ":nvme_types_emb",
         ":sanitize_log_page",
         ":smart_log_page",
+        "//testing/base/public:gunit_for_library_testonly",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
-        "@com_google_googletest//:gtest",
     ],
 )
 
