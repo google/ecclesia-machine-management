@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_SOFTWARE_H_
-#define ECCLESIA_MAGENT_REDFISH_INDUS_SOFTWARE_H_
+#ifndef ECCLESIA_MAGENT_REDFISH_COMMON_SOFTWARE_H_
+#define ECCLESIA_MAGENT_REDFISH_COMMON_SOFTWARE_H_
 
 #include <string>
+#include <utility>
 
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/version/version.h"
@@ -30,7 +31,9 @@ namespace ecclesia {
 
 class SoftwareInventory : public Resource {
  public:
-  SoftwareInventory() : Resource(kSoftwareInventoryMagentUri) {}
+  SoftwareInventory(const std::string software_name)
+      : Resource(kSoftwareInventoryMagentUri),
+        software_name_(std::move(software_name)) {}
 
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
@@ -42,13 +45,15 @@ class SoftwareInventory : public Resource {
         "/redfish/v1/"
         "$metadata#SoftwareInventory.SoftwareInventory";
     json[kId] = "Software Inventory";
-    json[kName] = "magent-indus";
+    json[kName] = software_name_;
     json[kVersion] = std::string(GetBuildVersion());
 
     JSONResponseOK(json, req);
   }
+
+  const std::string software_name_;
 };
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_SOFTWARE_H_
+#endif  // ECCLESIA_MAGENT_REDFISH_COMMON_SOFTWARE_H_
