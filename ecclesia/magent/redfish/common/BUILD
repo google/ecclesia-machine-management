@@ -23,6 +23,7 @@ cc_library(
         "session_service.h",
         "software_inventory.h",
         "storage_collection.h",
+        "system.h",
         "systems.h",
         "thermal.h",
         "update_service.h",

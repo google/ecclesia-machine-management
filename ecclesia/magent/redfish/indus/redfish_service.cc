@@ -49,6 +49,7 @@
 #include "ecclesia/magent/redfish/common/session_service.h"
 #include "ecclesia/magent/redfish/common/software_inventory.h"
 #include "ecclesia/magent/redfish/common/storage_collection.h"
+#include "ecclesia/magent/redfish/common/system.h"
 #include "ecclesia/magent/redfish/common/systems.h"
 #include "ecclesia/magent/redfish/common/thermal.h"
 #include "ecclesia/magent/redfish/common/update_service.h"
@@ -63,7 +64,6 @@
 #include "ecclesia/magent/redfish/indus/pcie_slots.h"
 #include "ecclesia/magent/redfish/indus/software.h"
 #include "ecclesia/magent/redfish/indus/storage.h"
-#include "ecclesia/magent/redfish/indus/system.h"
 #include "ecclesia/magent/sysmodel/x86/fru.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
 #include "json/json.h"
@@ -196,6 +196,7 @@ constexpr int kPe3Spicy16AssemblyIndex = 19;
 constexpr int kPe2ConnectorComponentIndex = 31;
 constexpr int kPe3ConnectorComponentIndex = 32;
 
+constexpr absl::string_view kSystemName = "Indus";
 }  // namespace
 
 IndusRedfishService::IndusRedfishService(
@@ -205,7 +206,8 @@ IndusRedfishService::IndusRedfishService(
   resources_.push_back(CreateResource<Root>(server));
   resources_.push_back(CreateResource<ServiceRoot>(server));
   resources_.push_back(CreateResource<ComputerSystemCollection>(server));
-  resources_.push_back(CreateResource<ComputerSystem>(server, system_model));
+  resources_.push_back(CreateResource<ComputerSystem>(
+      server, system_model, std::string(kSystemName)));
   resources_.push_back(CreateResource<ChassisCollection>(server, system_model));
   resources_.push_back(CreateResource<Chassis>(server, system_model));
   resources_.push_back(CreateResource<MemoryCollection>(server, system_model));

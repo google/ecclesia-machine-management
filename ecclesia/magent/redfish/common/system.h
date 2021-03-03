@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_SYSTEM_H_
-#define ECCLESIA_MAGENT_REDFISH_INDUS_SYSTEM_H_
+#ifndef ECCLESIA_MAGENT_REDFISH_COMMON_SYSTEM_H_
+#define ECCLESIA_MAGENT_REDFISH_COMMON_SYSTEM_H_
 
 #include <string>
+#include <utility>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
@@ -34,8 +35,10 @@ namespace ecclesia {
 
 class ComputerSystem : public Resource {
  public:
-  ComputerSystem(SystemModel *system_model)
-      : Resource(kComputerSystemUri), system_model_(system_model) {}
+  ComputerSystem(SystemModel *system_model, const std::string system_name)
+      : Resource(kComputerSystemUri),
+        system_model_(system_model),
+        system_name_(std::move(system_name)) {}
 
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
@@ -45,7 +48,7 @@ class ComputerSystem : public Resource {
     json[kOdataId] = std::string(Uri());
     json[kOdataContext] = "/redfish/v1/$metadata#ComputerSystem.ComputerSystem";
 
-    json[kName] = "Indus";
+    json[kName] = system_name_;
     json[kId] = "system";
 
     auto *memory = GetJsonObject(&json, kMemory);
@@ -83,7 +86,8 @@ class ComputerSystem : public Resource {
   }
 
   SystemModel *const system_model_;
+  const std::string system_name_;
 };
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_SYSTEM_H_
+#endif  // ECCLESIA_MAGENT_REDFISH_COMMON_SYSTEM_H_

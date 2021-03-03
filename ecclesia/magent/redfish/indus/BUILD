@@ -16,7 +16,6 @@ cc_library(
         "redfish_service.h",
         "software.h",
         "storage.h",
-        "system.h",
     ],
     visibility = ["//ecclesia:magent_frontend_users"],
     deps = [
