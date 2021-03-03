@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_PROCESSOR_H_
-#define ECCLESIA_MAGENT_REDFISH_INDUS_PROCESSOR_H_
+#ifndef ECCLESIA_MAGENT_REDFISH_COMMON_PROCESSOR_H_
+#define ECCLESIA_MAGENT_REDFISH_COMMON_PROCESSOR_H_
 
 #include <string>
 #include <type_traits>
@@ -115,4 +115,4 @@ class Processor : public IndexResource<int> {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_PROCESSOR_H_
+#endif  // ECCLESIA_MAGENT_REDFISH_COMMON_PROCESSOR_H_
