@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/magent/redfish/indus/memory_metrics.h"
+#include "ecclesia/magent/redfish/common/memory_metrics.h"
 
 #include <memory>
 #include <string>
@@ -46,14 +46,13 @@ namespace {
 // event time stamp and the error counts. On every call it accumulates the error
 // counts since the last time.
 const absl::flat_hash_map<int, DimmErrorCount> &GetMemoryErrors(
-    SystemModel *system_model) {
+    SystemModel *system_model, const DimmErrorCountingVisitorFactory &factory) {
   static absl::Time last_event_timestamp = absl::UnixEpoch();
   static auto &result_error_counts =
       *(new absl::flat_hash_map<int, DimmErrorCount>());
 
   std::unique_ptr<DimmErrorCountingVisitor> visitor =
-      CreateIndusDimmErrorCountingVisitor(
-          last_event_timestamp, absl::make_unique<IntelCpuTopology>());
+      factory(last_event_timestamp, absl::make_unique<IntelCpuTopology>());
 
   system_model->VisitSystemEvents(visitor.get());
   // update the last event time stamp
@@ -90,7 +89,7 @@ void MemoryMetrics::Get(
 
   int dimm_num = std::get<int>(params[0]);
   const absl::flat_hash_map<int, DimmErrorCount> &mem_errors =
-      GetMemoryErrors(system_model_);
+      GetMemoryErrors(system_model_, visitor_factory_);
 
   // Fill in the json response
   Json::Value json;

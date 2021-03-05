@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_MEMORY_METRICS_H_
-#define ECCLESIA_MAGENT_REDFISH_INDUS_MEMORY_METRICS_H_
+#ifndef ECCLESIA_MAGENT_REDFISH_COMMON_MEMORY_METRICS_H_
+#define ECCLESIA_MAGENT_REDFISH_COMMON_MEMORY_METRICS_H_
 
+#include <functional>
+#include <memory>
+#include <utility>
+
+#include "ecclesia/lib/mcedecoder/cpu_topology.h"
+#include "ecclesia/magent/lib/event_logger/system_event_visitors.h"
 #include "ecclesia/magent/redfish/core/index_resource.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
@@ -26,12 +32,18 @@
 
 namespace ecclesia {
 
+using DimmErrorCountingVisitorFactory =
+    std::function<std::unique_ptr<DimmErrorCountingVisitor>(
+        absl::Time, std::unique_ptr<CpuTopologyInterface>)>;
+
 class MemoryMetrics : public IndexResource<int> {
  public:
-  explicit MemoryMetrics(SystemModel *system_model)
-      : IndexResource(kMemoryMetricsUriPattern), system_model_(system_model) {}
+  explicit MemoryMetrics(SystemModel *system_model,
+                         DimmErrorCountingVisitorFactory visitor_factory)
+      : IndexResource(kMemoryMetricsUriPattern),
+        system_model_(system_model),
+        visitor_factory_(std::move(visitor_factory)) {}
 
- protected:
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override;
@@ -45,8 +57,9 @@ class MemoryMetrics : public IndexResource<int> {
   }
 
   SystemModel *const system_model_;
+  DimmErrorCountingVisitorFactory visitor_factory_;
 };
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_MEMORY_METRICS_H_
+#endif  // ECCLESIA_MAGENT_REDFISH_COMMON_MEMORY_METRICS_H_

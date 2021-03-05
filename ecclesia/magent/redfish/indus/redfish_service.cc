@@ -35,8 +35,10 @@
 #include "ecclesia/lib/io/usb/usb.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
+#include "ecclesia/magent/lib/event_logger/indus/system_event_visitors.h"
 #include "ecclesia/magent/redfish/common/memory.h"
 #include "ecclesia/magent/redfish/common/memory_collection.h"
+#include "ecclesia/magent/redfish/common/memory_metrics.h"
 #include "ecclesia/magent/redfish/common/pcie_device.h"
 #include "ecclesia/magent/redfish/common/pcie_device_collection.h"
 #include "ecclesia/magent/redfish/common/pcie_function.h"
@@ -61,7 +63,6 @@
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/redfish/indus/chassis.h"
 #include "ecclesia/magent/redfish/indus/drive.h"
-#include "ecclesia/magent/redfish/indus/memory_metrics.h"
 #include "ecclesia/magent/redfish/indus/pcie_slots.h"
 #include "ecclesia/magent/redfish/indus/storage.h"
 #include "ecclesia/magent/sysmodel/x86/fru.h"
@@ -286,7 +287,8 @@ IndusRedfishService::IndusRedfishService(
 
   resources_.push_back(CreateResource<Assembly>(server, assemblies_dir,
                                                 std::move(assembly_modifiers)));
-  resources_.push_back(CreateResource<MemoryMetrics>(server, system_model));
+  resources_.push_back(CreateResource<MemoryMetrics>(
+      server, system_model, CreateIndusDimmErrorCountingVisitor));
   resources_.push_back(
       CreateResource<ProcessorCollection>(server, system_model));
 

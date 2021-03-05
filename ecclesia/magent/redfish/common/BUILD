@@ -4,6 +4,7 @@ licenses(["notice"])
 cc_library(
     name = "common",
     srcs = [
+        "memory_metrics.cc",
         "pcie_device.cc",
         "pcie_device_collection.cc",
         "pcie_function.cc",
@@ -12,6 +13,7 @@ cc_library(
     hdrs = [
         "memory.h",
         "memory_collection.h",
+        "memory_metrics.h",
         "pcie_device.h",
         "pcie_device_collection.h",
         "pcie_function.h",
