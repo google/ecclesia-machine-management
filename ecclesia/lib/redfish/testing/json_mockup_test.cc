@@ -134,8 +134,7 @@ TEST(JsonMockup, CanGetSubObjectFields) {
   auto root_obj = json_intf->GetRoot().AsObject();
   ASSERT_TRUE(root_obj) << "Root object should not be null.";
 
-  auto subobj = root_obj->GetNode("SubObject");
-  auto subobj_obj = subobj.AsObject();
+  auto subobj_obj = (*root_obj)["SubObject"].AsObject();
   ASSERT_TRUE(subobj_obj) << "SubObject should not be null.";
 
   auto int_val = subobj_obj->GetNodeValue<int>("IntField");
@@ -152,7 +151,7 @@ TEST(JsonMockup, EmptyArray) {
   EXPECT_TRUE(root_itr->Empty());
 
   // Getting an element should return an unviewable variant
-  auto elem0 = root_itr->GetIndex(0);
+  auto elem0 = (*root_itr)[0];
   EXPECT_FALSE(elem0.AsObject());
   EXPECT_FALSE(elem0.AsIterable());
 }
@@ -170,27 +169,26 @@ TEST(JsonMockup, CanGetArrayFields) {
   auto root_obj = json_intf->GetRoot().AsObject();
   ASSERT_TRUE(root_obj) << "Root object should not be null.";
 
-  auto subobj = root_obj->GetNode("ObjArray");
-  auto subobj_itr = subobj.AsIterable();
+  auto subobj_itr = (*root_obj)["ObjArray"].AsIterable();
   ASSERT_TRUE(subobj_itr) << "ObjArray should not be null.";
   EXPECT_THAT(subobj_itr->Size(), Eq(3));
   EXPECT_FALSE(subobj_itr->Empty());
 
-  auto elem0 = subobj_itr->GetIndex(0);
+  auto elem0 = (*subobj_itr)[0];
   auto elem0_obj = elem0.AsObject();
   ASSERT_TRUE(elem0_obj);
   auto elem0_val = elem0_obj->GetNodeValue<int>("Val");
   ASSERT_TRUE(elem0_val.has_value());
   EXPECT_THAT(elem0_val.value(), Eq(0));
 
-  auto elem1 = subobj_itr->GetIndex(1);
+  auto elem1 = (*subobj_itr)[1];
   auto elem1_obj = elem1.AsObject();
   ASSERT_TRUE(elem1_obj);
   auto elem1_val = elem1_obj->GetNodeValue<int>("Val");
   ASSERT_TRUE(elem1_val.has_value());
   EXPECT_THAT(elem1_val.value(), Eq(1));
 
-  auto elem2 = subobj_itr->GetIndex(2);
+  auto elem2 = (*subobj_itr)[2];
   auto elem2_obj = elem2.AsObject();
   ASSERT_TRUE(elem2_obj);
   auto elem2_val = elem2_obj->GetNodeValue<int>("Val");
@@ -198,10 +196,10 @@ TEST(JsonMockup, CanGetArrayFields) {
   EXPECT_THAT(elem2_val.value(), Eq(2));
 
   // Getting an out-of-bounds element should return an unviewable variant
-  auto elem3 = subobj_itr->GetIndex(3);
+  auto elem3 = (*subobj_itr)[3];
   EXPECT_FALSE(elem3.AsObject());
   EXPECT_FALSE(elem3.AsIterable());
-  auto elem_neg = subobj_itr->GetIndex(-1);
+  auto elem_neg = (*subobj_itr)[-1];
   EXPECT_FALSE(elem_neg.AsObject());
   EXPECT_FALSE(elem_neg.AsIterable());
 }
@@ -220,21 +218,21 @@ TEST(JsonMockup, CanGetCollectionFields) {
   auto root_itr = json_intf->GetRoot().AsIterable();
   ASSERT_TRUE(root_itr) << "Root object should not be null.";
 
-  auto elem0 = root_itr->GetIndex(0);
+  auto elem0 = (*root_itr)[0];
   auto elem0_obj = elem0.AsObject();
   ASSERT_TRUE(elem0_obj);
   auto elem0_val = elem0_obj->GetNodeValue<int>("Val");
   ASSERT_TRUE(elem0_val.has_value());
   EXPECT_THAT(elem0_val.value(), Eq(0));
 
-  auto elem1 = root_itr->GetIndex(1);
+  auto elem1 = (*root_itr)[1];
   auto elem1_obj = elem1.AsObject();
   ASSERT_TRUE(elem1_obj);
   auto elem1_val = elem1_obj->GetNodeValue<int>("Val");
   ASSERT_TRUE(elem1_val.has_value());
   EXPECT_THAT(elem1_val.value(), Eq(1));
 
-  auto elem2 = root_itr->GetIndex(2);
+  auto elem2 = (*root_itr)[2];
   auto elem2_obj = elem2.AsObject();
   ASSERT_TRUE(elem2_obj);
   auto elem2_val = elem2_obj->GetNodeValue<int>("Val");
@@ -242,10 +240,10 @@ TEST(JsonMockup, CanGetCollectionFields) {
   EXPECT_THAT(elem2_val.value(), Eq(2));
 
   // Getting an out-of-bounds element should return an unviewable variant
-  auto elem3 = root_itr->GetIndex(3);
+  auto elem3 = (*root_itr)[3];
   EXPECT_FALSE(elem3.AsObject());
   EXPECT_FALSE(elem3.AsIterable());
-  auto elem_neg = root_itr->GetIndex(-1);
+  auto elem_neg = (*root_itr)[-1];
   EXPECT_FALSE(elem_neg.AsObject());
   EXPECT_FALSE(elem_neg.AsIterable());
 }

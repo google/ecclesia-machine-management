@@ -226,7 +226,7 @@ class RawObject : public RedfishObject {
   RawObject(const RawObject &) = delete;
   RawObject &operator=(const RawObject &) = delete;
 
-  RedfishVariant GetNode(const std::string &node_name) const override {
+  RedfishVariant operator[](const std::string &node_name) const override {
     return RedfishVariant(
         absl::make_unique<RawVariantImpl>(payload_->GetNode(node_name)));
   }
@@ -245,7 +245,7 @@ class RawIterable : public RedfishIterable {
 
   size_t Size() override { return payload_->Size(); }
   bool Empty() override { return payload_->Empty(); }
-  RedfishVariant GetIndex(int index) override {
+  RedfishVariant operator[](int index) const override {
     return RedfishVariant(
         absl::make_unique<RawVariantImpl>(payload_->GetIndex(index)));
   }

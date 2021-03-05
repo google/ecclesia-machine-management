@@ -85,11 +85,11 @@ struct Assembly {
 // to assembly_out.
 void ExtractAssemblyProperties(RedfishObject *obj,
                                std::vector<RedfishVariant> *assembly_out) {
-  auto assembly_node = obj->GetNode(kRfPropertyAssembly).AsObject();
+  auto assembly_node = (*obj)[kRfPropertyAssembly].AsObject();
   if (!assembly_node) return;
 
   auto assembly_collection =
-      assembly_node->GetNode(kRfPropertyAssemblies).AsIterable();
+      (*assembly_node)[kRfPropertyAssemblies].AsIterable();
   if (!assembly_collection) return;
 
   for (auto assembly : *assembly_collection) {
@@ -105,7 +105,7 @@ void ExtractAssemblyProperties(RedfishObject *obj,
 // * /redfish/v1/Systems/{id}/Storage/{id}Drives/{id}/Assembly
 void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
                                   std::vector<RedfishVariant> *assembly_out) {
-  auto system_collection = root_obj->GetNode(kRfPropertySystems).AsIterable();
+  auto system_collection = (*root_obj)[kRfPropertySystems].AsIterable();
   if (!system_collection) return;
 
   for (auto system : *system_collection) {
@@ -114,7 +114,7 @@ void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
     ExtractAssemblyProperties(system_obj.get(), assembly_out);
 
     auto memory_collection =
-        system_obj->GetNode(kRfPropertyMemory).AsIterable();
+        (*system_obj)[kRfPropertyMemory].AsIterable();
     if (memory_collection) {
       for (auto memory : *memory_collection) {
         auto memory_obj = memory.AsObject();
@@ -124,7 +124,7 @@ void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
     }
 
     auto processors_collection =
-        system_obj->GetNode(kRfPropertyProcessors).AsIterable();
+        (*system_obj)[kRfPropertyProcessors].AsIterable();
     if (processors_collection) {
       for (auto processor : *processors_collection) {
         auto processor_obj = processor.AsObject();
@@ -134,7 +134,7 @@ void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
     }
 
     auto ethernet_interfaces_collection =
-        system_obj->GetNode(kRfPropertyEthernetInterfaces).AsIterable();
+        (*system_obj)[kRfPropertyEthernetInterfaces].AsIterable();
     if (ethernet_interfaces_collection) {
       for (auto ethernet_interface : *ethernet_interfaces_collection) {
         auto ethernet_interface_obj = ethernet_interface.AsObject();
@@ -144,13 +144,13 @@ void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
     }
 
     auto storage_collection =
-        system_obj->GetNode(kRfPropertyStorage).AsIterable();
+        (*system_obj)[kRfPropertyStorage].AsIterable();
     if (storage_collection) {
       for (auto storage : *storage_collection) {
         auto storage_obj = storage.AsObject();
         if (!storage_obj) continue;
         auto drives_collection =
-            storage_obj->GetNode(kRfPropertyDrives).AsIterable();
+            (*storage_obj)[kRfPropertyDrives].AsIterable();
         if (drives_collection) {
           for (auto drive : *drives_collection) {
             auto drive_obj = drive.AsObject();
@@ -167,7 +167,7 @@ void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
 // * /redfish/v1/chassis/{chassis_id}/Assembly
 void ExtractAssemblyFromChassisUri(RedfishObject *root_obj,
                                    std::vector<RedfishVariant> *assembly_out) {
-  auto chassis_collection = root_obj->GetNode(kRfPropertyChassis).AsIterable();
+  auto chassis_collection = (*root_obj)[kRfPropertyChassis].AsIterable();
   if (!chassis_collection) return;
 
   for (auto chassis : *chassis_collection) {
@@ -273,14 +273,14 @@ absl::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
   if (!fru_name.has_value()) return absl::nullopt;
   assembly.name = fru_name.value();
 
-  auto oem = assembly_payload->GetNode(kRfPropertyOem).AsObject();
+  auto oem = (*assembly_payload)[kRfPropertyOem].AsObject();
   if (!oem) return assembly;
 
-  auto google = oem->GetNode(kRfOemPropertyGoogle).AsObject();
+  auto google = (*oem)[kRfOemPropertyGoogle].AsObject();
   if (!google) return assembly;
 
   // Fetch the Assembly's upstream odata.id reference if it exists
-  auto attached_to = google->GetNode(kRfOemPropertyAttachedTo).AsIterable();
+  auto attached_to = (*google)[kRfOemPropertyAttachedTo].AsIterable();
   if (attached_to && !attached_to->Empty()) {
     for (auto upstream_variant : *attached_to) {
       if (auto upstream = upstream_variant.AsObject();
@@ -290,7 +290,7 @@ absl::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
     }
   }
 
-  auto components = google->GetNode(kRfOemPropertyComponents).AsIterable();
+  auto components = (*google)[kRfOemPropertyComponents].AsIterable();
   if (!components) return assembly;
 
   for (auto component_resource : *components) {
@@ -326,7 +326,7 @@ absl::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
     // For every resource associated with this Component, extract the associated
     // URIs.
     auto associated_with =
-        component_resource_obj->GetNode(kRfOemPropertyAssociatedWith);
+        (*component_resource_obj)[kRfOemPropertyAssociatedWith];
     if (auto associated_with_iterable = associated_with.AsIterable()) {
       for (auto association : *associated_with_iterable) {
         if (auto association_obj = association.AsObject()) {

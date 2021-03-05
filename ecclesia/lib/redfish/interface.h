@@ -24,6 +24,7 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
@@ -45,6 +46,23 @@ class RedfishObject;
 //
 // If the given Redfish getter fails or there is a type mismatch, a null view
 // will be returned by the View methods.
+//
+// It is possible to access a nested Redfish structure by chaining the index
+// operator. For example `root[kRfPropertySystems][1]` gives the 2nd
+// ComputerSystem object in the Systems node as a RedfishVariant. In the case of
+// having a RedfishIterable in the chain, it is also possible to loop through
+// the iterator with `.Each()`. In that case a `.Do()` call is needed at the end
+// of the chain to specify the procedure to be applied on each object. If any
+// segment in the chain is null, the final result is null.
+//
+// These subscriptions and functions can appear multiple times in the chain. For
+// example,
+//
+//     RedfishVariant::IndexEach each;
+//     root[kRfPropertySystems].Each()[kRfPropertyMemory].Each().Do(
+//       [](auto mem_obj) {...});
+//
+// this applies the closure on each of the memory nodes in each system.
 class RedfishVariant final {
  public:
   // ImplIntf is provided as the interface for subclasses to be implemented with
@@ -62,12 +80,69 @@ class RedfishVariant final {
     virtual std::string DebugString() const = 0;
   };
 
+  // A helper class to denote a loop through an iterator.
+  class IndexEach {};
+  using IndexType = absl::variant<std::string, size_t, IndexEach>;
+
+  // A helper class for lazy evaluation of an index operator chain, when
+  // IndexEach is involved.
+  class IndexHelper {
+   public:
+    IndexHelper() = delete;
+    IndexHelper(const RedfishVariant &root, IndexType index) : root_(root) {
+      AppendIndex(index);
+    }
+
+    void AppendIndex(const IndexType &index) {
+      indices_.push_back(index);
+    }
+
+    bool IsEmpty() const {
+      return indices_.empty();
+    }
+
+    IndexHelper Each() {
+      AppendIndex(IndexEach());
+      return *this;
+    }
+
+    IndexHelper &operator[](const IndexType &index) {
+      AppendIndex(index);
+      return *this;
+    }
+
+    // This should be called at the end of the chain. For each “leaf” node that
+    // the chain finds, the functional `what` will be called with the node
+    // passed to it as the sole argument. The node is passed as a unique_ptr to
+    // the RedfishObject.
+    template <typename F> void Do(F what) const {
+      Do(root_, indices_, what);
+    }
+
+   private:
+    // template <typename F>
+    // void Do(const RedfishVariant &root, absl::Span<const IndexType> indices,
+    //         F what) const;
+    template <typename F>
+    void Do(const RedfishVariant &root, absl::Span<const IndexType> indices,
+            F what) const;
+
+    std::vector<IndexType> indices_;
+    const RedfishVariant &root_;
+  };
+
   RedfishVariant() : ptr_(nullptr) {}
   RedfishVariant(std::unique_ptr<ImplIntf> ptr) : ptr_(std::move(ptr)) {}
   RedfishVariant(const RedfishVariant &) = delete;
   RedfishVariant &operator=(const RedfishVariant &) = delete;
   RedfishVariant(RedfishVariant &&other) = default;
   RedfishVariant &operator=(RedfishVariant &&other) = default;
+
+  inline RedfishVariant operator[](const std::string &property) const;
+  inline RedfishVariant operator[](const size_t index) const;
+  IndexHelper Each() const {
+    return IndexHelper(*this, IndexType(IndexEach()));
+  }
 
   std::unique_ptr<RedfishObject> AsObject() const {
     if (!ptr_) return nullptr;
@@ -120,7 +195,7 @@ class RedfishIterable {
   // Returns the payload for a given index. If the value of the node is an
   // "@odata.id" field, the RedfishInterface will be queried to retrieve the
   // payload corresponding to that "@odata.id".
-  virtual RedfishVariant GetIndex(int index) = 0;
+  virtual RedfishVariant operator[](int index) const = 0;
 
   class Iterator {
    public:
@@ -132,7 +207,7 @@ class RedfishIterable {
 
     reference operator*() {
       if (index_ < iterable_->Size()) {
-        return iterable_->GetIndex(index_);
+        return (*iterable_)[index_];
       }
       return RedfishVariant();
     }
@@ -174,7 +249,7 @@ class RedfishObject {
   // Returns the payload for a given named property node. If the value of
   // the node is an "@odata.id" field, the RedfishInterface will be queried
   // to retrieve the payload corresponding to that "@odata.id".
-  virtual RedfishVariant GetNode(const std::string &node_name) const = 0;
+  virtual RedfishVariant operator[](const std::string &node_name) const = 0;
   virtual absl::optional<std::string> GetUri() = 0;
 
   // GetNodeValue is a convenience method which calls GetNode() then GetValue().
@@ -183,7 +258,7 @@ class RedfishObject {
   template <typename T>
   absl::optional<T> GetNodeValue(absl::string_view node_name) const {
     T val;
-    auto node = GetNode(node_name.data());
+    auto node = (*this)[node_name.data()];
     if (!node.GetValue(&val)) return absl::nullopt;
     return val;
   }
@@ -263,6 +338,65 @@ class NullRedfish : public RedfishInterface {
     return RedfishVariant();
   }
 };
+
+RedfishVariant RedfishVariant::operator[](const std::string &property) const {
+  if (!ptr_) return RedfishVariant();
+  if (std::unique_ptr<RedfishObject> obj = AsObject()) {
+    return (*obj)[property];
+  } else {
+    return RedfishVariant();
+  }
+}
+RedfishVariant RedfishVariant::operator[](const size_t index) const {
+  if (!ptr_) return RedfishVariant();
+  if (std::unique_ptr<RedfishIterable> iter = AsIterable()) {
+    return (*iter)[index];
+  } else {
+    return RedfishVariant();
+  }
+}
+
+// Evaluates the index chain in a recursive fashion.
+template <typename F>
+void RedfishVariant::IndexHelper::Do(
+    const RedfishVariant &root, absl::Span<const IndexType> indices,
+    F what) const {
+  if (indices.empty()) {
+    // The chain is empty. That means we have evaluated the whole chain. Variant
+    // `root` should be one of the objects the chain matches. So we will just
+    // call `what` on it, and stop the recursion.
+    if (std::unique_ptr<RedfishObject> obj = root.AsObject()) {
+      what(obj);
+    }
+    return;
+  }
+
+  // The chain is not empty. We will evaluate the 1st index in the chain, and
+  // leave the rest to the next layer of recursion.
+  const IndexType &index = indices[0];
+  absl::visit([&](auto&& index_value) {
+    using T = std::decay_t<decltype(index_value)>;
+    auto rest = indices.last(indices.size() - 1);
+    if constexpr (std::is_same_v<T, std::string>) {
+      // The index is a string. Likely we are looking at a RedfishObject. Simply
+      // drill down.
+      Do(root[index_value], rest, what);
+    } else if constexpr (std::is_same_v<T, size_t>) {
+      // The index is an integer. We should be looking at a RedfishIterable.
+      // Simply drill down.
+      Do(root[index_value], rest, what);
+    } else if constexpr (std::is_same_v<T, IndexEach>) {
+      // This segment of the chain is an `Each()`. Therefore we are looking at a
+      // RedfishIterable, and need to iterate over its elements. We then drill
+      // down to each of the elements.
+      auto iter = root.AsIterable();
+      if (!iter) return;
+      for (auto entry : *iter) {
+        Do(entry, rest, what);
+      }
+    }
+  }, index);
+}
 
 }  // namespace libredfish
 

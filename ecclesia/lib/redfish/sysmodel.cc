@@ -24,7 +24,6 @@
 #include "ecclesia/lib/redfish/property_definitions.h"
 
 namespace libredfish {
-
 // The following function overrides of QueryAllResources implement the search
 // algorithms for the specific Redfish Resources in the URIs defined in the
 // Redfish Schema Supplement. The supported URIs are non-exhaustive.
@@ -34,15 +33,10 @@ namespace libredfish {
 void Sysmodel::QueryAllResourceInternal(
     ResourceChassis *, const std::function<void(std::unique_ptr<RedfishObject>)>
                            &result_callback) {
-  auto root_obj = redfish_intf_->GetRoot().AsObject();
-  if (!root_obj) return;
-  auto chassis_itr = root_obj->GetNode(kRfPropertyChassis).AsIterable();
-  if (!chassis_itr) return;
-  for (auto chassis : *chassis_itr) {
-    if (std::unique_ptr<RedfishObject> obj = chassis.AsObject()) {
-      result_callback(std::move(obj));
-    }
-  }
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertyChassis].Each().Do([&](auto &chassis_obj) {
+    result_callback(std::move(chassis_obj));
+  });
 }
 
 // System:
@@ -50,15 +44,10 @@ void Sysmodel::QueryAllResourceInternal(
 void Sysmodel::QueryAllResourceInternal(
     ResourceSystem *, const std::function<void(std::unique_ptr<RedfishObject>)>
                            &result_callback) {
-  auto root_obj = redfish_intf_->GetRoot().AsObject();
-  if (!root_obj) return;
-  auto sys_itr = root_obj->GetNode(kRfPropertySystems).AsIterable();
-  if (!sys_itr) return;
-  for (auto sys : *sys_itr) {
-    if (std::unique_ptr<RedfishObject> obj = sys.AsObject()) {
-      result_callback(std::move(obj));
-    }
-  }
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertySystems].Each().Do([&](auto &sys_obj) {
+    result_callback(std::move(sys_obj));
+  });
 }
 
 // Memory:
@@ -66,21 +55,11 @@ void Sysmodel::QueryAllResourceInternal(
 void Sysmodel::QueryAllResourceInternal(
     ResourceMemory *, const std::function<void(std::unique_ptr<RedfishObject>)>
                           &result_callback) {
-  auto root_obj = redfish_intf_->GetRoot().AsObject();
-  if (!root_obj) return;
-  auto systems_itr = root_obj->GetNode(kRfPropertySystems).AsIterable();
-  if (!systems_itr) return;
-  for (auto system : *systems_itr) {
-    if (std::unique_ptr<RedfishObject> sys_obj = system.AsObject()) {
-      auto memory_itr = sys_obj->GetNode(kRfPropertyMemory).AsIterable();
-      if (!memory_itr) continue;
-      for (auto memory : *memory_itr) {
-        if (std::unique_ptr<RedfishObject> memory_obj = memory.AsObject()) {
-          result_callback(std::move(memory_obj));
-        }
-      }
-    }
-  }
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertySystems].Each()[kRfPropertyMemory].Each()
+      .Do([&](auto &memory_obj) {
+        result_callback(std::move(memory_obj));
+      });
 }
 
 // Storage:
@@ -88,21 +67,11 @@ void Sysmodel::QueryAllResourceInternal(
 void Sysmodel::QueryAllResourceInternal(
     ResourceStorage *, const std::function<void(std::unique_ptr<RedfishObject>)>
                            &result_callback) {
-  auto root_obj = redfish_intf_->GetRoot().AsObject();
-  if (!root_obj) return;
-  auto systems_itr = root_obj->GetNode(kRfPropertySystems).AsIterable();
-  if (!systems_itr) return;
-  for (auto system : *systems_itr) {
-    if (std::unique_ptr<RedfishObject> sys_obj = system.AsObject()) {
-      auto storage_itr = sys_obj->GetNode(kRfPropertyStorage).AsIterable();
-      if (!storage_itr) continue;
-      for (auto storage : *storage_itr) {
-        if (std::unique_ptr<RedfishObject> storage_obj = storage.AsObject()) {
-          result_callback(std::move(storage_obj));
-        }
-      }
-    }
-  }
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertySystems].Each()[kRfPropertyStorage].Each()
+      .Do([&](auto &storage_obj) {
+        result_callback(std::move(storage_obj));
+      });
 }
 
 // Drive:
@@ -110,27 +79,11 @@ void Sysmodel::QueryAllResourceInternal(
 void Sysmodel::QueryAllResourceInternal(
     ResourceDrive *, const std::function<void(std::unique_ptr<RedfishObject>)>
                          &result_callback) {
-  auto root_obj = redfish_intf_->GetRoot().AsObject();
-  if (!root_obj) return;
-  auto systems_itr = root_obj->GetNode(kRfPropertySystems).AsIterable();
-  if (!systems_itr) return;
-  for (auto system : *systems_itr) {
-    if (std::unique_ptr<RedfishObject> sys_obj = system.AsObject()) {
-      auto storage_itr = sys_obj->GetNode(kRfPropertyStorage).AsIterable();
-      if (!storage_itr) continue;
-      for (auto storage : *storage_itr) {
-        if (std::unique_ptr<RedfishObject> storage_obj = storage.AsObject()) {
-          auto drive_itr = storage_obj->GetNode(kRfPropertyDrives).AsIterable();
-          if (!drive_itr) continue;
-          for (auto drive : *drive_itr) {
-            if (std::unique_ptr<RedfishObject> drive_obj = drive.AsObject()) {
-              result_callback(std::move(drive_obj));
-            }
-          }
-        }
-      }
-    }
-  }
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertySystems].Each()[kRfPropertyStorage].Each()
+      [kRfPropertyDrives].Each().Do([&](auto &drive_obj) {
+        result_callback(std::move(drive_obj));
+      });
 }
 
 // Processor:
@@ -139,22 +92,11 @@ void Sysmodel::QueryAllResourceInternal(
     ResourceProcessor *,
     const std::function<void(std::unique_ptr<RedfishObject>)>
         &result_callback) {
-  auto root_obj = redfish_intf_->GetRoot().AsObject();
-  if (!root_obj) return;
-  auto systems_itr = root_obj->GetNode(kRfPropertySystems).AsIterable();
-  if (!systems_itr) return;
-  for (auto system : *systems_itr) {
-    if (std::unique_ptr<RedfishObject> sys_obj = system.AsObject()) {
-      auto processor_itr = sys_obj->GetNode(kRfPropertyProcessors).AsIterable();
-      if (!processor_itr) continue;
-      for (auto processor : *processor_itr) {
-        if (std::unique_ptr<RedfishObject> processor_obj =
-                processor.AsObject()) {
-          result_callback(std::move(processor_obj));
-        }
-      }
-    }
-  }
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertySystems].Each()[kRfPropertyProcessors].Each()
+      .Do([&](auto &processor_obj) {
+        result_callback(std::move(processor_obj));
+      });
 }
 
 // EthernetInterface:
@@ -163,22 +105,11 @@ void Sysmodel::QueryAllResourceInternal(
     ResourceEthernetInterface *,
     const std::function<void(std::unique_ptr<RedfishObject>)>
         &result_callback) {
-  auto root_obj = redfish_intf_->GetRoot().AsObject();
-  if (!root_obj) return;
-  auto systems_itr = root_obj->GetNode(kRfPropertySystems).AsIterable();
-  if (!systems_itr) return;
-  for (auto system : *systems_itr) {
-    if (std::unique_ptr<RedfishObject> sys_obj = system.AsObject()) {
-      auto eth_itr =
-          sys_obj->GetNode(kRfPropertyEthernetInterfaces).AsIterable();
-      if (!eth_itr) continue;
-      for (auto eth : *eth_itr) {
-        if (std::unique_ptr<RedfishObject> eth_obj = eth.AsObject()) {
-          result_callback(std::move(eth_obj));
-        }
-      }
-    }
-  }
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertySystems].Each()[kRfPropertyEthernetInterfaces].Each()
+      .Do([&](auto &eth_obj) {
+        result_callback(std::move(eth_obj));
+      });
 }
 
 // Thermal:
@@ -187,25 +118,11 @@ void Sysmodel::QueryAllResourceInternal(
     ResourceTemperature *,
     const std::function<void(std::unique_ptr<RedfishObject>)>
         &result_callback) {
-  auto root_obj = redfish_intf_->GetRoot().AsObject();
-  if (!root_obj) return;
-  auto chassis_itr = root_obj->GetNode(kRfPropertyChassis).AsIterable();
-  if (!chassis_itr) return;
-  for (auto chassis : *chassis_itr) {
-    if (std::unique_ptr<RedfishObject> chassis_obj = chassis.AsObject()) {
-      if (std::unique_ptr<RedfishObject> thermal_obj =
-         chassis_obj->GetNode(kRfPropertyThermal).AsObject()) {
-        if (auto temp_itr =
-                thermal_obj->GetNode(kRfPropertyTemperatures).AsIterable()) {
-          for (auto temp : *temp_itr) {
-            if (std::unique_ptr<RedfishObject> temp_obj = temp.AsObject()) {
-              result_callback(std::move(temp_obj));
-            }
-          }
-        }
-      }
-    }
-  }
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertyChassis].Each()[kRfPropertyThermal][kRfPropertyTemperatures]
+      .Each().Do([&](auto &temp_obj) {
+        result_callback(std::move(temp_obj));
+      });
 }
 
 // Pcie Function:
@@ -213,35 +130,13 @@ void Sysmodel::QueryAllResourceInternal(
 void Sysmodel::QueryAllResourceInternal(
     ResourcePcieFunction *,
     const std::function<void(std::unique_ptr<RedfishObject>)>
-        &result_callback) {
-  auto root_obj = redfish_intf_->GetRoot().AsObject();
-  if (!root_obj) return;
-  auto systems_itr = root_obj->GetNode(kRfPropertySystems).AsIterable();
-  if (!systems_itr) return;
-  for (auto system : *systems_itr) {
-    if (std::unique_ptr<RedfishObject> sys_obj = system.AsObject()) {
-      auto pcie_devices_itr =
-          sys_obj->GetNode(kRfPropertyPcieDevices).AsIterable();
-      if (!pcie_devices_itr) continue;
-      for (auto pcie_device : *pcie_devices_itr) {
-        if (std::unique_ptr<RedfishObject> pcie_device_obj =
-                pcie_device.AsObject()) {
-          auto links_obj =
-              pcie_device_obj->GetNode(kRfPropertyLinks).AsObject();
-          if (!links_obj) continue;
-          auto pcie_function_itr =
-              links_obj->GetNode(kRfPropertyPcieFunctions).AsIterable();
-          if (!pcie_function_itr) continue;
-          for (auto pcie_function : *pcie_function_itr) {
-            if (std::unique_ptr<RedfishObject> pcie_function_obj =
-                    pcie_function.AsObject()) {
-              result_callback(std::move(pcie_function_obj));
-            }
-          }
-        }
-      }
-    }
-  }
+    &result_callback) {
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertySystems].Each()[kRfPropertyPcieDevices].Each()
+      [kRfPropertyLinks][kRfPropertyPcieFunctions].Each()
+          .Do([&](auto &pcie_function_obj) {
+            result_callback(std::move(pcie_function_obj));
+          });
 }
 
 // ComputerSystem:
@@ -250,15 +145,10 @@ void Sysmodel::QueryAllResourceInternal(
     ResourceComputerSystem *,
     const std::function<void(std::unique_ptr<RedfishObject>)>
         &result_callback) {
-  auto root_obj = redfish_intf_->GetRoot().AsObject();
-  if (!root_obj) return;
-  auto systems_itr = root_obj->GetNode(kRfPropertySystems).AsIterable();
-  if (!systems_itr) return;
-  for (auto system : *systems_itr) {
-    if (std::unique_ptr<RedfishObject> sys_obj = system.AsObject()) {
-      result_callback(std::move(sys_obj));
-    }
-  }
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertySystems].Each().Do([&](auto &sys_obj) {
+    result_callback(std::move(sys_obj));
+  });
 }
 
 }  // namespace libredfish

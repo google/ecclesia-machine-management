@@ -143,15 +143,15 @@ TEST_F(RawInterfaceTest, GetFragmentUriMatches) {
   auto raw_intf = mockup_server.RedfishClientInterface();
   auto root = raw_intf->GetRoot().AsObject();
   ASSERT_TRUE(root);
-  auto chassis = root->GetNode("Chassis").AsIterable();
+  auto chassis = (*root)["Chassis"].AsIterable();
   ASSERT_TRUE(chassis);
-  auto indus = chassis->GetIndex(0).AsObject();
+  auto indus = (*chassis)[0].AsObject();
   ASSERT_TRUE(indus);
-  auto indus_assembly = indus->GetNode("Assembly").AsObject();
+  auto indus_assembly = (*indus)["Assembly"].AsObject();
   ASSERT_TRUE(indus_assembly);
-  auto assemblies = indus_assembly->GetNode("Assemblies").AsIterable();
+  auto assemblies = (*indus_assembly)["Assemblies"].AsIterable();
   ASSERT_TRUE(assemblies);
-  auto assembly = assemblies->GetIndex(0).AsObject();
+  auto assembly = (*assemblies)[0].AsObject();
   ASSERT_TRUE(assembly);
 
   auto assembly_via_uri =
@@ -210,7 +210,7 @@ TEST_P(RawInterfaceWithParamTest, GetUriMatchesGetRoot) {
 TEST_P(RawInterfaceWithParamTest, GetChildObjectByUriMatches) {
   auto root = raw_intf_->GetRoot().AsObject();
   ASSERT_TRUE(root);
-  auto chassis = root->GetNode("Chassis").AsObject();
+  auto chassis = (*root)["Chassis"].AsObject();
   ASSERT_TRUE(chassis);
 
   auto chassis_via_uri = raw_intf_->GetUri("/redfish/v1/Chassis").AsObject();
@@ -222,9 +222,9 @@ TEST_P(RawInterfaceWithParamTest, GetChildObjectByUriMatches) {
 TEST_P(RawInterfaceWithParamTest, GetIndusObjectByUriMatches) {
   auto root = raw_intf_->GetRoot().AsObject();
   ASSERT_TRUE(root);
-  auto chassis = root->GetNode("Chassis").AsIterable();
+  auto chassis = (*root)["Chassis"].AsIterable();
   ASSERT_TRUE(chassis);
-  auto indus = chassis->GetIndex(0).AsObject();
+  auto indus = (*chassis)[0].AsObject();
   ASSERT_TRUE(indus);
 
   auto indus_via_uri =
@@ -262,7 +262,7 @@ TEST_P(RawInterfaceWithParamTest, PostUri) {
   auto new_size = new_collection->Size();
   EXPECT_EQ(new_size - origin_size, 1);
   auto new_chassis =
-      new_collection->GetIndex(static_cast<int>(new_size - 1)).AsObject();
+      (*new_collection)[static_cast<int>(new_size - 1)].AsObject();
 
   EXPECT_EQ(new_chassis->GetNodeValue<int32_t>("key1").value_or(0), 1);
   EXPECT_EQ(new_chassis->GetNodeValue<double>("key2").value_or(0.0), 1.3);
@@ -300,7 +300,7 @@ TEST_P(RawInterfaceWithParamTest, PostUriWithStringPayload) {
   auto new_size = new_collection->Size();
   EXPECT_EQ(new_size - origin_size, 1);
   auto new_chassis =
-      new_collection->GetIndex(static_cast<int>(new_size - 1)).AsObject();
+      (*new_collection)[static_cast<int>(new_size - 1)].AsObject();
 
   EXPECT_EQ(new_chassis->GetNodeValue<int32_t>("key1").value_or(0), 1);
   EXPECT_EQ(new_chassis->GetNodeValue<double>("key2").value_or(0.0), 1.3);

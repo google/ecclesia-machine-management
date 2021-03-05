@@ -45,32 +45,12 @@ std::vector<SmartReading> ReadSmartData(const RedfishObject &obj) {
 
 absl::optional<std::vector<SmartReading>> ReadSmartDataFromStorage(
     const RedfishObject &obj) {
-  auto storage_controllers_arr =
-      obj.GetNode(libredfish::kRfPropertyStorageControllers).AsIterable();
-  if (!storage_controllers_arr || storage_controllers_arr->Empty())
-    return absl::nullopt;
-
-  auto storage_controllers_obj =
-      storage_controllers_arr->GetIndex(0).AsObject();
-  if (!storage_controllers_obj) return absl::nullopt;
-
-  auto nvme_controller_properties_obj =
-      storage_controllers_obj
-          ->GetNode(libredfish::kRfPropertyNvmeControllersProperties)
-          .AsObject();
-  if (!nvme_controller_properties_obj) return absl::nullopt;
-
-  auto oem_obj =
-      nvme_controller_properties_obj->GetNode(libredfish::kRfPropertyOem)
-          .AsObject();
-  if (!oem_obj) return absl::nullopt;
-
-  auto google_obj =
-      oem_obj->GetNode(libredfish::kRfOemPropertyGoogle).AsObject();
-  if (!google_obj) return absl::nullopt;
-
   auto smart_attributes_obj =
-      google_obj->GetNode(libredfish::kRfOemPropertySmartAttributes).AsObject();
+      obj[libredfish::kRfPropertyStorageControllers][0]
+      [libredfish::kRfPropertyNvmeControllersProperties]
+      [libredfish::kRfPropertyOem]
+      [libredfish::kRfOemPropertyGoogle]
+      [libredfish::kRfOemPropertySmartAttributes].AsObject();
   if (!smart_attributes_obj) return absl::nullopt;
 
   return ReadSmartData(*smart_attributes_obj);

@@ -87,7 +87,7 @@ class JsonMockupObject : public RedfishObject {
  public:
   explicit JsonMockupObject(json_t *json_view)
       : json_view_(ecclesia::DieIfNull(json_view)) {}
-  RedfishVariant GetNode(const std::string &node_name) const override {
+  RedfishVariant operator[](const std::string &node_name) const override {
     return RedfishVariant(absl::make_unique<JsonMockupVariantImpl>(
         json_object_get(json_view_, node_name.c_str())));
   }
@@ -114,7 +114,7 @@ class JsonMockupIterable : public RedfishIterable {
     return 0;
   }
   bool Empty() override { return Size() == 0; }
-  RedfishVariant GetIndex(int index) override {
+  RedfishVariant operator[](int index) const override {
     // Case 1: JSON is array
     if (json_is_array(json_view_)) {
       return RedfishVariant(absl::make_unique<JsonMockupVariantImpl>(
@@ -123,10 +123,9 @@ class JsonMockupIterable : public RedfishIterable {
     // Case 2: JSON is possibly a Redfish Collection
     if (json_is_object(json_view_)) {
       JsonMockupObject obj(json_view_);
-      auto members = obj.GetNode("Members");
-      auto members_view = members.AsIterable();
+      auto members_view = obj["Members"].AsIterable();
       if (members_view) {
-        return members_view->GetIndex(index);
+        return (*members_view)[index];
       }
     }
     // Default case: return nothing
@@ -199,7 +198,7 @@ class JsonMockupMockup : public RedfishInterface {
       if (p.empty()) continue;
       // Try treating it as an object:
       if (auto obj = current_node.AsObject()) {
-        auto next_node = obj->GetNode(std::string(p));
+        auto next_node = (*obj)[std::string(p)];
         if (next_node.AsObject() || next_node.AsIterable()) {
           current_node = std::move(next_node);
           continue;
@@ -209,7 +208,7 @@ class JsonMockupMockup : public RedfishInterface {
       if (auto iter = current_node.AsIterable()) {
         size_t index;
         if (absl::SimpleAtoi(p, &index)) {
-          auto next_node = iter->GetIndex(index);
+          auto next_node = (*iter)[index];
           if (next_node.AsObject() || next_node.AsIterable()) {
             current_node = std::move(next_node);
             continue;
