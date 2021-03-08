@@ -19,6 +19,9 @@
 //   * IsOk() -> matches a Status or StatusOr<T> where .ok() is true
 //   * IsOkAndHolds(m) -> matches a StatusOr<T> value where .ok() is true and
 //     the contained value matches matcher m.
+//   * IsStatusXxx() -> matches a Status or StatusOr<T> where the status is
+//     not OK and matches a particular code (e.g. IsStatusUnknown will match
+//     if the status code is StatusCode::kUnknown).
 
 #ifndef ECCLESIA_LIB_TESTING_STATUS_H_
 #define ECCLESIA_LIB_TESTING_STATUS_H_
@@ -36,18 +39,22 @@
 namespace ecclesia {
 namespace internal_status {
 
-// Monomorphic implementation of matcher IsOk() for a given type T.
-// T can be Status, StatusOr<>, or a reference to either of them.
+// Monomorphic implementation of matcher IsOk() and IsStatusXxx() for a given
+// type T. T can be Status, StatusOr<>, or a reference to either of them.
 template <typename StatusType>
-class IsOkMonoMatcher : public ::testing::MatcherInterface<StatusType> {
+class IsStatusMonoMatcher : public ::testing::MatcherInterface<StatusType> {
  public:
-  void DescribeTo(std::ostream *os) const override { *os << "is OK"; }
+  explicit IsStatusMonoMatcher(absl::StatusCode code) : code_(code) {}
+
+  void DescribeTo(std::ostream *os) const override {
+    *os << "is " << absl::StatusCodeToString(code_);
+  }
   void DescribeNegationTo(std::ostream *os) const override {
-    *os << "is not OK";
+    *os << "is not " << absl::StatusCodeToString(code_);
   }
   bool MatchAndExplain(StatusType actual_value,
                        ::testing::MatchResultListener *) const override {
-    return GetStatus(actual_value).ok();
+    return GetStatus(actual_value).code() == code_;
   }
 
  private:
@@ -60,15 +67,23 @@ class IsOkMonoMatcher : public ::testing::MatcherInterface<StatusType> {
   static const absl::Status &GetStatus(const absl::StatusOr<T> &statusor) {
     return statusor.status();
   }
+
+  absl::StatusCode code_;
 };
 
 // Implements IsOk() as a polymorphic matcher.
-class IsOkPolyMatcher {
+class IsStatusPolyMatcher {
  public:
+  explicit IsStatusPolyMatcher(absl::StatusCode code) : code_(code) {}
+
   template <typename StatusType>
   operator ::testing::Matcher<StatusType>() const {
-    return ::testing::Matcher<StatusType>(new IsOkMonoMatcher<StatusType>());
+    return ::testing::Matcher<StatusType>(
+        new IsStatusMonoMatcher<StatusType>(code_));
   }
+
+ private:
+  absl::StatusCode code_;
 };
 
 // Monomorphic implementation of matcher IsOkAndHolds(m). StatusOrType is a
@@ -143,8 +158,8 @@ class IsOkAndHoldsPolyMatcher {
 }  // namespace internal_status
 
 // Creates an IsOk matcher.
-inline internal_status::IsOkPolyMatcher IsOk() {
-  return internal_status::IsOkPolyMatcher();
+inline internal_status::IsStatusPolyMatcher IsOk() {
+  return internal_status::IsStatusPolyMatcher(absl::StatusCode::kOk);
 }
 
 // Creates an IsOkAndHolds matcher.
@@ -155,6 +170,62 @@ IsOkAndHolds(InnerMatcher &&inner_matcher) {
   return internal_status::IsOkAndHoldsPolyMatcher<
       typename std::decay<InnerMatcher>::type>(
       std::forward<InnerMatcher>(inner_matcher));
+}
+
+// Creates matchers for each status code.
+inline internal_status::IsStatusPolyMatcher IsStatusAborted() {
+  return internal_status::IsStatusPolyMatcher(absl::StatusCode::kAborted);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusAlreadyExists() {
+  return internal_status::IsStatusPolyMatcher(absl::StatusCode::kAlreadyExists);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusCancelled() {
+  return internal_status::IsStatusPolyMatcher(absl::StatusCode::kCancelled);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusDataLoss() {
+  return internal_status::IsStatusPolyMatcher(absl::StatusCode::kDataLoss);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusDeadlineExceeded() {
+  return internal_status::IsStatusPolyMatcher(
+      absl::StatusCode::kDeadlineExceeded);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusFailedPrecondition() {
+  return internal_status::IsStatusPolyMatcher(
+      absl::StatusCode::kFailedPrecondition);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusInternal() {
+  return internal_status::IsStatusPolyMatcher(absl::StatusCode::kInternal);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusInvalidArgument() {
+  return internal_status::IsStatusPolyMatcher(
+      absl::StatusCode::kInvalidArgument);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusNotFound() {
+  return internal_status::IsStatusPolyMatcher(absl::StatusCode::kNotFound);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusOutOfRange() {
+  return internal_status::IsStatusPolyMatcher(absl::StatusCode::kOutOfRange);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusPermissionDenied() {
+  return internal_status::IsStatusPolyMatcher(
+      absl::StatusCode::kPermissionDenied);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusResourceExhausted() {
+  return internal_status::IsStatusPolyMatcher(
+      absl::StatusCode::kResourceExhausted);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusUnauthenticated() {
+  return internal_status::IsStatusPolyMatcher(
+      absl::StatusCode::kUnauthenticated);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusUnavailable() {
+  return internal_status::IsStatusPolyMatcher(absl::StatusCode::kUnavailable);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusUnimplemented() {
+  return internal_status::IsStatusPolyMatcher(absl::StatusCode::kUnimplemented);
+}
+inline internal_status::IsStatusPolyMatcher IsStatusUnknown() {
+  return internal_status::IsStatusPolyMatcher(absl::StatusCode::kUnknown);
 }
 
 }  // namespace ecclesia
