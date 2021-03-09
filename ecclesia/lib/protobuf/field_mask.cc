@@ -48,11 +48,6 @@ void Intersect(const ::google::protobuf::FieldMask& mask1,
                ::google::protobuf::FieldMask* out) {
   ::google::protobuf::util::FieldMaskUtil::Intersect(mask1, mask2, out);
 }
-bool IsPathInFieldMask(absl::string_view path,
-                       const ::google::protobuf::FieldMask& mask) {
-  return ::google::protobuf::util::FieldMaskUtil::IsPathInFieldMask(
-      StringViewType(path.data(), path.size()), mask);
-}
 bool TrimMessage(const ::google::protobuf::FieldMask& mask,
                  google::protobuf::Message* message) {
   return ::google::protobuf::util::FieldMaskUtil::TrimMessage(mask, message);

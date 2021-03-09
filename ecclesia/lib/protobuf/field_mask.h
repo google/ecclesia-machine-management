@@ -44,8 +44,6 @@ void FromString(absl::string_view str, ::google::protobuf::FieldMask* out);
 void Intersect(const ::google::protobuf::FieldMask& mask1,
                const ::google::protobuf::FieldMask& mask2,
                ::google::protobuf::FieldMask* out);
-bool IsPathInFieldMask(absl::string_view path,
-                       const ::google::protobuf::FieldMask& mask);
 bool TrimMessage(const ::google::protobuf::FieldMask& mask,
                  ::google::protobuf::Message* message);
 
