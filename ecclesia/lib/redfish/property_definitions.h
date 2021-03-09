@@ -46,6 +46,7 @@ inline constexpr char kRfPropertySystems[] = "Systems";
 inline constexpr char kRfPropertyEthernetInterfaces[] = "EthernetInterfaces";
 inline constexpr char kRfPropertyThermal[] = "Thermal";
 inline constexpr char kRfPropertyTemperatures[] = "Temperatures";
+inline constexpr char kRfPropertyFans[] = "Fans";
 inline constexpr char kRfPropertyRelatedItem[] = "RelatedItem";
 inline constexpr char kRfPropertyStatus[] = "Status";
 inline constexpr char kRfPropertyState[] = "State";
@@ -87,6 +88,7 @@ DEFINE_REDFISH_RESOURCE(ResourceDrive, "Drive");
 DEFINE_REDFISH_RESOURCE(ResourceProcessor, "Processor");
 DEFINE_REDFISH_RESOURCE(ResourceEthernetInterface, "EthernetInterface");
 DEFINE_REDFISH_RESOURCE(ResourceTemperature, "Temperature");
+DEFINE_REDFISH_RESOURCE(ResourceFan, "Fan");
 DEFINE_REDFISH_RESOURCE(ResourcePcieFunction, "PCIeFunction");
 DEFINE_REDFISH_RESOURCE(ResourceComputerSystem, "ComputerSystem");
 // The AssemblyEntry is a single item in the "Assemblies" list of
@@ -129,6 +131,7 @@ DEFINE_REDFISH_PROPERTY(PropertyProtocol, std::string, "Protocol");
 DEFINE_REDFISH_PROPERTY(PropertyMediaType, std::string, "MediaType");
 DEFINE_REDFISH_PROPERTY(PropertyReadingCelsius, double, "ReadingCelsius");
 DEFINE_REDFISH_PROPERTY(PropertyThrottlingCelsius, int, "ThrottlingCelsius");
+DEFINE_REDFISH_PROPERTY(PropertyReading, double, "Reading");
 DEFINE_REDFISH_PROPERTY(PropertyUpperThresholdCritical, int,
                         "UpperThresholdCritical");
 DEFINE_REDFISH_PROPERTY(PropertyState, std::string, "State");
