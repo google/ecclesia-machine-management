@@ -167,6 +167,7 @@ inline constexpr char kAssemblyDataType[] = "#Assembly.v1_2_1.Assembly";
 inline constexpr char kComponents[] = "Components";
 
 // Google Oem Keywords
+inline constexpr char kTopologyRepresentation[] = "TopologyRepresentation";
 inline constexpr char kAssociatedWith[] = "AssociatedWith";
 inline constexpr char kAttachedTo[] = "AttachedTo";
 inline constexpr char kDevpath[] = "Devpath";

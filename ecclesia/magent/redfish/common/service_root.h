@@ -43,6 +43,8 @@ class ServiceRoot : public ServiceRootResource {
     json[kId] = "RootService";
     json[kName] = "Root Service";
     json["RedfishVersion"] = "1.6.1";
+    (*GetJsonObject(GetJsonObject(&json, kOem),
+                    kGoogle))[kTopologyRepresentation] = "redfish-devpath-v1";
     (*GetJsonObject(&json, kSystems))[kOdataId] = kComputerSystemCollectionUri;
     (*GetJsonObject(&json, kChassis))[kOdataId] = kChassisCollectionUri;
     (*GetJsonObject(&json, kUpdateService))[kOdataId] = kUpdateServiceUri;
