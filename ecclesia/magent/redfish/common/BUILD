@@ -39,6 +39,7 @@ cc_library(
         "//ecclesia/lib/io/pci:location",
         "//ecclesia/lib/io/pci:signature",
         "//ecclesia/lib/mcedecoder:cpu_topology",
+        "//ecclesia/lib/redfish:property_values",
         "//ecclesia/lib/version",
         "//ecclesia/magent/lib/event_logger:intel_cpu_topology",
         "//ecclesia/magent/lib/event_logger:system_event_visitors",

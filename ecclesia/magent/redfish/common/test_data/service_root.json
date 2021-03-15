@@ -12,6 +12,11 @@
       }
    },
    "Name" : "Root Service",
+   "Oem" : {
+     "Google" : {
+       "TopologyRepresentation" : "redfish-devpath-v1"
+     }
+   },
    "RedfishVersion" : "1.6.1",
    "UpdateService" : {
       "@odata.id" : "/redfish/v1/UpdateService"

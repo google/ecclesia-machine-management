@@ -28,6 +28,12 @@ cc_library(
 )
 
 cc_library(
+    name = "property_values",
+    hdrs = ["property_values.h"],
+    visibility = ["//ecclesia:redfish_users"],
+)
+
+cc_library(
     name = "raw",
     srcs = ["raw.cc"],
     hdrs = ["raw.h"],

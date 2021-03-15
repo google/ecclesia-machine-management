@@ -20,6 +20,7 @@
 #include <string>
 
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/redfish/property_values.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
@@ -43,6 +44,9 @@ class ServiceRoot : public ServiceRootResource {
     json[kId] = "RootService";
     json[kName] = "Root Service";
     json["RedfishVersion"] = "1.6.1";
+    (*GetJsonObject(GetJsonObject(&json, kOem),
+                    kGoogle))[kTopologyRepresentation] =
+        kTopologyRepresentationV1;
     (*GetJsonObject(&json, kSystems))[kOdataId] = kComputerSystemCollectionUri;
     (*GetJsonObject(&json, kChassis))[kOdataId] = kChassisCollectionUri;
     (*GetJsonObject(&json, kUpdateService))[kOdataId] = kUpdateServiceUri;
