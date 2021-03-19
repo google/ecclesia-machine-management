@@ -1,0 +1,44 @@
+--- src/service.c
++++ src/service.c
+@@ -200,7 +200,12 @@ void asyncToSyncConverter(bool success,
+ // the property referenced by the fragment. JSON object ownership is managed
+ // in this method; the json passed in is expected to be owned by the caller
+ // and will be decref'd by this method. The JSON returned is expected to be
+-// owned by the caller and will need to be decref'd in the future.
++// owned by the caller and will need to be decref'd in the future. If the input
++// json is a object, it would return the corresponding field using the frament
++// as key. While if the json is a array, it would iterate the array and look for
++// the element whose MemberId is same as the fragment. If any element in the
++// array doesn't contain MemberId, convert the fragment to index and return the
++// corresponding element in the array.
+ json_t *googleJsonGetField(json_t *json, char *fragment) {
+   if (json == NULL || fragment == NULL) {
+     return NULL;
+@@ -212,9 +217,24 @@ json_t *googleJsonGetField(json_t *json,
+   if (json_is_object(json)) {
+     ret = json_object_get(json, fragment);
+   } else if (json_is_array(json)) {
+-    size_t index = strtoul(fragment, NULL, 10);
+-    if (index < json_array_size(json)) {
+-      ret = json_array_get(json, index);
++    for (size_t index = 0; index < json_array_size(json); ++index) {
++      json_t *array_element = json_array_get(json, index);
++      if (json_is_object(array_element)) {
++        json_t *member_id_json = json_object_get(array_element, "MemberId");
++        // If any element in the array doesn't contain MemberId, then it's not
++        // a strict redfish collection, convert fragment to index and return
++        // the corresponding element.
++        if (member_id_json == NULL) {
++          REDFISH_DEBUG_DEBUG_PRINT("%dth element in array doesn't contain MemberId\n", index);
++          size_t i = strtoul(fragment, NULL, 10);
++          return json_array_get(json, i);
++        }
++        const char *member_id = json_string_value(member_id_json);
++        if (strcmp(fragment, member_id) == 0) {
++          ret = array_element;
++          break;
++        }
++      }
+     }
+   }
+   if (ret != NULL) {
