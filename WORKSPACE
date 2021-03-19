@@ -323,3 +323,32 @@ http_archive(
     strip_prefix = "cppzmq-4.7.1",
     urls = ["https://github.com/zeromq/cppzmq/archive/v4.7.1.tar.gz"],
 )
+
+# Riegeli. Uses the latest commit as of Mar 17, 2021.
+http_archive(
+    name = "com_google_riegeli",
+    url = "https://github.com/google/riegeli/archive/9c3f3203ad04a45fe8743bb71cd0cd98c76e394d.tar.gz",
+    sha256 = "8f28ca19b1ebe96df6c1d76ecadf1aa4e7fcf151c0492e91b7401a47ce2add62",
+    strip_prefix = "riegeli-9c3f3203ad04a45fe8743bb71cd0cd98c76e394d",
+)
+# Additional projects needed by riegeli.
+http_archive(
+    name = "org_brotli",
+    sha256 = "6e69be238ff61cef589a3fa88da11b649c7ff7a5932cb12d1e6251c8c2e17a2f",
+    strip_prefix = "brotli-1.0.7",
+    urls = ["https://github.com/google/brotli/archive/v1.0.7.zip"],
+)
+http_archive(
+    name = "net_zstd",
+    build_file = "@com_google_riegeli//third_party:net_zstd.BUILD",
+    sha256 = "b6c537b53356a3af3ca3e621457751fa9a6ba96daf3aebb3526ae0f610863532",
+    strip_prefix = "zstd-1.4.5/lib",
+    urls = ["https://github.com/facebook/zstd/archive/v1.4.5.zip"],
+)
+http_archive(
+    name = "highwayhash",
+    build_file = "@com_google_riegeli//third_party:highwayhash.BUILD",
+    sha256 = "cf891e024699c82aabce528a024adbe16e529f2b4e57f954455e0bf53efae585",
+    strip_prefix = "highwayhash-276dd7b4b6d330e4734b756e97ccfb1b69cc2e12",
+    urls = ["https://github.com/google/highwayhash/archive/276dd7b4b6d330e4734b756e97ccfb1b69cc2e12.zip"],
+)
