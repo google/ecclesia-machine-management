@@ -87,9 +87,12 @@ class Sysmodel {
       const std::function<void(std::unique_ptr<RedfishObject>)>
           &result_callback);
   void QueryAllResourceInternal(
-      ResourceFan *,
+      ResourceVoltage *,
       const std::function<void(std::unique_ptr<RedfishObject>)>
           &result_callback);
+  void QueryAllResourceInternal(
+      ResourceFan *, const std::function<void(std::unique_ptr<RedfishObject>)>
+                         &result_callback);
   void QueryAllResourceInternal(
       ResourcePcieFunction *,
       const std::function<void(std::unique_ptr<RedfishObject>)>

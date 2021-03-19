@@ -125,7 +125,19 @@ void Sysmodel::QueryAllResourceInternal(
       });
 }
 
-// Thermal:
+// Voltage:
+// "/redfish/v1/Chassis/{id}/Power#/Voltages/{sensor}"
+void Sysmodel::QueryAllResourceInternal(
+    ResourceVoltage *, const std::function<void(std::unique_ptr<RedfishObject>)>
+                           &result_callback) {
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertyChassis]
+      .Each()[kRfPropertyPower][kRfPropertyVoltages]
+      .Each()
+      .Do([&](auto &volt_obj) { result_callback(std::move(volt_obj)); });
+}
+
+// Fan:
 // "/redfish/v1/Chassis/{id}/Thermal"
 void Sysmodel::QueryAllResourceInternal(
     ResourceFan *,
