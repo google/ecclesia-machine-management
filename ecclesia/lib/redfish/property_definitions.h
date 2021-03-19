@@ -134,6 +134,7 @@ DEFINE_REDFISH_PROPERTY(PropertyProtocol, std::string, "Protocol");
 DEFINE_REDFISH_PROPERTY(PropertyMediaType, std::string, "MediaType");
 DEFINE_REDFISH_PROPERTY(PropertyReadingCelsius, double, "ReadingCelsius");
 DEFINE_REDFISH_PROPERTY(PropertyThrottlingCelsius, int, "ThrottlingCelsius");
+DEFINE_REDFISH_PROPERTY(PropertyReadingVolts, double, "ReadingVolts");
 DEFINE_REDFISH_PROPERTY(PropertyReading, double, "Reading");
 DEFINE_REDFISH_PROPERTY(PropertyUpperThresholdCritical, int,
                         "UpperThresholdCritical");
