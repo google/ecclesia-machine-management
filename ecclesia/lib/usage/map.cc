@@ -21,7 +21,6 @@
 #include <string>
 #include <utility>
 
-// IWYU pragma: no_include "base/integral_types.h"
 #include "google/protobuf/timestamp.pb.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/cleanup/cleanup.h"
