@@ -36,6 +36,7 @@
 #ifndef ECCLESIA_LIB_USAGE_MAP_H_
 #define ECCLESIA_LIB_USAGE_MAP_H_
 
+#include <cstdint>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -55,6 +56,17 @@ class PersistentUsageMap {
     // Full path to the file where usage should be persisted. The initial data
     // will also be loaded from this file, if it exists and is valid.
     std::string persistent_file;
+    // Set a duration where updating a key older than this will trigger an
+    // automatic write out of the map. If this is infinite duration then
+    // automatic writes will never trigger. If this is the zero duration (or
+    // negative) then every write will trigger a write.
+    //
+    // Note that the "age" is calculated using the age relative to the time of
+    // the use being recorded, not the current time. So if this value is 30 days
+    // and you have an entry which is 40 days old, trying to record a usage from
+    // 20 days ago will _not_ trigger a write. In general times should not be
+    // that heavily skewed.
+    absl::Duration auto_write_on_older_than = absl::InfiniteDuration();
   };
 
   // Construct a new persistent usage map using the given options. This will
@@ -65,6 +77,17 @@ class PersistentUsageMap {
   // something that can be copied, the map itself cannot be copyable either.
   PersistentUsageMap(const PersistentUsageMap &) = delete;
   PersistentUsageMap &operator=(const PersistentUsageMap &) = delete;
+
+  // Fetch statistics on the usage map. These statistics do not concern the
+  // contents of the map itself but instead track the behavior of this class.
+  struct Stats {
+    // Counters tracking how many times the map has been written out to the
+    // persistent store.
+    int32_t total_writes = 0;      // All writes, manual and automatic.
+    int32_t automatic_writes = 0;  // Automatic writes only.
+    int32_t failed_writes = 0;     // All writes which failed.
+  };
+  Stats GetStats() const ABSL_LOCKS_EXCLUDED(mutex_);
 
   // Call a given function with an (operation, user, timestamp) triple for every
   // entry in the usage map. The caller should not expect the calls to happen in
@@ -87,6 +110,9 @@ class PersistentUsageMap {
   // Record a new entry in the usage map. By default the timestamp of the call
   // will be presumed to be "now" but if the caller has a more accurate one it
   // can be explicitly passed in.
+  //
+  // This can automatically trigger writes to the persistent store, depending on
+  // the auto-write policy.
   void RecordUse(std::string operation, std::string user,
                  absl::Time timestamp = absl::Now())
       ABSL_LOCKS_EXCLUDED(mutex_);
@@ -117,7 +143,12 @@ class PersistentUsageMap {
   // Helper that will update a single record, either inserting a new entry into
   // the map or updating an existing one. You already need to have assembled the
   // key and value, it just does the insert-or-update check.
-  void InsertOrUpdateMapEntry(OperationUser op_user, absl::Time timestamp)
+  //
+  // This function will return the age of the existing entry relative to the
+  // given timestamp. It will be zero or negative if the timestamp is older than
+  // the existing entry; it will be infinite if this is a new entry.
+  absl::Duration InsertOrUpdateMapEntry(OperationUser op_user,
+                                        absl::Time timestamp)
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Helper that will merge the contents of the persistent file into the
@@ -125,13 +156,24 @@ class PersistentUsageMap {
   // the in-memory map will not be modified in that case.
   absl::Status MergeFromPersistentStore() ABSL_LOCKS_EXCLUDED(mutex_);
 
+  // Implementation of WriteToPersistentStore which expects the locks to already
+  // be held. For use by internal code already holding the mutex.
+  absl::Status WriteToPersistentStoreUnlocked()
+      ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+
   // The name of the file the usage map is persisted to.
   std::string persistent_file_;
+
+  // Policy flags controlling the behavior of the map.
+  absl::Duration auto_write_on_older_than_;
 
   // The underlying timestamp map, used in memory.
   mutable absl::Mutex mutex_;
   absl::flat_hash_map<OperationUser, absl::Time> in_memory_map_
       ABSL_GUARDED_BY(mutex_);
+
+  // Store all of the stats being tracked.
+  Stats stats_ ABSL_GUARDED_BY(mutex_);
 };
 
 }  // namespace ecclesia

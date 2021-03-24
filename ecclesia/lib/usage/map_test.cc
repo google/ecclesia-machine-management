@@ -81,6 +81,12 @@ TEST_F(PersistentUsageMapTest, NewUsesReplaceOld) {
     }
   });
   EXPECT_THAT(num_entries, Eq(2));
+
+  // Verify that we have no writes.
+  auto stats = usage_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(0));
+  EXPECT_THAT(stats.automatic_writes, Eq(0));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
 }
 
 TEST_F(PersistentUsageMapTest, OldDoesNotReplaceNew) {
@@ -111,17 +117,35 @@ TEST_F(PersistentUsageMapTest, OldDoesNotReplaceNew) {
     }
   });
   EXPECT_THAT(num_entries, Eq(2));
+
+  // Verify that we have no writes.
+  auto stats = usage_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(0));
+  EXPECT_THAT(stats.automatic_writes, Eq(0));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
 }
 
 TEST_F(PersistentUsageMapTest, SaveRecordsAndLoadRecords) {
   PersistentUsageMap first_map(
       {.persistent_file = fs_.GetTruePath("/saved.usage")});
 
+  // Verify that we have no writes at the start.
+  auto stats = first_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(0));
+  EXPECT_THAT(stats.automatic_writes, Eq(0));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
+
   // Write out a few records.
   first_map.RecordUse("rpc1", "user");
   first_map.RecordUse("rpc2", "user");
   first_map.RecordUse("rpc3", "hacker");
   EXPECT_THAT(first_map.WriteToPersistentStore(), IsOk());
+
+  // Verify that we have a write (manual, not automatic).
+  stats = first_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(1));
+  EXPECT_THAT(stats.automatic_writes, Eq(0));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
 
   // Extract the three timestamps from the map for later comparison.
   absl::Time timestamps[3];
@@ -140,7 +164,7 @@ TEST_F(PersistentUsageMapTest, SaveRecordsAndLoadRecords) {
 
   // Now load up a second version of the map and check that it matches. Note
   // that although you can't actually use maps multiple maps with a single file,
-  // there's no actual conflict if we don't every flush first_map again.
+  // there's no actual conflict if we don't ever flush first_map again.
   PersistentUsageMap second_map(
       {.persistent_file = fs_.GetTruePath("/saved.usage")});
   int num_entries = 0;
@@ -162,6 +186,116 @@ TEST_F(PersistentUsageMapTest, SaveRecordsAndLoadRecords) {
     }
   });
   EXPECT_THAT(num_entries, Eq(3));
+
+  // Verify that we have no writes in the second map.
+  stats = second_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(0));
+  EXPECT_THAT(stats.automatic_writes, Eq(0));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
+}
+
+TEST_F(PersistentUsageMapTest, SaveRecordOnEveryUpdate) {
+  PersistentUsageMap usage_map({
+      .persistent_file = fs_.GetTruePath("/on_every_update.usage"),
+      .auto_write_on_older_than = absl::ZeroDuration(),
+  });
+
+  // Verify that we have no writes at the start.
+  auto stats = usage_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(0));
+  EXPECT_THAT(stats.automatic_writes, Eq(0));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
+
+  // Write out a few records. All but one of these should trigger a write.
+  absl::Time before_first = absl::Now();
+  usage_map.RecordUse("rpc1", "user");
+  usage_map.RecordUse("rpc2", "user");
+  usage_map.RecordUse("rpc3", "hacker");
+  usage_map.RecordUse("rpc1", "user", before_first);  // Too old, no write!
+  usage_map.RecordUse("rpc2", "user");
+  usage_map.RecordUse("rpc3", "hacker");
+
+  // Verify that we have five automatic writes.
+  stats = usage_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(5));
+  EXPECT_THAT(stats.automatic_writes, Eq(5));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
+}
+
+TEST_F(PersistentUsageMapTest, SaveRecordOnOldUpdates) {
+  PersistentUsageMap usage_map({
+      .persistent_file = fs_.GetTruePath("/on_old_update.usage"),
+      .auto_write_on_older_than = absl::Minutes(1),
+  });
+
+  // Verify that we have no writes at the start.
+  auto stats = usage_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(0));
+  EXPECT_THAT(stats.automatic_writes, Eq(0));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
+
+  // Write out a few records. We manually control the timestamps so that after
+  // the first three updates only one of the followups should trigger a write.
+  absl::Time start_time = absl::Now();
+  usage_map.RecordUse("rpc1", "user", start_time);
+  usage_map.RecordUse("rpc2", "user", start_time + absl::Seconds(1));
+  usage_map.RecordUse("rpc3", "hacker", start_time + absl::Seconds(2));
+  // Too new, no updates.
+  usage_map.RecordUse("rpc1", "user", start_time + absl::Seconds(3));
+  usage_map.RecordUse("rpc2", "user", start_time + absl::Seconds(4));
+  usage_map.RecordUse("rpc3", "hacker", start_time + absl::Seconds(5));
+  // The first two entries are just slightly too new, so only the last writes.
+  usage_map.RecordUse("rpc1", "user", start_time + absl::Seconds(63));
+  usage_map.RecordUse("rpc2", "user", start_time + absl::Seconds(64));
+  usage_map.RecordUse("rpc3", "hacker", start_time + absl::Seconds(66));
+
+  // Verify that we have four automatic writes. This is the original three uses
+  // and then the very final one.
+  stats = usage_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(4));
+  EXPECT_THAT(stats.automatic_writes, Eq(4));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
+}
+
+TEST_F(PersistentUsageMapTest, LoadingRecordsDoesNotTriggerWrites) {
+  PersistentUsageMap first_map(
+      {.persistent_file = fs_.GetTruePath("/no_writes_on_load.usage")});
+
+  // Write out a few records.
+  first_map.RecordUse("rpc1", "user");
+  first_map.RecordUse("rpc2", "user");
+  first_map.RecordUse("rpc3", "hacker");
+  EXPECT_THAT(first_map.WriteToPersistentStore(), IsOk());
+
+  // Verify that we have a write (manual, not automatic).
+  auto stats = first_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(1));
+  EXPECT_THAT(stats.automatic_writes, Eq(0));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
+
+  // Now load up a second version of the map and check that it matches. Note
+  // that although you can't actually use maps multiple maps with a single file,
+  // there's no actual conflict if we don't ever flush first_map again.
+  //
+  // We configure the test to write on every update. Make sure that loading the
+  // map doesn't cause it to write the map!
+  PersistentUsageMap second_map({
+      .persistent_file = fs_.GetTruePath("/no_writes_on_load.usage"),
+      .auto_write_on_older_than = absl::ZeroDuration(),
+  });
+  // Count up the number of entries. We don't fully validate any of the values
+  // here as other tests do that, this is just for sanity.
+  int num_entries = 0;
+  second_map.WithEntries(
+      [&](const std::string &operation, const std::string &user,
+          const absl::Time &timestamp) { num_entries += 1; });
+  EXPECT_THAT(num_entries, Eq(3));
+
+  // Verify that we have no writes in the second map.
+  stats = second_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(0));
+  EXPECT_THAT(stats.automatic_writes, Eq(0));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
 }
 
 }  // namespace

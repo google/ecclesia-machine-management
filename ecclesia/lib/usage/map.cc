@@ -18,17 +18,20 @@
 
 #include <fcntl.h>
 
-#include <algorithm>
 #include <string>
 #include <utility>
 
 // IWYU pragma: no_include "base/integral_types.h"
 #include "google/protobuf/timestamp.pb.h"
+#include "absl/base/thread_annotations.h"
+#include "absl/cleanup/cleanup.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
+#include "ecclesia/lib/logging/globals.h"
+#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/usage/serialization.pb.h"
 #include "riegeli/bytes/fd_reader.h"
 #include "riegeli/bytes/fd_writer.h"
@@ -65,56 +68,60 @@ google::protobuf::Timestamp AbslTimeToProtoTime(absl::Time timestamp) {
 }  // namespace
 
 PersistentUsageMap::PersistentUsageMap(Options options)
-    : persistent_file_(std::move(options.persistent_file)) {
+    : persistent_file_(std::move(options.persistent_file)),
+      auto_write_on_older_than_(options.auto_write_on_older_than) {
   MergeFromPersistentStore().IgnoreError();
+}
+
+PersistentUsageMap::Stats PersistentUsageMap::GetStats() const {
+  absl::MutexLock ml(&mutex_);
+  return stats_;
 }
 
 void PersistentUsageMap::RecordUse(std::string operation, std::string user,
                                    absl::Time timestamp) {
   OperationUser op_user = {std::move(operation), std::move(user)};
   absl::MutexLock ml(&mutex_);
-  InsertOrUpdateMapEntry(std::move(op_user), timestamp);
+  // Update the internal map.
+  absl::Duration entry_age =
+      InsertOrUpdateMapEntry(std::move(op_user), timestamp);
+
+  // If the entry age is greater than the write-on-older-than value then trigger
+  // a write of the persistent store. Note that we deliberately use > for the
+  // comparison and not >= so that if the write-on-older-than value is infinite
+  // duration then we _never_ auto-write.
+  if (entry_age > auto_write_on_older_than_) {
+    stats_.automatic_writes += 1;
+    absl::Status write_result = WriteToPersistentStoreUnlocked();
+    // We can't do anything with the write error, so just log it.
+    if (!write_result.ok()) {
+      ErrorLog() << "automatic write of the persistent usage map to "
+                 << persistent_file_ << ": " << write_result;
+    }
+  }
 }
 
 absl::Status PersistentUsageMap::WriteToPersistentStore() {
-  // Construct the protobuf to write from the usage map.
-  PersistentUsageMapProto proto_map;
-  {
-    absl::MutexLock ml(&mutex_);
-    for (const auto &[key, value] : in_memory_map_) {
-      PersistentUsageMapProto::Entry *entry = proto_map.add_entries();
-      entry->set_operation(key.operation);
-      entry->set_user(key.user);
-      *entry->mutable_timestamp() = AbslTimeToProtoTime(value);
-    }
-  }
-
-  // Open up the file for writing.
-  // if the write operation fails.
-  riegeli::RecordWriter<riegeli::FdStreamWriter<>> writer(
-      riegeli::FdStreamWriter<>(persistent_file_,
-                                O_WRONLY | O_CREAT | O_TRUNC));
-
-  // Write the protobuf out to the file.
-  // if the output proto is too large.
-  if (!writer.WriteRecord(proto_map)) {
-    return absl::InternalError("unable to write out the usage map");
-  }
-  if (!writer.Close()) {
-    return absl::InternalError("closing the usage map failed");
-  }
-  return absl::OkStatus();
+  absl::MutexLock ml(&mutex_);
+  return WriteToPersistentStoreUnlocked();
 }
 
-void PersistentUsageMap::InsertOrUpdateMapEntry(OperationUser op_user,
-                                                absl::Time timestamp) {
+absl::Duration PersistentUsageMap::InsertOrUpdateMapEntry(
+    OperationUser op_user, absl::Time timestamp) {
   auto map_iter = in_memory_map_.find(op_user);
   if (map_iter == in_memory_map_.end()) {
     // No entry was found, so insert a new one.
     in_memory_map_.emplace(std::move(op_user), timestamp);
+    // Treat the "existing entry" as having an infinite age in this case.
+    return absl::InfiniteDuration();
   } else {
-    // Update the timestamp in the map to whichever is newer.
-    map_iter->second = std::max(timestamp, map_iter->second);
+    // We have a timestamp, so calculate the age and update it if the given
+    // tiemstamp is newer.
+    absl::Duration entry_age = timestamp - map_iter->second;
+    if (entry_age > absl::ZeroDuration()) {
+      map_iter->second = timestamp;
+    }
+    return entry_age;
   }
 }
 
@@ -135,6 +142,45 @@ absl::Status PersistentUsageMap::MergeFromPersistentStore() {
     InsertOrUpdateMapEntry(std::move(op_user),
                            AbslTimeFromProtoTime(entry.timestamp()));
   }
+  return absl::OkStatus();
+}
+
+absl::Status PersistentUsageMap::WriteToPersistentStoreUnlocked() {
+  stats_.total_writes += 1;
+
+  // Increment the failed write counter on exit. If the write is successful then
+  // we'll cancel this.
+  auto increment_failed_writes =
+      absl::MakeCleanup([this]() ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
+        stats_.failed_writes += 1;
+      });
+
+  // Construct the protobuf to write from the usage map.
+  PersistentUsageMapProto proto_map;
+  for (const auto &[key, value] : in_memory_map_) {
+    PersistentUsageMapProto::Entry *entry = proto_map.add_entries();
+    entry->set_operation(key.operation);
+    entry->set_user(key.user);
+    *entry->mutable_timestamp() = AbslTimeToProtoTime(value);
+  }
+
+  // Open up the file for writing.
+  // if the write operation fails.
+  riegeli::RecordWriter<riegeli::FdStreamWriter<>> writer(
+      riegeli::FdStreamWriter<>(persistent_file_,
+                                O_WRONLY | O_CREAT | O_TRUNC));
+
+  // Write the protobuf out to the file.
+  // if the output proto is too large.
+  if (!writer.WriteRecord(proto_map)) {
+    return absl::InternalError("unable to write out the usage map");
+  }
+  if (!writer.Close()) {
+    return absl::InternalError("closing the usage map failed");
+  }
+
+  // Success!
+  std::move(increment_failed_writes).Cancel();
   return absl::OkStatus();
 }
 
