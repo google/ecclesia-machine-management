@@ -298,5 +298,26 @@ TEST_F(PersistentUsageMapTest, LoadingRecordsDoesNotTriggerWrites) {
   EXPECT_THAT(stats.failed_writes, Eq(0));
 }
 
+TEST_F(PersistentUsageMapTest, WriteFileFails) {
+  // Unfortunately there's not a great way to make the actual writing of the
+  // file fail artificially. The easiest thing we can do is to make the map file
+  // path be a directory.
+  fs_.CreateDir("/failed_write.usage");
+  PersistentUsageMap first_map(
+      {.persistent_file = fs_.GetTruePath("/failed_write.usage")});
+
+  // Write out a few records.
+  first_map.RecordUse("rpc1", "user");
+  first_map.RecordUse("rpc2", "user");
+  first_map.RecordUse("rpc3", "hacker");
+  EXPECT_THAT(first_map.WriteToPersistentStore(), IsStatusInternal());
+
+  // Verify that we have a failed write.
+  auto stats = first_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(1));
+  EXPECT_THAT(stats.automatic_writes, Eq(0));
+  EXPECT_THAT(stats.failed_writes, Eq(1));
+}
+
 }  // namespace
 }  // namespace ecclesia

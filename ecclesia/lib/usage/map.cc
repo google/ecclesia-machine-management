@@ -27,6 +27,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_format.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/logging/globals.h"
@@ -68,6 +69,7 @@ google::protobuf::Timestamp AbslTimeToProtoTime(absl::Time timestamp) {
 
 PersistentUsageMap::PersistentUsageMap(Options options)
     : persistent_file_(std::move(options.persistent_file)),
+      temporary_file_(persistent_file_ + ".tmp"),
       auto_write_on_older_than_(options.auto_write_on_older_than) {
   MergeFromPersistentStore().IgnoreError();
 }
@@ -95,7 +97,7 @@ void PersistentUsageMap::RecordUse(std::string operation, std::string user,
     // We can't do anything with the write error, so just log it.
     if (!write_result.ok()) {
       ErrorLog() << "automatic write of the persistent usage map to "
-                 << persistent_file_ << ": " << write_result;
+                 << persistent_file_ << " failed: " << write_result;
     }
   }
 }
@@ -130,7 +132,8 @@ absl::Status PersistentUsageMap::MergeFromPersistentStore() {
       riegeli::FdStreamReader<>(persistent_file_, O_RDONLY));
   PersistentUsageMapProto proto_map;
   if (!reader.ReadRecord(proto_map)) {
-    return absl::NotFoundError("unable to read any existing record");
+    return absl::NotFoundError(absl::StrFormat(
+        "unable to read any existing record from %s", persistent_file_));
   }
 
   // Now that we've read the file, insert any entries found in it into the map.
@@ -163,19 +166,28 @@ absl::Status PersistentUsageMap::WriteToPersistentStoreUnlocked() {
     *entry->mutable_timestamp() = AbslTimeToProtoTime(value);
   }
 
-  // Open up the file for writing.
-  // if the write operation fails.
+  // Open up the file for writing. We use the temporary file for this.
   riegeli::RecordWriter<riegeli::FdStreamWriter<>> writer(
-      riegeli::FdStreamWriter<>(persistent_file_,
-                                O_WRONLY | O_CREAT | O_TRUNC));
+      riegeli::FdStreamWriter<>(temporary_file_, O_WRONLY | O_CREAT | O_TRUNC));
 
   // Write the protobuf out to the file.
   // if the output proto is too large.
   if (!writer.WriteRecord(proto_map)) {
-    return absl::InternalError("unable to write out the usage map");
+    return absl::InternalError(absl::StrFormat(
+        "unable to write out the usage map to %s", temporary_file_));
   }
   if (!writer.Close()) {
-    return absl::InternalError("closing the usage map failed");
+    return absl::InternalError(absl::StrFormat(
+        "closing the usage map writer for %s failed", temporary_file_));
+  }
+
+  // Complete the write by renaming the temporary file.
+  if (rename(temporary_file_.c_str(), persistent_file_.c_str()) != 0) {
+    // Try to unlink the temporary file to avoid leaving it lying around but if
+    // the unlink also fails not much we can do.
+    unlink(temporary_file_.c_str());
+    return absl::InternalError(absl::StrFormat(
+        "unable to rename %s onto %s", temporary_file_, persistent_file_));
   }
 
   // Success!

@@ -55,6 +55,10 @@ class PersistentUsageMap {
   struct Options {
     // Full path to the file where usage should be persisted. The initial data
     // will also be loaded from this file, if it exists and is valid.
+    //
+    // The usage map will also use an intermediate temporary file for writes,
+    // with the path of the temporary file being this path plus ".tmp". For
+    // persistence to work, both of these paths must be writable.
     std::string persistent_file;
     // Set a duration where updating a key older than this will trigger an
     // automatic write out of the map. If this is infinite duration then
@@ -161,8 +165,9 @@ class PersistentUsageMap {
   absl::Status WriteToPersistentStoreUnlocked()
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  // The name of the file the usage map is persisted to.
+  // The name of the files the usage map is persisted to.
   std::string persistent_file_;
+  std::string temporary_file_;
 
   // Policy flags controlling the behavior of the map.
   absl::Duration auto_write_on_older_than_;
