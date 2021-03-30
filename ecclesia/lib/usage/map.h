@@ -36,6 +36,7 @@
 #ifndef ECCLESIA_LIB_USAGE_MAP_H_
 #define ECCLESIA_LIB_USAGE_MAP_H_
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <tuple>
@@ -47,6 +48,7 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
+#include "absl/types/optional.h"
 
 namespace ecclesia {
 
@@ -71,6 +73,19 @@ class PersistentUsageMap {
     // 20 days ago will _not_ trigger a write. In general times should not be
     // that heavily skewed.
     absl::Duration auto_write_on_older_than = absl::InfiniteDuration();
+    // Define a maximum size of the persistent map when it is serialized out to
+    // a protocol buffer. If set, then the map will be trimmed to under this
+    // size by evicting entries starting with the oldest first.
+    //
+    // This trimming only happens when the this is being written out. This means
+    // that if you never write the usage map out to disk then the internal map
+    // can still grow without bound.
+    //
+    // Be aware that this value does not correspond to a precise maximum size
+    // limit for the underlying file. The file format imposes some fixed
+    // additional overhead on top of the serialized proto, and so the total
+    // persisted bytes can exceed this by some small, fixed amount.
+    absl::optional<size_t> maximum_proto_size;
   };
 
   // Construct a new persistent usage map using the given options. This will
@@ -160,6 +175,10 @@ class PersistentUsageMap {
   // the in-memory map will not be modified in that case.
   absl::Status MergeFromPersistentStore() ABSL_LOCKS_EXCLUDED(mutex_);
 
+  // Helper that will serialize the in memory map, along with doing any trimming
+  // necessary to reduce the map size to be under the maximum proto size.
+  std::string SerializeAndTrimMap() ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+
   // Implementation of WriteToPersistentStore which expects the locks to already
   // be held. For use by internal code already holding the mutex.
   absl::Status WriteToPersistentStoreUnlocked()
@@ -171,6 +190,7 @@ class PersistentUsageMap {
 
   // Policy flags controlling the behavior of the map.
   absl::Duration auto_write_on_older_than_;
+  absl::optional<size_t> maximum_proto_size_;
 
   // The underlying timestamp map, used in memory.
   mutable absl::Mutex mutex_;

@@ -17,19 +17,29 @@
 #include "ecclesia/lib/usage/map.h"
 
 #include <fcntl.h>
+#include <unistd.h>
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 
 #include "google/protobuf/timestamp.pb.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/memory/memory.h"
 #include "absl/meta/type_traits.h"
+#include "absl/numeric/bits.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
+#include "absl/types/optional.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/usage/serialization.pb.h"
@@ -65,12 +75,25 @@ google::protobuf::Timestamp AbslTimeToProtoTime(absl::Time timestamp) {
   return proto_timestamp;
 }
 
+// Given an unsigned integer, compute the number of bytes required to encode it
+// when serialized out to protobufs. Accepts a uint64_t but all of the standard
+// varint-backed integer types use the same encoding so casting the value to
+// uint64_t to call this won't change the result.
+//
+// Reference: https://developers.google.com/protocol-buffers/docs/encoding
+size_t BytesToEncodeInt(uint64_t value) {
+  // Integers are using a variable length number of bytes, with 7 bits stored in
+  // each byte. So the encoding is the bit width divided by 7, rounded UP.
+  return (absl::bit_width(value) + 6) / 7;
+}
+
 }  // namespace
 
 PersistentUsageMap::PersistentUsageMap(Options options)
     : persistent_file_(std::move(options.persistent_file)),
       temporary_file_(persistent_file_ + ".tmp"),
-      auto_write_on_older_than_(options.auto_write_on_older_than) {
+      auto_write_on_older_than_(options.auto_write_on_older_than),
+      maximum_proto_size_(options.maximum_proto_size) {
   MergeFromPersistentStore().IgnoreError();
 }
 
@@ -147,6 +170,62 @@ absl::Status PersistentUsageMap::MergeFromPersistentStore() {
   return absl::OkStatus();
 }
 
+std::string PersistentUsageMap::SerializeAndTrimMap() {
+  // Construct the protobuf to write from the usage map.
+  PersistentUsageMapProto proto_map;
+  for (const auto &[key, value] : in_memory_map_) {
+    PersistentUsageMapProto::Entry *entry = proto_map.add_entries();
+    entry->set_operation(key.operation);
+    entry->set_user(key.user);
+    *entry->mutable_timestamp() = AbslTimeToProtoTime(value);
+  }
+
+  // Serialize the protobuf. If it fit under the size limit, or there is no size
+  // limit, then return it immediately.
+  size_t size;
+  {
+    std::string serialized = proto_map.SerializeAsString();
+    if (!maximum_proto_size_ || serialized.size() <= *maximum_proto_size_) {
+      return serialized;
+    }
+    size = serialized.size();
+  }
+
+  // We need to trim the protobuf down. First, sort the entries in the proto map
+  // by timestamp, with the oldest values being last.
+  std::sort(proto_map.mutable_entries()->begin(),
+            proto_map.mutable_entries()->end(),
+            [](const PersistentUsageMapProto::Entry &lhs,
+               const PersistentUsageMapProto::Entry &rhs) {
+              const auto &lhs_ts = lhs.timestamp();
+              const auto &rhs_ts = rhs.timestamp();
+              // Note that we use ">" because we want oldest values last.
+              return std::tuple(lhs_ts.seconds(), lhs_ts.nanos()) >
+                     std::tuple(rhs_ts.seconds(), rhs_ts.nanos());
+            });
+
+  // Now that we have the protobuf fields sorted, keep removing entries from
+  // the end of the map until the size is under the limit. Stop if we remove
+  // everything.
+  while (size > *maximum_proto_size_ && proto_map.entries_size() > 0) {
+    // Remove the last (i.e the oldest) entry.
+    auto removed_entry =
+        absl::WrapUnique(proto_map.mutable_entries()->ReleaseLast());
+    // Compute how many bytes we saved.
+    size_t saved_bytes = removed_entry->SerializeAsString().size();
+    saved_bytes += BytesToEncodeInt(saved_bytes);  // The size bytes.
+    saved_bytes += 1;                              // The tag byte.
+    size -= saved_bytes;
+    // Remove the entry from the in-memory map as well.
+    in_memory_map_.erase(
+        OperationUser{std::move(*removed_entry->mutable_operation()),
+                      std::move(*removed_entry->mutable_user())});
+  }
+
+  // The proto map is trimmed down, now serialize it out.
+  return proto_map.SerializeAsString();
+}
+
 absl::Status PersistentUsageMap::WriteToPersistentStoreUnlocked() {
   stats_.total_writes += 1;
 
@@ -157,22 +236,15 @@ absl::Status PersistentUsageMap::WriteToPersistentStoreUnlocked() {
         stats_.failed_writes += 1;
       });
 
-  // Construct the protobuf to write from the usage map.
-  PersistentUsageMapProto proto_map;
-  for (const auto &[key, value] : in_memory_map_) {
-    PersistentUsageMapProto::Entry *entry = proto_map.add_entries();
-    entry->set_operation(key.operation);
-    entry->set_user(key.user);
-    *entry->mutable_timestamp() = AbslTimeToProtoTime(value);
-  }
+  // Construct and serialize the protobuf to write from the usage map.
+  std::string serialized_map = SerializeAndTrimMap();
 
   // Open up the file for writing. We use the temporary file for this.
   riegeli::RecordWriter<riegeli::FdStreamWriter<>> writer(
       riegeli::FdStreamWriter<>(temporary_file_, O_WRONLY | O_CREAT | O_TRUNC));
 
   // Write the protobuf out to the file.
-  // if the output proto is too large.
-  if (!writer.WriteRecord(proto_map)) {
+  if (!writer.WriteRecord(serialized_map)) {
     return absl::InternalError(absl::StrFormat(
         "unable to write out the usage map to %s", temporary_file_));
   }

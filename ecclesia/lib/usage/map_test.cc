@@ -29,6 +29,7 @@ namespace ecclesia {
 namespace {
 
 using ::testing::AllOf;
+using ::testing::AnyOf;
 using ::testing::Eq;
 using ::testing::Ge;
 using ::testing::Le;
@@ -317,6 +318,153 @@ TEST_F(PersistentUsageMapTest, WriteFileFails) {
   EXPECT_THAT(stats.total_writes, Eq(1));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(1));
+}
+
+TEST_F(PersistentUsageMapTest, WrittenFileIsEmptyWithZeroLimit) {
+  PersistentUsageMap usage_map({
+      .persistent_file = fs_.GetTruePath("/zero_limit.usage"),
+      .maximum_proto_size = 0,
+  });
+
+  // Make three writes.
+  usage_map.RecordUse("rpc1", "user");
+  usage_map.RecordUse("rpc2", "user");
+  usage_map.RecordUse("rpc1", "user");
+
+  // Verify the map has the two expected entries.
+  int num_entries = 0;
+  usage_map.WithEntries([&](const std::string &operation,
+                            const std::string &user,
+                            const absl::Time &timestamp) {
+    num_entries += 1;
+    EXPECT_THAT(user, Eq("user"));
+    EXPECT_THAT(operation, AnyOf("rpc1", "rpc2"));
+  });
+  EXPECT_THAT(num_entries, Eq(2));
+
+  // Now write out the file. This should wipe all of the contents.
+  EXPECT_THAT(usage_map.WriteToPersistentStore(), IsOk());
+
+  // Verify that we have a write.
+  auto stats = usage_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(1));
+  EXPECT_THAT(stats.automatic_writes, Eq(0));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
+
+  // Verify that the usage map is now empty.
+  usage_map.WithEntries(
+      [](const std::string &, const std::string &, const absl::Time &) {
+        ADD_FAILURE() << "usage map still contains entries";
+      });
+}
+
+TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
+  // Make maps with several different limits at the boundary of one or more
+  // of the messages.
+  PersistentUsageMap map_74({
+      .persistent_file = fs_.GetTruePath("/size_74_map.usage"),
+      .maximum_proto_size = 74,
+  });
+  PersistentUsageMap map_73({
+      .persistent_file = fs_.GetTruePath("/size_73_map.usage"),
+      .maximum_proto_size = 73,
+  });
+  PersistentUsageMap map_54({
+      .persistent_file = fs_.GetTruePath("/size_54_map.usage"),
+      .maximum_proto_size = 54,
+  });
+  PersistentUsageMap map_53({
+      .persistent_file = fs_.GetTruePath("/size_53_map.usage"),
+      .maximum_proto_size = 53,
+  });
+  PersistentUsageMap map_28({
+      .persistent_file = fs_.GetTruePath("/size_28_map.usage"),
+      .maximum_proto_size = 28,
+  });
+  PersistentUsageMap map_27({
+      .persistent_file = fs_.GetTruePath("/size_27_map.usage"),
+      .maximum_proto_size = 27,
+  });
+  PersistentUsageMap *all_maps[] = {&map_74, &map_73, &map_54,
+                                    &map_53, &map_28, &map_27};
+
+  // Populate the same set of entries into every single map. We use specific
+  // timestamps in all of the calls so that we can precisely know the resulting
+  // output proto size.
+  for (PersistentUsageMap *usage_map : all_maps) {
+    absl::Time timestamp = absl::UnixEpoch();
+    timestamp += absl::Seconds(2000000);
+    usage_map->RecordUse("rpc1", "user", timestamp);
+    timestamp += absl::Seconds(200000000);
+    usage_map->RecordUse("rpc2", "otheruser", timestamp);
+    timestamp += absl::Seconds(30000000000) + absl::Nanoseconds(123456789);
+    usage_map->RecordUse("rpc3", "third", timestamp);
+  }
+
+  // Verify that every map has three entries.
+  for (PersistentUsageMap *usage_map : all_maps) {
+    int num_entries = 0;
+    usage_map->WithEntries([&](const std::string &operation,
+                               const std::string &user,
+                               const absl::Time &timestamp) {
+      num_entries += 1;
+      EXPECT_THAT(operation, AnyOf("rpc1", "rpc2", "rpc3"));
+    });
+    EXPECT_THAT(num_entries, Eq(3));
+  }
+
+  // Now write out all the maps. This should trim them all.
+  for (PersistentUsageMap *usage_map : all_maps) {
+    EXPECT_THAT(usage_map->WriteToPersistentStore(), IsOk());
+
+    // Verify that we have a write.
+    auto stats = usage_map->GetStats();
+    EXPECT_THAT(stats.total_writes, Eq(1));
+    EXPECT_THAT(stats.automatic_writes, Eq(0));
+    EXPECT_THAT(stats.failed_writes, Eq(0));
+  }
+
+  // Verify that only the largest map has three entries.
+  for (PersistentUsageMap *usage_map : {&map_74}) {
+    int num_entries = 0;
+    usage_map->WithEntries([&](const std::string &operation,
+                               const std::string &user,
+                               const absl::Time &timestamp) {
+      num_entries += 1;
+      EXPECT_THAT(operation, AnyOf("rpc1", "rpc2", "rpc3"));
+    });
+    EXPECT_THAT(num_entries, Eq(3));
+  }
+  // Verify that the next two largest maps have two entries.
+  for (PersistentUsageMap *usage_map : {&map_73, &map_54}) {
+    int num_entries = 0;
+    usage_map->WithEntries([&](const std::string &operation,
+                               const std::string &user,
+                               const absl::Time &timestamp) {
+      num_entries += 1;
+      EXPECT_THAT(operation, AnyOf("rpc2", "rpc3"));
+    });
+    EXPECT_THAT(num_entries, Eq(2));
+  }
+  // Verify that the next two largest maps have one entry.
+  for (PersistentUsageMap *usage_map : {&map_53, &map_28}) {
+    int num_entries = 0;
+    usage_map->WithEntries([&](const std::string &operation,
+                               const std::string &user,
+                               const absl::Time &timestamp) {
+      num_entries += 1;
+      EXPECT_THAT(operation, Eq("rpc3"));
+    });
+    EXPECT_THAT(num_entries, Eq(1));
+  }
+  // Verify that the smallest map has no entries.
+  for (PersistentUsageMap *usage_map : {&map_27}) {
+    usage_map->WithEntries([&](const std::string &operation,
+                               const std::string &user,
+                               const absl::Time &timestamp) {
+      ADD_FAILURE() << "the smallest map should contain nothing";
+    });
+  }
 }
 
 }  // namespace
