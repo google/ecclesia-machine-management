@@ -68,16 +68,20 @@ class PersistentUsageMap {
     // negative) then every write will trigger a write.
     //
     // Note that the "age" is calculated using the age relative to the time of
-    // the use being recorded, not the current time. So if this value is 30 days
-    // and you have an entry which is 40 days old, trying to record a usage from
-    // 20 days ago will _not_ trigger a write. In general times should not be
-    // that heavily skewed.
+    // most recent entry in the map, not the absolute current time.
     absl::Duration auto_write_on_older_than = absl::InfiniteDuration();
+    // Set a duration where entries in the map that are older than this will be
+    // expired out. If this is infinite duration than writes will never expire.
+    //
+    // Like with the auto-write parameter, the age of the entries is determined
+    // relative to the newest entry in the map, not the absolute time. This
+    // trimming is also only done when the map is being written out.
+    absl::Duration trim_entries_older_than = absl::InfiniteDuration();
     // Define a maximum size of the persistent map when it is serialized out to
     // a protocol buffer. If set, then the map will be trimmed to under this
     // size by evicting entries starting with the oldest first.
     //
-    // This trimming only happens when the this is being written out. This means
+    // This trimming only happens when the map is being written out. This means
     // that if you never write the usage map out to disk then the internal map
     // can still grow without bound.
     //
@@ -126,6 +130,11 @@ class PersistentUsageMap {
     }
   }
 
+  // Report the most recent timestamp stored in the map. Every entry in the map
+  // will have a value <= this value, and at least one entry (if any exist) will
+  // have a value equal to it. If the map is empty this will be InfinitePast.
+  absl::Time GetMostRecentTimestamp() const ABSL_LOCKS_EXCLUDED(mutex_);
+
   // Record a new entry in the usage map. By default the timestamp of the call
   // will be presumed to be "now" but if the caller has a more accurate one it
   // can be explicitly passed in.
@@ -164,8 +173,8 @@ class PersistentUsageMap {
   // key and value, it just does the insert-or-update check.
   //
   // This function will return the age of the existing entry relative to the
-  // given timestamp. It will be zero or negative if the timestamp is older than
-  // the existing entry; it will be infinite if this is a new entry.
+  // newest entry in the map. It will be zero if the timestamp is older than the
+  // existing entry; it will be infinite if this is a new entry.
   absl::Duration InsertOrUpdateMapEntry(OperationUser op_user,
                                         absl::Time timestamp)
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
@@ -190,12 +199,18 @@ class PersistentUsageMap {
 
   // Policy flags controlling the behavior of the map.
   absl::Duration auto_write_on_older_than_;
+  absl::Duration trim_entries_older_than_;
   absl::optional<size_t> maximum_proto_size_;
 
   // The underlying timestamp map, used in memory.
   mutable absl::Mutex mutex_;
   absl::flat_hash_map<OperationUser, absl::Time> in_memory_map_
       ABSL_GUARDED_BY(mutex_);
+
+  // The newest timestamp currently in the map. This will be infinite past if
+  // the map is empty. For logic which is calculating how "old" an entry is this
+  // is the value which age is calculated relative to.
+  absl::Time newest_timestamp_in_map_ ABSL_GUARDED_BY(mutex_);
 
   // Store all of the stats being tracked.
   Stats stats_ ABSL_GUARDED_BY(mutex_);

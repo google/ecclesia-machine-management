@@ -93,13 +93,20 @@ PersistentUsageMap::PersistentUsageMap(Options options)
     : persistent_file_(std::move(options.persistent_file)),
       temporary_file_(persistent_file_ + ".tmp"),
       auto_write_on_older_than_(options.auto_write_on_older_than),
-      maximum_proto_size_(options.maximum_proto_size) {
+      trim_entries_older_than_(options.trim_entries_older_than),
+      maximum_proto_size_(options.maximum_proto_size),
+      newest_timestamp_in_map_(absl::InfinitePast()) {
   MergeFromPersistentStore().IgnoreError();
 }
 
 PersistentUsageMap::Stats PersistentUsageMap::GetStats() const {
   absl::MutexLock ml(&mutex_);
   return stats_;
+}
+
+absl::Time PersistentUsageMap::GetMostRecentTimestamp() const {
+  absl::MutexLock ml(&mutex_);
+  return newest_timestamp_in_map_;
 }
 
 void PersistentUsageMap::RecordUse(std::string operation, std::string user,
@@ -132,6 +139,7 @@ absl::Status PersistentUsageMap::WriteToPersistentStore() {
 
 absl::Duration PersistentUsageMap::InsertOrUpdateMapEntry(
     OperationUser op_user, absl::Time timestamp) {
+  newest_timestamp_in_map_ = std::max(newest_timestamp_in_map_, timestamp);
   auto map_iter = in_memory_map_.find(op_user);
   if (map_iter == in_memory_map_.end()) {
     // No entry was found, so insert a new one.
@@ -139,13 +147,17 @@ absl::Duration PersistentUsageMap::InsertOrUpdateMapEntry(
     // Treat the "existing entry" as having an infinite age in this case.
     return absl::InfiniteDuration();
   } else {
-    // We have a timestamp, so calculate the age and update it if the given
-    // tiemstamp is newer.
-    absl::Duration entry_age = timestamp - map_iter->second;
-    if (entry_age > absl::ZeroDuration()) {
-      map_iter->second = timestamp;
+    // We have any existing entry.
+    if (timestamp > map_iter->second) {
+      // If the new timestamp is actually newer, replace the old timestamp with
+      // it and return the age of the old one.
+      std::swap(map_iter->second, timestamp);
+      return newest_timestamp_in_map_ - timestamp;
+    } else {
+      // If the new timestamp is older, do nothing and return a zero duration to
+      // signal that nothing has been replaced.
+      return absl::ZeroDuration();
     }
-    return entry_age;
   }
 }
 
@@ -171,13 +183,37 @@ absl::Status PersistentUsageMap::MergeFromPersistentStore() {
 }
 
 std::string PersistentUsageMap::SerializeAndTrimMap() {
-  // Construct the protobuf to write from the usage map.
+  // Construct the protobuf to write from the usage map. If we come across any
+  // entries which are too old and need to be removed, don't include them in
+  // the map and put them in a list of entries to be pruned.
   PersistentUsageMapProto proto_map;
-  for (const auto &[key, value] : in_memory_map_) {
-    PersistentUsageMapProto::Entry *entry = proto_map.add_entries();
-    entry->set_operation(key.operation);
-    entry->set_user(key.user);
-    *entry->mutable_timestamp() = AbslTimeToProtoTime(value);
+  {
+    absl::Time keep_only_newer_than_time =
+        newest_timestamp_in_map_ - trim_entries_older_than_;
+    // This uses a manual while loop because in order to safely remove entries
+    // from the map as we go we need direct access to the iterator object.
+    auto map_iter = in_memory_map_.begin();
+    while (map_iter != in_memory_map_.end()) {
+      if (map_iter->second > keep_only_newer_than_time) {
+        // The time is new enough to keep. Push it into the output map.
+        PersistentUsageMapProto::Entry *entry = proto_map.add_entries();
+        entry->set_operation(map_iter->first.operation);
+        entry->set_user(map_iter->first.user);
+        *entry->mutable_timestamp() = AbslTimeToProtoTime(map_iter->second);
+        // Next entry in the map.
+        ++map_iter;
+      } else {
+        // The time is too old and should be trimmed. Don't include it in the
+        // output and erase it from the in-memory map.
+        in_memory_map_.erase(map_iter++);
+      }
+    }
+  }
+
+  // If trimming emptied the entire map then we need to reset the newest
+  // timestamp back to infinite past.
+  if (in_memory_map_.empty()) {
+    newest_timestamp_in_map_ = absl::InfinitePast();
   }
 
   // Serialize the protobuf. If it fit under the size limit, or there is no size
@@ -220,6 +256,12 @@ std::string PersistentUsageMap::SerializeAndTrimMap() {
     in_memory_map_.erase(
         OperationUser{std::move(*removed_entry->mutable_operation()),
                       std::move(*removed_entry->mutable_user())});
+  }
+
+  // If trimming emptied the entire map then we need to reset the newest
+  // timestamp back to infinite past.
+  if (in_memory_map_.empty()) {
+    newest_timestamp_in_map_ = absl::InfinitePast();
   }
 
   // The proto map is trimmed down, now serialize it out.

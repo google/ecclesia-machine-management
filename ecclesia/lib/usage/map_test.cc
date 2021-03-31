@@ -32,6 +32,7 @@ using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Eq;
 using ::testing::Ge;
+using ::testing::Gt;
 using ::testing::Le;
 
 class PersistentUsageMapTest : public ::testing::Test {
@@ -52,6 +53,7 @@ TEST_F(PersistentUsageMapTest, CreateWithMissingFileIsEmpty) {
       [&](const std::string &operation, const std::string &user,
           const absl::Time &timestamp) { has_entries = true; });
   EXPECT_FALSE(has_entries);
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(), Eq(absl::InfinitePast()));
 }
 
 TEST_F(PersistentUsageMapTest, NewUsesReplaceOld) {
@@ -82,6 +84,7 @@ TEST_F(PersistentUsageMapTest, NewUsesReplaceOld) {
     }
   });
   EXPECT_THAT(num_entries, Eq(2));
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(), Gt(absl::InfinitePast()));
 
   // Verify that we have no writes.
   auto stats = usage_map.GetStats();
@@ -118,6 +121,7 @@ TEST_F(PersistentUsageMapTest, OldDoesNotReplaceNew) {
     }
   });
   EXPECT_THAT(num_entries, Eq(2));
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(), Gt(absl::InfinitePast()));
 
   // Verify that we have no writes.
   auto stats = usage_map.GetStats();
@@ -162,6 +166,7 @@ TEST_F(PersistentUsageMapTest, SaveRecordsAndLoadRecords) {
       ADD_FAILURE() << "unexpected operation: " << operation;
     }
   });
+  EXPECT_THAT(first_map.GetMostRecentTimestamp(), Eq(timestamps[2]));
 
   // Now load up a second version of the map and check that it matches. Note
   // that although you can't actually use maps multiple maps with a single file,
@@ -187,6 +192,7 @@ TEST_F(PersistentUsageMapTest, SaveRecordsAndLoadRecords) {
     }
   });
   EXPECT_THAT(num_entries, Eq(3));
+  EXPECT_THAT(second_map.GetMostRecentTimestamp(), Eq(timestamps[2]));
 
   // Verify that we have no writes in the second map.
   stats = second_map.GetStats();
@@ -217,6 +223,7 @@ TEST_F(PersistentUsageMapTest, SaveRecordOnEveryUpdate) {
   usage_map.RecordUse("rpc3", "hacker");
 
   // Verify that we have five automatic writes.
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(), Gt(absl::InfinitePast()));
   stats = usage_map.GetStats();
   EXPECT_THAT(stats.total_writes, Eq(5));
   EXPECT_THAT(stats.automatic_writes, Eq(5));
@@ -252,6 +259,8 @@ TEST_F(PersistentUsageMapTest, SaveRecordOnOldUpdates) {
 
   // Verify that we have four automatic writes. This is the original three uses
   // and then the very final one.
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(),
+              Eq(start_time + absl::Seconds(66)));
   stats = usage_map.GetStats();
   EXPECT_THAT(stats.total_writes, Eq(4));
   EXPECT_THAT(stats.automatic_writes, Eq(4));
@@ -269,6 +278,7 @@ TEST_F(PersistentUsageMapTest, LoadingRecordsDoesNotTriggerWrites) {
   EXPECT_THAT(first_map.WriteToPersistentStore(), IsOk());
 
   // Verify that we have a write (manual, not automatic).
+  EXPECT_THAT(first_map.GetMostRecentTimestamp(), Gt(absl::InfinitePast()));
   auto stats = first_map.GetStats();
   EXPECT_THAT(stats.total_writes, Eq(1));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
@@ -291,6 +301,8 @@ TEST_F(PersistentUsageMapTest, LoadingRecordsDoesNotTriggerWrites) {
       [&](const std::string &operation, const std::string &user,
           const absl::Time &timestamp) { num_entries += 1; });
   EXPECT_THAT(num_entries, Eq(3));
+  EXPECT_THAT(second_map.GetMostRecentTimestamp(),
+              Eq(first_map.GetMostRecentTimestamp()));
 
   // Verify that we have no writes in the second map.
   stats = second_map.GetStats();
@@ -304,17 +316,18 @@ TEST_F(PersistentUsageMapTest, WriteFileFails) {
   // file fail artificially. The easiest thing we can do is to make the map file
   // path be a directory.
   fs_.CreateDir("/failed_write.usage");
-  PersistentUsageMap first_map(
+  PersistentUsageMap usage_map(
       {.persistent_file = fs_.GetTruePath("/failed_write.usage")});
 
   // Write out a few records.
-  first_map.RecordUse("rpc1", "user");
-  first_map.RecordUse("rpc2", "user");
-  first_map.RecordUse("rpc3", "hacker");
-  EXPECT_THAT(first_map.WriteToPersistentStore(), IsStatusInternal());
+  usage_map.RecordUse("rpc1", "user");
+  usage_map.RecordUse("rpc2", "user");
+  usage_map.RecordUse("rpc3", "hacker");
+  EXPECT_THAT(usage_map.WriteToPersistentStore(), IsStatusInternal());
 
   // Verify that we have a failed write.
-  auto stats = first_map.GetStats();
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(), Gt(absl::InfinitePast()));
+  auto stats = usage_map.GetStats();
   EXPECT_THAT(stats.total_writes, Eq(1));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(1));
@@ -341,6 +354,7 @@ TEST_F(PersistentUsageMapTest, WrittenFileIsEmptyWithZeroLimit) {
     EXPECT_THAT(operation, AnyOf("rpc1", "rpc2"));
   });
   EXPECT_THAT(num_entries, Eq(2));
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(), Gt(absl::InfinitePast()));
 
   // Now write out the file. This should wipe all of the contents.
   EXPECT_THAT(usage_map.WriteToPersistentStore(), IsOk());
@@ -356,6 +370,7 @@ TEST_F(PersistentUsageMapTest, WrittenFileIsEmptyWithZeroLimit) {
       [](const std::string &, const std::string &, const absl::Time &) {
         ADD_FAILURE() << "usage map still contains entries";
       });
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(), Eq(absl::InfinitePast()));
 }
 
 TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
@@ -391,6 +406,7 @@ TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
   // Populate the same set of entries into every single map. We use specific
   // timestamps in all of the calls so that we can precisely know the resulting
   // output proto size.
+  absl::Time most_recent_time;
   for (PersistentUsageMap *usage_map : all_maps) {
     absl::Time timestamp = absl::UnixEpoch();
     timestamp += absl::Seconds(2000000);
@@ -399,6 +415,7 @@ TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
     usage_map->RecordUse("rpc2", "otheruser", timestamp);
     timestamp += absl::Seconds(30000000000) + absl::Nanoseconds(123456789);
     usage_map->RecordUse("rpc3", "third", timestamp);
+    most_recent_time = timestamp;
   }
 
   // Verify that every map has three entries.
@@ -411,6 +428,7 @@ TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
       EXPECT_THAT(operation, AnyOf("rpc1", "rpc2", "rpc3"));
     });
     EXPECT_THAT(num_entries, Eq(3));
+    EXPECT_THAT(usage_map->GetMostRecentTimestamp(), Eq(most_recent_time));
   }
 
   // Now write out all the maps. This should trim them all.
@@ -465,6 +483,92 @@ TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
       ADD_FAILURE() << "the smallest map should contain nothing";
     });
   }
+
+  // Verify that every but the smallest still has the same most recent time.
+  for (PersistentUsageMap *usage_map : all_maps) {
+    if (usage_map == &map_27) {
+      EXPECT_THAT(usage_map->GetMostRecentTimestamp(),
+                  Eq(absl::InfinitePast()));
+    } else {
+      EXPECT_THAT(usage_map->GetMostRecentTimestamp(), Eq(most_recent_time));
+    }
+  }
+}
+
+TEST_F(PersistentUsageMapTest, TrimOlderEntries) {
+  PersistentUsageMap usage_map({
+      .persistent_file = fs_.GetTruePath("/last_3s.usage"),
+      .trim_entries_older_than = absl::Seconds(3),
+  });
+
+  // Write out a few records. Space them one second apart.
+  absl::Time start_time = absl::Now();
+  usage_map.RecordUse("rpc1", "user", start_time);
+  usage_map.RecordUse("rpc2", "user", start_time + absl::Seconds(1));
+  usage_map.RecordUse("rpc3", "hacker", start_time + absl::Seconds(2));
+  usage_map.RecordUse("rpc4", "friend", start_time + absl::Seconds(3));
+  usage_map.RecordUse("rpc2", "user", start_time + absl::Seconds(4));
+  usage_map.RecordUse("rpc5", "parent", start_time + absl::Seconds(5));
+
+  // Verify the map has five expected entries and six writes.
+  int num_entries = 0;
+  usage_map.WithEntries([&](const std::string &operation, const std::string &,
+                            const absl::Time &) {
+    num_entries += 1;
+    EXPECT_THAT(operation, AnyOf("rpc1", "rpc2", "rpc3", "rpc4", "rpc5"));
+  });
+  EXPECT_THAT(num_entries, Eq(5));
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(),
+              Eq(start_time + absl::Seconds(5)));
+
+  // Now write out the file. This should trim off all of the entries but the
+  // last three, i.e. everything three seconds or older relative to the last
+  // entry at start_time+5s.
+  EXPECT_THAT(usage_map.WriteToPersistentStore(), IsOk());
+  num_entries = 0;
+  usage_map.WithEntries([&](const std::string &operation, const std::string &,
+                            const absl::Time &) {
+    num_entries += 1;
+    EXPECT_THAT(operation, AnyOf("rpc2", "rpc4", "rpc5"));
+  });
+  EXPECT_THAT(num_entries, Eq(3));
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(),
+              Eq(start_time + absl::Seconds(5)));
+}
+
+TEST_F(PersistentUsageMapTest, TrimAllEntries) {
+  PersistentUsageMap usage_map({
+      .persistent_file = fs_.GetTruePath("/last_0s.usage"),
+      .trim_entries_older_than = absl::ZeroDuration(),
+  });
+
+  // Write out a few records. Space them one second apart.
+  absl::Time start_time = absl::Now();
+  usage_map.RecordUse("rpc1", "user", start_time);
+  usage_map.RecordUse("rpc2", "user", start_time + absl::Seconds(1));
+  usage_map.RecordUse("rpc3", "hacker", start_time + absl::Seconds(2));
+  usage_map.RecordUse("rpc4", "friend", start_time + absl::Seconds(3));
+  usage_map.RecordUse("rpc2", "user", start_time + absl::Seconds(4));
+  usage_map.RecordUse("rpc5", "parent", start_time + absl::Seconds(5));
+
+  // Verify the map has five expected entries and six writes.
+  int num_entries = 0;
+  usage_map.WithEntries([&](const std::string &operation, const std::string &,
+                            const absl::Time &) {
+    num_entries += 1;
+    EXPECT_THAT(operation, AnyOf("rpc1", "rpc2", "rpc3", "rpc4", "rpc5"));
+  });
+  EXPECT_THAT(num_entries, Eq(5));
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(),
+              Eq(start_time + absl::Seconds(5)));
+
+  // Now write out the file. This should trim off everything.
+  EXPECT_THAT(usage_map.WriteToPersistentStore(), IsOk());
+  usage_map.WithEntries(
+      [&](const std::string &, const std::string &, const absl::Time &) {
+        ADD_FAILURE() << "the written map should contain nothing";
+      });
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(), Eq(absl::InfinitePast()));
 }
 
 }  // namespace
