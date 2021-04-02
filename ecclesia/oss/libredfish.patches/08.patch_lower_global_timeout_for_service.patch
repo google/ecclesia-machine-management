@@ -5,7 +5,7 @@
  redfishAsyncOptions gDefaultOptions = {
      .accept = REDFISH_ACCEPT_JSON,
 -    .timeout = 20
-+    .timeout = 3L
++    .timeout = 5L
  };
  
  static void handleHostnameToRedfishService(const char* host, redfishService* service);
