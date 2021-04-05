@@ -1,0 +1,23 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#Memory.Memory",
+    "@odata.id": "/redfish/v1/Systems/system/Memory/9",
+    "@odata.type": "#Memory.v1_8_0.Memory",
+    "Assembly": {
+        "@odata.id": "/redfish/v1/Systems/system/Memory/9/Assembly"
+    },
+    "CapacityMiB": 32768,
+    "Id": "DIMM9",
+    "LogicalSizeMiB": 32768,
+    "Manufacturer": "MemoryMaker",
+    "MemoryDeviceType": "DDR4",
+    "Metrics": {
+        "@odata.id": "/redfish/v1/Systems/system/Memory/9/MemoryMetrics"
+    },
+    "Name": "DIMM9",
+    "OperatingSpeedMhz": 2400,
+    "PartNumber": "KF27000122-001",
+    "SerialNumber": "7030B009",
+    "Status": {
+        "State": "Enabled"
+    }
+}

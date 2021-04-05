@@ -1,0 +1,35 @@
+{
+    "@odata.contxt": "/redfish/v1/$metadata#Assembly.Assembly",
+    "@odata.id": "/redfish/v1/Systems/system/Processors/1/Assembly",
+    "@odata.type": "#Assembly.v1_2_1.Assembly",
+    "Assemblies": [
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Processors/1/Assembly#/Assemblies/0",
+            "MemberId": "0",
+            "Name": "cascadelake",
+            "Oem": {
+                "Google": {
+                    "AttachedTo": [
+                        {
+                            "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0/Oem/Google/Components/2"
+                        }
+                    ],
+                    "Components": [
+                        {
+                            "@odata.id": "/redfish/v1/Systems/system/Processors/1/Assembly#/Assemblies/0/Components/0",
+                            "AssociatedWith": [
+                                {
+                                    "@odata.id": "/redfish/v1/Systems/system/Processors/1"
+                                }
+                            ],
+                            "MemberId": "0",
+                            "Name": "cascadelake"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "Id": "Assembly",
+    "Name": "cascadelake"
+}

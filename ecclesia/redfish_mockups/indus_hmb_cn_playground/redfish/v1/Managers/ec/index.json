@@ -1,0 +1,28 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#Manager.Manager",
+    "@odata.id": "/redfish/v1/Managers/ec",
+    "@odata.type": "#Manager.v1_3_0.Manager",
+    "DateTime": "2019-08-01T16:50:22+00:00",
+    "Description": "Baseboard Management Controller",
+    "FirmwareVersion": "ec_indus_1.15.196.0",
+    "Id": "ecclesia_agent",
+    "Links": {
+        "ManagerForServers": [
+            {
+                "@odata.id": "/redfish/v1/Systems/system"
+            }
+        ],
+        "ManagerForServers@odata.count": 1
+    },
+    "Actions": {
+        "#Manager.Reset": {
+            "target": "/redfish/v1/Managers/ec/Actions/Manager.Reset",
+            "ResetType@Redfish.AllowableValues": [
+                "PowerCycle"
+            ]
+        }
+    },
+    "ManagerType": "ManagementController",
+    "Model": "bmc_core",
+    "Name": "Embedded Controller"
+}

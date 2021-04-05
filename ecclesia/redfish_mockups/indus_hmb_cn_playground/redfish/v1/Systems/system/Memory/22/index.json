@@ -1,0 +1,23 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#Memory.Memory",
+    "@odata.id": "/redfish/v1/Systems/system/Memory/22",
+    "@odata.type": "#Memory.v1_8_0.Memory",
+    "Metrics": {
+        "@odata.id": "/redfish/v1/Systems/system/Memory/22/MemoryMetrics"
+    },
+    "Name": "DIMM22",
+    "Id": "DIMM22",
+    "Status": {
+        "State": "Enabled"
+    },
+    "Assembly": {
+        "@odata.id": "/redfish/v1/Systems/system/Memory/22/Assembly"
+    },
+    "CapacityMiB": 32768,
+    "LogicalSizeMiB": 32768,
+    "Manufacturer": "MemoryMaker",
+    "MemoryDeviceType": "DDR4",
+    "OperatingSpeedMhz": 2400,
+    "PartNumber": "KF27000122-001",
+    "SerialNumber": "7030B022"
+}

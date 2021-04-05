@@ -1,0 +1,16 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#ProcessorMetrics.ProcessorMetrics",
+    "@odata.id": "/redfish/v1/Systems/system/Processors/0/ProcessorMetrics",
+    "@odata.type": "#ProcessorMetrics.v1_2_0.ProcessorMetrics",
+    "Id": "Metrics",
+    "Name": "Processor Metrics",
+    "ThrottlingCelsius": 30,
+    "Oem": {
+        "Google": {
+            "ProcessorErrorCounts": {
+                "Correctable": 0,
+                "Uncorrectable": 0
+            }
+        }
+    }
+}

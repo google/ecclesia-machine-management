@@ -1,0 +1,38 @@
+{
+    "@odata.contxt": "/redfish/v1/$metadata#Assembly.Assembly",
+    "@odata.id": "/redfish/v1/Systems/system/Memory/12/Assembly",
+    "@odata.type": "#Assembly.v1_2_1.Assembly",
+    "Assemblies": [
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/12/Assembly#/Assemblies/0",
+            "MemberId": "0",
+            "Name": "ddr4",
+            "Oem": {
+                "Google": {
+                    "AttachedTo": [
+                        {
+                            "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0/Oem/Google/Components/15"
+                        }
+                    ],
+                    "Components": [
+                        {
+                            "@odata.id": "/redfish/v1/Systems/system/Memory/12/Assembly#/Assemblies/0/Components/0",
+                            "AssociatedWith": [
+                                {
+                                    "@odata.id": "/redfish/v1/Systems/system/Memory/12"
+                                },
+                                {
+                                    "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/12"
+                                }
+                            ],
+                            "MemberId": "0",
+                            "Name": "ddr4"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "Id": "Assembly",
+    "Name": "ddr4"
+}

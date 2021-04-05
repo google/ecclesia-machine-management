@@ -1,0 +1,30 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#Processor.Processor",
+    "@odata.id": "/redfish/v1/Systems/system/Processors/0",
+    "@odata.type": "#Processor.v1_7_0.Processor",
+    "Assembly": {
+        "@odata.id": "/redfish/v1/Systems/system/Processors/0/Assembly"
+    },
+    "Id": "CPU0",
+    "Manufacturer": "Intel(R) Corporation",
+    "MaxSpeedMHz": 4000,
+    "Metrics": {
+        "@odata.id": "/redfish/v1/Systems/system/Processors/0/ProcessorMetrics"
+    },
+    "Name": "CPU0",
+    "PartNumber": "cascadelake",
+    "ProcessorId": {
+        "EffectiveFamily": "0x6",
+        "EffectiveModel": "0x55",
+        "Step": "0x4",
+        "VendorId": "Intel(R) Corporation"
+    },
+    "SerialNumber": "0x016b61948b27a116",
+    "Socket": "CPU0",
+    "Status": {
+        "State": "Enabled"
+    },
+    "TotalCores": 28,
+    "TotalEnabledCores": 28,
+    "TotalThreads": 56
+}

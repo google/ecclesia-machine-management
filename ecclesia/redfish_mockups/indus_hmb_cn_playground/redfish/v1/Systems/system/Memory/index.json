@@ -1,0 +1,81 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#MemoryCollection.MemoryCollection",
+    "@odata.id": "/redfish/v1/Systems/system/Memory",
+    "@odata.type": "#MemoryCollection.MemoryCollection",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/0"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/3"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/4"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/5"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/6"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/7"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/8"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/9"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/10"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/11"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/12"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/13"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/14"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/15"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/16"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/17"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/18"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/19"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/20"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/21"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/22"
+        },
+        {
+            "@odata.id": "/redfish/v1/Systems/system/Memory/23"
+        }
+    ],
+    "Members@odata.count": 24,
+    "Name": "Memory Module Collection"
+}
