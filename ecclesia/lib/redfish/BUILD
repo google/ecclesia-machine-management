@@ -82,6 +82,7 @@ cc_library(
         ":interface",
         ":property_definitions",
         ":types",
+        ":utils",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/memory",
@@ -93,7 +94,10 @@ cc_library(
 cc_test(
     name = "topology_test",
     srcs = ["topology_test.cc"],
-    data = ["//ecclesia/redfish_mockups/indus_hmb_cn:mockup.shar"],
+    data = [
+        "//ecclesia/redfish_mockups/indus_hmb_cn:mockup.shar",
+        "//ecclesia/redfish_mockups/indus_hmb_cn_playground:mockup.shar",
+    ],
     deps = [
         ":test_mockup",
         ":topology",

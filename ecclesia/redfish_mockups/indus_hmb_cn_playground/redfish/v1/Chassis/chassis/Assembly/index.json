@@ -718,7 +718,80 @@
                }
              ]
            }
+         },
+         "Status": {
+           "State": "Enabled"
          }
-       }
+       },
+        {
+           "@odata.id" : "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/18",
+           "MemberId" : "18",
+           "Name" : "spicy16_intp",
+           "Oem" : {
+              "Google" : {
+                 "AttachedTo" : [
+                    {
+                       "@odata.id" : "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0/Oem/Google/Components/31"
+                    }
+                 ],
+                 "Components" : [
+                    {
+                       "@odata.id" : "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/18/Oem/Google/Components/0",
+                       "MemberId" : "0",
+                       "Name" : "spicy16_intp",
+                       "AssociatedWith" : [
+                          {
+                             "@odata.id" : "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/18"
+                          }
+                       ]
+                    },
+                    {
+                       "@odata.id" : "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/18/Oem/Google/Components/1",
+                       "MemberId" : "1",
+                       "Name" : "CDFP",
+                       "PhysicalContext" : "Connector"
+                    }
+                 ]
+              }
+           },
+           "Status": {
+             "Foobar": "foobar"
+           }
+        },
+        {
+           "@odata.id" : "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/19",
+           "MemberId" : "19",
+           "Name" : "spicy16_intp",
+           "Oem" : {
+              "Google" : {
+                 "AttachedTo" : [
+                    {
+                       "@odata.id" : "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0/Oem/Google/Components/32"
+                    }
+                 ],
+                 "Components" : [
+                    {
+                       "@odata.id" : "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/19/Oem/Google/Components/0",
+                       "MemberId" : "0",
+                       "Name" : "spicy16_intp",
+                       "AssociatedWith" : [
+                          {
+                             "@odata.id" : "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/19"
+                          }
+                       ]
+                    },
+                    {
+                       "@odata.id" : "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/19/Oem/Google/Components/1",
+                       "MemberId" : "1",
+                       "Name" : "CDFP",
+                       "PhysicalContext" : "Connector"
+                    }
+                 ]
+              }
+           },
+           "Status": {
+             "State": "Absent"
+           }
+        }
    ]
 }

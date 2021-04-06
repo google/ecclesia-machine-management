@@ -72,6 +72,7 @@ void PrintTo(const std::unique_ptr<Node> &node, std::ostream *os) {
 namespace {
 
 using ::testing::ContainerEq;
+using ::testing::Contains;
 using ::testing::Eq;
 using ::testing::IsNull;
 using ::testing::Not;
@@ -604,6 +605,25 @@ TEST(RawInterfaceTestWithMockup, NodesMatch) {
   NodeTopology topology2 = CreateTopologyFromRedfish(raw_intf.get());
 
   NodeTopologiesHaveTheSameNodes(topology1, topology2);
+}
+
+TEST(RawInterfaceTestWithMockup, HandleAssemblyStateCorrectlly) {
+  TestingMockupServer mockup("indus_hmb_cn_playground/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+  NodeTopology topology = CreateTopologyFromRedfish(raw_intf.get());
+
+  std::vector<std::string> actual_devpaths;
+  for (const auto &node : topology.nodes) {
+    actual_devpaths.push_back(node->local_devpath);
+  }
+  // Assembly koolaid doesn't report Status
+  EXPECT_THAT(actual_devpaths, Contains("/phys/KA0"));
+  // Assembly koolaid reports Status.State as Enabled
+  EXPECT_THAT(actual_devpaths, Contains("/phys/KA2"));
+  // Assembly spicy16_inttp reports Status while there is no State
+  EXPECT_THAT(actual_devpaths, Not(Contains("/phys/PE2")));
+  // Assembly spicy16_inttp reports Status.State as Absent
+  EXPECT_THAT(actual_devpaths, Not(Contains("/phys/PE3")));
 }
 
 }  // namespace

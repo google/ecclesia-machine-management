@@ -52,6 +52,18 @@ inline bool ComponentIsEnabled(libredfish::RedfishObject *node_obj) {
   return *state == "Enabled";
 }
 
+inline bool AssemblyIsEnabled(libredfish::RedfishObject *assembly_obj) {
+  if (!assembly_obj) return false;
+  auto status = (*assembly_obj)[libredfish::kRfPropertyStatus].AsObject();
+  // If assembly doesn't report status, treat it as enabled.
+  if (!status) return true;
+
+  auto state = status->GetNodeValue<libredfish::PropertyState>();
+  if (!state) return false;
+
+  return *state == "Enabled";
+}
+
 }  // namespace libredfish
 
 #endif

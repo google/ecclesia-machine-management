@@ -32,6 +32,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/types.h"
+#include "ecclesia/lib/redfish/utils.h"
 
 namespace libredfish {
 namespace {
@@ -93,6 +94,10 @@ void ExtractAssemblyProperties(RedfishObject *obj,
   if (!assembly_collection) return;
 
   for (auto assembly : *assembly_collection) {
+    auto assembly_obj = assembly.AsObject();
+    if (!assembly_obj || !AssemblyIsEnabled(assembly_obj.get())) {
+      continue;
+    }
     assembly_out->push_back(std::move(assembly));
   }
 }
