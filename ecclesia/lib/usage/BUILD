@@ -8,6 +8,7 @@ proto_library(
 
 cc_proto_library(
     name = "serialization_cc_proto",
+    visibility = ["//ecclesia:library_users"],
     deps = [":serialization_proto"],
 )
 
@@ -15,6 +16,7 @@ cc_library(
     name = "map",
     srcs = ["map.cc"],
     hdrs = ["map.h"],
+    visibility = ["//ecclesia:library_users"],
     deps = [
         ":serialization_cc_proto",
         "//ecclesia/lib/logging",
