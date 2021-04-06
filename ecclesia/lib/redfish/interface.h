@@ -252,6 +252,8 @@ class RedfishObject {
   virtual RedfishVariant operator[](const std::string &node_name) const = 0;
   virtual absl::optional<std::string> GetUri() = 0;
 
+  virtual std::string DebugString() = 0;
+
   // GetNodeValue is a convenience method which calls GetNode() then GetValue().
   // If the node does not exist or if the value could not be retrieved, nullopt
   // will be returned. Returns typed value or nullopt on error.

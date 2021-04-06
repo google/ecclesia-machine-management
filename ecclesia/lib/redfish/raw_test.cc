@@ -207,6 +207,17 @@ TEST_P(RawInterfaceWithParamTest, GetUriMatchesGetRoot) {
   EXPECT_THAT(root->GetUri(), Eq(root_via_uri2->GetUri()));
 }
 
+TEST_P(RawInterfaceWithParamTest, DebugStringIsValid) {
+  auto root = raw_intf_->GetRoot().AsObject();
+  ASSERT_TRUE(root);
+  std::string root_debug_str = root->DebugString();
+  ASSERT_FALSE(root_debug_str.empty());
+  auto root_uri = root->GetUri();
+  ASSERT_TRUE(root_uri.has_value());
+
+  EXPECT_NE(root_debug_str.find(root_uri.value()), std::string::npos);
+}
+
 TEST_P(RawInterfaceWithParamTest, GetChildObjectByUriMatches) {
   auto root = raw_intf_->GetRoot().AsObject();
   ASSERT_TRUE(root);

@@ -94,6 +94,7 @@ class JsonMockupObject : public RedfishObject {
   absl::optional<std::string> GetUri() override {
     return GetNodeValue<std::string>("@odata.id");
   }
+  std::string DebugString() override { return "Unsupported."; }
 
   json_t *json_view_;
 };

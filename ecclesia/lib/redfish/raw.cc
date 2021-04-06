@@ -231,6 +231,7 @@ class RawObject : public RedfishObject {
         absl::make_unique<RawVariantImpl>(payload_->GetNode(node_name)));
   }
   absl::optional<std::string> GetUri() override { return payload_->GetUri(); }
+  std::string DebugString() override { return payload_->DebugString(); }
 
  private:
   std::shared_ptr<RawPayload> payload_;
