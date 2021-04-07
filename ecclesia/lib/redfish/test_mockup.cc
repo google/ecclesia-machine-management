@@ -134,10 +134,14 @@ void TestingMockupServer::SetUpMockupServer(
     char **server_argv,
     const std::function<std::unique_ptr<RedfishInterface>()> &factory,
     absl::optional<absl::Duration> start_estimation) {
-  // Launch the supprocess using spawn.
+  // Launch the supprocess using spawn. We spawn it into a unique process group
+  // so that at shutdown we can terminate the entire tree.
   absl::Time start_time = absl::Now();
   absl::Time give_up_time = start_time + kDaemonStartTimeout;
-  int result = posix_spawn(&server_pid_, server_argv[0], nullptr, nullptr,
+  posix_spawnattr_t attr;
+  posix_spawnattr_init(&attr);
+  posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETPGROUP);
+  int result = posix_spawn(&server_pid_, server_argv[0], nullptr, &attr,
                            server_argv, nullptr);
   ecclesia::Check(result == 0, "mockup server process started")
       << "posix_spawn() returned " << result;
@@ -193,7 +197,8 @@ void TestingMockupServer::SetUpMockupServer(
 }
 
 TestingMockupServer::~TestingMockupServer() {
-  kill(server_pid_, SIGKILL);
+  // Terminate the entire process group of the server.
+  kill(-server_pid_, SIGTERM);
   waitpid(server_pid_, nullptr, 0);
 }
 
