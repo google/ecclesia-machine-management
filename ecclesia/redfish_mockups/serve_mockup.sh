@@ -23,4 +23,7 @@ declare -r DATA_DIR=$(find "${ECCLESIA_DATA_DIR}" -type d -name redfish)/..
 # Run the server. Note that -D is already provided. Trying to provide another
 # -D argument is undefined behaviour.
 chmod u+x "$SERVER"
-"$SERVER" -D "$DATA_DIR" "$@"
+
+# Use exec to launch the server so that the PID of this script becomes the PID
+# of the server.
+exec "$SERVER" -D "$DATA_DIR" "$@"
