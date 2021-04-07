@@ -91,6 +91,7 @@ TEST_F(PersistentUsageMapTest, NewUsesReplaceOld) {
   EXPECT_THAT(stats.total_writes, Eq(0));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Eq(0));
 }
 
 TEST_F(PersistentUsageMapTest, OldDoesNotReplaceNew) {
@@ -128,6 +129,7 @@ TEST_F(PersistentUsageMapTest, OldDoesNotReplaceNew) {
   EXPECT_THAT(stats.total_writes, Eq(0));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Eq(0));
 }
 
 TEST_F(PersistentUsageMapTest, SaveRecordsAndLoadRecords) {
@@ -139,6 +141,7 @@ TEST_F(PersistentUsageMapTest, SaveRecordsAndLoadRecords) {
   EXPECT_THAT(stats.total_writes, Eq(0));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Eq(0));
 
   // Write out a few records.
   first_map.RecordUse("rpc1", "user");
@@ -151,6 +154,8 @@ TEST_F(PersistentUsageMapTest, SaveRecordsAndLoadRecords) {
   EXPECT_THAT(stats.total_writes, Eq(1));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Gt(0));
+  size_t first_size = stats.proto_size;
 
   // Extract the three timestamps from the map for later comparison.
   absl::Time timestamps[3];
@@ -199,6 +204,7 @@ TEST_F(PersistentUsageMapTest, SaveRecordsAndLoadRecords) {
   EXPECT_THAT(stats.total_writes, Eq(0));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Eq(first_size));
 }
 
 TEST_F(PersistentUsageMapTest, SaveRecordOnEveryUpdate) {
@@ -212,6 +218,7 @@ TEST_F(PersistentUsageMapTest, SaveRecordOnEveryUpdate) {
   EXPECT_THAT(stats.total_writes, Eq(0));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Eq(0));
 
   // Write out a few records. All but one of these should trigger a write.
   absl::Time before_first = absl::Now();
@@ -228,6 +235,7 @@ TEST_F(PersistentUsageMapTest, SaveRecordOnEveryUpdate) {
   EXPECT_THAT(stats.total_writes, Eq(5));
   EXPECT_THAT(stats.automatic_writes, Eq(5));
   EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Gt(0));
 }
 
 TEST_F(PersistentUsageMapTest, SaveRecordOnOldUpdates) {
@@ -241,6 +249,7 @@ TEST_F(PersistentUsageMapTest, SaveRecordOnOldUpdates) {
   EXPECT_THAT(stats.total_writes, Eq(0));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Eq(0));
 
   // Write out a few records. We manually control the timestamps so that after
   // the first three updates only one of the followups should trigger a write.
@@ -265,6 +274,7 @@ TEST_F(PersistentUsageMapTest, SaveRecordOnOldUpdates) {
   EXPECT_THAT(stats.total_writes, Eq(4));
   EXPECT_THAT(stats.automatic_writes, Eq(4));
   EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Gt(0));
 }
 
 TEST_F(PersistentUsageMapTest, LoadingRecordsDoesNotTriggerWrites) {
@@ -283,6 +293,8 @@ TEST_F(PersistentUsageMapTest, LoadingRecordsDoesNotTriggerWrites) {
   EXPECT_THAT(stats.total_writes, Eq(1));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Gt(0));
+  size_t first_size = stats.proto_size;
 
   // Now load up a second version of the map and check that it matches. Note
   // that although you can't actually use maps multiple maps with a single file,
@@ -309,6 +321,7 @@ TEST_F(PersistentUsageMapTest, LoadingRecordsDoesNotTriggerWrites) {
   EXPECT_THAT(stats.total_writes, Eq(0));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Eq(first_size));
 }
 
 TEST_F(PersistentUsageMapTest, WriteFileFails) {
@@ -331,6 +344,7 @@ TEST_F(PersistentUsageMapTest, WriteFileFails) {
   EXPECT_THAT(stats.total_writes, Eq(1));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(1));
+  EXPECT_THAT(stats.proto_size, Eq(0));
 }
 
 TEST_F(PersistentUsageMapTest, WrittenFileIsEmptyWithZeroLimit) {
@@ -364,6 +378,7 @@ TEST_F(PersistentUsageMapTest, WrittenFileIsEmptyWithZeroLimit) {
   EXPECT_THAT(stats.total_writes, Eq(1));
   EXPECT_THAT(stats.automatic_writes, Eq(0));
   EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Eq(0));  // Proto should be empty.
 
   // Verify that the usage map is now empty.
   usage_map.WithEntries(
@@ -402,6 +417,9 @@ TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
   });
   PersistentUsageMap *all_maps[] = {&map_74, &map_73, &map_54,
                                     &map_53, &map_28, &map_27};
+  absl::flat_hash_map<PersistentUsageMap *, size_t> all_map_sizes = {
+      {&map_74, 74}, {&map_73, 54}, {&map_54, 54},
+      {&map_53, 28}, {&map_28, 28}, {&map_27, 0}};
 
   // Populate the same set of entries into every single map. We use specific
   // timestamps in all of the calls so that we can precisely know the resulting
@@ -440,6 +458,7 @@ TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
     EXPECT_THAT(stats.total_writes, Eq(1));
     EXPECT_THAT(stats.automatic_writes, Eq(0));
     EXPECT_THAT(stats.failed_writes, Eq(0));
+    EXPECT_THAT(stats.proto_size, Eq(all_map_sizes.at(usage_map)));
   }
 
   // Verify that only the largest map has three entries.

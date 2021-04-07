@@ -109,6 +109,10 @@ class PersistentUsageMap {
     int32_t total_writes = 0;      // All writes, manual and automatic.
     int32_t automatic_writes = 0;  // Automatic writes only.
     int32_t failed_writes = 0;     // All writes which failed.
+    // The size of the most recent persisted proto. This will be set to the size
+    // of the loaded proto on construction, and updated after writes. Note that
+    // this does not correspond to the precise size of the underlying file.
+    size_t proto_size = 0;
   };
   Stats GetStats() const ABSL_LOCKS_EXCLUDED(mutex_);
 

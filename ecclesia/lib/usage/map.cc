@@ -165,10 +165,16 @@ absl::Status PersistentUsageMap::MergeFromPersistentStore() {
   // Try to read data in from a local file.
   riegeli::RecordReader reader(
       riegeli::FdStreamReader(persistent_file_, O_RDONLY));
-  PersistentUsageMapProto proto_map;
-  if (!reader.ReadRecord(proto_map)) {
+  std::string serialized_proto;
+  if (!reader.ReadRecord(serialized_proto)) {
     return absl::NotFoundError(absl::StrFormat(
         "unable to read any existing record from %s", persistent_file_));
+  }
+  PersistentUsageMapProto proto_map;
+  if (!proto_map.ParseFromString(serialized_proto)) {
+    return absl::InternalError(absl::StrFormat(
+        "the value stored in %s is not a valid persistent map proto",
+        persistent_file_));
   }
 
   // Now that we've read the file, insert any entries found in it into the map.
@@ -179,6 +185,7 @@ absl::Status PersistentUsageMap::MergeFromPersistentStore() {
     InsertOrUpdateMapEntry(std::move(op_user),
                            AbslTimeFromProtoTime(entry.timestamp()));
   }
+  stats_.proto_size = serialized_proto.size();
   return absl::OkStatus();
 }
 
@@ -305,6 +312,7 @@ absl::Status PersistentUsageMap::WriteToPersistentStoreUnlocked() {
   }
 
   // Success!
+  stats_.proto_size = serialized_map.size();
   std::move(increment_failed_writes).Cancel();
   return absl::OkStatus();
 }
