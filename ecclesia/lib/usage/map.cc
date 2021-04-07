@@ -163,8 +163,8 @@ absl::Duration PersistentUsageMap::InsertOrUpdateMapEntry(
 
 absl::Status PersistentUsageMap::MergeFromPersistentStore() {
   // Try to read data in from a local file.
-  riegeli::RecordReader<riegeli::FdStreamReader<>> reader(
-      riegeli::FdStreamReader<>(persistent_file_, O_RDONLY));
+  riegeli::RecordReader reader(
+      riegeli::FdStreamReader(persistent_file_, O_RDONLY));
   PersistentUsageMapProto proto_map;
   if (!reader.ReadRecord(proto_map)) {
     return absl::NotFoundError(absl::StrFormat(
@@ -282,8 +282,8 @@ absl::Status PersistentUsageMap::WriteToPersistentStoreUnlocked() {
   std::string serialized_map = SerializeAndTrimMap();
 
   // Open up the file for writing. We use the temporary file for this.
-  riegeli::RecordWriter<riegeli::FdStreamWriter<>> writer(
-      riegeli::FdStreamWriter<>(temporary_file_, O_WRONLY | O_CREAT | O_TRUNC));
+  riegeli::RecordWriter writer(
+      riegeli::FdStreamWriter(temporary_file_, O_WRONLY | O_CREAT | O_TRUNC));
 
   // Write the protobuf out to the file.
   if (!writer.WriteRecord(serialized_map)) {
