@@ -12,8 +12,7 @@
     "Name": "Indus",
     "Oem" : {
         "Google" : {
-           "BootNumber" : 20585,
-           "SystemUptime" : 80905
+           "BootNumber" : 20585
         }
      },
     "Processors": {

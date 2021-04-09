@@ -79,6 +79,7 @@ inline constexpr char kRfOemPropertyProcessorErrorCounts[] =
 inline constexpr char kRfPropertyProcessorId[] = "ProcessorId";
 inline constexpr char kRfOemPropertySmartAttributes[] = "SMARTAttributes";
 inline constexpr char kRfOemPropertyBootNumber[] = "BootNumber";
+inline constexpr char kRfOemPropertySystemUptime[] = "SystemUptime";
 
 inline constexpr char kRfPropertyMediaTypeSsd[] = "SSD";
 
