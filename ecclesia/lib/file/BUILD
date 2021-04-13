@@ -163,6 +163,47 @@ cc_test(
     ],
 )
 
+cc_data_library(
+    name = "json_files",
+    cc_namespace = "ecclesia_testdata",
+    data = [
+        "test_data/json.json",
+        "test_data/json_bad.txt",
+    ],
+    var_name = "kJsonFiles",
+)
+
+cc_library(
+    name = "parse_json",
+    hdrs = ["parse_json.h"],
+    visibility = ["//ecclesia:library_users"],
+    deps = [
+        ":cc_embed_interface",
+        "//ecclesia/lib/logging",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:optional",
+        "@com_jsoncpp//:json",
+    ],
+)
+
+cc_test(
+    name = "parse_json_test",
+    srcs = ["parse_json_test.cc"],
+    deps = [
+        ":cc_embed_interface",
+        ":json_files",
+        ":parse_json",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+        "@com_jsoncpp//:json",
+    ],
+)
+
 cc_library(
     name = "path",
     srcs = ["path.cc"],
