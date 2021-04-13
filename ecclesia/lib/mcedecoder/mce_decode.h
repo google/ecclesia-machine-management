@@ -38,7 +38,7 @@ class MceDecoderInterface {
       const MceLogMessage& raw_msg) = 0;
 };
 
-enum class CpuVendor { kIntel, kUnknown };
+enum class CpuVendor { kIntel, kAmd, kUnknown };
 
 enum class CpuIdentifier { kSkylake, kCascadeLake, kUnknown };
 

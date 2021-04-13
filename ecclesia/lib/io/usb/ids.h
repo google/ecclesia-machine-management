@@ -24,10 +24,10 @@
 namespace ecclesia {
 
 inline constexpr uint16_t kUsbVendorIdGoogle = 0x18d1;
-inline constexpr uint16_t kUsbProductIdSleipnirBmc = 0x0215;
+inline constexpr uint16_t kUsbProdIdSleipnirBmc = 0x0215;
 
 inline constexpr UsbSignature kUsbSignatureSleipnirBmc = {
-    kUsbVendorIdGoogle, kUsbProductIdSleipnirBmc};
+    kUsbVendorIdGoogle, kUsbProdIdSleipnirBmc};
 
 }  // namespace ecclesia
 
