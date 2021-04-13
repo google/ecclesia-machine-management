@@ -283,11 +283,6 @@ class RedfishInterface {
   // can be reliably assumed to be from a Google-controlled source.
   // Examples of trusted endpoints are attested BMCs and prodimage running in
   // caretaker mode.
-  // Examples of nontrusted endpoints are Redfish services running on a
-  // baremetal customer's machine, and attested agents serving information
-  // about hardware that has been exposed via passthrough to a VM customer
-  // (where a customer can tamper with the hardware's persistent state to
-  // misreport information).
   enum TrustedEndpoint { kTrusted, kUntrusted };
 
   // Updates the endpoint for sending Redfish requests.
