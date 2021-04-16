@@ -48,7 +48,7 @@ class PciTopologyInterface {
   // This class represents a node in the PCI topology tree.
   class Node {
    public:
-    Node(const PciLocation &location, size_t depth, Node *parent)
+    Node(const PciDbdfLocation &location, size_t depth, Node *parent)
         : location_(location), depth_(depth), parent_(parent) {}
 
     Node(const Node &) = delete;
@@ -56,7 +56,7 @@ class PciTopologyInterface {
     Node(Node &&) = delete;
     Node &operator=(Node &&) = delete;
 
-    const PciLocation &Location() const { return location_; }
+    const PciDbdfLocation &Location() const { return location_; }
 
     // This gets the depth in the PCI tree. For a root node, the depth is 0.
     size_t Depth() const { return depth_; }
@@ -76,13 +76,14 @@ class PciTopologyInterface {
     }
 
    private:
-    const PciLocation location_;
+    const PciDbdfLocation location_;
     size_t depth_;
     Node *parent_;
     std::vector<Node *> children_;
   };
 
-  using PciNodeMap = absl::flat_hash_map<PciLocation, std::unique_ptr<Node>>;
+  using PciNodeMap =
+      absl::flat_hash_map<PciDbdfLocation, std::unique_ptr<Node>>;
   virtual absl::StatusOr<PciNodeMap> EnumerateAllNodes() const = 0;
 
   // A method to convert a PCI location to a PCI device instance. The created
@@ -90,7 +91,7 @@ class PciTopologyInterface {
   // location. If no such PCI device with the given location exists, return
   // nullptr.
   virtual std::unique_ptr<PciDevice> CreateDevice(
-      const PciLocation &location) const = 0;
+      const PciDbdfLocation &location) const = 0;
 
   // This struct associates the root PCI bus with the corresponding ACPI path.
   struct PciAcpiPath {

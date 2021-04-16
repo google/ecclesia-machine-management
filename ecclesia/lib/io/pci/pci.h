@@ -50,7 +50,7 @@ class PciResources {
     explicit constexpr BarNum(BaseType value) : BaseType(value) {}
   };
 
-  explicit PciResources(PciLocation loc) : loc_(std::move(loc)) {}
+  explicit PciResources(PciDbdfLocation loc) : loc_(std::move(loc)) {}
   virtual ~PciResources() = default;
 
   // Check if Pci exists.
@@ -71,7 +71,7 @@ class PciResources {
   }
 
  protected:
-  PciLocation loc_;
+  PciDbdfLocation loc_;
 
  private:
   // The underlying implementation of GetBaseAddress.
@@ -82,7 +82,7 @@ class PciResources {
 class PciDevice {
  public:
   // Create a PCI device using the provided region for all config space access.
-  PciDevice(const PciLocation &location,
+  PciDevice(const PciDbdfLocation &location,
             std::unique_ptr<PciRegion> config_region,
             std::unique_ptr<PciResources> resources_intf)
       : location_(location),
@@ -99,7 +99,7 @@ class PciDevice {
   PciDevice &operator=(PciDevice &&) = default;
 
   // Get this device address.
-  const PciLocation &Location() const { return location_; }
+  const PciDbdfLocation &Location() const { return location_; }
 
   // Get the device config space. The virtual declaration is to facilitate mock
   // up for testing.
@@ -117,7 +117,7 @@ class PciDevice {
       const = 0;
 
  private:
-  PciLocation location_;
+  PciDbdfLocation location_;
 
   std::unique_ptr<PciRegion> config_region_;
   std::unique_ptr<PciConfigSpace> config_space_;

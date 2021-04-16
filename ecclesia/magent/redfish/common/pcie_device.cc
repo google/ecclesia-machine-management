@@ -73,7 +73,7 @@ void PCIeDevice::Get(tensorflow::serving::net_http::ServerRequestInterface *req,
   // always has a function of 0. Therefore, we append the ".0" to form a
   // complete PCI location.
   std::string pcie_location_str = absl::StrCat(pcie_name, ".0");
-  auto pcie_location = PciLocation::FromString(pcie_location_str);
+  auto pcie_location = PciDbdfLocation::FromString(pcie_location_str);
   if (!pcie_location.has_value()) {
     req->ReplyWithStatus(
         tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
@@ -111,7 +111,7 @@ void PCIeDevice::Get(tensorflow::serving::net_http::ServerRequestInterface *req,
   // Enumerate the PCIe functions and add valid links.
   for (uint8_t pci_func = 0; pci_func < 8; ++pci_func) {
     std::string pcie_location_str = absl::StrCat(pcie_name, ".", pci_func);
-    auto pcie_location = PciLocation::FromString(pcie_location_str);
+    auto pcie_location = PciDbdfLocation::FromString(pcie_location_str);
     if (!pcie_location.has_value()) {
       continue;
     }

@@ -32,7 +32,7 @@ namespace libredfish {
 //   "Device": "0x00",
 //   "Function": "0x0"
 // }
-absl::optional<ecclesia::PciLocation> ReadPciLocation(
+absl::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
     const RedfishObject &pci_location_obj);
 
 // Given a pcie function redfish object, read the vendor id, device id,

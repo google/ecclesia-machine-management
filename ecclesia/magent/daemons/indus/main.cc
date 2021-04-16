@@ -153,54 +153,54 @@ constexpr auto kEepromSmbusAddressSpicy16 =
 // Thermal info offset for channel0 is 0x150, for channel1 is 0x154.
 constexpr ecclesia::PciSensorParams dimm_channel_info[]{
     {"dimm0",  // cpu0_1lms_3
-     ecclesia::PciLocation::Make<0, 0x3a, 0x0c, 2>(), 0x150, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0x3a, 0x0c, 2>(), 0x150, 85},
     {"dimm1",  // cpu0_1lms_3
-     ecclesia::PciLocation::Make<0, 0x3a, 0x0c, 2>(), 0x154, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0x3a, 0x0c, 2>(), 0x154, 85},
     {"dimm2",  // cpu0_1lms_4
-     ecclesia::PciLocation::Make<0, 0x3a, 0x0c, 6>(), 0x150, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0x3a, 0x0c, 6>(), 0x150, 85},
     {"dimm3",  // cpu0_1lms_4
-     ecclesia::PciLocation::Make<0, 0x3a, 0x0c, 6>(), 0x154, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0x3a, 0x0c, 6>(), 0x154, 85},
     {"dimm4",  // cpu0_1lms_5
-     ecclesia::PciLocation::Make<0, 0x3a, 0x0d, 2>(), 0x150, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0x3a, 0x0d, 2>(), 0x150, 85},
     {"dimm5",  // cpu0_1lms_5
-     ecclesia::PciLocation::Make<0, 0x3a, 0x0d, 2>(), 0x154, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0x3a, 0x0d, 2>(), 0x154, 85},
     {"dimm6",  // cpu0_1lms_2
-     ecclesia::PciLocation::Make<0, 0x3a, 0x0b, 2>(), 0x154, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0x3a, 0x0b, 2>(), 0x154, 85},
     {"dimm7",  // cpu0_1lms_2
-     ecclesia::PciLocation::Make<0, 0x3a, 0x0b, 2>(), 0x150, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0x3a, 0x0b, 2>(), 0x150, 85},
     {"dimm8",  // cpu0_1lms_1
-     ecclesia::PciLocation::Make<0, 0x3a, 0x0a, 6>(), 0x154, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0x3a, 0x0a, 6>(), 0x154, 85},
     {"dimm9",  // cpu0_1lms_1
-     ecclesia::PciLocation::Make<0, 0x3a, 0x0a, 6>(), 0x150, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0x3a, 0x0a, 6>(), 0x150, 85},
     {"dimm10",  // cpu0_1lms_0
-     ecclesia::PciLocation::Make<0, 0x3a, 0x0a, 2>(), 0x154, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0x3a, 0x0a, 2>(), 0x154, 85},
     {"dimm11",  // cpu0_1lms_0
-     ecclesia::PciLocation::Make<0, 0x3a, 0x0a, 2>(), 0x150, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0x3a, 0x0a, 2>(), 0x150, 85},
 
     {"dimm12",  // cpu1_1lms_0
-     ecclesia::PciLocation::Make<0, 0xae, 0x0a, 2>(), 0x150, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0a, 2>(), 0x150, 85},
     {"dimm13",  // cpu1_1lms_0
-     ecclesia::PciLocation::Make<0, 0xae, 0x0a, 2>(), 0x154, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0a, 2>(), 0x154, 85},
     {"dimm14",  // cpu1_1lms_1
-     ecclesia::PciLocation::Make<0, 0xae, 0x0a, 6>(), 0x150, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0a, 6>(), 0x150, 85},
     {"dimm15",  // cpu1_1lms_1
-     ecclesia::PciLocation::Make<0, 0xae, 0x0a, 6>(), 0x154, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0a, 6>(), 0x154, 85},
     {"dimm16",  // cpu1_1lms_2
-     ecclesia::PciLocation::Make<0, 0xae, 0x0b, 2>(), 0x150, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0b, 2>(), 0x150, 85},
     {"dimm17",  // cpu1_1lms_2
-     ecclesia::PciLocation::Make<0, 0xae, 0x0b, 2>(), 0x154, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0b, 2>(), 0x154, 85},
     {"dimm18",  // cpu1_1lms_5
-     ecclesia::PciLocation::Make<0, 0xae, 0x0d, 2>(), 0x154, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0d, 2>(), 0x154, 85},
     {"dimm19",  // cpu1_1lms_5
-     ecclesia::PciLocation::Make<0, 0xae, 0x0d, 2>(), 0x150, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0d, 2>(), 0x150, 85},
     {"dimm20",  // cpu1_1lms_4
-     ecclesia::PciLocation::Make<0, 0xae, 0x0c, 6>(), 0x154, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0c, 6>(), 0x154, 85},
     {"dimm21",  // cpu1_1lms_4
-     ecclesia::PciLocation::Make<0, 0xae, 0x0c, 6>(), 0x150, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0c, 6>(), 0x150, 85},
     {"dimm22",  // cpu1_1lms_3
-     ecclesia::PciLocation::Make<0, 0xae, 0x0c, 2>(), 0x154, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0c, 2>(), 0x154, 85},
     {"dimm23",  // cpu1_1lms_3
-     ecclesia::PciLocation::Make<0, 0xae, 0x0c, 2>(), 0x150, 85},
+     ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0c, 2>(), 0x150, 85},
 };
 
 constexpr ecclesia::CpuMarginSensorParams cpu_margin_sensor_info[]{{"cpu0", 0},

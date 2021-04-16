@@ -58,7 +58,7 @@ void PCIeFunction::Get(
   int pci_func = std::get<int>(params[1]);
   std::string pcie_location_str =
       absl::StrCat(pci_domain_bus_dev, ".", pci_func);
-  auto pcie_location = PciLocation::FromString(pcie_location_str);
+  auto pcie_location = PciDbdfLocation::FromString(pcie_location_str);
   if (!pcie_location.has_value()) {
     req->ReplyWithStatus(
         tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
@@ -131,7 +131,7 @@ void PCIeFunction::Get(
     auto *links_oem = GetJsonObject(links, kOem);
     auto *links_oem_google = GetJsonObject(links_oem, kGoogle);
     if (pcie_connections->parent.has_value()) {
-      PciDeviceLocation pcie_dev_id(*pcie_connections->parent);
+      PciDbdLocation pcie_dev_id(*pcie_connections->parent);
       auto *upstream = GetJsonObject(links_oem_google, kUpstreamPCIeFunction);
       (*upstream)[kOdataId] =
           absl::Substitute("$0/$1/$2/$3/$4", kComputerSystemUri, kPCIeDevices,
@@ -140,7 +140,7 @@ void PCIeFunction::Get(
     }
     auto *downstream = GetJsonArray(links_oem_google, kDownsteamPCIeFunctions);
     for (const auto &child : pcie_connections->children) {
-      PciDeviceLocation pcie_dev_id(child);
+      PciDbdLocation pcie_dev_id(child);
       Json::Value pcie_func_link;
       pcie_func_link[kOdataId] = absl::Substitute(
           "$0/$1/$2/$3/$4", kComputerSystemUri, kPCIeDevices,

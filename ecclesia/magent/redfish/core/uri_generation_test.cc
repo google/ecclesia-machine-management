@@ -24,7 +24,7 @@ namespace ecclesia {
 namespace {
 
 TEST(GetPcieFunctionUri, PciLocationComplete) {
-  PciLocation location = PciLocation::Make<60, 3, 15, 4>();
+  PciDbdfLocation location = PciDbdfLocation::Make<60, 3, 15, 4>();
   EXPECT_EQ(
       GetPcieFunctionUri(location),
       "/redfish/v1/Systems/system/PCIeDevices/003c:03:0f/PCIeFunctions/4");

@@ -28,7 +28,7 @@ namespace ecclesia {
 // PCIeFunction to an Assembly described by assembly_name and component_name if
 // it exists.
 Assembly::AssemblyModifier CreateModifierToAssociatePcieFunction(
-    const PciLocation location, const std::string assembly_uri,
+    const PciDbdfLocation location, const std::string assembly_uri,
     const std::string assembly_name, const std::string component_name);
 
 }  // namespace ecclesia

@@ -31,7 +31,7 @@
 namespace ecclesia {
 namespace {
 
-constexpr PciLocation kLocation = PciLocation::Make<1, 2, 3, 4>();
+constexpr PciDbdfLocation kLocation = PciDbdfLocation::Make<1, 2, 3, 4>();
 constexpr char kTestAssemblyUri[] = "/redfish/v1/Systems/system/Test/0";
 constexpr char kTestAssemblyName[] = "test_assembly";
 constexpr char kTestComponentName[] = "test_component";

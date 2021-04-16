@@ -39,7 +39,7 @@ namespace {
 TEST(NvmeInterfaceTest, CreateFromPciSuccess) {
   std::string root_path = GetTestTempdirPath();
   TestFilesystem fs(root_path);
-  auto pci_location = PciLocation::Make<0, 0xae, 3, 4>();
+  auto pci_location = PciDbdfLocation::Make<0, 0xae, 3, 4>();
   std::string nvme_dev_name = "nvme2";
   fs.CreateDir(
       JoinFilePaths("/sys/bus/pci/devices", pci_location.ToString(), "nvme"));
@@ -57,7 +57,7 @@ TEST(NvmeInterfaceTest, CreateFromPciSuccess) {
 TEST(NvmeInterfaceTest, CreateFromPciFailureNoDevName) {
   std::string root_path = GetTestTempdirPath();
   TestFilesystem fs(root_path);
-  auto pci_location = PciLocation::Make<0, 0xae, 3, 4>();
+  auto pci_location = PciDbdfLocation::Make<0, 0xae, 3, 4>();
   fs.CreateDir(
       JoinFilePaths("/sys/bus/pci/devices", pci_location.ToString(), "nvme"));
 
@@ -72,7 +72,7 @@ TEST(NvmeInterfaceTest, CreateFromPciFailureNoDevName) {
 TEST(NvmeInterfaceTest, CreateFromPciFailureNoDevNode) {
   std::string root_path = GetTestTempdirPath();
   TestFilesystem fs(root_path);
-  auto pci_location = PciLocation::Make<0, 0xae, 3, 4>();
+  auto pci_location = PciDbdfLocation::Make<0, 0xae, 3, 4>();
   std::string nvme_dev_name = "nvme2";
   fs.CreateDir(
       JoinFilePaths("/sys/bus/pci/devices", pci_location.ToString(), "nvme"));
@@ -131,7 +131,7 @@ class TestNvmeDiscover : public NvmeDiscoverInterface {
 TEST(NvmeDiscoverInterfaceTest, GetAllNvmePlugins) {
   std::string root_path = GetTestTempdirPath();
   TestFilesystem fs(root_path);
-  auto pci_location = PciLocation::Make<0, 0xae, 3, 4>();
+  auto pci_location = PciDbdfLocation::Make<0, 0xae, 3, 4>();
   std::string nvme_dev_name = "nvme2";
   fs.CreateDir(
       JoinFilePaths("/sys/bus/pci/devices", pci_location.ToString(), "nvme"));

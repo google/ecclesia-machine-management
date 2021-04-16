@@ -94,11 +94,11 @@ absl::StatusOr<PcieLinkCapabilities> GetSysfsPcieLinkCapabilities(
 
 }  // namespace
 
-SysPciRegion::SysPciRegion(const PciLocation &loc)
+SysPciRegion::SysPciRegion(const PciDbdfLocation &loc)
     : SysPciRegion(kSysPciRoot, loc) {}
 
 SysPciRegion::SysPciRegion(absl::string_view sys_pci_devices_dir,
-                           const PciLocation &loc)
+                           const PciDbdfLocation &loc)
     : PciRegion(kMaxSysFileSize),
       apifs_(absl::StrFormat("%s/%s/config", sys_pci_devices_dir,
                              absl::FormatStreamed(loc))),
@@ -140,11 +140,11 @@ absl::Status SysPciRegion::Write32(OffsetType offset, uint32_t data) {
   return apifs_.WriteRange(offset, absl::MakeConstSpan(buffer));
 }
 
-SysfsPciResources::SysfsPciResources(PciLocation loc)
+SysfsPciResources::SysfsPciResources(PciDbdfLocation loc)
     : SysfsPciResources(kSysPciRoot, std::move(loc)) {}
 
 SysfsPciResources::SysfsPciResources(absl::string_view sys_pci_devices_dir,
-                                     PciLocation loc)
+                                     PciDbdfLocation loc)
     : PciResources(std::move(loc)),
       apifs_(absl::StrFormat("%s/%s", sys_pci_devices_dir,
                              absl::FormatStreamed(loc))) {}
@@ -194,12 +194,12 @@ absl::StatusOr<PciResources::BarInfo> SysfsPciResources::GetBaseAddressImpl(
 }
 
 std::unique_ptr<SysfsPciDevice> SysfsPciDevice::TryCreateDevice(
-    const PciLocation &location) {
+    const PciDbdfLocation &location) {
   return TryCreateDevice(kSysPciRoot, location);
 }
 
 std::unique_ptr<SysfsPciDevice> SysfsPciDevice::TryCreateDevice(
-    absl::string_view sys_pci_devices_dir, const PciLocation &location) {
+    absl::string_view sys_pci_devices_dir, const PciDbdfLocation &location) {
   ApifsDirectory apifs((std::string(sys_pci_devices_dir)));
   if (!apifs.Exists(location.ToString())) {
     return nullptr;
@@ -208,7 +208,7 @@ std::unique_ptr<SysfsPciDevice> SysfsPciDevice::TryCreateDevice(
 }
 
 SysfsPciDevice::SysfsPciDevice(absl::string_view sys_pci_devices_dir,
-                               const PciLocation &location)
+                               const PciDbdfLocation &location)
     : PciDevice(
           location,
           std::make_unique<SysPciRegion>(sys_pci_devices_dir, location),
@@ -255,7 +255,7 @@ std::vector<PciTopologyInterface::Node *> SysfsPciTopology::ScanDirectory(
     PciTopologyInterface::PciNodeMap *pci_node_map) const {
   std::vector<Node *> nodes_in_this_dir;
   WithEachFileInDirectory(directory_path, [&](absl::string_view entry_name) {
-    auto maybe_loc = PciLocation::FromString(entry_name);
+    auto maybe_loc = PciDbdfLocation::FromString(entry_name);
     if (maybe_loc.has_value()) {
       auto node = std::make_unique<PciTopologyInterface::Node>(
           maybe_loc.value(), depth, parent);

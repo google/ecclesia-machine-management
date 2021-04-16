@@ -108,7 +108,7 @@ void Storage::AddNvmeStorageControllers(
   auto *links = GetJsonObject(&storage_controller, kLinks);
   auto *pcie_functions = GetJsonArray(links, kPCIeFunctions);
   Json::Value pcie_func_link;
-  const PciLocation &pci_location = nvme_plugin.location.pci_location;
+  const PciDbdfLocation &pci_location = nvme_plugin.location.pci_location;
   pcie_func_link[kOdataId] =
       absl::StrFormat("%s/%s/%04x:%02x:%02x/%s/%x", kComputerSystemUri,
                       kPCIeDevices, pci_location.domain().value(),

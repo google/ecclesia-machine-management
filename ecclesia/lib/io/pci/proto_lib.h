@@ -31,8 +31,8 @@
 
 namespace ecclesia {
 
-PciLocationProtobuf PciLocationToProto(const PciLocation &location);
-absl::optional<PciLocation> PciLocationFromProto(
+PciLocationProtobuf PciLocationToProto(const PciDbdfLocation &location);
+absl::optional<PciDbdfLocation> PciLocationFromProto(
     const PciLocationProtobuf &location);
 
 PciBaseSignatureProtobuf PciBaseSignatureToProto(

@@ -116,7 +116,7 @@ class PciTopologyTest : public testing::Test {
 
 TEST(SysfsPciDeviceTest, CreatePciDevice) {
   TestFilesystem fs(GetTestTempdirPath());
-  auto existing_pci_loc = PciLocation::Make<0, 0xfe, 12, 3>();
+  auto existing_pci_loc = PciDbdfLocation::Make<0, 0xfe, 12, 3>();
   fs.CreateDir(
       absl::StrCat("/sys/bus/pci/devices/", existing_pci_loc.ToString()));
 
@@ -124,14 +124,14 @@ TEST(SysfsPciDeviceTest, CreatePciDevice) {
       fs.GetTruePath("/sys/bus/pci/devices/"), existing_pci_loc);
   EXPECT_NE(pci_device, nullptr);
 
-  auto non_existing_pci_loc = PciLocation::Make<0, 0xfe, 12, 4>();
+  auto non_existing_pci_loc = PciDbdfLocation::Make<0, 0xfe, 12, 4>();
   pci_device = SysfsPciDevice::TryCreateDevice(
       fs.GetTruePath("/sys/bus/pci/devices/"), non_existing_pci_loc);
   EXPECT_EQ(pci_device, nullptr);
 }
 
 TEST_F(PciSysTest, TestRegionDefaultConstructed) {
-  auto loc = PciLocation::Make<1, 2, 3, 4>();
+  auto loc = PciDbdfLocation::Make<1, 2, 3, 4>();
   auto region = SysPciRegion(loc);
 
   auto maybe_uint8 = region.Read8(4);
@@ -139,7 +139,7 @@ TEST_F(PciSysTest, TestRegionDefaultConstructed) {
 }
 
 TEST_F(PciSysTest, TestRead) {
-  auto loc = PciLocation::Make<1, 2, 3, 4>();
+  auto loc = PciDbdfLocation::Make<1, 2, 3, 4>();
   auto region = SysPciRegion(fs_.GetTruePath("/sys/bus/pci/devices/"), loc);
 
   auto maybe_uint8 = region.Read8(4);
@@ -156,7 +156,7 @@ TEST_F(PciSysTest, TestRead) {
 }
 
 TEST_F(PciSysTest, TestReadFailOutofRange) {
-  auto loc = PciLocation::Make<1, 2, 3, 4>();
+  auto loc = PciDbdfLocation::Make<1, 2, 3, 4>();
   auto region = SysPciRegion(fs_.GetTruePath("/sys/bus/pci/devices/"), loc);
 
   auto maybe_uint8 = region.Read8(10);
@@ -173,7 +173,7 @@ TEST_F(PciSysTest, TestReadFailOutofRange) {
 }
 
 TEST_F(PciSysTest, TestReadFailNotFound) {
-  auto loc = PciLocation::Make<1, 2, 3, 5>();
+  auto loc = PciDbdfLocation::Make<1, 2, 3, 5>();
   auto region = SysPciRegion(fs_.GetTruePath("/sys/bus/pci/devices/"), loc);
 
   auto maybe_uint8 = region.Read8(10);
@@ -190,7 +190,7 @@ TEST_F(PciSysTest, TestReadFailNotFound) {
 }
 
 TEST_F(PciSysTest, TestWrite) {
-  auto loc = PciLocation::Make<1, 2, 3, 4>();
+  auto loc = PciDbdfLocation::Make<1, 2, 3, 4>();
   auto region = SysPciRegion(fs_.GetTruePath("/sys/bus/pci/devices/"), loc);
 
   uint8_t u8 = 0x0B;
@@ -213,7 +213,7 @@ TEST_F(PciSysTest, TestWrite) {
 }
 
 TEST_F(PciSysTest, TestWriteFailNotFound) {
-  auto loc = PciLocation::Make<1, 2, 3, 5>();
+  auto loc = PciDbdfLocation::Make<1, 2, 3, 5>();
   auto region = SysPciRegion(fs_.GetTruePath("/sys/bus/pci/devices/"), loc);
   absl::Status status;
 
@@ -234,7 +234,7 @@ TEST_F(PciSysTest, TestWriteFailNotFound) {
 }
 
 TEST_F(PciSysTest, TestResources) {
-  auto loc = PciLocation::Make<1, 2, 3, 4>();
+  auto loc = PciDbdfLocation::Make<1, 2, 3, 4>();
   auto resources =
       SysfsPciResources(fs_.GetTruePath("/sys/bus/pci/devices/"), loc);
 
@@ -251,7 +251,7 @@ TEST_F(PciSysTest, TestResources) {
 }
 
 TEST_F(PciSysTest, TestResourcesNotFound) {
-  auto loc = PciLocation::Make<1, 2, 3, 5>();
+  auto loc = PciDbdfLocation::Make<1, 2, 3, 5>();
   auto resources =
       SysfsPciResources(fs_.GetTruePath("/sys/bus/pci/devices/"), loc);
 
@@ -265,7 +265,7 @@ TEST_F(PciSysTest, TestResourcesNotFound) {
 }
 
 TEST_F(PciSysTest, TestGettingLinkCapabilities) {
-  auto loc = PciLocation::Make<1, 2, 3, 4>();
+  auto loc = PciDbdfLocation::Make<1, 2, 3, 4>();
 
   auto pci_dev = SysfsPciDevice::TryCreateDevice(
       fs_.GetTruePath("/sys/bus/pci/devices/"), loc);
@@ -288,10 +288,13 @@ TEST_F(PciTopologyTest, EnumerateAllNodes) {
   ASSERT_TRUE(maybe_pci_map.ok());
   auto& location_nodes_map = maybe_pci_map.value();
   ASSERT_EQ(location_nodes_map.size(), 6);
-  std::vector<PciLocation> expect_all_locations = {
-      PciLocation::Make<0, 0xae, 0, 0>(), PciLocation::Make<0, 0xae, 1, 0>(),
-      PciLocation::Make<0, 0xaf, 0, 0>(), PciLocation::Make<0, 0xaf, 1, 0>(),
-      PciLocation::Make<0, 0xd7, 0, 0>(), PciLocation::Make<0, 0xd8, 0, 0>()};
+  std::vector<PciDbdfLocation> expect_all_locations = {
+      PciDbdfLocation::Make<0, 0xae, 0, 0>(),
+      PciDbdfLocation::Make<0, 0xae, 1, 0>(),
+      PciDbdfLocation::Make<0, 0xaf, 0, 0>(),
+      PciDbdfLocation::Make<0, 0xaf, 1, 0>(),
+      PciDbdfLocation::Make<0, 0xd7, 0, 0>(),
+      PciDbdfLocation::Make<0, 0xd8, 0, 0>()};
   for (const auto& location : expect_all_locations) {
     EXPECT_TRUE(location_nodes_map.contains(location));
     EXPECT_NE(location_nodes_map.at(location), nullptr);
@@ -308,7 +311,7 @@ TEST_F(PciTopologyTest, CorrectTopology) {
   // 0000:ae:0.0
   //   |--0000:af:0.0
   //   |--0000:af:1.0
-  auto root_node0_location = PciLocation::Make<0, 0xae, 0, 0>();
+  auto root_node0_location = PciDbdfLocation::Make<0, 0xae, 0, 0>();
   ASSERT_TRUE(location_nodes_map.contains(root_node0_location));
   auto* root_node0 = location_nodes_map.at(root_node0_location).get();
   EXPECT_EQ(root_node0->Location(), root_node0_location);
@@ -316,7 +319,7 @@ TEST_F(PciTopologyTest, CorrectTopology) {
   EXPECT_EQ(root_node0->Parent(), nullptr);
   auto node0_children = root_node0->Children();
   ASSERT_EQ(node0_children.size(), 2);
-  std::vector<PciLocation> children_locations;
+  std::vector<PciDbdfLocation> children_locations;
   auto* child0 = node0_children.at(0);
   children_locations.push_back(child0->Location());
   EXPECT_EQ(child0->Depth(), 1);
@@ -329,13 +332,13 @@ TEST_F(PciTopologyTest, CorrectTopology) {
   EXPECT_EQ(child1->Parent()->Location(), root_node0_location);
   // The two children have no particular order.
   EXPECT_THAT(children_locations,
-              UnorderedElementsAre(PciLocation::Make<0, 0xaf, 0, 0>(),
-                                   PciLocation::Make<0, 0xaf, 1, 0>()));
+              UnorderedElementsAre(PciDbdfLocation::Make<0, 0xaf, 0, 0>(),
+                                   PciDbdfLocation::Make<0, 0xaf, 1, 0>()));
 
   // Check the PCI tree branch:
   // 0000:d7:0.0
   //   |--0000:d8:0.0
-  auto root_node1_location = PciLocation::Make<0, 0xd7, 0, 0>();
+  auto root_node1_location = PciDbdfLocation::Make<0, 0xd7, 0, 0>();
   ASSERT_TRUE(location_nodes_map.contains(root_node1_location));
   auto* root_node1 = location_nodes_map.at(root_node1_location).get();
   EXPECT_EQ(root_node1->Location(), root_node1_location);
@@ -343,7 +346,7 @@ TEST_F(PciTopologyTest, CorrectTopology) {
   EXPECT_EQ(root_node1->Parent(), nullptr);
   auto node1_children = root_node1->Children();
   ASSERT_EQ(node1_children.size(), 1);
-  auto node1_child0_location = PciLocation::Make<0, 0xd8, 0, 0>();
+  auto node1_child0_location = PciDbdfLocation::Make<0, 0xd8, 0, 0>();
   child0 = node1_children.at(0);
   EXPECT_EQ(child0->Location(), node1_child0_location);
   EXPECT_EQ(child0->Depth(), 1);

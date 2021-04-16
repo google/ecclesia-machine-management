@@ -25,7 +25,7 @@
 
 namespace libredfish {
 
-absl::optional<ecclesia::PciLocation> ReadPciLocation(
+absl::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
     const RedfishObject &pci_location_obj) {
   auto maybe_domain =
       RedfishStrTo32Base<libredfish::OemGooglePropertyDomain>(pci_location_obj);
@@ -44,8 +44,8 @@ absl::optional<ecclesia::PciLocation> ReadPciLocation(
           pci_location_obj);
   if (!maybe_function.has_value()) return absl::nullopt;
 
-  return ecclesia::PciLocation::TryMake(*maybe_domain, *maybe_bus,
-                                        *maybe_device, *maybe_function);
+  return ecclesia::PciDbdfLocation::TryMake(*maybe_domain, *maybe_bus,
+                                            *maybe_device, *maybe_function);
 }
 
 absl::optional<ecclesia::PciFullSignature> ReadPciFullSignature(

@@ -81,12 +81,12 @@ TEST(IndusNvmeDiscoverTest, GetCorrectLocations) {
   //   |--0000:d8:0.0
   // 0000:d7:1.0
   //.  |--0000:d9:0.0
-  PciLocation pci_loc_ae_0 = PciLocation::Make<0, 0xae, 0, 0>();
-  PciLocation pci_loc_af_0 = PciLocation::Make<0, 0xaf, 0, 0>();
-  PciLocation pci_loc_d7_0 = PciLocation::Make<0, 0xd7, 0, 0>();
-  PciLocation pci_loc_d8_0 = PciLocation::Make<0, 0xd8, 0, 0>();
-  PciLocation pci_loc_d7_1 = PciLocation::Make<0, 0xd7, 1, 0>();
-  PciLocation pci_loc_d9_0 = PciLocation::Make<0, 0xd9, 0, 0>();
+  PciDbdfLocation pci_loc_ae_0 = PciDbdfLocation::Make<0, 0xae, 0, 0>();
+  PciDbdfLocation pci_loc_af_0 = PciDbdfLocation::Make<0, 0xaf, 0, 0>();
+  PciDbdfLocation pci_loc_d7_0 = PciDbdfLocation::Make<0, 0xd7, 0, 0>();
+  PciDbdfLocation pci_loc_d8_0 = PciDbdfLocation::Make<0, 0xd8, 0, 0>();
+  PciDbdfLocation pci_loc_d7_1 = PciDbdfLocation::Make<0, 0xd7, 1, 0>();
+  PciDbdfLocation pci_loc_d9_0 = PciDbdfLocation::Make<0, 0xd9, 0, 0>();
   auto node_ae_0 =
       std::make_unique<PciTopologyInterface::Node>(pci_loc_ae_0, 0, nullptr);
   auto node_af_0 = std::make_unique<PciTopologyInterface::Node>(

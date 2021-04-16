@@ -23,7 +23,7 @@
 
 namespace ecclesia {
 
-PciLocationProtobuf PciLocationToProto(const PciLocation &location) {
+PciLocationProtobuf PciLocationToProto(const PciDbdfLocation &location) {
   PciLocationProtobuf protobuf;
   protobuf.set_domain(location.domain().value());
   protobuf.set_bus(location.bus().value());
@@ -32,10 +32,10 @@ PciLocationProtobuf PciLocationToProto(const PciLocation &location) {
   return protobuf;
 }
 
-absl::optional<PciLocation> PciLocationFromProto(
+absl::optional<PciDbdfLocation> PciLocationFromProto(
     const PciLocationProtobuf &location) {
-  return PciLocation::TryMake(location.domain(), location.bus(),
-                              location.device(), location.function());
+  return PciDbdfLocation::TryMake(location.domain(), location.bus(),
+                                  location.device(), location.function());
 }
 
 PciBaseSignatureProtobuf PciBaseSignatureToProto(

@@ -109,17 +109,17 @@ class FakePciRegion : public PciRegion {
 
 class MockPciDevice : public PciDevice {
  public:
-  MockPciDevice(const PciLocation &location,
+  MockPciDevice(const PciDbdfLocation &location,
                 std::unique_ptr<PciRegion> config_region,
                 std::unique_ptr<PciResources> resources_intf)
       : PciDevice(location, std::move(config_region),
                   std::move(resources_intf)) {}
 
-  MockPciDevice(const PciLocation &location)
+  MockPciDevice(const PciDbdfLocation &location)
       : PciDevice(location, nullptr, nullptr) {}
 
   MockPciDevice()
-      : PciDevice(PciLocation::Make<0, 0, 0, 0>(), nullptr, nullptr) {}
+      : PciDevice(PciDbdfLocation::Make<0, 0, 0, 0>(), nullptr, nullptr) {}
 
   MOCK_METHOD(PciConfigSpace *, ConfigSpace, (), (const, override));
 
@@ -135,8 +135,8 @@ class MockPciTopology : public PciTopologyInterface {
   MOCK_METHOD(absl::StatusOr<PciNodeMap>, EnumerateAllNodes, (),
               (const, override));
 
-  MOCK_METHOD(std::unique_ptr<PciDevice>, CreateDevice, (const PciLocation &),
-              (const, override));
+  MOCK_METHOD(std::unique_ptr<PciDevice>, CreateDevice,
+              (const PciDbdfLocation &), (const, override));
 
   MOCK_METHOD(absl::StatusOr<std::vector<PciAcpiPath>>, EnumeratePciAcpiPaths,
               (), (const, override));

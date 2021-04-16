@@ -46,8 +46,8 @@ void ScanNvmeAsPciPlugins(const PciTopologyInterface *pci_topology,
                           std::function<std::string(int)> connector_name_func,
                           std::vector<NvmeLocation> *nvme_locations) {
   for (int pci_dev = 0; pci_dev <= 3; ++pci_dev) {
-    absl::optional<PciLocation> pci_location =
-        PciLocation::TryMake(pci_domain.value(), pci_bus.value(), pci_dev, 0);
+    absl::optional<PciDbdfLocation> pci_location = PciDbdfLocation::TryMake(
+        pci_domain.value(), pci_bus.value(), pci_dev, 0);
     if (!pci_location.has_value() ||
         !pci_nodes_map.contains(pci_location.value())) {
       continue;

@@ -86,8 +86,8 @@ TEST(SystemModelTest, DiscoverNvmePluginsFailure) {
 
 TEST(SystemModelTest, GetCorrectNvmePlugin) {
   // Set up mock for MockNvmeDiscover::GetAllNvmePlugins
-  NvmeLocation nvme_location0{PciLocation::Make<0, 0xae, 3, 4>(), "U2_1"};
-  NvmeLocation nvme_location1{PciLocation::Make<0, 0xd8, 9, 0>(), "U2_6"};
+  NvmeLocation nvme_location0{PciDbdfLocation::Make<0, 0xae, 3, 4>(), "U2_1"};
+  NvmeLocation nvme_location1{PciDbdfLocation::Make<0, 0xd8, 9, 0>(), "U2_6"};
   std::vector<NvmePlugin> nvme_plugins;
   nvme_plugins.push_back(NvmePlugin{
       nvme_location0, std::make_unique<NvmeInterface>(nullptr, "nvme1")});

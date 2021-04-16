@@ -44,14 +44,14 @@ class NvmeInterface {
   // This helper function creates a NVMe interface instance based on its PCI
   // location.
   static absl::StatusOr<std::unique_ptr<NvmeInterface>> CreateFromPci(
-      const PciLocation &pci_location) {
+      const PciDbdfLocation &pci_location) {
     return CreateFromPci(pci_location, "/");
   }
 
   // This helper function allows specific root directory path, mostly for
   // testing purpose.
   static absl::StatusOr<std::unique_ptr<NvmeInterface>> CreateFromPci(
-      const PciLocation &pci_location, absl::string_view root_path);
+      const PciDbdfLocation &pci_location, absl::string_view root_path);
 
   absl::StatusOr<std::unique_ptr<IdentifyController>> Identify() {
     return device_->Identify();
@@ -69,7 +69,7 @@ class NvmeInterface {
 };
 
 struct NvmeLocation {
-  PciLocation pci_location = PciLocation::Make<0, 0, 0, 0>();
+  PciDbdfLocation pci_location = PciDbdfLocation::Make<0, 0, 0, 0>();
   // This field identifies the physical location of the NVMe device. e.g.,
   // connector name that this NVMe SSD is plugged into. The devpath or
   // equivalent should be able to be derived from this field.

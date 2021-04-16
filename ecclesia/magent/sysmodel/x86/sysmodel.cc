@@ -179,7 +179,7 @@ std::vector<PciStorageLocation> SystemModel::GetPciStorageLocations() const {
 }
 
 absl::StatusOr<SystemModel::PciNodeConnections>
-SystemModel::GetPciNodeConnections(const PciLocation &pci_location) const {
+SystemModel::GetPciNodeConnections(const PciDbdfLocation &pci_location) const {
   absl::ReaderMutexLock ml(&pci_tree_nodes_lock_);
   auto iter = pci_tree_nodes_.find(pci_location);
   if (iter == pci_tree_nodes_.end()) {
@@ -203,11 +203,11 @@ SystemModel::GetPciNodeConnections(const PciLocation &pci_location) const {
 }
 
 std::unique_ptr<PciDevice> SystemModel::GetPciDevice(
-    const PciLocation &pci_location) const {
+    const PciDbdfLocation &pci_location) const {
   return pci_topology_->CreateDevice(pci_location);
 }
 
-std::vector<PciLocation> SystemModel::GetPcieDeviceLocations() const {
+std::vector<PciDbdfLocation> SystemModel::GetPcieDeviceLocations() const {
   absl::ReaderMutexLock ml(&pcie_device_locations_lock_);
   return pcie_device_locations_;
 }
@@ -347,7 +347,7 @@ SystemModel::SystemModel(SysmodelParams params)
 
   auto pci_nodes = pci_topology_->EnumerateAllNodes();
   if (pci_nodes.ok()) {
-    std::vector<PciLocation> pcie_dev_locations;
+    std::vector<PciDbdfLocation> pcie_dev_locations;
     for (const auto &pci_node : *pci_nodes) {
       auto pci_dev = pci_topology_->CreateDevice(pci_node.first);
       auto link_caps = pci_dev->PcieLinkCurrentCapabilities();

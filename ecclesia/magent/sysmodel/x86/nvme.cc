@@ -46,7 +46,7 @@ constexpr char kMntNvmeDirPath[] = "mnt/devtmpfs";
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<NvmeInterface>> NvmeInterface::CreateFromPci(
-    const PciLocation &pci_location, absl::string_view root_path) {
+    const PciDbdfLocation &pci_location, absl::string_view root_path) {
   // Firstly, find the devname in
   // /sys/bus/pci/devices/<pci_location>/nvme/<devname>
   std::string pci_nvme_path =

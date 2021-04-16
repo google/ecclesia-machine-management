@@ -25,7 +25,7 @@
 
 namespace ecclesia {
 
-std::string GetPcieFunctionUri(const PciLocation& location) {
+std::string GetPcieFunctionUri(const PciDbdfLocation& location) {
   const std::string pcie_device_str =
       absl::StrFormat("%04x:%02x:%02x", location.domain().value(),
                       location.bus().value(), location.device().value());

@@ -38,12 +38,12 @@ namespace ecclesia {
 
 class SysPciRegion : public PciRegion {
  public:
-  explicit SysPciRegion(const PciLocation &pci_loc);
+  explicit SysPciRegion(const PciDbdfLocation &pci_loc);
 
   // This constructor allows customized sysfs PCI devices directory, mostly for
   // testing purpose.
   SysPciRegion(absl::string_view sys_pci_devices_dir,
-               const PciLocation &pci_loc);
+               const PciDbdfLocation &pci_loc);
 
   absl::StatusOr<uint8_t> Read8(OffsetType offset) const override;
   absl::Status Write8(OffsetType offset, uint8_t data) override;
@@ -56,13 +56,13 @@ class SysPciRegion : public PciRegion {
 
  private:
   ApifsFile apifs_;
-  PciLocation loc_;
+  PciDbdfLocation loc_;
 };
 
 class SysfsPciResources : public PciResources {
  public:
-  explicit SysfsPciResources(PciLocation loc);
-  SysfsPciResources(absl::string_view sys_pci_devices_dir, PciLocation loc);
+  explicit SysfsPciResources(PciDbdfLocation loc);
+  SysfsPciResources(absl::string_view sys_pci_devices_dir, PciDbdfLocation loc);
 
   bool Exists() override;
 
@@ -80,12 +80,12 @@ class SysfsPciDevice : public PciDevice {
   // This factory method creates a PCI device given a PCI location. If there
   // exists no such sysfs node with the given PCI location, return nullptr.
   static std::unique_ptr<SysfsPciDevice> TryCreateDevice(
-      const PciLocation &location);
+      const PciDbdfLocation &location);
 
   // This creator allows customized sysfs PCI devices directory, mostly for
   // testing purpose.
   static std::unique_ptr<SysfsPciDevice> TryCreateDevice(
-      absl::string_view sys_pci_devices_dir, const PciLocation &location);
+      absl::string_view sys_pci_devices_dir, const PciDbdfLocation &location);
 
   // These methods utilize Linux sysfs interfaces to get the PCIe link status
   // directly via entries current_link_speed, current_link_width,
@@ -99,7 +99,7 @@ class SysfsPciDevice : public PciDevice {
 
  private:
   SysfsPciDevice(absl::string_view sys_pci_devices_dir,
-                 const PciLocation &location);
+                 const PciDbdfLocation &location);
   ApifsDirectory pci_device_dir_;
 };
 
@@ -114,7 +114,7 @@ class SysfsPciTopology : public PciTopologyInterface {
   absl::StatusOr<PciNodeMap> EnumerateAllNodes() const override;
 
   std::unique_ptr<PciDevice> CreateDevice(
-      const PciLocation &location) const override {
+      const PciDbdfLocation &location) const override {
     return SysfsPciDevice::TryCreateDevice(location);
   }
 

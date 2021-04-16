@@ -33,13 +33,14 @@ TEST(PciLocationTest, VerifyIdentityOps) {
     for (int bus = 0; bus <= 0xff; ++bus) {
       for (int device = 0; device <= 0x1f; ++device) {
         for (int function = 0; function <= 7; ++function) {
-          auto maybe_loc = PciLocation::TryMake(domain, bus, device, function);
+          auto maybe_loc =
+              PciDbdfLocation::TryMake(domain, bus, device, function);
           ASSERT_TRUE(maybe_loc.has_value());
           std::string loc_str =
               absl::StrFormat("%s", absl::FormatStreamed(maybe_loc.value()));
           ASSERT_EQ(12, loc_str.length());
 
-          auto loc_from_str = PciLocation::FromString(loc_str);
+          auto loc_from_str = PciDbdfLocation::FromString(loc_str);
           ASSERT_TRUE(loc_from_str.has_value());
 
           EXPECT_EQ(maybe_loc.value(), loc_from_str.value());
@@ -51,59 +52,59 @@ TEST(PciLocationTest, VerifyIdentityOps) {
 
 TEST(PciLocationTest, PciLocationFailTests) {
   // from empty string
-  auto loc = PciLocation::FromString("");
+  auto loc = PciDbdfLocation::FromString("");
   EXPECT_EQ(loc, absl::nullopt);
 
   // short form not parsable.
-  loc = PciLocation::FromString("02:01.0");
+  loc = PciDbdfLocation::FromString("02:01.0");
   EXPECT_EQ(loc, absl::nullopt);
 
   // Strict format: 0001:02:03.4, 0 padding is enforced.
-  loc = PciLocation::FromString("0001:2:3.4");
+  loc = PciDbdfLocation::FromString("0001:2:3.4");
   EXPECT_EQ(loc, absl::nullopt);
 
   // Invalid character.
-  loc = PciLocation::FromString("0001:02:0g.7");
+  loc = PciDbdfLocation::FromString("0001:02:0g.7");
   EXPECT_EQ(loc, absl::nullopt);
 
   // Function number out of range.
-  loc = PciLocation::FromString("0001:02:03.9");
+  loc = PciDbdfLocation::FromString("0001:02:03.9");
   EXPECT_EQ(loc, absl::nullopt);
 
   // TryMake: Function number out of range.
-  loc = PciLocation::TryMake(1, 2, 3, 9);
+  loc = PciDbdfLocation::TryMake(1, 2, 3, 9);
   EXPECT_EQ(loc, absl::nullopt);
 }
 
 TEST(PciLocationTest, TestComparator) {
-  EXPECT_GE((PciLocation::Make<0, 0, 0, 0>()),
-            (PciLocation::Make<0, 0, 0, 0>()));
+  EXPECT_GE((PciDbdfLocation::Make<0, 0, 0, 0>()),
+            (PciDbdfLocation::Make<0, 0, 0, 0>()));
 
-  EXPECT_GE((PciLocation::Make<0, 1, 2, 3>()),
-            (PciLocation::Make<0, 0, 0, 0>()));
+  EXPECT_GE((PciDbdfLocation::Make<0, 1, 2, 3>()),
+            (PciDbdfLocation::Make<0, 0, 0, 0>()));
 
-  EXPECT_GE((PciLocation::Make<1, 0, 0, 0>()),
-            (PciLocation::Make<0, 0xff, 0x1f, 0x7>()));
+  EXPECT_GE((PciDbdfLocation::Make<1, 0, 0, 0>()),
+            (PciDbdfLocation::Make<0, 0xff, 0x1f, 0x7>()));
 
-  EXPECT_LT((PciLocation::Make<0, 0xff, 0x1f, 0x7>()),
-            (PciLocation::Make<1, 0, 0, 0>()));
+  EXPECT_LT((PciDbdfLocation::Make<0, 0xff, 0x1f, 0x7>()),
+            (PciDbdfLocation::Make<1, 0, 0, 0>()));
 
-  EXPECT_LT((PciLocation::Make<0, 0, 0, 0>()),
-            (PciLocation::Make<0, 1, 2, 3>()));
+  EXPECT_LT((PciDbdfLocation::Make<0, 0, 0, 0>()),
+            (PciDbdfLocation::Make<0, 1, 2, 3>()));
 
-  EXPECT_EQ((PciLocation::Make<2, 4, 5, 6>()),
-            (PciLocation::Make<2, 4, 5, 6>()));
+  EXPECT_EQ((PciDbdfLocation::Make<2, 4, 5, 6>()),
+            (PciDbdfLocation::Make<2, 4, 5, 6>()));
 }
 
 TEST(PciLocationTest, IsHashable) {
-  absl::flat_hash_map<PciLocation, std::string> pci_map;
+  absl::flat_hash_map<PciDbdfLocation, std::string> pci_map;
 
   // Push different values into the map.
-  auto loc0 = PciLocation::Make<1, 2, 3, 4>();
-  auto loc1 = PciLocation::Make<0, 2, 3, 4>();
-  auto loc2 = PciLocation::Make<1, 0, 3, 4>();
-  auto loc3 = PciLocation::Make<1, 2, 0, 4>();
-  auto loc4 = PciLocation::Make<1, 2, 3, 0>();
+  auto loc0 = PciDbdfLocation::Make<1, 2, 3, 4>();
+  auto loc1 = PciDbdfLocation::Make<0, 2, 3, 4>();
+  auto loc2 = PciDbdfLocation::Make<1, 0, 3, 4>();
+  auto loc3 = PciDbdfLocation::Make<1, 2, 0, 4>();
+  auto loc4 = PciDbdfLocation::Make<1, 2, 3, 0>();
 
   pci_map[loc0] = absl::StrFormat("%s", absl::FormatStreamed(loc0));
   pci_map[loc1] = absl::StrFormat("%s", absl::FormatStreamed(loc1));
@@ -113,17 +114,17 @@ TEST(PciLocationTest, IsHashable) {
 
   EXPECT_EQ(pci_map.size(), 5);
 
-  auto iter = pci_map.find(PciLocation::Make<1, 0, 3, 4>());
+  auto iter = pci_map.find(PciDbdfLocation::Make<1, 0, 3, 4>());
   ASSERT_NE(iter, pci_map.end());
   EXPECT_EQ(iter->first, loc2);
   EXPECT_EQ(iter->second, "0001:00:03.4");
 }
 
 TEST(PciLocationTest, ToCorrectString) {
-  auto loc0 = PciLocation::Make<1, 2, 3, 4>();
-  auto loc1 = PciLocation::Make<0, 0xa, 0xb, 7>();
+  auto loc0 = PciDbdfLocation::Make<1, 2, 3, 4>();
+  auto loc1 = PciDbdfLocation::Make<0, 0xa, 0xb, 7>();
   // The max possible numbers for domain:bus:device.function value
-  auto loc2 = PciLocation::Make<0xffff, 0xff, 0x1f, 7>();
+  auto loc2 = PciDbdfLocation::Make<0xffff, 0xff, 0x1f, 7>();
   EXPECT_EQ(loc0.ToString(), "0001:02:03.4");
   EXPECT_EQ(loc1.ToString(), "0000:0a:0b.7");
   EXPECT_EQ(loc2.ToString(), "ffff:ff:1f.7");
@@ -134,13 +135,13 @@ TEST(PciDeviceLocationTest, VerifyIdentityOps) {
   for (int domain = 0; domain <= 0x8; ++domain) {
     for (int bus = 0; bus <= 0xff; ++bus) {
       for (int device = 0; device <= 0x1f; ++device) {
-        auto maybe_loc = PciDeviceLocation::TryMake(domain, bus, device);
+        auto maybe_loc = PciDbdLocation::TryMake(domain, bus, device);
         ASSERT_TRUE(maybe_loc.has_value());
         std::string loc_str =
             absl::StrFormat("%s", absl::FormatStreamed(maybe_loc.value()));
         ASSERT_EQ(10, loc_str.length());
 
-        auto loc_from_str = PciDeviceLocation::FromString(loc_str);
+        auto loc_from_str = PciDbdLocation::FromString(loc_str);
         ASSERT_TRUE(loc_from_str.has_value());
 
         EXPECT_EQ(maybe_loc.value(), loc_from_str.value());
@@ -150,17 +151,17 @@ TEST(PciDeviceLocationTest, VerifyIdentityOps) {
 }
 
 TEST(PciDeviceLocationTest, TestComparator) {
-  auto pci1_location = PciLocation::Make<1, 2, 3, 4>();
-  auto pci2_location = PciLocation::Make<1, 2, 3, 5>();
-  auto pci3_location = PciLocation::Make<1, 2, 4, 4>();
+  auto pci1_location = PciDbdfLocation::Make<1, 2, 3, 4>();
+  auto pci2_location = PciDbdfLocation::Make<1, 2, 3, 5>();
+  auto pci3_location = PciDbdfLocation::Make<1, 2, 4, 4>();
 
-  PciDeviceLocation pci_dbd1(pci1_location);
-  PciDeviceLocation pci_dbd2(pci2_location);
-  PciDeviceLocation pci_dbd3(pci3_location);
+  PciDbdLocation pci_dbd1(pci1_location);
+  PciDbdLocation pci_dbd2(pci2_location);
+  PciDbdLocation pci_dbd3(pci3_location);
 
-  EXPECT_EQ(pci_dbd1, (PciDeviceLocation::Make<1, 2, 3>()));
-  EXPECT_EQ(pci_dbd2, (PciDeviceLocation::Make<1, 2, 3>()));
-  EXPECT_EQ(pci_dbd3, (PciDeviceLocation::Make<1, 2, 4>()));
+  EXPECT_EQ(pci_dbd1, (PciDbdLocation::Make<1, 2, 3>()));
+  EXPECT_EQ(pci_dbd2, (PciDbdLocation::Make<1, 2, 3>()));
+  EXPECT_EQ(pci_dbd3, (PciDbdLocation::Make<1, 2, 4>()));
 
   EXPECT_EQ(pci_dbd1, pci_dbd2);
   EXPECT_NE(pci_dbd1, pci_dbd3);
@@ -186,16 +187,16 @@ TEST(PciDeviceLocationTest, TestComparator) {
 }
 
 TEST(PciDeviceLocationTest, IsHashable) {
-  absl::flat_hash_map<PciDeviceLocation, std::string> pci_map;
-  auto pci1_location = PciLocation::Make<1, 2, 3, 4>();
-  auto pci2_location = PciLocation::Make<1, 2, 3, 5>();
-  auto pci3_location = PciLocation::Make<1, 2, 4, 4>();
-  auto pci4_location = PciLocation::Make<1, 2, 5, 6>();
+  absl::flat_hash_map<PciDbdLocation, std::string> pci_map;
+  auto pci1_location = PciDbdfLocation::Make<1, 2, 3, 4>();
+  auto pci2_location = PciDbdfLocation::Make<1, 2, 3, 5>();
+  auto pci3_location = PciDbdfLocation::Make<1, 2, 4, 4>();
+  auto pci4_location = PciDbdfLocation::Make<1, 2, 5, 6>();
 
-  PciDeviceLocation pci_dbd1(pci1_location);
-  PciDeviceLocation pci_dbd2(pci2_location);
-  PciDeviceLocation pci_dbd3(pci3_location);
-  PciDeviceLocation pci_dbd4(pci4_location);
+  PciDbdLocation pci_dbd1(pci1_location);
+  PciDbdLocation pci_dbd2(pci2_location);
+  PciDbdLocation pci_dbd3(pci3_location);
+  PciDbdLocation pci_dbd4(pci4_location);
 
   // 0001:02:03:4 and 0001:02:03:5 have the same key. The later one will
   // override the previous one.
@@ -215,10 +216,10 @@ TEST(PciDeviceLocationTest, IsHashable) {
 }
 
 TEST(PciDeviceLocationTest, ToCorrectString) {
-  auto dbd0 = PciDeviceLocation::Make<1, 2, 3>();
-  auto dbd1 = PciDeviceLocation::Make<0, 0xa, 0xb>();
+  auto dbd0 = PciDbdLocation::Make<1, 2, 3>();
+  auto dbd1 = PciDbdLocation::Make<0, 0xa, 0xb>();
   // The max possible numbers for domain:bus:device value
-  auto dbd2 = PciDeviceLocation::Make<0xffff, 0xff, 0x1f>();
+  auto dbd2 = PciDbdLocation::Make<0xffff, 0xff, 0x1f>();
   EXPECT_EQ(dbd0.ToString(), "0001:02:03");
   EXPECT_EQ(dbd1.ToString(), "0000:0a:0b");
   EXPECT_EQ(dbd2.ToString(), "ffff:ff:1f");

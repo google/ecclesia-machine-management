@@ -22,7 +22,8 @@
 
 namespace ecclesia {
 
-absl::optional<PciLocation> PciLocation::FromString(absl::string_view str) {
+absl::optional<PciDbdfLocation> PciDbdfLocation::FromString(
+    absl::string_view str) {
   static constexpr LazyRE2 kRegex = {
       R"(([[:xdigit:]]{4}):([[:xdigit:]]{2}):([[:xdigit:]]{2})\.([0-7]{1}))"};
 
@@ -31,10 +32,10 @@ absl::optional<PciLocation> PciLocation::FromString(absl::string_view str) {
                       RE2::Hex(&device), RE2::Hex(&function))) {
     return absl::nullopt;
   }
-  return PciLocation::TryMake(domain, bus, device, function);
+  return PciDbdfLocation::TryMake(domain, bus, device, function);
 }
 
-absl::optional<PciDeviceLocation> PciDeviceLocation::FromString(
+absl::optional<PciDbdLocation> PciDbdLocation::FromString(
     absl::string_view str) {
   static constexpr LazyRE2 kRegex = {
       R"(([[:xdigit:]]{4}):([[:xdigit:]]{2}):([[:xdigit:]]{2}))"};
@@ -44,7 +45,7 @@ absl::optional<PciDeviceLocation> PciDeviceLocation::FromString(
                       RE2::Hex(&device))) {
     return absl::nullopt;
   }
-  return PciDeviceLocation::TryMake(domain, bus, device);
+  return PciDbdLocation::TryMake(domain, bus, device);
 }
 
 }  // namespace ecclesia

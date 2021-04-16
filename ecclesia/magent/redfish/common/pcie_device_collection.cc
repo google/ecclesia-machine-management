@@ -33,15 +33,15 @@ namespace ecclesia {
 Json::Value GetPcieDeviceUrlsAsJsonArray(SystemModel *system_model) {
   Json::Value array(Json::arrayValue);
 
-  std::vector<PciLocation> pcie_locations =
+  std::vector<PciDbdfLocation> pcie_locations =
       system_model->GetPcieDeviceLocations();
 
   // The pcie_locations can contain multiple locations that correspond to the
   // same PCIe device (with different PCI functions). This hash set will filter
   // the locations and make sure only the unique PCIe devices are kept.
-  absl::flat_hash_set<PciDeviceLocation> pcie_dev_ids;
-  for (const PciLocation &pcie_location : pcie_locations) {
-    pcie_dev_ids.insert(PciDeviceLocation(pcie_location));
+  absl::flat_hash_set<PciDbdLocation> pcie_dev_ids;
+  for (const PciDbdfLocation &pcie_location : pcie_locations) {
+    pcie_dev_ids.insert(PciDbdLocation(pcie_location));
   }
 
   for (const auto &pcie_dev_id : pcie_dev_ids) {

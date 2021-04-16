@@ -32,12 +32,12 @@ using ::testing::Eq;
 using ::testing::Optional;
 
 TEST(PciLocationToProto, SuccessfulConversions) {
-  auto zero = PciLocationToProto(PciLocation::Make<0, 0, 0, 0>());
+  auto zero = PciLocationToProto(PciDbdfLocation::Make<0, 0, 0, 0>());
   PciLocationProtobuf zero_expected =
       ParseTextProtoOrDie("domain: 0 bus: 0 device: 0 function: 0");
   EXPECT_THAT(zero, EqualsProto("domain: 0 bus: 0 device: 0 function: 0"));
 
-  auto nonzero = PciLocationToProto(PciLocation::Make<1, 2, 3, 4>());
+  auto nonzero = PciLocationToProto(PciDbdfLocation::Make<1, 2, 3, 4>());
   EXPECT_THAT(nonzero, EqualsProto("domain: 1 bus: 2 device: 3 function: 4"));
 }
 
@@ -45,12 +45,12 @@ TEST(PciLocationFromProto, SuccessfulConversions) {
   PciLocationProtobuf zero =
       ParseTextProtoOrDie("domain: 0 bus: 0 device: 0 function: 0");
   EXPECT_THAT(PciLocationFromProto(zero),
-              Optional(PciLocation::Make<0, 0, 0, 0>()));
+              Optional(PciDbdfLocation::Make<0, 0, 0, 0>()));
 
   PciLocationProtobuf nonzero =
       ParseTextProtoOrDie("domain: 1 bus: 2 device: 3 function: 4");
   EXPECT_THAT(PciLocationFromProto(nonzero),
-              Optional(PciLocation::Make<1, 2, 3, 4>()));
+              Optional(PciDbdfLocation::Make<1, 2, 3, 4>()));
 }
 
 TEST(PciLocationFromProto, FailedConversions) {

@@ -132,17 +132,17 @@ class SystemModel {
   }
 
   struct PciNodeConnections {
-    absl::optional<PciLocation> parent;
-    std::vector<PciLocation> children;
+    absl::optional<PciDbdfLocation> parent;
+    std::vector<PciDbdfLocation> children;
   };
 
   absl::StatusOr<PciNodeConnections> GetPciNodeConnections(
-      const PciLocation &pci_location) const;
+      const PciDbdfLocation &pci_location) const;
 
   std::unique_ptr<PciDevice> GetPciDevice(
-      const PciLocation &pci_location) const;
+      const PciDbdfLocation &pci_location) const;
 
-  std::vector<PciLocation> GetPcieDeviceLocations() const;
+  std::vector<PciDbdfLocation> GetPcieDeviceLocations() const;
 
   absl::optional<uint32_t> GetBootNumber();
 
@@ -194,7 +194,7 @@ class SystemModel {
 
   mutable absl::Mutex pcie_device_locations_lock_;
   // This vector stores those real PCIe devices connected with valid PCIe links.
-  std::vector<PciLocation> pcie_device_locations_
+  std::vector<PciDbdfLocation> pcie_device_locations_
       ABSL_GUARDED_BY(pcie_device_locations_lock_);
 
   mutable absl::Mutex pci_tree_nodes_lock_;

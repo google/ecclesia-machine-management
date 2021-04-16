@@ -31,7 +31,7 @@
 namespace ecclesia {
 
 struct PciStorageLocation {
-  PciLocation pci_location = PciLocation::Make<0, 0, 0, 0>();
+  PciDbdfLocation pci_location = PciDbdfLocation::Make<0, 0, 0, 0>();
   std::string physical_location;
 
   bool operator==(const PciStorageLocation &other) const {

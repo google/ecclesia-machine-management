@@ -37,7 +37,7 @@ namespace ecclesia {
 // object should outlive the params object because of the string_view.
 struct PciSensorParams {
   absl::string_view name;
-  ecclesia::PciLocation loc;
+  ecclesia::PciDbdfLocation loc;
   // Sensor reading offset.
   size_t offset;
   int upper_threshold_critical;
