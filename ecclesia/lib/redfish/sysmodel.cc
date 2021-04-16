@@ -150,6 +150,19 @@ void Sysmodel::QueryAllResourceInternal(
       });
 }
 
+// Sensors:
+// "/redfish/v1/Chassis/{id}/Sensors/{sensor}"
+void Sysmodel::QueryAllResourceInternal(
+    ResourceSensor *,
+    const std::function<void(std::unique_ptr<RedfishObject>)>
+        &result_callback) {
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertyChassis].Each()[kRfPropertySensors][PropertyMembers::Name]
+      .Each().Do([&](auto &sensor_obj) {
+        result_callback(std::move(sensor_obj));
+      });
+}
+
 // Pcie Function:
 // "/redfish/v1/Systems/{id}/PCIeDevices/{id}/PCIeFunctions/{id}"
 void Sysmodel::QueryAllResourceInternal(
