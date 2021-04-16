@@ -34,7 +34,10 @@ package_group(name = "redfish_validator_users")
 # Machine agent shared libraries, for use in agent code.
 package_group(
     name = "magent_library_users",
-    packages = ["//ecclesia/magent/..."],
+    packages = [
+        "//ecclesia/magent/...",
+        "//ecclesia/redfish/profiles/...",
+    ],
 )
 
 # Machine agent frontend code.
