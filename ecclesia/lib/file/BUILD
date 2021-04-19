@@ -235,6 +235,7 @@ cc_library(
         ":path",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/logging:posix",
+        "//file/base:path",
         "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",

@@ -27,6 +27,7 @@
 #include <utility>
 #include <vector>
 
+#include "file/base/path.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
@@ -76,7 +77,7 @@ void OpenAndWriteFile(const std::string &path, int flags,
 // Recursively remove everything in the given directory.
 void RemoveDirectoryTree(const std::string &path) {
   WithEachFileInDirectory(path, [&path](absl::string_view entry) {
-    std::string full_path = JoinFilePaths(path, entry);
+    std::string full_path = file::JoinPath(path, entry);
     // Try to remove the entry.
     int rc = remove(full_path.c_str());
     // If it failed because it was a non-empty directory, do a recursive call
@@ -97,7 +98,7 @@ void RemoveDirectoryTree(const std::string &path) {
 std::string GetTestDataDependencyPath(absl::string_view path) {
   char *srcdir = std::getenv("TEST_SRCDIR");
   Check(srcdir, "TEST_SRCDIR environment variable is defined");
-  return JoinFilePaths(srcdir, kEcclesiaRoot, path);
+  return file::JoinPath(srcdir, kEcclesiaRoot, path);
 }
 
 std::string GetTestTempdirPath() {
@@ -107,7 +108,7 @@ std::string GetTestTempdirPath() {
 }
 
 std::string GetTestTempdirPath(absl::string_view path) {
-  return JoinFilePaths(GetTestTempdirPath(), path);
+  return file::JoinPath(GetTestTempdirPath(), path);
 }
 
 std::string GetTestTempUdsDirectory() {
@@ -127,7 +128,7 @@ TestFilesystem::~TestFilesystem() { RemoveAllContents(); }
 std::string TestFilesystem::GetTruePath(absl::string_view path) const {
   Check(path[0] == '/', "path is absolute") << "path=" << path;
   while (!path.empty() && path[0] == '/') path.remove_prefix(1);
-  return JoinFilePaths(root_, path);
+  return file::JoinPath(root_, path);
 }
 
 void TestFilesystem::CreateDir(absl::string_view path) {
