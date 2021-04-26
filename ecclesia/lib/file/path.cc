@@ -63,15 +63,6 @@ absl::string_view GetDirname(absl::string_view path) {
 }
 
 std::string JoinFilePaths(absl::Span<const absl::string_view> paths) {
-  // Find the last absolute path in the span (if there is one). We can then
-  // ignore all the paths that come before it.
-  for (size_t i = paths.size() - 1; i > 0; --i) {
-    if (!paths[i].empty() && paths[i][0] == '/') {
-      paths.remove_prefix(i);
-      break;
-    }
-  }
-
   // Strip off any leading empty paths in the span. They don't impact the
   // final result and leading off with them complicates the joining process.
   while (!paths.empty()) {
