@@ -4,7 +4,7 @@
     "@odata.type": "#ChassisCollection.ChassisCollection",
     "Members": [
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis"
+            "@odata.id": "/redfish/v1/Chassis/Indus"
         }
     ],
     "Members@odata.count": 1,
