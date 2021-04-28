@@ -193,6 +193,22 @@ TEST_F(ApifsTest, TestWrite) {
   EXPECT_THAT(f3.Read(), IsOkAndHolds("goodbye, file!\n"));
 }
 
+TEST_F(ApifsTest, TestOverwrite) {
+  // Verify that we can write a file, and then rewrite it with something
+  // shorter and it will be correctly truncated.
+  EXPECT_THAT(apifs_.Read("ab/file3"), IsOkAndHolds(""));
+  EXPECT_THAT(apifs_.Write("ab/file3", "larger text"), IsOk());
+  EXPECT_THAT(apifs_.Read("ab/file3"), IsOkAndHolds("larger text"));
+  EXPECT_THAT(apifs_.Write("ab/file3", "smaller"), IsOk());
+  EXPECT_THAT(apifs_.Read("ab/file3"), IsOkAndHolds("smaller"));
+
+  // Use an ApifsFile to do the same operations.
+  ApifsFile f3(apifs_, "ab/file3");
+  EXPECT_THAT(f3.Read(), IsOkAndHolds("smaller"));
+  EXPECT_THAT(f3.Write("tiny"), IsOk());
+  EXPECT_THAT(f3.Read(), IsOkAndHolds("tiny"));
+}
+
 TEST_F(ApifsTest, TestReadLink) {
   // Test reading the symlink from file4 -> file1.
   EXPECT_THAT(apifs_.ReadLink("ab/file4"), IsOkAndHolds("file1"));

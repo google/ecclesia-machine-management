@@ -189,7 +189,7 @@ absl::Status ApifsFile::Write(absl::string_view value) const {
     return absl::NotFoundError(
         absl::StrFormat("File not found at path: %s", path_));
   }
-  const int fd = open(path_.c_str(), O_WRONLY);
+  const int fd = open(path_.c_str(), O_WRONLY | O_TRUNC);
   if (fd < 0) {
     return absl::NotFoundError(
         absl::StrFormat("unable to open the file at path: %s", path_));
