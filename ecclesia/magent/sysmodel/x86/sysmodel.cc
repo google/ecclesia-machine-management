@@ -265,6 +265,11 @@ absl::StatusOr<uint64_t> SystemModel::GetSystemTotalMemoryBytes() const {
          static_cast<uint32_t>(sys_info.mem_unit);
 }
 
+absl::StatusOr<std::vector<PciTopologyInterface::PciAcpiPath>>
+  SystemModel::GetAcpiPathsFromPciTopology() const {
+  return pci_topology_->EnumeratePciAcpiPaths();
+}
+
 SystemModel::SystemModel(SysmodelParams params)
     : smbios_reader_(absl::make_unique<SmbiosReader>(
           params.smbios_entry_point_path, params.smbios_tables_path)),

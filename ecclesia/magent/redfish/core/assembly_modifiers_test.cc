@@ -44,6 +44,11 @@ Assembly::AssemblyModifier CreateStandardPcieFunctionModifier() {
       kLocation, kTestAssemblyUri, kTestAssemblyName, kTestComponentName);
 }
 
+Assembly::AssemblyModifier CreateStandardComponentModifier() {
+  return CreateModifierToCreateComponent(kTestAssemblyUri, kTestAssemblyName,
+                                         kTestComponentName);
+}
+
 std::string FlattenStylizedJsonString(const std::string& json) {
   return absl::StrReplaceAll(json, {{"\n", ""}, {"\t", ""}, {" ", ""}});
 }
@@ -182,6 +187,148 @@ TEST(PcieFunctionAssemblyModifier, ModifyAssembly) {
   ASSERT_GT(test_associated_with.size(), 0);
   ASSERT_EQ(test_associated_with[0][kOdataId].asString(),
             kExpectedPcieFunctionOdataId);
+}
+
+TEST(AddComponentModifier, AssemblyMissing) {
+  const std::string kStaticAssembly = R"json({})json";
+  const std::string kBadUri = "/redfish/v1/not/the/right/uri";
+
+  Json::Reader reader;
+  Json::Value value;
+  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+
+  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  assemblies.insert(std::make_pair(kBadUri, std::move(value)));
+  EXPECT_FALSE(CreateStandardComponentModifier()(assemblies).ok());
+
+  // Check that assembly is not modified
+  EXPECT_EQ(FlattenStylizedJsonString(
+                assemblies.find(kBadUri)->second.toStyledString()),
+            FlattenStylizedJsonString(kStaticAssembly));
+}
+
+TEST(AddComponentModifier, AssemblyNameMissing) {
+  const std::string kStaticAssembly = R"json(
+    {
+      "Assemblies":[
+        {"Name":"not_the_test_assembly"}
+      ]
+    }
+  )json";
+
+  Json::Reader reader;
+  Json::Value value;
+  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+
+  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
+  EXPECT_FALSE(CreateStandardComponentModifier()(assemblies).ok());
+
+  // Check that assembly is not modified
+  EXPECT_EQ(FlattenStylizedJsonString(
+                (assemblies.find(kTestAssemblyUri)->second.toStyledString())),
+            FlattenStylizedJsonString(kStaticAssembly));
+}
+
+TEST(AddComponentModifier, ComponentsMissing) {
+  const std::string kStaticAssembly = R"json(
+    {
+      "Assemblies":[
+        {"Name":"test_assembly"},
+        {"@odata.id": "/redfish/v1/Systems/system/Test/0#/Assemblies/1"}
+      ]
+    }
+  )json";
+
+  Json::Reader reader;
+  Json::Value value;
+  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+
+  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
+  EXPECT_FALSE(CreateStandardComponentModifier()(assemblies).ok());
+
+  // Check that assembly is not modified
+  EXPECT_EQ(FlattenStylizedJsonString(
+                (assemblies.find(kTestAssemblyUri)->second.toStyledString())),
+            FlattenStylizedJsonString(kStaticAssembly));
+}
+
+TEST(AddComponentModifier, ComponentNameMissing) {
+  const std::string kStaticAssembly = R"json(
+    {
+      "Assemblies":[
+        {
+          "@odata.id": "/redfish/v1/Systems/system/Test/0#/Assemblies/0",
+          "Name":"test_assembly",
+          "MemberId": 0,
+          "Oem": {
+            "Google": {
+              "Components": [
+                {
+                  "@odata.id": "/redfish/v1/Systems/system/Test/0#/Assemblies/0/Components/0",
+                  "Name":"not_the_test_component"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  )json";
+
+  Json::Reader reader;
+  Json::Value value;
+  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+
+  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
+  EXPECT_TRUE(CreateStandardComponentModifier()(assemblies).ok());
+
+  // Check that assembly is not modified
+  const auto& components =
+      assemblies.find(kTestAssemblyUri)
+          ->second[kAssemblies][0][kOem][kGoogle][kComponents];
+  EXPECT_EQ(components.size(), 2);
+  EXPECT_EQ(components[1][kName].asString(), kTestComponentName);
+}
+
+TEST(AddComponentModifier, ComponentNameExists) {
+  const std::string kStaticAssembly = R"json(
+    {
+      "Assemblies":[
+        {
+          "@odata.id": "/redfish/v1/Systems/system/Test/0#/Assemblies/0",
+          "Name":"test_assembly",
+          "MemberId": 0,
+          "Oem": {
+            "Google": {
+              "Components": [
+                {
+                  "@odata.id": "/redfish/v1/Systems/system/Test/0#/Assemblies/0/Components/0",
+                  "Name":"test_component"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  )json";
+
+  Json::Reader reader;
+  Json::Value value;
+  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+
+  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
+  EXPECT_TRUE(CreateStandardComponentModifier()(assemblies).ok());
+
+  // Check that assembly is not modified
+  const auto& components =
+      assemblies.find(kTestAssemblyUri)
+          ->second[kAssemblies][0][kOem][kGoogle][kComponents];
+  EXPECT_EQ(components.size(), 1);
 }
 
 }  // namespace

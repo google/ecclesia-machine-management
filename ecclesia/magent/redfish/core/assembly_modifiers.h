@@ -31,6 +31,12 @@ Assembly::AssemblyModifier CreateModifierToAssociatePcieFunction(
     const PciDbdfLocation location, const std::string assembly_uri,
     const std::string assembly_name, const std::string component_name);
 
+// A helper function for constructing a new component for an assembly if one
+// does not exist
+Assembly::AssemblyModifier CreateModifierToCreateComponent(
+    const std::string assembly_uri, const std::string assembly_name,
+    const std::string component_name);
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_MAGENT_REDFISH_CORE_ASSEMBLY_MODIFIERS_H_

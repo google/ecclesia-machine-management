@@ -190,6 +190,36 @@ Assembly::AssemblyModifier CreateModifierToAppendSpicy16Fru(
   };
 }
 
+// Mapping for PCIe Device ACPI Path to CPU roots (pulled from indus board
+// layout)
+constexpr absl::string_view kCascadeLakeAssemblyName = "cascadelake";
+
+struct CpuPcieRoot {
+  uint pcie_root_bridge_num;
+  std::string processor_id;
+};
+
+const absl::flat_hash_map<std::string, CpuPcieRoot> &GetAcpiToCpuPcieRoot() {
+  static const absl::flat_hash_map<std::string, CpuPcieRoot> *map =
+      new absl::flat_hash_map<std::string, CpuPcieRoot>({
+          {"\\_SB_.PC00", {0, "0"}},
+          {"\\_SB_.PC01", {1, "0"}},
+          {"\\_SB_.PC02", {2, "0"}},
+          {"\\_SB_.PC03", {3, "0"}},
+          {"\\_SB_.PC06", {0, "1"}},
+          {"\\_SB_.PC07", {1, "1"}},
+          {"\\_SB_.PC08", {2, "1"}},
+          {"\\_SB_.PC09", {3, "1"}},
+      });
+  return *map;
+}
+
+std::string GetComponentNameForCpuPcieRoot(const uint bridge_num,
+                                           const int pci_device_num) {
+  return absl::StrFormat("iio:pcie_root@bridge%d:port%d.0", bridge_num,
+                         pci_device_num);
+}
+
 // The indices of the spicy16 assembly in the Indus assemblies array.
 constexpr int kPe2Spicy16AssemblyIndex = 18;
 constexpr int kPe3Spicy16AssemblyIndex = 19;
@@ -283,6 +313,42 @@ IndusRedfishService::IndusRedfishService(
         system_model->GetNvmeByPhysLocation(nvme_location)
             ->location.pci_location,
         drive_assembly, "nvme_ssd", "nvme"));
+  }
+
+  // Iterate through all Pci Devices and attach them to appropriate component
+  // based on ACPI Path
+  absl::flat_hash_map<std::pair<PciDomain, PciBusNum>, CpuPcieRoot>
+      pci_bus_to_cpu_pcie_root;
+  const absl::flat_hash_map<std::string, CpuPcieRoot> &acpi_to_cpu_pcie_root =
+      GetAcpiToCpuPcieRoot();
+  if (auto acpi_paths = system_model->GetAcpiPathsFromPciTopology();
+      acpi_paths.ok()) {
+    for (const auto &pci_acpi : acpi_paths.value()) {
+      if (auto it = acpi_to_cpu_pcie_root.find(pci_acpi.acpi_path);
+          it != acpi_to_cpu_pcie_root.end()) {
+        pci_bus_to_cpu_pcie_root[std::make_pair(pci_acpi.domain,
+                                                pci_acpi.bus)] = it->second;
+      }
+    }
+  }
+  for (const auto& pci_device : system_model->GetPcieDeviceLocations()) {
+    if (auto it = pci_bus_to_cpu_pcie_root.find(
+            std::make_pair(pci_device.domain(), pci_device.bus()));
+        it != pci_bus_to_cpu_pcie_root.end()) {
+      // First create AssemblyModifier to create PCIE root component in CPU
+      const std::string assembly_uri =
+          absl::StrCat(kProcessorCollectionUri, "/", it->second.processor_id,
+                       "/", kAssembly);
+      const std::string component_name = GetComponentNameForCpuPcieRoot(
+          it->second.pcie_root_bridge_num, pci_device.device().value());
+      assembly_modifiers.push_back(CreateModifierToCreateComponent(
+          assembly_uri, std::string(kCascadeLakeAssemblyName), component_name));
+      // Second create AssemblyModifier to associate PCI device with the created
+      // component
+      assembly_modifiers.push_back(CreateModifierToAssociatePcieFunction(
+          pci_device, assembly_uri, std::string(kCascadeLakeAssemblyName),
+          component_name));
+    }
   }
 
   resources_.push_back(CreateResource<Assembly>(server, assemblies_dir,

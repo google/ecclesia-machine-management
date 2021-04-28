@@ -17,11 +17,13 @@
 #include "ecclesia/magent/redfish/core/assembly_modifiers.h"
 
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_replace.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/uri_generation.h"
+#include "json/value.h"
 
 namespace ecclesia {
 
@@ -62,6 +64,50 @@ Assembly::AssemblyModifier CreateModifierToAssociatePcieFunction(
     }
     return absl::NotFoundError(
         absl::StrFormat("Failed to find Assembly at URI %s", assembly_uri));
+  };
+}
+
+Assembly::AssemblyModifier CreateModifierToCreateComponent(
+    const std::string assembly_uri, const std::string assembly_name,
+    const std::string component_name) {
+  return [assembly_uri(std::move(assembly_uri)),
+          assembly_name(std::move(assembly_name)),
+          component_name(std::move(component_name))](
+             absl::flat_hash_map<std::string, Json::Value> &assemblies) {
+    InfoLog() << "Adding component " << component_name
+              << " to assembly: " << assembly_uri;
+    auto iter = assemblies.find(assembly_uri);
+    if (iter == assemblies.end() || !iter->second.isMember(kAssemblies)) {
+      return absl::NotFoundError(
+          absl::StrFormat("Failed to find Assemblies at URI %s", assembly_uri));
+    }
+    for (auto &assembly : iter->second[kAssemblies]) {
+      if (assembly.isMember(kName) &&
+          assembly[kName].asString() == assembly_name) {
+        if (!assembly.isMember(kOem) || !assembly[kOem].isMember(kGoogle) ||
+            !assembly[kOem][kGoogle].isMember(kComponents)) {
+          return absl::NotFoundError(absl::StrFormat(
+              "Assembly %s does not have components", assembly_name));
+        }
+        auto &components = assembly[kOem][kGoogle][kComponents];
+        for (auto &component : components) {
+          if (component.isMember(kName) &&
+              component[kName].asString() == component_name) {
+            // Already found component
+            return absl::OkStatus();
+          }
+        }
+        Json::Value component;
+        component[kOdataId] = absl::StrCat(assembly[kOdataId].asString(),
+                                           "/Components/", components.size());
+        component[kMemberId] = components.size();
+        component[kName] = component_name;
+        components.append(component);
+        return absl::OkStatus();
+      }
+    }
+    return absl::NotFoundError(
+        absl::StrFormat("Failed to find assembly %s", assembly_name));
   };
 }
 

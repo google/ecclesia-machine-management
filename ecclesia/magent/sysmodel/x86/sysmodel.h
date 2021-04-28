@@ -152,6 +152,10 @@ class SystemModel {
   // Returns the system total memory size in unit of bytes.
   absl::StatusOr<uint64_t> GetSystemTotalMemoryBytes() const;
 
+  // Returns the enumeration of ACPI paths found in PCI topology
+  absl::StatusOr<std::vector<PciTopologyInterface::PciAcpiPath>>
+  GetAcpiPathsFromPciTopology() const;
+
  private:
   // Platform interfaces
   std::unique_ptr<SmbiosReader> smbios_reader_;
