@@ -49,6 +49,7 @@
 #include "ecclesia/magent/redfish/common/software.h"
 #include "ecclesia/magent/redfish/common/software_inventory.h"
 #include "ecclesia/magent/redfish/common/storage_collection.h"
+#include "ecclesia/magent/redfish/common/storage_controller_collection.h"
 #include "ecclesia/magent/redfish/common/system.h"
 #include "ecclesia/magent/redfish/common/systems.h"
 #include "ecclesia/magent/redfish/common/thermal.h"
@@ -63,7 +64,6 @@
 #include "ecclesia/magent/redfish/indus/pcie_slots.h"
 #include "ecclesia/magent/redfish/indus/storage.h"
 #include "ecclesia/magent/redfish/indus/storage_controller.h"
-#include "ecclesia/magent/redfish/common/storage_controller_collection.h"
 #include "ecclesia/magent/sysmodel/x86/fru.h"
 #include "ecclesia/magent/sysmodel/x86/nvme.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
@@ -220,6 +220,12 @@ std::string GetComponentNameForCpuPcieRoot(const uint bridge_num,
                          pci_device_num);
 }
 
+constexpr absl::string_view kIoCardAssemblyName = "io_card";
+
+std::string GetComponentNameForIoCardPciLocation(int pci_device_function) {
+  return absl::StrFormat("function%d", pci_device_function);
+}
+
 // The indices of the spicy16 assembly in the Indus assemblies array.
 constexpr int kPe2Spicy16AssemblyIndex = 18;
 constexpr int kPe3Spicy16AssemblyIndex = 19;
@@ -317,6 +323,12 @@ IndusRedfishService::IndusRedfishService(
 
   // Iterate through all Pci Devices and attach them to appropriate component
   // based on ACPI Path
+  // Also attach downstream IO module to the appropriate CpuPcieRoot and
+  // PCIeDevice
+  const CpuPcieRoot kIoCardUpstreamCpuPcieRoot = {3, "0"};
+  const uint kIoCardUpstreamPciDeviceNumber = 0,
+             kIoCardDownstreamPciDeviceNumber = 0;
+
   absl::flat_hash_map<std::pair<PciDomain, PciBusNum>, CpuPcieRoot>
       pci_bus_to_cpu_pcie_root;
   const absl::flat_hash_map<std::string, CpuPcieRoot> &acpi_to_cpu_pcie_root =
@@ -331,7 +343,7 @@ IndusRedfishService::IndusRedfishService(
       }
     }
   }
-  for (const auto& pci_device : system_model->GetPcieDeviceLocations()) {
+  for (const auto &pci_device : system_model->GetPcieDeviceLocations()) {
     if (auto it = pci_bus_to_cpu_pcie_root.find(
             std::make_pair(pci_device.domain(), pci_device.bus()));
         it != pci_bus_to_cpu_pcie_root.end()) {
@@ -348,6 +360,31 @@ IndusRedfishService::IndusRedfishService(
       assembly_modifiers.push_back(CreateModifierToAssociatePcieFunction(
           pci_device, assembly_uri, std::string(kCascadeLakeAssemblyName),
           component_name));
+
+      if (it->second.processor_id == kIoCardUpstreamCpuPcieRoot.processor_id &&
+          it->second.pcie_root_bridge_num ==
+              kIoCardUpstreamCpuPcieRoot.pcie_root_bridge_num &&
+          pci_device.device().value() == kIoCardUpstreamPciDeviceNumber) {
+        // Create function component in IO card assembly
+        if (const auto &downstream_pci_devices =
+                system_model->GetPciNodeConnections(pci_device);
+            downstream_pci_devices.ok()) {
+          for (const auto &downstream_pci : downstream_pci_devices->children) {
+            if (downstream_pci.device().value() !=
+                kIoCardDownstreamPciDeviceNumber)
+              continue;
+            const std::string io_card_component_name =
+                GetComponentNameForIoCardPciLocation(
+                    downstream_pci.function().value());
+            assembly_modifiers.push_back(CreateModifierToCreateComponent(
+                std::string(kAssemblyUri), std::string(kIoCardAssemblyName),
+                io_card_component_name));
+            assembly_modifiers.push_back(CreateModifierToAssociatePcieFunction(
+                downstream_pci, std::string(kAssemblyUri),
+                std::string(kIoCardAssemblyName), io_card_component_name));
+          }
+        }
+      }
     }
   }
 
