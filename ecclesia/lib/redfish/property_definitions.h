@@ -34,6 +34,7 @@ namespace libredfish {
 
 inline constexpr char kRfPropertyAssemblies[] = "Assemblies";
 inline constexpr char kRfPropertyAssembly[] = "Assembly";
+inline constexpr char kRfPropertyControllers[] = "Controllers";
 inline constexpr char kRfPropertyChassis[] = "Chassis";
 inline constexpr char kRfPropertyMemory[] = "Memory";
 inline constexpr char kRfPropertyStorage[] = "Storage";

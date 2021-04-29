@@ -43,14 +43,12 @@ std::vector<SmartReading> ReadSmartData(const RedfishObject &obj) {
   return readings;
 }
 
-absl::optional<std::vector<SmartReading>> ReadSmartDataFromStorage(
+absl::optional<std::vector<SmartReading>> ReadSmartDataFromStorageController(
     const RedfishObject &obj) {
   auto smart_attributes_obj =
-      obj[libredfish::kRfPropertyStorageControllers][0]
-      [libredfish::kRfPropertyNvmeControllersProperties]
-      [libredfish::kRfPropertyOem]
-      [libredfish::kRfOemPropertyGoogle]
-      [libredfish::kRfOemPropertySmartAttributes].AsObject();
+      obj[libredfish::kRfPropertyOem][libredfish::kRfOemPropertyGoogle]
+         [libredfish::kRfOemPropertySmartAttributes]
+             .AsObject();
   if (!smart_attributes_obj) return absl::nullopt;
 
   return ReadSmartData(*smart_attributes_obj);

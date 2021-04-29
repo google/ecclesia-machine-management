@@ -43,7 +43,7 @@ std::vector<SmartReading> ReadSmartData(const RedfishObject &obj);
 
 // Parse Nvme smart data from redfish storage object, the smart data is stored
 // under StorageControllers.NVMeControllerProperties.Oem.Google.SMARTAttributes
-absl::optional<std::vector<SmartReading>> ReadSmartDataFromStorage(
+absl::optional<std::vector<SmartReading>> ReadSmartDataFromStorageController(
     const RedfishObject &obj);
 
 }  // namespace libredfish
