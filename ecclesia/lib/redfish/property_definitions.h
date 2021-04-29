@@ -48,11 +48,14 @@ inline constexpr char kRfPropertySystems[] = "Systems";
 inline constexpr char kRfPropertyEthernetInterfaces[] = "EthernetInterfaces";
 inline constexpr char kRfPropertyThermal[] = "Thermal";
 inline constexpr char kRfPropertyTemperatures[] = "Temperatures";
+inline constexpr char kRfPropertyTemperaturesCount[] =
+    "Temperatures@odata.count";
 inline constexpr char kRfPropertyPower[] = "Power";
 inline constexpr char kRfPropertyPowerWatts[] = "PowerWatts";
 inline constexpr char kRfPropertyVoltages[] = "Voltages";
 inline constexpr char kRfPropertyFans[] = "Fans";
 inline constexpr char kRfPropertySensors[] = "Sensors";
+inline constexpr char kRfPropertyReadingUnits[] = "ReadingUnits";
 inline constexpr char kRfPropertyRelatedItem[] = "RelatedItem";
 inline constexpr char kRfPropertyStatus[] = "Status";
 inline constexpr char kRfPropertyState[] = "State";
@@ -86,6 +89,9 @@ inline constexpr char kRfOemPropertyBootNumber[] = "BootNumber";
 inline constexpr char kRfOemPropertySystemUptime[] = "SystemUptime";
 
 inline constexpr char kRfPropertyMediaTypeSsd[] = "SSD";
+inline constexpr char kRfPropertyMemberId[] = "MemberId";
+inline constexpr char kRfPropertyReading[] = "Reading";
+inline constexpr char kRfPropertyHealth[] = "Health";
 
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
 DEFINE_REDFISH_RESOURCE(ResourceChassis, "Chassis");
@@ -142,8 +148,15 @@ DEFINE_REDFISH_PROPERTY(PropertyReadingCelsius, double, "ReadingCelsius");
 DEFINE_REDFISH_PROPERTY(PropertyThrottlingCelsius, int, "ThrottlingCelsius");
 DEFINE_REDFISH_PROPERTY(PropertyReading, double, "Reading");
 DEFINE_REDFISH_PROPERTY(PropertyReadingType, std::string, "ReadingType");
+DEFINE_REDFISH_PROPERTY(PropertyReadingUnits, std::string, "ReadingUnits");
 DEFINE_REDFISH_PROPERTY(PropertyUpperThresholdCritical, int,
                         "UpperThresholdCritical");
+DEFINE_REDFISH_PROPERTY(PropertyUpperThresholdNonCritical, int,
+                        "UpperThresholdNonCritical");
+DEFINE_REDFISH_PROPERTY(PropertyLowerThresholdCritical, int,
+                        "LowerThresholdCritical");
+DEFINE_REDFISH_PROPERTY(PropertyLowerThresholdNonCritical, int,
+                        "LowerThresholdNonCritical");
 DEFINE_REDFISH_PROPERTY(PropertyState, std::string, "State");
 DEFINE_REDFISH_PROPERTY(PropertyVendorId, std::string, "VendorId");
 DEFINE_REDFISH_PROPERTY(PropertyDeviceId, std::string, "DeviceId");
@@ -155,6 +168,7 @@ DEFINE_REDFISH_PROPERTY(PropertyMaxPcieType, std::string, "MaxPCIeType");
 DEFINE_REDFISH_PROPERTY(PropertyLanesInUse, int, "LanesInUse");
 DEFINE_REDFISH_PROPERTY(PropertyMaxLanes, int, "MaxLanes");
 DEFINE_REDFISH_PROPERTY(PropertyProcessorIdStep, std::string, "Step");
+DEFINE_REDFISH_PROPERTY(PropertyDataSourceUri, std::string, "DataSourceUri");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
