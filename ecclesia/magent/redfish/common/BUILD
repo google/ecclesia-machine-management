@@ -27,6 +27,7 @@ cc_library(
         "software.h",
         "software_inventory.h",
         "storage_collection.h",
+        "storage_controller_collection.h",
         "system.h",
         "systems.h",
         "thermal.h",

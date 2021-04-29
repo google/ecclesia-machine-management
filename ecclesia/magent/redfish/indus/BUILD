@@ -6,6 +6,7 @@ cc_library(
         "chassis.cc",
         "redfish_service.cc",
         "storage.cc",
+        "storage_controller.cc",
     ],
     hdrs = [
         "chassis.h",
@@ -13,6 +14,7 @@ cc_library(
         "pcie_slots.h",
         "redfish_service.h",
         "storage.h",
+        "storage_controller.h",
     ],
     visibility = ["//ecclesia:magent_frontend_users"],
     deps = [

@@ -30,11 +30,8 @@
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
-#include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/usb/ids.h"
 #include "ecclesia/lib/io/usb/usb.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/magent/lib/event_logger/indus/system_event_visitors.h"
 #include "ecclesia/magent/redfish/common/memory.h"
 #include "ecclesia/magent/redfish/common/memory_collection.h"
@@ -65,7 +62,10 @@
 #include "ecclesia/magent/redfish/indus/drive.h"
 #include "ecclesia/magent/redfish/indus/pcie_slots.h"
 #include "ecclesia/magent/redfish/indus/storage.h"
+#include "ecclesia/magent/redfish/indus/storage_controller.h"
+#include "ecclesia/magent/redfish/common/storage_controller_collection.h"
 #include "ecclesia/magent/sysmodel/x86/fru.h"
+#include "ecclesia/magent/sysmodel/x86/nvme.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
 #include "json/json.h"
 #include "json/value.h"
@@ -372,6 +372,8 @@ IndusRedfishService::IndusRedfishService(
       CreateResource<SoftwareInventory>(server, std::string(kSoftwareName)));
   resources_.push_back(CreateResource<StorageCollection>(server, system_model));
   resources_.push_back(CreateResource<Storage>(server, system_model));
+  resources_.push_back(CreateResource<StorageControllerCollection>(server));
+  resources_.push_back(CreateResource<StorageController>(server, system_model));
   resources_.push_back(CreateResource<Drive>(server, system_model));
   metadata_ = CreateMetadata(server, odata_metadata_path);
 }

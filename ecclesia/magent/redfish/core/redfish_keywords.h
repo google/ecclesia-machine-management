@@ -141,6 +141,7 @@ inline constexpr char kVersion[] = "Version";
 inline constexpr char kSoftwareInventory[] = "SoftwareInventory";
 inline constexpr char kFirmwareInventory[] = "FirmwareInventory";
 inline constexpr char kChassisType[] = "ChassisType";
+inline constexpr char kControllers[] = "Controllers";
 inline constexpr char kStorageControllers[] = "StorageControllers";
 inline constexpr char kSupportedControllerProtocols[] =
     "SupportedControllerProtocols";
@@ -237,6 +238,10 @@ inline constexpr char kStorageCollectionUri[] =
     "/redfish/v1/Systems/system/Storage";
 inline constexpr char kStorageUriPattern[] =
     "/redfish/v1/Systems/system/Storage/(\\w+)";
+inline constexpr char kStorageControllerCollectionUriPattern[] =
+    "/redfish/v1/Systems/system/Storage/(\\w+)/Controllers";
+inline constexpr char kStorageControllerUriPattern[] =
+    "/redfish/v1/Systems/system/Storage/(\\w+)/Controllers/0";
 // drive and hardcode the Drives index to 0. Need to generalize the model to
 // allow storage with multiple drives.
 inline constexpr char kDriveUriPattern[] =
