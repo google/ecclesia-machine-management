@@ -1,0 +1,19 @@
+{
+    "@odata.context": "/redfish/v1/$metadata#Processor.Processor",
+    "@odata.id": "/redfish/v1/Systems/system/Processors/0",
+    "@odata.type": "#Processor.v1_7_0.Processor",
+    "Assembly": {
+        "@odata.id": "/redfish/v1/Systems/system/Processors/0/Assembly"
+    },
+    "EnvironmentMetrics": {
+        "@odata.id": "/redfish/v1/Systems/system/Processors/0/EnvironmentMetrics"
+    },
+    "Id": "CPU0",
+    "Metrics": {
+        "@odata.id": "/redfish/v1/Systems/system/Processors/0/ProcessorMetrics"
+    },
+    "Name": "CPU0",
+    "Status": {
+        "State": "Enabled"
+    }
+}

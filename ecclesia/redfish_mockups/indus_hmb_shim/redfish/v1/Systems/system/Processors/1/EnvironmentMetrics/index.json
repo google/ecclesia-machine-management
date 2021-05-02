@@ -1,0 +1,10 @@
+{
+    "@odata.id": "/redfish/v1/Systems/system/Processors/1/EnvironmentMetrics",
+    "@odata.type": "#EnvironmentMetrics.v1_0_0.EnvironmentMetrics",
+    "Id": "EnvironmentMetrics",
+    "Name": "Processor Environment Metrics",
+    "PowerWatts": {
+        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon",
+        "Reading": 30.0
+    }
+}
