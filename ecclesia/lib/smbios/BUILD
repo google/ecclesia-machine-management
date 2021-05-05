@@ -40,6 +40,7 @@ cc_library(
         "processor_information.h",
         "reader.h",
         "system_event_log.h",
+        "system_information.h",
     ],
     visibility = [
         "//ecclesia:library_users",

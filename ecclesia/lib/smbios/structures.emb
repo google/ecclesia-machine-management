@@ -15,6 +15,7 @@ enum StructureType:
   PROCESSOR_INFORMATION                = 4
   SYSTEM_BOOT_INFORMATION              = 32
   SYSTEM_EVENT_LOG                     = 15
+  SYSTEM_INFORMATION                   = 1
 
 # _snum suffix to the field names indicate that it represents a string number
 
@@ -51,6 +52,33 @@ struct BiosInformationStructure:
 
   19 [+1]  UInt       ec_firmware_minor_release
     -- Embedded Controller Firmware Minor Release
+
+
+struct SystemInformationStructure:
+  0  [+1]  UInt        manufacturer_snum
+    -- String number of the manufacturer's name
+
+  1  [+1]  UInt        product_name_snum
+    -- String number of the product (mainboard) name
+
+  2  [+1]  UInt        version_snum
+    -- String number of the version of the system string
+
+  3  [+1]  UInt        serial_number_snum
+    -- String number of the serial number string
+
+  4  [+16]  UInt:8[16] uuid
+    -- Universal unique identifier number of the system
+
+  20 [+1]  UInt        wakeup_type
+    -- Identifies the event that caused the system to power up
+
+  21 [+1]  UInt        sku_number_snum
+    -- String number of the sku or product ID which identifies the configuration
+    -- of the machine from a particular vendor
+
+  22 [+1]  UInt        family_snum
+    -- String number of the family the computer belongs
 
 
 enum MemoryType:
@@ -487,5 +515,8 @@ struct SmbiosStructure:
 
   if structure_type == StructureType.SYSTEM_BOOT_INFORMATION:
     4 [+ml-4]  SystemBootInformationStructure  system_boot_information
+
+  if structure_type == StructureType.SYSTEM_INFORMATION:
+    4 [+ml-4]  SystemInformationStructure      system_information
 
   0 [+ml]      UInt:8[]                        raw_bytes

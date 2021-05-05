@@ -28,6 +28,7 @@
 #include "ecclesia/lib/smbios/memory_device.h"
 #include "ecclesia/lib/smbios/processor_information.h"
 #include "ecclesia/lib/smbios/system_event_log.h"
+#include "ecclesia/lib/smbios/system_information.h"
 
 namespace ecclesia {
 
@@ -49,6 +50,9 @@ class SmbiosReader {
 
   // Type 0 (Bios Information)
   std::unique_ptr<BiosInformation> GetBiosInformation() const;
+
+  // Type 1 (System Information)
+  std::unique_ptr<SystemInformation> GetSystemInformation() const;
 
   // Type 17 (Memory Device)
   // The returned vector is sorted on the device locator string

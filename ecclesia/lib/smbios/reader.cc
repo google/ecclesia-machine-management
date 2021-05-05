@@ -170,6 +170,16 @@ std::unique_ptr<BiosInformation> SmbiosReader::GetBiosInformation() const {
   return nullptr;
 }
 
+std::unique_ptr<SystemInformation> SmbiosReader::GetSystemInformation() const {
+  for (auto &entry : entries_) {
+    if (entry.GetSmbiosStructureView().structure_type().Read() ==
+        StructureType::SYSTEM_INFORMATION) {
+      return absl::make_unique<SystemInformation>(&entry);
+    }
+  }
+  return nullptr;
+}
+
 std::vector<MemoryDevice> SmbiosReader::GetAllMemoryDevices() const {
   std::vector<MemoryDevice> memory_devices;
 
