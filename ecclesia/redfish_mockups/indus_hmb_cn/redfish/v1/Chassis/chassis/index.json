@@ -6,6 +6,7 @@
         "@odata.id": "/redfish/v1/Chassis/chassis/Assembly"
     },
     "Id": "chassis",
+    "ChassisType" : "RackMount",
     "Links": {
         "ComputerSystems":  [
             {

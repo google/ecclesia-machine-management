@@ -8,6 +8,16 @@
     "Id": "RootService",
     "Name": "Root Service",
     "RedfishVersion": "1.6.1",
+    "Links" : {
+        "Sessions" : {
+            "@odata.id" : "/redfish/v1/SessionService/Sessions"
+        }
+    },
+    "Oem" : {
+        "Google" : {
+           "TopologyRepresentation" : "redfish-devpath-v1"
+        }
+    },
     "UpdateService": {
       "@odata.id": "/redfish/v1/UpdateService"
     },
