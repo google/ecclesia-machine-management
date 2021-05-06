@@ -25,11 +25,15 @@ package_group(
         "//ecclesia/mmanager/backends/redfish/...",
         "//ecclesia/mmanager/frontends/...",
         "//ecclesia/mmanager/middles/collector/...",
+        "//ecclesia/redfish_mockups/tests/...",
     ],
 )
 
 # Code intended for redfish service and interoperability validation.
-package_group(name = "redfish_validator_users")
+package_group(
+    name = "redfish_validator_users",
+    packages = ["//ecclesia/redfish_mockups/tests/..."],
+)
 
 # Machine agent shared libraries, for use in agent code.
 package_group(
