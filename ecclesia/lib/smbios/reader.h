@@ -27,6 +27,7 @@
 #include "ecclesia/lib/smbios/internal.h"
 #include "ecclesia/lib/smbios/memory_device.h"
 #include "ecclesia/lib/smbios/processor_information.h"
+#include "ecclesia/lib/smbios/reader_intf.h"
 #include "ecclesia/lib/smbios/system_event_log.h"
 #include "ecclesia/lib/smbios/system_information.h"
 
@@ -36,7 +37,7 @@ namespace ecclesia {
 // structure. This can be easily extended to support a 64-bit entry point if
 // needed. The reader should outlive any objects returned by it, since the
 // objects contain TableEntry pointers which are owned by the reader.
-class SmbiosReader {
+class SmbiosReader : public SmbiosReaderInterface {
  public:
   // The constructor takes in path to the entry_point and the smbios tables
   // stored in sysfs as binary files.
@@ -44,28 +45,30 @@ class SmbiosReader {
   // /sys/firmware/dmi/tables/smbios_entry_point
   // /sys/firmware/dmi/tables/DMI
   SmbiosReader(std::string entry_point_path, std::string tables_path);
+  virtual ~SmbiosReader() {}
 
   SmbiosReader(const SmbiosReader&) = delete;
   SmbiosReader& operator=(const SmbiosReader&) = delete;
 
   // Type 0 (Bios Information)
-  std::unique_ptr<BiosInformation> GetBiosInformation() const;
+  std::unique_ptr<BiosInformation> GetBiosInformation() const override;
 
   // Type 1 (System Information)
-  std::unique_ptr<SystemInformation> GetSystemInformation() const;
+  std::unique_ptr<SystemInformation> GetSystemInformation() const override;
 
   // Type 17 (Memory Device)
   // The returned vector is sorted on the device locator string
-  std::vector<MemoryDevice> GetAllMemoryDevices() const;
+  std::vector<MemoryDevice> GetAllMemoryDevices() const override;
 
   // Type 15 (System Event Log)
-  std::unique_ptr<SystemEventLog> GetSystemEventLog() const;
+  std::unique_ptr<SystemEventLog> GetSystemEventLog() const override;
 
   // Type 4 (Processor Information)
-  std::vector<ProcessorInformation> GetAllProcessors() const;
+  std::vector<ProcessorInformation> GetAllProcessors() const override;
 
   // Read boot number from Type 32 (System Boot Information)
-  absl::StatusOr<int32_t> GetBootNumberFromSystemBootInformation() const;
+  absl::StatusOr<int32_t> GetBootNumberFromSystemBootInformation()
+      const override;
 
  private:
   std::vector<TableEntry> entries_;

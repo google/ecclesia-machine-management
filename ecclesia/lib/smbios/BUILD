@@ -39,6 +39,7 @@ cc_library(
         "platform_translator.h",
         "processor_information.h",
         "reader.h",
+        "reader_intf.h",
         "system_event_log.h",
         "system_information.h",
     ],
