@@ -1,5 +1,5 @@
 {
-    "@odata.id": "/redfish/v1/Chassis/chassis/Thermal",
+    "@odata.id": "/redfish/v1/Chassis/Indus/Thermal",
     "@odata.context": "/redfish/v1/$metadata#Thermal.Thermal",
     "@odata.type": "#Thermal.v1_6_0.Thermal",
     "Id": "Thermal",
@@ -7,7 +7,7 @@
     "Temperatures@odata.count": 24,
     "Temperatures": [
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/0",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/0",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -23,7 +23,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/1",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/1",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -39,7 +39,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/2",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/2",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -55,7 +55,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/3",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/3",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -71,7 +71,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/4",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/4",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -87,7 +87,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/5",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/5",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -103,7 +103,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/6",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/6",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -119,7 +119,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/7",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/7",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -135,7 +135,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/8",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/8",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -151,7 +151,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/9",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/9",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -167,7 +167,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/10",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/10",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -183,7 +183,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/11",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/11",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -199,7 +199,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/12",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/12",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -215,7 +215,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/13",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/13",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -231,7 +231,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/14",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/14",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -247,7 +247,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/15",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/15",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -263,7 +263,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/16",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/16",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -279,7 +279,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/17",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/17",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -295,7 +295,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/18",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/18",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -311,7 +311,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/19",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/19",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -327,7 +327,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/20",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/20",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -343,7 +343,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/21",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/21",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -359,7 +359,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/22",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/22",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {
@@ -375,7 +375,7 @@
             "UpperThresholdCritical": 85
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/23",
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/23",
             "@odata.type": "#Thermal.v1_6_0.Temperature",
             "RelatedItem": [
                 {

@@ -1,11 +1,11 @@
 {
     "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
-    "@odata.id": "/redfish/v1/Chassis/chassis",
+    "@odata.id": "/redfish/v1/Chassis/Indus",
     "@odata.type": "#Chassis.v1_6_0.Chassis",
     "Assembly": {
-        "@odata.id": "/redfish/v1/Chassis/chassis/Assembly"
+        "@odata.id": "/redfish/v1/Chassis/Indus/Assembly"
     },
-    "Id": "chassis",
+    "Id": "Indus",
     "ChassisType" : "RackMount",
     "Links": {
         "ComputerSystems":  [
@@ -15,7 +15,7 @@
         ]
     },
     "Thermal": {
-        "@odata.id": "/redfish/v1/Chassis/chassis/Thermal"
+        "@odata.id": "/redfish/v1/Chassis/Indus/Thermal"
     },
     "Name": "Indus Chassis",
     "Manufacturer": "gmaker",

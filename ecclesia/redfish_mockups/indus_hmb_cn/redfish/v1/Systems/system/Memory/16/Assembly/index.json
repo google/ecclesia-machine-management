@@ -11,7 +11,7 @@
                 "Google": {
                     "AttachedTo": [
                         {
-                            "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0/Oem/Google/Components/19"
+                            "@odata.id": "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/0/Oem/Google/Components/19"
                         }
                     ],
                     "Components": [
@@ -22,7 +22,7 @@
                                     "@odata.id": "/redfish/v1/Systems/system/Memory/16"
                                 },
                                 {
-                                    "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/16"
+                                    "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/16"
                                 }
                             ],
                             "MemberId": "0",

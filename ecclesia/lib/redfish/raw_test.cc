@@ -155,7 +155,7 @@ TEST_F(RawInterfaceTest, GetFragmentUriMatches) {
   ASSERT_TRUE(assembly);
 
   auto assembly_via_uri =
-      raw_intf->GetUri("/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0")
+      raw_intf->GetUri("/redfish/v1/Chassis/Indus/Assembly#/Assemblies/0")
           .AsObject();
   ASSERT_TRUE(assembly_via_uri);
 
@@ -239,7 +239,7 @@ TEST_P(RawInterfaceWithParamTest, GetIndusObjectByUriMatches) {
   ASSERT_TRUE(indus);
 
   auto indus_via_uri =
-      raw_intf_->GetUri("/redfish/v1/Chassis/chassis").AsObject();
+      raw_intf_->GetUri("/redfish/v1/Chassis/Indus").AsObject();
   ASSERT_TRUE(indus_via_uri);
 
   EXPECT_THAT(indus->GetUri(), Eq(indus_via_uri->GetUri()));

@@ -409,9 +409,9 @@ TEST(RawInterfaceTestWithMockup, IndusHmbCnMockupUriMapIsCorrect) {
   ASSERT_THAT(topology.uri_to_associated_node_map.size(), Eq(51));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
-      "/redfish/v1/Chassis/chassis"));
+      "/redfish/v1/Chassis/Indus"));
   EXPECT_THAT(
-      topology.uri_to_associated_node_map.at("/redfish/v1/Chassis/chassis"),
+      topology.uri_to_associated_node_map.at("/redfish/v1/Chassis/Indus"),
       UnorderedElementsAre(Pointee(Node{"indus", "/phys", NodeType::kBoard})));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
