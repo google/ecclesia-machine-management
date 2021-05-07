@@ -12,7 +12,7 @@
       "Oem": {
         "Google": {
           "AttachedTo": [
-            {"@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0/Oem/Google/Components/2"}
+            {"@odata.id": "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/0/Oem/Google/Components/2"}
           ],
           "Components": [
             {

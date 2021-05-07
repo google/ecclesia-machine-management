@@ -12,7 +12,7 @@
       "Oem": {
         "Google": {
           "AttachedTo": [
-            {"@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0/Oem/Google/Components/14"}
+            {"@odata.id": "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/0/Oem/Google/Components/14"}
           ],
           "Components": [
             {
@@ -21,7 +21,7 @@
               "Name": "ddr4",
               "AssociatedWith": [
                 {"@odata.id": "/redfish/v1/Systems/system/Memory/11"},
-                {"@odata.id": "/redfish/v1/Chassis/chassis/Thermal#/Temperatures/11"}
+                {"@odata.id": "/redfish/v1/Chassis/Indus/Thermal#/Temperatures/11"}
               ]
             }
           ]

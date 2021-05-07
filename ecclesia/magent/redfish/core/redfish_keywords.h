@@ -201,7 +201,7 @@ inline constexpr char kComputerSystemCollectionUri[] = "/redfish/v1/Systems";
 inline constexpr char kComputerSystemUri[] = "/redfish/v1/Systems/system";
 inline constexpr char kChassisCollectionUri[] = "/redfish/v1/Chassis";
 inline constexpr char kChassisUriPattern[] = "/redfish/v1/Chassis/(\\w+)";
-inline constexpr char kChassisUri[] = "/redfish/v1/Chassis/chassis";
+inline constexpr char kChassisUri[] = "/redfish/v1/Chassis/Indus";
 inline constexpr char kMemoryCollectionUri[] =
     "/redfish/v1/Systems/system/Memory";
 inline constexpr char kMemoryUriPattern[] =
@@ -216,20 +216,20 @@ inline constexpr char kProcessorUriPattern[] =
     "/redfish/v1/Systems/system/Processors/(\\d+)";
 inline constexpr char kProcessorMetricsUriPattern[] =
     "/redfish/v1/Systems/system/Processors/(\\d+)/ProcessorMetrics";
-inline constexpr char kThermalUri[] = "/redfish/v1/Chassis/chassis/Thermal";
-inline constexpr char kPCIeSlotsUri[] = "/redfish/v1/Chassis/chassis/PCIeSlots";
+inline constexpr char kThermalUri[] = "/redfish/v1/Chassis/Indus/Thermal";
+inline constexpr char kPCIeSlotsUri[] = "/redfish/v1/Chassis/Indus/PCIeSlots";
 inline constexpr char kPCIeDeviceCollectionUri[] =
     "/redfish/v1/Systems/system/PCIeDevices";
 inline constexpr char kPCIeDeviceUriPattern[] =
     "/redfish/v1/Systems/system/PCIeDevices/([\\w:]+)";
 inline constexpr char kPCIeFunctionUriPattern[] =
     "/redfish/v1/Systems/system/PCIeDevices/([\\w:]+)/PCIeFunctions/(\\d+)";
-inline constexpr char kPowerUri[] = "/redfish/v1/Chassis/chassis/Power";
-inline constexpr char kAssemblyUri[] = "/redfish/v1/Chassis/chassis/Assembly";
+inline constexpr char kPowerUri[] = "/redfish/v1/Chassis/Indus/Power";
+inline constexpr char kAssemblyUri[] = "/redfish/v1/Chassis/Indus/Assembly";
 inline constexpr char kPowerControlUri[] =
-    "/redfish/v1/Chassis/chassis/Power#/PowerControl/0";
+    "/redfish/v1/Chassis/Indus/Power#/PowerControl/0";
 inline constexpr char kTemperaturesUri[] =
-    "/redfish/v1/Chassis/chassis/Thermal#/Temperatures/0";
+    "/redfish/v1/Chassis/Indus/Thermal#/Temperatures/0";
 inline constexpr char kEthernetInterfaceCollectionUri[] =
     "/redfish/v1/Systems/system/EthernetInterfaces";
 inline constexpr char kEthernetInterfaceUri[] =

@@ -51,15 +51,9 @@ class ChassisCollection : public Resource {
     json[kMembersCount] = system_model_->GetAllChassis().size();
     auto *json_members = GetJsonArray(&json, kMembers);
     for (const auto &chassis_id : system_model_->GetAllChassis()) {
-      // We leave the Indus chassis URL the hardcoded string for now.
-      if (chassis_id == ChassisId::kIndus) {
-        AppendCollectionMember(json_members, kChassisUri);
-      } else {
-        AppendCollectionMember(
-            json_members,
-            absl::StrCat(kChassisCollectionUri, "/",
-                         ChassisIdToString(chassis_id)));
-      }
+      AppendCollectionMember(json_members,
+                             absl::StrCat(kChassisCollectionUri, "/",
+                                          ChassisIdToString(chassis_id)));
     }
     JSONResponseOK(json, req);
   }

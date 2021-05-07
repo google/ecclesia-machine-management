@@ -10,7 +10,7 @@
             "Google" : {
                "AttachedTo" : [
                   {
-                     "@odata.id" : "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/18/Oem/Google/Components/1"
+                     "@odata.id" : "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/18/Oem/Google/Components/1"
                   }
                ],
                "Components" : [
@@ -710,7 +710,7 @@
             "Google" : {
                "AttachedTo" : [
                   {
-                     "@odata.id" : "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/19/Oem/Google/Components/1"
+                     "@odata.id" : "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/19/Oem/Google/Components/1"
                   }
                ],
                "Components" : [
