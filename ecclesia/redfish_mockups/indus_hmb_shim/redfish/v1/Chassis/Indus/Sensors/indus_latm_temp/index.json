@@ -1,5 +1,5 @@
 {
-    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/indus_latm_temp",
+    "@odata.id": "/redfish/v1/Chassis/Indus/Sensors/indus_latm_temp",
     "@odata.type": "#Sensor.v1_2_0.Sensor",
     "Id": "indus_latm_temp",
     "Name": "indus_latm_temp",
@@ -8,7 +8,7 @@
     "ReadingType": "Temperature",
     "RelatedItem": [
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/11"
+            "@odata.id": "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/11"
         }
     ],
     "Status": {

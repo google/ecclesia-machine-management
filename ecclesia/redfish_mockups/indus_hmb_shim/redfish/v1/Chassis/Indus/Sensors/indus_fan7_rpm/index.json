@@ -1,14 +1,14 @@
 {
-    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/indus_fan5_rpm",
+    "@odata.id": "/redfish/v1/Chassis/Indus/Sensors/indus_fan7_rpm",
     "@odata.type": "#Sensor.v1_2_0.Sensor",
-    "Id": "indus_fan5_rpm",
-    "Name": "fan5",
+    "Id": "indus_fan7_rpm",
+    "Name": "fan7",
     "Reading": 16115.0,
     "ReadingUnits": "RPM",
     "ReadingType": "Rotational",
     "RelatedItem": [
         {
-            "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/7"
+            "@odata.id": "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/9"
         }
     ],
     "Status": {

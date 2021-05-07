@@ -1,8 +1,8 @@
 {
-    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/indus_cpu0_pwmon",
+    "@odata.id": "/redfish/v1/Chassis/Indus/Sensors/indus_cpu1_pwmon",
     "@odata.type": "#Sensor.v1_2_0.Sensor",
-    "Id": "indus_cpu0_pwmon",
-    "Name": "CPU0",
+    "Id": "indus_cpu1_pwmon",
+    "Name": "CPU1",
     "ReadingType": "Power",
     "Status": {
         "State": "Enabled",
@@ -12,7 +12,7 @@
     "ReadingUnits": "W",
     "RelatedItem": [
         {
-            "@odata.id": "/redfish/v1/Systems/system/Processors/0/Assembly#/Assemblies/0"
+            "@odata.id": "/redfish/v1/Systems/system/Processors/1/Assembly#/Assemblies/0"
         }
     ]
 }

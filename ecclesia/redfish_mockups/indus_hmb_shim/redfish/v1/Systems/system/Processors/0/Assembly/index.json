@@ -11,7 +11,7 @@
                 "Google": {
                     "AttachedTo": [
                         {
-                            "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0/Oem/Google/Components/1"
+                            "@odata.id": "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/0/Oem/Google/Components/1"
                         }
                     ],
                     "Components": [
@@ -19,7 +19,7 @@
                             "@odata.id": "/redfish/v1/Systems/system/Processors/0/Assembly#/Assemblies/0/Components/0",
                             "AssociatedWith": [
                                 {
-                                    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/indus_cpu0_pwmon"
+                                    "@odata.id": "/redfish/v1/Chassis/Indus/Sensors/indus_cpu0_pwmon"
                                 },
                                 {
                                     "@odata.id": "/redfish/v1/Systems/system/Processors/0"

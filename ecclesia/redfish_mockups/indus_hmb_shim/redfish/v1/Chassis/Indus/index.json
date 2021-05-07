@@ -1,11 +1,11 @@
 {
     "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
-    "@odata.id": "/redfish/v1/Chassis/chassis",
+    "@odata.id": "/redfish/v1/Chassis/Indus",
     "@odata.type": "#Chassis.v1_6_0.Chassis",
     "Assembly": {
-        "@odata.id": "/redfish/v1/Chassis/chassis/Assembly"
+        "@odata.id": "/redfish/v1/Chassis/Indus/Assembly"
     },
-    "Id": "chassis",
+    "Id": "Indus",
     "Links": {
         "ComputerSystems":  [
             {
@@ -14,7 +14,7 @@
         ]
     },
     "Sensors": {
-        "@odata.id": "/redfish/v1/Chassis/chassis/Sensors"
+        "@odata.id": "/redfish/v1/Chassis/Indus/Sensors"
     },
     "Name": "Indus Chassis",
     "Manufacturer": "gmaker",

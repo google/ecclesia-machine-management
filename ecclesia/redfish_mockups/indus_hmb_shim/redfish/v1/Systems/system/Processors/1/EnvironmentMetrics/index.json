@@ -4,7 +4,7 @@
     "Id": "EnvironmentMetrics",
     "Name": "Processor Environment Metrics",
     "PowerWatts": {
-        "DataSourceUri": "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon",
+        "DataSourceUri": "/redfish/v1/Chassis/Indus/Sensors/indus_cpu1_pwmon",
         "Reading": 30.0
     }
 }
