@@ -17,13 +17,18 @@
 #ifndef ECCLESIA_LIB_STATUS_POSIX_H_
 #define ECCLESIA_LIB_STATUS_POSIX_H_
 
+#include <cerrno>
 #include <string_view>
 
 #include "absl/status/status.h"
 
 namespace ecclesia {
 
-absl::Status PosixErrorToStatus(int error_number, std::string_view message);
+// Helper factory method for taking a POSIX errno and translating it to an
+// applicable absl::Status error with the provided message. The resulting
+// absl::Status message will be prepended with the error_number.
+absl::Status PosixErrorToStatus(std::string_view message,
+                                int error_number = errno);
 
 }  // namespace ecclesia
 

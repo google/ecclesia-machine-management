@@ -19,6 +19,7 @@
 #include <errno.h>
 
 #include "absl/status/status.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 
 namespace ecclesia {
@@ -164,8 +165,21 @@ absl::StatusCode ErrnoToStatusCode(int error_number) {
   }
 }
 
-absl::Status PosixErrorToStatus(int error_number, absl::string_view message) {
-  return absl::Status(ErrnoToStatusCode(error_number), message);
+absl::Status PosixErrorToStatus(absl::string_view message, int error_number) {
+  // Use absl::StrError once it is available in public API:
+  // https://github.com/abseil/abseil-cpp/issues/942
+  // Assume GNU semantics for strerror_r, which returns char*.
+  char buf[1024] = {'\000'};
+  const char *ret = strerror_r(error_number, buf, sizeof(buf));
+  std::string errno_msg;
+  if (buf[0] != '\000') {
+    errno_msg = "strerror failed";
+  } else {
+    errno_msg = std::string(ret);
+  }
+  return absl::Status(
+      ErrnoToStatusCode(error_number),
+      absl::StrFormat("[errno: %d (%s)] %s", errno, errno_msg, message));
 }
 
 }  // namespace ecclesia
