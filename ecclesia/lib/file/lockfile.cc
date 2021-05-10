@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/file/lockfile.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -30,6 +31,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/status/macros.h"
+#include "ecclesia/lib/status/posix.h"
 
 namespace ecclesia {
 
@@ -76,7 +78,7 @@ LockFile::~LockFile() { Close(); }
 
 absl::StatusOr<LockedLockFile> LockFile::TryLock() {
   if (flock(fd_, LOCK_EX | LOCK_NB) != 0) {
-    return absl::UnknownError(
+    return PosixErrorToStatus(
         absl::StrFormat("unable to lock file %s ", path_));
   }
 
@@ -86,7 +88,7 @@ absl::StatusOr<LockedLockFile> LockFile::TryLock() {
 absl::StatusOr<absl::Time> LockFile::GetModTime() {
   struct stat st;
   if (stat(path_.c_str(), &st) != 0) {
-    return absl::UnknownError(
+    return PosixErrorToStatus(
         absl::StrFormat("unable to get stat from file: %s", path_));
   }
   return absl::FromUnixSeconds(st.st_mtime);
@@ -95,7 +97,7 @@ absl::StatusOr<absl::Time> LockFile::GetModTime() {
 absl::Status LockFile::Open() {
   fd_ = open(path_.c_str(), O_CREAT | O_RDWR, 0600);
   if (fd_ < 0) {
-    return absl::UnknownError(
+    return PosixErrorToStatus(
         absl::StrFormat("unable to open lockfile %s", path_));
   }
 
@@ -110,7 +112,7 @@ void LockFile::Close() {
 
 absl::StatusOr<std::string> LockFile::Read() {
   if (lseek(fd_, 0, SEEK_SET) != 0) {
-    return absl::UnknownError(
+    return PosixErrorToStatus(
         absl::StrFormat("unable to read lockfile %s", path_));
   }
 
@@ -120,8 +122,8 @@ absl::StatusOr<std::string> LockFile::Read() {
     const ssize_t n = read(fd_, buffer, sizeof(buffer));
     if (n < 0) {
       if (errno == EINTR) continue;
-      return absl::UnknownError(absl::StrFormat(
-          "failed to read data from: %s, errno: %d", path_, errno));
+      return PosixErrorToStatus(
+          absl::StrFormat("failed to read data from: %s", path_));
     } else if (n == 0) {
       break;  // Nothing left to read.
     } else {
@@ -139,15 +141,15 @@ absl::Status LockFile::Write(absl::string_view value) {
       ssize_t write_size = write(fd_, data, size);
       if (write_size < 0) {
         if (errno == EINTR) continue;
-        return absl::UnknownError(absl::StrFormat(
-            "failed to write data to %s, errno: %d", path_, errno));
+        return PosixErrorToStatus(
+            absl::StrFormat("failed to write data to %s", path_));
       }
       size -= write_size;
       data += write_size;
     }
   }
   if (fsync(fd_) != 0) {
-    return absl::UnknownError(
+    return PosixErrorToStatus(
         absl::StrFormat("unable to write to lockfile %s", path_));
   }
   return absl::OkStatus();
@@ -155,11 +157,11 @@ absl::Status LockFile::Write(absl::string_view value) {
 
 absl::Status LockFile::Clear() {
   if (ftruncate(fd_, 0) != 0) {
-    return absl::UnknownError(
+    return PosixErrorToStatus(
         absl::StrFormat("unable to clear contents of lockfile %s", path_));
   }
   if (fsync(fd_) != 0) {
-    return absl::UnknownError(
+    return PosixErrorToStatus(
         absl::StrFormat("unable to clear lockfile %s", path_));
   }
   return absl::OkStatus();

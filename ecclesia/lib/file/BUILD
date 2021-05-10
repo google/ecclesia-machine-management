@@ -102,6 +102,7 @@ cc_library(
     visibility = ["//ecclesia:library_users"],
     deps = [
         "//ecclesia/lib/status:macros",
+        "//ecclesia/lib/status:posix",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
