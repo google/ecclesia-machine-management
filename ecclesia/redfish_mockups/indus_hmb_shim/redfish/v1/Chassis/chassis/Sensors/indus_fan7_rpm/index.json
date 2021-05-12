@@ -3,7 +3,6 @@
     "@odata.type": "#Sensor.v1_2_0.Sensor",
     "Id": "indus_fan7_rpm",
     "Name": "fan7",
-    "Reading": 16115.0,
     "ReadingUnits": "RPM",
     "ReadingType": "Rotational",
     "RelatedItem": [
@@ -12,7 +11,6 @@
         }
     ],
     "Status": {
-        "Health": "OK",
-        "State": "Enabled"
+        "State": "Absent"
     }
 }
