@@ -291,7 +291,7 @@ http_archive(
         "//ecclesia/oss:redfishMockupServer.patches/04.add_uds.patch",
         "//ecclesia/oss:redfishMockupServer.patches/05.add_session_auth_support.patch",
         "//ecclesia/oss:redfishMockupServer.patches/06.add_mtls_support.patch",
-        "//ecclesia/oss:redfishMockupServer.patches/07.add_eventservice_support.patch.patch",
+        "//ecclesia/oss:redfishMockupServer.patches/07.add_eventservice_support.patch",
     ],
 )
 
