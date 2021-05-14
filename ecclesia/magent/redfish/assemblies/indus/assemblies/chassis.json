@@ -719,6 +719,25 @@
               ]
             }
           }
+        },
+        {
+          "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/18",
+          "MemberId": "18",
+          "Name": "io_card",
+          "Oem": {
+            "Google": {
+              "AttachedTo": [
+                { "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0/Oem/Google/Components/29" }
+              ],
+              "Components": [
+                {
+                  "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/18/Oem/Google/Components/0",
+                  "MemberId": "0",
+                  "Name": "io_card"
+                }
+              ]
+            }
+          }
         }
     ]
 }
