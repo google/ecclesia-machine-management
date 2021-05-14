@@ -1,0 +1,216 @@
+From b8fd7bca277931ad8796624368ff446dedcb59d4 Mon Sep 17 00:00:00 2001
+From: Nan Zhou <nanzhou@google.com>
+Date: Fri, 14 May 2021 10:23:39 -0700
+Subject: [PATCH] Add EventService support
+
+The patch includes the following changes,
+1. Changed the HTTPServer to the ThreadingHTTPServer; it is to support
+serving new requests while holding SSE connections;
+2. Implemented SSE using requests according to the Redfish Spec; it leverages a
+simple CV based message queue and associates with SubmitTestEvents;
+3. Implemented Push-Style-Eventing using requests. Added POST to
+Subscriptions Collection support;
+4. Based on 2 and 3, a simple EventService is implemented. Clients can
+create subscriptions by sending GETs to the ServerSendEventUri or POSTs to
+Subscriptions Collection. Then clients can trigger new Events by POST to
+SubmitTestEvents. New Events are pushed into existing subscriptions via SSE
+or POST.
+
+There are some limitations:
+1. POST-style-Eventing doesn't support HTTPS;
+2. SSE stores historical Events;
+3. SubmitTestEvents blocks until all events are sent out;
+4. Only MessageID based event filtering is supported;
+But these limitations are more regarding the Server.
+It should be good for client side unit tests purpose.
+
+Signed-off-by: Nan Zhou <nanzhou@google.com>
+---
+ redfishMockupServer.py | 104 +++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 94 insertions(+), 10 deletions(-)
+
+diff --git a/redfishMockupServer.py b/redfishMockupServer.py
+index f1534d6..b27cf61 100644
+--- a/redfishMockupServer.py
++++ b/redfishMockupServer.py
+@@ -18,6 +18,8 @@ import os
+ import ssl
+ import logging
+ import socketserver
++import requests
++from copy import copy
+ from http.server import BaseHTTPRequestHandler, HTTPServer
+ from urllib.parse import urlparse, urlunparse, parse_qs
+ from rfSsdpServer import RfSSDPServer
+@@ -32,6 +34,35 @@ tool_version = "1.1.0"
+ 
+ dont_send = ["connection", "keep-alive", "content-length", "transfer-encoding"]
+ 
++class ProducerConsumer():
++    def __init__(self):
++        self.lock = threading.Condition()
++        self.consumers = set()
++        self.waiting = set()
++        self.item = None
++
++    def consume(self):
++        with self.lock:
++            ident = threading.get_ident()
++            self.consumers.add(ident)
++            while True:
++                self.lock.wait_for(lambda: ident in self.waiting)
++                self.waiting.remove(ident)
++                self.lock.notify()
++                try:
++                    yield copy(self.item)
++                except GeneratorExit:
++                    break
++            self.consumers.remove(ident)
++
++    def produce(self, item):
++        with self.lock:
++            self.lock.wait_for(lambda: len(self.waiting) == 0)
++            self.item = item
++            self.waiting = self.consumers.copy()
++            self.lock.notify()
++
++event_queue = ProducerConsumer()
+ 
+ def dict_merge(dct, merge_dct):
+         """
+@@ -75,12 +106,30 @@ class UnixSocketHttpServer(socketserver.UnixStreamServer):
+             return (request, ["local", 0])
+ 
+ 
++class ThreadingUnixSocketHttpServer(socketserver.ThreadingMixIn, UnixSocketHttpServer):
++    daemon_threads = True
++
++class ThreadingHTTPServer(socketserver.ThreadingMixIn, HTTPServer):
++    daemon_threads = True
++
++
+ class RfMockupServer(BaseHTTPRequestHandler):
+         '''
+         returns index.json file for Serverthe specified URL
+         '''
+         patchedLinks = dict()
+ 
++        def get_sse_uri(self):
++            """get_sse_uri
++
++            Returns: the SeverSentEvent URI
++            """
++            path = self.construct_path('/redfish/v1/EventService', 'index.json')
++            success, subscription = self.get_cached_link(path)
++            if not success or "ServerSentEventUri" not in subscription:
++                return ""
++            return subscription["ServerSentEventUri"]
++
+         def construct_path(self, path, filename):
+             """construct_path
+ 
+@@ -186,25 +235,25 @@ class RfMockupServer(BaseHTTPRequestHandler):
+                             logger.info('No such resource')
+                         else:
+                             # Sanity check the subscription for required properties
+-                            if ('Destination' in subscription) and ('EventTypes' in subscription):
++                            if ('Destination' in subscription) and ('MessageIds' in subscription):
+                                 logger.info(('Target', subscription['Destination']))
+-                                logger.info((data_received['EventType'], subscription['EventTypes']))
++                                logger.info((data_received['MessageId'], subscription['MessageIds']))
+ 
+                                 # If the EventType in the request is one of interest to the subscriber, build an event payload
+-                                if data_received['EventType'] in subscription['EventTypes']:
++                                if data_received['MessageId'] in subscription['MessageIds']:
+                                     http_headers = {}
+                                     http_headers['Content-Type'] = 'application/json'
+ 
+                                     event_payload['Context'] = subscription.get('Context', 'Default Context')
+ 
+                                     # Send the event
+-                                    events.append(grequests.post(subscription['Destination'], timeout=20, data=json.dumps(event_payload), headers=http_headers))
++                                    try:
++                                        requests.post(subscription['Destination'], timeout=5, data=json.dumps(event_payload), headers=http_headers)
++                                    except requests.exceptions.RequestException as e:
++                                        # Ignore any exceptions in requests to unblock the POST response
++                                        logger.critical("Exception while post events to subcriptions: %s", e)
+                                 else:
+                                     logger.info('event not in eventtypes')
+-                    try:
+-                        threading.Thread(target=grequests.map, args=(events,)).start()
+-                    except Exception as e:
+-                        logger.info('post error {}'.format( str(e)))
+                     return (204)
+                     self.event_id = self.event_id + 1
+ 
+@@ -347,6 +396,22 @@ class RfMockupServer(BaseHTTPRequestHandler):
+             logger.info(("GET", self.path))
+             logger.info("   GET: Headers: {}".format(self.headers))
+ 
++            # If it is a GET on the SeverSendEvents URI, start sending text/event-stream
++            # until the connection is closed
++            sse_uri = self.get_sse_uri()
++            if len(sse_uri) > 0 and self.path == sse_uri:
++                self.send_response(200)
++                self.send_header('Content-type', 'text/event-stream')
++                self.end_headers()
++                for event in event_queue.consume():
++                    try:
++                        self.wfile.write(f'data: {event.rstrip()}\n\n'.encode())
++                        self.wfile.flush()
++                    except BrokenPipeError:
++                        break
++                return
++
++
+             # construct path "mockdir/path/to/resource/<filename>"
+             fpath = self.construct_path(self.path, 'index.json')
+             fpath_xml = self.construct_path(self.path, 'index.xml')
+@@ -566,6 +631,16 @@ class RfMockupServer(BaseHTTPRequestHandler):
+                                 self.send_header('X-Auth-Token', 'MagicToken')
+                                 self.end_headers()
+                                 self.wfile.write(encoding)
++                            elif "/redfish/v1/EventService/Subscriptions" in self.path:
++                                self.send_response(201)
++                                self.send_header("Location", newpath)
++                                subscription_payload = {}
++                                subscription_payload["@odata.id"] = newpath
++                                subscription_payload["@odata.type"] = "#EventDestination.v1_6_0.EventDestination"
++                                encoding = bytes(json.dumps(subscription_payload, ensure_ascii=False), "utf-8")
++                                self.send_header("Content-Length", len(encoding))
++                                self.end_headers()
++                                self.wfile.write(encoding)
+                             else:
+                                 self.send_response(204)
+                                 self.send_header("Location", newpath)
+@@ -576,6 +651,15 @@ class RfMockupServer(BaseHTTPRequestHandler):
+                     else:
+                         # SubmitTestEvent
+                         if 'EventService/Actions/EventService.SubmitTestEvent' in self.path:
++                       		# handle SSE first
++                            event_payload = {}
++                            event_payload['@odata.type'] = '#Event.v1_2_1.Event'
++                            event_payload['Name'] = 'Test Event'
++                            event_payload['Id'] = str(self.event_id)
++                            event_payload['Events'] = []
++                            event_payload['Events'].append(data_received)
++                            event_queue.produce(json.dumps(event_payload))
++                            # then handle POST style Eventing
+                             r_code = self.handle_eventing(data_received)
+                             self.send_response(r_code)
+                         # SubmitTestMetricReport
+@@ -759,9 +843,9 @@ def main():
+         else:
+             ServerClass = HTTPServer
+         if unix:
+-            myServer = UnixSocketHttpServer(unix, RfMockupServer)
++            myServer = ThreadingUnixSocketHttpServer(unix, RfMockupServer)
+         else:
+-            myServer = ServerClass((hostname, port), RfMockupServer)
++            myServer = ThreadingHTTPServer((hostname, port), RfMockupServer)
+ 
+         if sslMode == 'tls' or sslMode == 'mtls':
+             logger.info("Using SSL with certfile: {}".format(sslCert))
+-- 
+2.31.1.751.gd2f1c929bd-goog
+
