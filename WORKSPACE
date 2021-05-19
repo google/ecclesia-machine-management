@@ -18,12 +18,12 @@ http_archive(
     urls = ["https://github.com/abseil/abseil-cpp/archive/143a27800eb35f4568b9be51647726281916aac9.zip"],
 )
 
-# Emboss. Uses the latest commit as of Oct 19, 2020.
+# Emboss. Uses the latest commit as of May 19, 2021.
 http_archive(
     name = "com_google_emboss",
-    sha256 = "292e5bb5e4bb8a5b75aeeec4def6502dcede288f2017feb2c35834dec775f891",
-    strip_prefix = "emboss-2ad6ec5a6501e42a1df23ab35ebd51186851c02c",
-    urls = ["https://github.com/google/emboss/archive/2ad6ec5a6501e42a1df23ab35ebd51186851c02c.zip"],
+    sha256 = "53971feb699d35cd96986cf451eb85986974d65429807c3c2b168c6786846b34",
+    strip_prefix = "emboss-5cb347f85c9f1d2b7d00c29bd08ef706d8cd0461",
+    urls = ["https://github.com/google/emboss/archive/5cb347f85c9f1d2b7d00c29bd08ef706d8cd0461.tar.gz"],
 )
 
 # Protocol buffers. Official release 3.17.0.
