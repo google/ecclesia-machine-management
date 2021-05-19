@@ -26,19 +26,12 @@ http_archive(
     urls = ["https://github.com/google/emboss/archive/2ad6ec5a6501e42a1df23ab35ebd51186851c02c.zip"],
 )
 
-# Protocol buffers. Official release 3.14.0.
+# Protocol buffers. Official release 3.17.0.
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "d0f5f605d0d656007ce6c8b5a82df3037e1d8fe8b121ed42e536f569dec16113",
-    strip_prefix = "protobuf-3.14.0",
-    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.14.0.tar.gz"],
-    patches = [
-        # Force the enabling of optional proto3 fields. In theory you can do
-        # this by passing --experimantal_allow_proto3_optional as a flag but not
-        # every library (i.e. gRPC) that uses protoc provides a mechanism to
-        # pass flags down to it.
-        "//ecclesia/oss:com_google_protobuf.patches/default_proto3_optional.patch",
-    ],
+    sha256 = "eaba1dd133ac5167e8b08bc3268b2d33c6e9f2dcb14ec0f97f3d3eed9b395863",
+    strip_prefix = "protobuf-3.17.0",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.17.0.tar.gz"],
 )
 
 # Google APIs. Latest commit as of Nov 16, 2020.
