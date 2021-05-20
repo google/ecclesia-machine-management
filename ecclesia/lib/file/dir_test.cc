@@ -23,6 +23,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
@@ -34,6 +35,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
+using ::testing::Eq;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
 
@@ -150,6 +152,66 @@ TEST_F(DirTest, WithEachFileSubdirectoriesListed) {
 
   EXPECT_THAT(WithEachFileInDirectoryVector(TestDirName()),
               UnorderedElementsAre("subdir"));
+}
+
+TEST_F(DirTest, DsdWithBadFilenames) {
+  DataStoreDirectory dsd(std::string{TestDirName()});
+  EXPECT_THAT(dsd.UseFile("", {}), IsStatusInvalidArgument());
+  EXPECT_THAT(dsd.UseFile("subdir/a.txt", {}), IsStatusInvalidArgument());
+
+  EXPECT_THAT(dsd.GetAllFileStats(), Eq(decltype(dsd.GetAllFileStats()){}));
+}
+
+TEST_F(DirTest, DsdWithNoFiles) {
+  DataStoreDirectory dsd(std::string{TestDirName()});
+  EXPECT_THAT(dsd.UseFile("a.txt", {}), IsOk());
+  EXPECT_THAT(dsd.UseFile("b.txt", {}), IsOk());
+  EXPECT_THAT(dsd.UseFile("c.txt", {}), IsOk());
+  EXPECT_THAT(dsd.UseFile("a.txt", {}), IsStatusFailedPrecondition());
+
+  EXPECT_THAT(dsd.GetAllFileStats(),
+              Eq(decltype(dsd.GetAllFileStats()){
+                  {"a.txt", {.exists = false, .size = 0}},
+                  {"b.txt", {.exists = false, .size = 0}},
+                  {"c.txt", {.exists = false, .size = 0}}}));
+}
+
+TEST_F(DirTest, DsdWithExistingFiles) {
+  std::ofstream touch_a(fs::path(TestDirName()) / "a.txt");
+  std::ofstream touch_b(fs::path(TestDirName()) / "b.txt");
+  touch_b << "hello world" << std::flush;
+  std::ofstream touch_c(fs::path(TestDirName()) / "c.txt");
+
+  DataStoreDirectory dsd(std::string{TestDirName()});
+  EXPECT_THAT(dsd.UseFile("a.txt", {}), IsOk());
+  EXPECT_THAT(dsd.UseFile("b.txt", {}), IsOk());
+  EXPECT_THAT(dsd.UseFile("c.txt", {}), IsOk());
+  EXPECT_THAT(dsd.UseFile("a.txt", {}), IsStatusFailedPrecondition());
+
+  EXPECT_THAT(dsd.GetAllFileStats(),
+              Eq(decltype(dsd.GetAllFileStats()){
+                  {"a.txt", {.exists = true, .size = 0}},
+                  {"b.txt", {.exists = true, .size = 11}},
+                  {"c.txt", {.exists = true, .size = 0}}}));
+}
+
+TEST_F(DirTest, DsdWithMixedFiles) {
+  std::ofstream touch_a(fs::path(TestDirName()) / "a.txt");
+  std::ofstream touch_b(fs::path(TestDirName()) / "b.txt");
+  touch_b << "pi=3.1415" << std::flush;
+  std::ofstream touch_d(fs::path(TestDirName()) / "d.txt");
+
+  DataStoreDirectory dsd(std::string{TestDirName()});
+  EXPECT_THAT(dsd.UseFile("a.txt", {}), IsOk());
+  EXPECT_THAT(dsd.UseFile("b.txt", {}), IsOk());
+  EXPECT_THAT(dsd.UseFile("c.txt", {}), IsOk());
+
+  EXPECT_THAT(dsd.GetAllFileStats(),
+              Eq(decltype(dsd.GetAllFileStats()){
+                  {"a.txt", {.exists = true, .size = 0}},
+                  {"b.txt", {.exists = true, .size = 9}},
+                  {"c.txt", {.exists = false, .size = 0}}}));
+  EXPECT_THAT(dsd.GetFileStats("d.txt"), IsStatusFailedPrecondition());
 }
 
 }  // namespace

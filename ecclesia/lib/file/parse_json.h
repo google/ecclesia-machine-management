@@ -20,10 +20,17 @@
 #ifndef ECCLESIA_LIB_FILE_PARSE_JSON_H_
 #define ECCLESIA_LIB_FILE_PARSE_JSON_H_
 
+#include <array>
+#include <cstddef>
+#include <memory>
+#include <type_traits>
+
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
+#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "json/json.h"
 #include "json/value.h"
