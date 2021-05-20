@@ -32,6 +32,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/optional.h"
 #include "ecclesia/lib/file/dir.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/logging/globals.h"
@@ -100,10 +101,16 @@ std::string GetTestDataDependencyPath(absl::string_view path) {
   return JoinFilePaths(srcdir, kEcclesiaRoot, path);
 }
 
-std::string GetTestTempdirPath() {
+absl::optional<std::string> MaybeGetTestTempdirPath() {
   char *tmpdir = std::getenv("TEST_TMPDIR");
-  Check(tmpdir, "TEST_TMPDIR environment variable is defined");
+  if (!tmpdir) return absl::nullopt;
   return tmpdir;
+}
+
+std::string GetTestTempdirPath() {
+  absl::optional<std::string> tempdir = MaybeGetTestTempdirPath();
+  Check(tempdir.has_value(), "TEST_TMPDIR environment variable is defined");
+  return *tempdir;
 }
 
 std::string GetTestTempdirPath(absl::string_view path) {

@@ -24,6 +24,7 @@
 #include <string>
 
 #include "absl/strings/string_view.h"
+#include "absl/types/optional.h"
 
 namespace ecclesia {
 
@@ -33,9 +34,14 @@ namespace ecclesia {
 // would be "lib/file/test_filesystem.h".
 std::string GetTestDataDependencyPath(absl::string_view path);
 
-// Find a path in the test temporary directory. Also provided as a 0-arg version
-// that simply returns the test temporary directory itself.
+// Returns the test temporary directory.
+// Returns nullopt if the temporary directory is not defined in TEST_TMPDIR.
+absl::optional<std::string> MaybeGetTestTempdirPath();
+// Same as above, but check-fail if the temporary directory is not defined.
 std::string GetTestTempdirPath();
+
+// Find a path in the test temporary directory.
+// Check-fail if the temporary directory is not defined.
 std::string GetTestTempdirPath(absl::string_view path);
 
 // Create a temporary directory for unix domain sockets. In theory you could
