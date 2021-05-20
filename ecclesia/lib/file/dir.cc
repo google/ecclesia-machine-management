@@ -24,12 +24,33 @@
 #include <string>
 #include <utility>
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/path.h"
 
 namespace ecclesia {
+namespace {
+
+// Implement DataStoreDirectory::GetFileStats for a single file, but unlike the
+// actual method this operates on a full path and it does not do any kind of "is
+// this a registered filename" check.
+DataStoreDirectory::Stats GetSingleFileStats(const std::string &path) {
+  DataStoreDirectory::Stats stats;
+  struct stat st;
+  if (stat(path.c_str(), &st) == 0) {
+    // We basically treat any kind of stat failure as "it doesn't exist". While
+    // there are other ways they
+    stats.exists = true;
+    stats.size = st.st_size;
+  }
+  return stats;
+}
+
+}  // namespace
 
 absl::Status MakeDirectories(absl::string_view dirname) {
   std::stack<std::string> missing_dirs;
@@ -58,6 +79,48 @@ absl::Status MakeDirectories(absl::string_view dirname) {
 
   // If we get here then every directory was created.
   return absl::OkStatus();
+}
+
+DataStoreDirectory::DataStoreDirectory(std::string path)
+    : path_(std::move(path)) {}
+
+absl::StatusOr<std::string> DataStoreDirectory::UseFile(
+    absl::string_view filename, const UseFileOptions &options) {
+  // Make sure the filename is actually a filename, not empty or a directory.
+  if (filename.empty()) {
+    return absl::InvalidArgumentError("filename must not be empty");
+  }
+  if (filename.find('/') != filename.npos) {
+    return absl::InvalidArgumentError(absl::StrFormat(
+        "filename '%s' appears to be a path and not a filename", filename));
+  }
+  // If the file is already in use then return an error.
+  if (used_files_.contains(filename)) {
+    return absl::FailedPreconditionError(absl::StrFormat(
+        "file '%s' in directory '%s' is already in use", filename, path_));
+  }
+  // The file is not in use, do any setup required by the options and register
+  // it for use.
+  used_files_.emplace(filename);
+  return JoinFilePaths(path_, filename);
+}
+
+absl::StatusOr<DataStoreDirectory::Stats> DataStoreDirectory::GetFileStats(
+    absl::string_view filename) const {
+  if (!used_files_.contains(filename)) {
+    return absl::FailedPreconditionError(absl::StrFormat(
+        "'%s' is not a known filename to '%s'", filename, path_));
+  }
+  return GetSingleFileStats(JoinFilePaths(path_, filename));
+}
+
+absl::flat_hash_map<std::string, DataStoreDirectory::Stats>
+DataStoreDirectory::GetAllFileStats() const {
+  absl::flat_hash_map<std::string, Stats> stats_map;
+  for (const std::string &filename : used_files_) {
+    stats_map[filename] = GetSingleFileStats(JoinFilePaths(path_, filename));
+  }
+  return stats_map;
 }
 
 }  // namespace ecclesia

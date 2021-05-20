@@ -16,9 +16,10 @@
 
 #include "ecclesia/lib/file/parse_json.h"
 
+#include <array>
+
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/file/json_files.h"
 #include "ecclesia/lib/testing/status.h"

@@ -17,17 +17,17 @@
 #include "ecclesia/lib/file/lockfile.h"
 
 #include <memory>
+#include <string>
 #include <thread>  // NOLINT(build/c++11)
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/functional/bind_front.h"
-#include "absl/strings/str_cat.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/notification.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
-#include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/status/test_macros.h"
 #include "ecclesia/lib/testing/status.h"
 
