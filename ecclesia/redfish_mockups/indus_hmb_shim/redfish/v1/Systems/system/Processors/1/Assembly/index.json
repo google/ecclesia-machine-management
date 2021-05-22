@@ -22,6 +22,9 @@
                                     "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon"
                                 },
                                 {
+                                    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t"
+                                },
+                                {
                                     "@odata.id": "/redfish/v1/Systems/system/Processors/1"
                                 }
                             ],

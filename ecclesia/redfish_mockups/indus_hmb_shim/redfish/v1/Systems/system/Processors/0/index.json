@@ -9,9 +9,6 @@
         "@odata.id": "/redfish/v1/Systems/system/Processors/0/EnvironmentMetrics"
     },
     "Id": "CPU0",
-    "Metrics": {
-        "@odata.id": "/redfish/v1/Systems/system/Processors/0/ProcessorMetrics"
-    },
     "Name": "CPU0",
     "Status": {
         "State": "Enabled"

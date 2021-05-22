@@ -203,9 +203,6 @@ constexpr ecclesia::PciSensorParams dimm_channel_info[]{
      ecclesia::PciDbdfLocation::Make<0, 0xae, 0x0c, 2>(), 0x150, 85},
 };
 
-constexpr ecclesia::CpuMarginSensorParams cpu_margin_sensor_info[]{{"cpu0", 0},
-                                                                   {"cpu1", 1}};
-
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -315,7 +312,7 @@ int main(int argc, char** argv) {
       .sysfs_mem_file_path = kSysfsMemFilePath,
       .fru_factories = absl::MakeSpan(fru_factories),
       .dimm_thermal_params = absl::MakeSpan(dimm_channel_info),
-      .cpu_margin_params = absl::MakeSpan(cpu_margin_sensor_info),
+      .cpu_margin_params = absl::Span<ecclesia::CpuMarginSensorParams>(),
       .nvme_discover_getter =
           [](ecclesia::PciTopologyInterface* pci_topology) {
             return std::make_unique<ecclesia::IndusNvmeDiscover>(pci_topology);
