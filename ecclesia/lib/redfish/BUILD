@@ -35,11 +35,18 @@ cc_library(
 
 cc_library(
     name = "raw",
-    srcs = ["raw.cc"],
-    hdrs = ["raw.h"],
+    srcs = [
+        "libredfish_adapter.cc",
+        "raw.cc",
+    ],
+    hdrs = [
+        "libredfish_adapter.h",
+        "raw.h",
+    ],
     visibility = ["//ecclesia:redfish_users"],
     deps = [
         ":interface",
+        "//ecclesia/lib/http:client",
         "//ecclesia/lib/logging",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/memory",

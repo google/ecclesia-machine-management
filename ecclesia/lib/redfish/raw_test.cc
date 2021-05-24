@@ -50,6 +50,17 @@ constexpr absl::string_view kClientKeyFile =
 constexpr absl::string_view kClientCAFile =
     "lib/redfish/testing/cert/ca_server.crt";
 
+enum class BackendType { kDefault, kEcclesiaCurl };
+
+absl::string_view BackendTypeToString(BackendType backend_type) {
+  switch (backend_type) {
+    case BackendType::kDefault:
+      return "Default";
+    case BackendType::kEcclesiaCurl:
+      return "EcclesiaCurl";
+  }
+}
+
 enum class InterfaceType { kNoAuth, kBasicAuth, kSessionAuth, kTlsAuth };
 
 absl::optional<absl::string_view> InterfaceTypeToString(
@@ -69,6 +80,32 @@ absl::optional<absl::string_view> InterfaceTypeToString(
   }
 }
 
+struct RawTestConfig {
+  BackendType backend_type;
+  InterfaceType interface_type;
+};
+
+const RawTestConfig kRawTestCases[] = {
+  { BackendType::kDefault, InterfaceType::kNoAuth },
+  { BackendType::kDefault, InterfaceType::kBasicAuth },
+  { BackendType::kDefault, InterfaceType::kSessionAuth },
+  { BackendType::kDefault, InterfaceType::kTlsAuth },
+  { BackendType::kEcclesiaCurl, InterfaceType::kNoAuth },
+};
+
+// The class converts default integer based test names to meaningful auth type
+// based names in value-parameterized tests.
+struct PrintToStringParamName {
+  template <class ParamType>
+  std::string operator()(
+      const ::testing::TestParamInfo<ParamType>& info) const {
+    auto interface = InterfaceTypeToString(info.param.interface_type);
+    ecclesia::Check(interface.has_value(), "the interface is supported");
+    return std::string(BackendTypeToString(info.param.backend_type)) +
+        "_" + std::string(*interface);
+  }
+};
+
 std::unique_ptr<TestingMockupServer> GetTlsServer() {
   return absl::make_unique<TestingMockupServer>(
       "indus_hmb_cn/mockup.shar",
@@ -85,18 +122,6 @@ std::unique_ptr<TestingMockupServer> GetTlsServer() {
           .key_file = ecclesia::GetTestDataDependencyPath(kClientKeyFile),
           .ca_cert_file = ecclesia::GetTestDataDependencyPath(kClientCAFile)});
 }
-
-// The class converts default integer based test names to meaningful auth type
-// based names in value-parameterized tests.
-struct PrintToStringParamName {
-  template <class ParamType>
-  std::string operator()(
-      const ::testing::TestParamInfo<ParamType>& info) const {
-    auto res = InterfaceTypeToString(info.param);
-    ecclesia::Check(res.has_value(), "the interface is supported");
-    return std::string(*res);
-  }
-};
 
 // The class handles non value-parameterized tests.
 class RawInterfaceTest : public ::testing::Test {};
@@ -165,12 +190,12 @@ TEST_F(RawInterfaceTest, GetFragmentUriMatches) {
 // The class handles value-parameterized tests.
 class RawInterfaceWithParamTest
     : public ::testing::Test,
-      public testing::WithParamInterface<InterfaceType> {
+      public testing::WithParamInterface<RawTestConfig> {
  protected:
   RawInterfaceWithParamTest() {}
   // Sets up raw_intf_ based on auth types
   void SetUp() {
-    switch (GetParam()) {
+    switch (GetParam().interface_type) {
       case InterfaceType::kBasicAuth:
         mockup_server_ = absl::make_unique<TestingMockupServer>(
             "barebones_session_auth/mockup.shar");
@@ -320,11 +345,8 @@ TEST_P(RawInterfaceWithParamTest, PostUriWithStringPayload) {
   EXPECT_EQ(new_chassis->GetNodeValue<bool>("key4").value_or(false), true);
 }
 
-INSTANTIATE_TEST_SUITE_P(Interfaces, RawInterfaceWithParamTest,
-                         testing::Values(InterfaceType::kNoAuth,
-                                         InterfaceType::kBasicAuth,
-                                         InterfaceType::kSessionAuth,
-                                         InterfaceType::kTlsAuth),
+INSTANTIATE_TEST_SUITE_P(RawTests, RawInterfaceWithParamTest,
+                         testing::ValuesIn(kRawTestCases),
                          PrintToStringParamName());
 }  // namespace
 }  // namespace libredfish
