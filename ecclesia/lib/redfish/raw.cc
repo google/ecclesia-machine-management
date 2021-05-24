@@ -32,9 +32,11 @@
 #include "absl/types/variant.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/libredfish_adapter.h"
 
 extern "C" {
 #include "redfishPayload.h"
+#include "redfishRawAsync.h"
 #include "redfishService.h"
 }  // extern "C"
 
@@ -366,11 +368,19 @@ class RawIntf : public RedfishInterface {
 // Constructor method for creating a RawIntf.
 std::unique_ptr<RedfishInterface> NewRawInterface(
     const std::string &endpoint,
-    libredfish::RedfishInterface::TrustedEndpoint trusted) {
+    libredfish::RedfishInterface::TrustedEndpoint trusted,
+    std::unique_ptr<ecclesia::HttpClient> client) {
+  serviceHttpHandler handler{};
+  if (client) {
+    handler = NewLibredfishAdapter(std::move(client));
+  }
+
   // createServiceEnumerator only returns NULL if calloc fails, regardless of
   // whether the endpoint is valid or reachable.
+  // Handler is consumed even on failure.
   ServiceUniquePtr service(
-      createServiceEnumerator(endpoint.c_str(), nullptr, nullptr, 0));
+      createServiceEnumeratorExt(endpoint.c_str(), nullptr, nullptr, 0,
+                                 &handler));
   return absl::make_unique<RawIntf>(std::move(service), trusted);
 }
 

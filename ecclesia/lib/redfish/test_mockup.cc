@@ -42,6 +42,8 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/raw.h"
 
+extern char** environ;
+
 namespace libredfish {
 namespace {
 
@@ -54,12 +56,15 @@ constexpr absl::Duration kDaemonStartSleepDuration = absl::Milliseconds(50);
 // Tune this value until you didn't see retries very often
 constexpr absl::Duration kDaemonAuthStartEstimation = absl::Seconds(1);
 
-std::string ConfigToEndpoint(const TestingMockupServer::ConfigUnix &config) {
+// The URI scheme is ignored for unix sockets.
+std::string ConfigToEndpoint(const char* scheme,
+                             const TestingMockupServer::ConfigUnix &config) {
   return absl::StrCat("unix://", config.socket_path);
 }
 
-std::string ConfigToEndpoint(const TestingMockupServer::ConfigNetwork &config) {
-  return absl::StrCat(config.hostname, ":", config.port);
+std::string ConfigToEndpoint(const char* scheme,
+                             const TestingMockupServer::ConfigNetwork &config) {
+  return absl::StrCat(scheme, "://", config.hostname, ":", config.port);
 }
 
 }  // namespace
@@ -141,8 +146,9 @@ void TestingMockupServer::SetUpMockupServer(
   posix_spawnattr_t attr;
   posix_spawnattr_init(&attr);
   posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETPGROUP);
+  // Pass our environment to the child to at least get TEST_TMPDIR.
   int result = posix_spawn(&server_pid_, server_argv[0], nullptr, &attr,
-                           server_argv, nullptr);
+                           server_argv, environ);
   ecclesia::Check(result == 0, "mockup server process started")
       << "posix_spawn() returned " << result;
 
@@ -203,10 +209,13 @@ TestingMockupServer::~TestingMockupServer() {
 }
 
 std::unique_ptr<RedfishInterface>
-TestingMockupServer::RedfishClientInterface() {
+TestingMockupServer::RedfishClientInterface(
+    std::unique_ptr<ecclesia::HttpClient> client) {
   std::string endpoint = absl::visit(
-      [](auto &conn) { return ConfigToEndpoint(conn); }, connection_config_);
-  auto intf = libredfish::NewRawInterface(endpoint, RedfishInterface::kTrusted);
+      [](auto &conn) { return ConfigToEndpoint("http", conn); },
+      connection_config_);
+  auto intf = libredfish::NewRawInterface(endpoint, RedfishInterface::kTrusted,
+                                          std::move(client));
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
 }
@@ -216,8 +225,9 @@ TestingMockupServer::RedfishClientBasicAuthInterface() {
   PasswordArgs args;
   args.username = "FakeName";
   args.password = "FakePassword";
-  args.endpoint = absl::visit([](auto &conn) { return ConfigToEndpoint(conn); },
-                              connection_config_);
+  args.endpoint = absl::visit(
+      [](auto &conn) { return ConfigToEndpoint("http", conn); },
+      connection_config_);
   auto intf = libredfish::NewRawBasicAuthInterface(args);
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
@@ -228,8 +238,9 @@ TestingMockupServer::RedfishClientSessionAuthInterface() {
   PasswordArgs args;
   args.username = "FakeName";
   args.password = "FakePassword";
-  args.endpoint = absl::visit([](auto &conn) { return ConfigToEndpoint(conn); },
-                              connection_config_);
+  args.endpoint = absl::visit(
+      [](auto &conn) { return ConfigToEndpoint("http", conn); },
+      connection_config_);
   auto intf = libredfish::NewRawSessionAuthInterface(args);
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
@@ -241,9 +252,9 @@ TestingMockupServer::RedfishClientTlsAuthInterface() {
                   "client TLS configuration exists");
 
   TlsArgs args;
-  args.endpoint = absl::StrCat(
-      "https://", absl::visit([](auto &conn) { return ConfigToEndpoint(conn); },
-                              connection_config_));
+  args.endpoint = absl::visit(
+      [](auto &conn) { return ConfigToEndpoint("https", conn); },
+      connection_config_);
   args.verify_hostname = client_tls_config_->verify_hostname;
   args.verify_peer = client_tls_config_->verify_peer;
   args.cert_file = client_tls_config_->cert_file;
