@@ -66,49 +66,4 @@ std::vector<PciThermalSensor> CreatePciThermalSensors(
   return sensors;
 }
 
-CpuMarginSensor::CpuMarginSensor(const CpuMarginSensorParams &params)
-    // Right now we don’t know the upper critical limit for (at least some
-    // Intel) CPUs. So it is set to some arbitrary number.
-    : ThermalSensor(params.name, 0), lpu_path_(absl::nullopt) {
-  // Determine the LPU index to use.
-  IntelCpuTopology top;
-  std::vector<int> lpus = top.GetLpusForSocketId(params.cpu_index);
-  if (!lpus.empty()) {
-    lpu_path_ = absl::StrCat("/dev/cpu/", lpus[0], "/msr");
-  }
-}
-
-absl::optional<int> CpuMarginSensor::Read() {
-  if (!lpu_path_) {
-    return absl::nullopt;
-  }
-
-  Msr msr(*lpu_path_);
-  absl::StatusOr<uint64_t> maybe_therm_status =
-      msr.Read(kMsrIa32PackageThermStatus);
-  if (!maybe_therm_status.ok()) {
-    return absl::nullopt;
-  }
-
-  // The following code is in gsys, but I don’t think this works for package
-  // thermal. In Intel’s manual, IA32_PACKAGE_THERM_STATUS’s bit 31 is said to
-  // be “reserved”.
-  //
-  // Bit 31 indicates valid reading.
-  // if (!(val & (1 << 31))) { return absl::nullopt; }
-
-  // Readout is in bits 22:16.
-  uint64_t reading = (*maybe_therm_status >> 16) & 0x7f;
-  return reading;
-}
-
-std::vector<CpuMarginSensor> CreateCpuMarginSensors(
-    const absl::Span<const CpuMarginSensorParams> param_set) {
-  std::vector<CpuMarginSensor> sensors;
-  for (const auto &param : param_set) {
-    sensors.emplace_back(param);
-  }
-  return sensors;
-}
-
 }  // namespace ecclesia

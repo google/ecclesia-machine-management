@@ -99,20 +99,6 @@ absl::optional<Cpu> SystemModel::GetCpu(std::size_t index) {
   return absl::nullopt;
 }
 
-std::size_t SystemModel::NumCpuMarginSensors() const {
-  absl::ReaderMutexLock ml(&cpu_margin_sensors_lock_);
-  return cpu_margin_sensors_.size();
-}
-
-absl::optional<CpuMarginSensor> SystemModel::GetCpuMarginSensor(
-    std::size_t index) {
-  absl::ReaderMutexLock ml(&cpu_margin_sensors_lock_);
-  if (index < cpu_margin_sensors_.size()) {
-    return cpu_margin_sensors_[index];
-  }
-  return absl::nullopt;
-}
-
 std::size_t SystemModel::NumFruReaders() const {
   absl::ReaderMutexLock ml(&fru_readers_lock_);
   return fru_readers_.size();
@@ -276,8 +262,7 @@ SystemModel::SystemModel(SysmodelParams params)
       field_translator_(std::move(params.field_translator)),
       pci_topology_(std::make_unique<SysfsPciTopology>()),
       usb_discovery_(std::make_unique<SysfsUsbDiscovery>()),
-      dimm_thermal_params_(std::move(params.dimm_thermal_params)),
-      cpu_margin_params_(std::move(params.cpu_margin_params)) {
+      dimm_thermal_params_(std::move(params.dimm_thermal_params)) {
   // Construct system model objects
   auto dimms = CreateDimms(smbios_reader_.get(), field_translator_.get());
   {
@@ -301,12 +286,6 @@ SystemModel::SystemModel(SysmodelParams params)
   {
     absl::WriterMutexLock ml(&dimm_thermal_sensors_lock_);
     dimm_thermal_sensors_ = std::move(dimm_thermal_sensors);
-  }
-
-  auto cpu_margin_sensors = CreateCpuMarginSensors(cpu_margin_params_);
-  {
-    absl::WriterMutexLock ml(&cpu_margin_sensors_lock_);
-    cpu_margin_sensors_ = std::move(cpu_margin_sensors);
   }
 
   auto chassis = CreateChassis(usb_discovery_.get());

@@ -61,7 +61,6 @@ struct SysmodelParams {
   std::string sysfs_mem_file_path;
   absl::Span<const SysmodelFruReaderFactory> fru_factories;
   absl::Span<const PciSensorParams> dimm_thermal_params;
-  absl::Span<const CpuMarginSensorParams> cpu_margin_params;
   std::function<std::unique_ptr<NvmeDiscoverInterface>(PciTopologyInterface *)>
       nvme_discover_getter;
   std::function<std::unique_ptr<PciStorageDiscoverInterface>(
@@ -87,9 +86,6 @@ class SystemModel {
 
   std::size_t NumCpus() const;
   absl::optional<Cpu> GetCpu(std::size_t index);
-
-  std::size_t NumCpuMarginSensors() const;
-  absl::optional<CpuMarginSensor> GetCpuMarginSensor(std::size_t index);
 
   std::size_t NumFruReaders() const;
   template <typename IteratorF>
@@ -180,10 +176,6 @@ class SystemModel {
   std::vector<PciThermalSensor> dimm_thermal_sensors_
       ABSL_GUARDED_BY(dimm_thermal_sensors_lock_);
 
-  mutable absl::Mutex cpu_margin_sensors_lock_;
-  std::vector<CpuMarginSensor> cpu_margin_sensors_
-      ABSL_GUARDED_BY(cpu_margin_sensors_lock_);
-
   mutable absl::Mutex chassis_lock_;
   std::vector<ChassisId> chassis_ ABSL_GUARDED_BY(chassis_lock_);
 
@@ -209,7 +201,6 @@ class SystemModel {
   std::unique_ptr<SystemEventLogger> event_logger_;
 
   const absl::Span<const PciSensorParams> dimm_thermal_params_;
-  const absl::Span<const CpuMarginSensorParams> cpu_margin_params_;
 
   absl::optional<uint32_t> boot_number_;
   // Iterate through BIOS Event Log to load boot number from events

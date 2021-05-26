@@ -48,14 +48,12 @@ TEST(SystemModelTest, EmptyParamsNoBreak) {
       .sysfs_mem_file_path = "",
       .fru_factories = absl::Span<SysmodelFruReaderFactory>(),
       .dimm_thermal_params = absl::Span<PciSensorParams>(),
-      .cpu_margin_params = absl::Span<CpuMarginSensorParams>(),
       .nvme_discover_getter = nullptr};
   SystemModel sysmodel(std::move(params));
 
   EXPECT_EQ(sysmodel.NumCpus(), 0);
   EXPECT_EQ(sysmodel.NumDimms(), 0);
   EXPECT_EQ(sysmodel.NumDimmThermalSensors(), 0);
-  EXPECT_EQ(sysmodel.NumCpuMarginSensors(), 0);
   EXPECT_EQ(sysmodel.NumFruReaders(), 0);
   EXPECT_EQ(sysmodel.NumNvmePlugins(), 0);
 }
@@ -74,7 +72,6 @@ TEST(SystemModelTest, DiscoverNvmePluginsFailure) {
       .sysfs_mem_file_path = "",
       .fru_factories = absl::Span<SysmodelFruReaderFactory>(),
       .dimm_thermal_params = absl::Span<PciSensorParams>(),
-      .cpu_margin_params = absl::Span<CpuMarginSensorParams>(),
       .nvme_discover_getter = [&](PciTopologyInterface *) {
         return std::move(nvme_discover);
       }};
@@ -107,7 +104,6 @@ TEST(SystemModelTest, GetCorrectNvmePlugin) {
       .sysfs_mem_file_path = "",
       .fru_factories = absl::Span<SysmodelFruReaderFactory>(),
       .dimm_thermal_params = absl::Span<PciSensorParams>(),
-      .cpu_margin_params = absl::Span<CpuMarginSensorParams>(),
       .nvme_discover_getter = [&](PciTopologyInterface *) {
         return std::move(nvme_discover);
       }};
@@ -143,7 +139,6 @@ TEST(SystemModelTest, GetSystemUptime) {
       .sysfs_mem_file_path = "",
       .fru_factories = absl::Span<SysmodelFruReaderFactory>(),
       .dimm_thermal_params = absl::Span<PciSensorParams>(),
-      .cpu_margin_params = absl::Span<CpuMarginSensorParams>(),
       .nvme_discover_getter = nullptr};
   SystemModel sysmodel(std::move(params));
 
@@ -161,7 +156,6 @@ TEST(SystemModelTest, GetSystemTotalMemory) {
       .sysfs_mem_file_path = "",
       .fru_factories = absl::Span<SysmodelFruReaderFactory>(),
       .dimm_thermal_params = absl::Span<PciSensorParams>(),
-      .cpu_margin_params = absl::Span<CpuMarginSensorParams>(),
       .nvme_discover_getter = nullptr};
   SystemModel sysmodel(std::move(params));
 

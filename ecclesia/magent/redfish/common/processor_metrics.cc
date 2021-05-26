@@ -110,15 +110,6 @@ void ProcessorMetrics::Get(
     (*cpu_error_counts)[kUncorrectable] = 0;
   }
 
-  // Get CPU thermal margin.
-  auto sensor = system_model_->GetCpuMarginSensor(cpu_num);
-  if (sensor) {
-    auto value = sensor->Read();
-    if (value) {
-      json[kThrottlingCelsius] = *value;
-    }
-  }
-
   JSONResponseOK(json, req);
 }
 }  // namespace ecclesia
