@@ -59,6 +59,8 @@ inline constexpr char kRfPropertyReadingUnits[] = "ReadingUnits";
 inline constexpr char kRfPropertyRelatedItem[] = "RelatedItem";
 inline constexpr char kRfPropertyStatus[] = "Status";
 inline constexpr char kRfPropertyState[] = "State";
+inline constexpr char kRfPropertyThresholds[] = "Thresholds";
+inline constexpr char kRfPropertyUpperCritical[] = "UpperCritical";
 inline constexpr char kRfPropertyStorageControllers[] = "StorageControllers";
 inline constexpr char kRfPropertyNvmeControllersProperties[] =
     "NVMeControllerProperties";
