@@ -129,14 +129,12 @@ def shar_binary(
     # Combine the stub and data library into an actual binary.
     native.cc_binary(
         name = name,
-        testonly = True,
         srcs = [name + "__stub.cc"],
         deps = [
             ":" + name + "__shar_data",
             "@com_google_absl//absl/strings",
             "//ecclesia/lib/file:dir",
             "//ecclesia/lib/file:path",
-            "//ecclesia/lib/file:test_filesystem",
             "//ecclesia/lib/logging",
             "//ecclesia/lib/logging:posix",
         ],

@@ -21,7 +21,6 @@
 // The code here is not meant to be compiled directly, but instead expects that
 // the SHELL, SCRIPT and DATA_HEADER entries are expanded into a true .cc file.
 
-#include <cstring>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -29,7 +28,6 @@
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/dir.h"
 #include "ecclesia/lib/file/path.h"
-#include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/logging/posix.h"
@@ -43,22 +41,9 @@ namespace {
 constexpr absl::string_view kShell = "$SHELL";
 constexpr absl::string_view kScript = "$SCRIPT";
 
-char* GetTmpDirTemplate() {
-  absl::optional<std::string> maybe_tmpdir = MaybeGetTestTempdirPath();
-  std::string tmpdir;
-  if (maybe_tmpdir.has_value()) {
-    tmpdir = std::move(*maybe_tmpdir);
-  } else {
-    tmpdir = "/tmp";
-  }
-  return strdup(JoinFilePaths(tmpdir, "shar_binary.XXXXXX").c_str());
-}
-
 int RealMain(int argc, char *argv[]) {
-  char* tempdir_buffer = GetTmpDirTemplate();
-  if (tempdir_buffer == nullptr) {
-    FatalLog() << "out of memory building temporary directory template";
-  }
+  // Get a temporary directory.
+  char tempdir_buffer[] = "/tmp/shar_binary.XXXXXX";
   if (mkdtemp(tempdir_buffer) == nullptr) {
     FatalLog() << "unable to create temporary directory";
   }

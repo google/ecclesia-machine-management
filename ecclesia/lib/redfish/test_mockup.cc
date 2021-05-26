@@ -42,8 +42,6 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/raw.h"
 
-extern char** environ;
-
 namespace libredfish {
 namespace {
 
@@ -143,9 +141,8 @@ void TestingMockupServer::SetUpMockupServer(
   posix_spawnattr_t attr;
   posix_spawnattr_init(&attr);
   posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETPGROUP);
-  // Pass our environment to the child to at least get TEST_TMPDIR.
   int result = posix_spawn(&server_pid_, server_argv[0], nullptr, &attr,
-                           server_argv, environ);
+                           server_argv, nullptr);
   ecclesia::Check(result == 0, "mockup server process started")
       << "posix_spawn() returned " << result;
 
