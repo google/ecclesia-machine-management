@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <cstdlib>
 #include <stack>
 #include <string>
 #include <utility>
@@ -52,6 +53,16 @@ DataStoreDirectory::Stats GetSingleFileStats(const std::string &path) {
 }
 
 }  // namespace
+
+std::string GetSystemTempdirPath() {
+  // If we're in a test environment, use the test temporary directory.
+  char *test_tmpdir = std::getenv("TEST_TMPDIR");
+  if (test_tmpdir) {
+    return test_tmpdir;
+  }
+  // Fall back to /tmp if we don't have a more specific directory to return.
+  return "/tmp";
+}
 
 absl::Status MakeDirectories(absl::string_view dirname) {
   std::stack<std::string> missing_dirs;

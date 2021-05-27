@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/file/dir.h"
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -65,6 +66,18 @@ class DirTest : public ::testing::Test {
  private:
   std::string testdir_;
 };
+
+TEST_F(DirTest, GetSystemTempdirReturnTestTempdir) {
+  EXPECT_THAT(GetSystemTempdirPath(), Eq(GetTestTempdirPath()));
+}
+
+TEST_F(DirTest, GetSystemTempdirReturnTmpOutsideOfTest) {
+  // We need to remove TEST_TMPDIR from the environment to verify this.
+  std::string existing_tmpdir = GetTestTempdirPath();
+  ASSERT_THAT(unsetenv("TEST_TMPDIR"), Eq(0));
+  EXPECT_THAT(GetSystemTempdirPath(), Eq("/tmp"));
+  ASSERT_THAT(setenv("TEST_TMPDIR", existing_tmpdir.c_str(), 0), Eq(0));
+}
 
 TEST_F(DirTest, CreateDirectoriesNothingExists) {
   std::string created_dir = absl::StrCat(TestDirName(), "/aaa/bbb/ccc");

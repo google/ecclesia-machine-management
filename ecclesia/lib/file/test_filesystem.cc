@@ -101,16 +101,10 @@ std::string GetTestDataDependencyPath(absl::string_view path) {
   return JoinFilePaths(srcdir, kEcclesiaRoot, path);
 }
 
-absl::optional<std::string> MaybeGetTestTempdirPath() {
-  char *tmpdir = std::getenv("TEST_TMPDIR");
-  if (!tmpdir) return absl::nullopt;
-  return tmpdir;
-}
-
 std::string GetTestTempdirPath() {
-  absl::optional<std::string> tempdir = MaybeGetTestTempdirPath();
-  Check(tempdir.has_value(), "TEST_TMPDIR environment variable is defined");
-  return *tempdir;
+  char *tmpdir = std::getenv("TEST_TMPDIR");
+  Check(tmpdir, "TEST_TMPDIR environment variable is defined");
+  return tmpdir;
 }
 
 std::string GetTestTempdirPath(absl::string_view path) {

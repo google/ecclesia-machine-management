@@ -33,6 +33,13 @@
 
 namespace ecclesia {
 
+// Get a system temporary directory path. Note that this doesn't create a
+// temporary directory for you, it simply gets the path to a usable system
+// temporary directory. This will make use of TEST_TMPDIR if it is set in order
+// to be "bazel test"-friendly. It should never fail because as a last resort it
+// will just return /tmp.
+std::string GetSystemTempdirPath();
+
 // Given a path, create a directory at it, including creating any intervening
 // directories above it if they do not already exist.
 //
