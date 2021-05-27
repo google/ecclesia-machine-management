@@ -42,9 +42,9 @@ constexpr absl::string_view kShell = "$SHELL";
 constexpr absl::string_view kScript = "$SCRIPT";
 
 int RealMain(int argc, char *argv[]) {
-  // Get a temporary directory.
-  char tempdir_buffer[] = "/tmp/shar_binary.XXXXXX";
-  if (mkdtemp(tempdir_buffer) == nullptr) {
+  std::string tempdir_buffer =
+    JoinFilePaths(GetSystemTempdirPath(), "shar_binary.XXXXXX");
+  if (mkdtemp(tempdir_buffer.data()) == nullptr) {
     FatalLog() << "unable to create temporary directory";
   }
   absl::string_view tempdir = tempdir_buffer;
