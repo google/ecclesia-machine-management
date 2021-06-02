@@ -34,6 +34,7 @@ inline constexpr char kMembersCount[] = "Members@odata.count";
 inline constexpr char kOem[] = "Oem";
 inline constexpr char kGoogle[] = "Google";
 inline constexpr char kMemory[] = "Memory";
+inline constexpr char kSensor[] = "Sensors";
 inline constexpr char kStorage[] = "Storage";
 inline constexpr char kDrives[] = "Drives";
 inline constexpr char kStatus[] = "Status";
@@ -129,7 +130,8 @@ inline constexpr char kMACAddress[] = "MACAddress";
 inline constexpr char kLinkStatus[] = "LinkStatus";
 inline constexpr char kSpeedMbps[] = "SpeedMbps";
 inline constexpr char kReading[] = "Reading";
-inline constexpr char kReadingUnits[] = "ReadingUnits";
+inline constexpr char kReadingType[] = "ReadingType";
+inline constexpr char kReadingUnits[] = "ReadingUnit";
 inline constexpr char kMinReadingRange[] = "MinReadingRange";
 inline constexpr char kMaxReadingRange[] = "MaxReadingRange";
 inline constexpr char kRelatedItem[] = "RelatedItem";
@@ -257,7 +259,10 @@ inline constexpr char kSoftwareInventoryMagentUri[] =
     "/redfish/v1/UpdateService/SoftwareInventory/magent";
 inline constexpr char kSessionServiceUri[] = "/redfish/v1/SessionService";
 inline constexpr char kSessionsUri[] = "/redfish/v1/SessionService/Sessions";
-
+inline constexpr char kSleipnirSensorCollectionUri[] =
+    "/redfish/v1/Chassis/Sleipnir/Sensors";
+inline constexpr char kSleipnirSensorUriPattern[] =
+    "/redfish/v1/Chassis/Sleipnir/Sensors/([\\w]+)";
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_MAGENT_REDFISH_CORE_REDFISH_KEYWORDS_H_

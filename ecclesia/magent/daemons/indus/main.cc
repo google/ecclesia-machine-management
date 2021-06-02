@@ -303,6 +303,8 @@ int main(int argc, char** argv) {
         }));
   }
 
+  auto ipmi_sensors = ipmi.GetAllSensors();
+
   ecclesia::SysmodelParams params = {
       .field_translator =
           absl::make_unique<ecclesia::IndusSmbiosFieldTranslator>(),
@@ -312,6 +314,7 @@ int main(int argc, char** argv) {
       .sysfs_mem_file_path = kSysfsMemFilePath,
       .fru_factories = absl::MakeSpan(fru_factories),
       .dimm_thermal_params = absl::MakeSpan(dimm_channel_info),
+      .ipmi_sensors = absl::MakeSpan(ipmi_sensors),
       .nvme_discover_getter =
           [](ecclesia::PciTopologyInterface* pci_topology) {
             return std::make_unique<ecclesia::IndusNvmeDiscover>(pci_topology);

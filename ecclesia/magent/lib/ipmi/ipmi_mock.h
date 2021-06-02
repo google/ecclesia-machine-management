@@ -32,6 +32,12 @@ namespace ecclesia {
 class MockIpmiInterface : public IpmiInterface {
  public:
   MOCK_METHOD(std::vector<BmcFruInterfaceInfo>, GetAllFrus, (), (override));
+  MOCK_METHOD(std::vector<BmcSensorInterfaceInfo>, GetAllSensors, (),
+              (override));
+  MOCK_METHOD(absl::StatusOr<BmcSensorInterfaceInfo>, GetSensor,
+              (SensorNum sensor_num), (override));
+  MOCK_METHOD(absl::StatusOr<double>, ReadSensor, (SensorNum sensor_num),
+              (override));
   MOCK_METHOD(absl::Status, ReadFru,
               (uint16_t, size_t, absl::Span<unsigned char>), (override));
   MOCK_METHOD(absl::Status, GetFruSize, (uint16_t, uint16_t *), (override));

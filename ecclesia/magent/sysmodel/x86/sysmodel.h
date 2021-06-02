@@ -42,12 +42,14 @@
 #include "ecclesia/magent/lib/event_reader/elog_reader.h"
 #include "ecclesia/magent/lib/event_reader/event_reader.h"
 #include "ecclesia/magent/lib/event_reader/mced_reader.h"
+// #include "ecclesia/magent/lib/ipmi/interface_options.h"
 #include "ecclesia/magent/sysmodel/x86/chassis.h"
 #include "ecclesia/magent/sysmodel/x86/cpu.h"
 #include "ecclesia/magent/sysmodel/x86/dimm.h"
 #include "ecclesia/magent/sysmodel/x86/fru.h"
 #include "ecclesia/magent/sysmodel/x86/nvme.h"
 #include "ecclesia/magent/sysmodel/x86/pci_storage.h"
+#include "ecclesia/magent/sysmodel/x86/sleipnir_sensor.h"
 #include "ecclesia/magent/sysmodel/x86/thermal.h"
 
 namespace ecclesia {
@@ -61,6 +63,7 @@ struct SysmodelParams {
   std::string sysfs_mem_file_path;
   absl::Span<const SysmodelFruReaderFactory> fru_factories;
   absl::Span<const PciSensorParams> dimm_thermal_params;
+  absl::Span<const IpmiInterface::BmcSensorInterfaceInfo> ipmi_sensors;
   std::function<std::unique_ptr<NvmeDiscoverInterface>(PciTopologyInterface *)>
       nvme_discover_getter;
   std::function<std::unique_ptr<PciStorageDiscoverInterface>(
@@ -83,6 +86,8 @@ class SystemModel {
   // Return the sensor for DIMM at “index”. Return nullptr if index is out of
   // bounds.
   PciThermalSensor *GetDimmThermalSensor(std::size_t index);
+
+  std::vector<SleipnirSensor> GetAllIpmiSensors() const;
 
   std::size_t NumCpus() const;
   absl::optional<Cpu> GetCpu(std::size_t index);
@@ -176,6 +181,10 @@ class SystemModel {
   std::vector<PciThermalSensor> dimm_thermal_sensors_
       ABSL_GUARDED_BY(dimm_thermal_sensors_lock_);
 
+  mutable absl::Mutex sleipnir_sensors_lock_;
+  std::vector<SleipnirSensor> sleipnir_sensors_
+      ABSL_GUARDED_BY(sleipnir_sensors_lock_);
+
   mutable absl::Mutex chassis_lock_;
   std::vector<ChassisId> chassis_ ABSL_GUARDED_BY(chassis_lock_);
 
@@ -201,6 +210,7 @@ class SystemModel {
   std::unique_ptr<SystemEventLogger> event_logger_;
 
   const absl::Span<const PciSensorParams> dimm_thermal_params_;
+  const absl::Span<const IpmiInterface::BmcSensorInterfaceInfo> ipmi_sensors_;
 
   absl::optional<uint32_t> boot_number_;
   // Iterate through BIOS Event Log to load boot number from events

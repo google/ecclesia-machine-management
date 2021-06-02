@@ -101,6 +101,9 @@ void Chassis::Get(tensorflow::serving::net_http::ServerRequestInterface *req,
   linked_computer_systems[kOdataId] = kComputerSystemUri;
   computer_systems->append(linked_computer_systems);
 
+  auto *sensors = GetJsonObject(&json, kSensor);
+  (*sensors)[kOdataId] = absl::StrCat(req->uri_path(), "/Sensors");
+
   if (chassis_id == ChassisId::kIndus) {
     auto *thermal = GetJsonObject(&json, kThermal);
     (*thermal)[kOdataId] = kThermalUri;

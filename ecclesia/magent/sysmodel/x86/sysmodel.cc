@@ -56,6 +56,7 @@
 #include "ecclesia/magent/sysmodel/x86/dimm.h"
 #include "ecclesia/magent/sysmodel/x86/fru.h"
 #include "ecclesia/magent/sysmodel/x86/nvme.h"
+#include "ecclesia/magent/sysmodel/x86/sleipnir_sensor.h"
 #include "ecclesia/magent/sysmodel/x86/thermal.h"
 
 namespace ecclesia {
@@ -84,6 +85,11 @@ PciThermalSensor *SystemModel::GetDimmThermalSensor(std::size_t index) {
     return &dimm_thermal_sensors_[index];
   }
   return nullptr;
+}
+
+std::vector<SleipnirSensor> SystemModel::GetAllIpmiSensors() const {
+  absl::ReaderMutexLock ml(&sleipnir_sensors_lock_);
+  return sleipnir_sensors_;
 }
 
 std::size_t SystemModel::NumCpus() const {
@@ -262,7 +268,8 @@ SystemModel::SystemModel(SysmodelParams params)
       field_translator_(std::move(params.field_translator)),
       pci_topology_(std::make_unique<SysfsPciTopology>()),
       usb_discovery_(std::make_unique<SysfsUsbDiscovery>()),
-      dimm_thermal_params_(std::move(params.dimm_thermal_params)) {
+      dimm_thermal_params_(std::move(params.dimm_thermal_params)),
+      ipmi_sensors_(std::move(params.ipmi_sensors)) {
   // Construct system model objects
   auto dimms = CreateDimms(smbios_reader_.get(), field_translator_.get());
   {
@@ -286,6 +293,12 @@ SystemModel::SystemModel(SysmodelParams params)
   {
     absl::WriterMutexLock ml(&dimm_thermal_sensors_lock_);
     dimm_thermal_sensors_ = std::move(dimm_thermal_sensors);
+  }
+
+  auto sleipnir_sensors = CreateSleipnirSensors(ipmi_sensors_);
+  {
+    absl::WriterMutexLock ml(&sleipnir_sensors_lock_);
+    sleipnir_sensors_ = std::move(sleipnir_sensors);
   }
 
   auto chassis = CreateChassis(usb_discovery_.get());

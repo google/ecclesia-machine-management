@@ -112,6 +112,19 @@ class Ipmitool : public IpmiInterface {
     return ipmi_impl_->GetAllFrus();
   }
 
+  std::vector<BmcSensorInterfaceInfo> GetAllSensors() override {
+    return ipmi_impl_->GetAllSensors();
+  }
+
+  absl::StatusOr<BmcSensorInterfaceInfo> GetSensor(
+      SensorNum sensor_num) override {
+    return ipmi_impl_->GetSensor(sensor_num);
+  }
+
+  absl::StatusOr<double> ReadSensor(SensorNum sensor_num) override {
+    return ipmi_impl_->ReadSensor(sensor_num);
+  }
+
   absl::Status ReadFru(uint16_t fru_id, size_t offset,
                        absl::Span<unsigned char> data) override {
     return ipmi_impl_->ReadFru(fru_id, offset, data);

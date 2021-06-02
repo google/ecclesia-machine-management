@@ -11,6 +11,7 @@ cc_library(
         ":dimm",
         ":nvme",
         ":pci_storage",
+        ":sleipnir_sensor",
         ":sysmodel_fru",
         ":thermal",
         "//ecclesia/lib/io/pci",
@@ -239,5 +240,21 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
+    ],
+)
+
+cc_library(
+    name = "sleipnir_sensor",
+    srcs = ["sleipnir_sensor.cc"],
+    hdrs = ["sleipnir_sensor.h"],
+    visibility = ["//ecclesia:magent_library_users"],
+    deps = [
+        "//ecclesia/magent/lib/ipmi",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/types:optional",
+        "@com_googlesource_code_re2//:re2",
     ],
 )

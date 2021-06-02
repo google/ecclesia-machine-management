@@ -349,7 +349,12 @@
                   {
                      "@odata.id" : "/redfish/v1/Chassis/Sleipnir/Assembly#/Assemblies/7/Oem/Google/Components/0",
                      "MemberId" : "0",
-                     "Name" : "i2cool"
+                     "Name" : "i2cool",
+                     "AssociatedWith": [
+                        {
+                           "@odata.id": "/redfish/v1/Chassis/Sleipnir/Sensors/sleipnir_KL1"
+                        }
+                     ]
                   }
                ]
             }
@@ -370,7 +375,12 @@
                   {
                      "@odata.id" : "/redfish/v1/Chassis/Sleipnir/Assembly#/Assemblies/8/Oem/Google/Components/0",
                      "MemberId" : "0",
-                     "Name" : "i2cool"
+                     "Name" : "i2cool",
+                     "AssociatedWith": [
+                        {
+                           "@odata.id": "/redfish/v1/Chassis/Sleipnir/Sensors/sleipnir_KL2"
+                        }
+                     ]
                   }
                ]
             }
@@ -391,7 +401,15 @@
                   {
                      "@odata.id" : "/redfish/v1/Chassis/Sleipnir/Assembly#/Assemblies/9/Oem/Google/Components/0",
                      "MemberId" : "0",
-                     "Name" : "fan_60mm"
+                     "Name" : "fan_60mm",
+                     "AssociatedWith": [
+                        {
+                           "@odata.id": "/redfish/v1/Chassis/Sleipnir/Sensors/sleipnir_Fan0_0_RPM"
+                        },
+                        {
+                           "@odata.id": "/redfish/v1/Chassis/Sleipnir/Sensors/sleipnir_Fan0_1_RPM"
+                        }
+                     ]
                   }
                ]
             }
@@ -412,7 +430,15 @@
                   {
                      "@odata.id" : "/redfish/v1/Chassis/Sleipnir/Assembly#/Assemblies/10/Oem/Google/Components/0",
                      "MemberId" : "0",
-                     "Name" : "fan_60mm"
+                     "Name" : "fan_60mm",
+                     "AssociatedWith": [
+                        {
+                           "@odata.id": "/redfish/v1/Chassis/Sleipnir/Sensors/sleipnir_Fan1_0_RPM"
+                        },
+                        {
+                           "@odata.id": "/redfish/v1/Chassis/Sleipnir/Sensors/sleipnir_Fan1_1_RPM"
+                        }
+                     ]
                   }
                ]
             }
@@ -433,7 +459,15 @@
                   {
                      "@odata.id" : "/redfish/v1/Chassis/Sleipnir/Assembly#/Assemblies/11/Oem/Google/Components/0",
                      "MemberId" : "0",
-                     "Name" : "fan_60mm"
+                     "Name" : "fan_60mm",
+                     "AssociatedWith": [
+                        {
+                           "@odata.id": "/redfish/v1/Chassis/Sleipnir/Sensors/sleipnir_Fan2_0_RPM"
+                        },
+                        {
+                           "@odata.id": "/redfish/v1/Chassis/Sleipnir/Sensors/sleipnir_Fan2_1_RPM"
+                        }
+                     ]
                   }
                ]
             }
@@ -567,7 +601,12 @@
                   {
                      "@odata.id" : "/redfish/v1/Chassis/Sleipnir/Assembly#/Assemblies/16/Oem/Google/Components/0",
                      "MemberId" : "0",
-                     "Name" : "i2cool"
+                     "Name" : "i2cool",
+                     "AssociatedWith": [
+                        {
+                           "@odata.id": "/redfish/v1/Chassis/Sleipnir/Sensors/sleipnir_KL0"
+                        }
+                     ]
                   }
                ]
             }
@@ -669,7 +708,12 @@
                   {
                      "@odata.id" : "/redfish/v1/Chassis/Sleipnir/Assembly#/Assemblies/20/Oem/Google/Components/0",
                      "MemberId" : "0",
-                     "Name" : "i2cool"
+                     "Name" : "i2cool",
+                     "AssociatedWith": [
+                        {
+                           "@odata.id": "/redfish/v1/Chassis/Sleipnir/Sensors/sleipnir_KL3"
+                        }
+                     ]
                   }
                ]
             }

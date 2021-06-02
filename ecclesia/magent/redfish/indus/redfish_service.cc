@@ -62,6 +62,8 @@
 #include "ecclesia/magent/redfish/indus/chassis.h"
 #include "ecclesia/magent/redfish/indus/drive.h"
 #include "ecclesia/magent/redfish/indus/pcie_slots.h"
+#include "ecclesia/magent/redfish/indus/sleipnir_sensor.h"
+#include "ecclesia/magent/redfish/indus/sleipnir_sensor_collection.h"
 #include "ecclesia/magent/redfish/indus/storage.h"
 #include "ecclesia/magent/redfish/indus/storage_controller.h"
 #include "ecclesia/magent/sysmodel/x86/fru.h"
@@ -412,6 +414,9 @@ IndusRedfishService::IndusRedfishService(
   resources_.push_back(CreateResource<StorageControllerCollection>(server));
   resources_.push_back(CreateResource<StorageController>(server, system_model));
   resources_.push_back(CreateResource<Drive>(server, system_model));
+  resources_.push_back(
+      CreateResource<SleipnirIpmiSensor>(server, system_model));
+  resources_.push_back(CreateResource<SensorCollection>(server, system_model));
   metadata_ = CreateMetadata(server, odata_metadata_path);
 }
 

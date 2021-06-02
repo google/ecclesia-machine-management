@@ -32,11 +32,13 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
+#include "absl/types/variant.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/status/macros.h"
@@ -71,6 +73,17 @@ int verbose = 0;
 }  // extern "C"
 
 namespace ecclesia {
+
+namespace {
+
+struct FreeDeleter {
+  inline void operator()(void *ptr) const { free(ptr); }
+};
+
+template <typename T>
+using SdrRecordUniquePtr = std::unique_ptr<T, FreeDeleter>;
+
+}  // namespace
 
 // IPMI Completion Codes.
 constexpr uint8_t IPMI_OK_CODE = 0x00;
@@ -224,14 +237,257 @@ void IpmitoolInterface::SdrEnd(std::any intf, std::any i) {
                       std::any_cast<struct ipmi_sdr_iterator *>(i));
 }
 
+IpmiSensor::Type ReadIpmiSensorTypeInternal(
+    const sdr_record_common_sensor &common,
+    absl::string_view printable_sensor) {
+  // See section 42.2 IpmiSensor Type Codes and Data in the IPMI spec
+  switch (common.sensor.type) {
+    case 0x01:
+      return SENSOR_TYPE_THERMAL;
+    case 0x02:
+      return SENSOR_TYPE_VOLTAGE;
+    case 0x03:
+      return SENSOR_TYPE_CURRENT;
+    case 0x04:
+      return SENSOR_TYPE_FANTACH;
+    case 0x1b:
+    case 0x25:
+      return SENSOR_TYPE_PRESENCE;
+    case 0x28:  // Management Subsys Health
+    case 0xc0:  // OEM Reserved (0xc0 - 0xff)
+      return SENSOR_TYPE_OEM_STATE;
+    // A generic module/board sensor. Profile sensor implementation in gBMC uses
+    // this type, but is not relevant to gsys API or internal handling.
+    case 0x15:
+    // The following sensor type codes have been seen in Google production
+    // but we have not assigned a monitoring type to them. These sensor
+    // types will not be inferred from these codes.
+    case 0x0b:  // "Other", used for power, but check unit to confirm
+    case 0x0c:  // Memory
+    case 0x21:  // Slot/Connector sensor
+    default:
+      break;
+  }
+
+  // Fallback to looking at the sensor unit to infer the sensor type
+  // See section 43.17 Sensor Unit Type Codes from the IPMI spec
+  switch (common.unit.type.base) {
+    case 1:
+      return SENSOR_TYPE_THERMAL;
+    case 4:
+      return SENSOR_TYPE_VOLTAGE;
+    case 5:
+      return SENSOR_TYPE_CURRENT;
+    case 6:
+      return SENSOR_TYPE_POWER;
+    case 18:
+      return SENSOR_TYPE_FANTACH;
+    case 22:
+      return SENSOR_TYPE_TIME;
+    case 41:
+      return SENSOR_TYPE_FANTACH;
+    default:
+      break;
+  }
+  WarningLog() << absl::StrFormat(
+      "ipmi sensor type could not be inferred, unknown sensor type 0x%x "
+      "unit 0x%x for %s",
+      common.sensor.type, common.unit.type.base, printable_sensor);
+  return SENSOR_TYPE_THERMAL;
+}
+
+class IpmiFullCompactSensor {
+ public:
+  // Default/copy constructors are deleted since it contains unique_ptr which
+  // allows only move semantics.
+  IpmiFullCompactSensor() = delete;
+  IpmiFullCompactSensor(const IpmiFullCompactSensor &) = delete;
+
+  // Move constructor, standard semantics
+  IpmiFullCompactSensor(IpmiFullCompactSensor &&) = default;
+
+  static std::unique_ptr<IpmiFullCompactSensor> Create(
+      struct sdr_record_common_sensor *sensor, uint8_t sdr_record_type) {
+    if (sdr_record_type == SDR_RECORD_TYPE_FULL_SENSOR ||
+        sdr_record_type == SDR_RECORD_TYPE_COMPACT_SENSOR) {
+      return absl::WrapUnique(
+          new IpmiFullCompactSensor(sensor, sdr_record_type));
+    }
+
+    WarningLog() << "unsupported sensor, must be either full or compact";
+
+    return nullptr;
+  }
+  std::string GetName() const { return name_; }
+  IpmiSensor::Unit GetUnit() const { return unit_; }
+  IpmiSensor::Type GetType() const { return type_; }
+  IpmiInterface::EntityIdentifier GetEntityIdentifier() const {
+    return {common_->entity.id, common_->entity.instance};
+  }
+  // bool IsSettable() const { return common_->sensor.init.settable; }
+  // bool IsSettable() const { return false; }
+  uint8_t GetLun() const { return common_->keys.lun; }
+  uint8_t GetId() const { return common_->keys.sensor_num; }
+  SensorNum GetSensorNum() const { return {GetLun(), GetId()}; }
+
+  bool IsFullType() const {
+    return (sdr_record_type_ == SDR_RECORD_TYPE_FULL_SENSOR);
+  }
+
+  absl::StatusOr<double> ReadValue(struct ipmi_intf *ipmi) const {
+    struct sensor_reading *read = ipmi_sdr_read_sensor_value(
+        ipmi, common_, sdr_record_type_, kSendorReadPrecision);
+
+    if (read == nullptr) {
+      return absl::InternalError(
+          absl::StrFormat("not supported %s", ToPrintableString()));
+    }
+
+    if (read->s_reading_unavailable) {
+      return absl::InternalError(absl::StrFormat(
+          "reading for %s is unavailable", ToPrintableString()));
+    }
+
+    if (read->s_scanning_disabled) {
+      return absl::InternalError(
+          absl::StrFormat("scanning for %s is disabled", ToPrintableString()));
+    }
+
+    if (!read->s_reading_valid) {
+      return absl::InternalError(
+          absl::StrFormat("error on reading for %s", ToPrintableString()));
+    }
+
+    double val = read->s_has_analog_value ? read->s_a_val : read->s_reading;
+    switch (type_) {
+      case SENSOR_TYPE_OEM_STATE:
+        val = (read->s_data2 & kStateByteAssertedBit) ? 1.0 : 0.0;
+        break;
+      case SENSOR_TYPE_PRESENCE:
+        // Usage: sensor type code 0x1b (Cable/Interconnect), 0x25 (Entity
+        // Presence). Details see IPMI spec 42.2 section.
+        //
+        // 1Bh: 00h -- cable/interconnect is connected
+        //      01h -- Configuration error.
+        // In this case we only check Configuration error bit (& with 2). We
+        // will fallback to "cable is connected" when error bit is not set.
+        //
+        // 25h: 00h -- entity present
+        //      01h -- entity absent
+        //      02h -- entity disabled
+        // In this case we are supposed to also check the 'entity disabled' bit,
+        // but bmc is not using the bit currently. So similarly we only check
+        // the entity absent bit (& with 2). Like case 1Bh, we fallback to
+        // "present" when absent bit is not set.
+        //
+        // What 'val' stands for is as the following table
+        //  __________________________________________________
+        //  | response.data[2] |    val    |      state      |
+        //  |        2         |     0     |     absent      |
+        //  |      not 2       |     1     |     present     |
+        //  --------------------------------------------------
+        val = (read->s_data2 & kPresenceSensorErrorBit) ? 0.0 : 1.0;
+        break;
+      default:
+        break;
+    }
+
+    // We now assume the value is valid
+    return val;
+  }
+
+  std::string ToPrintableString() const {
+    return absl::StrFormat("%d.%d(%s) %s sensor", GetLun(), GetId(), GetName(),
+                           IsFullType() ? "full" : "compact");
+  }
+
+ private:
+  IpmiFullCompactSensor(struct sdr_record_common_sensor *sensor,
+                        uint8_t sdr_record_type)
+      : common_(sensor), sdr_record_type_(sdr_record_type) {
+    if (sdr_record_type_ == SDR_RECORD_TYPE_FULL_SENSOR) {
+      auto *full = reinterpret_cast<struct sdr_record_full_sensor *>(sensor);
+      sensor_ = SdrRecordUniquePtr<struct sdr_record_full_sensor>(full);
+      name_ = std::string(reinterpret_cast<const char *>(full->id_string),
+                          full->id_code & 0x1f);
+    } else if (sdr_record_type_ == SDR_RECORD_TYPE_COMPACT_SENSOR) {
+      auto *compact =
+          reinterpret_cast<struct sdr_record_compact_sensor *>(sensor);
+      sensor_ = SdrRecordUniquePtr<struct sdr_record_compact_sensor>(compact);
+      name_ = std::string(reinterpret_cast<const char *>(compact->id_string),
+                          compact->id_code & 0x1f);
+    }
+
+    // NOTE: ReadTypeInternal() and ReadUnitInternal() needs to be called
+    // after setting common_, sdr_record_type_, name_.
+    type_ = ReadIpmiSensorTypeInternal(*common_, ToPrintableString());
+    unit_ = ReadUnitInternal();
+  }
+
+  IpmiSensor::Unit ReadUnitInternal() {
+    // See section 43.17 IpmiSensor Unit Type Codes from the IPMI spec
+    switch (common_->unit.type.base) {
+      case 0:
+        return SENSOR_UNIT_UNSPECIFIED;
+      case 1:
+        return SENSOR_UNIT_DEGREES;
+      case 4:
+        return SENSOR_UNIT_VOLTS;
+      case 5:
+        return SENSOR_UNIT_AMPS;
+      case 6:
+        return SENSOR_UNIT_WATTS;
+      case 18:
+        return SENSOR_UNIT_RPM;
+      case 22:
+        return SENSOR_UNIT_SECONDS;
+      case 41:
+        return SENSOR_UNIT_RPM;
+      default:
+        break;
+    }
+    WarningLog() << absl::StrFormat("unknown sensor unit 0x%x for %s",
+                                    common_->unit.type.base,
+                                    ToPrintableString());
+    return SENSOR_UNIT_UNSPECIFIED;
+  }
+
+  struct sdr_record_full_sensor *GetFullSensorPtr() const {
+    if (IsFullType()) {
+      return absl::get<SdrRecordUniquePtr<struct sdr_record_full_sensor>>(
+                 sensor_)
+          .get();
+    }
+    return nullptr;
+  }
+
+  // When reading a sensor with ipmi_sdr_read_sensor_value(),
+  // s_a_str of struct sensor_reading, which is a return value, contains
+  // analog value as a string format. `kSendorReadPrecision` specifies how
+  // many digits under decimal point will be shown.
+  // However, s_a_str is NOT used. So this will NOT affect.
+  static constexpr int kSendorReadPrecision = 3;
+
+  static constexpr int kStateByteAssertedBit = 0x02;
+  static constexpr int kPresenceSensorErrorBit = 0x02;
+
+  absl::variant<SdrRecordUniquePtr<struct sdr_record_full_sensor>,
+                SdrRecordUniquePtr<struct sdr_record_compact_sensor>>
+      sensor_;
+
+  struct sdr_record_common_sensor *common_;
+  uint8_t sdr_record_type_;
+
+  std::string name_;
+  IpmiSensor::Unit unit_;
+  IpmiSensor::Type type_;
+};
+
 class IpmitoolImpl : public IpmiInterface {
  public:
   struct FreeDeleter {
     inline void operator()(void *ptr) const { free(ptr); }
   };
-
-  template <typename T>
-  using SdrRecordUniquePtr = std::unique_ptr<T, FreeDeleter>;
 
   explicit IpmitoolImpl(
       absl::optional<ecclesia::MagentConfig::IpmiCredential> cred)
@@ -256,6 +512,52 @@ class IpmitoolImpl : public IpmiInterface {
       frus.push_back(fru);
     }
     return frus;
+  }
+
+  std::vector<BmcSensorInterfaceInfo> GetAllSensors() override {
+    if (fullcompact_sensors_cache_.empty()) {
+      if (!FindAllSensors().ok()) return {};
+    }
+    std::vector<BmcSensorInterfaceInfo> sensors;
+    for (const auto &[sensor_num, sensor] : fullcompact_sensors_cache_) {
+      BmcSensorInterfaceInfo info;
+      info.id = sensor_num;
+      info.name = sensor->GetName();
+      info.type = sensor->GetType();
+      info.unit = sensor->GetUnit();
+      // info.settable = sensor->IsSettable();
+      info.entity_id = sensor->GetEntityIdentifier();
+      sensors.push_back(info);
+    }
+    return sensors;
+  }
+
+  absl::StatusOr<BmcSensorInterfaceInfo> GetSensor(
+      SensorNum sensor_num) override {
+    if (!intf_) {
+      return absl::InternalError("Ipmi interface: intf_ is nullptr.");
+    }
+
+    ECCLESIA_ASSIGN_OR_RETURN(IpmiFullCompactSensor * sensor,
+                              GrabSensorInternal(intf_, sensor_num));
+
+    return BmcSensorInterfaceInfo{.id = sensor_num,
+                                  .name = sensor->GetName(),
+                                  .type = sensor->GetType(),
+                                  .unit = sensor->GetUnit(),
+                                  // .settable = sensor->IsSettable(),
+                                  .entity_id = sensor->GetEntityIdentifier()};
+  }
+
+  absl::StatusOr<double> ReadSensor(SensorNum sensor_num) override {
+    if (!intf_) {
+      return absl::InternalError("Ipmi interface: intf_ is nullptr.");
+    }
+
+    ECCLESIA_ASSIGN_OR_RETURN(IpmiFullCompactSensor * sensor,
+                              GrabSensorInternal(intf_, sensor_num));
+
+    return sensor->ReadValue(intf_);
   }
 
   absl::Status ReadFru(uint16_t fru_id, size_t offset,
@@ -294,6 +596,12 @@ class IpmitoolImpl : public IpmiInterface {
   absl::flat_hash_map<uint16_t,
                       SdrRecordUniquePtr<struct sdr_record_fru_locator>>
       frus_cache_;
+  // A map of IPMI sensor number to SDR records types FULL and COMPACT.
+  // This map is only modified during construction and then serves as a cache
+  // of the read FRU information.
+  absl::flat_hash_map<SensorNum, std::unique_ptr<IpmiFullCompactSensor>>
+      fullcompact_sensors_cache_;
+
   absl::optional<ecclesia::MagentConfig::IpmiCredential> cred_;
   ipmi_intf *intf_;
   IpmitoolInterface ipmitool_intf_;
@@ -511,6 +819,47 @@ class IpmitoolImpl : public IpmiInterface {
     return status;
   }
 
+  absl::Status FindAllSensors() {
+    if (!intf_) {
+      return absl::InternalError("Ipmi interface: intf_ is nullptr.");
+    }
+
+    struct ipmi_sdr_iterator *itr = nullptr;
+    if ((itr = std::any_cast<struct ipmi_sdr_iterator *>(
+             ipmitool_intf_.SdrStart(intf_, 0))) == nullptr) {
+      return absl::InternalError("Unable to open SDR for reading.");
+    }
+
+    absl::Status status;
+    struct sdr_get_rs *header;
+    while ((header = std::any_cast<struct sdr_get_rs *>(
+                ipmitool_intf_.SdrGetNextHeader(intf_, itr))) != nullptr) {
+      if (header->type == SDR_RECORD_TYPE_FULL_SENSOR ||
+          header->type == SDR_RECORD_TYPE_COMPACT_SENSOR) {
+        struct sdr_record_common_sensor *rec;
+        rec = reinterpret_cast<struct sdr_record_common_sensor *>(
+            ipmitool_intf_.SdrGetRecord(intf_, header, itr));
+        if (rec == nullptr) {
+          InfoLog() << "Fail to get SDR record";
+          continue;
+        }
+
+        std::unique_ptr<IpmiFullCompactSensor> sensor =
+            IpmiFullCompactSensor::Create(rec, header->type);
+        if (sensor == nullptr) {
+          continue;
+        }
+
+        fullcompact_sensors_cache_.emplace(sensor->GetSensorNum(),
+                                           std::move(sensor));
+      }
+    }
+    // Frees the memory allocated by ipmi_sdr_start
+    ipmitool_intf_.SdrEnd(intf_, itr);
+
+    return status;
+  }
+
   std::string IpmiResponseToString(uint8_t code) {
     const struct valstr *curr = &completion_code_vals[0];
 
@@ -551,6 +900,94 @@ class IpmitoolImpl : public IpmiInterface {
   std::string ReadFruName(struct sdr_record_fru_locator *fru) {
     return std::string(reinterpret_cast<const char *>(fru->id_string),
                        fru->id_code & 0x1f);
+  }
+
+  // Find the SDR for the specified sensor.
+  absl::Status GrabSensorSdrInternal(struct ipmi_intf *ipmi,
+                                     SensorNum sensor_num) {
+    // Fake an iterator.
+    struct ipmi_sdr_iterator itr, *sdr_list_itr = nullptr;
+    memset(&itr, 0x00, sizeof(itr));
+
+    // Try to grab some details (could just call get_device_id ourselves, but
+    // this is just as straightforward.
+    sdr_list_itr = ipmi_sdr_start(ipmi, 0);
+    if (sdr_list_itr == nullptr) {
+      return absl::InternalError("Unable to open SDR for reading");
+    }
+
+    itr.reservation = sdr_list_itr->reservation;
+    itr.use_built_in = sdr_list_itr->use_built_in;
+    itr.next = sensor_num.id;
+
+    // store the SDR id used for logging before freeing sdr_list_itr
+    int sdr_id = sdr_list_itr->next;
+
+    // Frees the memory allocated by ipmi_sdr_start
+    ipmi_sdr_end(ipmi, sdr_list_itr);
+
+    // Returns itr's current, and sets itr->next.
+    struct sdr_get_rs *header;
+    while ((header = ipmi_sdr_get_next_header(ipmi, &itr)) != nullptr) {
+      if (header->type != SDR_RECORD_TYPE_FULL_SENSOR &&
+          header->type != SDR_RECORD_TYPE_COMPACT_SENSOR &&
+          header->type != SDR_RECORD_TYPE_EVENTONLY_SENSOR) {
+        continue;
+      }
+
+      struct sdr_record_common_sensor *rec;
+      // Allocates memory of size (header->length+1) to hold raw sdr data
+      // in ipmi_sdr_get_record
+      rec = reinterpret_cast<struct sdr_record_common_sensor *>(
+          ipmi_sdr_get_record(ipmi, header, &itr));
+
+      if (rec == nullptr) {
+        continue;
+      }
+
+      if (header->type == SDR_RECORD_TYPE_FULL_SENSOR ||
+          header->type == SDR_RECORD_TYPE_COMPACT_SENSOR) {
+        auto sensor = IpmiFullCompactSensor::Create(rec, header->type);
+        if (sensor == nullptr) {
+          continue;
+        }
+        if (sensor->GetId() != sensor_num.id ||
+            sensor->GetLun() != sensor_num.lun) {
+          continue;
+        }
+        InfoLog() << absl::StrFormat("Found %s at SDR id %d",
+                                     sensor->ToPrintableString(), sdr_id);
+        fullcompact_sensors_cache_.emplace(sensor->GetSensorNum(),
+                                           std::move(sensor));
+      } else {
+        return absl::InternalError(absl::StrFormat(
+            "Unexpected header type %d for SDR id %d", header->type, sdr_id));
+      }
+
+      return absl::OkStatus();
+    }
+    return absl::NotFoundError(absl::StrFormat("SDR for %d:%d not found",
+                                               sensor_num.lun, sensor_num.id));
+  }
+
+  absl::StatusOr<IpmiFullCompactSensor *> GrabSensorInternal(
+      struct ipmi_intf *ipmi, SensorNum sensor_num) {
+    // Look up the sdr_record from the sensor map, and look it up via ipmi if
+    // it's missing.
+    auto sensor_iter = fullcompact_sensors_cache_.find(sensor_num);
+    if (sensor_iter == fullcompact_sensors_cache_.end()) {
+      auto result = GrabSensorSdrInternal(ipmi, sensor_num);
+      if (result.ok()) {
+        sensor_iter = fullcompact_sensors_cache_.find(sensor_num);
+      }
+    }
+
+    if (sensor_iter == fullcompact_sensors_cache_.end()) {
+      return absl::NotFoundError(absl::StrFormat(
+          "ipmi has no sensor number %d.%d", sensor_num.lun, sensor_num.id));
+    }
+
+    return sensor_iter->second.get();
   }
 };
 

@@ -22,6 +22,9 @@
                         },
                         {
                            "@odata.id" : "/redfish/v1/Systems/system/Storage/U2_6"
+                        },
+                        {
+                           "@odata.id": "/redfish/v1/Chassis/Sleipnir/Sensors/sleipnir_nvme6"
                         }
                      ],
                      "MemberId" : "0",
@@ -29,7 +32,7 @@
                   },
                   {
                      "@odata.id" : "/redfish/v1/Systems/system/Storage/U2_6/Drives/0/Assembly#/Assemblies/0/Oem/Google/Components/1",
-                     "AssociatedWith" : [],
+                     "AssociatedWith": [],
                      "MemberId" : "1",
                      "Name" : "nvme"
                   }

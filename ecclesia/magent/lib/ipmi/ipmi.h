@@ -25,8 +25,11 @@
 #include <tuple>
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/types/span.h"
+#include "ecclesia/magent/lib/ipmi/sensor.h"
 
 namespace ecclesia {
 
@@ -59,10 +62,39 @@ class IpmiInterface {
     uint16_t fru_id;
   };
 
+  struct BmcSensorInterfaceInfo {
+    SensorNum id;
+    std::string name;
+    IpmiSensor::Type type;
+    IpmiSensor::Unit unit;
+    bool settable;
+    EntityIdentifier entity_id;
+    absl::optional<double> min_threshold;
+    absl::optional<double> max_threshold;
+    friend bool operator==(const BmcSensorInterfaceInfo& o1,
+                           const BmcSensorInterfaceInfo& o2) {
+      return o1.id == o2.id && o1.name == o2.name && o1.type == o2.type &&
+             o1.unit == o2.unit && o1.settable == o2.settable &&
+             o1.min_threshold == o2.min_threshold &&
+             o1.max_threshold == o2.max_threshold;
+    }
+    friend bool operator!=(const BmcSensorInterfaceInfo& o1,
+                           const BmcSensorInterfaceInfo& o2) {
+      return !(o1 == o2);
+    }
+  };
+
   IpmiInterface() {}
   virtual ~IpmiInterface() {}
 
   virtual std::vector<BmcFruInterfaceInfo> GetAllFrus() = 0;
+
+  virtual std::vector<BmcSensorInterfaceInfo> GetAllSensors() = 0;
+
+  virtual absl::StatusOr<BmcSensorInterfaceInfo> GetSensor(
+      SensorNum sensor_num) = 0;
+
+  virtual absl::StatusOr<double> ReadSensor(SensorNum sensor_num) = 0;
 
   // Reads FRU raw data
   // We will read bytes starting from offset from fru identified by fru_id
@@ -72,6 +104,23 @@ class IpmiInterface {
 
   // Gets the FRU size
   virtual absl::Status GetFruSize(uint16_t fru_id, uint16_t *size) = 0;
+};
+
+struct IpmiCommandIdentifier {
+  uint8_t netfn;
+  uint8_t lun;
+  uint8_t command;
+  bool operator==(const IpmiCommandIdentifier& other) const {
+    return std::tie(netfn, lun, command) ==
+           std::tie(other.netfn, other.lun, other.command);
+  }
+  bool operator!=(const IpmiCommandIdentifier& other) const {
+    return !(*this == other);
+  }
+  template <typename H>
+  friend H AbslHashValue(H h, const IpmiCommandIdentifier& id) {
+    return H::combine(std::move(h), id.netfn, id.lun, id.command);
+  }
 };
 
 }  // namespace ecclesia
