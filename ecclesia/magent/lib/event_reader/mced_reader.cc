@@ -79,7 +79,8 @@ FILE *InitSocket(const std::string &socket_path,
   return socket_file;
 }
 
-// This function is mostly borrowed from platforms/machine_check/mced.cc
+// This function is mostly borrowed from
+// third_party/mosys/modules/architecture/common/mce/mced.cc
 // Parses a line of text obtained from the mcedaemon into the MachineCheck
 // structure
 absl::optional<MachineCheck> ParseLine(absl::string_view mced_line) {
