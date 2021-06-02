@@ -18,6 +18,7 @@
 
 #include <string>
 
+#include "absl/strings/match.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "ecclesia/lib/smbios/structures.emb.h"
@@ -54,15 +55,42 @@ CpuSignature ProcessorInformation::GetSignaturex86() const {
   return signature;
 }
 
+CpuSignature ProcessorInformation::GetSignatureAmd() const {
+  CpuSignature signature;
+
+  auto view = this->GetMessageView();
+  signature.vendor = this->GetString(view.manufacturer_snum().Read());
+  signature.type = view.processor_id_x86().processor_type().Read();
+
+  // From https://en.wikichip.org/wiki/amd/cpuid
+  int family_id = view.processor_id_x86().family_id().Read();
+  int family_id_ext = view.processor_id_x86().family_id_ext().Read();
+  int model = view.processor_id_x86().model().Read();
+  int model_ext = view.processor_id_x86().model_ext().Read();
+  signature.family = family_id < 0x0F ? family_id : family_id + family_id_ext;
+  signature.model = family_id < 0x0F ? model : ((model_ext << 4) | model);
+  signature.stepping = view.processor_id_x86().stepping_id().Read();
+  return signature;
+}
+
 absl::optional<CpuSignature> ProcessorInformation::GetSignature() const {
   if (IsIntelProcessor()) {
     return this->GetSignaturex86();
+  }
+  if (IsAmdProcessor()) {
+    return this->GetSignatureAmd();
   }
   return absl::nullopt;
 }
 
 bool ProcessorInformation::IsIntelProcessor() const {
   return this->GetProcessorFamily() == INTEL_XEON;
+}
+
+bool ProcessorInformation::IsAmdProcessor() const {
+  return absl::StrContains(
+      GetString(GetMessageView().manufacturer_snum().Read()),
+      "Advanced Micro Devices");
 }
 
 }  // namespace ecclesia

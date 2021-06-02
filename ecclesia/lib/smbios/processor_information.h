@@ -69,6 +69,8 @@ class ProcessorInformation {
 
   bool IsIntelProcessor() const;
 
+  bool IsAmdProcessor() const;
+
   uint16_t GetCoreCount() const {
     if (this->GetMessageView().has_core_count2().Value()) {
       return this->GetMessageView().core_count2().Read();
@@ -101,6 +103,8 @@ class ProcessorInformation {
 
  private:
   CpuSignature GetSignaturex86() const;
+  CpuSignature GetSignatureAmd() const;
+
   const TableEntry *table_entry_;
 };
 
