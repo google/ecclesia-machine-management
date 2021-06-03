@@ -32,7 +32,10 @@
 #ifndef ECCLESIA_LIB_PROTOBUF_FIELD_MASK_H_
 #define ECCLESIA_LIB_PROTOBUF_FIELD_MASK_H_
 
+#include <vector>
+
 #include "google/protobuf/field_mask.pb.h"
+#include "google/protobuf/descriptor.h"
 #include "google/protobuf/message.h"
 #include "absl/strings/string_view.h"
 
@@ -46,6 +49,13 @@ void Intersect(const ::google::protobuf::FieldMask& mask1,
                ::google::protobuf::FieldMask* out);
 bool TrimMessage(const ::google::protobuf::FieldMask& mask,
                  ::google::protobuf::Message* message);
+bool GetFieldDescriptors(
+    const ::google::protobuf::Descriptor* descriptor, absl::string_view path,
+    std::vector<const ::google::protobuf::FieldDescriptor*>* field_descriptors);
+template <typename T>
+bool IsValidPath(absl::string_view path) {
+  return GetFieldDescriptors(T::descriptor(), path, nullptr);
+}
 
 }  // namespace ecclesia_field_mask_util
 }  // namespace ecclesia
