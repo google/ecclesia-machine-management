@@ -32,13 +32,17 @@ namespace libredfish {
 // are separate from the PropertyDefinitions for now as we cannot define the
 // Redfish types "Array" and "Object" at the moment.
 
+inline constexpr char kRfPropertyActions[] = "Actions";
+inline constexpr char kRfPropertyAllowableValues[] = "AllowableValues";
 inline constexpr char kRfPropertyAssemblies[] = "Assemblies";
 inline constexpr char kRfPropertyAssembly[] = "Assembly";
 inline constexpr char kRfPropertyControllers[] = "Controllers";
 inline constexpr char kRfPropertyChassis[] = "Chassis";
+inline constexpr char kRfPropertyChassisReset[] = "#Chassis.Reset";
 inline constexpr char kRfPropertyMemory[] = "Memory";
 inline constexpr char kRfPropertyStorage[] = "Storage";
 inline constexpr char kRfPropertyDrives[] = "Drives";
+inline constexpr char kRfPropertyDriveReset[] = "#Drive.Reset";
 inline constexpr char kRfPropertyProtocolOem[] = "OEM";
 inline constexpr char kRfPropertyOem[] = "Oem";
 inline constexpr char kRfPropertyProcessors[] = "Processors";
@@ -50,6 +54,7 @@ inline constexpr char kRfPropertyThermal[] = "Thermal";
 inline constexpr char kRfPropertyTemperatures[] = "Temperatures";
 inline constexpr char kRfPropertyTemperaturesCount[] =
     "Temperatures@odata.count";
+inline constexpr char kRfPropertyParameters[] = "Parameters";
 inline constexpr char kRfPropertyPower[] = "Power";
 inline constexpr char kRfPropertyPowerWatts[] = "PowerWatts";
 inline constexpr char kRfPropertyVoltages[] = "Voltages";
@@ -171,6 +176,8 @@ DEFINE_REDFISH_PROPERTY(PropertyLanesInUse, int, "LanesInUse");
 DEFINE_REDFISH_PROPERTY(PropertyMaxLanes, int, "MaxLanes");
 DEFINE_REDFISH_PROPERTY(PropertyProcessorIdStep, std::string, "Step");
 DEFINE_REDFISH_PROPERTY(PropertyDataSourceUri, std::string, "DataSourceUri");
+DEFINE_REDFISH_PROPERTY(PropertyRedfishActionInfo, std::string,
+                        "@Redfish.ActionInfo");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
