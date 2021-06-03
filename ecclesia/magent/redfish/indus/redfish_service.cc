@@ -16,6 +16,8 @@
 
 #include "ecclesia/magent/redfish/indus/redfish_service.h"
 
+#include <sys/types.h>
+
 #include <memory>
 #include <string>
 #include <utility>
@@ -30,8 +32,13 @@
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
+#include "ecclesia/lib/io/pci/discovery.h"
+#include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/usb/ids.h"
 #include "ecclesia/lib/io/usb/usb.h"
+#include "ecclesia/lib/logging/globals.h"
+#include "ecclesia/lib/logging/logging.h"
+#include "ecclesia/lib/types/fixed_range_int.h"
 #include "ecclesia/magent/lib/event_logger/indus/system_event_visitors.h"
 #include "ecclesia/magent/redfish/common/memory.h"
 #include "ecclesia/magent/redfish/common/memory_collection.h"
@@ -142,55 +149,11 @@ constexpr char kSpicy16AssemblyStaticJson[] = R"json({
 }
 })json";
 
-// A helper function to create an AssemblyModifier that can be used to append
-// spicy16 interposer card FRU in Indus assemblies. If the input fru has value,
-// the FRU info will also be added to the assembly.
-Assembly::AssemblyModifier CreateModifierToAppendSpicy16Fru(
-    int member_id, int connector_id, absl::optional<SysmodelFru> fru) {
-  return [fru, member_id, connector_id](
-             absl::flat_hash_map<std::string, Json::Value> &assemblies) {
-    // Construct JSON value with spicy16 assembly static info.
-    Json::Reader reader;
-    Json::Value value;
-    reader.parse(kSpicy16AssemblyStaticJson, value);
+// The indices of the PE2 & PE3 connectors as components of Indus mobo assembly.
+constexpr int kPe2ConnectorComponentIndex = 29;
+constexpr int kPe3ConnectorComponentIndex = 30;
 
-    // Add dynamic info in the JSON content.
-    std::string self_url =
-        absl::StrFormat("%s/Assembly#/Assemblies/%d", kChassisUri, member_id);
-    value[kOdataId] = self_url;
-    value[kMemberId] = member_id;
-    Json::Value attached_to;
-    attached_to[kOdataId] =
-        absl::StrFormat("%s/Assembly#/Assemblies/0/Oem/Google/Components/%d",
-                        kChassisUri, connector_id);
-    value[kOem][kGoogle][kAttachedTo].append(attached_to);
-    Json::Value associated_with;
-    associated_with[kOdataId] = self_url;
-    value[kOem][kGoogle][kComponents][0][kAssociatedWith].append(
-        associated_with);
-    value[kOem][kGoogle][kComponents][0][kOdataId] =
-        absl::StrFormat("%s/Assembly#/Assemblies/%d/Oem/Google/Components/0",
-                        kChassisUri, member_id);
-
-    value[kOem][kGoogle][kComponents][1][kOdataId] =
-        absl::StrFormat("%s/Assembly#/Assemblies/%d/Oem/Google/Components/1",
-                        kChassisUri, member_id);
-    if (fru.has_value()) {
-      value[kPartNumber] = std::string(fru->GetPartNumber());
-      value[kSerialNumber] = std::string(fru->GetSerialNumber());
-      value[kVendor] = std::string(fru->GetManufacturer());
-    }
-    const std::string target_url = absl::StrCat(kChassisUri, "/Assembly");
-    auto assembly_iter = assemblies.find(target_url);
-    if (assembly_iter == assemblies.end()) {
-      return absl::NotFoundError(absl::StrCat(
-          "Failed to find a matched assembly with URL: ", target_url));
-    }
-    auto &assembly_resource_json = assembly_iter->second;
-    assembly_resource_json[kAssemblies].append(value);
-    return absl::OkStatus();
-  };
-}
+constexpr absl::string_view kSweet16CableAssemblyName = "sweet16_cable";
 
 // Mapping for PCIe Device ACPI Path to CPU roots (pulled from indus board
 // layout)
@@ -228,16 +191,102 @@ std::string GetComponentNameForIoCardPciLocation(int pci_device_function) {
   return absl::StrFormat("function%d", pci_device_function);
 }
 
-// The indices of the spicy16 assembly in the Indus assemblies array.
-constexpr int kPe2Spicy16AssemblyIndex = 18;
-constexpr int kPe3Spicy16AssemblyIndex = 19;
-// The indices of the PE2 & PE3 connectors as components of Indus mobo assembly.
-constexpr int kPe2ConnectorComponentIndex = 31;
-constexpr int kPe3ConnectorComponentIndex = 32;
-
 constexpr absl::string_view kSystemName = "Indus";
 constexpr absl::string_view kSoftwareName = "magent-indus";
 }  // namespace
+
+Assembly::AssemblyModifier CreateModifierToAttachSpicy16Fru(
+    int connector_id, absl::optional<SysmodelFru> fru) {
+  return [fru, connector_id](
+             absl::flat_hash_map<std::string, Json::Value> &assemblies) {
+    // Step 1: create and append the spicy16 FRU to the Indus Assemblies.
+    const std::string indus_assembly_url =
+        absl::StrCat(kChassisUri, "/Assembly");
+    auto assembly_iter = assemblies.find(indus_assembly_url);
+    if (assembly_iter == assemblies.end()) {
+      return absl::NotFoundError(absl::StrCat(
+          "Failed to find a matched assembly with URL: ", indus_assembly_url));
+    }
+    InfoLog() << "Attaching Spicy16 intp card to Assemblies";
+    auto &indus_assembly_resource_json = assembly_iter->second;
+    int member_id = indus_assembly_resource_json[kAssemblies].size();
+    // 1.1 Construct JSON value with spicy16 assembly static info.
+    Json::Reader reader;
+    Json::Value value;
+    reader.parse(kSpicy16AssemblyStaticJson, value);
+    // Add dynamic info in the JSON content.
+    std::string self_url =
+        absl::StrFormat("%s/Assembly#/Assemblies/%d", kChassisUri, member_id);
+    value[kOdataId] = self_url;
+    value[kMemberId] = member_id;
+    Json::Value attached_to;
+    attached_to[kOdataId] =
+        absl::StrFormat("%s/Assembly#/Assemblies/0/Oem/Google/Components/%d",
+                        kChassisUri, connector_id);
+    value[kOem][kGoogle][kAttachedTo].append(attached_to);
+    Json::Value associated_with;
+    associated_with[kOdataId] = self_url;
+    value[kOem][kGoogle][kComponents][0][kAssociatedWith].append(
+        associated_with);
+    value[kOem][kGoogle][kComponents][0][kOdataId] =
+        absl::StrFormat("%s/Assembly#/Assemblies/%d/Oem/Google/Components/0",
+                        kChassisUri, member_id);
+
+    const std::string spicy16_downstream_connector_url =
+        absl::StrFormat("%s/Assembly#/Assemblies/%d/Oem/Google/Components/1",
+                        kChassisUri, member_id);
+    value[kOem][kGoogle][kComponents][1][kOdataId] =
+        spicy16_downstream_connector_url;
+
+    if (fru.has_value()) {
+      value[kPartNumber] = std::string(fru->GetPartNumber());
+      value[kSerialNumber] = std::string(fru->GetSerialNumber());
+      value[kVendor] = std::string(fru->GetManufacturer());
+    }
+    // 1.2 Append the json to the end of the assemblies array. The member ID is
+    // already updated.
+    indus_assembly_resource_json[kAssemblies].append(value);
+
+    // Step 2: modify the reference of the created spicy16 assembly in Sleipnir
+    // Assemblies.
+    const std::string sleipnir_assembly_url =
+        absl::StrCat(kChassisCollectionUri, "/Sleipnir/Assembly");
+    assembly_iter = assemblies.find(sleipnir_assembly_url);
+    if (assembly_iter == assemblies.end()) {
+      return absl::NotFoundError(
+          absl::StrCat("Failed to find a matched assembly with URL: ",
+                       sleipnir_assembly_url));
+    }
+    auto &sleipnir_assembly_resource_json = assembly_iter->second;
+    // 2.1 Find the index of the sweet16 cable which should be plugged into the
+    // spicy16 interposer card downstream connector.
+    int matched_sweet16_idx = -1;
+    for (int idx = 0; idx < sleipnir_assembly_resource_json[kAssemblies].size();
+         idx++) {
+      if (sleipnir_assembly_resource_json[kAssemblies][idx][kName].asString() ==
+          kSweet16CableAssemblyName) {
+        matched_sweet16_idx = idx;
+        // Here it assumes there are two spicy16 intp cards and two sweet16
+        // cables. And the first & second sweet16 cable match the spicy16 card
+        // in PE2 & PE3 connectors, respectively.
+        if (connector_id == kPe2ConnectorComponentIndex) {
+          break;
+        }
+      }
+    }
+    if (matched_sweet16_idx == -1) {
+      return absl::NotFoundError(absl::StrCat(
+          "Failed to find a matched sweet16 assembly in resource with URL: ",
+          sleipnir_assembly_url));
+    }
+    InfoLog() << "Modifying Sweet16 AttachedTo info";
+    auto &sweet16_assembly =
+        sleipnir_assembly_resource_json[kAssemblies][matched_sweet16_idx];
+    sweet16_assembly[kOem][kGoogle][kAttachedTo][0][kOdataId] =
+        spicy16_downstream_connector_url;
+    return absl::OkStatus();
+  };
+}
 
 IndusRedfishService::IndusRedfishService(
     tensorflow::serving::net_http::HTTPServerInterface *server,
@@ -291,25 +340,17 @@ IndusRedfishService::IndusRedfishService(
   //  spicy16 is added.
   auto sleipnir_location = FindUsbDeviceWithSignature(
       system_model->GetUsbDiscoveryIntf(), kUsbSignatureSleipnirBmc);
-  // Add spicy16 intp that corresponds to PE2.
+  // Add spicy16 intp card that corresponds to PE2.
   maybe_fru = GetValidFru(system_model->GetFruReader("spicy16_intp0"));
-  if (maybe_fru.has_value()) {
-    assembly_modifiers.push_back(CreateModifierToAppendSpicy16Fru(
-        kPe2Spicy16AssemblyIndex, kPe2ConnectorComponentIndex,
-        maybe_fru.value()));
-  } else if (sleipnir_location.ok()) {
-    assembly_modifiers.push_back(CreateModifierToAppendSpicy16Fru(
-        kPe2Spicy16AssemblyIndex, kPe2ConnectorComponentIndex, absl::nullopt));
+  if (maybe_fru.has_value() || sleipnir_location.ok()) {
+    assembly_modifiers.push_back(CreateModifierToAttachSpicy16Fru(
+        kPe2ConnectorComponentIndex, maybe_fru));
   }
-  // Add spicy16 intp that corresponds to PE3.
+  // Add spicy16 intp card that corresponds to PE3.
   maybe_fru = GetValidFru(system_model->GetFruReader("spicy16_intp4"));
-  if (maybe_fru.has_value()) {
-    assembly_modifiers.push_back(CreateModifierToAppendSpicy16Fru(
-        kPe3Spicy16AssemblyIndex, kPe3ConnectorComponentIndex,
-        maybe_fru.value()));
-  } else if (sleipnir_location.ok()) {
-    assembly_modifiers.push_back(CreateModifierToAppendSpicy16Fru(
-        kPe3Spicy16AssemblyIndex, kPe3ConnectorComponentIndex, absl::nullopt));
+  if (maybe_fru.has_value() || sleipnir_location.ok()) {
+    assembly_modifiers.push_back(CreateModifierToAttachSpicy16Fru(
+        kPe3ConnectorComponentIndex, maybe_fru));
   }
 
   // Iterate through all storage devices to attach PCIeFunctions

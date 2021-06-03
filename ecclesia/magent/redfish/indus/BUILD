@@ -21,10 +21,12 @@ cc_library(
     ],
     visibility = ["//ecclesia:magent_frontend_users"],
     deps = [
+        "//ecclesia/lib/io/pci:discovery",
         "//ecclesia/lib/io/pci:location",
         "//ecclesia/lib/io/usb",
         "//ecclesia/lib/io/usb:ids",
         "//ecclesia/lib/logging",
+        "//ecclesia/lib/types:fixed_range_int",
         "//ecclesia/magent/lib/event_logger/indus:indus_system_event_visitors",
         "//ecclesia/magent/lib/ipmi",
         "//ecclesia/magent/lib/ipmi:interface_options",
@@ -47,7 +49,6 @@ cc_library(
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:variant",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        "@com_googlesource_code_re2//:re2",
         "@com_jsoncpp//:json",
     ],
 )

@@ -18,15 +18,25 @@
 #define ECCLESIA_MAGENT_REDFISH_INDUS_REDFISH_SERVICE_H_
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "absl/strings/string_view.h"
+#include "ecclesia/magent/redfish/core/assembly.h"
 #include "ecclesia/magent/redfish/core/odata_metadata.h"
 #include "ecclesia/magent/redfish/core/resource.h"
+#include "ecclesia/magent/sysmodel/x86/fru.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 
 namespace ecclesia {
+
+// A helper function to create an AssemblyModifier that can be used to attach
+// spicy16 interposer card FRU in Indus assemblies and also modify the
+// downstream sweet16 cable in the Sleipnir assemblies. If the input fru has
+// value, the FRU info will also be added to the assembly.
+Assembly::AssemblyModifier CreateModifierToAttachSpicy16Fru(
+    int connector_id, absl::optional<SysmodelFru> fru);
 
 // The top level class which encapsulates all the redfish resources exported by
 // the management agent.

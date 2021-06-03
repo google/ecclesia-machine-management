@@ -18,6 +18,7 @@
 #define ECCLESIA_MAGENT_REDFISH_COMMON_SENSOR_COLLECTION_H_
 
 #include <string>
+#include <vector>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
@@ -27,7 +28,6 @@
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
 #include "json/value.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
-#include "re2/re2.h"
 
 namespace ecclesia {
 

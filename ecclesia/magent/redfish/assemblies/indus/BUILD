@@ -13,3 +13,11 @@ pkg_tar(
         "//ecclesia:magent_library_users",
     ],
 )
+
+filegroup(
+    name = "assemblies_json_files",
+    srcs = glob(["assemblies/*.json"]),
+    visibility = [
+        "//ecclesia:magent_library_users",
+    ],
+)
