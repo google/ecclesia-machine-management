@@ -1,0 +1,20 @@
+--- include/ipmitool/ipmi_sdr.h	2016-05-29 13:20:14.000000000 -0700
++++ include/ipmitool/ipmi_sdr_new.h	2021-06-02 16:54:18.738881190 -0700
+@@ -340,7 +340,7 @@
+ 	struct {
+ 		struct {
+ #if WORDS_BIGENDIAN
+-			uint8_t __reserved:1;
++			uint8_t settable:1;
+ 			uint8_t scanning:1;
+ 			uint8_t events:1;
+ 			uint8_t thresholds:1;
+@@ -356,7 +356,7 @@
+ 			uint8_t thresholds:1;
+ 			uint8_t events:1;
+ 			uint8_t scanning:1;
+-			uint8_t __reserved:1;
++			uint8_t settable:1;
+ #endif
+ 		} ATTRIBUTE_PACKING init;
+ 		struct {

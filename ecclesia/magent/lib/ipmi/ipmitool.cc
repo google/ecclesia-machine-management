@@ -324,8 +324,7 @@ class IpmiFullCompactSensor {
   IpmiInterface::EntityIdentifier GetEntityIdentifier() const {
     return {common_->entity.id, common_->entity.instance};
   }
-  // bool IsSettable() const { return common_->sensor.init.settable; }
-  // bool IsSettable() const { return false; }
+  bool IsSettable() const { return common_->sensor.init.settable; }
   uint8_t GetLun() const { return common_->keys.lun; }
   uint8_t GetId() const { return common_->keys.sensor_num; }
   SensorNum GetSensorNum() const { return {GetLun(), GetId()}; }
@@ -525,7 +524,7 @@ class IpmitoolImpl : public IpmiInterface {
       info.name = sensor->GetName();
       info.type = sensor->GetType();
       info.unit = sensor->GetUnit();
-      // info.settable = sensor->IsSettable();
+      info.settable = sensor->IsSettable();
       info.entity_id = sensor->GetEntityIdentifier();
       sensors.push_back(info);
     }
@@ -545,7 +544,7 @@ class IpmitoolImpl : public IpmiInterface {
                                   .name = sensor->GetName(),
                                   .type = sensor->GetType(),
                                   .unit = sensor->GetUnit(),
-                                  // .settable = sensor->IsSettable(),
+                                  .settable = sensor->IsSettable(),
                                   .entity_id = sensor->GetEntityIdentifier()};
   }
 

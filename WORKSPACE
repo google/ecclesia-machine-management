@@ -218,6 +218,7 @@ http_archive(
         "https://github.com/ipmitool/ipmitool/releases/download/IPMITOOL_1_8_18/ipmitool-1.8.18.tar.gz"
     ],
     patches = [
+        "//ecclesia/oss:ipmitool.patches/ipmitool.ipmi_sdr.patch",
         # Openssl 1.1 made struct EVP_MD_CTX opaque, so we have to heap
         # allocate it.
         "//ecclesia/oss:ipmitool.patches/ipmitool.lanplus_crypt_impl.patch"
