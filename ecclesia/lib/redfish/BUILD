@@ -166,7 +166,7 @@ cc_library(
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:variant",
-        "@com_google_googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
     ],
 )
 
