@@ -17,6 +17,7 @@
 #include "ecclesia/lib/codec/bits.h"
 
 #include <cstdint>
+#include <limits>
 
 #include "gtest/gtest.h"
 
@@ -138,6 +139,108 @@ TEST(BitsTest, ExtractBitsSignedWorks) {
   EXPECT_EQ(value_64, ExtractBits(value_64, BitRange(100, 0)));
   EXPECT_EQ(0x0, ExtractBits(value_64, BitRange(64)));
   EXPECT_EQ(0x0, ExtractBits(value_64, BitRange(0, 1)));
+}
+
+TEST(MaskedAddressTest, Iterator) {
+  constexpr int kMaxErrors = 64;
+  MaskedAddress addr(0xdeadbeef, ~0x00000fff);
+
+  int num_errors = 0;
+  uint64_t expected = 0xdeadb000;
+  for (MaskedAddress::iterator iter = addr.begin();
+       iter != addr.end() && num_errors < kMaxErrors; ++iter, ++expected) {
+    EXPECT_EQ(*iter, expected) << expected;
+    if (*iter != expected) {
+      ++num_errors;
+    }
+  }
+  if (num_errors < kMaxErrors) {
+    EXPECT_EQ(expected, 0xdeadc000);
+  }
+}
+
+TEST(MaskedAddressTest, Contiguous) {
+  EXPECT_TRUE(MaskedAddress(0xdeadbeef, ~0x00000fff).Contiguous());
+  EXPECT_FALSE(MaskedAddress(0xdeadbeef, ~0x00000aff).Contiguous());
+  EXPECT_TRUE(MaskedAddress(0xdeadbeef, ~0x000007ff).Contiguous());
+  EXPECT_TRUE(MaskedAddress(0xdeadbeef, ~0x000000ff).Contiguous());
+  EXPECT_FALSE(MaskedAddress(0xdeadbeef, ~0x000000ef).Contiguous());
+  EXPECT_FALSE(MaskedAddress(0xdeadbeef, ~0x0000002f).Contiguous());
+  EXPECT_TRUE(MaskedAddress(0xdeadbeef, ~0x0000001f).Contiguous());
+  EXPECT_FALSE(MaskedAddress(0xdeadbeef, ~0x0000000e).Contiguous());
+  EXPECT_FALSE(MaskedAddress(0xdeadbeef, ~0x0000000c).Contiguous());
+  EXPECT_FALSE(MaskedAddress(0xdeadbeef, ~0x00000009).Contiguous());
+  EXPECT_FALSE(MaskedAddress(0xdeadbeef, ~0x00000008).Contiguous());
+  EXPECT_TRUE(MaskedAddress(0xdeadbeef, ~0x00000007).Contiguous());
+  EXPECT_FALSE(MaskedAddress(0xdeadbeef, ~0x00000006).Contiguous());
+  EXPECT_FALSE(MaskedAddress(0xdeadbeef, ~0x00000005).Contiguous());
+  EXPECT_FALSE(MaskedAddress(0xdeadbeef, ~0x00000004).Contiguous());
+  EXPECT_TRUE(MaskedAddress(0xdeadbeef, ~0x00000003).Contiguous());
+  EXPECT_FALSE(MaskedAddress(0xdeadbeef, ~0x00000002).Contiguous());
+  EXPECT_TRUE(MaskedAddress(0xdeadbeef, ~0x00000001).Contiguous());
+  EXPECT_TRUE(MaskedAddress(0xdeadbeef, ~0x00000000).Contiguous());
+}
+
+TEST(AddressRangeTest, Empty) {
+  AddressRange range(0xdeadbe00, 0xdeadbeef);
+  EXPECT_FALSE(range.InRange(0x0));
+  EXPECT_FALSE(range.InRange(0xf00));
+  EXPECT_FALSE(range.InRange(0xdead0000));
+  EXPECT_FALSE(range.InRange(0xdeadbdff));
+  EXPECT_TRUE(range.InRange(0xdeadbe00));
+  EXPECT_TRUE(range.InRange(0xdeadbe80));
+  EXPECT_TRUE(range.InRange(0xdeadbec0));
+  EXPECT_TRUE(range.InRange(0xdeadbee0));
+  EXPECT_TRUE(range.InRange(0xdeadbeef));
+  EXPECT_FALSE(range.InRange(0xdeadbef0));
+  EXPECT_FALSE(range.InRange(0xdeadbefa));
+  EXPECT_FALSE(range.InRange(0xdeadbf00));
+  EXPECT_FALSE(range.InRange(0xffffffff));
+  EXPECT_FALSE(range.InRange(std::numeric_limits<uint64_t>::max()));
+}
+
+TEST(AddressRangeTest, CoversMask) {
+  AddressRange range(0xdeadbe00, 0xdeadbeef);
+  EXPECT_FALSE(range.CoversMask(MaskedAddress(0x0)));
+  EXPECT_FALSE(range.CoversMask(MaskedAddress(0x0, ~0xffff)));
+  EXPECT_FALSE(range.CoversMask(MaskedAddress(0x0, ~0xffffffffUL)));
+  EXPECT_FALSE(range.CoversMask(MaskedAddress(0xdead0000)));
+  EXPECT_FALSE(range.CoversMask(MaskedAddress(0xdead0000, ~0xffff)));
+  EXPECT_FALSE(range.CoversMask(MaskedAddress(0xdead0000, ~0xff)));
+  EXPECT_FALSE(range.CoversMask(MaskedAddress(0xdeadbe00, ~0xff)));
+  EXPECT_TRUE(range.CoversMask(MaskedAddress(0xdeadbe00)));
+  EXPECT_TRUE(range.CoversMask(MaskedAddress(0xdeadbe00, ~0x7f)));
+  EXPECT_TRUE(range.CoversMask(MaskedAddress(0xdeadbea0)));
+  EXPECT_TRUE(range.CoversMask(MaskedAddress(0xdeadbe00, ~0xf)));
+  EXPECT_TRUE(range.CoversMask(MaskedAddress(0xdeadbeef)));
+  EXPECT_TRUE(range.CoversMask(MaskedAddress(0xdeadbee0, ~0xf)));
+  EXPECT_FALSE(range.CoversMask(MaskedAddress(0xdeadbea0, ~0x7f)));
+  EXPECT_FALSE(range.CoversMask(MaskedAddress(0xdeadbee0, ~0xff)));
+  EXPECT_FALSE(range.CoversMask(MaskedAddress(0xffffffff, ~0xffffff)));
+  EXPECT_FALSE(range.CoversMask(MaskedAddress(0xffffffff, ~0xffffffffUL)));
+}
+
+TEST(AddressRangeTest, OverlapsMask) {
+  AddressRange range(0xdeadbe00, 0xdeadbeef);
+  EXPECT_FALSE(range.OverlapsMask(MaskedAddress(0x0)));
+  EXPECT_FALSE(range.OverlapsMask(MaskedAddress(0x0, ~0x0)));
+  EXPECT_FALSE(range.OverlapsMask(MaskedAddress(0x0, ~0xffff)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0x0, ~0xffffffffUL)));
+  EXPECT_FALSE(range.OverlapsMask(MaskedAddress(0xdead0000)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0xdead0000, ~0xffff)));
+  EXPECT_FALSE(range.OverlapsMask(MaskedAddress(0xdead0000, ~0xff)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0xdeadbe00)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0xdeadbe00, ~0xf)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0xdeadbe00, ~0x7f)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0xdeadbe00, ~0xff)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0xdeadbe01)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0xdeadbea0)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0xdeadbeef)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0xdeadbee0, ~0xf)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0xdeadbea0, ~0x7f)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0xdeadbee0, ~0xff)));
+  EXPECT_FALSE(range.OverlapsMask(MaskedAddress(0xffffffff, ~0xffffff)));
+  EXPECT_TRUE(range.OverlapsMask(MaskedAddress(0xffffffff, ~0xffffffffUL)));
 }
 
 }  // namespace

@@ -8,9 +8,13 @@ licenses(["notice"])
 
 cc_library(
     name = "bits",
+    srcs = ["bits.cc"],
     hdrs = ["bits.h"],
     visibility = ["//ecclesia:library_users"],
-    deps = ["@com_google_absl//absl/base:core_headers"],
+    deps = [
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/numeric:bits",
+    ],
 )
 
 cc_test(
@@ -19,6 +23,7 @@ cc_test(
     srcs = ["bits_test.cc"],
     deps = [
         ":bits",
+        "@com_google_absl//absl/base:core_headers",
         "@com_google_googletest//:gtest_main",
     ],
 )
