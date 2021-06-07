@@ -43,6 +43,7 @@ inline constexpr char kRfPropertyMemory[] = "Memory";
 inline constexpr char kRfPropertyStorage[] = "Storage";
 inline constexpr char kRfPropertyDrives[] = "Drives";
 inline constexpr char kRfPropertyDriveReset[] = "#Drive.Reset";
+inline constexpr char kRfPropertyResetType[] = "ResetType";
 inline constexpr char kRfPropertyProtocolOem[] = "OEM";
 inline constexpr char kRfPropertyOem[] = "Oem";
 inline constexpr char kRfPropertyProcessors[] = "Processors";
@@ -178,6 +179,7 @@ DEFINE_REDFISH_PROPERTY(PropertyProcessorIdStep, std::string, "Step");
 DEFINE_REDFISH_PROPERTY(PropertyDataSourceUri, std::string, "DataSourceUri");
 DEFINE_REDFISH_PROPERTY(PropertyRedfishActionInfo, std::string,
                         "@Redfish.ActionInfo");
+DEFINE_REDFISH_PROPERTY(PropertyTarget, std::string, "target");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
