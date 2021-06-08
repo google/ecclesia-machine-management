@@ -165,15 +165,17 @@ class AddressRange {
   // The empty range.
   AddressRange() : AddressRange(1, 0) {}
 
-  // They have been removed to avoid specifying the intent that they are
-  // intended for iteration, until there is a clear use case for supporting
-  // iteration.
+  bool operator==(const AddressRange &range) const {
+    return begin_ == range.begin_ && end_ == range.end_;
+  }
+  bool operator!=(const AddressRange &range) const {
+    return !(*this == range);
+  }
 
   // The range is empty if end < begin.
   bool Empty() const;
   // An address is in the range if begin <= address <= end.
   bool InRange(uint64_t address) const;
-
 
   // Check if all the possible addresses within the MaskedAddress fall within
   // the AddressRange.

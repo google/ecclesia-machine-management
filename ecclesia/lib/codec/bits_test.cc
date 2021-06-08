@@ -203,6 +203,38 @@ TEST(MaskedAddressTest, Contiguous) {
   EXPECT_TRUE(MaskedAddress(0xdeadbeef, ~0x00000000).Contiguous());
 }
 
+TEST(AddressRangeTest, EqualAndNotEqual) {
+  AddressRange range0(0x12345678, 0xdeadbeef);
+  AddressRange range1(0, 0xdeadbeef);
+  AddressRange range2(0, 0x12345678);
+  AddressRange range3(0x12345678, 0xdeadbeef);
+  AddressRange range4(0, 0xdeadbeef);
+  AddressRange range5(0, 0x12345678);
+
+  EXPECT_EQ(range0, range0);
+  EXPECT_EQ(range1, range1);
+  EXPECT_EQ(range2, range2);
+  EXPECT_EQ(range3, range3);
+  EXPECT_EQ(range4, range4);
+  EXPECT_EQ(range5, range5);
+
+  EXPECT_EQ(range0, range3);
+  EXPECT_EQ(range1, range4);
+  EXPECT_EQ(range2, range5);
+  EXPECT_EQ(range3, range0);
+  EXPECT_EQ(range4, range1);
+  EXPECT_EQ(range5, range2);
+
+  EXPECT_NE(range0, range1);
+  EXPECT_NE(range0, range2);
+  EXPECT_NE(range0, range4);
+  EXPECT_NE(range0, range5);
+  EXPECT_NE(range1, range0);
+  EXPECT_NE(range2, range0);
+  EXPECT_NE(range4, range0);
+  EXPECT_NE(range5, range0);
+}
+
 TEST(AddressRangeTest, Empty) {
   AddressRange range(0xdeadbe00, 0xdeadbeef);
   EXPECT_FALSE(range.InRange(0x0));
