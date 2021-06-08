@@ -17,8 +17,8 @@
 #include "ecclesia/lib/http/curl_client.h"
 
 #include "absl/base/call_once.h"
+#include "absl/strings/ascii.h"
 #include "absl/strings/str_split.h"
-#include "absl/strings/substitute.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "json/writer.h"
@@ -134,66 +134,119 @@ CurlHttpClient::CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
 
 CurlHttpClient::~CurlHttpClient() { libcurl_->curl_easy_cleanup(curl_); }
 
-std::string CurlHttpClient::ComposeUri(absl::string_view uri) {
-  return absl::Substitute("https://[$0]$1", host_, uri);
-}
-
 absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Get(
-    absl::string_view uri) {
-  return HttpMethod(Protocol::kGet, ComposeUri(uri), "");
+    std::unique_ptr<HttpRequest> request) {
+  return HttpMethod(Protocol::kGet, std::move(request));
 }
 
 absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Post(
-    absl::string_view uri, absl::string_view post) {
-  return HttpMethod(Protocol::kPost, ComposeUri(uri), post);
+      std::unique_ptr<HttpRequest> request) {
+  return HttpMethod(Protocol::kPost, std::move(request));
+}
+
+std::string CurlHttpClient::ComposeUri(absl::string_view path) {
+  // We're assuming "path" begins with "/".
+  return absl::StrCat("https://$0$1", host_, path);
+}
+
+absl::StatusOr<HttpClient::HttpResponse> CurlHttpClient::GetPath(
+    absl::string_view path) {
+  if (path.empty() || path.front() != '/') {
+    return absl::InvalidArgumentError(
+        "path must be non-empty beginning with \"/\"");
+  }
+  auto rqst = std::make_unique<HttpRequest>();
+  rqst->uri = ComposeUri(path);
+  return Get(std::move(rqst));
+}
+
+absl::StatusOr<HttpClient::HttpResponse> CurlHttpClient::PostPath(
+    absl::string_view path, absl::string_view post) {
+  if (path.empty() || path.front() != '/') {
+    return absl::InvalidArgumentError(
+        "path must be non-empty beginning with \"/\"");
+  }
+  auto rqst = std::make_unique<HttpRequest>();
+  rqst->uri = ComposeUri(path);
+  rqst->body = post;
+  return Post(std::move(rqst));
 }
 
 absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
-    Protocol cmd, absl::string_view uri, absl::string_view post) {
+    Protocol cmd, std::unique_ptr<HttpRequest> request) {
   absl::MutexLock l(&mu_);
   SetDefaultCurlOpts();
 
-  if (!post.empty() || cmd == Protocol::kPost || cmd == Protocol::kPut) {
-    libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, post.size());
-    libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, post.data());
+  libcurl_->curl_easy_setopt(curl_, CURLOPT_URL, request->uri);
+
+  if (!user_pwd_.empty()) {
+    libcurl_->curl_easy_setopt(curl_, CURLOPT_USERPWD, user_pwd_.c_str());
   }
 
-  if (cmd == Protocol::kHead) {
-    libcurl_->curl_easy_setopt(curl_, CURLOPT_NOBODY, true);
+  switch (cmd) {
+    case Protocol::kGet:
+      libcurl_->curl_easy_setopt(curl_, CURLOPT_HTTPGET, 1L);
+      libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, 0L);
+      // There are multiple versions that take a pointer, thus we need to
+      // constrain the argument.
+      libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
+                                 static_cast<void*>(nullptr));
+      break;
+    case Protocol::kPost:
+      libcurl_->curl_easy_setopt(curl_, CURLOPT_HTTPGET, 0L);
+      libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE,
+                                 request->body.size());
+      libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
+                                 request->body.data());
+      break;
   }
 
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_URL, uri);
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_USERPWD, user_pwd_.c_str());
+  struct curl_slist* request_headers = NULL;
+  for (const auto& hdr : request->headers) {
+    struct curl_slist* list = curl_slist_append(
+        request_headers, absl::StrCat(hdr.first, ":", hdr.second).c_str());
+    if (list == nullptr) {
+      curl_slist_free_all(request_headers);
+      return absl::ResourceExhaustedError("request header list");
+    }
+    request_headers = list;
+  }
+  libcurl_->curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, request_headers);
 
-  std::string body;
-  std::vector<std::string> headers;
+  std::string response_body;
+  HttpHeaders response_headers;
 
   libcurl_->curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, BodyCallback);
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &body);
+  libcurl_->curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response_body);
   libcurl_->curl_easy_setopt(curl_, CURLOPT_HEADERFUNCTION, HeaderCallback);
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_WRITEHEADER, &headers);
+  libcurl_->curl_easy_setopt(curl_, CURLOPT_WRITEHEADER, &response_headers);
 
   CURLcode code = libcurl_->curl_easy_perform(curl_);
 
+  curl_slist_free_all(request_headers);
   return HttpClient::HttpResponse{
-      .code = code, .body = body, .headers = headers};
+      .code = code, .body = response_body, .headers = response_headers};
 }
 
 // userp is set through framework over third_CURLOPT_WRITEDATA
-size_t CurlHttpClient::HeaderCallback(void *data, size_t size, size_t nmemb,
-                                      void *userp) {
-  auto *headers = static_cast<std::vector<std::string> *>(userp);
-  char *str = static_cast<char *>(data);
+size_t CurlHttpClient::HeaderCallback(const void *data, size_t size,
+                                      size_t nmemb, void *userp) {
+  auto *headers = static_cast<HttpHeaders*>(userp);
+  auto str = static_cast<const char *>(data);
+
   if (str[0] != '\r' && str[1] != '\n') {
     auto s = std::string(str, size * nmemb);
-    absl::RemoveExtraAsciiWhitespace(&s);
-    headers->push_back(s);
+    std::vector<std::string> v = absl::StrSplit(s, absl::MaxSplits(':', 1));
+    absl::StripAsciiWhitespace(&v[0]);
+    absl::StripAsciiWhitespace(&v[1]);
+    headers->try_emplace(v[0], v[1]);
   }
+
   return size * nmemb;
 }
 
 // userp is set through framework over third_CURLOPT_WRITEHEADER
-size_t CurlHttpClient::BodyCallback(void *data, size_t size, size_t nmemb,
+size_t CurlHttpClient::BodyCallback(const void *data, size_t size, size_t nmemb,
                                     void *userp) {
   std::string *body = static_cast<std::string *>(userp);
   const std::string str(static_cast<const char *>(data), size * nmemb);

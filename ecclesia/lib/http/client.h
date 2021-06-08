@@ -17,7 +17,9 @@
 #ifndef ECCLESIA_LIB_HTTP_CLIENT_H_
 #define ECCLESIA_LIB_HTTP_CLIENT_H_
 
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
@@ -28,19 +30,8 @@ namespace ecclesia {
 
 // The supported Http request methods
 enum class Protocol {
-  kError,
   kGet,
   kPost,
-  kHead,
-  kPut,
-  kDelete,
-  kCopy,
-  kMove,
-  kLock,
-  kUnlock,
-  kTrace,
-  kOptions,
-  kConnect
 };
 
 // A struct we use to store protocol with its Method string.
@@ -64,6 +55,17 @@ class HttpClient {
 
   enum class Resolver { kIPAny = 0, kIPv4Only, kIPv6Only };
 
+  // Get/Post requests
+  struct HttpRequest {
+    // The full URI, i.e., "http://host/redfish/v1", not "/redfish/v1".
+    std::string uri;
+
+    // Only used by Post requests.
+    std::string body;
+
+    HttpHeaders headers;
+  };
+
   // Http response that contains http status code, header and body
   struct HttpResponse {
     // The unique_ptr returned outlives the HttpResponse.
@@ -71,7 +73,7 @@ class HttpClient {
 
     int code = 0;
     std::string body;
-    std::vector<std::string> headers;
+    HttpHeaders headers;
   };
 
   HttpClient() {}
@@ -80,10 +82,11 @@ class HttpClient {
   // Following Get and Post functions are stateless.
 
   // Execute a GET request and return HttpResponse or absl::Status.
-  virtual absl::StatusOr<HttpResponse> Get(absl::string_view uri) = 0;
+  virtual absl::StatusOr<HttpResponse> Get(
+      std::unique_ptr<HttpRequest> request) = 0;
   // Sub class is responsible for generating the post string_view.
-  virtual absl::StatusOr<HttpResponse> Post(absl::string_view uri,
-                                            absl::string_view post) = 0;
+  virtual absl::StatusOr<HttpResponse> Post(
+      std::unique_ptr<HttpRequest> request) = 0;
 };
 
 }  // namespace ecclesia

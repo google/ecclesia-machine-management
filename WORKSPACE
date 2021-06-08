@@ -269,6 +269,7 @@ http_archive(
         "//ecclesia/oss:libredfish.patches/08.mtls_auth.asyncRaw.c.patch",
         "//ecclesia/oss:libredfish.patches/09.mtls_auth.internal_service.h.patch",
         "//ecclesia/oss:libredfish.patches/10.mtls_auth.service.c.patch",
+        "//ecclesia/oss:libredfish.patches/11.http_handler.patch",
     ],
 )
 

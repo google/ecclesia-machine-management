@@ -6,6 +6,7 @@ cc_library(
     name = "client",
     srcs = ["client.cc"],
     hdrs = ["client.h"],
+    visibility = ["//ecclesia:library_users"],
     deps = [
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status",

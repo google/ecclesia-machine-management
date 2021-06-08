@@ -157,26 +157,37 @@ class CurlHttpClient : public HttpClient {
     HttpClient::Resolver resolver = Resolver::kIPAny;
   };
 
-  explicit CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
-                          HttpCredential cred);
+  CurlHttpClient(std::unique_ptr<LibCurl> libcurl, HttpCredential cred);
   CurlHttpClient(std::unique_ptr<LibCurl> libcurl, HttpCredential cred,
                  Config config);
   ~CurlHttpClient() override;
 
-  absl::StatusOr<HttpResponse> Get(absl::string_view uri) override;
-  absl::StatusOr<HttpResponse> Post(absl::string_view uri,
-                                    absl::string_view post) override;
+  CurlHttpClient(const CurlHttpClient &) = delete;
+  CurlHttpClient &operator=(const CurlHttpClient &) = delete;
+  CurlHttpClient(CurlHttpClient &&other) = delete;
+  CurlHttpClient &operator=(CurlHttpClient &&other) = delete;
+
+  absl::StatusOr<HttpResponse> Get(
+      std::unique_ptr<HttpRequest> request) override;
+  absl::StatusOr<HttpResponse> Post(
+      std::unique_ptr<HttpRequest> request) override;
+
+  // Helper methods for simple cases.
+  // "path" is an absolute Redfish path, e.g., "/redfish/v1".
+  absl::StatusOr<HttpResponse> GetPath(absl::string_view path);
+  absl::StatusOr<HttpResponse> PostPath(absl::string_view path,
+                                        absl::string_view post);
 
   Config GetConfig() const { return config_; }
 
  private:
-  absl::StatusOr<HttpResponse> HttpMethod(Protocol cmd, absl::string_view uri,
-                                          absl::string_view post)
+  absl::StatusOr<HttpResponse> HttpMethod(Protocol cmd,
+                                          std::unique_ptr<HttpRequest> request)
       ABSL_LOCKS_EXCLUDED(mu_);
   void SetDefaultCurlOpts() ABSL_EXCLUSIVE_LOCKS_REQUIRED(mu_);
-  static size_t HeaderCallback(void *data, size_t size, size_t nmemb,
+  static size_t HeaderCallback(const void *data, size_t size, size_t nmemb,
                                void *userp);
-  static size_t BodyCallback(void *data, size_t size, size_t nmemb,
+  static size_t BodyCallback(const void *data, size_t size, size_t nmemb,
                              void *userp);
 
   std::string ComposeUri(absl::string_view uri);
