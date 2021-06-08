@@ -141,6 +141,28 @@ TEST(BitsTest, ExtractBitsSignedWorks) {
   EXPECT_EQ(0x0, ExtractBits(value_64, BitRange(0, 1)));
 }
 
+TEST(BitsTest, ExtractBitsFromOffsetAndNumBits) {
+  EXPECT_EQ(ExtractBits(0x12345678, BitRange::FromOffsetAndNumBits(0, 4)), 0x8);
+  EXPECT_EQ(ExtractBits(0x12345678, BitRange::FromOffsetAndNumBits(0, 32)),
+            0x12345678);
+  EXPECT_EQ(ExtractBits(0x12345678, BitRange::FromOffsetAndNumBits(0, 64)),
+            0x12345678);
+  EXPECT_EQ(ExtractBits(0x12345678, BitRange::FromOffsetAndNumBits(8, 6)),
+            0x16);
+  EXPECT_EQ(ExtractBits(0x12345678, BitRange::FromOffsetAndNumBits(20, 6)),
+            0x23);
+  EXPECT_EQ(ExtractBits(0x12345678, BitRange::FromOffsetAndNumBits(24, 8)),
+            0x12);
+  EXPECT_EQ(ExtractBits(0x12345678, BitRange::FromOffsetAndNumBits(24, 10)),
+            0x12);
+
+  // Test some out-of-range inputs.
+  EXPECT_EQ(ExtractBits(0x12345678, BitRange::FromOffsetAndNumBits(32, 1)),
+            0x0);
+  EXPECT_EQ(ExtractBits(0x12345678, BitRange::FromOffsetAndNumBits(32, 32)),
+            0x0);
+}
+
 TEST(MaskedAddressTest, Iterator) {
   constexpr int kMaxErrors = 64;
   MaskedAddress addr(0xdeadbeef, ~0x00000fff);

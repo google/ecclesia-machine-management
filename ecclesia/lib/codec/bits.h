@@ -24,7 +24,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <string>
 #include <type_traits>
 
 #include "absl/base/attributes.h"
@@ -55,6 +54,12 @@ inline uint8_t XorAllBits(uint64_t reg) {
 struct BitRange {
   constexpr BitRange(uint8_t high, uint8_t low) : hi(high), lo(low) {}
   constexpr BitRange(uint8_t bit) : BitRange(bit, bit) {}
+
+  // Constructs a BitRange by specifying `num_bits` starting from the low bit
+  // at `offset`.
+  static BitRange FromOffsetAndNumBits(uint8_t offset, uint8_t num_bits) {
+    return BitRange(offset + num_bits - 1, offset);
+  }
 
   uint8_t hi;
   uint8_t lo;
