@@ -69,4 +69,11 @@ absl::optional<UsbLocation> UsbLocationFromProto(
   return absl::nullopt;
 }
 
+UsbSignatureProtobuf UsbSignatureToProto(const UsbSignature &signature) {
+  UsbSignatureProtobuf protobuf;
+  protobuf.set_product_id(signature.product_id);
+  protobuf.set_vendor_id(signature.vendor_id);
+  return protobuf;
+}
+
 }  // namespace ecclesia

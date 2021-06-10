@@ -31,3 +31,8 @@ message UsbLocationProtobuf {
   // Format ports as string; "<port1>.<port2>..."; the root device will be "0"
   string ports = 2;
 }
+
+message UsbSignatureProtobuf {
+  int32 vendor_id = 1;
+  int32 product_id = 2;
+}

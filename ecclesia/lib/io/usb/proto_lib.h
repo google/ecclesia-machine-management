@@ -29,6 +29,10 @@ UsbLocationProtobuf UsbLocationToProto(const UsbLocation &location);
 absl::optional<UsbLocation> UsbLocationFromProto(
     const UsbLocationProtobuf &location);
 
+// Function for converting ecclesia::UsbSignature to
+// ecclesia::UsbSignatureProtobuf
+UsbSignatureProtobuf UsbSignatureToProto(const UsbSignature &signature);
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_IO_USB_PROTO_LIB_H_
