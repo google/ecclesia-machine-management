@@ -71,3 +71,15 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+proto_library(
+    name = "proto",
+    srcs = ["smbus.proto"],
+    visibility = ["//ecclesia:library_users"],
+)
+
+cc_proto_library(
+    name = "cc_proto",
+    visibility = ["//ecclesia:library_users"],
+    deps = [":proto"],
+)
