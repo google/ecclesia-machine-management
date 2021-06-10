@@ -25,6 +25,7 @@ cc_library(
         ":location",
         ":pci",
         ":region",
+        "//ecclesia/lib/codec:bits",
         "//ecclesia/lib/codec:endian",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

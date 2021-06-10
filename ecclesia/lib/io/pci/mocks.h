@@ -107,6 +107,29 @@ class FakePciRegion : public PciRegion {
   std::string memory_;
 };
 
+class MockPciRegion : public PciRegion {
+ public:
+  explicit MockPciRegion(size_t size) : PciRegion(size) {}
+
+  MOCK_METHOD(absl::StatusOr<uint8_t>, Read8, (OffsetType offset),
+              (const, override));
+
+  MOCK_METHOD(absl::Status, Write8, (OffsetType offset, uint8_t data),
+              (override));
+
+  MOCK_METHOD(absl::StatusOr<uint16_t>, Read16, (OffsetType offset),
+              (const, override));
+
+  MOCK_METHOD(absl::Status, Write16, (OffsetType offset, uint16_t data),
+              (override));
+
+  MOCK_METHOD(absl::StatusOr<uint32_t>, Read32, (OffsetType offset),
+              (const, override));
+
+  MOCK_METHOD(absl::Status, Write32, (OffsetType offset, uint32_t data),
+              (override));
+};
+
 class MockPciDevice : public PciDevice {
  public:
   MockPciDevice(const PciDbdfLocation &location,
