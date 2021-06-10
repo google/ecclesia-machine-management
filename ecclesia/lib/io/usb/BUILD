@@ -70,6 +70,19 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "proto_lib",
+    srcs = ["proto_lib.cc"],
+    hdrs = ["proto_lib.h"],
+    visibility = ["//ecclesia:library_users"],
+    deps = [
+        ":cc_proto",
+        ":usb",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:optional",
+    ],
+)
+
 cc_test(
     name = "sysfs_test",
     size = "small",
@@ -84,4 +97,29 @@ cc_test(
         "@com_google_absl//absl/types:optional",
         "@com_google_googletest//:gtest_main",
     ],
+)
+
+cc_test(
+    name = "proto_lib_test",
+    srcs = ["proto_lib_test.cc"],
+    deps = [
+        ":cc_proto",
+        ":proto_lib",
+        ":usb",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/testing:proto",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+proto_library(
+    name = "proto",
+    srcs = ["usb.proto"],
+    visibility = ["//ecclesia:library_users"],
+)
+
+cc_proto_library(
+    name = "cc_proto",
+    visibility = ["//ecclesia:library_users"],
+    deps = [":proto"],
 )
