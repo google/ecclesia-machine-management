@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -97,8 +98,26 @@ void RemoveDirectoryTree(const std::string &path) {
 
 std::string GetTestDataDependencyPath(absl::string_view path) {
   char *srcdir = std::getenv("TEST_SRCDIR");
-  Check(srcdir, "TEST_SRCDIR environment variable is defined");
-  return JoinFilePaths(srcdir, kEcclesiaRoot, path);
+  if (srcdir) {
+    return JoinFilePaths(srcdir, kEcclesiaRoot, path);
+  }
+#if defined(__GLIBC__)
+  // Check for runfiles in the directory of the binary itself
+  if (program_invocation_name != nullptr) {
+    // Note that we don't want to use JoinFilePaths here: the runfiles directory
+    // is the same name as the program invocation but with ".runfiles" appended.
+    std::string runfiles_srcdir =
+        absl::StrCat(program_invocation_name, ".runfiles");
+    struct stat st;
+    if (stat(runfiles_srcdir.c_str(), &st) == 0) {
+      return JoinFilePaths(runfiles_srcdir, kEcclesiaRoot, path);
+    }
+  }
+  FatalLog() << "TEST_SRCDIR environment variable was not defined, and "
+                ".runfiles directory was not found.";
+#else
+  FatalLog() << "TEST_SRCDIR environment variable was not defined";
+#endif
 }
 
 std::string GetTestTempdirPath() {
