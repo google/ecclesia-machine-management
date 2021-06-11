@@ -72,6 +72,40 @@ cc_test(
 )
 
 cc_library(
+    name = "mmio",
+    srcs = ["mmio.cc"],
+    hdrs = ["mmio.h"],
+    visibility = ["//ecclesia:library_users"],
+    deps = [
+        ":location",
+        ":region",
+        "//ecclesia/lib/codec:endian",
+        "//ecclesia/lib/file:mmap",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "mmio_test",
+    size = "small",
+    srcs = ["mmio_test.cc"],
+    deps = [
+        ":location",
+        ":mmio",
+        "//ecclesia/lib/codec:endian",
+        "//ecclesia/lib/file:path",
+        "//ecclesia/lib/file:test_filesystem",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "signature",
     hdrs = ["signature.h"],
     visibility = ["//ecclesia:library_users"],
