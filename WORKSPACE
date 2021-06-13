@@ -50,6 +50,17 @@ switched_rules_by_language(
     grpc = True,
 )
 
+# Needs to come before grpc_deps() to be respected.
+http_archive(
+    name = "boringssl",
+    sha256 = "a1b2685a3c9cc12bc0d687706215a3b1359e1d93d057f7f80ea13ab119e9da1a",
+    strip_prefix = "boringssl-6fd7c365f59403c1b27867462434bc6af9a87a75",
+    urls = [
+        "https://github.com/google/boringssl/archive/6fd7c365f59403c1b27867462434bc6af9a87a75.tar.gz",
+    ],
+)
+
+
 # gRPC. Official release 1.33.2. Name is required by Google APIs.
 http_archive(
     name = "com_github_grpc_grpc",
@@ -178,15 +189,6 @@ http_archive(
     sha256 = "c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1",
     strip_prefix = "zlib-1.2.11",
     urls = ["https://zlib.net/zlib-1.2.11.tar.gz"],
-)
-
-http_archive(
-    name = "boringssl",
-    sha256 = "66e1b0675d58b35f9fe3224b26381a6d707c3293eeee359c813b4859a6446714",
-    strip_prefix = "boringssl-9b7498d5aba71e545747d65dc65a4d4424477ff0",
-    urls = [
-        "https://github.com/google/boringssl/archive/9b7498d5aba71e545747d65dc65a4d4424477ff0.tar.gz",
-    ],
 )
 
 http_archive(
