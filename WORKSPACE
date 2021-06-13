@@ -156,6 +156,9 @@ http_archive(
     name = "com_google_tensorflow_serving",
     sha256 = "d2d5874a6f65dbca25f8750c03b1d64d46995e04561b83c1bd4b0b956ebf96ef",
     strip_prefix = "serving-72927141f29d83614cf8304725b1a7e6357ce6ac",
+    patches = [
+            "//ecclesia/oss:tensorflow.patches/tensorflow.visibility.patch",
+    ],
     urls = ["https://github.com/tensorflow/serving/archive/72927141f29d83614cf8304725b1a7e6357ce6ac.zip"],
 )
 

@@ -1,0 +1,28 @@
+diff --git a/tensorflow_serving/util/net_http/client/public/BUILD b/tensorflow_serving/util/net_http/client/public/BUILD
+index 34e9d41f..98047448 100644
+--- tensorflow_serving/util/net_http/client/public/BUILD
++++ tensorflow_serving/util/net_http/client/public/BUILD
+@@ -11,6 +11,7 @@ package_group(
+     name = "http_client_users",
+     packages = [
+         "//third_party/ecclesia/...",
++        "//...",
+     ],
+ )
+
+diff --git a/tensorflow_serving/util/net_http/server/public/BUILD b/tensorflow_serving/util/net_http/server/public/BUILD
+index e7f96d98..f3b199c5 100644
+--- tensorflow_serving/util/net_http/server/public/BUILD
++++ tensorflow_serving/util/net_http/server/public/BUILD
+@@ -8,7 +8,10 @@ package(
+     ],
+ )
+
+-package_group(name = "http_server_clients")
++package_group(
++        name = "http_server_clients",
++        packages = ["//..."],
++)
+
+ licenses(["notice"])  # Apache 2.0
+
