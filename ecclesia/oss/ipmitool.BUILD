@@ -131,4 +131,5 @@ cc_library(
         "@ncurses//:ncurses",
         "@boringssl//:crypto",
     ],
+    visibility = ["//visibility:public"],
 )
