@@ -18,10 +18,10 @@
 #define ECCLESIA_MAGENT_REDFISH_INDUS_REDFISH_SERVICE_H_
 
 #include <memory>
-#include <optional>
 #include <vector>
 
 #include "absl/strings/string_view.h"
+#include "absl/types/optional.h"
 #include "ecclesia/magent/redfish/core/assembly.h"
 #include "ecclesia/magent/redfish/core/odata_metadata.h"
 #include "ecclesia/magent/redfish/core/resource.h"
