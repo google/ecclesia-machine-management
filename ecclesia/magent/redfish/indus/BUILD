@@ -12,8 +12,11 @@ cc_library(
     hdrs = [
         "chassis.h",
         "drive.h",
+        "event_service.h",
+        "event_service_clear.h",
         "pcie_slots.h",
         "redfish_service.h",
+        "service_root.h",
         "sleipnir_sensor.h",
         "sleipnir_sensor_collection.h",
         "storage.h",

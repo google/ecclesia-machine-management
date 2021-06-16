@@ -28,6 +28,7 @@ inline constexpr char kName[] = "Name";
 inline constexpr char kSystems[] = "Systems";
 inline constexpr char kChassis[] = "Chassis";
 inline constexpr char kManagers[] = "Managers";
+inline constexpr char kEventService[] = "EventService";
 inline constexpr char kUpdateService[] = "UpdateService";
 inline constexpr char kMembers[] = "Members";
 inline constexpr char kMembersCount[] = "Members@odata.count";
@@ -204,6 +205,7 @@ inline constexpr char kComputerSystemUri[] = "/redfish/v1/Systems/system";
 inline constexpr char kChassisCollectionUri[] = "/redfish/v1/Chassis";
 inline constexpr char kChassisUriPattern[] = "/redfish/v1/Chassis/(\\w+)";
 inline constexpr char kChassisUri[] = "/redfish/v1/Chassis/chassis";
+inline constexpr char kEventServiceUri[] = "/redfish/v1/EventService";
 inline constexpr char kMemoryCollectionUri[] =
     "/redfish/v1/Systems/system/Memory";
 inline constexpr char kMemoryUriPattern[] =

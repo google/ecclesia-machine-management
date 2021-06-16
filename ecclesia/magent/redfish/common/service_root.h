@@ -34,9 +34,8 @@ class ServiceRoot : public ServiceRootResource {
  public:
   ServiceRoot() : ServiceRootResource(kServiceRootUri) {}
 
- private:
-  void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
-           const ParamsType &params) override {
+ protected:
+  Json::Value BasicRoot() const {
     Json::Value json;
     json[kOdataType] = "#ServiceRoot.v1_5_0.ServiceRoot";
     json[kOdataId] = std::string(Uri());
@@ -53,8 +52,13 @@ class ServiceRoot : public ServiceRootResource {
     (*GetJsonObject(&json, kSessionService))[kOdataId] = kSessionServiceUri;
     Json::Value *links = GetJsonObject(&json, kLinks);
     (*GetJsonObject(links, kSessions))[kOdataId] = kSessionsUri;
+    return json;
+  }
 
-    JSONResponseOK(json, req);
+ private:
+  void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
+           const ParamsType &params) override {
+    JSONResponseOK(BasicRoot(), req);
   }
 };
 
