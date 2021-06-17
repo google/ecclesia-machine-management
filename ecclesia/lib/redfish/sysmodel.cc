@@ -189,4 +189,14 @@ void Sysmodel::QueryAllResourceInternal(
   });
 }
 
+// Manager
+// "/redfish/v1/Managers/{id}"
+void Sysmodel::QueryAllResourceInternal(
+    ResourceManager *, const std::function<void(std::unique_ptr<RedfishObject>)>
+                           &result_callback) {
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertyManagers].Each().Do(
+      [&](auto &sys_obj) { result_callback(std::move(sys_obj)); });
+}
+
 }  // namespace libredfish

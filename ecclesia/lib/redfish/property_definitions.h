@@ -50,6 +50,7 @@ inline constexpr char kRfPropertyProcessors[] = "Processors";
 inline constexpr char kRfPropertyMetrics[] = "Metrics";
 inline constexpr char kRfPropertyEnvironmentMetrics[] = "EnvironmentMetrics";
 inline constexpr char kRfPropertySystems[] = "Systems";
+inline constexpr char kRfPropertyManagers[] = "Managers";
 inline constexpr char kRfPropertyEthernetInterfaces[] = "EthernetInterfaces";
 inline constexpr char kRfPropertyThermal[] = "Thermal";
 inline constexpr char kRfPropertyTemperatures[] = "Temperatures";
@@ -117,6 +118,7 @@ DEFINE_REDFISH_RESOURCE(ResourceComputerSystem, "ComputerSystem");
 // The AssemblyEntry is a single item in the "Assemblies" list of
 // Assembly resource
 DEFINE_REDFISH_RESOURCE(ResourceAssemblyEntry, "/Assembly#/");
+DEFINE_REDFISH_RESOURCE(ResourceManager, "Manager");
 
 DEFINE_REDFISH_PROPERTY(PropertyOdataId, std::string, "@odata.id");
 DEFINE_REDFISH_PROPERTY(PropertyOdataType, std::string, "@odata.type");

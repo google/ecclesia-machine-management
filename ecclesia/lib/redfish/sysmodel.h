@@ -105,6 +105,10 @@ class Sysmodel {
       ResourceComputerSystem *,
       const std::function<void(std::unique_ptr<RedfishObject>)>
           &result_callback);
+  void QueryAllResourceInternal(
+      ResourceManager *,
+      const std::function<void(std::unique_ptr<RedfishObject>)>
+          &result_callback);
 
   RedfishInterface *redfish_intf_;
 };
