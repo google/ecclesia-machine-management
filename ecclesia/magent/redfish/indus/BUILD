@@ -43,6 +43,7 @@ cc_library(
         "//ecclesia/magent/sysmodel/x86:sysmodel_fru",
         "//ecclesia/magent/sysmodel/x86:x86_sysmodel",
         "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/meta:type_traits",
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/status",

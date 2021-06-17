@@ -68,6 +68,10 @@ ABSL_FLAG(std::string, odata_metadata_file_path,
           "/etc/google/magent/metadata/index.xml",
           "Path to a file containing the OData metadata document.");
 
+ABSL_FLAG(std::string, system_event_clear_script_path,
+          "",
+          "Path to an script that clears the system events.");
+
 namespace {
 
 using tensorflow::serving::net_http::HTTPServerInterface;

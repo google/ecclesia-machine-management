@@ -19,7 +19,13 @@
 
 #include <string>
 #include <vector>
+#include <cstdlib>
 
+#include <sys/stat.h>
+#include <sys/wait.h>
+
+#include "absl/flags/declare.h"
+#include "absl/flags/flag.h"
 #include "absl/strings/str_cat.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
@@ -27,6 +33,8 @@
 #include "ecclesia/magent/redfish/indus/event_service.h"
 #include "json/value.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
+
+ABSL_DECLARE_FLAG(std::string, system_event_clear_script_path);
 
 namespace ecclesia {
 
@@ -45,9 +53,30 @@ class EventServiceClear : public Resource {
 
   void Post(tensorflow::serving::net_http::ServerRequestInterface *req,
             const ParamsType &params) override {
+    std::string script = absl::GetFlag(FLAGS_system_event_clear_script_path);
+    if (script.empty()) {
+      req->ReplyWithStatus(
+          tensorflow::serving::net_http::HTTPStatusCode::METHOD_NA);
+      return;
+    } else if (!FileExists(script.c_str())) {
+      req->ReplyWithStatus(
+          tensorflow::serving::net_http::HTTPStatusCode::NOT_FOUND);
+      return;
+    }
 
-    req->ReplyWithStatus(
-        tensorflow::serving::net_http::HTTPStatusCode::IM_A_TEAPOT);
+    int status = std::system(script.c_str());
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+      req->ReplyWithStatus(
+          tensorflow::serving::net_http::HTTPStatusCode::OK);
+      } else {
+      req->ReplyWithStatus(
+          tensorflow::serving::net_http::HTTPStatusCode::ERROR);
+    }
+  }
+
+  static bool FileExists(const char* path) {
+    struct stat buffer;
+    return stat(path, &buffer) == 0;
   }
 };
 
