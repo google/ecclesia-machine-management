@@ -199,4 +199,17 @@ void Sysmodel::QueryAllResourceInternal(
       [&](auto &sys_obj) { result_callback(std::move(sys_obj)); });
 }
 
+// EventService:
+// "/redfish/v1/EventService"
+void Sysmodel::QueryAllResourceInternal(
+    ResourceEventService *,
+    const std::function<void(std::unique_ptr<RedfishObject>)>
+        &result_callback) {
+  auto root = redfish_intf_->GetRoot();
+  auto service = root[ResourceEventService::Name].AsObject();
+  if (service) {
+    result_callback(std::move(service));
+  }
+}
+
 }  // namespace libredfish

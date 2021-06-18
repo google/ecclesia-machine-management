@@ -101,6 +101,9 @@ inline constexpr char kRfPropertyMediaTypeSsd[] = "SSD";
 inline constexpr char kRfPropertyMemberId[] = "MemberId";
 inline constexpr char kRfPropertyReading[] = "Reading";
 inline constexpr char kRfPropertyHealth[] = "Health";
+inline constexpr char kRfPropertyResponseError[] = "error";
+inline constexpr char kRfPropertyResponseCode[] = "code";
+inline constexpr char kRfPropertyResponseMessage[] = "message";
 
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
 DEFINE_REDFISH_RESOURCE(ResourceChassis, "Chassis");
@@ -115,6 +118,7 @@ DEFINE_REDFISH_RESOURCE(ResourceFan, "Fan");
 DEFINE_REDFISH_RESOURCE(ResourceSensor, "Sensor");
 DEFINE_REDFISH_RESOURCE(ResourcePcieFunction, "PCIeFunction");
 DEFINE_REDFISH_RESOURCE(ResourceComputerSystem, "ComputerSystem");
+DEFINE_REDFISH_RESOURCE(ResourceEventService, "EventService");
 // The AssemblyEntry is a single item in the "Assemblies" list of
 // Assembly resource
 DEFINE_REDFISH_RESOURCE(ResourceAssemblyEntry, "/Assembly#/");
@@ -183,6 +187,8 @@ DEFINE_REDFISH_PROPERTY(PropertyDataSourceUri, std::string, "DataSourceUri");
 DEFINE_REDFISH_PROPERTY(PropertyRedfishActionInfo, std::string,
                         "@Redfish.ActionInfo");
 DEFINE_REDFISH_PROPERTY(PropertyTarget, std::string, "target");
+DEFINE_REDFISH_PROPERTY(PropertyResponseCode, std::string, "code");
+DEFINE_REDFISH_PROPERTY(PropertyResponseMessage, std::string, "message");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
