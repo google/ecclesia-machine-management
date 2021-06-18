@@ -34,6 +34,7 @@ class ServiceRootIndus : public ServiceRoot {
            const ParamsType &params) override {
     Json::Value json = BasicRoot();
     json[kEventService][kOdataId] = kEventServiceUri;
+    json[kOem][kGoogle][kTopologyRepresentation] = kTopologyRepresentationV1;
     JSONResponseOK(json, req);
   }
 };
