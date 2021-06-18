@@ -170,6 +170,11 @@ inline constexpr char kAssemblies[] = "Assemblies";
 inline constexpr char kAssemblyDataType[] = "#Assembly.v1_2_1.Assembly";
 inline constexpr char kComponents[] = "Components";
 
+// POST response keywords
+inline constexpr char kResponseError[] = "error";
+inline constexpr char kResponseCode[] = "code";
+inline constexpr char kResponseMessage[] = "message";
+
 // Google Oem Keywords
 inline constexpr char kTopologyRepresentation[] = "TopologyRepresentation";
 inline constexpr char kAssociatedWith[] = "AssociatedWith";
@@ -265,6 +270,7 @@ inline constexpr char kSleipnirSensorCollectionUri[] =
     "/redfish/v1/Chassis/Sleipnir/Sensors";
 inline constexpr char kSleipnirSensorUriPattern[] =
     "/redfish/v1/Chassis/Sleipnir/Sensors/([\\w]+)";
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_MAGENT_REDFISH_CORE_REDFISH_KEYWORDS_H_

@@ -59,24 +59,40 @@ class EventServiceClear : public Resource {
           tensorflow::serving::net_http::HTTPStatusCode::METHOD_NA);
       return;
     } else if (!FileExists(script.c_str())) {
-      req->ReplyWithStatus(
-          tensorflow::serving::net_http::HTTPStatusCode::NOT_FOUND);
+      Respond("Base.1.0.GeneralError",
+              "Script not found",
+              tensorflow::serving::net_http::HTTPStatusCode::NOT_FOUND,
+              req);
       return;
     }
 
     int status = std::system(script.c_str());
     if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-      req->ReplyWithStatus(
-          tensorflow::serving::net_http::HTTPStatusCode::OK);
+      Respond("Base.1.0.Success",
+              "Success",
+              tensorflow::serving::net_http::HTTPStatusCode::OK,
+              req);
       } else {
-      req->ReplyWithStatus(
-          tensorflow::serving::net_http::HTTPStatusCode::ERROR);
+      Respond("Base.1.0.GeneralError",
+              "Failed to execute script",
+              tensorflow::serving::net_http::HTTPStatusCode::ERROR,
+              req);
     }
   }
 
   static bool FileExists(const char* path) {
     struct stat buffer;
     return stat(path, &buffer) == 0;
+  }
+
+  static void Respond(
+      absl::string_view rf_code, absl::string_view msg,
+      tensorflow::serving::net_http::HTTPStatusCode code,
+      tensorflow::serving::net_http::ServerRequestInterface *req) {
+    Json::Value res;
+    res[kResponseError][kResponseCode] = std::string(rf_code);
+    res[kResponseError][kResponseMessage] = std::string(msg);
+    JSONResponse(res, code, req);
   }
 };
 
