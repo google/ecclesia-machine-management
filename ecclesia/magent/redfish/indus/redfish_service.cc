@@ -52,6 +52,7 @@
 #include "ecclesia/magent/redfish/common/root.h"
 #include "ecclesia/magent/redfish/common/session_collection.h"
 #include "ecclesia/magent/redfish/common/session_service.h"
+#include "ecclesia/magent/redfish/common/service_root.h"
 #include "ecclesia/magent/redfish/common/software.h"
 #include "ecclesia/magent/redfish/common/software_inventory.h"
 #include "ecclesia/magent/redfish/common/storage_collection.h"
@@ -66,11 +67,11 @@
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/redfish/indus/chassis.h"
-#include "ecclesia/magent/redfish/indus/event_service.h"
-#include "ecclesia/magent/redfish/indus/event_service_clear.h"
+#include "ecclesia/magent/redfish/indus/log_services.h"
+#include "ecclesia/magent/redfish/indus/log_service.h"
+#include "ecclesia/magent/redfish/indus/log_service_clear.h"
 #include "ecclesia/magent/redfish/indus/drive.h"
 #include "ecclesia/magent/redfish/indus/pcie_slots.h"
-#include "ecclesia/magent/redfish/indus/service_root.h"
 #include "ecclesia/magent/redfish/indus/sleipnir_sensor.h"
 #include "ecclesia/magent/redfish/indus/sleipnir_sensor_collection.h"
 #include "ecclesia/magent/redfish/indus/storage.h"
@@ -295,7 +296,7 @@ IndusRedfishService::IndusRedfishService(
     SystemModel *system_model, absl::string_view assemblies_dir,
     absl::string_view odata_metadata_path) {
   resources_.push_back(CreateResource<Root>(server));
-  resources_.push_back(CreateResource<ServiceRootIndus>(server));
+  resources_.push_back(CreateResource<ServiceRoot>(server));
   resources_.push_back(CreateResource<ComputerSystemCollection>(server));
   resources_.push_back(CreateResource<ComputerSystem>(
       server, system_model, std::string(kSystemName)));
@@ -303,8 +304,9 @@ IndusRedfishService::IndusRedfishService(
   resources_.push_back(CreateResource<Chassis>(server, system_model));
   resources_.push_back(CreateResource<MemoryCollection>(server, system_model));
   resources_.push_back(CreateResource<Memory>(server, system_model));
-  resources_.push_back(CreateResource<EventService>(server));
-  resources_.push_back(CreateResource<EventServiceClear>(server));
+  resources_.push_back(CreateResource<LogServiceCollectionIndus>(server));
+  resources_.push_back(CreateResource<LogService>(server));
+  resources_.push_back(CreateResource<LogServiceClear>(server));
   resources_.push_back(CreateResource<SessionCollection>(server));
   resources_.push_back(CreateResource<SessionService>(server));
 

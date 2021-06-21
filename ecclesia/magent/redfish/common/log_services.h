@@ -14,45 +14,37 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_EVENT_SERVICE_H_
-#define ECCLESIA_MAGENT_REDFISH_INDUS_EVENT_SERVICE_H_
+#ifndef ECCLESIA_MAGENT_REDFISH_COMMON_LOG_SERVICES_H_
+#define ECCLESIA_MAGENT_REDFISH_COMMON_LOG_SERVICES_H_
 
 #include <string>
-#include <vector>
 
-#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/magent/redfish/core/index_resource.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
-#include "ecclesia/magent/sysmodel/x86/chassis.h"
-#include "ecclesia/magent/sysmodel/x86/sysmodel.h"
 #include "json/value.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
 
-class EventService : public Resource {
+class LogServiceCollection : public Resource {
  public:
-  static constexpr char kClearAction[] = "Clear";
-  EventService() : Resource(kEventServiceUri) {}
+  LogServiceCollection() : Resource(kLogServicesUri) {}
 
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override {
     Json::Value json;
-    json[kOdataType] = "#EventService.v1_5_0.EventService";
+    json[kOdataType] = "#LogServiceCollection.LogServiceCollection";
     json[kOdataId] = std::string(Uri());
-    json[kActions][absl::StrCat("#EventService.", kClearAction)][kTarget] =
-        absl::StrCat(Uri(), "/Actions/EventService.", kClearAction);
-
-    json[kName] = "Event Service";
-    json[kId] = "EventService";
-
+    json[kName] = "Log Service Collection";
+    json[kMembersCount] = 0;
+    GetJsonArray(&json, kMembers);
     JSONResponseOK(json, req);
   }
 };
 
 }  // namespace ecclesia
-#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_EVENT_SERVICE_H_
+
+#endif  // ECCLESIA_MAGENT_REDFISH_COMMON_LOG_SERVICES_H_

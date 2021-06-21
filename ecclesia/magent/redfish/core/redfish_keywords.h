@@ -28,7 +28,7 @@ inline constexpr char kName[] = "Name";
 inline constexpr char kSystems[] = "Systems";
 inline constexpr char kChassis[] = "Chassis";
 inline constexpr char kManagers[] = "Managers";
-inline constexpr char kEventService[] = "EventService";
+inline constexpr char kLogService[] = "LogService";
 inline constexpr char kUpdateService[] = "UpdateService";
 inline constexpr char kMembers[] = "Members";
 inline constexpr char kMembersCount[] = "Members@odata.count";
@@ -138,6 +138,7 @@ inline constexpr char kMaxReadingRange[] = "MaxReadingRange";
 inline constexpr char kRelatedItem[] = "RelatedItem";
 inline constexpr char kEnabled[] = "Enabled";
 inline constexpr char kAbsent[] = "Absent";
+inline constexpr char kOk[] = "OK";
 inline constexpr char kThrottlingCelsius[] = "ThrottlingCelsius";
 inline constexpr char kMemberId[] = "MemberId";
 inline constexpr char kVersion[] = "Version";
@@ -164,6 +165,8 @@ inline constexpr char kDeviceType[] = "DeviceType";
 inline constexpr char kSessions[] = "Sessions";
 inline constexpr char kSessionService[] = "SessionService";
 inline constexpr char kServiceEnabled[] = "ServiceEnabled";
+inline constexpr char kLogServices[] = "LogServices";
+inline constexpr char kClearLog[] = "ClearLog";
 
 // Assembly keywords
 inline constexpr char kAssemblies[] = "Assemblies";
@@ -210,7 +213,10 @@ inline constexpr char kComputerSystemUri[] = "/redfish/v1/Systems/system";
 inline constexpr char kChassisCollectionUri[] = "/redfish/v1/Chassis";
 inline constexpr char kChassisUriPattern[] = "/redfish/v1/Chassis/(\\w+)";
 inline constexpr char kChassisUri[] = "/redfish/v1/Chassis/chassis";
-inline constexpr char kEventServiceUri[] = "/redfish/v1/EventService";
+inline constexpr char kLogServicesUri[] =
+    "/redfish/v1/Systems/system/LogServices";
+inline constexpr char kLogServiceSystemEventsUri[] =
+    "/redfish/v1/Systems/system/LogServices/SystemEvents";
 inline constexpr char kMemoryCollectionUri[] =
     "/redfish/v1/Systems/system/Memory";
 inline constexpr char kMemoryUriPattern[] =

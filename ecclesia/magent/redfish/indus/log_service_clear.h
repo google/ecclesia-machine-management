@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_EVENT_SERVICE_CLEAR_H_
-#define ECCLESIA_MAGENT_REDFISH_INDUS_EVENT_SERVICE_CLEAR_H_
+#ifndef ECCLESIA_MAGENT_REDFISH_INDUS_LOG_SERVICE_CLEAR_H_
+#define ECCLESIA_MAGENT_REDFISH_INDUS_LOG_SERVICE_CLEAR_H_
 
 #include <string>
 #include <vector>
@@ -30,7 +30,6 @@
 #include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
-#include "ecclesia/magent/redfish/indus/event_service.h"
 #include "json/value.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -38,11 +37,11 @@ ABSL_DECLARE_FLAG(std::string, system_event_clear_script_path);
 
 namespace ecclesia {
 
-class EventServiceClear : public Resource {
+class LogServiceClear : public Resource {
  public:
-  EventServiceClear() : Resource(
-      absl::StrCat(kEventServiceUri, "/Actions/EventService.",
-                   EventService::kClearAction)) {}
+  LogServiceClear() : Resource(
+      absl::StrCat(kLogServiceSystemEventsUri, "/Actions/", kLogService, ".",
+                   kClearLog)) {}
 
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
@@ -97,4 +96,4 @@ class EventServiceClear : public Resource {
 };
 
 }  // namespace ecclesia
-#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_EVENT_SERVICE_CLEAR_H_
+#endif  // ECCLESIA_MAGENT_REDFISH_INDUS_LOG_SERVICE_CLEAR_H_

@@ -50,6 +50,7 @@ class ComputerSystem : public Resource {
 
     json[kName] = system_name_;
     json[kId] = "system";
+    json[kLogServices][kOdataId] = kLogServicesUri;
 
     auto *memory = GetJsonObject(&json, kMemory);
     (*memory)[kOdataId] = absl::StrCat(Uri(), "/", kMemory);

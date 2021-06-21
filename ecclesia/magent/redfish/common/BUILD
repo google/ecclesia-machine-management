@@ -11,6 +11,7 @@ cc_library(
         "processor_metrics.cc",
     ],
     hdrs = [
+        "log_services.h",
         "memory.h",
         "memory_collection.h",
         "memory_metrics.h",
