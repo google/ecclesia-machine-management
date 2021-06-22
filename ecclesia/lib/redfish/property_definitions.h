@@ -84,6 +84,8 @@ inline constexpr char kRfPropertyDownstreamPcieFunctions[] =
     "DownstreamPCIeFunctions";
 inline constexpr char kRfPropertyPciLocation[] = "PciLocation";
 inline constexpr char kRfPropertyId[] = "Id";
+inline constexpr char kRfPropertyLogServices[] = "LogServices";
+inline constexpr char kRfPropertyClearLog[] = "ClearLog";
 
 inline constexpr char kRfOemPropertyAssociatedWith[] = "AssociatedWith";
 inline constexpr char kRfOemPropertyAttachedTo[] = "AttachedTo";
@@ -118,7 +120,7 @@ DEFINE_REDFISH_RESOURCE(ResourceFan, "Fan");
 DEFINE_REDFISH_RESOURCE(ResourceSensor, "Sensor");
 DEFINE_REDFISH_RESOURCE(ResourcePcieFunction, "PCIeFunction");
 DEFINE_REDFISH_RESOURCE(ResourceComputerSystem, "ComputerSystem");
-DEFINE_REDFISH_RESOURCE(ResourceEventService, "EventService");
+DEFINE_REDFISH_RESOURCE(ResourceLogService, "LogService");
 // The AssemblyEntry is a single item in the "Assemblies" list of
 // Assembly resource
 DEFINE_REDFISH_RESOURCE(ResourceAssemblyEntry, "/Assembly#/");
@@ -136,6 +138,7 @@ DEFINE_REDFISH_PROPERTY(PropertyVendor, std::string, "Vendor");
 DEFINE_REDFISH_PROPERTY(PropertyMemoryDeviceType, std::string,
                         "MemoryDeviceType");
 DEFINE_REDFISH_PROPERTY(PropertyName, std::string, "Name");
+DEFINE_REDFISH_PROPERTY(PropertyId, std::string, "Id");
 DEFINE_REDFISH_PROPERTY(PropertyOperatingSpeedMhz, int, "OperatingSpeedMhz");
 DEFINE_REDFISH_PROPERTY(PropertyPartNumber, std::string, "PartNumber");
 DEFINE_REDFISH_PROPERTY(PropertyPhysicalContext, std::string,

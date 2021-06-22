@@ -110,7 +110,7 @@ class Sysmodel {
       const std::function<void(std::unique_ptr<RedfishObject>)>
           &result_callback);
   void QueryAllResourceInternal(
-      ResourceEventService *,
+      ResourceLogService *,
       const std::function<void(std::unique_ptr<RedfishObject>)>
           &result_callback);
 
