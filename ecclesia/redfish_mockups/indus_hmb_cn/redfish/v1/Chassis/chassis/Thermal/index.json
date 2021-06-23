@@ -20,7 +20,7 @@
             "Name": "dimm0",
             "MemberId": "0",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/1",
@@ -36,7 +36,7 @@
             "Name": "dimm1",
             "MemberId": "1",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/2",
@@ -52,7 +52,7 @@
             "Name": "dimm2",
             "MemberId": "2",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/3",
@@ -68,7 +68,7 @@
             "Name": "dimm3",
             "MemberId": "3",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/4",
@@ -84,7 +84,7 @@
             "Name": "dimm4",
             "MemberId": "4",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/5",
@@ -100,7 +100,7 @@
             "Name": "dimm5",
             "MemberId": "5",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/6",
@@ -116,7 +116,7 @@
             "Name": "dimm6",
             "MemberId": "6",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/7",
@@ -132,7 +132,7 @@
             "Name": "dimm7",
             "MemberId": "7",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/8",
@@ -148,7 +148,7 @@
             "Name": "dimm8",
             "MemberId": "8",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/9",
@@ -164,7 +164,7 @@
             "Name": "dimm9",
             "MemberId": "9",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/10",
@@ -180,7 +180,7 @@
             "Name": "dimm10",
             "MemberId": "10",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/11",
@@ -196,7 +196,7 @@
             "Name": "dimm11",
             "MemberId": "11",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/12",
@@ -212,7 +212,7 @@
             "Name": "dimm12",
             "MemberId": "12",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/13",
@@ -228,7 +228,7 @@
             "Name": "dimm13",
             "MemberId": "13",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/14",
@@ -244,7 +244,7 @@
             "Name": "dimm14",
             "MemberId": "14",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/15",
@@ -260,7 +260,7 @@
             "Name": "dimm15",
             "MemberId": "15",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/16",
@@ -276,7 +276,7 @@
             "Name": "dimm16",
             "MemberId": "16",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/17",
@@ -292,7 +292,7 @@
             "Name": "dimm17",
             "MemberId": "17",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/18",
@@ -308,7 +308,7 @@
             "Name": "dimm18",
             "MemberId": "18",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/19",
@@ -324,7 +324,7 @@
             "Name": "dimm19",
             "MemberId": "19",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/20",
@@ -340,7 +340,7 @@
             "Name": "dimm20",
             "MemberId": "20",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/21",
@@ -356,7 +356,7 @@
             "Name": "dimm21",
             "MemberId": "21",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/22",
@@ -372,7 +372,7 @@
             "Name": "dimm22",
             "MemberId": "22",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         },
         {
             "@odata.id": "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/23",
@@ -388,7 +388,7 @@
             "Name": "dimm23",
             "MemberId": "23",
             "ReadingCelsius": 40.0,
-            "UpperThresholdCritical": 85
+            "UpperThresholdCritical": 85.0
         }
     ]
 }

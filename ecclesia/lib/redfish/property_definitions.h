@@ -167,13 +167,13 @@ DEFINE_REDFISH_PROPERTY(PropertyReadingVolts, double, "ReadingVolts");
 DEFINE_REDFISH_PROPERTY(PropertyReading, double, "Reading");
 DEFINE_REDFISH_PROPERTY(PropertyReadingType, std::string, "ReadingType");
 DEFINE_REDFISH_PROPERTY(PropertyReadingUnits, std::string, "ReadingUnits");
-DEFINE_REDFISH_PROPERTY(PropertyUpperThresholdCritical, int,
+DEFINE_REDFISH_PROPERTY(PropertyUpperThresholdCritical, double,
                         "UpperThresholdCritical");
-DEFINE_REDFISH_PROPERTY(PropertyUpperThresholdNonCritical, int,
+DEFINE_REDFISH_PROPERTY(PropertyUpperThresholdNonCritical, double,
                         "UpperThresholdNonCritical");
-DEFINE_REDFISH_PROPERTY(PropertyLowerThresholdCritical, int,
+DEFINE_REDFISH_PROPERTY(PropertyLowerThresholdCritical, double,
                         "LowerThresholdCritical");
-DEFINE_REDFISH_PROPERTY(PropertyLowerThresholdNonCritical, int,
+DEFINE_REDFISH_PROPERTY(PropertyLowerThresholdNonCritical, double,
                         "LowerThresholdNonCritical");
 DEFINE_REDFISH_PROPERTY(PropertyState, std::string, "State");
 DEFINE_REDFISH_PROPERTY(PropertyVendorId, std::string, "VendorId");
