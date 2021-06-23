@@ -176,7 +176,10 @@ class RedfishVariant final {
     return ptr_->GetValue(val);
   }
 
-  std::string DebugString() const { return ptr_->DebugString(); }
+  std::string DebugString() const {
+    if (!ptr_) return "";
+    return ptr_->DebugString();
+  }
 
  private:
   std::unique_ptr<ImplIntf> ptr_;
