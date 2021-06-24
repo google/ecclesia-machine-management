@@ -29,6 +29,7 @@
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 
 namespace libredfish {
@@ -86,11 +87,11 @@ struct RawTestConfig {
 };
 
 const RawTestConfig kRawTestCases[] = {
-  { BackendType::kDefault, InterfaceType::kNoAuth },
-  { BackendType::kDefault, InterfaceType::kBasicAuth },
-  { BackendType::kDefault, InterfaceType::kSessionAuth },
-  { BackendType::kDefault, InterfaceType::kTlsAuth },
-  { BackendType::kEcclesiaCurl, InterfaceType::kNoAuth },
+    {BackendType::kDefault, InterfaceType::kNoAuth},
+    {BackendType::kDefault, InterfaceType::kBasicAuth},
+    {BackendType::kDefault, InterfaceType::kSessionAuth},
+    {BackendType::kDefault, InterfaceType::kTlsAuth},
+    {BackendType::kEcclesiaCurl, InterfaceType::kNoAuth},
 };
 
 // The class converts default integer based test names to meaningful auth type
@@ -101,8 +102,8 @@ struct PrintToStringParamName {
       const ::testing::TestParamInfo<ParamType>& info) const {
     auto interface = InterfaceTypeToString(info.param.interface_type);
     ecclesia::Check(interface.has_value(), "the interface is supported");
-    return std::string(BackendTypeToString(info.param.backend_type)) +
-        "_" + std::string(*interface);
+    return std::string(BackendTypeToString(info.param.backend_type)) + "_" +
+           std::string(*interface);
   }
 };
 
@@ -343,6 +344,68 @@ TEST_P(RawInterfaceWithParamTest, PostUriWithStringPayload) {
   EXPECT_EQ(new_chassis->GetNodeValue<std::string>("key3").value_or(""),
             "test");
   EXPECT_EQ(new_chassis->GetNodeValue<bool>("key4").value_or(false), true);
+}
+
+TEST_P(RawInterfaceWithParamTest, PatchUri) {
+  auto root_chassis =
+      raw_intf_->GetUri("/redfish/v1/Chassis/chassis").AsObject();
+  ASSERT_TRUE(root_chassis);
+
+  auto res =
+      raw_intf_->PatchUri("/redfish/v1/Chassis/chassis", {{"Name", "testname"}})
+          .AsObject();
+  // After propagate status code to RedfishInvariant, add test to verify
+  // status code for different type of resources. For example, for resource
+  // support Action, return 204, others return 404.
+  // For 204 response, there is no payload. So this will return empty
+  // RedfishInvariant. The following ASSERT will fail.
+  // ASSERT_TRUE(res);
+
+  auto new_root_chassis =
+      raw_intf_->GetUri("/redfish/v1/Chassis/chassis").AsObject();
+  ASSERT_TRUE(new_root_chassis);
+
+  EXPECT_THAT(new_root_chassis->GetNodeValue<libredfish::PropertyName>(),
+              Eq("testname"));
+}
+
+TEST_P(RawInterfaceWithParamTest, PatchUriMultipleFields) {
+  auto root_chassis =
+      raw_intf_->GetUri("/redfish/v1/Chassis/chassis").AsObject();
+  ASSERT_TRUE(root_chassis);
+
+  auto res = raw_intf_
+                 ->PatchUri("/redfish/v1/Chassis/chassis",
+                            {{"Name", "testname"}, {"Id", "testid"}})
+                 .AsObject();
+  // After propagate status code to RedfishInvariant, add test to verify
+  // status code for different type of resources. For example, for resource
+  // support Action, return 204, others return 404.
+  // For 204 response, there is no payload. So this will return empty
+  // RedfishInvariant. The following ASSERT will fail.
+  // ASSERT_TRUE(res);
+
+  auto new_root_chassis =
+      raw_intf_->GetUri("/redfish/v1/Chassis/chassis").AsObject();
+  ASSERT_TRUE(new_root_chassis);
+
+  EXPECT_THAT(new_root_chassis->GetNodeValue<libredfish::PropertyName>(),
+              Eq("testname"));
+  EXPECT_THAT(new_root_chassis->GetNodeValue<libredfish::PropertyId>(),
+              Eq("testid"));
+}
+
+TEST_P(RawInterfaceWithParamTest, PatchBadUri) {
+  auto res = raw_intf_
+                 ->PatchUri("/redfish/v1/Not/A/Uri",
+                            {{"Name", "testname"}, {"Id", "testid"}})
+                 .AsObject();
+  // After propagate status code to RedfishInvariant, add test to verify
+  // status code for different type of resources. For example, for resource
+  // support Action, return 204, others return 404.
+  // For 204 response, there is no payload. So this will return empty
+  // RedfishInvariant.
+  EXPECT_FALSE(res);
 }
 
 INSTANTIATE_TEST_SUITE_P(RawTests, RawInterfaceWithParamTest,

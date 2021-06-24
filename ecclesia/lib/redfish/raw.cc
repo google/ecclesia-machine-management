@@ -83,6 +83,25 @@ class JsonValue {
   json_t *json_;
 };
 
+// Helper function which serializes a Span of Redfish property -> value map
+// pairs into a string that can be sent over the wire.
+MallocChar KvSpanToJsonCharBuffer(
+    absl::Span<const std::pair<std::string, RedfishInterface::ValueVariant>>
+        kv_span) {
+  json_t *post_payload = json_object();
+  for (const auto &kv_pair : kv_span) {
+    absl::visit(
+        [&](auto val) {
+          JsonValue jValue(val);
+          json_object_set(post_payload, kv_pair.first.data(), jValue.get());
+        },
+        kv_pair.second);
+  }
+  MallocChar content(json_dumps(post_payload, 0));
+  json_decref(post_payload);
+  return content;
+}
+
 // RawPayload provides a wrapper for interacting with responses from a
 // Redfish query. The provided methods will either provide additional info or
 // allow data to be extracted. RawPayload is an interface containing the union
@@ -310,33 +329,8 @@ class RawIntf : public RedfishInterface {
   RedfishVariant PostUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
-    absl::ReaderMutexLock lock(&service_mutex_);
-    if (!service_) {
-      return RedfishVariant();
-    }
-
-    json_t *post_payload = json_object();
-    for (const auto &kv_pair : kv_span) {
-      absl::visit(
-          [&](auto val) {
-            JsonValue jValue(val);
-            json_object_set(post_payload, kv_pair.first.data(), jValue.get());
-          },
-          kv_pair.second);
-    }
-
-    MallocChar content(json_dumps(post_payload, 0));
-    json_decref(post_payload);
-    json_t *value =
-        postUriFromService(service_.get(), uri.data(), content.get(), 0, NULL);
-
-    if (!value) {
-      return RedfishVariant();
-    }
-
-    return RedfishVariant(
-        absl::make_unique<RawVariantImpl>(RawPayload::NewShared(
-            PayloadUniquePtr(createRedfishPayload(value, service_.get())))));
+    MallocChar content = KvSpanToJsonCharBuffer(kv_span);
+    return PostUri(uri, absl::string_view(content.get()));
   }
 
   RedfishVariant PostUri(absl::string_view uri,
@@ -348,6 +342,27 @@ class RawIntf : public RedfishInterface {
 
     json_t *value =
         postUriFromService(service_.get(), uri.data(), data.begin(), 0, NULL);
+    if (!value) {
+      return RedfishVariant();
+    }
+
+    return RedfishVariant(
+        absl::make_unique<RawVariantImpl>(RawPayload::NewShared(
+            PayloadUniquePtr(createRedfishPayload(value, service_.get())))));
+  }
+
+  RedfishVariant PatchUri(
+      absl::string_view uri,
+      absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
+    absl::ReaderMutexLock lock(&service_mutex_);
+    if (!service_) {
+      return RedfishVariant();
+    }
+
+    MallocChar content = KvSpanToJsonCharBuffer(kv_span);
+    json_t *value =
+        patchUriFromService(service_.get(), uri.data(), content.get());
+
     if (!value) {
       return RedfishVariant();
     }
@@ -378,9 +393,8 @@ std::unique_ptr<RedfishInterface> NewRawInterface(
   // createServiceEnumerator only returns NULL if calloc fails, regardless of
   // whether the endpoint is valid or reachable.
   // Handler is consumed even on failure.
-  ServiceUniquePtr service(
-      createServiceEnumeratorExt(endpoint.c_str(), nullptr, nullptr, 0,
-                                 &handler));
+  ServiceUniquePtr service(createServiceEnumeratorExt(endpoint.c_str(), nullptr,
+                                                      nullptr, 0, &handler));
   return absl::make_unique<RawIntf>(std::move(service), trusted);
 }
 

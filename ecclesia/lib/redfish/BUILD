@@ -70,6 +70,7 @@ cc_test(
     ],
     deps = [
         ":interface",
+        ":property_definitions",
         ":raw",
         ":test_mockup",
         "//ecclesia/lib/file:test_filesystem",
