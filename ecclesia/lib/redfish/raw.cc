@@ -27,16 +27,17 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
+#include "absl/synchronization/notification.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "absl/types/variant.h"
+#include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/libredfish_adapter.h"
 
 extern "C" {
 #include "redfishPayload.h"
-#include "redfishRawAsync.h"
 #include "redfishService.h"
 }  // extern "C"
 
@@ -45,6 +46,11 @@ namespace {
 
 // Redfish version for the service root.
 constexpr char kRedfishServiceVersionRoot[] = "/redfish/v1";
+
+// Options for outbound HTTP requests to a redfish backend.
+constexpr redfishAsyncOptions kDefaultAsyncOptions = {
+    .accept = REDFISH_ACCEPT_JSON, .timeout = 5L /* seconds */
+};
 
 struct RedfishPayloadDeleter {
   void operator()(redfishPayload *payload) {
@@ -287,6 +293,60 @@ std::unique_ptr<RedfishIterable> RawVariantImpl::AsIterable() const {
   return absl::make_unique<RawIterable>(payload_);
 }
 
+// Struct to hold the results of a Redfish HTTP operation.
+struct LibredfishCallbackResult {
+  bool success;
+  uint16_t http_code;
+  PayloadUniquePtr payload;
+};
+
+// Context object to be used for interfacing with the async worker in the
+// libredfish library. Implements a producer and consumer function to pass a
+// LibredfishCallbackResult one time. Interacting between a single producer
+// and consumer is threadsafe as long as each function is only invoked once.
+class AsyncLibredfishChannel {
+ public:
+  AsyncLibredfishChannel() {}
+
+  // Producer: Sets the payload and notifies the consumer. Intended to be
+  // invoked once.
+  void SetPayloadAndNotify(LibredfishCallbackResult payload) {
+    payload_ = std::move(payload);
+    notification_.Notify();
+  }
+
+  // Consumer: Waits for data to be ready and consumes the payload. Intended to
+  // be invoked once.
+  LibredfishCallbackResult WaitForPayloadAndConsume() {
+    // Block forever for the notification. We rely on the timeout in the
+    // redfishAsyncOptions to trigger if there are any HTTP issues. We cannot
+    // change WaitForNotification to WaitForNotificationWithTimeout without
+    // updating the LibredfishAsyncToSyncCallback function to use shared_ptr,
+    // otherwise we risk having the main thread time out on the worker thread,
+    // deleting this context, and having the worker thread hold a dangling ptr.
+    notification_.WaitForNotification();
+    return std::move(payload_);
+  }
+
+ private:
+  absl::Notification notification_;
+  LibredfishCallbackResult payload_;
+};
+
+// Callback passed to libredfish to invoke in the libredfish worker thread to
+// pass back the HTTP result to the main thread.
+void LibredfishAsyncToSyncCallback(bool success, uint16_t http_code,
+                                   redfishPayload *payload, void *context) {
+  AsyncLibredfishChannel *async_channel =
+      static_cast<AsyncLibredfishChannel *>(context);
+  async_channel->SetPayloadAndNotify(
+      LibredfishCallbackResult{.success = success,
+                               .http_code = http_code,
+                               .payload = PayloadUniquePtr(payload)});
+  // After we've notified the main thread, there are no guarantees that *context
+  // will remain a valid pointer.
+}
+
 // RawIntf provides an interaface wrapper for the redfishService C type.
 class RawIntf : public RedfishInterface {
  public:
@@ -340,15 +400,26 @@ class RawIntf : public RedfishInterface {
       return RedfishVariant();
     }
 
-    json_t *value =
-        postUriFromService(service_.get(), uri.data(), data.begin(), 0, NULL);
-    if (!value) {
+    PayloadUniquePtr payload(
+        createRedfishPayloadFromString(data.data(), service_.get()));
+
+    AsyncLibredfishChannel channel;
+    redfishAsyncOptions async_options = kDefaultAsyncOptions;
+    // Actually start the request, the channel becomes the (void * context)
+    // parameter in the request callback.
+    if (!postUriFromServiceAsync(service_.get(), uri.data(), payload.get(),
+                                 &async_options, LibredfishAsyncToSyncCallback,
+                                 &channel)) {
       return RedfishVariant();
     }
 
-    return RedfishVariant(
-        absl::make_unique<RawVariantImpl>(RawPayload::NewShared(
-            PayloadUniquePtr(createRedfishPayload(value, service_.get())))));
+    // Return the result as a variant.
+    LibredfishCallbackResult async_payload = channel.WaitForPayloadAndConsume();
+    if (!async_payload.success) {
+      return RedfishVariant();
+    }
+    return RedfishVariant(absl::make_unique<RawVariantImpl>(
+        RawPayload::NewShared(std::move(async_payload.payload))));
   }
 
   RedfishVariant PatchUri(
@@ -360,16 +431,26 @@ class RawIntf : public RedfishInterface {
     }
 
     MallocChar content = KvSpanToJsonCharBuffer(kv_span);
-    json_t *value =
-        patchUriFromService(service_.get(), uri.data(), content.get());
+    PayloadUniquePtr payload(
+        createRedfishPayloadFromString(content.get(), service_.get()));
 
-    if (!value) {
+    AsyncLibredfishChannel channel;
+    redfishAsyncOptions async_options = kDefaultAsyncOptions;
+    // Actually start the request, the channel becomes the (void * context)
+    // parameter in the request callback.
+    if (!patchUriFromServiceAsync(service_.get(), uri.data(), payload.get(),
+                                  &async_options, LibredfishAsyncToSyncCallback,
+                                  &channel)) {
       return RedfishVariant();
     }
 
-    return RedfishVariant(
-        absl::make_unique<RawVariantImpl>(RawPayload::NewShared(
-            PayloadUniquePtr(createRedfishPayload(value, service_.get())))));
+    // Return the result as a variant.
+    LibredfishCallbackResult async_payload = channel.WaitForPayloadAndConsume();
+    if (!async_payload.success) {
+      return RedfishVariant();
+    }
+    return RedfishVariant(absl::make_unique<RawVariantImpl>(
+        RawPayload::NewShared(std::move(async_payload.payload))));
   }
 
  private:
