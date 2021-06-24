@@ -34,10 +34,22 @@
 #ifndef ECCLESIA_LIB_FILE_UDS_H_
 #define ECCLESIA_LIB_FILE_UDS_H_
 
+#include <sys/types.h>
+
 #include <functional>
 #include <string>
 
+#include "absl/types/optional.h"
+
 namespace ecclesia {
+
+// Structure for (optionally) specifying UID and GID information in requests.
+// This is used by functions that allow maniupulating the socket or directory
+// ownership. A value being unspecified is interpreted as "don't change it".
+struct DomainSocketOwners {
+  absl::optional<uid_t> uid;
+  absl::optional<gid_t> gid;
+};
 
 // Given a path to a socket root, return a bool indicating if this path is
 // considered to be a safe one for creating socket directories.
@@ -55,7 +67,7 @@ bool IsSafeUnixDomainSocketRoot(const std::string &root_path);
 // function. In general this should just be IsSafeUnixDomainSocketRoot but it
 // can be useful to replace it in testing.
 bool SetUpUnixDomainSocket(
-    const std::string &socket_path,
+    const std::string &socket_path, const DomainSocketOwners &owners,
     const std::function<bool(const std::string &)> &is_root_safe);
 
 // Given a path to a domain socket, delete it.
@@ -65,6 +77,18 @@ bool SetUpUnixDomainSocket(
 // down.
 // Returns true if the socket was deleted successfully, false otherwise.
 bool CleanUpUnixDomainSocket(const std::string &socket_path);
+
+// Given a path to a domain socket, set the socket owners.
+//
+// Note that this socket must be in active use for this to be meaningful. You
+// can't pre-create a file for the socket and change the permissions because you
+// can't bind() over top of an existing file.
+//
+// A consquence of this is that you should never rely on this to lock down a
+// socket with stricter ownership because you can't guarantee that no
+// connections will be requested before the permission is applied.
+bool SetUnixDomainSocketOwnership(const std::string &socket_path,
+                                  const DomainSocketOwners &owners);
 
 }  // namespace ecclesia
 

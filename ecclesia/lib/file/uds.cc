@@ -20,9 +20,15 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <filesystem>
 #include <functional>
+#include <optional>
 #include <string>
+
+#include "absl/strings/string_view.h"
+#include "ecclesia/lib/file/path.h"
+#include "ecclesia/lib/logging/globals.h"
+#include "ecclesia/lib/logging/logging.h"
+#include "ecclesia/lib/logging/posix.h"
 
 namespace ecclesia {
 
@@ -34,15 +40,18 @@ bool IsSafeUnixDomainSocketRoot(const std::string &root_path) {
 }
 
 bool SetUpUnixDomainSocket(
-    const std::string &socket_path,
+    const std::string &socket_path, const DomainSocketOwners &owners,
     const std::function<bool(const std::string &)> &is_root_safe) {
-  // Construct the three paths we care about.
-  std::filesystem::path socket(socket_path);
-  std::filesystem::path socket_directory = socket.parent_path();
-  std::filesystem::path socket_root = socket_directory.parent_path();
+  // Construct the directory and root paths from the socket path. We store these
+  // in a string instead of a string_view because we need to be able to convert
+  // them into NUL-terminated strings to pass them into C APIs.
+  std::string socket_directory(GetDirname(socket_path));
+  std::string socket_root(GetDirname(socket_directory));
 
   // Fail immediately if the socket root is not safe.
-  if (!is_root_safe(socket_root.string())) {
+  if (!is_root_safe(socket_root)) {
+    ErrorLog() << "cannot set up domain sockets in " << socket_root
+               << " because it is not a safe and secure location";
     return false;
   }
 
@@ -56,15 +65,41 @@ bool SetUpUnixDomainSocket(
       // lstat to make sure we don't follow a symlink to a directory.
       struct stat socket_dir_stat;
       if (lstat(socket_directory.c_str(), &socket_dir_stat) != 0) {
+        PosixErrorLog() << "unable to lstat() " << socket_directory;
         return false;
       }
       if (!S_ISDIR(socket_dir_stat.st_mode)) {
+        ErrorLog() << "socket directory " << socket_directory
+                   << "is not a directory";
         return false;
       }
       if ((socket_dir_stat.st_mode & S_IRWXU) != S_IRWXU) {
+        ErrorLog() << "socket directory " << socket_directory
+                   << "does not have the correct permissions";
         return false;
       }
     } else {
+      return false;
+    }
+  }
+
+  // The socket directory exists, but it might not have the required owners.
+  //
+  // We could just unconditionally call chown with the desired owners but we
+  // prefer to minimize extra writes at the expense of extra reads so we guard
+  // the lookup with a stat check.
+  struct stat socket_dir_stat;
+  if (lstat(socket_directory.c_str(), &socket_dir_stat) != 0) {
+    PosixErrorLog() << "unable to lstat() " << socket_directory;
+    return false;
+  }
+  uid_t expected_uid = owners.uid ? *owners.uid : getuid();
+  gid_t expected_gid = owners.gid ? *owners.gid : getgid();
+  // If the directory isn't owned by the expected owners then change it.
+  if (socket_dir_stat.st_uid != expected_uid ||
+      socket_dir_stat.st_gid != expected_gid) {
+    if (lchown(socket_directory.c_str(), expected_uid, expected_gid) != 0) {
+      PosixErrorLog() << "unable to lchown() " << socket_directory;
       return false;
     }
   }
@@ -73,7 +108,8 @@ bool SetUpUnixDomainSocket(
   // an existing socket file, so we want to remove that. It's okay for the
   // remove to fail because the file already doesn't exist, but any other
   // failure is an error.
-  if (unlink(socket.c_str()) != 0 && errno != ENOENT) {
+  if (unlink(socket_path.c_str()) != 0 && errno != ENOENT) {
+    PosixErrorLog() << "unable to remove the existing socket " << socket_path;
     return false;
   }
 
@@ -88,10 +124,33 @@ bool SetUpUnixDomainSocket(
 }
 
 bool CleanUpUnixDomainSocket(const std::string &socket_path) {
-  std::filesystem::path socket(socket_path);
   // It's okay for the remove to fail because the file already doesn't exist,
   // but any other failure is an error.
-  return (unlink(socket.c_str()) == 0 || errno == ENOENT);
+  return (unlink(socket_path.c_str()) == 0 || errno == ENOENT);
+}
+
+bool SetUnixDomainSocketOwnership(const std::string &socket_path,
+                                  const DomainSocketOwners &owners) {
+  // Check the existing ownership in order to avoid having to make a change if
+  // we don't have to.
+  struct stat socket_stat;
+  if (lstat(socket_path.c_str(), &socket_stat) != 0) {
+    PosixErrorLog() << "unable to lstat() " << socket_path;
+    return false;
+  }
+  uid_t expected_uid = owners.uid ? *owners.uid : getuid();
+  gid_t expected_gid = owners.gid ? *owners.gid : getgid();
+  // If the existing ownership is not what we need, then try to change them.
+  if (socket_stat.st_uid != expected_uid ||
+      socket_stat.st_gid != expected_gid) {
+    if (lchown(socket_path.c_str(), expected_uid, expected_gid) != 0) {
+      PosixErrorLog() << "unable to lchown() " << socket_path;
+      return false;
+    }
+  }
+  // If we get here then either the socket already has the correct ownership or
+  // we have changed it to the correct ownership.
+  return true;
 }
 
 }  // namespace ecclesia

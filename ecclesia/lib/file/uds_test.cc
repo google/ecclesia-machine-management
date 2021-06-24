@@ -16,18 +16,41 @@
 
 #include "ecclesia/lib/file/uds.h"
 
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <string>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/testing/status.h"
 
 namespace ecclesia {
 namespace {
 
 namespace fs = std::filesystem;
+
+using ::testing::Eq;
+
+// Read the UID and GID of the given path.
+struct FileOwnership {
+  uid_t uid;
+  gid_t gid;
+};
+absl::StatusOr<FileOwnership> GetOwnership(const std::string &path) {
+  struct stat st;
+  if (lstat(path.c_str(), &st) != 0) {
+    return absl::InternalError("lstat() failed");
+  }
+  return FileOwnership{.uid = st.st_uid, .gid = st.st_gid};
+}
 
 TEST(IsSafeTest, VarRunIsSafe) {
   // Absolute path yes, relative path no.
@@ -80,28 +103,40 @@ class SetUpUnixDomainSocketTest : public ::testing::Test {
 TEST_F(SetUpUnixDomainSocketTest, FailsOnUnsafeDirectory) {
   // Try to use a file directly in our "/var/run" equivalent. It should fail
   // because the root is then the parent of test_var_run, not test_var_run_.
-  EXPECT_FALSE(
-      SetUpUnixDomainSocket(test_var_run_ / "test.socket", MakeIsRootSafe()));
+  EXPECT_FALSE(SetUpUnixDomainSocket(test_var_run_ / "test.socket", {},
+                                     MakeIsRootSafe()));
 }
 
 TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryEmpty) {
   // The directory starts out empty and so this should always work.
-  ASSERT_TRUE(SetUpUnixDomainSocket(socket_path_.string(), MakeIsRootSafe()));
+  ASSERT_TRUE(
+      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
 
   EXPECT_TRUE(fs::exists(socket_dir_));
   EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all);
   EXPECT_FALSE(fs::exists(socket_path_));
+
+  auto ownership = GetOwnership(socket_dir_);
+  ASSERT_THAT(ownership, IsOk());
+  EXPECT_THAT(ownership->uid, Eq(getuid()));
+  EXPECT_THAT(ownership->gid, Eq(getgid()));
 }
 
 TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryExists) {
   fs::create_directory(socket_dir_);
   fs::permissions(socket_dir_, fs::perms::owner_all);
 
-  ASSERT_TRUE(SetUpUnixDomainSocket(socket_path_.string(), MakeIsRootSafe()));
+  ASSERT_TRUE(
+      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
 
   EXPECT_TRUE(fs::exists(socket_dir_));
   EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all);
   EXPECT_FALSE(fs::exists(socket_path_));
+
+  auto ownership = GetOwnership(socket_dir_);
+  ASSERT_THAT(ownership, IsOk());
+  EXPECT_THAT(ownership->uid, Eq(getuid()));
+  EXPECT_THAT(ownership->gid, Eq(getgid()));
 }
 
 TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryAndFileExists) {
@@ -109,24 +144,32 @@ TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryAndFileExists) {
   fs::permissions(socket_dir_, fs::perms::owner_all);
   CreateFile(socket_path_);
 
-  ASSERT_TRUE(SetUpUnixDomainSocket(socket_path_.string(), MakeIsRootSafe()));
+  ASSERT_TRUE(
+      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
 
   EXPECT_TRUE(fs::exists(socket_dir_));
   EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all);
   EXPECT_FALSE(fs::exists(socket_path_));
+
+  auto ownership = GetOwnership(socket_dir_);
+  ASSERT_THAT(ownership, IsOk());
+  EXPECT_THAT(ownership->uid, Eq(getuid()));
+  EXPECT_THAT(ownership->gid, Eq(getgid()));
 }
 
 TEST_F(SetUpUnixDomainSocketTest, FailsWhenDirectoryExistsButIsFile) {
   CreateFile(socket_dir_);
 
-  EXPECT_FALSE(SetUpUnixDomainSocket(socket_path_.string(), MakeIsRootSafe()));
+  EXPECT_FALSE(
+      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
 }
 
 TEST_F(SetUpUnixDomainSocketTest, FailsWhenDirectoryExistsWithBadPerms) {
   fs::create_directory(socket_dir_);
   fs::permissions(socket_dir_, fs::perms::owner_read | fs::perms::group_all);
 
-  EXPECT_FALSE(SetUpUnixDomainSocket(socket_path_.string(), MakeIsRootSafe()));
+  EXPECT_FALSE(
+      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
 }
 
 TEST_F(SetUpUnixDomainSocketTest, FailsWhenDirectoryCreationFails) {
@@ -134,7 +177,8 @@ TEST_F(SetUpUnixDomainSocketTest, FailsWhenDirectoryCreationFails) {
   // equivalent it's trying to get created inside of.
   fs::remove(test_var_run_);
 
-  EXPECT_FALSE(SetUpUnixDomainSocket(socket_path_.string(), MakeIsRootSafe()));
+  EXPECT_FALSE(
+      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
 }
 
 }  // namespace

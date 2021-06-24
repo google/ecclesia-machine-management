@@ -259,6 +259,13 @@ cc_library(
     srcs = ["uds.cc"],
     hdrs = ["uds.h"],
     visibility = ["//ecclesia:library_users"],
+    deps = [
+        ":path",
+        "//ecclesia/lib/logging",
+        "//ecclesia/lib/logging:posix",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:optional",
+    ],
 )
 
 cc_test(
@@ -267,6 +274,9 @@ cc_test(
     deps = [
         ":test_filesystem",
         ":uds",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_main",
     ],
 )
