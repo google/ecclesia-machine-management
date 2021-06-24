@@ -37,17 +37,17 @@ namespace ecclesia {
 //     Mask(16)  = 0xffff
 //     Mask(63)  = 0x7fffffffffffffff
 //     Mask(64)  = 0xffffffffffffffff
-inline uint64_t Mask(int width) {
-  return (((uint64_t{1} << (width / 2)) << (width / 2)) << (width % 2)) - 1;
+// We shift 1 by width/2 twice and do one more shift for odd number.
+// The double shift handles Mask(64), which becomes unsigned(-1)
+// Intel CPU masks the shift bits. Details at shortn/_gJcWwhuy5H
+constexpr uint64_t Mask(int width) {
+  return (((uint64_t{1} << (width >> 1)) << (width >> 1)) << (width & 0x01)) -
+         1;
 }
 
 // Xor's bits of a register with each other.
-inline uint8_t XorAllBits(uint64_t reg) {
-  uint64_t tmp = 0;
-  for (size_t b = 0; b < 8 * sizeof(reg); b++) {
-    tmp ^= (reg >> b) & 0x1;
-  }
-  return tmp;
+constexpr uint8_t XorAllBits(uint64_t reg) {
+  return absl::popcount(reg) & 0x01;
 }
 
 // Define a type to represent bit range from lo to hi inclusive.
@@ -168,9 +168,7 @@ class AddressRange {
   bool operator==(const AddressRange &range) const {
     return begin_ == range.begin_ && end_ == range.end_;
   }
-  bool operator!=(const AddressRange &range) const {
-    return !(*this == range);
-  }
+  bool operator!=(const AddressRange &range) const { return !(*this == range); }
 
   // The range is empty if end < begin.
   bool Empty() const;
