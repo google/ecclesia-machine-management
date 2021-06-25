@@ -78,7 +78,9 @@ bool SetUpUnixDomainSocket(
 // Returns true if the socket was deleted successfully, false otherwise.
 bool CleanUpUnixDomainSocket(const std::string &socket_path);
 
-// Given a path to a domain socket, set the socket owners.
+// Given a path to a domain socket, set the socket owners. This will also set
+// the permissions to u+a,g+a as the socket ownership isn't much use without
+// read and write permission for the user and group.
 //
 // Note that this socket must be in active use for this to be meaningful. You
 // can't pre-create a file for the socket and change the permissions because you

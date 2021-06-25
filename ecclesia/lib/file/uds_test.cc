@@ -113,7 +113,9 @@ TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryEmpty) {
       SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
 
   EXPECT_TRUE(fs::exists(socket_dir_));
-  EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all);
+  EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all |
+                                                       fs::perms::group_read |
+                                                       fs::perms::group_exec);
   EXPECT_FALSE(fs::exists(socket_path_));
 
   auto ownership = GetOwnership(socket_dir_);
@@ -124,13 +126,16 @@ TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryEmpty) {
 
 TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryExists) {
   fs::create_directory(socket_dir_);
-  fs::permissions(socket_dir_, fs::perms::owner_all);
+  fs::permissions(socket_dir_, fs::perms::owner_all | fs::perms::group_read |
+                                   fs::perms::group_exec);
 
   ASSERT_TRUE(
       SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
 
   EXPECT_TRUE(fs::exists(socket_dir_));
-  EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all);
+  EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all |
+                                                       fs::perms::group_read |
+                                                       fs::perms::group_exec);
   EXPECT_FALSE(fs::exists(socket_path_));
 
   auto ownership = GetOwnership(socket_dir_);
@@ -141,14 +146,57 @@ TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryExists) {
 
 TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryAndFileExists) {
   fs::create_directory(socket_dir_);
-  fs::permissions(socket_dir_, fs::perms::owner_all);
+  fs::permissions(socket_dir_, fs::perms::owner_all | fs::perms::group_read |
+                                   fs::perms::group_exec);
   CreateFile(socket_path_);
 
   ASSERT_TRUE(
       SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
 
   EXPECT_TRUE(fs::exists(socket_dir_));
-  EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all);
+  EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all |
+                                                       fs::perms::group_read |
+                                                       fs::perms::group_exec);
+  EXPECT_FALSE(fs::exists(socket_path_));
+
+  auto ownership = GetOwnership(socket_dir_);
+  ASSERT_THAT(ownership, IsOk());
+  EXPECT_THAT(ownership->uid, Eq(getuid()));
+  EXPECT_THAT(ownership->gid, Eq(getgid()));
+}
+
+TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryHasTooStrictPerms) {
+  fs::create_directory(socket_dir_);
+  fs::permissions(socket_dir_, fs::perms::owner_all);
+
+  ASSERT_TRUE(
+      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
+
+  EXPECT_TRUE(fs::exists(socket_dir_));
+  // Permission should now be fixed.
+  EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all |
+                                                       fs::perms::group_read |
+                                                       fs::perms::group_exec);
+  EXPECT_FALSE(fs::exists(socket_path_));
+
+  auto ownership = GetOwnership(socket_dir_);
+  ASSERT_THAT(ownership, IsOk());
+  EXPECT_THAT(ownership->uid, Eq(getuid()));
+  EXPECT_THAT(ownership->gid, Eq(getgid()));
+}
+
+TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryHasTooLoosePerms) {
+  fs::create_directory(socket_dir_);
+  fs::permissions(socket_dir_, fs::perms::all);
+
+  ASSERT_TRUE(
+      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
+
+  EXPECT_TRUE(fs::exists(socket_dir_));
+  // Permission should now be fixed.
+  EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all |
+                                                       fs::perms::group_read |
+                                                       fs::perms::group_exec);
   EXPECT_FALSE(fs::exists(socket_path_));
 
   auto ownership = GetOwnership(socket_dir_);
@@ -164,14 +212,6 @@ TEST_F(SetUpUnixDomainSocketTest, FailsWhenDirectoryExistsButIsFile) {
       SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
 }
 
-TEST_F(SetUpUnixDomainSocketTest, FailsWhenDirectoryExistsWithBadPerms) {
-  fs::create_directory(socket_dir_);
-  fs::permissions(socket_dir_, fs::perms::owner_read | fs::perms::group_all);
-
-  EXPECT_FALSE(
-      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
-}
-
 TEST_F(SetUpUnixDomainSocketTest, FailsWhenDirectoryCreationFails) {
   // We can make creation of socket_dir_ fail by removing the "/var/run"
   // equivalent it's trying to get created inside of.
@@ -179,6 +219,29 @@ TEST_F(SetUpUnixDomainSocketTest, FailsWhenDirectoryCreationFails) {
 
   EXPECT_FALSE(
       SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
+}
+
+TEST(SetUnixDomainSocketOwnershipTest, PassesWhenFileExists) {
+  std::string socket = GetTestTempdirPath("test1.socket");
+  { std::ofstream touch(socket); }
+  ASSERT_TRUE(fs::exists(socket));
+
+  ASSERT_TRUE(SetUnixDomainSocketOwnership(socket, {}));
+  EXPECT_EQ(fs::status(socket).permissions(),
+            fs::perms::owner_all | fs::perms::group_all);
+
+  auto ownership = GetOwnership(socket);
+  ASSERT_THAT(ownership, IsOk());
+  EXPECT_THAT(ownership->uid, Eq(getuid()));
+  EXPECT_THAT(ownership->gid, Eq(getgid()));
+}
+
+TEST(SetUnixDomainSocketOwnershipTest, FailsWhenFileDoesNotExist) {
+  std::string socket = GetTestTempdirPath("test2.socket");
+  ASSERT_FALSE(fs::exists(socket));
+
+  EXPECT_FALSE(SetUnixDomainSocketOwnership(socket, {}));
+  EXPECT_FALSE(fs::exists(socket));
 }
 
 }  // namespace

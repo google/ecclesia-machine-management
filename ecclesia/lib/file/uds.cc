@@ -55,51 +55,51 @@ bool SetUpUnixDomainSocket(
     return false;
   }
 
-  // Create the socket directory. If it fails because a directory already
-  // exists then that's okay as long as it has acceptable permissions. Any other
-  // failure is an error.
-  if (mkdir(socket_directory.c_str(), S_IRWXU) != 0) {
-    if (errno == EEXIST) {
-      // We're okay with the directory already existing, but if it does then we
-      // need to make sure it's a directory with the right permissions. We use
-      // lstat to make sure we don't follow a symlink to a directory.
-      struct stat socket_dir_stat;
-      if (lstat(socket_directory.c_str(), &socket_dir_stat) != 0) {
-        PosixErrorLog() << "unable to lstat() " << socket_directory;
-        return false;
-      }
-      if (!S_ISDIR(socket_dir_stat.st_mode)) {
-        ErrorLog() << "socket directory " << socket_directory
-                   << "is not a directory";
-        return false;
-      }
-      if ((socket_dir_stat.st_mode & S_IRWXU) != S_IRWXU) {
-        ErrorLog() << "socket directory " << socket_directory
-                   << "does not have the correct permissions";
-        return false;
-      }
-    } else {
+  // Create the socket directory. If it fails because a directory already exists
+  // then that's okay as long as it has acceptable permissions (which we will
+  // check afterwards). Any other failure is an error.
+  if (mkdir(socket_directory.c_str(), S_IRWXU | S_IRWXG) != 0) {
+    if (errno != EEXIST) {
+      PosixErrorLog() << "unable to create the socket directory "
+                      << socket_directory;
       return false;
     }
   }
 
-  // The socket directory exists, but it might not have the required owners.
-  //
-  // We could just unconditionally call chown with the desired owners but we
-  // prefer to minimize extra writes at the expense of extra reads so we guard
-  // the lookup with a stat check.
+  // Now that the socket directory exists, we need to check that it has the
+  // correct permissions and ownership.
   struct stat socket_dir_stat;
   if (lstat(socket_directory.c_str(), &socket_dir_stat) != 0) {
     PosixErrorLog() << "unable to lstat() " << socket_directory;
     return false;
   }
+  // First make sure it's actually a directory.
+  if (!S_ISDIR(socket_dir_stat.st_mode)) {
+    ErrorLog() << "socket directory " << socket_directory
+               << "is not a directory";
+    return false;
+  }
+  // Now, check if the directory has the correct permissions. If it does not
+  // then try to change them.
+  mode_t expected_perms = S_IRWXU | S_IRGRP | S_IXGRP;
+  if ((socket_dir_stat.st_mode & ACCESSPERMS) != expected_perms) {
+    if (chmod(socket_directory.c_str(),
+              (socket_dir_stat.st_mode & ~ACCESSPERMS) | expected_perms) != 0) {
+      PosixErrorLog() << "socket directory " << socket_directory
+                      << "does not have the correct user permissions and "
+                         "we cannot change them; chmod() failed";
+      return false;
+    }
+  }
+  // Finally, make sure that the directory has the required owners.
   uid_t expected_uid = owners.uid ? *owners.uid : getuid();
   gid_t expected_gid = owners.gid ? *owners.gid : getgid();
-  // If the directory isn't owned by the expected owners then change it.
   if (socket_dir_stat.st_uid != expected_uid ||
       socket_dir_stat.st_gid != expected_gid) {
     if (lchown(socket_directory.c_str(), expected_uid, expected_gid) != 0) {
-      PosixErrorLog() << "unable to lchown() " << socket_directory;
+      PosixErrorLog() << "socket directory " << socket_directory
+                      << " does not have the correct ownership and we cannot "
+                         "change it; lchown() failed";
       return false;
     }
   }
@@ -131,25 +131,40 @@ bool CleanUpUnixDomainSocket(const std::string &socket_path) {
 
 bool SetUnixDomainSocketOwnership(const std::string &socket_path,
                                   const DomainSocketOwners &owners) {
-  // Check the existing ownership in order to avoid having to make a change if
-  // we don't have to.
+  // Check the existing permissions and ownership in order to avoid having to
+  // make a change if we don't have to.
   struct stat socket_stat;
   if (lstat(socket_path.c_str(), &socket_stat) != 0) {
     PosixErrorLog() << "unable to lstat() " << socket_path;
     return false;
   }
-  uid_t expected_uid = owners.uid ? *owners.uid : getuid();
-  gid_t expected_gid = owners.gid ? *owners.gid : getgid();
-  // If the existing ownership is not what we need, then try to change them.
-  if (socket_stat.st_uid != expected_uid ||
-      socket_stat.st_gid != expected_gid) {
-    if (lchown(socket_path.c_str(), expected_uid, expected_gid) != 0) {
-      PosixErrorLog() << "unable to lchown() " << socket_path;
+  // First, check if the socket has the correct permissions. If it does not then
+  // try to change them.
+  mode_t expected_perms = S_IRWXU | S_IRWXG;
+  if ((socket_stat.st_mode & ACCESSPERMS) != expected_perms) {
+    if (chmod(socket_path.c_str(),
+              (socket_stat.st_mode & ~ACCESSPERMS) | expected_perms) != 0) {
+      PosixErrorLog() << "socket file " << socket_path
+                      << "does not have the correct permissions and we cannot "
+                         "change them; chmod() failed";
       return false;
     }
   }
-  // If we get here then either the socket already has the correct ownership or
-  // we have changed it to the correct ownership.
+  // Now, check if the socket has the specified ownership. Again, if it does not
+  // then try to change it.
+  uid_t expected_uid = owners.uid ? *owners.uid : getuid();
+  gid_t expected_gid = owners.gid ? *owners.gid : getgid();
+  if (socket_stat.st_uid != expected_uid ||
+      socket_stat.st_gid != expected_gid) {
+    if (lchown(socket_path.c_str(), expected_uid, expected_gid) != 0) {
+      PosixErrorLog() << "socket file " << socket_path
+                      << "does not have the correct ownership and we cannot "
+                         "change it; lchown() failed";
+      return false;
+    }
+  }
+  // If we get here then either the socket had the correct permissions and
+  // ownership already, or we were able to fix it so that it does.
   return true;
 }
 
