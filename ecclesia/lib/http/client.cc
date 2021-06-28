@@ -27,6 +27,15 @@
 
 namespace ecclesia {
 
+std::string GetHttpMethodName(ecclesia::Protocol protocol) {
+  switch (protocol) {
+    case Protocol::kGet:
+      return "GET";
+    case Protocol::kPost:
+      return "POST";
+  }
+}
+
 absl::StatusOr<Json::Value> HttpClient::HttpResponse::GetBodyJson() {
   auto json = Json::Value();
   Json::Reader reader;

@@ -34,19 +34,8 @@ enum class Protocol {
   kPost,
 };
 
-// A struct we use to store protocol with its Method string.
-struct ProtocolInfo {
-  constexpr ProtocolInfo(Protocol p_enum, const char p_name[])
-      : protocol(p_enum), name(p_name) {}
-  Protocol protocol;
-  absl::string_view name;
-};
-
-// Protocols we currently support
-static constexpr ProtocolInfo kAllProtocols[] = {
-    {Protocol::kGet, "GET"},
-    {Protocol::kPost, "POST"},
-};
+// Return the HTTP method name for protocol.
+std::string GetHttpMethodName(ecclesia::Protocol protocol);
 
 // Http Client interface
 class HttpClient {
