@@ -186,14 +186,8 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
   switch (cmd) {
     case Protocol::kGet:
       libcurl_->curl_easy_setopt(curl_, CURLOPT_HTTPGET, 1L);
-      libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE, 0L);
-      // There are multiple versions that take a pointer, thus we need to
-      // constrain the argument.
-      libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
-                                 static_cast<void*>(nullptr));
       break;
     case Protocol::kPost:
-      libcurl_->curl_easy_setopt(curl_, CURLOPT_HTTPGET, 0L);
       libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE,
                                  request->body.size());
       libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
