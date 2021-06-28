@@ -182,15 +182,16 @@ class LibredfishAdapter {
     rqst->uri = request->url;
     rqst->headers = ConvertRequestHeaders(request->headers);
     switch(request->method) {
-      case HTTP_GET: {
+      case HTTP_GET:
         client_response = client_->Get(std::move(rqst));
         break;
-      }
-      case HTTP_POST: {
+      case HTTP_POST:
         rqst->body = std::string{request->body, request->bodySize};
         client_response = client_->Post(std::move(rqst));
         break;
-      }
+      case HTTP_DELETE:
+        client_response = client_->Delete(std::move(rqst));
+        break;
       default:
         ecclesia::FatalLog() << "Unsupported method: " << request->method;
     }
@@ -213,25 +214,19 @@ class LibredfishAdapter {
     // It is the callback's responsibility to free request, response.
     // is a work-in-progress. E.g., CURLcode or HTTP code? Here it's HTTP code.
     response->httpResponseCode = resp.code;
-    if (resp.code != 200) {
-      ecclesia::InfoLog() << "Got error code: " << resp.code;
-      // See rawAsyncWorkThread.
-      response->connectError = 1;
-    } else {
-      response->connectError = 0;
-      size_t size = resp.body.size();
-      auto body = reinterpret_cast<char*>(malloc(size + 1));
-      if (!body) {
-        // Pass nullptr for response to indicate malloc failure.
-        callback(request, nullptr, callback_context);
-        freeAsyncResponse(response);
-        return;
-      }
-      memcpy(body, resp.body.c_str(), size + 1);
-      response->body = body;
-      response->bodySize = size;
-      response->headers = ConvertResponseHeaders(client_response->headers);
+    response->connectError = 0;
+    size_t size = resp.body.size();
+    auto body = reinterpret_cast<char*>(malloc(size + 1));
+    if (!body) {
+      // Pass nullptr for response to indicate malloc failure.
+      callback(request, nullptr, callback_context);
+      freeAsyncResponse(response);
+      return;
     }
+    memcpy(body, resp.body.c_str(), size + 1);
+    response->body = body;
+    response->bodySize = size;
+    response->headers = ConvertResponseHeaders(client_response->headers);
 
     callback(request, response, callback_context);
   }

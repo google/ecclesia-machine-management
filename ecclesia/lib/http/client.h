@@ -32,6 +32,7 @@ namespace ecclesia {
 enum class Protocol {
   kGet,
   kPost,
+  kDelete,
 };
 
 // Return the HTTP method name for protocol.
@@ -68,7 +69,7 @@ class HttpClient {
   HttpClient() {}
   virtual ~HttpClient() {}
 
-  // Following Get and Post functions are stateless.
+  // Following HTTP method functions are stateless.
 
   // Execute a GET request and return HttpResponse or absl::Status.
   virtual absl::StatusOr<HttpResponse> Get(
@@ -76,6 +77,11 @@ class HttpClient {
   // Sub class is responsible for generating the post string_view.
   virtual absl::StatusOr<HttpResponse> Post(
       std::unique_ptr<HttpRequest> request) = 0;
+  // Execute a DELETE request and return HttpResponse or absl::Status.
+  virtual absl::StatusOr<HttpResponse> Delete(
+      std::unique_ptr<HttpRequest> request) {
+    return absl::UnimplementedError("Delete not implemented");
+  }
 };
 
 }  // namespace ecclesia

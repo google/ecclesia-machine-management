@@ -33,6 +33,8 @@ std::string GetHttpMethodName(ecclesia::Protocol protocol) {
       return "GET";
     case Protocol::kPost:
       return "POST";
+    case Protocol::kDelete:
+      return "DELETE";
   }
 }
 

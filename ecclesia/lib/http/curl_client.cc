@@ -21,6 +21,7 @@
 #include "absl/strings/str_split.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/status/macros.h"
 #include "json/writer.h"
 
 namespace ecclesia {
@@ -140,8 +141,13 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Get(
 }
 
 absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Post(
-      std::unique_ptr<HttpRequest> request) {
+    std::unique_ptr<HttpRequest> request) {
   return HttpMethod(Protocol::kPost, std::move(request));
+}
+
+absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Delete(
+    std::unique_ptr<HttpRequest> request) {
+  return HttpMethod(Protocol::kDelete, std::move(request));
 }
 
 std::string CurlHttpClient::ComposeUri(absl::string_view path) {
@@ -149,27 +155,37 @@ std::string CurlHttpClient::ComposeUri(absl::string_view path) {
   return absl::StrCat("https://$0$1", host_, path);
 }
 
-absl::StatusOr<HttpClient::HttpResponse> CurlHttpClient::GetPath(
-    absl::string_view path) {
+absl::StatusOr<std::unique_ptr<HttpClient::HttpRequest>>
+    CurlHttpClient::InitRequest(absl::string_view path) {
   if (path.empty() || path.front() != '/') {
     return absl::InvalidArgumentError(
         "path must be non-empty beginning with \"/\"");
   }
-  auto rqst = std::make_unique<HttpRequest>();
+  auto rqst = std::make_unique<HttpClient::HttpRequest>();
   rqst->uri = ComposeUri(path);
+  return rqst;
+}
+
+absl::StatusOr<HttpClient::HttpResponse> CurlHttpClient::GetPath(
+    absl::string_view path) {
+  ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<HttpClient::HttpRequest> rqst,
+                            InitRequest(path));
   return Get(std::move(rqst));
 }
 
 absl::StatusOr<HttpClient::HttpResponse> CurlHttpClient::PostPath(
     absl::string_view path, absl::string_view post) {
-  if (path.empty() || path.front() != '/') {
-    return absl::InvalidArgumentError(
-        "path must be non-empty beginning with \"/\"");
-  }
-  auto rqst = std::make_unique<HttpRequest>();
-  rqst->uri = ComposeUri(path);
+  ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<HttpClient::HttpRequest> rqst,
+                            InitRequest(path));
   rqst->body = post;
   return Post(std::move(rqst));
+}
+
+absl::StatusOr<HttpClient::HttpResponse> CurlHttpClient::DeletePath(
+    absl::string_view path) {
+  ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<HttpClient::HttpRequest> rqst,
+                            InitRequest(path));
+  return Delete(std::move(rqst));
 }
 
 absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
@@ -192,6 +208,9 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
                                  request->body.size());
       libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
                                  request->body.data());
+      break;
+    case Protocol::kDelete:
+      libcurl_->curl_easy_setopt(curl_, CURLOPT_CUSTOMREQUEST, "DELETE");
       break;
   }
 

@@ -38,6 +38,7 @@ cc_library(
         ":cred_cc_proto",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/status:macros",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/strings",
