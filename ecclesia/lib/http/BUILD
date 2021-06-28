@@ -29,6 +29,28 @@ cc_test(
 )
 
 cc_library(
+    name = "codes",
+    srcs = ["codes.cc"],
+    hdrs = ["codes.h"],
+    visibility = ["//ecclesia:library_users"],
+    deps = [
+        "@com_google_absl//absl/algorithm:container",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "codes_test",
+    srcs = ["codes_test.cc"],
+    deps = [
+        "codes",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "curl_client",
     srcs = ["curl_client.cc"],
     hdrs = ["curl_client.h"],
