@@ -43,7 +43,7 @@ class SmbiosReader {
   // On a standard linux implementation these paths are
   // /sys/firmware/dmi/tables/smbios_entry_point
   // /sys/firmware/dmi/tables/DMI
-  SmbiosReader(std::string entry_point_path, std::string tables_path);
+  explicit SmbiosReader(std::string entry_point_path, std::string tables_path);
 
   SmbiosReader(const SmbiosReader&) = delete;
   SmbiosReader& operator=(const SmbiosReader&) = delete;
