@@ -252,7 +252,7 @@ struct SystemBootInformationStructure:
     7 [+4]  UInt      boot_count
 
   if boot_status != 0x80:
-    7 [+1]  UInt:8[]  boot_status_data
+    7 [+0]  UInt:8[]  boot_status_data
 
 enum BoardType:
   BOARD_TYPE_INVALID                  = 0
