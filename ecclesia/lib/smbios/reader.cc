@@ -91,7 +91,9 @@ bool ExtractSmbiosStructure(uint8_t *start_address, std::size_t max_length,
       MakeSmbiosStructureView(start_address, max_length);
 
   if (!smbios_structure_view.Ok()) {
-    ErrorLog() << "Failure parsing smbios structure";
+    ErrorLog() << "Failure parsing smbios structure: "
+               << emboss::WriteToString(smbios_structure_view,
+                                        emboss::MultilineText());
     return false;
   }
 
@@ -231,7 +233,7 @@ std::vector<ProcessorInformation> SmbiosReader::GetAllProcessors() const {
 absl::StatusOr<int32_t> SmbiosReader::GetBootNumberFromSystemBootInformation()
     const {
   for (const auto &entry : entries_) {
-    const auto& structure_view = entry.GetSmbiosStructureView();
+    const auto &structure_view = entry.GetSmbiosStructureView();
     if (structure_view.structure_type().Read() ==
             StructureType::SYSTEM_BOOT_INFORMATION &&
         structure_view.system_boot_information().Ok()) {
