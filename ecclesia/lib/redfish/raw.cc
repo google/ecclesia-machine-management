@@ -481,7 +481,13 @@ std::unique_ptr<RedfishInterface> NewRawInterface(
 
 // Constructor method for creating a RawInterface with auth session.
 std::unique_ptr<RedfishInterface> NewRawSessionAuthInterface(
-    const PasswordArgs &connectionArgs) {
+    const PasswordArgs &connectionArgs,
+    std::unique_ptr<ecclesia::HttpClient> client) {
+  serviceHttpHandler handler{};
+  if (client) {
+    handler = NewLibredfishAdapter(std::move(client));
+  }
+
   enumeratorAuthentication auth;
   auth.authType = REDFISH_AUTH_SESSION;
 
@@ -490,8 +496,12 @@ std::unique_ptr<RedfishInterface> NewRawSessionAuthInterface(
   auth.authCodes.userPass.username = &username_buf[0];
   auth.authCodes.userPass.password = &password_buf[0];
 
-  ServiceUniquePtr service(createServiceEnumerator(
-      connectionArgs.endpoint.c_str(), nullptr, &auth, 0));
+  // Note: handler is consumed even on failure.
+  ServiceUniquePtr service(createServiceEnumeratorExt(
+      connectionArgs.endpoint.c_str(), nullptr, &auth, 0, &handler));
+  if (service == nullptr) {
+    return nullptr;
+  }
   return absl::make_unique<RawIntf>(std::move(service),
                                     RedfishInterface::kTrusted);
 }

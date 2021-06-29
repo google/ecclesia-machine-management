@@ -48,17 +48,20 @@ struct TlsArgs {
 };
 
 // Constructor method for creating a RawInterface.
+// If client is provided then it is used for HTTP requests instead of the
+// default which is libcurl.
 // Returns nullptr in case the interface failed to be constructed.
 std::unique_ptr<RedfishInterface> NewRawInterface(
     const std::string &endpoint, RedfishInterface::TrustedEndpoint trusted,
     std::unique_ptr<ecclesia::HttpClient> client = nullptr);
 
 // Constructor method for creating a RawInterface with session auth.
+// If client is provided then it is used for HTTP requests instead of the
+// default which is libcurl.
 // Returns nullptr in case the interface failed to be constructed.
-// This does not take a "client" parameter because it is currently not
-// needed nor tested.
 std::unique_ptr<RedfishInterface> NewRawSessionAuthInterface(
-    const PasswordArgs &connectionArgs);
+    const PasswordArgs &connectionArgs,
+    std::unique_ptr<ecclesia::HttpClient> client = nullptr);
 
 // Constructor method for creating a RawInterface with basic auth.
 // Returns nullptr in case the interface failed to be constructed.

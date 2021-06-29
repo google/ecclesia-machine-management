@@ -85,9 +85,8 @@ class TestingMockupServer {
 
   // Returns a new RedfishInterface connected to the mockup server.
   // Auth type is REDFISH_AUTH_SESSION
-  // This does not take a "client" parameter because it is currently not
-  // needed nor tested.
-  std::unique_ptr<RedfishInterface> RedfishClientSessionAuthInterface();
+  std::unique_ptr<RedfishInterface> RedfishClientSessionAuthInterface(
+    std::unique_ptr<ecclesia::HttpClient> client = nullptr);
 
   // Returns a new RedfishInterface connected to the mockup server.
   // Auth type is REDFISH_AUTH_TLS

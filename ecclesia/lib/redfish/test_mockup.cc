@@ -234,14 +234,15 @@ TestingMockupServer::RedfishClientBasicAuthInterface() {
 }
 
 std::unique_ptr<RedfishInterface>
-TestingMockupServer::RedfishClientSessionAuthInterface() {
+TestingMockupServer::RedfishClientSessionAuthInterface(
+    std::unique_ptr<ecclesia::HttpClient> client) {
   PasswordArgs args;
   args.username = "FakeName";
   args.password = "FakePassword";
   args.endpoint = absl::visit(
       [](auto &conn) { return ConfigToEndpoint("http", conn); },
       connection_config_);
-  auto intf = libredfish::NewRawSessionAuthInterface(args);
+  auto intf = libredfish::NewRawSessionAuthInterface(args, std::move(client));
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
 }
