@@ -84,7 +84,8 @@ absl::optional<CpuSignature> ProcessorInformation::GetSignature() const {
 }
 
 bool ProcessorInformation::IsIntelProcessor() const {
-  return this->GetProcessorFamily() == INTEL_XEON;
+  return absl::StrContains(
+      GetString(GetMessageView().manufacturer_snum().Read()), "Intel");
 }
 
 bool ProcessorInformation::IsAmdProcessor() const {
