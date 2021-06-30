@@ -4,36 +4,12 @@ licenses(["notice"])  # MIT/X derivative license
 
 exports_files(["COPYING"])
 
-CURL_WIN_COPTS = [
-    "/Iexternal/curl/lib",
-    "/DBUILDING_LIBCURL",
-    "/DHAVE_CONFIG_H",
-    "/DCURL_DISABLE_FTP",
-    "/DCURL_DISABLE_NTLM",
-    "/DCURL_DISABLE_PROXY",
-    "/DHAVE_LIBZ",
-    "/DHAVE_ZLIB_H",
-    # Defining _USING_V110_SDK71_ is hackery to defeat curl's incorrect
-    # detection of what OS releases we can build on with VC 2012. This
-    # may not be needed (or may have to change) if the WINVER setting
-    # changes in //third_party/msvc/vc_12_0/CROSSTOOL.
-    "/D_USING_V110_SDK71_",
-]
-
-CURL_WIN_SRCS = [
-    "lib/asyn-thread.c",
-    "lib/inet_ntop.c",
-    "lib/system_win32.c",
-    "lib/x509asn1.c",
-    "lib/vtls/schannel.c",
-    "lib/vtls/schannel_verify.c",
-    "lib/idn_win32.c",
-]
-
 cc_library(
     name = "curl",
     srcs = [
         "include/curl_config.h",
+        "lib/altsvc.c",
+        "lib/altsvc.h",
         "lib/amigaos.h",
         "lib/arpa_telnet.h",
         "lib/asyn.h",
@@ -57,6 +33,8 @@ cc_library(
         "lib/curl_endian.h",
         "lib/curl_fnmatch.c",
         "lib/curl_fnmatch.h",
+        "lib/curl_get_line.c",
+        "lib/curl_get_line.h",
         "lib/curl_gethostname.c",
         "lib/curl_gethostname.h",
         "lib/curl_gssapi.h",
@@ -86,6 +64,8 @@ cc_library(
         "lib/curl_threads.h",
         "lib/curlx.h",
         "lib/dict.h",
+        "lib/doh.c",
+        "lib/doh.h",
         "lib/dotdot.c",
         "lib/dotdot.h",
         "lib/easy.c",
@@ -154,16 +134,18 @@ cc_library(
         "lib/nwos.c",
         "lib/parsedate.c",
         "lib/parsedate.h",
-        "lib/pingpong.h",
         "lib/pingpong.c",
+        "lib/pingpong.h",
         "lib/pop3.h",
         "lib/progress.c",
         "lib/progress.h",
+        "lib/psl.c",
+        "lib/psl.h",
         "lib/quic.h",
         "lib/rand.c",
         "lib/rand.h",
-        "lib/rename.h",
         "lib/rename.c",
+        "lib/rename.h",
         "lib/rtsp.c",
         "lib/rtsp.h",
         "lib/security.c",
@@ -184,8 +166,8 @@ cc_library(
         "lib/smb.h",
         "lib/smtp.h",
         "lib/sockaddr.h",
-        "lib/socketpair.h",
         "lib/socketpair.c",
+        "lib/socketpair.h",
         "lib/socks.c",
         "lib/socks.h",
         "lib/speedcheck.c",
@@ -211,6 +193,8 @@ cc_library(
         "lib/transfer.h",
         "lib/url.c",
         "lib/url.h",
+        "lib/urlapi.c",
+        "lib/urlapi-int.h",
         "lib/urldata.h",
         "lib/vauth/cleartext.c",
         "lib/vauth/cram.c",
@@ -226,9 +210,13 @@ cc_library(
         "lib/vtls/gskit.h",
         "lib/vtls/gtls.h",
         "lib/vtls/mbedtls.h",
+        "lib/vtls/mesalink.c",
+        "lib/vtls/mesalink.h",
         "lib/vtls/nssg.h",
+        "lib/vtls/openssl.c",
         "lib/vtls/openssl.h",
         "lib/vtls/schannel.h",
+        "lib/vtls/sectransp.h",
         "lib/vtls/vtls.c",
         "lib/vtls/vtls.h",
         "lib/vtls/wolfssl.h",
@@ -237,31 +225,7 @@ cc_library(
         "lib/wildcard.c",
         "lib/wildcard.h",
         "lib/x509asn1.h",
-        "lib/psl.h",
-        "lib/psl.c",
-        "lib/vtls/sectransp.h",
-        "lib/vtls/mesalink.h",
-        "lib/vtls/mesalink.c",
-        "lib/curl_get_line.h",
-        "lib/curl_get_line.c",
-        "lib/urlapi-int.h",
-        "lib/urlapi.c",
-        "lib/altsvc.h",
-        "lib/altsvc.c",
-        "lib/doh.h",
-        "lib/doh.c",
-    ] + select({
-        "@org_tensorflow//tensorflow:macos": [
-            "lib/vtls/sectransp.c",
-        ],
-        "@org_tensorflow//tensorflow:ios": [
-            "lib/vtls/sectransp.c",
-        ],
-        "@org_tensorflow//tensorflow:windows": CURL_WIN_SRCS,
-        "//conditions:default": [
-            "lib/vtls/openssl.c",
-        ],
-    }),
+    ],
     hdrs = [
         "include/curl/curl.h",
         "include/curl/curlver.h",
@@ -273,64 +237,28 @@ cc_library(
         "include/curl/typecheck-gcc.h",
         "include/curl/urlapi.h",
     ],
-    copts = select({
-        "@org_tensorflow//tensorflow:windows": CURL_WIN_COPTS,
-        "//conditions:default": [
-            "-Iexternal/curl/lib",
-            "-D_GNU_SOURCE",
-            "-DBUILDING_LIBCURL",
-            "-DHAVE_CONFIG_H",
-            "-DCURL_DISABLE_FTP",
-            "-DCURL_DISABLE_NTLM",  # turning it off in configure is not enough
-            "-DHAVE_LIBZ",
-            "-DHAVE_ZLIB_H",
-            "-Wno-string-plus-int",
-        ],
-    }) + select({
-        "@org_tensorflow//tensorflow:macos": [
-            "-fno-constant-cfstrings",
-        ],
-        "@org_tensorflow//tensorflow:windows": [
-            # See curl.h for discussion of write size and Windows
-            "/DCURL_MAX_WRITE_SIZE=16384",
-        ],
-        "//conditions:default": [
-            "-DCURL_MAX_WRITE_SIZE=65536",
-        ],
-    }),
+    copts = [
+        "-Iexternal/curl/lib",
+        "-D_GNU_SOURCE",
+        "-DBUILDING_LIBCURL",
+        "-DHAVE_CONFIG_H",
+        "-DCURL_DISABLE_FTP",
+        "-DCURL_DISABLE_NTLM",  # turning it off in configure is not enough
+        "-DHAVE_LIBZ",
+        "-DHAVE_ZLIB_H",
+        "-Wno-string-plus-int",
+        "-DCURL_MAX_WRITE_SIZE=65536",
+    ],
     defines = ["CURL_STATICLIB"],
     includes = ["include"],
-    linkopts = select({
-        "@org_tensorflow//tensorflow:android": [
-            "-pie",
-        ],
-        "@org_tensorflow//tensorflow:macos": [
-            "-Wl,-framework",
-            "-Wl,CoreFoundation",
-            "-Wl,-framework",
-            "-Wl,Security",
-        ],
-        "@org_tensorflow//tensorflow:ios": [],
-        "@org_tensorflow//tensorflow:windows": [
-            "-DEFAULTLIB:ws2_32.lib",
-            "-DEFAULTLIB:advapi32.lib",
-            "-DEFAULTLIB:crypt32.lib",
-            "-DEFAULTLIB:Normaliz.lib",
-        ],
-        "//conditions:default": [
-            "-lrt",
-        ],
-    }),
+    linkopts = [
+        "-lrt",
+    ],
     visibility = ["//visibility:public"],
     deps = [
+        "@boringssl//:ssl",
         "@zlib",
-    ] + select({
-        "@org_tensorflow//tensorflow:ios": [],
-        "@org_tensorflow//tensorflow:windows": [],
-        "//conditions:default": [
-            "@boringssl//:ssl",
-        ],
-    }),
+    ],
 )
 
 CURL_BIN_WIN_COPTS = [
@@ -427,16 +355,13 @@ cc_binary(
         "src/tool_xattr.c",
         "src/tool_xattr.h",
     ],
-    copts = select({
-        "@org_tensorflow//tensorflow:windows": CURL_BIN_WIN_COPTS,
-        "//conditions:default": [
-            "-Iexternal/curl/lib",
-            "-D_GNU_SOURCE",
-            "-DHAVE_CONFIG_H",
-            "-DCURL_DISABLE_LIBCURL_OPTION",
-            "-Wno-string-plus-int",
-        ],
-    }),
+    copts = [
+        "-Iexternal/curl/lib",
+        "-D_GNU_SOURCE",
+        "-DHAVE_CONFIG_H",
+        "-DCURL_DISABLE_LIBCURL_OPTION",
+        "-Wno-string-plus-int",
+    ],
     deps = [":curl"],
 )
 

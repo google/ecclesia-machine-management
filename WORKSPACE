@@ -151,12 +151,12 @@ http_archive(
     ],
 )
 
-#tensorflow. Commit from September 21, 2020 making net_http client API visible
+#tensorflow. Commit from June 23, 2021 making HTTP server support PATCH
 http_archive(
     name = "com_google_tensorflow_serving",
-    sha256 = "d2d5874a6f65dbca25f8750c03b1d64d46995e04561b83c1bd4b0b956ebf96ef",
-    strip_prefix = "serving-72927141f29d83614cf8304725b1a7e6357ce6ac",
-    urls = ["https://github.com/tensorflow/serving/archive/72927141f29d83614cf8304725b1a7e6357ce6ac.zip"],
+    sha256 = "9635a59a23981bb61661b94059fd10f8365b3f316212b0eb5c5c9ffb8be911b6",
+    strip_prefix = "serving-6cbc4a9eb419c8078c3a4e791381cda70dd8fc78",
+    urls = ["https://github.com/tensorflow/serving/archive/6cbc4a9eb419c8078c3a4e791381cda70dd8fc78.zip"],
 )
 
 load("@com_google_tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_serving_workspace")
@@ -347,4 +347,11 @@ http_archive(
     sha256 = "cf891e024699c82aabce528a024adbe16e529f2b4e57f954455e0bf53efae585",
     strip_prefix = "highwayhash-276dd7b4b6d330e4734b756e97ccfb1b69cc2e12",
     urls = ["https://github.com/google/highwayhash/archive/276dd7b4b6d330e4734b756e97ccfb1b69cc2e12.zip"],
+)
+http_archive(
+    name = "snappy",
+    build_file = "@com_google_riegeli//third_party:snappy.BUILD",
+    sha256 = "e170ce0def2c71d0403f5cda61d6e2743373f9480124bcfcd0fa9b3299d428d9",
+    strip_prefix = "snappy-1.1.9",
+    urls = ["https://github.com/google/snappy/archive/1.1.9.zip"],
 )
