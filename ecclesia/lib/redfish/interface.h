@@ -26,10 +26,13 @@
 #include <utility>
 #include <vector>
 
+#include "absl/status/status.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "absl/types/variant.h"
+#include "ecclesia/lib/http/codes.h"
 
 namespace libredfish {
 
@@ -63,6 +66,18 @@ class RedfishObject;
 //       [](auto mem_obj) {...});
 //
 // this applies the closure on each of the memory nodes in each system.
+//
+// RedfishVariant contains an absl::Status member. A non-OK absl::Status may
+// still contain a valid Redfish payload (e.g. a POST operation failed and the
+// detailed structured JSON error is in the payload). One should treat the state
+// of the absl::Status member and the Redfish payload as independent. The
+// Redfish specification can provide clarity on the situations in which one
+// could expect errors and/or payloads.
+//
+// RedfishVariant contains a httpcode member. This field is only populated if a
+// HTTP request was required to produce the RedfishVariant. Some operations
+// which construct a RedfishVariant may not involve HTTP requests (e.g. drilling
+// down into child fields of a payload).
 class RedfishVariant final {
  public:
   // ImplIntf is provided as the interface for subclasses to be implemented with
@@ -93,13 +108,9 @@ class RedfishVariant final {
       AppendIndex(index);
     }
 
-    void AppendIndex(const IndexType &index) {
-      indices_.push_back(index);
-    }
+    void AppendIndex(const IndexType &index) { indices_.push_back(index); }
 
-    bool IsEmpty() const {
-      return indices_.empty();
-    }
+    bool IsEmpty() const { return indices_.empty(); }
 
     IndexHelper Each() {
       AppendIndex(IndexEach());
@@ -115,7 +126,8 @@ class RedfishVariant final {
     // the chain finds, the functional `what` will be called with the node
     // passed to it as the sole argument. The node is passed as a unique_ptr to
     // the RedfishObject.
-    template <typename F> void Do(F what) const {
+    template <typename F>
+    void Do(F what) const {
       Do(root_, indices_, what);
     }
 
@@ -132,7 +144,24 @@ class RedfishVariant final {
   };
 
   RedfishVariant() : ptr_(nullptr) {}
-  RedfishVariant(std::unique_ptr<ImplIntf> ptr) : ptr_(std::move(ptr)) {}
+
+  // Construct from Status.
+  explicit RedfishVariant(absl::Status status)
+      : ptr_(nullptr), status_(std::move(status)) {}
+
+  // Construct from ptr: the Redfish data is valid and there were no errors.
+  explicit RedfishVariant(std::unique_ptr<ImplIntf> ptr)
+      : ptr_(std::move(ptr)), status_(absl::OkStatus()) {}
+
+  // Construct from httpcode + error object. A Status is constructed by
+  // converting the provided httpcode.
+  RedfishVariant(std::unique_ptr<ImplIntf> ptr,
+                 ecclesia::HttpResponseCode httpcode)
+      : ptr_(std::move(ptr)),
+        status_(ecclesia::HttpResponseCodeToCanonical(httpcode),
+                ecclesia::HttpResponseCodeToReasonPhrase(httpcode)),
+        httpcode_(httpcode) {}
+
   RedfishVariant(const RedfishVariant &) = delete;
   RedfishVariant &operator=(const RedfishVariant &) = delete;
   RedfishVariant(RedfishVariant &&other) = default;
@@ -151,6 +180,17 @@ class RedfishVariant final {
   std::unique_ptr<RedfishIterable> AsIterable() const {
     if (!ptr_) return nullptr;
     return ptr_->AsIterable();
+  }
+
+  // Returns the status of the RedfishVariant.
+  // Note that the status is independent from the Redfish Payload. See the
+  // class-level docstring for more information.
+  const absl::Status &status() const { return status_; }
+
+  // Returns the httpcode, if one is available. See the class-level docstring
+  // for more information.
+  const absl::optional<ecclesia::HttpResponseCode> &httpcode() const {
+    return httpcode_;
   }
 
   // If the underlying Redfish payload is the provided val type, retrieves the
@@ -183,6 +223,8 @@ class RedfishVariant final {
 
  private:
   std::unique_ptr<ImplIntf> ptr_;
+  absl::Status status_;
+  absl::optional<ecclesia::HttpResponseCode> httpcode_;
 };
 
 // RedfishIterable provides an interface for accessing properties of either
@@ -209,10 +251,12 @@ class RedfishIterable {
     using iterator_category = std::input_iterator_tag;
 
     reference operator*() {
-      if (index_ < iterable_->Size()) {
+      size_t size = iterable_->Size();
+      if (index_ < size) {
         return (*iterable_)[index_];
       }
-      return RedfishVariant();
+      return RedfishVariant(absl::OutOfRangeError(absl::StrFormat(
+          "index %zu is out of bounds (iterable has size %zu)", index_, size)));
     }
 
     Iterator &operator++() {
@@ -307,9 +351,8 @@ class RedfishInterface {
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) = 0;
 
   // Post to the given URI and returns result.
-  virtual RedfishVariant PostUri(
-      absl::string_view uri,
-      absl::string_view data) = 0;
+  virtual RedfishVariant PostUri(absl::string_view uri,
+                                 absl::string_view data) = 0;
 
   // Patch to the given URI and returns result.
   virtual RedfishVariant PatchUri(
@@ -330,22 +373,21 @@ class NullRedfish : public RedfishInterface {
   bool IsTrusted() const override { return true; }
   RedfishVariant GetRoot() override { return RedfishVariant(); }
   RedfishVariant GetUri(absl::string_view uri) override {
-    return RedfishVariant();
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }
   RedfishVariant PostUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
-    return RedfishVariant();
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }
-  RedfishVariant PostUri(
-      absl::string_view uri,
-      absl::string_view data) override {
-    return RedfishVariant();
+  RedfishVariant PostUri(absl::string_view uri,
+                         absl::string_view data) override {
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }
   RedfishVariant PatchUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
-    return RedfishVariant();
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }
 };
 
@@ -354,7 +396,7 @@ RedfishVariant RedfishVariant::operator[](const std::string &property) const {
   if (std::unique_ptr<RedfishObject> obj = AsObject()) {
     return (*obj)[property];
   } else {
-    return RedfishVariant();
+    return RedfishVariant(absl::InternalError("not a RedfishObject"));
   }
 }
 RedfishVariant RedfishVariant::operator[](const size_t index) const {
@@ -362,15 +404,15 @@ RedfishVariant RedfishVariant::operator[](const size_t index) const {
   if (std::unique_ptr<RedfishIterable> iter = AsIterable()) {
     return (*iter)[index];
   } else {
-    return RedfishVariant();
+    return RedfishVariant(absl::InternalError("not a RedfishIterable"));
   }
 }
 
 // Evaluates the index chain in a recursive fashion.
 template <typename F>
-void RedfishVariant::IndexHelper::Do(
-    const RedfishVariant &root, absl::Span<const IndexType> indices,
-    F what) const {
+void RedfishVariant::IndexHelper::Do(const RedfishVariant &root,
+                                     absl::Span<const IndexType> indices,
+                                     F what) const {
   if (indices.empty()) {
     // The chain is empty. That means we have evaluated the whole chain. Variant
     // `root` should be one of the objects the chain matches. So we will just
@@ -384,28 +426,30 @@ void RedfishVariant::IndexHelper::Do(
   // The chain is not empty. We will evaluate the 1st index in the chain, and
   // leave the rest to the next layer of recursion.
   const IndexType &index = indices[0];
-  absl::visit([&](auto&& index_value) {
-    using T = std::decay_t<decltype(index_value)>;
-    auto rest = indices.last(indices.size() - 1);
-    if constexpr (std::is_same_v<T, std::string>) {
-      // The index is a string. Likely we are looking at a RedfishObject. Simply
-      // drill down.
-      Do(root[index_value], rest, what);
-    } else if constexpr (std::is_same_v<T, size_t>) {
-      // The index is an integer. We should be looking at a RedfishIterable.
-      // Simply drill down.
-      Do(root[index_value], rest, what);
-    } else if constexpr (std::is_same_v<T, IndexEach>) {
-      // This segment of the chain is an `Each()`. Therefore we are looking at a
-      // RedfishIterable, and need to iterate over its elements. We then drill
-      // down to each of the elements.
-      auto iter = root.AsIterable();
-      if (!iter) return;
-      for (auto entry : *iter) {
-        Do(entry, rest, what);
-      }
-    }
-  }, index);
+  absl::visit(
+      [&](auto &&index_value) {
+        using T = std::decay_t<decltype(index_value)>;
+        auto rest = indices.last(indices.size() - 1);
+        if constexpr (std::is_same_v<T, std::string>) {
+          // The index is a string. Likely we are looking at a RedfishObject.
+          // Simply drill down.
+          Do(root[index_value], rest, what);
+        } else if constexpr (std::is_same_v<T, size_t>) {
+          // The index is an integer. We should be looking at a RedfishIterable.
+          // Simply drill down.
+          Do(root[index_value], rest, what);
+        } else if constexpr (std::is_same_v<T, IndexEach>) {
+          // This segment of the chain is an `Each()`. Therefore we are looking
+          // at a RedfishIterable, and need to iterate over its elements. We
+          // then drill down to each of the elements.
+          auto iter = root.AsIterable();
+          if (!iter) return;
+          for (auto entry : *iter) {
+            Do(entry, rest, what);
+          }
+        }
+      },
+      index);
 }
 
 }  // namespace libredfish

@@ -23,14 +23,18 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/memory/memory.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
+#include "ecclesia/magent/daemons/common.h"
+#include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 
 namespace libredfish {
 namespace {
@@ -277,22 +281,15 @@ TEST_P(RawInterfaceWithParamTest, PostUri) {
   ASSERT_TRUE(origin_collection);
   auto origin_size = origin_collection->Size();
 
-  auto res = raw_intf_
-                 ->PostUri("/redfish/v1/Chassis",
-                           {
-                               {"key1", 1},
-                               {"key2", 1.3},
-                               {"key3", "test"},
-                               {"key4", true},
-                               {"key5", std::string("value5")},
-                           })
-                 .AsObject();
-  // After propagate status code to RedfishInvariant, add test to verify
-  // status code for different type of resources. For example, for resource
-  // support Action, return 204, others return 404.
-  // For 204 response, there is no payload. So this will return empty
-  // RedfishInvariant. The following ASSERT will fail.
-  // ASSERT_TRUE(res);
+  auto res = raw_intf_->PostUri("/redfish/v1/Chassis",
+                                {
+                                    {"key1", 1},
+                                    {"key2", 1.3},
+                                    {"key3", "test"},
+                                    {"key4", true},
+                                    {"key5", std::string("value5")},
+                                });
+  EXPECT_TRUE(res.status().ok()) << res.status().message();
 
   auto new_collection = raw_intf_->GetUri("/redfish/v1/Chassis").AsIterable();
   ASSERT_TRUE(origin_collection);
@@ -316,21 +313,14 @@ TEST_P(RawInterfaceWithParamTest, PostUriWithStringPayload) {
   ASSERT_TRUE(origin_collection);
   auto origin_size = origin_collection->Size();
 
-  auto res = raw_intf_
-                 ->PostUri("/redfish/v1/Chassis",
-                           "{"
-                           "\"key1\": 1,"
-                           "\"key2\": 1.3,"
-                           "\"key3\": \"test\","
-                           "\"key4\": true"
-                           "}")
-                 .AsObject();
-  // After propagate status code to RedfishInvariant, add test to verify
-  // status code for different type of resources. For example, for resource
-  // support Action, return 204, others return 404.
-  // For 204 response, there is no payload. So this will return empty
-  // RedfishInvariant. The following ASSERT will fail.
-  // ASSERT_TRUE(res);
+  auto res = raw_intf_->PostUri("/redfish/v1/Chassis",
+                                "{"
+                                "\"key1\": 1,"
+                                "\"key2\": 1.3,"
+                                "\"key3\": \"test\","
+                                "\"key4\": true"
+                                "}");
+  EXPECT_TRUE(res.status().ok()) << res.status().message();
 
   auto new_collection = raw_intf_->GetUri("/redfish/v1/Chassis").AsIterable();
   ASSERT_TRUE(origin_collection);
@@ -351,15 +341,9 @@ TEST_P(RawInterfaceWithParamTest, PatchUri) {
       raw_intf_->GetUri("/redfish/v1/Chassis/chassis").AsObject();
   ASSERT_TRUE(root_chassis);
 
-  auto res =
-      raw_intf_->PatchUri("/redfish/v1/Chassis/chassis", {{"Name", "testname"}})
-          .AsObject();
-  // After propagate status code to RedfishInvariant, add test to verify
-  // status code for different type of resources. For example, for resource
-  // support Action, return 204, others return 404.
-  // For 204 response, there is no payload. So this will return empty
-  // RedfishInvariant. The following ASSERT will fail.
-  // ASSERT_TRUE(res);
+  auto res = raw_intf_->PatchUri("/redfish/v1/Chassis/chassis",
+                                 {{"Name", "testname"}});
+  EXPECT_TRUE(res.status().ok()) << res.status().message();
 
   auto new_root_chassis =
       raw_intf_->GetUri("/redfish/v1/Chassis/chassis").AsObject();
@@ -374,16 +358,9 @@ TEST_P(RawInterfaceWithParamTest, PatchUriMultipleFields) {
       raw_intf_->GetUri("/redfish/v1/Chassis/chassis").AsObject();
   ASSERT_TRUE(root_chassis);
 
-  auto res = raw_intf_
-                 ->PatchUri("/redfish/v1/Chassis/chassis",
-                            {{"Name", "testname"}, {"Id", "testid"}})
-                 .AsObject();
-  // After propagate status code to RedfishInvariant, add test to verify
-  // status code for different type of resources. For example, for resource
-  // support Action, return 204, others return 404.
-  // For 204 response, there is no payload. So this will return empty
-  // RedfishInvariant. The following ASSERT will fail.
-  // ASSERT_TRUE(res);
+  auto res = raw_intf_->PatchUri("/redfish/v1/Chassis/chassis",
+                                 {{"Name", "testname"}, {"Id", "testid"}});
+  EXPECT_TRUE(res.status().ok()) << res.status().message();
 
   auto new_root_chassis =
       raw_intf_->GetUri("/redfish/v1/Chassis/chassis").AsObject();
@@ -396,20 +373,319 @@ TEST_P(RawInterfaceWithParamTest, PatchUriMultipleFields) {
 }
 
 TEST_P(RawInterfaceWithParamTest, PatchBadUri) {
-  auto res = raw_intf_
-                 ->PatchUri("/redfish/v1/Not/A/Uri",
-                            {{"Name", "testname"}, {"Id", "testid"}})
-                 .AsObject();
-  // After propagate status code to RedfishInvariant, add test to verify
-  // status code for different type of resources. For example, for resource
-  // support Action, return 204, others return 404.
-  // For 204 response, there is no payload. So this will return empty
-  // RedfishInvariant.
-  EXPECT_FALSE(res);
+  auto res = raw_intf_->PatchUri("/redfish/v1/Not/A/Uri",
+                                 {{"Name", "testname"}, {"Id", "testid"}});
+  EXPECT_THAT(res.status().code(), Eq(absl::StatusCode::kNotFound));
 }
 
 INSTANTIATE_TEST_SUITE_P(RawTests, RawInterfaceWithParamTest,
                          testing::ValuesIn(kRawTestCases),
                          PrintToStringParamName());
+
+// The class exposes an HTTP server where custom handlers can be implemented.
+class ManualServerTest : public ::testing::Test {
+ protected:
+  ManualServerTest() : server_(ecclesia::CreateServer(0)) {
+    server_->StartAcceptingRequests();
+    intf_ = libredfish::NewRawInterface(
+        absl::StrCat("http://localhost:", server_->listen_port()),
+        RedfishInterface::kTrusted);
+  }
+  ~ManualServerTest() {
+    if (server_) {
+      server_->Terminate();
+      server_->WaitForTermination();
+    }
+  }
+  std::unique_ptr<tensorflow::serving::net_http::HTTPServerInterface> server_;
+  std::unique_ptr<libredfish::RedfishInterface> intf_;
+};
+
+// The following test cases: see Redfish Specification (2021.1)
+// Section 7.5.1 Modification success responses
+TEST_F(ManualServerTest, PatchOk200) {
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("PATCH"));
+        tensorflow::serving::net_http::SetContentType(req, "application/json");
+        req->WriteResponseString(R"json({ "Name": "Hello" })json");
+        req->ReplyWithStatus(tensorflow::serving::net_http::HTTPStatusCode::OK);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+
+  auto patch = intf_->PatchUri("/redfish/v1/Chassis", {{"Name", "Hello"}});
+  EXPECT_THAT(patch.httpcode(), Eq(ecclesia::HTTP_CODE_REQUEST_OK));
+  EXPECT_TRUE(patch.status().ok()) << patch.status().message();
+  auto obj = patch.AsObject();
+  ASSERT_TRUE(obj);
+  EXPECT_THAT(obj->GetNodeValue<libredfish::PropertyName>(), "Hello");
+}
+
+TEST_F(ManualServerTest, PatchOk200WithExtendedInfo) {
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("PATCH"));
+        tensorflow::serving::net_http::SetContentType(req, "application/json");
+        req->WriteResponseString(R"json({
+          "Name": "Goodbye",
+          "@Message.ExtendedInfo": [
+            {
+              "MessageId": "Base.1.0.PropertyDuplicate",
+              "Message": "BaseIndicates that a duplicate property was included in the request body",
+              "RelatedProperties": [
+                "#/Name"
+              ],
+              "Severity": "Warning",
+              "Resolution": "Remove the duplicate property from the request body."
+            }
+          ]
+        })json");
+        req->ReplyWithStatus(tensorflow::serving::net_http::HTTPStatusCode::OK);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+
+  auto patch = intf_->PatchUri("/redfish/v1/Chassis",
+                               {{"Name", "Hello"}, {"Name", "Goodbye"}});
+  EXPECT_THAT(patch.httpcode(), Eq(ecclesia::HTTP_CODE_REQUEST_OK));
+  EXPECT_TRUE(patch.status().ok()) << patch.status().message();
+  auto obj = patch.AsObject();
+  ASSERT_TRUE(obj);
+  EXPECT_THAT(obj->GetNodeValue<libredfish::PropertyName>(), "Goodbye");
+}
+
+TEST_F(ManualServerTest, PatchOk202) {
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("PATCH"));
+        req->AppendResponseHeader("Location", "/upload_monitor");
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::ACCEPTED);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+  // 202 gets redirected:
+  server_->RegisterRequestHandler(
+      "/upload_monitor",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("GET"));
+        tensorflow::serving::net_http::SetContentType(req, "application/json");
+        req->WriteResponseString(R"json({ "Name": "Hello" })json");
+        req->ReplyWithStatus(tensorflow::serving::net_http::HTTPStatusCode::OK);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+
+  auto patch = intf_->PatchUri("/redfish/v1/Chassis", {{"Name", "Hello"}});
+  EXPECT_THAT(patch.httpcode(), Eq(ecclesia::HTTP_CODE_REQUEST_OK));
+  EXPECT_TRUE(patch.status().ok()) << patch.status().message();
+  auto obj = patch.AsObject();
+  ASSERT_TRUE(obj);
+  EXPECT_THAT(obj->GetNodeValue<libredfish::PropertyName>(), "Hello");
+}
+
+TEST_F(ManualServerTest, PatchOk204) {
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("PATCH"));
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+
+  auto patch = intf_->PatchUri("/redfish/v1/Chassis", {{"Name", "Hello"}});
+  EXPECT_THAT(patch.httpcode(), Eq(ecclesia::HTTP_CODE_NO_CONTENT));
+  EXPECT_TRUE(patch.status().ok()) << patch.status().message();
+  auto obj = patch.AsObject();
+  EXPECT_FALSE(obj);
+}
+
+TEST_F(ManualServerTest, Patch400WithExtendedInfo) {
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("PATCH"));
+        tensorflow::serving::net_http::SetContentType(req, "application/json");
+        req->WriteResponseString(R"json({
+          "Name": "Static Name",
+          "@Message.ExtendedInfo": [
+            {
+              "MessageId": "Base.1.0.PropertyNotWritable",
+              "Message": "The property Name is a read only property and cannot be assigned a value.",
+              "RelatedProperties": [
+                "#/Name"
+              ],
+              "Severity": "Warning",
+              "Resolution": "Remove the property from the request body and resubmit the request if the operation failed."
+            }
+          ]
+        })json");
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+
+  auto patch = intf_->PatchUri("/redfish/v1/Chassis", {{"Name", "Hello"}});
+  EXPECT_THAT(patch.httpcode(), Eq(ecclesia::HTTP_CODE_BAD_REQUEST));
+  EXPECT_THAT(patch.status().code(), Eq(absl::StatusCode::kInvalidArgument))
+      << patch.status().message();
+  auto obj = patch.AsObject();
+  ASSERT_TRUE(obj);
+  EXPECT_THAT(obj->GetNodeValue<libredfish::PropertyName>(), "Static Name");
+}
+
+TEST_F(ManualServerTest, Patch405) {
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("PATCH"));
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::METHOD_NA);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+
+  auto patch = intf_->PatchUri("/redfish/v1/Chassis", {{"Name", "Hello"}});
+  EXPECT_THAT(patch.httpcode(), Eq(ecclesia::HTTP_CODE_METHOD_NA));
+  EXPECT_THAT(patch.status().code(), Eq(absl::StatusCode::kFailedPrecondition))
+      << patch.status().message();
+  auto obj = patch.AsObject();
+  EXPECT_FALSE(obj);
+}
+
+TEST_F(ManualServerTest, PostOk200) {
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("POST"));
+        tensorflow::serving::net_http::SetContentType(req, "application/json");
+        req->WriteResponseString(R"json({
+          "error": {
+            "message": "Success."
+          }
+        })json");
+        req->ReplyWithStatus(tensorflow::serving::net_http::HTTPStatusCode::OK);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+
+  auto patch = intf_->PostUri("/redfish/v1/Chassis", {{"Name", "Hello"}});
+  EXPECT_THAT(patch.httpcode(), Eq(ecclesia::HTTP_CODE_REQUEST_OK));
+  EXPECT_TRUE(patch.status().ok()) << patch.status().message();
+  auto obj = patch.AsObject();
+  ASSERT_TRUE(obj);
+  auto error = (*obj)["error"].AsObject();
+  ASSERT_TRUE(error);
+  EXPECT_THAT(error->GetNodeValue<std::string>("message"), Eq("Success."));
+}
+
+TEST_F(ManualServerTest, PostOk201) {
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("POST"));
+        req->AppendResponseHeader("Location", "/redfish/v1/Chassis/chassis");
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::CREATED);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+  // 202 gets redirected:
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis/chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("GET"));
+        tensorflow::serving::net_http::SetContentType(req, "application/json");
+        req->WriteResponseString(R"json({ "Name": "Hello" })json");
+        req->ReplyWithStatus(tensorflow::serving::net_http::HTTPStatusCode::OK);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+
+  auto patch = intf_->PostUri("/redfish/v1/Chassis", {{"Name", "Hello"}});
+  EXPECT_THAT(patch.httpcode(), Eq(ecclesia::HTTP_CODE_REQUEST_OK));
+  EXPECT_TRUE(patch.status().ok()) << patch.status().message();
+  auto obj = patch.AsObject();
+  ASSERT_TRUE(obj);
+  EXPECT_THAT(obj->GetNodeValue<libredfish::PropertyName>(), "Hello");
+}
+
+TEST_F(ManualServerTest, PostOk204) {
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("POST"));
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+
+  auto patch = intf_->PostUri("/redfish/v1/Chassis", {{"Name", "Hello"}});
+  EXPECT_THAT(patch.httpcode(), Eq(ecclesia::HTTP_CODE_NO_CONTENT));
+  EXPECT_TRUE(patch.status().ok()) << patch.status().message();
+  auto obj = patch.AsObject();
+  EXPECT_FALSE(obj);
+}
+
+TEST_F(ManualServerTest, Post400) {
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("POST"));
+        tensorflow::serving::net_http::SetContentType(req, "application/json");
+        req->WriteResponseString(R"json({
+          "error": {
+            "message": "Failed."
+          }
+        })json");
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+
+  auto patch = intf_->PostUri("/redfish/v1/Chassis", {{"Name", "Hello"}});
+  EXPECT_THAT(patch.httpcode(), Eq(ecclesia::HTTP_CODE_BAD_REQUEST));
+  EXPECT_THAT(patch.status().code(), Eq(absl::StatusCode::kInvalidArgument))
+      << patch.status().message();
+  auto obj = patch.AsObject();
+  ASSERT_TRUE(obj);
+  auto error = (*obj)["error"].AsObject();
+  ASSERT_TRUE(error);
+  EXPECT_THAT(error->GetNodeValue<std::string>("message"), Eq("Failed."));
+}
+
+TEST_F(ManualServerTest, Post400NoContent) {
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("POST"));
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+
+  auto patch = intf_->PostUri("/redfish/v1/Chassis", {{"Name", "Hello"}});
+  EXPECT_THAT(patch.httpcode(), Eq(ecclesia::HTTP_CODE_BAD_REQUEST));
+  EXPECT_THAT(patch.status().code(), Eq(absl::StatusCode::kInvalidArgument))
+      << patch.status().message();
+  auto obj = patch.AsObject();
+  EXPECT_FALSE(obj);
+}
+
+TEST_F(ManualServerTest, Post401NoContent) {
+  server_->RegisterRequestHandler(
+      "/redfish/v1/Chassis",
+      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+        EXPECT_THAT(req->http_method(), Eq("POST"));
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::UNAUTHORIZED);
+      },
+      tensorflow::serving::net_http::RequestHandlerOptions());
+
+  auto patch = intf_->PostUri("/redfish/v1/Chassis", {{"Name", "Hello"}});
+  EXPECT_THAT(patch.httpcode(), Eq(ecclesia::HTTP_CODE_UNAUTHORIZED));
+  EXPECT_THAT(patch.status().code(), Eq(absl::StatusCode::kUnauthenticated))
+      << patch.status().message();
+  auto obj = patch.AsObject();
+  EXPECT_FALSE(obj);
+}
+
 }  // namespace
 }  // namespace libredfish

@@ -25,6 +25,7 @@
 
 #include "absl/base/thread_annotations.h"
 #include "absl/memory/memory.h"
+#include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/synchronization/notification.h"
@@ -32,6 +33,7 @@
 #include "absl/types/span.h"
 #include "absl/types/variant.h"
 #include "ecclesia/lib/http/client.h"
+#include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/libredfish_adapter.h"
@@ -379,7 +381,8 @@ class RawIntf : public RedfishInterface {
   RedfishVariant GetUri(absl::string_view uri) override {
     absl::ReaderMutexLock lock(&service_mutex_);
     if (!service_) {
-      return RedfishVariant();
+      return RedfishVariant(
+          absl::FailedPreconditionError("not connected to a Redifsh service"));
     }
     return RedfishVariant(
         absl::make_unique<RawVariantImpl>(RawPayload::NewShared(
@@ -397,7 +400,8 @@ class RawIntf : public RedfishInterface {
                          absl::string_view data) override {
     absl::ReaderMutexLock lock(&service_mutex_);
     if (!service_) {
-      return RedfishVariant();
+      return RedfishVariant(
+          absl::FailedPreconditionError("Not connected to a Redifsh service."));
     }
 
     PayloadUniquePtr payload(
@@ -410,16 +414,16 @@ class RawIntf : public RedfishInterface {
     if (!postUriFromServiceAsync(service_.get(), uri.data(), payload.get(),
                                  &async_options, LibredfishAsyncToSyncCallback,
                                  &channel)) {
-      return RedfishVariant();
+      return RedfishVariant(
+          absl::UnavailableError("Unable to start the async Redfish POST."));
     }
 
     // Return the result as a variant.
     LibredfishCallbackResult async_payload = channel.WaitForPayloadAndConsume();
-    if (!async_payload.success) {
-      return RedfishVariant();
-    }
-    return RedfishVariant(absl::make_unique<RawVariantImpl>(
-        RawPayload::NewShared(std::move(async_payload.payload))));
+    return RedfishVariant(
+        absl::make_unique<RawVariantImpl>(
+            RawPayload::NewShared(std::move(async_payload.payload))),
+        ecclesia::HttpResponseCodeFromInt(async_payload.http_code));
   }
 
   RedfishVariant PatchUri(
@@ -427,7 +431,8 @@ class RawIntf : public RedfishInterface {
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
     absl::ReaderMutexLock lock(&service_mutex_);
     if (!service_) {
-      return RedfishVariant();
+      return RedfishVariant(
+          absl::FailedPreconditionError("Not connected to a Redifsh service."));
     }
 
     MallocChar content = KvSpanToJsonCharBuffer(kv_span);
@@ -441,16 +446,16 @@ class RawIntf : public RedfishInterface {
     if (!patchUriFromServiceAsync(service_.get(), uri.data(), payload.get(),
                                   &async_options, LibredfishAsyncToSyncCallback,
                                   &channel)) {
-      return RedfishVariant();
+      return RedfishVariant(
+          absl::UnavailableError("Unable to start the async Redfish PATCH."));
     }
 
     // Return the result as a variant.
     LibredfishCallbackResult async_payload = channel.WaitForPayloadAndConsume();
-    if (!async_payload.success) {
-      return RedfishVariant();
-    }
-    return RedfishVariant(absl::make_unique<RawVariantImpl>(
-        RawPayload::NewShared(std::move(async_payload.payload))));
+    return RedfishVariant(
+        absl::make_unique<RawVariantImpl>(
+            RawPayload::NewShared(std::move(async_payload.payload))),
+        ecclesia::HttpResponseCodeFromInt(async_payload.http_code));
   }
 
  private:

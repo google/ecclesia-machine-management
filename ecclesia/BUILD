@@ -39,6 +39,7 @@ package_group(
 package_group(
     name = "magent_library_users",
     packages = [
+        "//ecclesia/lib/redfish/...",
         "//ecclesia/magent/...",
         "//ecclesia/redfish/profiles/...",
     ],
