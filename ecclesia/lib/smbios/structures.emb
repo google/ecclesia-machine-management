@@ -1,6 +1,7 @@
 [$default byte_order: "LittleEndian"]
 [(cpp) namespace: "::ecclesia"]
 
+
 enum StructureType:
   BASEBOARD_INFORMATION                = 2
   BIOS_INFORMATION                     = 0
@@ -55,29 +56,29 @@ struct BiosInformationStructure:
 
 
 struct SystemInformationStructure:
-  0  [+1]  UInt        manufacturer_snum
+  0  [+1]   UInt        manufacturer_snum
     -- String number of the manufacturer's name
 
-  1  [+1]  UInt        product_name_snum
+  1  [+1]   UInt        product_name_snum
     -- String number of the product (mainboard) name
 
-  2  [+1]  UInt        version_snum
+  2  [+1]   UInt        version_snum
     -- String number of the version of the system string
 
-  3  [+1]  UInt        serial_number_snum
+  3  [+1]   UInt        serial_number_snum
     -- String number of the serial number string
 
-  4  [+16]  UInt:8[16] uuid
+  4  [+16]  UInt:8[16]  uuid
     -- Universal unique identifier number of the system
 
-  20 [+1]  UInt        wakeup_type
+  20 [+1]   UInt        wakeup_type
     -- Identifies the event that caused the system to power up
 
-  21 [+1]  UInt        sku_number_snum
+  21 [+1]   UInt        sku_number_snum
     -- String number of the sku or product ID which identifies the configuration
     -- of the machine from a particular vendor
 
-  22 [+1]  UInt        family_snum
+  22 [+1]   UInt        family_snum
     -- String number of the family the computer belongs
 
 
@@ -171,6 +172,7 @@ enum AccessMethod:
   INDEX_IO_2       = 2
   MEMORY_MAPPED_IO = 3
 
+
 struct SystemEventLogStructure:
   0  [+2]         UInt          log_area_length
   2  [+2]         UInt          log_header_start_offset
@@ -206,7 +208,7 @@ bits ProcessorIdx86:
   28 [+4]  UInt  reserved
 
 
-struct ProcessorInformationStructure:
+struct ProcessorInformationStructure(ml: Int:8):
   0  [+1]    UInt            socket_designation_snum
     -- Example: "CPU0"
 
@@ -222,26 +224,32 @@ struct ProcessorInformationStructure:
   18 [+2]    UInt            current_speed_mhz
   20 [+1]    UInt            status
   21 [+1]    UInt            processor_upgrade
-  22 [+2]    UInt            l1_cache_handle
-  24 [+2]    UInt            l2_cache_handle
-  26 [+2]    UInt            l3_cache_handle
-  28 [+1]    UInt            serial_number_snum
-  29 [+1]    UInt            asset_tag_snum
-  30 [+1]    UInt            part_number_snum
-  31 [+1]    UInt            core_count
-  32 [+1]    UInt            core_enabled
-  33 [+1]    UInt            thread_count
-  34 [+2]    UInt            processor_characteristics
-  if processor_family == 0xfe:
+  if ml >= 0x20:
+    22 [+2]  UInt            l1_cache_handle
+    24 [+2]  UInt            l2_cache_handle
+    26 [+2]  UInt            l3_cache_handle
+
+  if ml >= 0x23:
+    28 [+1]  UInt            serial_number_snum
+    29 [+1]  UInt            asset_tag_snum
+    30 [+1]  UInt            part_number_snum
+
+  if ml >= 0x28:
+    31 [+1]  UInt            core_count
+    32 [+1]  UInt            core_enabled
+    33 [+1]  UInt            thread_count
+    34 [+2]  UInt            processor_characteristics
+
+  if ml >= 0x2a && processor_family == 0xfe:
     36 [+2]  UInt            processor_family2
 
-  if core_count == 0xff:
+  if ml >= 0x2e && core_count == 0xff:
     38 [+2]  UInt            core_count2
 
-  if core_enabled == 0xff:
+  if ml >= 0x2e && core_enabled == 0xff:
     40 [+2]  UInt            core_enabled2
 
-  if thread_count == 0xff:
+  if ml >= 0x2e && thread_count == 0xff:
     42 [+2]  UInt            thread_count2
 
 
@@ -253,6 +261,7 @@ struct SystemBootInformationStructure:
 
   if boot_status != 0x80:
     7 [+0]  UInt:8[]  boot_status_data
+
 
 enum BoardType:
   BOARD_TYPE_INVALID                  = 0
@@ -270,119 +279,139 @@ enum BoardType:
   BOARD_TYPE_PROCESSOR_IO_MODULE      = 12
   BOARD_TYPE_INTERCONNECT_BOARD       = 13
 
+
 struct BaseboardInformationStructure:
-  0 [+1]      UInt        manufacturer_snum
-  1 [+1]      UInt        product_snum
-  2 [+1]      UInt        version_snum
-  3 [+1]      UInt        serial_number_snum
-  4 [+1]      UInt        asset_tag_snum
-  5 [+1]      bits:
-    0 [+1]      Flag        hosting_board
-    1 [+1]      Flag        requires_doughterboard
-    2 [+1]      Flag        removable
-    3 [+1]      Flag        replaceable
-    4 [+1]      Flag        swappable
-    5 [+3]      Flag[3]     reserved
-  6 [+1]      UInt        location_in_chassis_snum
-  7 [+2]      UInt        chassis_handle
-  9 [+1]      BoardType   board_type
-  10[+1]      UInt        number_of_contained_object_handles (hc)
-  11[+hc * 2] UInt:16[hc] contained_object_handles
+  0  [+1]         UInt         manufacturer_snum
+  1  [+1]         UInt         product_snum
+  2  [+1]         UInt         version_snum
+  3  [+1]         UInt         serial_number_snum
+  4  [+1]         UInt         asset_tag_snum
+  5  [+1]  bits:
+    0  [+1]       Flag         hosting_board
+    1  [+1]       Flag         requires_doughterboard
+    2  [+1]       Flag         removable
+    3  [+1]       Flag         replaceable
+    4  [+1]       Flag         swappable
+    5  [+3]       Flag[3]      reserved
+
+  6  [+1]         UInt         location_in_chassis_snum
+  7  [+2]         UInt         chassis_handle
+  9  [+1]         BoardType    board_type
+  10 [+1]         UInt         number_of_contained_object_handles (hc)
+  11 [+hc*2]      UInt:16[hc]  contained_object_handles
+
 
 struct BridgeDeviceLink:
-  0 [+1]      UInt        name_snum
-  1 [+2]      UInt        handle
+  0 [+1]  UInt  name_snum
+  1 [+2]  UInt  handle
+
 
 struct BridgeDeviceStructure:
-  0 [+1]      UInt        name_snum
-  1 [+8]      UInt        address
-  9 [+1]      UInt        number_of_links(lc)
-  10[+lc * BridgeDeviceLink.$size_in_bytes] BridgeDeviceLink[lc] links
+  0  [+1]                                   UInt                  name_snum
+  1  [+8]                                   UInt                  address
+  9  [+1]                                   UInt                  number_of_links (lc)
+  10 [+lc*BridgeDeviceLink.$size_in_bytes]  BridgeDeviceLink[lc]  links
+
 
 struct LinkDevice:
-  0 [+1]      UInt        identifier
-  1 [+8]      UInt        address
-  9 [+2]      UInt        handle
+  0 [+1]  UInt  identifier
+  1 [+8]  UInt  address
+  9 [+2]  UInt  handle
+
 
 struct LinkDeviceStructure:
-  0 [+1]      UInt        name_snum
-  1 [+1]      UInt        number_of_devices (dc)
-  2 [+dc * LinkDevice.$size_in_bytes] LinkDevice[dc] devices
+  0 [+1]                             UInt            name_snum
+  1 [+1]                             UInt            number_of_devices (dc)
+  2 [+dc*LinkDevice.$size_in_bytes]  LinkDevice[dc]  devices
+
 
 enum CpuLinkSpeedUnit:
   CPU_LINK_SPEED_UNKNOWN = 0
-  CPU_LINK_SPEED_MHZ = 1
-  CPU_LINK_SPEED_GHZ = 2
-  CPU_LINK_SPEED_MTS = 3
-  CPU_LINK_SPEED_GTS = 4
-  CPU_LINK_SPEED_OTHER = 5
+  CPU_LINK_SPEED_MHZ     = 1
+  CPU_LINK_SPEED_GHZ     = 2
+  CPU_LINK_SPEED_MTS     = 3
+  CPU_LINK_SPEED_GTS     = 4
+  CPU_LINK_SPEED_OTHER   = 5
+
 
 enum CpuLinkDirection:
-  CPU_LINK_DIRECTION_EGRESS = 1
-  CPU_LINK_DIRECTION_INGRESS = 2
+  CPU_LINK_DIRECTION_EGRESS        = 1
+  CPU_LINK_DIRECTION_INGRESS       = 2
   CPU_LINK_DIRECTION_BIDIRECTIONAL = 3
-  CPU_LINK_DIRECTION_OTHER = 4
+  CPU_LINK_DIRECTION_OTHER         = 4
+
 
 struct CpuLinkStructure:
-  0 [+1]      UInt        name_snum
-  1 [+2]      bits:
-    0 [+4]      CpuLinkSpeedUnit:4   speed_unit
-    4 [+4]      CpuLinkDirection:4   direction
-  3 [+4]      UInt        max_speed
-  7 [+4]      UInt        current_speed
-  11[+2]      UInt        src_cpu_handle
-  13[+2]      UInt        dest_cpu_handle
+  0  [+1]         UInt                name_snum
+  1  [+2]  bits:
+    0  [+4]       CpuLinkSpeedUnit:4  speed_unit
+    4  [+4]       CpuLinkDirection:4  direction
+
+  3  [+4]         UInt                max_speed
+  7  [+4]         UInt                current_speed
+  11 [+2]         UInt                src_cpu_handle
+  13 [+2]         UInt                dest_cpu_handle
+
 
 struct GroupAssociationsItem:
-  0 [+1]      StructureType           structure_type
-  1 [+2]      UInt                    handle
+  0 [+1]  StructureType  structure_type
+  1 [+2]  UInt           handle
+
 
 struct GroupAssociationsStructure(ml: Int:8):
-  0 [+1]      UInt                    group_name_snum
-  1 [+ml-5]   GroupAssociationsItem[] items
+  0 [+1]     UInt                     group_name_snum
+  1 [+ml-5]  GroupAssociationsItem[]  items
+
 
 enum IpmiInterfaceType:
- IPMI_INTERFACE_TYPE_UNKNOWN = 0
- IPMI_INTERFACE_TYPE_KCS = 1
- IPMI_INTERFACE_TYPE_SMIC = 2
- IPMI_INTERFACE_TYPE_BT = 3
+  IPMI_INTERFACE_TYPE_UNKNOWN = 0
+  IPMI_INTERFACE_TYPE_KCS     = 1
+  IPMI_INTERFACE_TYPE_SMIC    = 2
+  IPMI_INTERFACE_TYPE_BT      = 3
+
 
 struct IpmiDeviceStructure:
-  0 [+1]      IpmiInterfaceType       interface_type
-  1 [+1]      bits:
-     0[+4]      UInt:4                  minor
-     4[+4]      UInt:4                  major
-  2 [+1]      UInt                    i2c_address
-  3 [+1]      UInt                    nv_storage_device_address
-  4 [+8]      UInt                    base_address
-  12[+1]      bits:
-    0 [+4]      UInt:4                  identify_interrupt_info
-    4 [+4]      UInt:4                  identify_base_address_modifier
-  13[+1]      UInt                    interrupt_number
+  0  [+1]         IpmiInterfaceType  interface_type
+  1  [+1]  bits:
+    0  [+4]       UInt:4             minor
+    4  [+4]       UInt:4             major
+
+  2  [+1]         UInt               i2c_address
+  3  [+1]         UInt               nv_storage_device_address
+  4  [+8]         UInt               base_address
+  12 [+1]  bits:
+    0  [+4]       UInt:4             identify_interrupt_info
+    4  [+4]       UInt:4             identify_base_address_modifier
+
+  13 [+1]         UInt               interrupt_number
+
 
 enum DeviceType:
- DEVICE_TYPE_INVALID = 0
- DEVICE_TYPE_UNKNOWN =2
- DEVICE_TYPE_VIDEO = 3
- DEVICE_TYPE_SCSI_CONTROLLER = 4
- DEVICE_TYPE_ETHERNET = 5
- DEVICE_TYPE_TOKEN_RING = 6
- DEVICE_TYPE_SOUND = 7
- DEVICE_TYPE_PATA_CONTROLLER = 8
- DEVICE_TYPE_SATA_CONTROLLER = 9
- DEVICE_TYPE_SAS_CONTROLLER = 10
+  DEVICE_TYPE_INVALID         = 0
+  DEVICE_TYPE_UNKNOWN         = 2
+  DEVICE_TYPE_VIDEO           = 3
+  DEVICE_TYPE_SCSI_CONTROLLER = 4
+  DEVICE_TYPE_ETHERNET        = 5
+  DEVICE_TYPE_TOKEN_RING      = 6
+  DEVICE_TYPE_SOUND           = 7
+  DEVICE_TYPE_PATA_CONTROLLER = 8
+  DEVICE_TYPE_SATA_CONTROLLER = 9
+  DEVICE_TYPE_SAS_CONTROLLER  = 10
+
 
 struct OnboardDevicesExtendedStructure:
-  0 [+1]       UInt                   reference_designation_snum
-  1 [+1]       bits:
-     0 [+7]      DeviceType             device_type
-     7 [+1]      Flag                   enabled
-  2 [+1]       UInt                   instance
-  3 [+2]       UInt                   segment_number
-  5 [+1]       UInt                   bus_number
-  6 [+1]       bits device_function:
-    0 [+3]       UInt:3                 function_number
-    3 [+5]       UInt:5                 device_number
+  0 [+1]         UInt        reference_designation_snum
+  1 [+1]  bits:
+    0 [+7]       DeviceType  device_type
+    7 [+1]       Flag        enabled
+
+  2 [+1]         UInt        instance
+  3 [+2]         UInt        segment_number
+  5 [+1]         UInt        bus_number
+  6 [+1]         bits        device_function:
+    0 [+3]  UInt:3  function_number
+    3 [+5]  UInt:5  device_number
+
 
 enum ConnectorType:
   CONNECTOR_TYPE_NONE                            = 0x00
@@ -426,6 +455,7 @@ enum ConnectorType:
   CONNECTOR_TYPE_PC_98NOTE                       = 0xA3
   CONNECTOR_TYPE_PC_98FULL                       = 0xA4
 
+
 enum PortType:
   PORT_TYPE_NONE                           = 0x00
   PORT_TYPE_PARALLEL_PORT_XT_AT_COMPATIBLE = 0x01
@@ -467,56 +497,57 @@ enum PortType:
 
 
 struct PortConnectorStructure:
-  0 [+1]       UInt                        internal_reference_designator_snum
-  1 [+1]       ConnectorType               internal_connector_type
-  2 [+1]       UInt                        external_reference_designator_snum
-  3 [+1]       ConnectorType               external_connector_type
-  4 [+1]       PortType                    port_type 
+  0 [+1]  UInt           internal_reference_designator_snum
+  1 [+1]  ConnectorType  internal_connector_type
+  2 [+1]  UInt           external_reference_designator_snum
+  3 [+1]  ConnectorType  external_connector_type
+  4 [+1]  PortType       port_type
+
 
 struct SmbiosStructure:
-  0 [+1]       StructureType                   structure_type
-  1 [+1]       UInt                            length (ml)
-  2 [+2]       UInt                            handle
+  0 [+1]       StructureType                      structure_type
+  1 [+1]       UInt                               length (ml)
+  2 [+2]       UInt                               handle
   if structure_type == StructureType.BIOS_INFORMATION:
-    4 [+ml-4]  BiosInformationStructure        bios_information
+    4 [+ml-4]  BiosInformationStructure           bios_information
 
   if structure_type == StructureType.BASEBOARD_INFORMATION:
-    4 [+ml-4]  BaseboardInformationStructure   baseboard_information
+    4 [+ml-4]  BaseboardInformationStructure      baseboard_information
 
   if structure_type == StructureType.BRIDGE_DEVICE:
-    4 [+ml-4]  BridgeDeviceStructure           bridge_device
+    4 [+ml-4]  BridgeDeviceStructure              bridge_device
 
   if structure_type == StructureType.LINK_DEVICE:
-    4 [+ml-4]  LinkDeviceStructure             link_device
+    4 [+ml-4]  LinkDeviceStructure                link_device
 
   if structure_type == StructureType.CPU_LINK:
-    4 [+ml-4]  CpuLinkStructure                cpu_link
+    4 [+ml-4]  CpuLinkStructure                   cpu_link
 
   if structure_type == StructureType.GROUP_ASSOCIATIONS:
-    4 [+ml-4]  GroupAssociationsStructure(ml)  group_associations
+    4 [+ml-4]  GroupAssociationsStructure(ml)     group_associations
 
   if structure_type == StructureType.IPMI_DEVICE:
-    4 [+ml-4]  IpmiDeviceStructure  ipmi_device
+    4 [+ml-4]  IpmiDeviceStructure                ipmi_device
 
   if structure_type == StructureType.ONBOARD_DEVICES_EXTENDED_INFORMATION:
-    4 [+ml-4]  OnboardDevicesExtendedStructure onboard_devices_extended
+    4 [+ml-4]  OnboardDevicesExtendedStructure    onboard_devices_extended
 
   if structure_type == StructureType.PORT_CONNECTOR:
-    4 [+ml-4]  PortConnectorStructure          port_connector
+    4 [+ml-4]  PortConnectorStructure             port_connector
 
   if structure_type == StructureType.SYSTEM_EVENT_LOG:
-    4 [+ml-4]  SystemEventLogStructure         system_event_log
+    4 [+ml-4]  SystemEventLogStructure            system_event_log
 
   if structure_type == StructureType.MEMORY_DEVICE:
-    4 [+ml-4]  MemoryDeviceStructure           memory_device
+    4 [+ml-4]  MemoryDeviceStructure              memory_device
 
   if structure_type == StructureType.PROCESSOR_INFORMATION:
-    4 [+ml-4]  ProcessorInformationStructure   processor_information
+    4 [+ml-4]  ProcessorInformationStructure(ml)  processor_information
 
   if structure_type == StructureType.SYSTEM_BOOT_INFORMATION:
-    4 [+ml-4]  SystemBootInformationStructure  system_boot_information
+    4 [+ml-4]  SystemBootInformationStructure     system_boot_information
 
   if structure_type == StructureType.SYSTEM_INFORMATION:
-    4 [+ml-4]  SystemInformationStructure      system_information
+    4 [+ml-4]  SystemInformationStructure         system_information
 
-  0 [+ml]      UInt:8[]                        raw_bytes
+  0 [+ml]      UInt:8[]                           raw_bytes
