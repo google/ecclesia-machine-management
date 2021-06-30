@@ -74,6 +74,7 @@ inline constexpr char kRfPropertyNvmeControllersProperties[] =
 inline constexpr char kRfPropertyNvmeSmartCriticalWarnings[] =
     "NVMeSMARTCriticalWarnings";
 inline constexpr char kRfPropertyLinks[] = "Links";
+inline constexpr char kRfPropertyOriginOfCondition[] = "OriginOfCondition";
 inline constexpr char kRfPropertyPcieDevice[] = "PCIeDevice";
 inline constexpr char kRfPropertyPcieDevices[] = "PCIeDevices";
 inline constexpr char kRfPropertyPcieInterface[] = "PCIeInterface";
@@ -85,6 +86,7 @@ inline constexpr char kRfPropertyDownstreamPcieFunctions[] =
 inline constexpr char kRfPropertyPciLocation[] = "PciLocation";
 inline constexpr char kRfPropertyId[] = "Id";
 inline constexpr char kRfPropertyLogServices[] = "LogServices";
+inline constexpr char kRfPropertyEntries[] = "Entries";
 inline constexpr char kRfPropertyClearLog[] = "ClearLog";
 
 inline constexpr char kRfOemPropertyAssociatedWith[] = "AssociatedWith";
@@ -107,6 +109,9 @@ inline constexpr char kRfPropertyResponseError[] = "error";
 inline constexpr char kRfPropertyResponseCode[] = "code";
 inline constexpr char kRfPropertyResponseMessage[] = "message";
 
+inline constexpr char kRfPropertyUpdateService[] = "UpdateService";
+inline constexpr char kRfPropertyFirmwareInventory[] = "FirmwareInventory";
+
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
 DEFINE_REDFISH_RESOURCE(ResourceChassis, "Chassis");
 DEFINE_REDFISH_RESOURCE(ResourceMemory, "Memory");
@@ -121,6 +126,8 @@ DEFINE_REDFISH_RESOURCE(ResourceSensor, "Sensor");
 DEFINE_REDFISH_RESOURCE(ResourcePcieFunction, "PCIeFunction");
 DEFINE_REDFISH_RESOURCE(ResourceComputerSystem, "ComputerSystem");
 DEFINE_REDFISH_RESOURCE(ResourceLogService, "LogService");
+DEFINE_REDFISH_RESOURCE(ResourceLogEntry, "LogEntry");
+DEFINE_REDFISH_RESOURCE(ResourceSoftwareInventory, "SoftwareInventory");
 // The AssemblyEntry is a single item in the "Assemblies" list of
 // Assembly resource
 DEFINE_REDFISH_RESOURCE(ResourceAssemblyEntry, "/Assembly#/");
@@ -192,6 +199,13 @@ DEFINE_REDFISH_PROPERTY(PropertyRedfishActionInfo, std::string,
 DEFINE_REDFISH_PROPERTY(PropertyTarget, std::string, "target");
 DEFINE_REDFISH_PROPERTY(PropertyResponseCode, std::string, "code");
 DEFINE_REDFISH_PROPERTY(PropertyResponseMessage, std::string, "message");
+DEFINE_REDFISH_PROPERTY(PropertyEventId, std::string, "EventId");
+DEFINE_REDFISH_PROPERTY(PropertyUpdateable, bool, "Updateable");
+DEFINE_REDFISH_PROPERTY(PropertyWriteProtected, bool, "WriteProtected");
+DEFINE_REDFISH_PROPERTY(PropertyEntryType, std::string, "EntryType");
+DEFINE_REDFISH_PROPERTY(PropertyOemRecordFormat, std::string,
+                        "OemRecordFormat");
+DEFINE_REDFISH_PROPERTY(PropertyMessage, std::string, "Message");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");

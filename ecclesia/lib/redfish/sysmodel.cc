@@ -212,4 +212,33 @@ void Sysmodel::QueryAllResourceInternal(
       });
 }
 
+// LogEntry:
+// "/redfish/v1/Chassis/{id}/LogServices/{id}/Entries/{id}"
+void Sysmodel::QueryAllResourceInternal(
+    ResourceLogEntry *,
+    const std::function<void(std::unique_ptr<RedfishObject>)>
+        &result_callback) {
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertyChassis]
+      .Each()[kRfPropertyLogServices]
+      .Each()[kRfPropertyEntries]
+      .Each()
+      .Do([&](std::unique_ptr<RedfishObject> &entry) {
+        result_callback(std::move(entry));
+      });
+}
+
+// SoftwareInventory:
+// "/redfish/v1/UpdateService/FirmwareInventory/{id}"
+void Sysmodel::QueryAllResourceInternal(
+    ResourceSoftwareInventory *,
+    const std::function<void(std::unique_ptr<RedfishObject>)>
+        &result_callback) {
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertyUpdateService][kRfPropertyFirmwareInventory].Each().Do(
+      [&](std::unique_ptr<RedfishObject> &software) {
+        result_callback(std::move(software));
+      });
+}
+
 }  // namespace libredfish

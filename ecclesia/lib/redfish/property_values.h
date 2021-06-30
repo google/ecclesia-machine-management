@@ -26,7 +26,10 @@ inline constexpr char kReadingUnitRpm[] = "RPM";
 inline constexpr char kReadingUnitCel[] = "Cel";
 inline constexpr char kHealthOk[] = "OK";
 inline constexpr char kStateEnabled[] = "Enabled";
+inline constexpr char kStateDisabled[] = "Disabled";
 inline constexpr char kStateAbsent[] = "Absent";
+inline constexpr char kEntryTypeOem[] = "OEM";
+inline constexpr char kOemRecordFormatBmc[] = "BMC Device Entry";
 }  // namespace libredfish
 
 namespace ecclesia {

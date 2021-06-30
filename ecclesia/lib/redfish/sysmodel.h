@@ -113,6 +113,14 @@ class Sysmodel {
       ResourceLogService *,
       const std::function<void(std::unique_ptr<RedfishObject>)>
           &result_callback);
+  void QueryAllResourceInternal(
+      ResourceLogEntry *,
+      const std::function<void(std::unique_ptr<RedfishObject>)>
+          &result_callback);
+  void QueryAllResourceInternal(
+      ResourceSoftwareInventory *,
+      const std::function<void(std::unique_ptr<RedfishObject>)>
+          &result_callback);
 
   RedfishInterface *redfish_intf_;
 };
