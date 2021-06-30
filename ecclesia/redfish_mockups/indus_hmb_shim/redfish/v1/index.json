@@ -10,5 +10,10 @@
     "RedfishVersion": "1.6.1",
     "Systems": {
         "@odata.id": "/redfish/v1/Systems"
+    },
+    "Oem" : {
+        "Google" : {
+           "TopologyRepresentation" : "redfish-devpath-v1"
+        }
     }
 }
