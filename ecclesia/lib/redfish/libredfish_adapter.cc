@@ -192,6 +192,10 @@ class LibredfishAdapter {
       case HTTP_DELETE:
         client_response = client_->Delete(std::move(rqst));
         break;
+      case HTTP_PATCH:
+        rqst->body = std::string{request->body, request->bodySize};
+        client_response = client_->Patch(std::move(rqst));
+        break;
       default:
         ecclesia::FatalLog() << "Unsupported method: " << request->method;
     }

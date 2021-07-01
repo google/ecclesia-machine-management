@@ -173,6 +173,8 @@ class CurlHttpClient : public HttpClient {
       std::unique_ptr<HttpRequest> request) override;
   absl::StatusOr<HttpResponse> Delete(
       std::unique_ptr<HttpRequest> request) override;
+  absl::StatusOr<HttpResponse> Patch(
+      std::unique_ptr<HttpRequest> request) override;
 
   // Helper methods for simple cases.
   // "path" is an absolute Redfish path, e.g., "/redfish/v1".
@@ -180,6 +182,8 @@ class CurlHttpClient : public HttpClient {
   absl::StatusOr<HttpResponse> PostPath(absl::string_view path,
                                         absl::string_view post);
   absl::StatusOr<HttpResponse> DeletePath(absl::string_view path);
+  absl::StatusOr<HttpResponse> PatchPath(absl::string_view path,
+                                         absl::string_view patch);
 
   Config GetConfig() const { return config_; }
 

@@ -150,6 +150,11 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Delete(
   return HttpMethod(Protocol::kDelete, std::move(request));
 }
 
+absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Patch(
+    std::unique_ptr<HttpRequest> request) {
+  return HttpMethod(Protocol::kPatch, std::move(request));
+}
+
 std::string CurlHttpClient::ComposeUri(absl::string_view path) {
   // We're assuming "path" begins with "/".
   return absl::StrCat("https://$0$1", host_, path);
@@ -188,6 +193,14 @@ absl::StatusOr<HttpClient::HttpResponse> CurlHttpClient::DeletePath(
   return Delete(std::move(rqst));
 }
 
+absl::StatusOr<HttpClient::HttpResponse> CurlHttpClient::PatchPath(
+    absl::string_view path, absl::string_view patch) {
+  ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<HttpClient::HttpRequest> rqst,
+                            InitRequest(path));
+  rqst->body = patch;
+  return Patch(std::move(rqst));
+}
+
 absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
     Protocol cmd, std::unique_ptr<HttpRequest> request) {
   absl::MutexLock l(&mu_);
@@ -211,6 +224,13 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
       break;
     case Protocol::kDelete:
       libcurl_->curl_easy_setopt(curl_, CURLOPT_CUSTOMREQUEST, "DELETE");
+      break;
+    case Protocol::kPatch:
+      libcurl_->curl_easy_setopt(curl_, CURLOPT_CUSTOMREQUEST, "PATCH");
+      libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE,
+                                 request->body.size());
+      libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
+                                 request->body.data());
       break;
   }
 

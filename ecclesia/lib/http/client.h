@@ -33,6 +33,7 @@ enum class Protocol {
   kGet,
   kPost,
   kDelete,
+  kPatch,
 };
 
 // Return the HTTP method name for protocol.
@@ -81,6 +82,11 @@ class HttpClient {
   virtual absl::StatusOr<HttpResponse> Delete(
       std::unique_ptr<HttpRequest> request) {
     return absl::UnimplementedError("Delete not implemented");
+  }
+  // Execute a PATCH request and return HttpResponse or absl::Status.
+  virtual absl::StatusOr<HttpResponse> Patch(
+      std::unique_ptr<HttpRequest> request) {
+    return absl::UnimplementedError("Patch not implemented");
   }
 };
 
