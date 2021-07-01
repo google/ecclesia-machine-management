@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/topology.h"
 
 #include <cstddef>
+#include <initializer_list>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -26,11 +27,15 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/memory/memory.h"
+#include "absl/meta/type_traits.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
+#include "ecclesia/lib/redfish/property_values.h"
+#include "ecclesia/lib/redfish/topology_v2.h"
 #include "ecclesia/lib/redfish/types.h"
 #include "ecclesia/lib/redfish/utils.h"
 
@@ -498,9 +503,30 @@ class NodeId {
   NodeType type_;
 };
 
+bool IsNodeTopologyV2(RedfishInterface *redfish_intf) {
+  auto service_root = redfish_intf->GetRoot().AsObject();
+  if (service_root) {
+    if (auto oem =
+            (*service_root)[kRfPropertyOem][kRfOemPropertyGoogle].AsObject();
+        oem) {
+      if (auto topology_type =
+              oem->GetNodeValue<OemGooglePropertyTopologyRepresentation>();
+          topology_type.has_value()) {
+        // If the service root doesn't report redfish-devpath-v1, we assume it
+        // is v2
+        return topology_type.value() != ecclesia::kTopologyRepresentationV1;
+      }
+    }
+  }
+  return true;
+}
+
 }  // namespace
 
 NodeTopology CreateTopologyFromRedfish(RedfishInterface *redfish_intf) {
+  if (IsNodeTopologyV2(redfish_intf)) {
+    return CreateTopologyFromRedfishV2(redfish_intf);
+  }
   std::vector<Assembly> assemblies = CreateAssembliesFromRedfish(redfish_intf);
   return CreateNodeTopologyFromAssemblies(std::move(assemblies));
 }

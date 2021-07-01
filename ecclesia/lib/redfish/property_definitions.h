@@ -88,6 +88,12 @@ inline constexpr char kRfPropertyId[] = "Id";
 inline constexpr char kRfPropertyLogServices[] = "LogServices";
 inline constexpr char kRfPropertyEntries[] = "Entries";
 inline constexpr char kRfPropertyClearLog[] = "ClearLog";
+inline constexpr char kRfPropertyMembers[] = "Members";
+inline constexpr char kRfPropertyLocation[] = "Location";
+inline constexpr char kRfPropertyPhysicalLocation[] = "PhysicalLocation";
+inline constexpr char kRfPropertyPartLocation[] = "PartLocation";
+inline constexpr char kRfPropertyCables[] = "Cables";
+inline constexpr char kRfPropertyCableUpstreamResources[] = "UpstreamResources";
 
 inline constexpr char kRfOemPropertyAssociatedWith[] = "AssociatedWith";
 inline constexpr char kRfOemPropertyAttachedTo[] = "AttachedTo";
@@ -207,6 +213,8 @@ DEFINE_REDFISH_PROPERTY(PropertyOemRecordFormat, std::string,
                         "OemRecordFormat");
 DEFINE_REDFISH_PROPERTY(PropertyMessage, std::string, "Message");
 DEFINE_REDFISH_PROPERTY(PropertyVersion, std::string, "Version");
+DEFINE_REDFISH_PROPERTY(PropertyLocationType, std::string, "LocationType");
+DEFINE_REDFISH_PROPERTY(PropertyServiceLabel, std::string, "ServiceLabel");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
@@ -226,6 +234,8 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyCriticalTemperatureTimeMinute, int,
                         "CriticalTemperatureTimeMinute");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCriticalWarning, int,
                         "CriticalWarning");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyTopologyRepresentation, std::string,
+                        "TopologyRepresentation");
 }  // namespace libredfish
 
 #endif  // ECCLESIA_LIB_REDFISH_PROPERTY_DEFINITIONS_H_

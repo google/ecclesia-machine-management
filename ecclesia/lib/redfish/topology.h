@@ -24,43 +24,10 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/types.h"
 
 namespace libredfish {
-
-// Node represents a single devpath from the Redfish backend and its associated
-// system data. There is a one-to-one mapping between Redfish Assembly
-// Components and Nodes.
-struct Node {
-  // Name property value from the Redfish Component representing this Node.
-  std::string name;
-  // Local devpath assigned to this Node.
-  std::string local_devpath;
-  // Node type represents the physical type of this Node.
-  NodeType type;
-  // Associated URIs that provide logical system information to this Node.
-  std::vector<std::string> associated_uris;
-};
-
-// NodeTopology represents the collection of Nodes comprising a Redfish backend.
-// Additional data structures are provided in order to conveniently look up
-// specific nodes.
-struct NodeTopology {
-  // All nodes fround from the redfish backend.
-  std::vector<std::unique_ptr<Node>> nodes;
-
-  // Map of a URI to all associated Nodes. If the URI is fetched, these Nodes
-  // can have their properties updated from that information.
-  absl::flat_hash_map<std::string, std::vector<Node *>>
-      uri_to_associated_node_map;
-  // Map of a domain devpath to a Node.
-  absl::flat_hash_map<std::string, Node *> devpath_to_node_map;
-
-  // Map of a Node to the list of Nodes it is attached to.
-  absl::flat_hash_map<Node *, std::vector<Node *>> node_to_parents;
-  // Map of a Node to its child nodes. This is just the inverse of the above.
-  absl::flat_hash_map<Node *, std::vector<Node *>> node_to_children;
-};
 
 NodeTopology CreateTopologyFromRedfish(RedfishInterface *redfish_intf);
 

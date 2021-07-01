@@ -1,5 +1,8 @@
 # Description:
 # C++ wrapper interfaces for libredfish
+
+load("//ecclesia/build_defs:embed.bzl", "cc_data_library")
+
 licenses(["notice"])
 
 cc_library(
@@ -98,12 +101,16 @@ cc_library(
     visibility = ["//ecclesia:redfish_users"],
     deps = [
         ":interface",
+        ":node_topology",
         ":property_definitions",
+        ":property_values",
+        ":topology_v2",
         ":types",
         ":utils",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/meta:type_traits",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
     ],
@@ -234,4 +241,53 @@ cc_library(
         "//ecclesia/lib/io/pci:signature",
         "@com_google_absl//absl/types:optional",
     ],
+)
+
+cc_library(
+    name = "topology_v2",
+    srcs = ["topology_v2.cc"],
+    hdrs = ["topology_v2.h"],
+    deps = [
+        ":interface",
+        ":node_topology",
+        ":property",
+        ":property_definitions",
+        ":topology_config_cc_proto",
+        ":topology_configs",
+        ":types",
+        "//ecclesia/lib/file:cc_embed_interface",
+        "//ecclesia/lib/logging",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/meta:type_traits",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:optional",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
+    name = "node_topology",
+    hdrs = ["node_topology.h"],
+    deps = [
+        ":types",
+        "@com_google_absl//absl/container:flat_hash_map",
+    ],
+)
+
+proto_library(
+    name = "topology_config",
+    srcs = ["topology_config.proto"],
+)
+
+cc_proto_library(
+    name = "topology_config_cc_proto",
+    deps = [":topology_config"],
+)
+
+cc_data_library(
+    name = "topology_configs",
+    cc_namespace = "libredfish",
+    data = glob(["topology_configs/*.textpb"]),
+    var_name = "kTopologyConfig",
 )

@@ -1,0 +1,48 @@
+# proto-file: third_party/ecclesia/lib/redfish/topology_config.proto
+# proto-message: TopologyConfig
+
+# This text proto represents the valid linkages for DMTF Redfish version 2021.1
+
+find_root_node {
+  chassis_link: "ContainedBy"
+}
+
+cable_linkages {
+  upstream_links: "UpstreamChassis"
+  upstream_links: "UpstreamResources"
+}
+
+resource_to_config {
+  key: "Chassis"
+  value {
+    usable_links {
+      array_links: "Contains"
+      array_links: "Drives"
+      array_links: "Storage"
+      array_links: "Processors"
+    }
+    first_class_attributes {
+      collection_attributes: "Memory"
+      collection_attributes: "Drives"
+    }
+  }
+}
+resource_to_config {
+  key: "Cable"
+  value {
+    usable_links {
+      singular_links: "DownstreamChassis"
+      array_links: "DownstreamResources"
+      array_links: "DownstreamPorts"
+    }
+  }
+}
+resource_to_config {
+  key: "Storage"
+  value {
+    first_class_attributes {
+      array_attributes: "Controllers"
+      array_attributes: "Drives"
+    }
+  }
+}

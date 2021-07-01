@@ -1,0 +1,72 @@
+// Copyright 2021 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Protobuffers for describing a Redfish topology configuration.
+//
+// These messages are used for constructing the NodeTopology. The Version 2
+// topology library uses the proto messages to query all of the required
+// resources based on resource type
+
+syntax = "proto3";
+
+package libredfish;
+
+// Resource type specific configurations for finding associated Redfish
+// resources
+// TODO(b/192486899): Add handling for specific versions of each resource
+message ResourceConfig {
+  // Attributes under the "Links" attribute in Resource that point to associated
+  // resources
+  message UsableLinks {
+    // Link Attribute is a single object
+    repeated string singular_links = 1;
+    // Link Attribute is an array
+    repeated string array_links = 2;
+  }
+  UsableLinks usable_links = 1;
+
+  // First class Attributes in Resource that point to associated resources
+  message FirstClassAttributes {
+    // Attribute is an object that points to a downstream collection
+    repeated string collection_attributes = 1;
+    // Attribute is an array of nodes that point to downstream resources
+    repeated string array_attributes = 2;
+  }
+  FirstClassAttributes first_class_attributes = 2;
+}
+
+message TopologyConfig {
+  // Represents how to find a root node to start the devpath creation process
+  // This will handle any changes to assupmtions being made about the root node
+  message FindingRootNode {
+    oneof root_link {
+      // Assumption: root node is a Chassis resource
+      // The attribute name under "Links" to find Chassis that is upstream of
+      // current Chassis
+      string chassis_link = 1;
+    }
+  }
+  FindingRootNode find_root_node = 1;
+
+  // Map of resource type to config
+  map<string, ResourceConfig> resource_to_config = 2;
+
+  // Handling the special case of Cable resources since these resources are
+  // usually not software tracked but can determine downstream resources
+  message CableLinkages {
+    // Attribute under the "Links" attribute that point to upstream resources
+    repeated string upstream_links = 1;
+  }
+  CableLinkages cable_linkages = 3;
+}
