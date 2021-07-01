@@ -206,6 +206,7 @@ DEFINE_REDFISH_PROPERTY(PropertyEntryType, std::string, "EntryType");
 DEFINE_REDFISH_PROPERTY(PropertyOemRecordFormat, std::string,
                         "OemRecordFormat");
 DEFINE_REDFISH_PROPERTY(PropertyMessage, std::string, "Message");
+DEFINE_REDFISH_PROPERTY(PropertyVersion, std::string, "Version");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
