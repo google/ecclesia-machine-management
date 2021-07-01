@@ -208,49 +208,59 @@ bits ProcessorIdx86:
   28 [+4]  UInt  reserved
 
 
-struct ProcessorInformationStructure(ml: Int:8):
-  0  [+1]    UInt            socket_designation_snum
+struct ProcessorInformationStructure:
+  0  [+1]    StructureType   structure_type
+    [requires: this == StructureType.PROCESSOR_INFORMATION]
+
+  1  [+1]    UInt            length
+  let supports_v2_1 = length >= 0x20
+  let supports_v2_3 = length >= 0x23
+  let supports_v2_5 = length >= 0x28
+  let supports_v2_6 = length >= 0x2a
+  let supports_v3_0 = length >= 0x30
+  2  [+2]    UInt            handle
+  4  [+1]    UInt            socket_designation_snum
     -- Example: "CPU0"
 
-  1  [+1]    ProcessorType   processor_type
-  2  [+1]    UInt            processor_family
-  3  [+1]    UInt            manufacturer_snum
-  4  [+8]    UInt:8[]        processor_id
-  4  [+4]    ProcessorIdx86  processor_id_x86
-  12 [+1]    UInt            version
-  13 [+1]    UInt            voltage
-  14 [+2]    UInt            external_clk_freq_mhz
-  16 [+2]    UInt            max_speed_mhz
-  18 [+2]    UInt            current_speed_mhz
-  20 [+1]    UInt            status
-  21 [+1]    UInt            processor_upgrade
-  if ml >= 0x20:
-    22 [+2]  UInt            l1_cache_handle
-    24 [+2]  UInt            l2_cache_handle
-    26 [+2]  UInt            l3_cache_handle
+  5  [+1]    ProcessorType   processor_type
+  6  [+1]    UInt            processor_family
+  7  [+1]    UInt            manufacturer_snum
+  8  [+8]    UInt:8[]        processor_id
+  8  [+4]    ProcessorIdx86  processor_id_x86
+  16 [+1]    UInt            version
+  17 [+1]    UInt            voltage
+  18 [+2]    UInt            external_clk_freq_mhz
+  20 [+2]    UInt            max_speed_mhz
+  22 [+2]    UInt            current_speed_mhz
+  24 [+1]    UInt            status
+  25 [+1]    UInt            processor_upgrade
+  if supports_v2_1:
+    26 [+2]  UInt            l1_cache_handle
+    28 [+2]  UInt            l2_cache_handle
+    30 [+2]  UInt            l3_cache_handle
 
-  if ml >= 0x23:
-    28 [+1]  UInt            serial_number_snum
-    29 [+1]  UInt            asset_tag_snum
-    30 [+1]  UInt            part_number_snum
+  if supports_v2_3:
+    32 [+1]  UInt            serial_number_snum
+    33 [+1]  UInt            asset_tag_snum
+    34 [+1]  UInt            part_number_snum
 
-  if ml >= 0x28:
-    31 [+1]  UInt            core_count
-    32 [+1]  UInt            core_enabled
-    33 [+1]  UInt            thread_count
-    34 [+2]  UInt            processor_characteristics
+  if supports_v2_5:
+    35 [+1]  UInt            core_count
+    36 [+1]  UInt            core_enabled
+    37 [+1]  UInt            thread_count
+    38 [+2]  UInt            processor_characteristics
 
-  if ml >= 0x2a && processor_family == 0xfe:
-    36 [+2]  UInt            processor_family2
+  if supports_v2_6 && processor_family == 0xfe:
+    40 [+2]  UInt            processor_family2
 
-  if ml >= 0x2e && core_count == 0xff:
-    38 [+2]  UInt            core_count2
+  if supports_v3_0 && core_count == 0xff:
+    42 [+2]  UInt            core_count2
 
-  if ml >= 0x2e && core_enabled == 0xff:
-    40 [+2]  UInt            core_enabled2
+  if supports_v3_0 && core_enabled == 0xff:
+    44 [+2]  UInt            core_enabled2
 
-  if ml >= 0x2e && thread_count == 0xff:
-    42 [+2]  UInt            thread_count2
+  if supports_v3_0 && thread_count == 0xff:
+    46 [+2]  UInt            thread_count2
 
 
 struct SystemBootInformationStructure:
@@ -358,9 +368,14 @@ struct GroupAssociationsItem:
   1 [+2]  UInt           handle
 
 
-struct GroupAssociationsStructure(ml: Int:8):
-  0 [+1]     UInt                     group_name_snum
-  1 [+ml-5]  GroupAssociationsItem[]  items
+struct GroupAssociationsStructure:
+  0 [+1]         StructureType            structure_type
+    [requires: this == StructureType.GROUP_ASSOCIATIONS]
+
+  1 [+1]         UInt                     length
+  2 [+2]         UInt                     handle
+  4 [+1]         UInt                     group_name_snum
+  5 [+length-5]  GroupAssociationsItem[]  items
 
 
 enum IpmiInterfaceType:
@@ -505,49 +520,49 @@ struct PortConnectorStructure:
 
 
 struct SmbiosStructure:
-  0 [+1]       StructureType                      structure_type
-  1 [+1]       UInt                               length (ml)
-  2 [+2]       UInt                               handle
+  0 [+1]       StructureType                    structure_type
+  1 [+1]       UInt                             length (ml)
+  2 [+2]       UInt                             handle
   if structure_type == StructureType.BIOS_INFORMATION:
-    4 [+ml-4]  BiosInformationStructure           bios_information
+    4 [+ml-4]  BiosInformationStructure         bios_information
 
   if structure_type == StructureType.BASEBOARD_INFORMATION:
-    4 [+ml-4]  BaseboardInformationStructure      baseboard_information
+    4 [+ml-4]  BaseboardInformationStructure    baseboard_information
 
   if structure_type == StructureType.BRIDGE_DEVICE:
-    4 [+ml-4]  BridgeDeviceStructure              bridge_device
+    4 [+ml-4]  BridgeDeviceStructure            bridge_device
 
   if structure_type == StructureType.LINK_DEVICE:
-    4 [+ml-4]  LinkDeviceStructure                link_device
+    4 [+ml-4]  LinkDeviceStructure              link_device
 
   if structure_type == StructureType.CPU_LINK:
-    4 [+ml-4]  CpuLinkStructure                   cpu_link
+    4 [+ml-4]  CpuLinkStructure                 cpu_link
 
   if structure_type == StructureType.GROUP_ASSOCIATIONS:
-    4 [+ml-4]  GroupAssociationsStructure(ml)     group_associations
+    0 [+ml]    GroupAssociationsStructure       group_associations
 
   if structure_type == StructureType.IPMI_DEVICE:
-    4 [+ml-4]  IpmiDeviceStructure                ipmi_device
+    4 [+ml-4]  IpmiDeviceStructure              ipmi_device
 
   if structure_type == StructureType.ONBOARD_DEVICES_EXTENDED_INFORMATION:
-    4 [+ml-4]  OnboardDevicesExtendedStructure    onboard_devices_extended
+    4 [+ml-4]  OnboardDevicesExtendedStructure  onboard_devices_extended
 
   if structure_type == StructureType.PORT_CONNECTOR:
-    4 [+ml-4]  PortConnectorStructure             port_connector
+    4 [+ml-4]  PortConnectorStructure           port_connector
 
   if structure_type == StructureType.SYSTEM_EVENT_LOG:
-    4 [+ml-4]  SystemEventLogStructure            system_event_log
+    4 [+ml-4]  SystemEventLogStructure          system_event_log
 
   if structure_type == StructureType.MEMORY_DEVICE:
-    4 [+ml-4]  MemoryDeviceStructure              memory_device
+    4 [+ml-4]  MemoryDeviceStructure            memory_device
 
   if structure_type == StructureType.PROCESSOR_INFORMATION:
-    4 [+ml-4]  ProcessorInformationStructure(ml)  processor_information
+    0 [+ml]    ProcessorInformationStructure    processor_information
 
   if structure_type == StructureType.SYSTEM_BOOT_INFORMATION:
-    4 [+ml-4]  SystemBootInformationStructure     system_boot_information
+    4 [+ml-4]  SystemBootInformationStructure   system_boot_information
 
   if structure_type == StructureType.SYSTEM_INFORMATION:
-    4 [+ml-4]  SystemInformationStructure         system_information
+    4 [+ml-4]  SystemInformationStructure       system_information
 
-  0 [+ml]      UInt:8[]                           raw_bytes
+  0 [+ml]      UInt:8[]                         raw_bytes
