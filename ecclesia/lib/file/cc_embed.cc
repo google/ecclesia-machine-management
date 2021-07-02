@@ -80,7 +80,7 @@ namespace {
 constexpr absl::string_view kHeaderTemplate =
     R"(#include "ecclesia/lib/file/cc_embed_interface.h"
 namespace $0 {
-extern ::ecclesia::EmbeddedFileArray<$1> $2;
+extern ecclesia::EmbeddedFileArray<$1> $2;
 }  // namespace $0
 )";
 
@@ -95,8 +95,8 @@ extern ::ecclesia::EmbeddedFileArray<$1> $2;
 constexpr absl::string_view kSourcePrefixTemplate =
     R"(#include "ecclesia/lib/file/cc_embed_interface.h"
 namespace $0 {
-extern ::ecclesia::EmbeddedFileArray<$1> $2;
-::ecclesia::EmbeddedFileArray<$1> $2 = {{
+extern ecclesia::EmbeddedFileArray<$1> $2;
+ecclesia::EmbeddedFileArray<$1> $2 = {{
 )";
 
 // Template for defining the output source suffix, as an absl::Substitute

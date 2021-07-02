@@ -67,7 +67,7 @@ class ProtoMatcherBase {
   virtual ~ProtoMatcherBase() = default;
 
   // Base matcher, that matches against any protobuf message type.
-  bool MatchAndExplain(const ::google::protobuf::Message &arg,
+  bool MatchAndExplain(const google::protobuf::Message &arg,
                        ::testing::MatchResultListener *listener) const {
     if (!arg.IsInitialized()) {
       *listener << "which isn't fully initialized";
@@ -103,7 +103,7 @@ class ProtoMatcherBase {
       std::enable_if_t<
           // Check that the type can be dereferenced to get a Message.
           std::is_base_of_v<
-              ::google::protobuf::Message,
+              google::protobuf::Message,
               std::remove_reference_t<decltype(*std::declval<T>())>> &&
               // Check that the type can be compared against null.
               std::is_same_v<decltype(std::declval<T>() == nullptr), bool>,
@@ -131,7 +131,7 @@ class ProtoMatcherBase {
   // functions should not be utilized directly by users of the matchers. Instead
   // use the matcher functions defined in the public namespace.
   void SetIgnoreRepeatedFieldOrdering() {
-    repeated_field_comparison_ = ::google::protobuf::util::MessageDifferencer::AS_SET;
+    repeated_field_comparison_ = google::protobuf::util::MessageDifferencer::AS_SET;
   }
 
  protected:
@@ -140,17 +140,17 @@ class ProtoMatcherBase {
   // function. This allows different subclasses to customize the delete policy
   // for example by having deletion be a no-op if the returned object is reused
   // across calls.
-  using ExpectedProtoPtr = std::unique_ptr<const ::google::protobuf::Message,
-                                           void (*)(const ::google::protobuf::Message *)>;
+  using ExpectedProtoPtr =
+      std::unique_ptr<const google::protobuf::Message, void (*)(const google::protobuf::Message *)>;
 
  private:
   // Print the expected protocol buffer value.
-  virtual void PrintExpected(::std::ostream *os) const = 0;
+  virtual void PrintExpected(std::ostream *os) const = 0;
 
   // Returns the expected value as a protobuf object; if the object cannot be
   // created then this will explain why to 'listener' and return null.
   virtual ExpectedProtoPtr CreateExpectedProto(
-      const ::google::protobuf::Message &arg,
+      const google::protobuf::Message &arg,
       ::testing::MatchResultListener *listener) const = 0;
 
   // Describes the expected relation between the actual protobuf and the
@@ -158,7 +158,7 @@ class ProtoMatcherBase {
   void DescribeRelationToExpectedProto(std::ostream *os) const {
     *os << "equal ";
     if (repeated_field_comparison_ ==
-        ::google::protobuf::util::MessageDifferencer::AS_SET) {
+        google::protobuf::util::MessageDifferencer::AS_SET) {
       *os << "(ignoring repeated field ordering) ";
     }
     *os << "to ";
@@ -166,24 +166,24 @@ class ProtoMatcherBase {
   }
 
   // Create a message differencer for use in comparisons.
-  std::unique_ptr<::google::protobuf::util::MessageDifferencer> MakeDifferencer() const {
-    auto differencer = absl::make_unique<::google::protobuf::util::MessageDifferencer>();
+  std::unique_ptr<google::protobuf::util::MessageDifferencer> MakeDifferencer() const {
+    auto differencer = absl::make_unique<google::protobuf::util::MessageDifferencer>();
     differencer->set_repeated_field_comparison(repeated_field_comparison_);
     return differencer;
   }
 
   // Provides a string describing a type mismatch between the two given protos.
   // Assumes that the types actually mismatch.
-  std::string DescribeTypeMismatch(const ::google::protobuf::Message &expected,
-                                   const ::google::protobuf::Message &actual) const {
+  std::string DescribeTypeMismatch(const google::protobuf::Message &expected,
+                                   const google::protobuf::Message &actual) const {
     return "whose type should be " + expected.GetTypeName() +
            " but actually is " + actual.GetTypeName();
   }
 
   // Provides a string describing the difference between the two given protos.
   // Assumes that the types are actually different.
-  std::string DescribeDiff(const ::google::protobuf::Message &expected,
-                           const ::google::protobuf::Message &actual) const {
+  std::string DescribeDiff(const google::protobuf::Message &expected,
+                           const google::protobuf::Message &actual) const {
     auto differencer = MakeDifferencer();
     std::string diff;
     differencer->ReportDifferencesToString(&diff);
@@ -201,22 +201,22 @@ class ProtoMatcherBase {
   }
 
   // Flags to control the matching behavior.
-  ::google::protobuf::util::MessageDifferencer::RepeatedFieldComparison
-      repeated_field_comparison_ = ::google::protobuf::util::MessageDifferencer::AS_LIST;
+  google::protobuf::util::MessageDifferencer::RepeatedFieldComparison
+      repeated_field_comparison_ = google::protobuf::util::MessageDifferencer::AS_LIST;
 };
 
 // An implementation of the base matcher that matches against an actual protocol
 // buffer message.
 class ProtoMatcher : public ProtoMatcherBase {
  public:
-  explicit ProtoMatcher(const ::google::protobuf::Message &expected)
+  explicit ProtoMatcher(const google::protobuf::Message &expected)
       : expected_(CloneMessage(expected)) {}
 
  private:
   void PrintExpected(std::ostream *os) const override {
     *os << expected_->GetTypeName();
     std::string expected_string;
-    if (::google::protobuf::TextFormat::PrintToString(*expected_, &expected_string)) {
+    if (google::protobuf::TextFormat::PrintToString(*expected_, &expected_string)) {
       *os << " -> {" << expected_string << "}";
     } else {
       *os << " (unknown value)";
@@ -224,16 +224,16 @@ class ProtoMatcher : public ProtoMatcherBase {
   }
 
   ExpectedProtoPtr CreateExpectedProto(
-      const ::google::protobuf::Message &,
+      const google::protobuf::Message &,
       ::testing::MatchResultListener *) const override {
     // Here we use a no-op deleter, because the returned object is a pointer to
     // the underlying stored message, which lives as long as the matcher does.
-    return ExpectedProtoPtr(expected_.get(), [](const ::google::protobuf::Message *) {});
+    return ExpectedProtoPtr(expected_.get(), [](const google::protobuf::Message *) {});
   }
 
   // Helper function that creates a copy of the given Message.
-  static std::shared_ptr<const ::google::protobuf::Message> CloneMessage(
-      const ::google::protobuf::Message &msg) {
+  static std::shared_ptr<const google::protobuf::Message> CloneMessage(
+      const google::protobuf::Message &msg) {
     auto cloned = absl::WrapUnique(msg.New());
     cloned->CopyFrom(msg);
     return cloned;
@@ -245,7 +245,7 @@ class ProtoMatcher : public ProtoMatcherBase {
   // because the matcher needs to be copyable. Since the underlying stored
   // message is const and never modified it is safe to have multiple copies of a
   // matcher pointing at the same underlying object.
-  const std::shared_ptr<const ::google::protobuf::Message> expected_;
+  const std::shared_ptr<const google::protobuf::Message> expected_;
 };
 
 // An implementation of a proto matcher that stores the to-be-matched protobuf
@@ -256,7 +256,7 @@ class ProtoStringMatcher : public ProtoMatcherBase {
       : expected_(expected) {}
 
  private:
-  void PrintExpected(::std::ostream *os) const override {
+  void PrintExpected(std::ostream *os) const override {
     *os << "{" << expected_ << "}";
   }
 
@@ -265,10 +265,10 @@ class ProtoStringMatcher : public ProtoMatcherBase {
   // protobuf is constructed on each call the returned pointer actually takes
   // ownership and has a real deleter.
   ExpectedProtoPtr CreateExpectedProto(
-      const ::google::protobuf::Message &arg,
+      const google::protobuf::Message &arg,
       ::testing::MatchResultListener *listener) const override {
     // Define a collector that just accumulates a list of error message strings.
-    class TextErrorCollector : public ::google::protobuf::io::ErrorCollector {
+    class TextErrorCollector : public google::protobuf::io::ErrorCollector {
      public:
       const std::vector<std::string> &errors() const { return errors_; }
 
@@ -285,14 +285,14 @@ class ProtoStringMatcher : public ProtoMatcherBase {
       std::vector<std::string> errors_;
     };
     TextErrorCollector collector;
-    ::google::protobuf::TextFormat::Parser parser;
+    google::protobuf::TextFormat::Parser parser;
     parser.RecordErrorsTo(&collector);
 
     // Try the actual parse. If it fails, log all the recorded errors.
     auto expected_proto = absl::WrapUnique(arg.New());
     if (parser.ParseFromString(expected_, expected_proto.get())) {
       return ExpectedProtoPtr(expected_proto.release(),
-                              [](const ::google::protobuf::Message *msg) { delete msg; });
+                              [](const google::protobuf::Message *msg) { delete msg; });
     } else {
       if (listener->IsInterested()) {
         *listener << "where ";
@@ -300,7 +300,7 @@ class ProtoStringMatcher : public ProtoMatcherBase {
         *listener << " doesn't parse as a " << arg.GetTypeName() << ":\n"
                   << absl::StrJoin(collector.errors(), "\n");
       }
-      return ExpectedProtoPtr(nullptr, [](const ::google::protobuf::Message *) {});
+      return ExpectedProtoPtr(nullptr, [](const google::protobuf::Message *) {});
     }
   }
 
@@ -312,7 +312,7 @@ class ProtoStringMatcher : public ProtoMatcherBase {
 // Creates EqualsProto matches. They can be given either an actual Message
 // object or a text proto.
 inline ::testing::PolymorphicMatcher<internal_proto::ProtoMatcher> EqualsProto(
-    const ::google::protobuf::Message &x) {
+    const google::protobuf::Message &x) {
   return ::testing::MakePolymorphicMatcher(internal_proto::ProtoMatcher(x));
 }
 inline ::testing::PolymorphicMatcher<internal_proto::ProtoStringMatcher>

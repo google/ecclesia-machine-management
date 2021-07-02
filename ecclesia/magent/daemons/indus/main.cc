@@ -74,7 +74,7 @@ ABSL_FLAG(std::string, system_event_clear_script_path,
 
 namespace {
 
-using tensorflow::serving::net_http::HTTPServerInterface;
+using ::tensorflow::serving::net_http::HTTPServerInterface;
 
 constexpr char kSmbiosEntryPointPath[] =
     "/sys/firmware/dmi/tables/smbios_entry_point";

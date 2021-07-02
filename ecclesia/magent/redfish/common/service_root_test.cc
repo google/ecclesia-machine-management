@@ -44,9 +44,9 @@
 namespace ecclesia {
 namespace {
 
-using tensorflow::serving::net_http::EventExecutor;
-using tensorflow::serving::net_http::HTTPServerInterface;
-using tensorflow::serving::net_http::ServerOptions;
+using ::tensorflow::serving::net_http::EventExecutor;
+using ::tensorflow::serving::net_http::HTTPServerInterface;
+using ::tensorflow::serving::net_http::ServerOptions;
 
 constexpr absl::string_view kFileName =
     "magent/redfish/common/test_data/service_root.json";

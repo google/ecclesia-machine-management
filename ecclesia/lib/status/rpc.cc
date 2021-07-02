@@ -49,7 +49,7 @@ google::rpc::Status StatusToRpcStatus(const absl::Status& status) {
   return ret;
 }
 
-absl::Status StatusFromGrpcStatus(const ::grpc::Status &status) {
+absl::Status StatusFromGrpcStatus(const grpc::Status& status) {
   return absl::Status(static_cast<absl::StatusCode>(status.error_code()),
                       status.error_message());
 }

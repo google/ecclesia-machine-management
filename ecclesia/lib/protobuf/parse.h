@@ -48,7 +48,7 @@ template <typename MessageType>
 MessageType ParseTextAsProtoOrDie(
     const std::string &text, SourceLocation loc = SourceLocation::current()) {
   // Define a collector that just accumulates a list of error message strings.
-  class TextErrorCollector : public ::google::protobuf::io::ErrorCollector {
+  class TextErrorCollector : public google::protobuf::io::ErrorCollector {
    public:
     const std::vector<std::string> &errors() const { return errors_; }
 
@@ -67,7 +67,7 @@ MessageType ParseTextAsProtoOrDie(
 
   // Set up a parser using our collector.
   TextErrorCollector collector;
-  ::google::protobuf::TextFormat::Parser parser;
+  google::protobuf::TextFormat::Parser parser;
   parser.RecordErrorsTo(&collector);
 
   // Try the actual parse. If it fails, terminate with all of the errors.

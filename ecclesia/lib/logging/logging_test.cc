@@ -113,7 +113,7 @@ class TestRecordingMessageMatcher
     return matches;
   }
 
-  void DescribeTo(::std::ostream *os) const override {
+  void DescribeTo(std::ostream *os) const override {
     *os << "has ";
     if (prefix_) {
       *os << "prefix=" << *prefix_ << ", ";
@@ -121,7 +121,7 @@ class TestRecordingMessageMatcher
     *os << "text=" << text_;
   }
 
-  void DescribeNegationTo(::std::ostream *os) const override {
+  void DescribeNegationTo(std::ostream *os) const override {
     *os << "does not have ";
     if (prefix_) {
       *os << "prefix=" << *prefix_ << ", ";

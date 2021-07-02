@@ -55,7 +55,7 @@ absl::optional<TopologyConfig> LoadTopologyConfigFromConfigName(
       ecclesia::GetEmbeddedFileWithName(config_name, kTopologyConfig);
   if (filedata.has_value()) {
     TopologyConfig config;
-    if (::google::protobuf::TextFormat::ParseFromString(filedata->data(), &config)) {
+    if (google::protobuf::TextFormat::ParseFromString(filedata->data(), &config)) {
       return config;
     }
   }

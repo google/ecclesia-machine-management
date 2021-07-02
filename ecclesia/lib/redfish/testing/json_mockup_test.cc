@@ -28,7 +28,7 @@
 namespace libredfish {
 namespace {
 
-using testing::Eq;
+using ::testing::Eq;
 
 TEST(JsonMockup, InvalidJsonDies) {
   EXPECT_DEATH(NewJsonMockupInterface("{"), "Could not load JSON:");

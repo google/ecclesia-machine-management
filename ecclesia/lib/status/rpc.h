@@ -32,7 +32,7 @@ absl::Status StatusFromRpcStatus(const google::rpc::Status &status);
 google::rpc::Status StatusToRpcStatus(const absl::Status &status);
 
 // Given a gRPC status, convert it to an equivalent absl::Status.
-absl::Status StatusFromGrpcStatus(const ::grpc::Status &status);
+absl::Status StatusFromGrpcStatus(const grpc::Status &status);
 
 }  // namespace ecclesia
 

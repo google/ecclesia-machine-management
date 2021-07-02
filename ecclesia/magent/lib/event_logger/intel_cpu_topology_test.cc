@@ -29,7 +29,7 @@
 namespace ecclesia {
 namespace {
 
-using testing::ElementsAre;
+using ::testing::ElementsAre;
 
 class IntelCpuTopologyTest : public ::testing::Test {
  protected:
