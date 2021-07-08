@@ -44,15 +44,15 @@ extern "C" {
 }  // extern "C"
 
 namespace libredfish {
+
+const RedfishRawInterfaceOptions kDefaultRedfishRawInterfaceOptions{
+  .default_timeout = absl::Seconds(5),
+};
+
 namespace {
 
 // Redfish version for the service root.
 constexpr char kRedfishServiceVersionRoot[] = "/redfish/v1";
-
-// Options for outbound HTTP requests to a redfish backend.
-constexpr redfishAsyncOptions kDefaultAsyncOptions = {
-    .accept = REDFISH_ACCEPT_JSON, .timeout = 5L /* seconds */
-};
 
 struct RedfishPayloadDeleter {
   void operator()(redfishPayload *payload) {
@@ -352,8 +352,9 @@ void LibredfishAsyncToSyncCallback(bool success, uint16_t http_code,
 // RawIntf provides an interaface wrapper for the redfishService C type.
 class RawIntf : public RedfishInterface {
  public:
-  explicit RawIntf(ServiceUniquePtr service, TrustedEndpoint trusted)
-      : service_(std::move(service)), trusted_(trusted) {}
+  explicit RawIntf(ServiceUniquePtr service, TrustedEndpoint trusted,
+                   const RedfishRawInterfaceOptions& options)
+      : options_(options), service_(std::move(service)), trusted_(trusted) {}
   RawIntf(const RawIntf &) = delete;
   RawIntf operator=(const RawIntf &) = delete;
 
@@ -408,7 +409,7 @@ class RawIntf : public RedfishInterface {
         createRedfishPayloadFromString(data.data(), service_.get()));
 
     AsyncLibredfishChannel channel;
-    redfishAsyncOptions async_options = kDefaultAsyncOptions;
+    redfishAsyncOptions async_options = ConvertOptions(options_);
     // Actually start the request, the channel becomes the (void * context)
     // parameter in the request callback.
     if (!postUriFromServiceAsync(service_.get(), uri.data(), payload.get(),
@@ -440,7 +441,7 @@ class RawIntf : public RedfishInterface {
         createRedfishPayloadFromString(content.get(), service_.get()));
 
     AsyncLibredfishChannel channel;
-    redfishAsyncOptions async_options = kDefaultAsyncOptions;
+    redfishAsyncOptions async_options = ConvertOptions(options_);
     // Actually start the request, the channel becomes the (void * context)
     // parameter in the request callback.
     if (!patchUriFromServiceAsync(service_.get(), uri.data(), payload.get(),
@@ -459,6 +460,7 @@ class RawIntf : public RedfishInterface {
   }
 
  private:
+  const RedfishRawInterfaceOptions options_;
   mutable absl::Mutex service_mutex_;
   ServiceUniquePtr service_ ABSL_GUARDED_BY(service_mutex_);
   TrustedEndpoint trusted_ ABSL_GUARDED_BY(service_mutex_);
@@ -470,10 +472,11 @@ class RawIntf : public RedfishInterface {
 std::unique_ptr<RedfishInterface> NewRawInterface(
     const std::string &endpoint,
     libredfish::RedfishInterface::TrustedEndpoint trusted,
-    std::unique_ptr<ecclesia::HttpClient> client) {
+    std::unique_ptr<ecclesia::HttpClient> client,
+    const RedfishRawInterfaceOptions& options) {
   serviceHttpHandler handler{};
   if (client) {
-    handler = NewLibredfishAdapter(std::move(client));
+    handler = NewLibredfishAdapter(std::move(client), options);
   }
 
   // createServiceEnumerator only returns NULL if calloc fails, regardless of
@@ -481,16 +484,17 @@ std::unique_ptr<RedfishInterface> NewRawInterface(
   // Handler is consumed even on failure.
   ServiceUniquePtr service(createServiceEnumeratorExt(endpoint.c_str(), nullptr,
                                                       nullptr, 0, &handler));
-  return absl::make_unique<RawIntf>(std::move(service), trusted);
+  return absl::make_unique<RawIntf>(std::move(service), trusted, options);
 }
 
 // Constructor method for creating a RawInterface with auth session.
 std::unique_ptr<RedfishInterface> NewRawSessionAuthInterface(
     const PasswordArgs &connectionArgs,
-    std::unique_ptr<ecclesia::HttpClient> client) {
+    std::unique_ptr<ecclesia::HttpClient> client,
+    const RedfishRawInterfaceOptions& options) {
   serviceHttpHandler handler{};
   if (client) {
-    handler = NewLibredfishAdapter(std::move(client));
+    handler = NewLibredfishAdapter(std::move(client), options);
   }
 
   enumeratorAuthentication auth;
@@ -508,7 +512,8 @@ std::unique_ptr<RedfishInterface> NewRawSessionAuthInterface(
     return nullptr;
   }
   return absl::make_unique<RawIntf>(std::move(service),
-                                    RedfishInterface::kTrusted);
+                                    RedfishInterface::kTrusted,
+                                    options);
 }
 
 std::unique_ptr<RedfishInterface> NewRawBasicAuthInterface(
@@ -524,7 +529,8 @@ std::unique_ptr<RedfishInterface> NewRawBasicAuthInterface(
   ServiceUniquePtr service(createServiceEnumerator(
       connectionArgs.endpoint.c_str(), nullptr, &auth, 0));
   return absl::make_unique<RawIntf>(std::move(service),
-                                    RedfishInterface::kTrusted);
+                                    RedfishInterface::kTrusted,
+                                    kDefaultRedfishRawInterfaceOptions);
 }
 
 std::unique_ptr<RedfishInterface> NewRawTlsAuthInterface(
@@ -543,7 +549,8 @@ std::unique_ptr<RedfishInterface> NewRawTlsAuthInterface(
   ServiceUniquePtr service(createServiceEnumerator(
       connectionArgs.endpoint.c_str(), nullptr, &auth, 0));
   return absl::make_unique<RawIntf>(std::move(service),
-                                    RedfishInterface::kTrusted);
+                                    RedfishInterface::kTrusted,
+                                    kDefaultRedfishRawInterfaceOptions);
 }
 
 }  // namespace libredfish

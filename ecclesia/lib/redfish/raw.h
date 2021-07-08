@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 
+#include "absl/time/time.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/redfish/interface.h"
 
@@ -47,25 +48,38 @@ struct TlsArgs {
   absl::optional<std::string> ca_cert_file;
 };
 
+// Options for the interface as a whole.
+struct RedfishRawInterfaceOptions {
+  // The default timeout. A value of zero means no timeout.
+  absl::Duration default_timeout = absl::Seconds(0);
+};
+
+// The default set of method options.
+extern const RedfishRawInterfaceOptions kDefaultRedfishRawInterfaceOptions;
+
 // Constructor method for creating a RawInterface.
-// If client is provided then it is used for HTTP requests instead of the
+// If client is non-null then it is used for HTTP requests instead of the
 // default which is libcurl.
 // Returns nullptr in case the interface failed to be constructed.
 std::unique_ptr<RedfishInterface> NewRawInterface(
     const std::string &endpoint, RedfishInterface::TrustedEndpoint trusted,
-    std::unique_ptr<ecclesia::HttpClient> client = nullptr);
+    std::unique_ptr<ecclesia::HttpClient> client = nullptr,
+    const RedfishRawInterfaceOptions& options =
+        kDefaultRedfishRawInterfaceOptions);
 
 // Constructor method for creating a RawInterface with session auth.
-// If client is provided then it is used for HTTP requests instead of the
+// If client is non-null then it is used for HTTP requests instead of the
 // default which is libcurl.
 // Returns nullptr in case the interface failed to be constructed.
 std::unique_ptr<RedfishInterface> NewRawSessionAuthInterface(
     const PasswordArgs &connectionArgs,
-    std::unique_ptr<ecclesia::HttpClient> client = nullptr);
+    std::unique_ptr<ecclesia::HttpClient> client = nullptr,
+    const RedfishRawInterfaceOptions& options =
+        kDefaultRedfishRawInterfaceOptions);
 
 // Constructor method for creating a RawInterface with basic auth.
 // Returns nullptr in case the interface failed to be constructed.
-// This does not take a "client" parameter because it is currently not
+// This does not take client,options parameters because they are currently not
 // needed nor tested.
 std::unique_ptr<RedfishInterface> NewRawBasicAuthInterface(
     const PasswordArgs &connectionArgs);

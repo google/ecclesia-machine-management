@@ -287,12 +287,26 @@ class LibredfishAdapter {
 
 }  // namespace
 
+// Convert our options struct to libredfish's.
+redfishAsyncOptions ConvertOptions(const RedfishRawInterfaceOptions& options) {
+  ecclesia::Check(options.default_timeout >= absl::ZeroDuration(),
+                  "timeout is non-negative");
+  return redfishAsyncOptions{
+    // At present we don't support other formats.
+    .accept = REDFISH_ACCEPT_JSON,
+    .timeout = static_cast<unsigned long>(
+        options.default_timeout / absl::Seconds(1)),
+  };
+};
+
 serviceHttpHandler NewLibredfishAdapter(
-    std::unique_ptr<ecclesia::HttpClient> client) {
+    std::unique_ptr<ecclesia::HttpClient> client,
+    const RedfishRawInterfaceOptions& default_options) {
   serviceHttpHandler h;
   h.start_request_handler = LibredfishAdapter::StartRequestHandler;
   h.cleanup_request_handler_context = LibredfishAdapter::Deleter;
   h.request_handler_context = new LibredfishAdapter(std::move(client));
+  h.default_async_options = ConvertOptions(default_options);
   return h;
 }
 

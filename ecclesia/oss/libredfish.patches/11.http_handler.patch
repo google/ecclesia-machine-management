@@ -4,18 +4,22 @@ New functions createServiceEnumeratorAsyncExt and createServiceEnumeratorExt
 are added that take a new serviceHttpHandler argument that let's the caller
 provide a different HTTP handler to use instead of the default Curl.
 
-diff --git include/redfishRawAsync.h new/redfishRawAsync.h
+An important part of the patch is the ability to provide a new default
+timeout: The provided HTTP handler may have timing requirements that
+far exceed the current default.
+
+diff --git a/include/redfishRawAsync.h b/include/redfishRawAsync.h
+index 171cac1..7608f18 100644
 --- include/redfishRawAsync.h
-+++ new/redfishRawAsync.h
-@@ -16,99 +16,10 @@
++++ include/redfishRawAsync.h
+@@ -16,98 +16,9 @@
  #ifndef _REDFISH_RAW_ASYNC_H_
  #define _REDFISH_RAW_ASYNC_H_
  
--#include <redfishService.h>
-+#include "redfishTypes.h"
-+#include "redfishService.h"
++#include <redfishTypes.h>
+ #include <redfishService.h>
  
- /**
+-/**
 - * @brief A representation of an HTTP header.
 - *
 - * An HTTP header structure list.
@@ -105,22 +109,22 @@ diff --git include/redfishRawAsync.h new/redfishRawAsync.h
 - */
 -typedef void (*asyncRawCallback)(asyncHttpRequest* request, asyncHttpResponse* response, void* context);
 -
--/**
+ /**
   * @brief Create an asyncHttpRequest struct.
   *
-  * This method creates an asyncHttpRequest struct and initializes the values per the parameters.
-diff --git include/redfishService.h new/redfishService.h
+diff --git a/include/redfishService.h b/include/redfishService.h
+index 2cea318..c29689f 100644
 --- include/redfishService.h
-+++ new/redfishService.h
++++ include/redfishService.h
 @@ -15,6 +15,7 @@
  #define _REDFISH_SERVICE_H_
  #include "jansson.h"
  #include "curl/curl.h"
-+#include "redfishTypes.h"
++#include <redfishTypes.h>
  #include <stdbool.h>
  
  #ifdef _MSC_VER
-@@ -164,11 +165,13 @@ typedef void (*redfishEventCallback)(red
+@@ -164,11 +165,13 @@ typedef void (*redfishEventCallback)(redfishPayload* event, enumeratorAuthentica
   * @param auth The authentication method to use for the redfish service. If NULL
   * the connection will be made with no authentication
   * @param flags Any extra flags to pass to the service
@@ -134,7 +138,37 @@ diff --git include/redfishService.h new/redfishService.h
  /**
   * @brief Update the host a service is connecting to.
   *
-@@ -438,12 +441,14 @@ typedef void (*redfishCreateAsyncCallbac
+@@ -341,13 +344,6 @@ REDFISH_EXPORT void serviceDecRefAndWait(redfishService* service);
+ /** There was an error parsing the returned payload **/
+ #define REDFISH_ERROR_PARSING 0xFFFE
+ 
+-/** Accept any type of response **/
+-#define REDFISH_ACCEPT_ALL  0xFFFFFFFF
+-/** Accept a JSON response **/
+-#define REDFISH_ACCEPT_JSON 1
+-/** Accept an XML response **/
+-#define REDFISH_ACCEPT_XML  2
+-
+ /** Try Registering for events through SSE, if supported will be tried first **/
+ #define REDFISH_REG_TYPE_SSE  1
+ /** Try Registering for events through EventDestination POST **/
+@@ -372,15 +368,6 @@ typedef int SOCKET;
+ /** Open a POSIX domain socket, socketName should be specified **/
+ #define REDFISH_EVENT_FRONT_END_DOMAIN_SOCKET 4
+ 
+-/** Extra async options for the call **/
+-typedef struct
+-{
+-    /** The type of response payload to accept **/
+-    int accept;
+-    /** The timeout for the operation, 0 means never timeout **/
+-    unsigned long timeout;
+-} redfishAsyncOptions;
+-
+ typedef struct
+ {
+     /** Event Registration Types to try **/
+@@ -438,12 +425,14 @@ typedef void (*redfishCreateAsyncCallback)(redfishService* service, void* contex
   * @param flags Any extra flags to pass to the service
   * @param callback The callback to call when the service is created
   * @param context The context to pass to the callback
@@ -149,11 +183,12 @@ diff --git include/redfishService.h new/redfishService.h
  
  /**
   * Callback for Redfish async calls
-diff --git include/redfishTypes.h new/redfishTypes.h
+diff --git a/include/redfishTypes.h b/include/redfishTypes.h
 new file mode 100644
+index 0000000..86ecfb8
 --- /dev/null
 +++ include/redfishTypes.h
-@@ -0,0 +1,158 @@
+@@ -0,0 +1,176 @@
 +//----------------------------------------------------------------------------
 +// Copyright Notice:
 +// Copyright 2017-2021 DMTF. All rights reserved.
@@ -263,6 +298,22 @@ new file mode 100644
 + */
 +typedef void (*asyncRawCallback)(asyncHttpRequest* request, asyncHttpResponse* response, void* context);
 +
++/** Accept any type of response **/
++#define REDFISH_ACCEPT_ALL  0xFFFFFFFF
++/** Accept a JSON response **/
++#define REDFISH_ACCEPT_JSON 1
++/** Accept an XML response **/
++#define REDFISH_ACCEPT_XML  2
++
++/** Extra options async calls **/
++typedef struct
++{
++    /** The type of response payload to accept **/
++    int accept;
++    /** The timeout for the operation, 0 means never timeout **/
++    unsigned long timeout;
++} redfishAsyncOptions;
++
 +/**
 + * @brief The function to call to queue a request to be performed.
 + *
@@ -309,12 +360,15 @@ new file mode 100644
 +    cleanupRequestHandlerContext cleanup_request_handler_context;
 +    /** Additional state to provide to start_request_handler **/
 +    void* request_handler_context;
++    /** The default set of async options to use for this handler **/
++    redfishAsyncOptions default_async_options;
 +} serviceHttpHandler;
 +
 +#endif
-diff --git src/asyncRaw.c new/asyncRaw.c
+diff --git a/src/asyncRaw.c b/src/asyncRaw.c
+index a1006d5..09f9d38 100644
 --- src/asyncRaw.c
-+++ new/asyncRaw.c
++++ src/asyncRaw.c
 @@ -11,6 +11,7 @@
  #include <unistd.h>
  #endif
@@ -332,8 +386,9 @@ diff --git src/asyncRaw.c new/asyncRaw.c
  {
      asyncWorkItem* workItem;
  
-diff --git src/asyncRaw.h new/asyncRaw.h
+diff --git a/src/asyncRaw.h b/src/asyncRaw.h
 new file mode 100644
+index 0000000..37a68c1
 --- /dev/null
 +++ src/asyncRaw.h
 @@ -0,0 +1,36 @@
@@ -353,7 +408,7 @@ new file mode 100644
 +#define _ASYNC_RAW_H_
 +
 +#include "internal_service.h"
-+#include "redfishRawAsync.h"
++#include <redfishRawAsync.h>
 +
 +/**
 + * @brief Queue an HTTP request for subsequent processing.
@@ -373,18 +428,19 @@ new file mode 100644
 +
 +#endif
 +/* vim: set tabstop=4 shiftwidth=4 ff=unix expandtab: */
-diff --git src/internal_service.h new/internal_service.h
+diff --git a/src/internal_service.h b/src/internal_service.h
+index 41d3599..f774953 100644
 --- src/internal_service.h
-+++ new/internal_service.h
++++ src/internal_service.h
 @@ -21,6 +21,7 @@
  #ifndef NO_CZMQ
  #include <czmq.h>
  #endif
-+#include "redfishTypes.h"
++#include <redfishTypes.h>
  #include "queue.h"
  #include "util.h"
  
-@@ -115,6 +116,12 @@ typedef struct _redfishService {
+@@ -115,6 +116,14 @@ typedef struct _redfishService {
      char *clientKeyFile;
      /** The certificate authority file **/
      char *caCertFile;
@@ -394,12 +450,15 @@ diff --git src/internal_service.h new/internal_service.h
 +    cleanupRequestHandlerContext cleanup_request_handler_context;
 +    /** Additional state to provide to start_request_handler **/
 +    void* request_handler_context;
++    /** The default options to use **/
++    redfishAsyncOptions default_async_options;
  } redfishService;
  
  #endif
-diff --git src/service.c new/service.c
+diff --git a/src/service.c b/src/service.c
+index d721282..8aea0fb 100644
 --- src/service.c
-+++ new/service.c
++++ src/service.c
 @@ -18,6 +18,7 @@
  #include "redfishEvent.h"
  #include "redfishRawAsync.h"
@@ -408,7 +467,14 @@ diff --git src/service.c new/service.c
  #include "debug.h"
  #include "util.h"
  
-@@ -41,11 +42,11 @@ redfishAsyncOptions gDefaultOptions = {
+@@ -35,17 +36,17 @@ struct EventActorState
+ };
+ 
+ /** Default asynchronous options for Redfish calls **/
+-redfishAsyncOptions gDefaultOptions = {
++static const redfishAsyncOptions gDefaultOptions = {
+     .accept = REDFISH_ACCEPT_JSON,
+     .timeout = 5L
  };
  
  static void handleHostnameToRedfishService(const char* host, redfishService* service);
@@ -425,7 +491,7 @@ diff --git src/service.c new/service.c
  static char* makeUrlForService(redfishService* service, const char* uri);
  static json_t* getVersions(redfishService* service, const char* rootUri);
  static char* getSSEUri(redfishService* service);
-@@ -53,35 +54,35 @@ static char* getEventSubscriptionUri(red
+@@ -53,35 +54,35 @@ static char* getEventSubscriptionUri(redfishService* service);
  static void addStringToJsonObject(json_t* object, const char* key, const char* value);
  static redfishPayload* getPayloadFromAsyncResponse(asyncHttpResponse* response, redfishService* service);
  static unsigned char* base64_encode(const unsigned char* src, size_t len, size_t* out_len);
@@ -472,7 +538,7 @@ diff --git src/service.c new/service.c
      }
      else
      {
-@@ -89,6 +90,11 @@ redfishService* createServiceEnumerator(
+@@ -89,6 +90,11 @@ redfishService* createServiceEnumerator(const char* host, const char* rootUri, e
      }
  }
  
@@ -484,7 +550,16 @@ diff --git src/service.c new/service.c
  void updateServiceHost(redfishService* service, const char* host) {
    mutex_lock(&service->endpoint_mutex);
    char* old_host = service->host;
-@@ -585,24 +591,24 @@ static void setupRequestFromOptions(asyn
+@@ -550,7 +556,7 @@ static void setupRequestFromOptions(asyncHttpRequest* request, redfishService* s
+ 
+     if(options == NULL)
+     {
+-        options = &gDefaultOptions;
++        options = &service->default_async_options;
+     }
+     switch(options->accept)
+     {
+@@ -585,24 +591,24 @@ static void setupRequestFromOptions(asyncHttpRequest* request, redfishService* s
      request->timeout = options->timeout;
  }
  
@@ -515,7 +590,7 @@ diff --git src/service.c new/service.c
      }
      else
      {
-@@ -610,6 +616,16 @@ bool createServiceEnumeratorAsync(const 
+@@ -610,6 +616,16 @@ bool createServiceEnumeratorAsync(const char* host, const char* rootUri, enumera
      }
  }
  
@@ -532,7 +607,7 @@ diff --git src/service.c new/service.c
  bool getUriFromServiceAsync(redfishService* service, const char* uri, redfishAsyncOptions* options, redfishAsyncCallback callback, void* context)
  {
      char* url;
-@@ -1272,6 +1288,11 @@ static void freeServicePtr(redfishServic
+@@ -1272,6 +1288,11 @@ static void freeServicePtr(redfishService* service)
          free(service->caCertFile);
          service->caCertFile = NULL;
      }
@@ -544,7 +619,7 @@ diff --git src/service.c new/service.c
      if(service->selfTerm == false && service->eventTerm == false)
      {
          free(service);
-@@ -1369,15 +1390,19 @@ static void handleHostnameToRedfishServi
+@@ -1369,15 +1390,19 @@ static void handleHostnameToRedfishService(const char* host,
  #endif
  }
  
@@ -567,7 +642,7 @@ diff --git src/service.c new/service.c
  	}
      serviceIncRef(ret);
      mutex_init(&ret->endpoint_mutex);
-@@ -1386,6 +1411,13 @@ static redfishService* createServiceEnum
+@@ -1386,6 +1411,15 @@ static redfishService* createServiceEnumeratorNoAuth(const char* host, const cha
      mutex_unlock(&ret->endpoint_mutex);
      ret->flags = flags;
      ret->tcpSocket = -1;
@@ -575,13 +650,15 @@ diff --git src/service.c new/service.c
 +        ret->start_request_handler = handler->start_request_handler;
 +        ret->cleanup_request_handler_context = handler->cleanup_request_handler_context;
 +        ret->request_handler_context = handler->request_handler_context;
++        ret->default_async_options = handler->default_async_options;
 +    } else {
 +        ret->start_request_handler = defaultStartRawAsyncRequest;
++        ret->default_async_options = gDefaultOptions;
 +    }
      if(enumerate)
      {
          ret->versions = getVersions(ret, rootUri);
-@@ -1394,7 +1426,7 @@ static redfishService* createServiceEnum
+@@ -1394,7 +1428,7 @@ static redfishService* createServiceEnumeratorNoAuth(const char* host, const cha
      return ret;
  }
  
@@ -590,7 +667,7 @@ diff --git src/service.c new/service.c
  {
      redfishService* ret;
      bool rc;
-@@ -1402,6 +1434,9 @@ static bool createServiceEnumeratorNoAut
+@@ -1402,6 +1436,9 @@ static bool createServiceEnumeratorNoAuthAsync(const char* host, const char* roo
      ret = (redfishService*)calloc(1, sizeof(redfishService));
      if(ret == NULL)
      {
@@ -600,7 +677,7 @@ diff --git src/service.c new/service.c
          return false;
      }
      serviceIncRef(ret);
-@@ -1411,6 +1446,13 @@ static bool createServiceEnumeratorNoAut
+@@ -1411,6 +1448,15 @@ static bool createServiceEnumeratorNoAuthAsync(const char* host, const char* roo
      mutex_unlock(&ret->endpoint_mutex);
      ret->flags = flags;
      ret->tcpSocket = -1;
@@ -608,13 +685,15 @@ diff --git src/service.c new/service.c
 +        ret->start_request_handler = handler->start_request_handler;
 +        ret->cleanup_request_handler_context = handler->cleanup_request_handler_context;
 +        ret->request_handler_context = handler->request_handler_context;
++        ret->default_async_options = handler->default_async_options;
 +    } else {
 +        ret->start_request_handler = defaultStartRawAsyncRequest;
++        ret->default_async_options = gDefaultOptions;
 +    }
      rc = getVersionsAsync(ret, rootUri, callback, context);
      if(rc == false)
      {
-@@ -1419,7 +1461,7 @@ static bool createServiceEnumeratorNoAut
+@@ -1419,7 +1465,7 @@ static bool createServiceEnumeratorNoAuthAsync(const char* host, const char* roo
      return rc;
  }
  
@@ -623,7 +702,7 @@ diff --git src/service.c new/service.c
  {
      redfishService* ret;
      char userPass[1024] = {0};
-@@ -1436,13 +1478,13 @@ static redfishService* createServiceEnum
+@@ -1436,13 +1482,13 @@ static redfishService* createServiceEnumeratorBasicAuth(const char* host, const
      snprintf(userPass, sizeof(userPass), "Basic %s", base64);
      free(base64);
  
@@ -639,7 +718,7 @@ diff --git src/service.c new/service.c
  {
      redfishService* ret;
      char userPass[1024] = {0};
-@@ -1461,7 +1503,7 @@ static bool createServiceEnumeratorBasic
+@@ -1461,7 +1507,7 @@ static bool createServiceEnumeratorBasicAuthAsync(const char* host, const char*
      free(base64);
  
      //This does no network interactions when enumerate is false... use it because it's easier
@@ -648,7 +727,7 @@ diff --git src/service.c new/service.c
      if(ret == NULL)
      {
          return false;
-@@ -1475,7 +1517,7 @@ static bool createServiceEnumeratorBasic
+@@ -1475,7 +1521,7 @@ static bool createServiceEnumeratorBasicAuthAsync(const char* host, const char*
      return rc;
  }
  
@@ -657,7 +736,7 @@ diff --git src/service.c new/service.c
  {
      redfishService* ret;
      redfishPayload* payload;
-@@ -1487,7 +1529,7 @@ static redfishService* createServiceEnum
+@@ -1487,7 +1533,7 @@ static redfishService* createServiceEnumeratorSessionAuth(const char* host, cons
      json_t* post;
      char* content;
  
@@ -666,7 +745,8 @@ diff --git src/service.c new/service.c
      if(ret == NULL)
      {
          return NULL;
-@@ -1547,8 +1589,8 @@ static redfishService* createServiceEnum
+@@ -1546,9 +1592,9 @@ static redfishService* createServiceEnumeratorSessionAuth(const char* host, cons
+     return ret;
  }
  
 -static redfishService* createServiceEnumeratorTlsAuth(const char* host, const char* rootUri, bool verifyPeer, bool verifyHostname, const char* clientCertFile, const char* clientKeyFile, const char* caCertFile, unsigned int flags)
@@ -677,7 +757,7 @@ diff --git src/service.c new/service.c
      ret->verifyPeer = verifyPeer;
      ret->verifyHostname = verifyHostname;
      ret->clientCertFile = safeStrdup(clientCertFile);
-@@ -1743,7 +1785,7 @@ static void finishedRedfishCreate(redfis
+@@ -1742,7 +1788,7 @@ static void finishedRedfishCreate(redfishService* service, void* context)
      }
  }
  
@@ -686,7 +766,7 @@ diff --git src/service.c new/service.c
  {
      bool rc;
      createServiceSessionAuthAsyncContext* myContext;
-@@ -1760,7 +1802,7 @@ static bool createServiceEnumeratorSessi
+@@ -1759,7 +1805,7 @@ static bool createServiceEnumeratorSessionAuthAsync(const char* host, const char
      myContext->originalContext = context;
      myContext->service = NULL;
  
@@ -695,7 +775,7 @@ diff --git src/service.c new/service.c
      if(rc == false)
      {
          free(myContext->username);
-@@ -1770,11 +1812,11 @@ static bool createServiceEnumeratorSessi
+@@ -1769,11 +1815,11 @@ static bool createServiceEnumeratorSessionAuthAsync(const char* host, const char
      return rc;
  }
  
@@ -709,7 +789,7 @@ diff --git src/service.c new/service.c
      if(ret == NULL)
      {
          return ret;
-@@ -1784,13 +1826,13 @@ static redfishService* createServiceEnum
+@@ -1783,13 +1829,13 @@ static redfishService* createServiceEnumeratorToken(const char* host, const char
      return ret;
  }
  

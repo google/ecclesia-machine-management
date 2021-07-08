@@ -20,6 +20,7 @@
 #include <memory>
 
 #include "ecclesia/lib/http/client.h"
+#include "ecclesia/lib/redfish/raw.h"
 
 extern "C" {
 #include "redfishService.h"
@@ -27,8 +28,11 @@ extern "C" {
 
 namespace libredfish {
 
+redfishAsyncOptions ConvertOptions(const RedfishRawInterfaceOptions& options);
+
 serviceHttpHandler NewLibredfishAdapter(
-    std::unique_ptr<ecclesia::HttpClient> client);
+    std::unique_ptr<ecclesia::HttpClient> client,
+    const RedfishRawInterfaceOptions& default_options);
 
 }  // namespace libredfish
 
