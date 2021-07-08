@@ -103,14 +103,16 @@ class SetUpUnixDomainSocketTest : public ::testing::Test {
 TEST_F(SetUpUnixDomainSocketTest, FailsOnUnsafeDirectory) {
   // Try to use a file directly in our "/var/run" equivalent. It should fail
   // because the root is then the parent of test_var_run, not test_var_run_.
-  EXPECT_FALSE(SetUpUnixDomainSocket(test_var_run_ / "test.socket", {},
+  EXPECT_FALSE(SetUpUnixDomainSocket(test_var_run_ / "test.socket",
+                                     DomainSocketPermissions::kUserAndGroup, {},
                                      MakeIsRootSafe()));
 }
 
 TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryEmpty) {
   // The directory starts out empty and so this should always work.
-  ASSERT_TRUE(
-      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
+  ASSERT_TRUE(SetUpUnixDomainSocket(socket_path_.string(),
+                                    DomainSocketPermissions::kUserAndGroup, {},
+                                    MakeIsRootSafe()));
 
   EXPECT_TRUE(fs::exists(socket_dir_));
   EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all |
@@ -129,8 +131,9 @@ TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryExists) {
   fs::permissions(socket_dir_, fs::perms::owner_all | fs::perms::group_read |
                                    fs::perms::group_exec);
 
-  ASSERT_TRUE(
-      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
+  ASSERT_TRUE(SetUpUnixDomainSocket(socket_path_.string(),
+                                    DomainSocketPermissions::kUserAndGroup, {},
+                                    MakeIsRootSafe()));
 
   EXPECT_TRUE(fs::exists(socket_dir_));
   EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all |
@@ -150,8 +153,9 @@ TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryAndFileExists) {
                                    fs::perms::group_exec);
   CreateFile(socket_path_);
 
-  ASSERT_TRUE(
-      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
+  ASSERT_TRUE(SetUpUnixDomainSocket(socket_path_.string(),
+                                    DomainSocketPermissions::kUserAndGroup, {},
+                                    MakeIsRootSafe()));
 
   EXPECT_TRUE(fs::exists(socket_dir_));
   EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all |
@@ -169,8 +173,9 @@ TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryHasTooStrictPerms) {
   fs::create_directory(socket_dir_);
   fs::permissions(socket_dir_, fs::perms::owner_all);
 
-  ASSERT_TRUE(
-      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
+  ASSERT_TRUE(SetUpUnixDomainSocket(socket_path_.string(),
+                                    DomainSocketPermissions::kUserAndGroup, {},
+                                    MakeIsRootSafe()));
 
   EXPECT_TRUE(fs::exists(socket_dir_));
   // Permission should now be fixed.
@@ -189,8 +194,9 @@ TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryHasTooLoosePerms) {
   fs::create_directory(socket_dir_);
   fs::permissions(socket_dir_, fs::perms::all);
 
-  ASSERT_TRUE(
-      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
+  ASSERT_TRUE(SetUpUnixDomainSocket(socket_path_.string(),
+                                    DomainSocketPermissions::kUserAndGroup, {},
+                                    MakeIsRootSafe()));
 
   EXPECT_TRUE(fs::exists(socket_dir_));
   // Permission should now be fixed.
@@ -205,11 +211,51 @@ TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryHasTooLoosePerms) {
   EXPECT_THAT(ownership->gid, Eq(getgid()));
 }
 
+TEST_F(SetUpUnixDomainSocketTest,
+       PassesWhenDirectoryHasTooStrictPermsUserOnly) {
+  fs::create_directory(socket_dir_);
+  fs::permissions(socket_dir_, fs::perms::owner_all);
+
+  ASSERT_TRUE(SetUpUnixDomainSocket(socket_path_.string(),
+                                    DomainSocketPermissions::kUserOnly, {},
+                                    MakeIsRootSafe()));
+
+  EXPECT_TRUE(fs::exists(socket_dir_));
+  // Permission should now be fixed.
+  EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all);
+  EXPECT_FALSE(fs::exists(socket_path_));
+
+  auto ownership = GetOwnership(socket_dir_);
+  ASSERT_THAT(ownership, IsOk());
+  EXPECT_THAT(ownership->uid, Eq(getuid()));
+  EXPECT_THAT(ownership->gid, Eq(getgid()));
+}
+
+TEST_F(SetUpUnixDomainSocketTest, PassesWhenDirectoryHasTooLoosePermsUserOnly) {
+  fs::create_directory(socket_dir_);
+  fs::permissions(socket_dir_, fs::perms::all);
+
+  ASSERT_TRUE(SetUpUnixDomainSocket(socket_path_.string(),
+                                    DomainSocketPermissions::kUserOnly, {},
+                                    MakeIsRootSafe()));
+
+  EXPECT_TRUE(fs::exists(socket_dir_));
+  // Permission should now be fixed.
+  EXPECT_EQ(fs::status(socket_dir_).permissions(), fs::perms::owner_all);
+  EXPECT_FALSE(fs::exists(socket_path_));
+
+  auto ownership = GetOwnership(socket_dir_);
+  ASSERT_THAT(ownership, IsOk());
+  EXPECT_THAT(ownership->uid, Eq(getuid()));
+  EXPECT_THAT(ownership->gid, Eq(getgid()));
+}
+
 TEST_F(SetUpUnixDomainSocketTest, FailsWhenDirectoryExistsButIsFile) {
   CreateFile(socket_dir_);
 
-  EXPECT_FALSE(
-      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
+  EXPECT_FALSE(SetUpUnixDomainSocket(socket_path_.string(),
+                                     DomainSocketPermissions::kUserAndGroup, {},
+                                     MakeIsRootSafe()));
 }
 
 TEST_F(SetUpUnixDomainSocketTest, FailsWhenDirectoryCreationFails) {
@@ -217,8 +263,9 @@ TEST_F(SetUpUnixDomainSocketTest, FailsWhenDirectoryCreationFails) {
   // equivalent it's trying to get created inside of.
   fs::remove(test_var_run_);
 
-  EXPECT_FALSE(
-      SetUpUnixDomainSocket(socket_path_.string(), {}, MakeIsRootSafe()));
+  EXPECT_FALSE(SetUpUnixDomainSocket(socket_path_.string(),
+                                     DomainSocketPermissions::kUserAndGroup, {},
+                                     MakeIsRootSafe()));
 }
 
 TEST(SetUnixDomainSocketOwnershipTest, PassesWhenFileExists) {

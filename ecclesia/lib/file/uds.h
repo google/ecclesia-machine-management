@@ -43,6 +43,14 @@
 
 namespace ecclesia {
 
+// Enumeration specifying the permissions that the socket should allow.
+enum class DomainSocketPermissions {
+  // The domain socket will only have user permissions (0700).
+  kUserOnly,
+  // The domain socket will have user and group permissions (0750).
+  kUserAndGroup,
+};
+
 // Structure for (optionally) specifying UID and GID information in requests.
 // This is used by functions that allow maniupulating the socket or directory
 // ownership. A value being unspecified is interpreted as "don't change it".
@@ -67,7 +75,8 @@ bool IsSafeUnixDomainSocketRoot(const std::string &root_path);
 // function. In general this should just be IsSafeUnixDomainSocketRoot but it
 // can be useful to replace it in testing.
 bool SetUpUnixDomainSocket(
-    const std::string &socket_path, const DomainSocketOwners &owners,
+    const std::string &socket_path, DomainSocketPermissions permissions,
+    const DomainSocketOwners &owners,
     const std::function<bool(const std::string &)> &is_root_safe);
 
 // Given a path to a domain socket, delete it.

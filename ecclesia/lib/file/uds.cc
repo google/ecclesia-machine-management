@@ -40,7 +40,8 @@ bool IsSafeUnixDomainSocketRoot(const std::string &root_path) {
 }
 
 bool SetUpUnixDomainSocket(
-    const std::string &socket_path, const DomainSocketOwners &owners,
+    const std::string &socket_path, DomainSocketPermissions permissions,
+    const DomainSocketOwners &owners,
     const std::function<bool(const std::string &)> &is_root_safe) {
   // Construct the directory and root paths from the socket path. We store these
   // in a string instead of a string_view because we need to be able to convert
@@ -55,10 +56,25 @@ bool SetUpUnixDomainSocket(
     return false;
   }
 
+  // Compute the expected permissions field mask from the permissions enum.
+  mode_t expected_perms;
+  switch (permissions) {
+    case DomainSocketPermissions::kUserOnly:
+      expected_perms = S_IRWXU;
+      break;
+    case DomainSocketPermissions::kUserAndGroup:
+      expected_perms = S_IRWXU | S_IRGRP | S_IXGRP;
+      break;
+    default:
+      ErrorLog() << "unrecognized permissions enum value "
+                 << static_cast<int>(permissions) << " (as int)";
+      return false;
+  }
+
   // Create the socket directory. If it fails because a directory already exists
   // then that's okay as long as it has acceptable permissions (which we will
   // check afterwards). Any other failure is an error.
-  if (mkdir(socket_directory.c_str(), S_IRWXU | S_IRWXG) != 0) {
+  if (mkdir(socket_directory.c_str(), expected_perms) != 0) {
     if (errno != EEXIST) {
       PosixErrorLog() << "unable to create the socket directory "
                       << socket_directory;
@@ -81,7 +97,6 @@ bool SetUpUnixDomainSocket(
   }
   // Now, check if the directory has the correct permissions. If it does not
   // then try to change them.
-  mode_t expected_perms = S_IRWXU | S_IRGRP | S_IXGRP;
   if ((socket_dir_stat.st_mode & ACCESSPERMS) != expected_perms) {
     if (chmod(socket_directory.c_str(),
               (socket_dir_stat.st_mode & ~ACCESSPERMS) | expected_perms) != 0) {
