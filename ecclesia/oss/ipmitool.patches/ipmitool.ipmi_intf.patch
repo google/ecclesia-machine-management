@@ -1,0 +1,13 @@
+--- include/ipmitool/ipmi_intf.h.orig	2021-03-03 21:04:33.058151794 -0800
++++ include/ipmitool/ipmi_intf.h	2021-03-03 21:04:59.889812453 -0800
+@@ -252,10 +252,8 @@
+ void ipmi_intf_session_set_password(struct ipmi_intf * intf, char * password);
+ void ipmi_intf_session_set_privlvl(struct ipmi_intf * intf, uint8_t privlvl);
+ void ipmi_intf_session_set_lookupbit(struct ipmi_intf * intf, uint8_t lookupbit);
+-#ifdef IPMI_INTF_LANPLUS
+ void ipmi_intf_session_set_cipher_suite_id(struct ipmi_intf * intf,
+                                            enum cipher_suite_ids cipher_suite_id);
+-#endif /* IPMI_INTF_LANPLUS */
+ void ipmi_intf_session_set_sol_escape_char(struct ipmi_intf * intf, char sol_escape_char);
+ void ipmi_intf_session_set_kgkey(struct ipmi_intf *intf, const uint8_t *kgkey);
+ void ipmi_intf_session_set_port(struct ipmi_intf * intf, int port);

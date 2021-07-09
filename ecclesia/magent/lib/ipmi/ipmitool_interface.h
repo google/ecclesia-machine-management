@@ -23,6 +23,11 @@
 #include <any>
 #include <cstdint>
 
+extern "C" {
+# include "include/ipmitool/ipmi_intf.h"
+}
+
+
 namespace ecclesia {
 
 class IpmitoolInterface {
@@ -41,7 +46,9 @@ class IpmitoolInterface {
   // expected type for intf: struct ipmi_intf *
   virtual void SessionSetSolEscapeChar(std::any intf, char sol_escape_char);
 
-  virtual void SessionSetCipherSuiteId(std::any intf, uint8_t cipher_suite_id);
+  // expected type for intf: struct ipmi_intf *
+  virtual void SessionSetCipherSuiteId(std::any intf,
+                                       enum cipher_suite_ids cipher_suite_id);
 
   // expected type for intf: struct ipmi_intf *
   virtual void SessionSetRetry(std::any intf, int retry);

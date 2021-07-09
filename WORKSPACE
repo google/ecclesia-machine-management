@@ -212,18 +212,20 @@ http_archive(
 http_archive(
     name = "ipmitool",
     build_file = "@//ecclesia/oss:ipmitool.BUILD",
-    sha256 = "e93fe5966d59e16bb4317c9c588cdf35d6100753a0ba957c493b064bcad52493",
-    strip_prefix = "ipmitool-1.8.18",
+    sha256 = "c8549064def9c38acd8d3d9bf976952e792b714206285c9c4b9ff6c9c56a17fc",
+    strip_prefix = "ipmitool-c3939dac2c060651361fc71516806f9ab8c38901",
     urls = [
-        "https://github.com/ipmitool/ipmitool/releases/download/IPMITOOL_1_8_18/ipmitool-1.8.18.tar.gz"
+        "https://github.com/ipmitool/ipmitool/archive/c3939dac2c060651361fc71516806f9ab8c38901.tar.gz"
     ],
     patches = [
         "//ecclesia/oss:ipmitool.patches/ipmitool.ipmi_sdr.patch",
         # Openssl 1.1 made struct EVP_MD_CTX opaque, so we have to heap
         # allocate it.
-        "//ecclesia/oss:ipmitool.patches/ipmitool.lanplus_crypt_impl.patch"
+        "//ecclesia/oss:ipmitool.patches/ipmitool.ipmi_intf.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.fix_cast.patch",
     ],
     patch_cmds = [
+        "./bootstrap",
         "./configure CFLAGS=-fPIC CXXFLAGS=-fPIC --enable-shared=no",
         "cp ./config.h include",
     ],

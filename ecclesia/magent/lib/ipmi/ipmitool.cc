@@ -44,7 +44,6 @@
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/magent/lib/fru/fru.h"
 #include "ecclesia/magent/lib/ipmi/ipmi.h"
-#include "ecclesia/magent/lib/ipmi/ipmitool_interface.h"
 #include "ecclesia/magent/proto/config.pb.h"
 
 extern "C" {
@@ -71,6 +70,8 @@ int csv_output = 0;
 int verbose = 0;
 
 }  // extern "C"
+
+#include "ecclesia/magent/lib/ipmi/ipmitool_interface.h"
 
 namespace ecclesia {
 
@@ -129,12 +130,12 @@ void IpmitoolInterface::SessionSetSolEscapeChar(std::any intf,
 }
 
 void IpmitoolInterface::SessionSetCipherSuiteId(std::any intf,
-                                                uint8_t cipher_suite_id) {
+       enum cipher_suite_ids cipher_suite_id) {
   if (!intf.has_value()) {
     FatalLog() << "intf is empty.";
     return;
   }
-  return ipmi_intf_session_set_cipher_suite_id(
+  ipmi_intf_session_set_cipher_suite_id(
       std::any_cast<struct ipmi_intf *>(intf), cipher_suite_id);
 }
 
@@ -233,8 +234,7 @@ void IpmitoolInterface::SdrEnd(std::any intf, std::any i) {
     FatalLog() << "intf is empty.";
     return;
   }
-  return ipmi_sdr_end(std::any_cast<struct ipmi_intf *>(intf),
-                      std::any_cast<struct ipmi_sdr_iterator *>(i));
+  ipmi_sdr_end(std::any_cast<struct ipmi_sdr_iterator *>(i));
 }
 
 IpmiSensor::Type ReadIpmiSensorTypeInternal(
@@ -876,19 +876,17 @@ class IpmitoolImpl : public IpmiInterface {
     // Default is name-only lookup, from ipmitool's ipmi_main.c
     constexpr uint8_t kIpmiDefaultLookupBit = 0x10;
 
-    // Default from table 22-19 of the IPMIv2 spec, from ipmitool's ipmi_main.c
-    constexpr uint8_t kIpmiDefaultCipherSuiteId = 3;
-
     // Default is empty, from ipmitool's ipmi_main.c
     uint8_t kgkey[IPMI_KG_BUFFER_SIZE] = {0};
 
     // The following values are all defaults taken from the implementation in
-    // google3/v1_8_18/lib/ipmi_main.c.
+    // google3/v1_8_18_c3939da/lib/ipmi_main.c.
     ipmitool_intf_.SessionSetKgkey(intf, kgkey);
     ipmitool_intf_.SessionSetPrivlvl(intf, IPMI_SESSION_PRIV_ADMIN);
     ipmitool_intf_.SessionSetLookupbit(intf, kIpmiDefaultLookupBit);
     ipmitool_intf_.SessionSetSolEscapeChar(intf, SOL_ESCAPE_CHARACTER_DEFAULT);
-    ipmitool_intf_.SessionSetCipherSuiteId(intf, kIpmiDefaultCipherSuiteId);
+    // Default from table 22-19 of the IPMIv2 spec, from ipmitool's ipmi_main.c
+    ipmitool_intf_.SessionSetCipherSuiteId(intf, IPMI_LANPLUS_CIPHER_SUITE_3);
     intf->devnum = 0;
     intf->devfile = nullptr;
     intf->ai_family = AF_UNSPEC;
@@ -923,7 +921,7 @@ class IpmitoolImpl : public IpmiInterface {
     int sdr_id = sdr_list_itr->next;
 
     // Frees the memory allocated by ipmi_sdr_start
-    ipmi_sdr_end(ipmi, sdr_list_itr);
+    ipmi_sdr_end(sdr_list_itr);
 
     // Returns itr's current, and sets itr->next.
     struct sdr_get_rs *header;
