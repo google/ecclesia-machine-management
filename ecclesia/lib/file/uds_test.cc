@@ -268,28 +268,5 @@ TEST_F(SetUpUnixDomainSocketTest, FailsWhenDirectoryCreationFails) {
                                      MakeIsRootSafe()));
 }
 
-TEST(SetUnixDomainSocketOwnershipTest, PassesWhenFileExists) {
-  std::string socket = GetTestTempdirPath("test1.socket");
-  { std::ofstream touch(socket); }
-  ASSERT_TRUE(fs::exists(socket));
-
-  ASSERT_TRUE(SetUnixDomainSocketOwnership(socket, {}));
-  EXPECT_EQ(fs::status(socket).permissions(),
-            fs::perms::owner_all | fs::perms::group_all);
-
-  auto ownership = GetOwnership(socket);
-  ASSERT_THAT(ownership, IsOk());
-  EXPECT_THAT(ownership->uid, Eq(getuid()));
-  EXPECT_THAT(ownership->gid, Eq(getgid()));
-}
-
-TEST(SetUnixDomainSocketOwnershipTest, FailsWhenFileDoesNotExist) {
-  std::string socket = GetTestTempdirPath("test2.socket");
-  ASSERT_FALSE(fs::exists(socket));
-
-  EXPECT_FALSE(SetUnixDomainSocketOwnership(socket, {}));
-  EXPECT_FALSE(fs::exists(socket));
-}
-
 }  // namespace
 }  // namespace ecclesia

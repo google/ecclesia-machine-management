@@ -87,20 +87,6 @@ bool SetUpUnixDomainSocket(
 // Returns true if the socket was deleted successfully, false otherwise.
 bool CleanUpUnixDomainSocket(const std::string &socket_path);
 
-// Given a path to a domain socket, set the socket owners. This will also set
-// the permissions to u+a,g+a as the socket ownership isn't much use without
-// read and write permission for the user and group.
-//
-// Note that this socket must be in active use for this to be meaningful. You
-// can't pre-create a file for the socket and change the permissions because you
-// can't bind() over top of an existing file.
-//
-// A consquence of this is that you should never rely on this to lock down a
-// socket with stricter ownership because you can't guarantee that no
-// connections will be requested before the permission is applied.
-bool SetUnixDomainSocketOwnership(const std::string &socket_path,
-                                  const DomainSocketOwners &owners);
-
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_FILE_UDS_H_

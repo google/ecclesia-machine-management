@@ -71,6 +71,16 @@ bool SetUpUnixDomainSocket(
       return false;
   }
 
+  // Add in setuid or setgid permissions as well if the function specifies a
+  // UID or GID other than the default. This is necessary to ensure that domain
+  // sockets created in this directory get the same ownership as the directory.
+  if (owners.uid) {
+    expected_perms |= S_ISUID;
+  }
+  if (owners.gid) {
+    expected_perms |= S_ISGID;
+  }
+
   // Create the socket directory. If it fails because a directory already exists
   // then that's okay as long as it has acceptable permissions (which we will
   // check afterwards). Any other failure is an error.
@@ -97,9 +107,9 @@ bool SetUpUnixDomainSocket(
   }
   // Now, check if the directory has the correct permissions. If it does not
   // then try to change them.
-  if ((socket_dir_stat.st_mode & ACCESSPERMS) != expected_perms) {
+  if ((socket_dir_stat.st_mode & ALLPERMS) != expected_perms) {
     if (chmod(socket_directory.c_str(),
-              (socket_dir_stat.st_mode & ~ACCESSPERMS) | expected_perms) != 0) {
+              (socket_dir_stat.st_mode & ~ALLPERMS) | expected_perms) != 0) {
       PosixErrorLog() << "socket directory " << socket_directory
                       << "does not have the correct user permissions and "
                          "we cannot change them; chmod() failed";
@@ -142,45 +152,6 @@ bool CleanUpUnixDomainSocket(const std::string &socket_path) {
   // It's okay for the remove to fail because the file already doesn't exist,
   // but any other failure is an error.
   return (unlink(socket_path.c_str()) == 0 || errno == ENOENT);
-}
-
-bool SetUnixDomainSocketOwnership(const std::string &socket_path,
-                                  const DomainSocketOwners &owners) {
-  // Check the existing permissions and ownership in order to avoid having to
-  // make a change if we don't have to.
-  struct stat socket_stat;
-  if (lstat(socket_path.c_str(), &socket_stat) != 0) {
-    PosixErrorLog() << "unable to lstat() " << socket_path;
-    return false;
-  }
-  // First, check if the socket has the correct permissions. If it does not then
-  // try to change them.
-  mode_t expected_perms = S_IRWXU | S_IRWXG;
-  if ((socket_stat.st_mode & ACCESSPERMS) != expected_perms) {
-    if (chmod(socket_path.c_str(),
-              (socket_stat.st_mode & ~ACCESSPERMS) | expected_perms) != 0) {
-      PosixErrorLog() << "socket file " << socket_path
-                      << "does not have the correct permissions and we cannot "
-                         "change them; chmod() failed";
-      return false;
-    }
-  }
-  // Now, check if the socket has the specified ownership. Again, if it does not
-  // then try to change it.
-  uid_t expected_uid = owners.uid ? *owners.uid : getuid();
-  gid_t expected_gid = owners.gid ? *owners.gid : getgid();
-  if (socket_stat.st_uid != expected_uid ||
-      socket_stat.st_gid != expected_gid) {
-    if (lchown(socket_path.c_str(), expected_uid, expected_gid) != 0) {
-      PosixErrorLog() << "socket file " << socket_path
-                      << "does not have the correct ownership and we cannot "
-                         "change it; lchown() failed";
-      return false;
-    }
-  }
-  // If we get here then either the socket had the correct permissions and
-  // ownership already, or we were able to fix it so that it does.
-  return true;
 }
 
 }  // namespace ecclesia
