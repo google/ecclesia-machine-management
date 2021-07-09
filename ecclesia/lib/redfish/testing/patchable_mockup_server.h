@@ -18,7 +18,6 @@
 #define ECCLESIA_LIB_REDFISH_TESTING_PATCHABLE_MOCKUP_SERVER_H_
 
 #include <memory>
-#include <optional>
 #include <string>
 
 #include "absl/base/thread_annotations.h"
@@ -26,6 +25,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
+#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
