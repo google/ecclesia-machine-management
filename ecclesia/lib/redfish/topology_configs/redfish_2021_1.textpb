@@ -41,7 +41,7 @@ resource_to_config {
   key: "Storage"
   value {
     first_class_attributes {
-      array_attributes: "Controllers"
+      array_attributes: "StorageControllers"
       array_attributes: "Drives"
     }
   }
