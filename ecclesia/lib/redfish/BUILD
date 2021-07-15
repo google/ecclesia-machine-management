@@ -7,13 +7,18 @@ licenses(["notice"])
 
 cc_library(
     name = "interface",
-    hdrs = ["interface.h"],
+    hdrs = [
+        "interface.h",
+        "property.h",
+        "property_definitions.h",
+    ],
     visibility = ["//ecclesia:redfish_users"],
     deps = [
         "//ecclesia/lib/http:codes",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
         "@com_google_absl//absl/types:variant",
@@ -30,7 +35,11 @@ cc_library(
     name = "property_definitions",
     hdrs = ["property_definitions.h"],
     visibility = ["//ecclesia:redfish_users"],
-    deps = [":property"],
+    deps = [
+        ":property",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/time",
+    ],
 )
 
 cc_library(

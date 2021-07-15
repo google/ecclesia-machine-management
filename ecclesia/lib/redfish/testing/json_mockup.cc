@@ -78,6 +78,13 @@ class JsonMockupVariantImpl : public RedfishVariant::ImplIntf {
     *val = json_boolean_value(json_view_);
     return true;
   }
+  bool GetValue(absl::Time *val) const override {
+    std::string dt_string;
+    if (!GetValue(&dt_string)) return false;
+    std::string err;
+    absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", dt_string, val, &err);
+    return err.empty();
+  }
 
  private:
   json_t *json_view_;

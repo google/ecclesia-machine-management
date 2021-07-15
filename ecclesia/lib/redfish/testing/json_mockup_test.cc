@@ -396,5 +396,22 @@ TEST(JsonMockup, CanGetUri) {
   }
 }
 
+TEST(JsonMockup, DateTime) {
+  auto json_intf = NewJsonMockupInterface(R"json(
+  {
+    "DateTime": "2020-07-20T00:00:35+00:00"
+  }
+  )json");
+
+  absl::Time dt;
+  RedfishVariant var = json_intf->GetUri("/DateTime");
+  EXPECT_TRUE(var.GetValue(&dt));
+
+  absl::TimeZone utc;
+  assert(absl::LoadTimeZone("UTC", &utc));
+  absl::Time dt_gold = absl::FromDateTime(2020, 7, 20, 0, 0, 35, utc);
+  EXPECT_EQ(dt, dt_gold);
+}
+
 }  // namespace
 }  // namespace libredfish

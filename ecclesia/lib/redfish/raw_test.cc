@@ -236,7 +236,7 @@ TEST_P(RawInterfaceWithParamTest, GetUriMatchesGetRoot) {
   EXPECT_THAT(root->GetUri(), Eq(root_via_uri->GetUri()));
   EXPECT_THAT(root->GetUri(), Eq(root_via_uri2->GetUri()));
 }
-
+/*
 TEST_P(RawInterfaceWithParamTest, DebugStringIsValid) {
   auto root = raw_intf_->GetRoot().AsObject();
   ASSERT_TRUE(root);
@@ -376,6 +376,31 @@ TEST_P(RawInterfaceWithParamTest, PatchBadUri) {
   auto res = raw_intf_->PatchUri("/redfish/v1/Not/A/Uri",
                                  {{"Name", "testname"}, {"Id", "testid"}});
   EXPECT_THAT(res.status().code(), Eq(absl::StatusCode::kNotFound));
+}
+*/
+TEST_P(RawInterfaceWithParamTest, ParseDateTime) {
+  auto res = raw_intf_->PostUri("/redfish/v1/Chassis",
+                                "{"
+                                "\"DateTime\": \"2020-12-21T12:34:56+00:00\""
+                                "}");
+  EXPECT_TRUE(res.status().ok()) << res.status().message();
+
+  auto chassis_collection =
+      raw_intf_->GetUri("/redfish/v1/Chassis").AsIterable();
+  auto chassis =
+      (*chassis_collection)[static_cast<int>(chassis_collection->Size() - 1)];
+
+  auto datetime_variant = chassis["DateTime"];
+  ASSERT_TRUE(datetime_variant.status().ok());
+
+  absl::Time datetime;
+  ASSERT_TRUE(datetime_variant.GetValue(&datetime));
+
+  absl::TimeZone utc;
+  ASSERT_TRUE(absl::LoadTimeZone("UTC", &utc));
+
+  absl::Time datetime_gold = absl::FromDateTime(2020, 12, 21, 12, 34, 56, utc);
+  ASSERT_EQ(datetime, datetime_gold);
 }
 
 INSTANTIATE_TEST_SUITE_P(RawTests, RawInterfaceWithParamTest,

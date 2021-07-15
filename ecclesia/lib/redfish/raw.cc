@@ -239,6 +239,21 @@ class RawVariantImpl : public RedfishVariant::ImplIntf {
     if (!payload_) return false;
     return payload_->GetValue(val);
   }
+  bool GetValue(absl::Time *val) const override {
+    if (!payload_) {
+      printf("No payload\n");
+      return false;
+    }
+    std::string dt_string;
+    if (!payload_->GetValue(&dt_string)) {
+      printf("Can't get value for string\n");
+      return false;
+    }
+    std::string err;
+    absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", dt_string, val, &err);
+    printf("err:%s\n", err.c_str());
+    return err.empty();
+  }
   std::string DebugString() const override {
     if (!payload_) return "(null payload)";
     return payload_->DebugString();

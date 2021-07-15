@@ -29,6 +29,7 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "absl/types/variant.h"
@@ -92,6 +93,7 @@ class RedfishVariant final {
     virtual bool GetValue(int64_t *val) const = 0;
     virtual bool GetValue(double *val) const = 0;
     virtual bool GetValue(bool *val) const = 0;
+    virtual bool GetValue(absl::Time *val) const = 0;
     virtual std::string DebugString() const = 0;
   };
 
@@ -212,6 +214,10 @@ class RedfishVariant final {
     return ptr_->GetValue(val);
   }
   bool GetValue(bool *val) const {
+    if (!ptr_) return false;
+    return ptr_->GetValue(val);
+  }
+  bool GetValue(absl::Time *val) const {
     if (!ptr_) return false;
     return ptr_->GetValue(val);
   }

@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <string>
 
+#include "absl/time/time.h"
 #include "ecclesia/lib/redfish/property.h"
 
 namespace libredfish {
@@ -205,6 +206,8 @@ DEFINE_REDFISH_PROPERTY(PropertyRedfishActionInfo, std::string,
 DEFINE_REDFISH_PROPERTY(PropertyTarget, std::string, "target");
 DEFINE_REDFISH_PROPERTY(PropertyResponseCode, std::string, "code");
 DEFINE_REDFISH_PROPERTY(PropertyResponseMessage, std::string, "message");
+DEFINE_REDFISH_PROPERTY(PropertyDateTime, absl::Time, "DateTime");
+DEFINE_REDFISH_PROPERTY(PropertyLastResetTime, absl::Time, "LastResetTime");
 DEFINE_REDFISH_PROPERTY(PropertyEventId, std::string, "EventId");
 DEFINE_REDFISH_PROPERTY(PropertyUpdateable, bool, "Updateable");
 DEFINE_REDFISH_PROPERTY(PropertyWriteProtected, bool, "WriteProtected");
