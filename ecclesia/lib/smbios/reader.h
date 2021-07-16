@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "absl/status/statusor.h"
+#include "ecclesia/lib/smbios/baseboard_information.h"
 #include "ecclesia/lib/smbios/bios.h"
 #include "ecclesia/lib/smbios/internal.h"
 #include "ecclesia/lib/smbios/memory_device.h"
@@ -53,6 +54,9 @@ class SmbiosReader {
 
   // Type 1 (System Information)
   std::unique_ptr<SystemInformation> GetSystemInformation() const;
+
+  // Type 2 (Baseboard Information)
+  std::unique_ptr<BaseboardInformation> GetBaseboardInformation() const;
 
   // Type 17 (Memory Device)
   // The returned vector is sorted on the device locator string

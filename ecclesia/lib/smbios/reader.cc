@@ -180,6 +180,17 @@ std::unique_ptr<SystemInformation> SmbiosReader::GetSystemInformation() const {
   return nullptr;
 }
 
+std::unique_ptr<BaseboardInformation> SmbiosReader::GetBaseboardInformation()
+    const {
+  for (auto &entry : entries_) {
+    if (entry.GetSmbiosStructureView().structure_type().Read() ==
+        StructureType::BASEBOARD_INFORMATION) {
+      return absl::make_unique<BaseboardInformation>(&entry);
+    }
+  }
+  return nullptr;
+}
+
 std::vector<MemoryDevice> SmbiosReader::GetAllMemoryDevices() const {
   std::vector<MemoryDevice> memory_devices;
 
@@ -231,7 +242,7 @@ std::vector<ProcessorInformation> SmbiosReader::GetAllProcessors() const {
 absl::StatusOr<int32_t> SmbiosReader::GetBootNumberFromSystemBootInformation()
     const {
   for (const auto &entry : entries_) {
-    const auto& structure_view = entry.GetSmbiosStructureView();
+    const auto &structure_view = entry.GetSmbiosStructureView();
     if (structure_view.structure_type().Read() ==
             StructureType::SYSTEM_BOOT_INFORMATION &&
         structure_view.system_boot_information().Ok()) {

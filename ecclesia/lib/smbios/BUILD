@@ -33,6 +33,7 @@ cc_library(
         "reader.cc",
     ],
     hdrs = [
+        "baseboard_information.h",
         "bios.h",
         "internal.h",
         "memory_device.h",
