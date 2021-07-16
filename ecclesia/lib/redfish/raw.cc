@@ -46,7 +46,7 @@ extern "C" {
 namespace libredfish {
 
 const RedfishRawInterfaceOptions kDefaultRedfishRawInterfaceOptions{
-  .default_timeout = absl::Seconds(5),
+    .default_timeout = absl::Seconds(5),
 };
 
 namespace {
@@ -241,18 +241,13 @@ class RawVariantImpl : public RedfishVariant::ImplIntf {
   }
   bool GetValue(absl::Time *val) const override {
     if (!payload_) {
-      printf("No payload\n");
       return false;
     }
     std::string dt_string;
     if (!payload_->GetValue(&dt_string)) {
-      printf("Can't get value for string\n");
       return false;
     }
-    std::string err;
-    absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", dt_string, val, &err);
-    printf("err:%s\n", err.c_str());
-    return err.empty();
+    return absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", dt_string, val, nullptr);
   }
   std::string DebugString() const override {
     if (!payload_) return "(null payload)";
@@ -368,7 +363,7 @@ void LibredfishAsyncToSyncCallback(bool success, uint16_t http_code,
 class RawIntf : public RedfishInterface {
  public:
   explicit RawIntf(ServiceUniquePtr service, TrustedEndpoint trusted,
-                   const RedfishRawInterfaceOptions& options)
+                   const RedfishRawInterfaceOptions &options)
       : options_(options), service_(std::move(service)), trusted_(trusted) {}
   RawIntf(const RawIntf &) = delete;
   RawIntf operator=(const RawIntf &) = delete;
@@ -488,7 +483,7 @@ std::unique_ptr<RedfishInterface> NewRawInterface(
     const std::string &endpoint,
     libredfish::RedfishInterface::TrustedEndpoint trusted,
     std::unique_ptr<ecclesia::HttpClient> client,
-    const RedfishRawInterfaceOptions& options) {
+    const RedfishRawInterfaceOptions &options) {
   serviceHttpHandler handler{};
   if (client) {
     handler = NewLibredfishAdapter(std::move(client), options);
@@ -506,7 +501,7 @@ std::unique_ptr<RedfishInterface> NewRawInterface(
 std::unique_ptr<RedfishInterface> NewRawSessionAuthInterface(
     const PasswordArgs &connectionArgs,
     std::unique_ptr<ecclesia::HttpClient> client,
-    const RedfishRawInterfaceOptions& options) {
+    const RedfishRawInterfaceOptions &options) {
   serviceHttpHandler handler{};
   if (client) {
     handler = NewLibredfishAdapter(std::move(client), options);
@@ -527,8 +522,7 @@ std::unique_ptr<RedfishInterface> NewRawSessionAuthInterface(
     return nullptr;
   }
   return absl::make_unique<RawIntf>(std::move(service),
-                                    RedfishInterface::kTrusted,
-                                    options);
+                                    RedfishInterface::kTrusted, options);
 }
 
 std::unique_ptr<RedfishInterface> NewRawBasicAuthInterface(
