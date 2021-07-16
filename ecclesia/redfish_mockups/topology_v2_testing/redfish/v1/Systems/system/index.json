@@ -1,0 +1,15 @@
+{
+  "@odata.id": "/redfish/v1/Systems/system",
+  "@odata.type": "#ComputerSystem.v1_13_0.ComputerSystem",
+  "Id": "system",
+  "Name": "system",
+  "Processors": {
+    "@odata.id": "/redfish/v1/Systems/system/Processors"
+  },
+  "Storage": {
+    "@odata.id": "/redfish/v1/Systems/system/Storage"
+  },
+  "Memory": {
+    "@odata.id": "/redfish/v1/Systems/system/Memory"
+  }
+}

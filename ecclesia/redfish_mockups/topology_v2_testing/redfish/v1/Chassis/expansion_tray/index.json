@@ -1,0 +1,18 @@
+{
+  "@odata.id": "/redfish/v1/Chassis/expansion_tray",
+  "@odata.type": "#Chassis.v1_14_0.Chassis",
+  "ChassisType": "RackMount",
+  "Id": "expansion_tray",
+  "Links": {
+    "Contains": [{
+      "@odata.id": "/redfish/v1/Chassis/expansion_child"
+    }]
+  },
+  "Location": {
+    "PartLocation": {
+      "LocationType": "Slot",
+      "ServiceLabel": "DOWNLINK"
+    }
+  },
+  "Name": "expansion_tray"
+}

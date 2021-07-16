@@ -1,0 +1,14 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#Processor.Processor",
+  "@odata.id": "/redfish/v1/Systems/system/Processors/0",
+  "@odata.type": "#Processor.v1_7_0.Processor",
+  "Id": "0",
+  "Name": "cpu",
+  "Location": {
+    "PartLocation": {
+      "LocationType": "Slot",
+      "ServiceLabel": "CPU"
+    }
+  },
+  "ProcessorType": "CPU"
+}

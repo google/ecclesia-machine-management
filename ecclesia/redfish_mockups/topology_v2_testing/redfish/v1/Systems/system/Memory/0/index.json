@@ -1,0 +1,17 @@
+{
+  "@odata.id": "/redfish/v1/Systems/system/Memory/0",
+  "@odata.type": "#Memory.v1_8_0.Memory",
+  "Id": "0",
+  "Name": "memory",
+  "Links": {
+    "Chassis": {
+      "@odata.id": "/redfish/v1/Chassis/child1"
+    }
+  },
+  "Location": {
+    "PartLocation": {
+      "LocationType": "Slot",
+      "ServiceLabel": "DIMM"
+    }
+  }
+}

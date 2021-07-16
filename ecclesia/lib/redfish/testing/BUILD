@@ -84,3 +84,16 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "node_topology_testing",
+    testonly = True,
+    srcs = ["node_topology_testing.cc"],
+    hdrs = ["node_topology_testing.h"],
+    visibility = ["//ecclesia:redfish_users"],
+    deps = [
+        "//ecclesia/lib/redfish:node_topology",
+        "//ecclesia/lib/redfish:types",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)

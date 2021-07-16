@@ -1,0 +1,30 @@
+{
+  "@odata.id": "/redfish/v1/Chassis/root",
+  "@odata.type": "#Chassis.v1_14_0.Chassis",
+  "ChassisType": "RackMount",
+  "Id": "root",
+  "Assembly": {
+    "@odata.id": "/redfish/v1/Chassis/root/Assembly"
+  },
+  "Links": {
+    "Storage": [
+      {
+        "@odata.id": "/redfish/v1/Systems/system/Storage/1"
+      }
+    ],
+    "Processors": [
+      {
+        "@odata.id": "/redfish/v1/Systems/system/Processors/0"
+      }
+    ],
+    "Contains": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/child1"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/child2"
+      }
+    ]
+  },
+  "Name": "root"
+}

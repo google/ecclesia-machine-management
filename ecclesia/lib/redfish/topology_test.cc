@@ -31,43 +31,10 @@
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "ecclesia/lib/redfish/testing/json_mockup.h"
+#include "ecclesia/lib/redfish/testing/node_topology_testing.h"
 #include "ecclesia/lib/redfish/types.h"
 
 namespace libredfish {
-
-// Define equality of two nodes being only their name, devpath, type. Ignore
-// the properties.
-bool operator==(const Node &n1, const Node &n2) {
-  return std::tie(n1.name, n1.local_devpath, n1.type) ==
-         std::tie(n2.name, n2.local_devpath, n2.type);
-}
-
-// Some print functions defined to simplify debugging with GMock output.
-std::string ToString(NodeType type) {
-  switch (type) {
-    case NodeType::kBoard:
-      return "Board";
-    case NodeType::kConnector:
-      return "Connector";
-    case NodeType::kDevice:
-      return "Device";
-    case NodeType::kCable:
-      return "Cable";
-  }
-}
-
-void PrintTo(const Node &node, std::ostream *os) {
-  *os << absl::StrFormat("\n{name: \"%s\" devpath: \"%s\" type: %s)", node.name,
-                         node.local_devpath, ToString(node.type));
-}
-
-void PrintTo(const std::unique_ptr<Node> &node, std::ostream *os) {
-  if (node) {
-    PrintTo(*node, os);
-  } else {
-    *os << "\n(null)";
-  }
-}
 
 namespace {
 

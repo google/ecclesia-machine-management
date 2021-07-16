@@ -1,0 +1,21 @@
+{
+  "@odata.id": "/redfish/v1/Chassis/child1",
+  "@odata.type": "#Chassis.v1_14_0.Chassis",
+  "ChassisType": "RackMount",
+  "Id": "child1",
+  "Links": {
+    "ContainedBy": {
+      "@odata.id": "/redfish/v1/Chassis/root"
+    }
+  },
+  "Location": {
+    "PartLocation": {
+      "LocationType": "Slot",
+      "ServiceLabel": "C1"
+    }
+  },
+  "Name": "child1",
+  "Memory": {
+    "@odata.id": "/redfish/v1/Systems/system/Memory"
+  }
+}

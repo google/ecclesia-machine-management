@@ -1,0 +1,29 @@
+{
+  "@odata.id": "/redfish/v1/Systems/system/Storage/1",
+  "@odata.type": "#Storage.v1_7_1.Storage",
+  "Drives": [
+    {
+      "@odata.id": "/redfish/v1/Systems/system/Storage/1/Drives/0"
+    }
+  ],
+  "StorageControllers": [
+    {
+      "@odata.id": "/redfish/v1/Systems/system/Storage/1#/StorageControllers/0",
+      "Name": "controller",
+      "Id": "0",
+      "Location": {
+        "PartLocation": {
+          "LocationType": "Embedded"
+        }
+      }
+    }
+  ],
+  "Location": {
+    "PartLocation": {
+      "LocationType": "Slot",
+      "ServiceLabel": "SSD"
+    }
+  },
+  "Id": "1",
+  "Name": "ssd"
+}

@@ -138,10 +138,30 @@ cc_test(
         ":topology",
         ":types",
         "//ecclesia/lib/redfish/testing:json_mockup",
+        "//ecclesia/lib/redfish/testing:node_topology_testing",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "topology_v2_test",
+    srcs = ["topology_v2_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/topology_v2_testing:mockup.shar",
+    ],
+    deps = [
+        ":node_topology",
+        ":test_mockup",
+        ":topology_v2",
+        ":types",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/redfish/testing:node_topology_testing",
+        "//ecclesia/lib/redfish/testing:patchable_mockup_server",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -257,6 +277,7 @@ cc_library(
     name = "topology_v2",
     srcs = ["topology_v2.cc"],
     hdrs = ["topology_v2.h"],
+    visibility = ["//ecclesia:redfish_users"],
     deps = [
         ":interface",
         ":node_topology",
@@ -279,6 +300,7 @@ cc_library(
 cc_library(
     name = "node_topology",
     hdrs = ["node_topology.h"],
+    visibility = ["//ecclesia:redfish_users"],
     deps = [
         ":types",
         "@com_google_absl//absl/container:flat_hash_map",

@@ -1,0 +1,17 @@
+{
+  "@odata.id": "/redfish/v1/Cables/dangling_cable",
+  "@odata.type": "#Cable.v1_0_0.Cable",
+  "Name": "dangling_cable",
+  "Id": "dangling_cable",
+  "Links": {
+    "UpstreamChassis": {
+      "@odata.id": "/redfish/v1/Chassis/child1"
+    }
+  },
+  "Location": {
+    "PartLocation": {
+      "LocationType": "Slot",
+      "ServiceLabel": "QSFP"
+    }
+  }
+}

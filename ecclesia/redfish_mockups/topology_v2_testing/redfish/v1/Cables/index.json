@@ -1,0 +1,14 @@
+{
+  "@odata.id": "/redfish/v1/Cables",
+  "@odata.type": "#CableCollection.CableCollection",
+  "Members": [
+    {
+      "@odata.id": "/redfish/v1/Cables/expansion_cable"
+    },
+    {
+      "@odata.id": "/redfish/v1/Cables/dangling_cable"
+    }
+  ],
+  "Members@odata.count": 2,
+  "Name": "Cables Collection"
+}

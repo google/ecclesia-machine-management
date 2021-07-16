@@ -1,0 +1,23 @@
+{
+  "@odata.id": "/redfish/v1/Chassis",
+  "@odata.type": "#ChassisCollection.ChassisCollection",
+  "Members": [
+    {
+      "@odata.id": "/redfish/v1/Chassis/root"
+    },
+    {
+      "@odata.id": "/redfish/v1/Chassis/child1"
+    },
+    {
+      "@odata.id": "/redfish/v1/Chassis/child2"
+    },
+    {
+      "@odata.id": "/redfish/v1/Chassis/expansion_tray"
+    },
+    {
+      "@odata.id": "/redfish/v1/Chassis/expansion_child"
+    }
+  ],
+  "Members@odata.count": 5,
+  "Name": "Chassis Collection"
+}

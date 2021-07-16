@@ -1,0 +1,12 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#Drive.Drive",
+  "@odata.id": "/redfish/v1/Systems/system/Storage/1/Drives/0",
+  "@odata.type": "#Drive.v1_12_0.Drive",
+  "Name": "drive",
+  "PhysicalLocation": {
+    "PartLocation": {
+      "LocationType": "Embedded"
+    }
+  },
+  "Id": "0"
+}

@@ -1,0 +1,22 @@
+{
+  "@odata.id": "/redfish/v1/Cables/expansion_cable",
+  "@odata.type": "#Cable.v1_0_0.Cable",
+  "Name": "expansion_cable",
+  "Id": "expansion_cable",
+  "Links": {
+    "UpstreamResources": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/child2"
+      }
+    ],
+    "DownstreamChassis": {
+      "@odata.id": "/redfish/v1/Chassis/expansion_tray"
+    }
+  },
+  "Location": {
+    "PartLocation": {
+      "LocationType": "Slot",
+      "ServiceLabel": "HDMI"
+    }
+  }
+}
