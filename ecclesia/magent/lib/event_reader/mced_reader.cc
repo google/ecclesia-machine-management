@@ -40,7 +40,6 @@
 #include "re2/re2.h"
 
 namespace ecclesia {
-
 namespace {
 
 // Limit on the maximum line length we should expect from mced.
@@ -79,6 +78,18 @@ FILE *InitSocket(const std::string &socket_path,
   return socket_file;
 }
 
+// Determine the type that the included RE2 library uses for string view
+// parameters by seeing what the type the QuoteMeta function takes.
+template <typename T>
+struct ArgExtractor;
+
+template <typename T>
+struct ArgExtractor<std::string(T)> {
+  using type = T;
+};
+using StringViewType =
+    std::decay_t<typename ArgExtractor<decltype(RE2::QuoteMeta)>::type>;
+
 // This function is mostly borrowed from
 // third_party/mosys/modules/architecture/common/mce/mced.cc
 // Parses a line of text obtained from the mcedaemon into the MachineCheck
@@ -89,13 +100,14 @@ absl::optional<MachineCheck> ParseLine(absl::string_view mced_line) {
   std::string value_str;
   // Parse only for KERNEL_MCE_V2, since all of the OSes we plan to run on will
   // support this newer version
-  static const RE2 *mce_pattern = new RE2("%(\\w)=(\\S+)");
+  static constexpr LazyRE2 mce_pattern = {"%(\\w)=(\\S+)"};
 
-  while (RE2::FindAndConsume(&mced_line, *mce_pattern, &type, &value_str)) {
+  StringViewType line_view = mced_line;
+  while (RE2::FindAndConsume(&line_view, *mce_pattern, &type, &value_str)) {
     // Value can be either signed or unsigned depending on the type.
     uint64_t unsigned_value = 0;
     int64_t signed_value = 0;
-    static const RE2 *num_pattern = new RE2("(.*)");
+    static constexpr LazyRE2 num_pattern = {"(.*)"};
     bool unsigned_status =
         RE2::FullMatch(value_str, *num_pattern, RE2::CRadix(&unsigned_value));
     bool signed_status =
