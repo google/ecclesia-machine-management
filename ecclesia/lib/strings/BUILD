@@ -25,6 +25,13 @@ cc_library(
 )
 
 cc_library(
+    name = "string_view",
+    hdrs = ["string_view.h"],
+    visibility = ["//ecclesia:library_users"],
+    deps = ["@com_google_absl//absl/strings"],
+)
+
+cc_library(
     name = "strip",
     srcs = ["strip.cc"],
     hdrs = ["strip.h"],
@@ -54,6 +61,15 @@ cc_test(
         "@com_google_absl//absl/types:optional",
         "@com_google_googletest//:gtest_main",
         "@com_googlesource_code_re2//:re2",
+    ],
+)
+
+cc_test(
+    name = "string_view_test",
+    srcs = ["string_view_test.cc"],
+    deps = [
+        ":string_view",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
