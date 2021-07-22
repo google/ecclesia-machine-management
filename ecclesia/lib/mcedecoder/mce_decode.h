@@ -35,7 +35,7 @@ class MceDecoderInterface {
   // Decode MCE and fill in the input decoded_msg. Returns a not-OK status
   // either if the decoding fails or the event is not a MCE.
   virtual absl::StatusOr<MceDecodedMessage> DecodeMceMessage(
-      const MceLogMessage& raw_msg) = 0;
+      const MceLogMessage &raw_msg) = 0;
 };
 
 enum class CpuVendor { kIntel, kUnknown };
@@ -54,7 +54,7 @@ class MceDecoder : public MceDecoderInterface {
         dimm_translator_(std::move(dimm_translator)) {}
 
   absl::StatusOr<MceDecodedMessage> DecodeMceMessage(
-      const MceLogMessage& raw_msg) override;
+      const MceLogMessage &raw_msg) override;
 
  private:
   CpuVendor cpu_vendor_;

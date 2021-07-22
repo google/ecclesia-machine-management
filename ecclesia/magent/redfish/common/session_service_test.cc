@@ -129,13 +129,13 @@ TEST_F(SessionServiceTest, PostToSessionServiceUnauthorized) {
 
   // Exercise the RequestHandler
   std::unique_ptr<tensorflow::serving::net_http::HTTPClientInterface>
-  connection =
-      tensorflow::serving::net_http::CreateEvHTTPConnection("localhost", port_);
+      connection = tensorflow::serving::net_http::CreateEvHTTPConnection(
+          "localhost", port_);
 
   ASSERT_TRUE(connection != nullptr);
 
-  tensorflow::serving::net_http::ClientRequest request =
-      {kSessionServiceUri, "POST", {}, ""};
+  tensorflow::serving::net_http::ClientRequest request = {
+      kSessionServiceUri, "POST", {}, ""};
   tensorflow::serving::net_http::ClientResponse response = {};
 
   EXPECT_TRUE(connection->BlockingSendRequest(request, &response));

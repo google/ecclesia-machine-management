@@ -39,7 +39,7 @@ static LazyRE2 knvmeRegex = {"^nvme\\d+"};
 }  // namespace
 
 SleipnirSensor::SleipnirSensor(
-    const IpmiInterface::BmcSensorInterfaceInfo& sensor) {
+    const IpmiInterface::BmcSensorInterfaceInfo &sensor) {
   sleipnir_sensor_info_.id = sensor.id;
   sleipnir_sensor_info_.name = absl::StrCat("sleipnir_", sensor.name);
   sleipnir_sensor_info_.type = sensor.type;
@@ -49,7 +49,7 @@ SleipnirSensor::SleipnirSensor(
 std::vector<SleipnirSensor> CreateSleipnirSensors(
     absl::Span<const IpmiInterface::BmcSensorInterfaceInfo> ipmi_sensors) {
   std::vector<SleipnirSensor> sensors;
-  for (const auto& sensor : ipmi_sensors) {
+  for (const auto &sensor : ipmi_sensors) {
     if ((RE2::FullMatch(sensor.name, *kFanRegex) && !sensor.settable) ||
         RE2::FullMatch(sensor.name, *kKLRegex) ||
         RE2::FullMatch(sensor.name, *knvmeRegex)) {

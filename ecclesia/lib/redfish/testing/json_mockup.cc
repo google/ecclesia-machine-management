@@ -233,9 +233,8 @@ class JsonMockupMockup : public RedfishInterface {
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
     return RedfishVariant();
   }
-  RedfishVariant PostUri(
-      absl::string_view uri,
-      absl::string_view data) override {
+  RedfishVariant PostUri(absl::string_view uri,
+                         absl::string_view data) override {
     return RedfishVariant();
   }
   RedfishVariant PatchUri(

@@ -89,7 +89,7 @@ TEST(NvmeInterfaceTest, CreateFromPciFailureNoDevNode) {
 
 TEST(NvmeInterfaceTest, VerifyInterfaceMethods) {
   auto nvme_device = std::make_unique<MockNvmeDevice>();
-  auto* nvme_device_ptr = nvme_device.get();
+  auto *nvme_device_ptr = nvme_device.get();
 
   // Create IdentifyController and SmartLogPage instances. The fix-length input
   // strings are to make sure the created objects are not nullptr.
@@ -146,7 +146,7 @@ TEST(NvmeDiscoverInterfaceTest, GetAllNvmePlugins) {
   auto maybe_nvme_plugins =
       nvme_discover.GetAllNvmePlugins(GetTestTempdirPath());
   ASSERT_TRUE(maybe_nvme_plugins.ok());
-  const std::vector<NvmePlugin>& nvme_plugins = maybe_nvme_plugins.value();
+  const std::vector<NvmePlugin> &nvme_plugins = maybe_nvme_plugins.value();
   ASSERT_EQ(nvme_plugins.size(), 1);
   EXPECT_EQ(nvme_plugins.at(0).location.pci_location, pci_location);
   EXPECT_EQ(nvme_plugins.at(0).location.physical_location, "U2_1");

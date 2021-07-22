@@ -73,4 +73,3 @@ absl::optional<ecclesia::PciFullSignature> ReadPciFullSignature(
 }
 
 }  // namespace libredfish
-

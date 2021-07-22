@@ -18,9 +18,9 @@
 #define ECCLESIA_LIB_REDFISH_PCI_H_
 
 #include "absl/types/optional.h"
-#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/pci/signature.h"
+#include "ecclesia/lib/redfish/interface.h"
 
 namespace libredfish {
 // Given a Redifhs node that contains PciLocation, parse the domain, bus, device
@@ -46,7 +46,6 @@ absl::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
 // }
 absl::optional<ecclesia::PciFullSignature> ReadPciFullSignature(
     const RedfishObject &pcie_function_obj);
-
 
 }  // namespace libredfish
 

@@ -123,8 +123,7 @@ void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
     if (!system_obj) continue;
     ExtractAssemblyProperties(system_obj.get(), assembly_out);
 
-    auto memory_collection =
-        (*system_obj)[kRfPropertyMemory].AsIterable();
+    auto memory_collection = (*system_obj)[kRfPropertyMemory].AsIterable();
     if (memory_collection) {
       for (auto memory : *memory_collection) {
         auto memory_obj = memory.AsObject();
@@ -153,14 +152,12 @@ void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
       }
     }
 
-    auto storage_collection =
-        (*system_obj)[kRfPropertyStorage].AsIterable();
+    auto storage_collection = (*system_obj)[kRfPropertyStorage].AsIterable();
     if (storage_collection) {
       for (auto storage : *storage_collection) {
         auto storage_obj = storage.AsObject();
         if (!storage_obj) continue;
-        auto drives_collection =
-            (*storage_obj)[kRfPropertyDrives].AsIterable();
+        auto drives_collection = (*storage_obj)[kRfPropertyDrives].AsIterable();
         if (drives_collection) {
           for (auto drive : *drives_collection) {
             auto drive_obj = drive.AsObject();

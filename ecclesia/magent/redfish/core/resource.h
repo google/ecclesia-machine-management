@@ -104,8 +104,7 @@ std::unique_ptr<Resource> CreateResource(
 
 // Generate a response with the input json object and an HTTP status code.
 inline void JSONResponse(
-    const Json::Value &json,
-    tensorflow::serving::net_http::HTTPStatusCode code,
+    const Json::Value &json, tensorflow::serving::net_http::HTTPStatusCode code,
     tensorflow::serving::net_http::ServerRequestInterface *req) {
   tensorflow::serving::net_http::SetContentType(req, "application/json");
   req->WriteResponseString(json.toStyledString());

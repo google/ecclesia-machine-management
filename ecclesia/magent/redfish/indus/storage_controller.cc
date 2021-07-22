@@ -41,8 +41,7 @@
 namespace ecclesia {
 namespace {
 
-void AddStaticFields(Json::Value *json,
-                     absl::string_view uri) {
+void AddStaticFields(Json::Value *json, absl::string_view uri) {
   (*json)[kOdataId] = std::string(uri);
   (*json)[kOdataType] = "#StorageController.v1_1_0.StorageController";
   (*json)[kOdataContext] =

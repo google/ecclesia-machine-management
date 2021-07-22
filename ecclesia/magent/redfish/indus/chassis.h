@@ -55,10 +55,9 @@ class ChassisCollection : public Resource {
       if (chassis_id == ChassisId::kIndus) {
         AppendCollectionMember(json_members, kChassisUri);
       } else {
-        AppendCollectionMember(
-            json_members,
-            absl::StrCat(kChassisCollectionUri, "/",
-                         ChassisIdToString(chassis_id)));
+        AppendCollectionMember(json_members,
+                               absl::StrCat(kChassisCollectionUri, "/",
+                                            ChassisIdToString(chassis_id)));
       }
     }
     JSONResponseOK(json, req);

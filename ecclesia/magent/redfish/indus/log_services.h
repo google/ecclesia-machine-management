@@ -18,6 +18,7 @@
 #define ECCLESIA_MAGENT_REDFISH_INDUS_LOG_SERVICES_H_
 
 #include <string>
+
 #include "ecclesia/magent/redfish/common/log_services.h"
 
 namespace ecclesia {

@@ -67,7 +67,7 @@ class Processor : public IndexResource<int> {
           tensorflow::serving::net_http::HTTPStatusCode::NOT_FOUND);
       return;
     }
-    const auto& cpu_info = cpu->GetCpuInfo();
+    const auto &cpu_info = cpu->GetCpuInfo();
     Json::Value json;
     json[kOdataType] = "#Processor.v1_7_0.Processor";
     json[kOdataId] = std::string(req->uri_path());

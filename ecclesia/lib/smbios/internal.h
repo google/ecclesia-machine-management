@@ -34,8 +34,8 @@ namespace ecclesia {
 
 // Information regarding a SMBIOS structure in memory
 struct SmbiosStructureInfo {
-  uint8_t* formatted_data_start;
-  uint8_t* unformed_data_start;
+  uint8_t *formatted_data_start;
+  uint8_t *unformed_data_start;
   std::size_t structure_size;
 };
 
@@ -44,10 +44,10 @@ class TableEntry {
  public:
   // The constructor takes a reference to the SmbiosStructureInfo that has
   // pointers to the different sections of an SMBIOS table entry
-  TableEntry(const SmbiosStructureInfo& info) {
+  TableEntry(const SmbiosStructureInfo &info) {
     data_ = std::vector(info.formatted_data_start, info.unformed_data_start);
     // Extract the list of character strings from the unformed section
-    char* start = reinterpret_cast<char*>(info.unformed_data_start);
+    char *start = reinterpret_cast<char *>(info.unformed_data_start);
     while (*start != '\0') {
       strings_.emplace_back(start);
       // Move to the next character string
@@ -60,10 +60,10 @@ class TableEntry {
   // Need to allow move since the table entries are stored in a vector.
   // Note that any previously obtained view objects should still be valid, since
   // the underlaying storage is std::vector<>.
-  TableEntry(const TableEntry&) = delete;
-  TableEntry& operator=(const TableEntry&) = delete;
-  TableEntry(TableEntry&&) = default;
-  TableEntry& operator=(TableEntry&&) = default;
+  TableEntry(const TableEntry &) = delete;
+  TableEntry &operator=(const TableEntry &) = delete;
+  TableEntry(TableEntry &&) = default;
+  TableEntry &operator=(TableEntry &&) = default;
 
   SmbiosStructureView GetSmbiosStructureView() const {
     auto message_view = MakeSmbiosStructureView(data_.data(), data_.size());

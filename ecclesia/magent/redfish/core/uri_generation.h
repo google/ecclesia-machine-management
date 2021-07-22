@@ -24,7 +24,7 @@
 namespace ecclesia {
 
 // Construct the PCIeFunction URI from the BDF and Redfish Schema
-std::string GetPcieFunctionUri(const PciDbdfLocation& location);
+std::string GetPcieFunctionUri(const PciDbdfLocation &location);
 
 }  // namespace ecclesia
 

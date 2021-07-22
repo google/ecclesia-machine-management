@@ -39,7 +39,7 @@ struct MceLogMessage {
   uint64_t mci_address;
   uint64_t mci_misc;
 
-  bool operator==(const MceLogMessage& other) const {
+  bool operator==(const MceLogMessage &other) const {
     return std::tie(time_stamp, lpu_id, bank, mcg_status, mci_status,
                     mci_address, mci_misc) ==
            std::tie(other.time_stamp, other.lpu_id, other.bank,
@@ -47,7 +47,7 @@ struct MceLogMessage {
                     other.mci_misc);
   }
 
-  bool operator!=(const MceLogMessage& other) const {
+  bool operator!=(const MceLogMessage &other) const {
     return !(*this == other);
   }
 
@@ -213,7 +213,7 @@ class MceAttributes {
   // Get a MCE attribute using key, if there is no such attribute, return false;
   // else overwrite the input value and return true.
   template <typename T>
-  bool GetAttribute(MceAttributeKey key, T* value) const {
+  bool GetAttribute(MceAttributeKey key, T *value) const {
     auto iter = attributes_.find(key);
     if (iter == attributes_.end()) {
       return false;

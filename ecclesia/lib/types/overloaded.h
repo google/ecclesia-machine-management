@@ -30,6 +30,4 @@ Overloaded(Ts...) -> Overloaded<Ts...>;
 
 }  // namespace ecclesia
 
-
-
 #endif  // ECCLESIA_LIB_TYPES_OVERLOADED_H_

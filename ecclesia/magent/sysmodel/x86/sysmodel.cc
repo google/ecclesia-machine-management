@@ -258,7 +258,7 @@ absl::StatusOr<uint64_t> SystemModel::GetSystemTotalMemoryBytes() const {
 }
 
 absl::StatusOr<std::vector<PciTopologyInterface::PciAcpiPath>>
-  SystemModel::GetAcpiPathsFromPciTopology() const {
+SystemModel::GetAcpiPathsFromPciTopology() const {
   return pci_topology_->EnumeratePciAcpiPaths();
 }
 

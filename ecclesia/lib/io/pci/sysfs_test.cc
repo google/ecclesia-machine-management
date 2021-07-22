@@ -286,7 +286,7 @@ TEST_F(PciTopologyTest, EnumerateAllNodes) {
   SysfsPciTopology pci_topology(fs_.GetTruePath("/sys/devices/"));
   auto maybe_pci_map = pci_topology.EnumerateAllNodes();
   ASSERT_TRUE(maybe_pci_map.ok());
-  auto& location_nodes_map = maybe_pci_map.value();
+  auto &location_nodes_map = maybe_pci_map.value();
   ASSERT_EQ(location_nodes_map.size(), 6);
   std::vector<PciDbdfLocation> expect_all_locations = {
       PciDbdfLocation::Make<0, 0xae, 0, 0>(),
@@ -295,7 +295,7 @@ TEST_F(PciTopologyTest, EnumerateAllNodes) {
       PciDbdfLocation::Make<0, 0xaf, 1, 0>(),
       PciDbdfLocation::Make<0, 0xd7, 0, 0>(),
       PciDbdfLocation::Make<0, 0xd8, 0, 0>()};
-  for (const auto& location : expect_all_locations) {
+  for (const auto &location : expect_all_locations) {
     EXPECT_TRUE(location_nodes_map.contains(location));
     EXPECT_NE(location_nodes_map.at(location), nullptr);
   }
@@ -305,7 +305,7 @@ TEST_F(PciTopologyTest, CorrectTopology) {
   SysfsPciTopology pci_topology(fs_.GetTruePath("/sys/devices/"));
   auto maybe_pci_map = pci_topology.EnumerateAllNodes();
   ASSERT_TRUE(maybe_pci_map.ok());
-  auto& location_nodes_map = maybe_pci_map.value();
+  auto &location_nodes_map = maybe_pci_map.value();
 
   // Check the PCI tree branch:
   // 0000:ae:0.0
@@ -313,19 +313,19 @@ TEST_F(PciTopologyTest, CorrectTopology) {
   //   |--0000:af:1.0
   auto root_node0_location = PciDbdfLocation::Make<0, 0xae, 0, 0>();
   ASSERT_TRUE(location_nodes_map.contains(root_node0_location));
-  auto* root_node0 = location_nodes_map.at(root_node0_location).get();
+  auto *root_node0 = location_nodes_map.at(root_node0_location).get();
   EXPECT_EQ(root_node0->Location(), root_node0_location);
   EXPECT_EQ(root_node0->Depth(), 0);
   EXPECT_EQ(root_node0->Parent(), nullptr);
   auto node0_children = root_node0->Children();
   ASSERT_EQ(node0_children.size(), 2);
   std::vector<PciDbdfLocation> children_locations;
-  auto* child0 = node0_children.at(0);
+  auto *child0 = node0_children.at(0);
   children_locations.push_back(child0->Location());
   EXPECT_EQ(child0->Depth(), 1);
   EXPECT_TRUE(child0->Children().empty());
   EXPECT_EQ(child0->Parent()->Location(), root_node0_location);
-  auto* child1 = node0_children.at(1);
+  auto *child1 = node0_children.at(1);
   children_locations.push_back(child1->Location());
   EXPECT_EQ(child1->Depth(), 1);
   EXPECT_TRUE(child1->Children().empty());
@@ -340,7 +340,7 @@ TEST_F(PciTopologyTest, CorrectTopology) {
   //   |--0000:d8:0.0
   auto root_node1_location = PciDbdfLocation::Make<0, 0xd7, 0, 0>();
   ASSERT_TRUE(location_nodes_map.contains(root_node1_location));
-  auto* root_node1 = location_nodes_map.at(root_node1_location).get();
+  auto *root_node1 = location_nodes_map.at(root_node1_location).get();
   EXPECT_EQ(root_node1->Location(), root_node1_location);
   EXPECT_EQ(root_node1->Depth(), 0);
   EXPECT_EQ(root_node1->Parent(), nullptr);
@@ -358,7 +358,7 @@ TEST_F(PciTopologyTest, EnumeratePciAcpiPaths) {
   SysfsPciTopology pci_topology(fs_.GetTruePath("/sys/devices/"));
   auto maybe_pci_acpi_paths = pci_topology.EnumeratePciAcpiPaths();
   ASSERT_TRUE(maybe_pci_acpi_paths.ok());
-  auto& pci_acpi_paths = maybe_pci_acpi_paths.value();
+  auto &pci_acpi_paths = maybe_pci_acpi_paths.value();
   ASSERT_EQ(pci_acpi_paths.size(), 2);
 
   EXPECT_THAT(pci_acpi_paths,

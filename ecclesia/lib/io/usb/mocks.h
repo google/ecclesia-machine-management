@@ -30,7 +30,7 @@ class MockUsbDiscovery : public UsbDiscoveryInterface {
  public:
   MOCK_METHOD(absl::StatusOr<std::vector<UsbLocation>>, EnumerateAllUsbDevices,
               (), (const, override));
-  MOCK_METHOD(std::unique_ptr<UsbDevice>, CreateDevice, (const UsbLocation&),
+  MOCK_METHOD(std::unique_ptr<UsbDevice>, CreateDevice, (const UsbLocation &),
               (const, override));
 };
 
@@ -38,9 +38,9 @@ class MockUsbDevice : public UsbDevice {
  public:
   MockUsbDevice() : MockUsbDevice(UsbLocation::Make<1>()) {}
 
-  MockUsbDevice(const UsbLocation& location) : location_(location) {}
+  MockUsbDevice(const UsbLocation &location) : location_(location) {}
 
-  const UsbLocation& Location() const { return location_; }
+  const UsbLocation &Location() const { return location_; }
 
   MOCK_METHOD(absl::StatusOr<UsbSignature>, GetSignature, (),
               (const, override));

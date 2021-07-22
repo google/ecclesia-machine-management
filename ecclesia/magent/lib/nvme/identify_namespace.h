@@ -65,8 +65,8 @@ struct IdentifyNamespace {
 };
 
 // Compares all fields for equality.  Useful for std containers and tests.
-bool operator==(const IdentifyNamespace& lhs, const IdentifyNamespace& rhs);
-bool operator!=(const IdentifyNamespace& lhs, const IdentifyNamespace& rhs);
+bool operator==(const IdentifyNamespace &lhs, const IdentifyNamespace &rhs);
+bool operator!=(const IdentifyNamespace &lhs, const IdentifyNamespace &rhs);
 
 // Utility function to decode IdentifyController object in Namespace List mode.
 absl::StatusOr<std::set<uint32_t>> ParseIdentifyListNamespace(

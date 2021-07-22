@@ -34,20 +34,18 @@ void Sysmodel::QueryAllResourceInternal(
     ResourceChassis *, const std::function<void(std::unique_ptr<RedfishObject>)>
                            &result_callback) {
   auto root = redfish_intf_->GetRoot();
-  root[kRfPropertyChassis].Each().Do([&](auto &chassis_obj) {
-    result_callback(std::move(chassis_obj));
-  });
+  root[kRfPropertyChassis].Each().Do(
+      [&](auto &chassis_obj) { result_callback(std::move(chassis_obj)); });
 }
 
 // System:
 // "/redfish/v1/System/{id}"
 void Sysmodel::QueryAllResourceInternal(
     ResourceSystem *, const std::function<void(std::unique_ptr<RedfishObject>)>
-                           &result_callback) {
+                          &result_callback) {
   auto root = redfish_intf_->GetRoot();
-  root[kRfPropertySystems].Each().Do([&](auto &sys_obj) {
-    result_callback(std::move(sys_obj));
-  });
+  root[kRfPropertySystems].Each().Do(
+      [&](auto &sys_obj) { result_callback(std::move(sys_obj)); });
 }
 
 // Memory:
@@ -56,10 +54,8 @@ void Sysmodel::QueryAllResourceInternal(
     ResourceMemory *, const std::function<void(std::unique_ptr<RedfishObject>)>
                           &result_callback) {
   auto root = redfish_intf_->GetRoot();
-  root[kRfPropertySystems].Each()[kRfPropertyMemory].Each()
-      .Do([&](auto &memory_obj) {
-        result_callback(std::move(memory_obj));
-      });
+  root[kRfPropertySystems].Each()[kRfPropertyMemory].Each().Do(
+      [&](auto &memory_obj) { result_callback(std::move(memory_obj)); });
 }
 
 // Storage:
@@ -68,10 +64,8 @@ void Sysmodel::QueryAllResourceInternal(
     ResourceStorage *, const std::function<void(std::unique_ptr<RedfishObject>)>
                            &result_callback) {
   auto root = redfish_intf_->GetRoot();
-  root[kRfPropertySystems].Each()[kRfPropertyStorage].Each()
-      .Do([&](auto &storage_obj) {
-        result_callback(std::move(storage_obj));
-      });
+  root[kRfPropertySystems].Each()[kRfPropertyStorage].Each().Do(
+      [&](auto &storage_obj) { result_callback(std::move(storage_obj)); });
 }
 
 // Drive:
@@ -80,10 +74,11 @@ void Sysmodel::QueryAllResourceInternal(
     ResourceDrive *, const std::function<void(std::unique_ptr<RedfishObject>)>
                          &result_callback) {
   auto root = redfish_intf_->GetRoot();
-  root[kRfPropertySystems].Each()[kRfPropertyStorage].Each()
-      [kRfPropertyDrives].Each().Do([&](auto &drive_obj) {
-        result_callback(std::move(drive_obj));
-      });
+  root[kRfPropertySystems]
+      .Each()[kRfPropertyStorage]
+      .Each()[kRfPropertyDrives]
+      .Each()
+      .Do([&](auto &drive_obj) { result_callback(std::move(drive_obj)); });
 }
 
 // Processor:
@@ -93,10 +88,8 @@ void Sysmodel::QueryAllResourceInternal(
     const std::function<void(std::unique_ptr<RedfishObject>)>
         &result_callback) {
   auto root = redfish_intf_->GetRoot();
-  root[kRfPropertySystems].Each()[kRfPropertyProcessors].Each()
-      .Do([&](auto &processor_obj) {
-        result_callback(std::move(processor_obj));
-      });
+  root[kRfPropertySystems].Each()[kRfPropertyProcessors].Each().Do(
+      [&](auto &processor_obj) { result_callback(std::move(processor_obj)); });
 }
 
 // EthernetInterface:
@@ -106,10 +99,8 @@ void Sysmodel::QueryAllResourceInternal(
     const std::function<void(std::unique_ptr<RedfishObject>)>
         &result_callback) {
   auto root = redfish_intf_->GetRoot();
-  root[kRfPropertySystems].Each()[kRfPropertyEthernetInterfaces].Each()
-      .Do([&](auto &eth_obj) {
-        result_callback(std::move(eth_obj));
-      });
+  root[kRfPropertySystems].Each()[kRfPropertyEthernetInterfaces].Each().Do(
+      [&](auto &eth_obj) { result_callback(std::move(eth_obj)); });
 }
 
 // Thermal:
@@ -119,10 +110,10 @@ void Sysmodel::QueryAllResourceInternal(
     const std::function<void(std::unique_ptr<RedfishObject>)>
         &result_callback) {
   auto root = redfish_intf_->GetRoot();
-  root[kRfPropertyChassis].Each()[kRfPropertyThermal][kRfPropertyTemperatures]
-      .Each().Do([&](auto &temp_obj) {
-        result_callback(std::move(temp_obj));
-      });
+  root[kRfPropertyChassis]
+      .Each()[kRfPropertyThermal][kRfPropertyTemperatures]
+      .Each()
+      .Do([&](auto &temp_obj) { result_callback(std::move(temp_obj)); });
 }
 
 // Voltage:
@@ -140,27 +131,25 @@ void Sysmodel::QueryAllResourceInternal(
 // Fan:
 // "/redfish/v1/Chassis/{id}/Thermal"
 void Sysmodel::QueryAllResourceInternal(
-    ResourceFan *,
-    const std::function<void(std::unique_ptr<RedfishObject>)>
-        &result_callback) {
+    ResourceFan *, const std::function<void(std::unique_ptr<RedfishObject>)>
+                       &result_callback) {
   auto root = redfish_intf_->GetRoot();
-  root[kRfPropertyChassis].Each()[kRfPropertyThermal][kRfPropertyFans]
-      .Each().Do([&](auto &temp_obj) {
-        result_callback(std::move(temp_obj));
-      });
+  root[kRfPropertyChassis]
+      .Each()[kRfPropertyThermal][kRfPropertyFans]
+      .Each()
+      .Do([&](auto &temp_obj) { result_callback(std::move(temp_obj)); });
 }
 
 // Sensors:
 // "/redfish/v1/Chassis/{id}/Sensors/{sensor}"
 void Sysmodel::QueryAllResourceInternal(
-    ResourceSensor *,
-    const std::function<void(std::unique_ptr<RedfishObject>)>
-        &result_callback) {
+    ResourceSensor *, const std::function<void(std::unique_ptr<RedfishObject>)>
+                          &result_callback) {
   auto root = redfish_intf_->GetRoot();
-  root[kRfPropertyChassis].Each()[kRfPropertySensors][PropertyMembers::Name]
-      .Each().Do([&](auto &sensor_obj) {
-        result_callback(std::move(sensor_obj));
-      });
+  root[kRfPropertyChassis]
+      .Each()[kRfPropertySensors][PropertyMembers::Name]
+      .Each()
+      .Do([&](auto &sensor_obj) { result_callback(std::move(sensor_obj)); });
 }
 
 // Pcie Function:
@@ -168,13 +157,15 @@ void Sysmodel::QueryAllResourceInternal(
 void Sysmodel::QueryAllResourceInternal(
     ResourcePcieFunction *,
     const std::function<void(std::unique_ptr<RedfishObject>)>
-    &result_callback) {
+        &result_callback) {
   auto root = redfish_intf_->GetRoot();
-  root[kRfPropertySystems].Each()[kRfPropertyPcieDevices].Each()
-      [kRfPropertyLinks][kRfPropertyPcieFunctions].Each()
-          .Do([&](auto &pcie_function_obj) {
-            result_callback(std::move(pcie_function_obj));
-          });
+  root[kRfPropertySystems]
+      .Each()[kRfPropertyPcieDevices]
+      .Each()[kRfPropertyLinks][kRfPropertyPcieFunctions]
+      .Each()
+      .Do([&](auto &pcie_function_obj) {
+        result_callback(std::move(pcie_function_obj));
+      });
 }
 
 // ComputerSystem:
@@ -184,9 +175,8 @@ void Sysmodel::QueryAllResourceInternal(
     const std::function<void(std::unique_ptr<RedfishObject>)>
         &result_callback) {
   auto root = redfish_intf_->GetRoot();
-  root[kRfPropertySystems].Each().Do([&](auto &sys_obj) {
-    result_callback(std::move(sys_obj));
-  });
+  root[kRfPropertySystems].Each().Do(
+      [&](auto &sys_obj) { result_callback(std::move(sys_obj)); });
 }
 
 // Manager

@@ -161,7 +161,7 @@ std::string CurlHttpClient::ComposeUri(absl::string_view path) {
 }
 
 absl::StatusOr<std::unique_ptr<HttpClient::HttpRequest>>
-    CurlHttpClient::InitRequest(absl::string_view path) {
+CurlHttpClient::InitRequest(absl::string_view path) {
   if (path.empty() || path.front() != '/') {
     return absl::InvalidArgumentError(
         "path must be non-empty beginning with \"/\"");
@@ -234,9 +234,9 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
       break;
   }
 
-  struct curl_slist* request_headers = NULL;
-  for (const auto& hdr : request->headers) {
-    struct curl_slist* list = curl_slist_append(
+  struct curl_slist *request_headers = NULL;
+  for (const auto &hdr : request->headers) {
+    struct curl_slist *list = curl_slist_append(
         request_headers, absl::StrCat(hdr.first, ":", hdr.second).c_str());
     if (list == nullptr) {
       curl_slist_free_all(request_headers);
@@ -264,7 +264,7 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
 // userp is set through framework over third_CURLOPT_WRITEDATA
 size_t CurlHttpClient::HeaderCallback(const void *data, size_t size,
                                       size_t nmemb, void *userp) {
-  auto *headers = static_cast<HttpHeaders*>(userp);
+  auto *headers = static_cast<HttpHeaders *>(userp);
   auto str = static_cast<const char *>(data);
 
   if (str[0] != '\r' && str[1] != '\n') {

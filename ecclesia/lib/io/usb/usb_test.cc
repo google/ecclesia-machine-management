@@ -111,8 +111,9 @@ TEST(ExistUsbDeviceWithSignatureTest, FoundMatchedDevice) {
   EXPECT_CALL(usb_discover, CreateDevice(usb_location0)).WillOnce([](auto...) {
     return nullptr;
   });
-  EXPECT_CALL(usb_discover, CreateDevice(usb_location1))
-      .WillOnce([&](auto...) { return std::move(usb_device); });
+  EXPECT_CALL(usb_discover, CreateDevice(usb_location1)).WillOnce([&](auto...) {
+    return std::move(usb_device);
+  });
 
   auto result = FindUsbDeviceWithSignature(&usb_discover, usb_sig);
   ASSERT_TRUE(result.ok());

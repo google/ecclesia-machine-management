@@ -66,9 +66,8 @@ class MmioRegion : public PciRegion {
   template <typename T>
   absl::Status ReadConfig(OffsetType offset, absl::Span<uint8_t> span) const {
     if (offset % sizeof(T) != 0) {
-      return absl::InvalidArgumentError(
-          absl::StrFormat("offset %#x is not aligned with read size %d",
-                          offset, sizeof(T)));
+      return absl::InvalidArgumentError(absl::StrFormat(
+          "offset %#x is not aligned with read size %d", offset, sizeof(T)));
     }
 
     ECCLESIA_RETURN_IF_ERROR(mmio_.status());
@@ -82,7 +81,7 @@ class MmioRegion : public PciRegion {
     // This is the critical part that forces an aligned, specific-size data copy
     // from mmap'd PCI config space.
     const T typed_value =
-        *reinterpret_cast<const volatile T*>(mem.begin() + offset);
+        *reinterpret_cast<const volatile T *>(mem.begin() + offset);
     std::memcpy(span.data(), &typed_value, sizeof(typed_value));
     return absl::OkStatus();
   }
@@ -90,9 +89,8 @@ class MmioRegion : public PciRegion {
   template <typename T>
   absl::Status WriteConfig(OffsetType offset, absl::Span<const uint8_t> span) {
     if (offset % sizeof(T) != 0) {
-      return absl::InvalidArgumentError(
-          absl::StrFormat("offset %#x is not aligned with read size %d",
-                          offset, sizeof(T)));
+      return absl::InvalidArgumentError(absl::StrFormat(
+          "offset %#x is not aligned with read size %d", offset, sizeof(T)));
     }
 
     ECCLESIA_RETURN_IF_ERROR(mmio_.status());
@@ -107,9 +105,9 @@ class MmioRegion : public PciRegion {
     }
     // This is the critical part that forces an aligned, specific-size data copy
     // to mmap'd PCI config space.
-    volatile T* typed_dest =
-        reinterpret_cast<volatile T*>(mem.data() + offset);
-    *typed_dest = *reinterpret_cast<const T*>(span.data());
+    volatile T *typed_dest =
+        reinterpret_cast<volatile T *>(mem.data() + offset);
+    *typed_dest = *reinterpret_cast<const T *>(span.data());
     return absl::OkStatus();
   }
 

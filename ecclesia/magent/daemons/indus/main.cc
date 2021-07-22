@@ -68,8 +68,7 @@ ABSL_FLAG(std::string, odata_metadata_file_path,
           "/etc/google/magent/metadata/index.xml",
           "Path to a file containing the OData metadata document.");
 
-ABSL_FLAG(std::string, system_event_clear_script_path,
-          "",
+ABSL_FLAG(std::string, system_event_clear_script_path, "",
           "Path to an script that clears the system events.");
 
 namespace {
@@ -209,8 +208,8 @@ constexpr ecclesia::PciSensorParams dimm_channel_info[]{
 
 }  // namespace
 
-int main(int argc, char** argv) {
-  std::vector<char*> args = absl::ParseCommandLine(argc, argv);
+int main(int argc, char **argv) {
+  std::vector<char *> args = absl::ParseCommandLine(argc, argv);
   ecclesia::TrySetGlobalLoggerToFileLogger(args[0]);
 
   if (absl::GetFlag(FLAGS_assemblies_dir).empty()) {
@@ -298,7 +297,7 @@ int main(int argc, char** argv) {
   // Construct an IPMI interface to Sleipnir BMC and add FRUs if there is any.
   ecclesia::Ipmitool ipmi(ecclesia::GetIpmiCredentialFromPb(kMagentConfigPath));
   auto ipmi_frus = ipmi.GetAllFrus();
-  for (const auto& fru : ipmi_frus) {
+  for (const auto &fru : ipmi_frus) {
     fru_factories.push_back(ecclesia::SysmodelFruReaderFactory(
         absl::StrCat("sleipnir_", fru.name),
         [&]() -> std::unique_ptr<ecclesia::SysmodelFruReaderIntf> {
@@ -320,7 +319,7 @@ int main(int argc, char** argv) {
       .dimm_thermal_params = absl::MakeSpan(dimm_channel_info),
       .ipmi_sensors = absl::MakeSpan(ipmi_sensors),
       .nvme_discover_getter =
-          [](ecclesia::PciTopologyInterface* pci_topology) {
+          [](ecclesia::PciTopologyInterface *pci_topology) {
             return std::make_unique<ecclesia::IndusNvmeDiscover>(pci_topology);
           },
       .pci_storage_discover_getter = nullptr};
@@ -331,7 +330,7 @@ int main(int argc, char** argv) {
   auto server = ecclesia::CreateServer(absl::GetFlag(FLAGS_port));
   server->RegisterRequestHandler(
       "/healthz",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         tensorflow::serving::net_http::SetContentType(
             req, "text/html;charset=utf-8");
         req->WriteResponseString("ok");

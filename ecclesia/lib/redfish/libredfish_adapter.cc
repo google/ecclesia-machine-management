@@ -44,9 +44,9 @@ namespace {
 
 struct RequestInfo {
   bool terminate;
-  asyncHttpRequest* request;
+  asyncHttpRequest *request;
   asyncRawCallback callback;
-  void* callback_context;
+  void *callback_context;
 };
 
 using RequestQueue = std::deque<RequestInfo>;
@@ -56,15 +56,15 @@ using RequestQueue = std::deque<RequestInfo>;
 class LibredfishAdapter {
  public:
   LibredfishAdapter(std::unique_ptr<ecclesia::HttpClient> client)
-    : client_(std::move(client)) {}
+      : client_(std::move(client)) {}
 
-  static bool StartRequestHandler(redfishService* service,
-                                  void* handler_context,
-                                  asyncHttpRequest* request,
+  static bool StartRequestHandler(redfishService *service,
+                                  void *handler_context,
+                                  asyncHttpRequest *request,
                                   asyncRawCallback callback,
-                                  void* callback_context) {
+                                  void *callback_context) {
     ecclesia::DebugLog() << "Url: " << request->url;
-    auto adapter = reinterpret_cast<LibredfishAdapter*>(handler_context);
+    auto adapter = reinterpret_cast<LibredfishAdapter *>(handler_context);
 
     if (!service || !request) {
       ecclesia::ErrorLog() << "service/request are NULL";
@@ -75,10 +75,8 @@ class LibredfishAdapter {
     absl::WriterMutexLock lock(&adapter->queue_mutex_);
 
     if (!adapter->queue_thread_) {
-      adapter->queue_thread_ =
-          ecclesia::GetDefaultThreadFactory()->New([adapter]() {
-            adapter->RequestHandlerThread();
-          });
+      adapter->queue_thread_ = ecclesia::GetDefaultThreadFactory()->New(
+          [adapter]() { adapter->RequestHandlerThread(); });
     }
 
     adapter->AddToQueue(request, callback, callback_context);
@@ -94,8 +92,8 @@ class LibredfishAdapter {
   // redfishService object is atomic we can assume that when Deleter() is
   // called there is no one else with a reference. In other words, this
   // function can only be called once.
-  static void Deleter(void* context) {
-    auto adapter = reinterpret_cast<LibredfishAdapter*>(context);
+  static void Deleter(void *context) {
+    auto adapter = reinterpret_cast<LibredfishAdapter *>(context);
 
     {
       absl::WriterMutexLock lock(&adapter->queue_mutex_);
@@ -133,10 +131,11 @@ class LibredfishAdapter {
     }
   }
 
-  void AddToQueue(asyncHttpRequest* request, asyncRawCallback callback,
-                  void* callback_context) ABSL_EXCLUSIVE_LOCKS_REQUIRED(queue_mutex_) {
-    request_queue_.emplace_back(RequestInfo{
-        false, request, callback, callback_context});
+  void AddToQueue(asyncHttpRequest *request, asyncRawCallback callback,
+                  void *callback_context)
+      ABSL_EXCLUSIVE_LOCKS_REQUIRED(queue_mutex_) {
+    request_queue_.emplace_back(
+        RequestInfo{false, request, callback, callback_context});
   }
 
   void TerminateQueue() ABSL_EXCLUSIVE_LOCKS_REQUIRED(queue_mutex_) {
@@ -146,26 +145,25 @@ class LibredfishAdapter {
   RequestInfo WaitForNextRequest() {
     absl::WriterMutexLock lock(
         &queue_mutex_,
-        absl::Condition{
-          [](void* data) {
-            auto queue = reinterpret_cast<RequestQueue*>(data);
-            return !queue->empty();
-          },
-          &request_queue_});
+        absl::Condition{[](void *data) {
+                          auto queue = reinterpret_cast<RequestQueue *>(data);
+                          return !queue->empty();
+                        },
+                        &request_queue_});
     auto request_info = request_queue_.front();
     request_queue_.pop_front();
     return request_info;
   }
 
-  void ProcessRequest(const RequestInfo& request_info) {
-    asyncHttpRequest* request = request_info.request;
+  void ProcessRequest(const RequestInfo &request_info) {
+    asyncHttpRequest *request = request_info.request;
     asyncRawCallback callback = request_info.callback;
-    void* callback_context = request_info.callback_context;
-    asyncHttpResponse* response;
+    void *callback_context = request_info.callback_context;
+    asyncHttpResponse *response;
 
     if (callback) {
       // Use calloc as it's callback's responsibility to free it.
-      response = reinterpret_cast<asyncHttpResponse*>(
+      response = reinterpret_cast<asyncHttpResponse *>(
           calloc(1, sizeof(asyncHttpResponse)));
       if (!response) {
         callback(request, nullptr, callback_context);
@@ -181,7 +179,7 @@ class LibredfishAdapter {
     auto rqst = std::make_unique<ecclesia::HttpClient::HttpRequest>();
     rqst->uri = request->url;
     rqst->headers = ConvertRequestHeaders(request->headers);
-    switch(request->method) {
+    switch (request->method) {
       case HTTP_GET:
         client_response = client_->Get(std::move(rqst));
         break;
@@ -214,13 +212,13 @@ class LibredfishAdapter {
       return;
     }
 
-    ecclesia::HttpClient::HttpResponse& resp = client_response.value();
+    ecclesia::HttpClient::HttpResponse &resp = client_response.value();
     // It is the callback's responsibility to free request, response.
     // is a work-in-progress. E.g., CURLcode or HTTP code? Here it's HTTP code.
     response->httpResponseCode = resp.code;
     response->connectError = 0;
     size_t size = resp.body.size();
-    auto body = reinterpret_cast<char*>(malloc(size + 1));
+    auto body = reinterpret_cast<char *>(malloc(size + 1));
     if (!body) {
       // Pass nullptr for response to indicate malloc failure.
       callback(request, nullptr, callback_context);
@@ -237,27 +235,27 @@ class LibredfishAdapter {
 
   // Utility to convert libredfish's representation of headers to ours.
   static ecclesia::HttpClient::HttpHeaders ConvertRequestHeaders(
-      const httpHeader* in) {
+      const httpHeader *in) {
     ecclesia::HttpClient::HttpHeaders out;
-    for (const httpHeader* h = in; h != nullptr; h = h->next) {
+    for (const httpHeader *h = in; h != nullptr; h = h->next) {
       out.try_emplace(h->name, h->value);
     }
     return out;
   }
 
   // Utility to convert our representation of headers to libredfish's.
-  static httpHeader* ConvertResponseHeaders(
-      const ecclesia::HttpClient::HttpHeaders& in) {
-    httpHeader* first = nullptr;
-    httpHeader* last = nullptr;
+  static httpHeader *ConvertResponseHeaders(
+      const ecclesia::HttpClient::HttpHeaders &in) {
+    httpHeader *first = nullptr;
+    httpHeader *last = nullptr;
 
     // For consistency with default handler, ignore malloc failures.
-    for (const auto& h : in) {
+    for (const auto &h : in) {
       // Since we are interfacing with a C API that wants malloc'd buffers,
       // use strndup().
-      char* name = strdup(h.first.c_str());
-      char* value = strdup(h.second.c_str());
-      auto hdr = reinterpret_cast<httpHeader*>(malloc(sizeof(httpHeader)));
+      char *name = strdup(h.first.c_str());
+      char *value = strdup(h.second.c_str());
+      auto hdr = reinterpret_cast<httpHeader *>(malloc(sizeof(httpHeader)));
       if (!name || !value || !hdr) {
         free(name);
         free(value);
@@ -288,20 +286,20 @@ class LibredfishAdapter {
 }  // namespace
 
 // Convert our options struct to libredfish's.
-redfishAsyncOptions ConvertOptions(const RedfishRawInterfaceOptions& options) {
+redfishAsyncOptions ConvertOptions(const RedfishRawInterfaceOptions &options) {
   ecclesia::Check(options.default_timeout >= absl::ZeroDuration(),
                   "timeout is non-negative");
   return redfishAsyncOptions{
-    // At present we don't support other formats.
-    .accept = REDFISH_ACCEPT_JSON,
-    .timeout = static_cast<unsigned long>(
-        options.default_timeout / absl::Seconds(1)),
+      // At present we don't support other formats.
+      .accept = REDFISH_ACCEPT_JSON,
+      .timeout = static_cast<unsigned long>(options.default_timeout /
+                                            absl::Seconds(1)),
   };
 };
 
 serviceHttpHandler NewLibredfishAdapter(
     std::unique_ptr<ecclesia::HttpClient> client,
-    const RedfishRawInterfaceOptions& default_options) {
+    const RedfishRawInterfaceOptions &default_options) {
   serviceHttpHandler h;
   h.start_request_handler = LibredfishAdapter::StartRequestHandler;
   h.cleanup_request_handler_context = LibredfishAdapter::Deleter;

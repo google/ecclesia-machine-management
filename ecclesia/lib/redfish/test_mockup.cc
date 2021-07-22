@@ -208,12 +208,11 @@ TestingMockupServer::~TestingMockupServer() {
   waitpid(server_pid_, nullptr, 0);
 }
 
-std::unique_ptr<RedfishInterface>
-TestingMockupServer::RedfishClientInterface(
+std::unique_ptr<RedfishInterface> TestingMockupServer::RedfishClientInterface(
     std::unique_ptr<ecclesia::HttpClient> client) {
-  std::string endpoint = absl::visit(
-      [](auto &conn) { return ConfigToEndpoint("http", conn); },
-      connection_config_);
+  std::string endpoint =
+      absl::visit([](auto &conn) { return ConfigToEndpoint("http", conn); },
+                  connection_config_);
   auto intf = libredfish::NewRawInterface(endpoint, RedfishInterface::kTrusted,
                                           std::move(client));
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
@@ -225,9 +224,9 @@ TestingMockupServer::RedfishClientBasicAuthInterface() {
   PasswordArgs args;
   args.username = "FakeName";
   args.password = "FakePassword";
-  args.endpoint = absl::visit(
-      [](auto &conn) { return ConfigToEndpoint("http", conn); },
-      connection_config_);
+  args.endpoint =
+      absl::visit([](auto &conn) { return ConfigToEndpoint("http", conn); },
+                  connection_config_);
   auto intf = libredfish::NewRawBasicAuthInterface(args);
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
@@ -239,9 +238,9 @@ TestingMockupServer::RedfishClientSessionAuthInterface(
   PasswordArgs args;
   args.username = "FakeName";
   args.password = "FakePassword";
-  args.endpoint = absl::visit(
-      [](auto &conn) { return ConfigToEndpoint("http", conn); },
-      connection_config_);
+  args.endpoint =
+      absl::visit([](auto &conn) { return ConfigToEndpoint("http", conn); },
+                  connection_config_);
   auto intf = libredfish::NewRawSessionAuthInterface(args, std::move(client));
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
@@ -253,9 +252,9 @@ TestingMockupServer::RedfishClientTlsAuthInterface() {
                   "client TLS configuration exists");
 
   TlsArgs args;
-  args.endpoint = absl::visit(
-      [](auto &conn) { return ConfigToEndpoint("https", conn); },
-      connection_config_);
+  args.endpoint =
+      absl::visit([](auto &conn) { return ConfigToEndpoint("https", conn); },
+                  connection_config_);
   args.verify_hostname = client_tls_config_->verify_hostname;
   args.verify_peer = client_tls_config_->verify_peer;
   args.cert_file = client_tls_config_->cert_file;

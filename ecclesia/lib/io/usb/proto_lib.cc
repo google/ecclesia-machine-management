@@ -49,7 +49,7 @@ absl::optional<UsbLocation> UsbLocationFromProto(
   auto maybe_bus = UsbBusLocation::TryMake(location.bus());
   absl::optional<UsbPortSequence> maybe_port_sequence;
   // Check if root device aka ports = "0"
-  if (location.ports() != "0"){
+  if (location.ports() != "0") {
     std::vector<int> ports;
     for (const auto port_str : absl::StrSplit(location.ports(), '.')) {
       int port_num;

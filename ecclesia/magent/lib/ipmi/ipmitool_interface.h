@@ -24,9 +24,8 @@
 #include <cstdint>
 
 extern "C" {
-# include "include/ipmitool/ipmi_intf.h"
+#include "include/ipmitool/ipmi_intf.h"
 }
-
 
 namespace ecclesia {
 

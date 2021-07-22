@@ -44,5 +44,4 @@ inline absl::optional<int32_t> RedfishStrTo32Base(const RedfishObject &obj) {
 
 }  // namespace libredfish
 
-
 #endif  // ECCLESIA_LIB_REDFISH_NUMBERS_H_

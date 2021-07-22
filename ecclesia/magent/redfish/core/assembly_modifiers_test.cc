@@ -49,7 +49,7 @@ Assembly::AssemblyModifier CreateStandardComponentModifier() {
                                          kTestComponentName);
 }
 
-std::string FlattenStylizedJsonString(const std::string& json) {
+std::string FlattenStylizedJsonString(const std::string &json) {
   return absl::StrReplaceAll(json, {{"\n", ""}, {"\t", ""}, {" ", ""}});
 }
 
@@ -180,7 +180,7 @@ TEST(PcieFunctionAssemblyModifier, ModifyAssembly) {
   EXPECT_TRUE(CreateStandardPcieFunctionModifier()(assemblies).ok());
 
   // Check that assembly is modified
-  const auto& test_associated_with =
+  const auto &test_associated_with =
       assemblies.find(kTestAssemblyUri)
           ->second[kAssemblies][0][kOem][kGoogle][kComponents][0]
                   [kAssociatedWith];
@@ -286,7 +286,7 @@ TEST(AddComponentModifier, ComponentNameMissing) {
   EXPECT_TRUE(CreateStandardComponentModifier()(assemblies).ok());
 
   // Check that assembly is not modified
-  const auto& components =
+  const auto &components =
       assemblies.find(kTestAssemblyUri)
           ->second[kAssemblies][0][kOem][kGoogle][kComponents];
   EXPECT_EQ(components.size(), 2);
@@ -325,7 +325,7 @@ TEST(AddComponentModifier, ComponentNameExists) {
   EXPECT_TRUE(CreateStandardComponentModifier()(assemblies).ok());
 
   // Check that assembly is not modified
-  const auto& components =
+  const auto &components =
       assemblies.find(kTestAssemblyUri)
           ->second[kAssemblies][0][kOem][kGoogle][kComponents];
   EXPECT_EQ(components.size(), 1);

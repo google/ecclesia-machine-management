@@ -109,8 +109,7 @@ TEST_F(SessionCollectionTest, QuerySessionCollection) {
                                   libredfish::RedfishInterface::kTrusted);
 
   // Perform an http get request on the session collection resource.
-  libredfish::RedfishVariant response =
-      redfish_intf->GetUri(kSessionsUri);
+  libredfish::RedfishVariant response = redfish_intf->GetUri(kSessionsUri);
 
   // Parse the raw contents and compare it to the expected session collection.
   Json::Reader reader;
@@ -125,13 +124,13 @@ TEST_F(SessionCollectionTest, PostToSessionCollectionUnauthorized) {
 
   // Exercise the RequestHandler.
   std::unique_ptr<tensorflow::serving::net_http::HTTPClientInterface>
-  connection =
-      tensorflow::serving::net_http::CreateEvHTTPConnection("localhost", port_);
+      connection = tensorflow::serving::net_http::CreateEvHTTPConnection(
+          "localhost", port_);
 
   ASSERT_TRUE(connection != nullptr);
 
-  tensorflow::serving::net_http::ClientRequest request =
-      {kSessionsUri, "POST", {}, ""};
+  tensorflow::serving::net_http::ClientRequest request = {
+      kSessionsUri, "POST", {}, ""};
   tensorflow::serving::net_http::ClientResponse response = {};
 
   EXPECT_TRUE(connection->BlockingSendRequest(request, &response));

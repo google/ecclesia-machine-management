@@ -39,17 +39,17 @@ class FakeLibCurl : public LibCurl {
       : response_content_(response_content), response_code_(response_code) {}
 
   FakeLibCurl(absl::string_view response_content, uint64_t response_code,
-              const std::vector<std::string>& response_headers)
+              const std::vector<std::string> &response_headers)
       : response_content_(response_content),
         response_code_(response_code),
         response_headers_(response_headers) {}
 
-  CURL* curl_easy_init() override {
+  CURL *curl_easy_init() override {
     is_initialized_ = true;
-    return reinterpret_cast<CURL*>(this);
+    return reinterpret_cast<CURL *>(this);
   }
 
-  CURLcode curl_easy_setopt(CURL* curl, CURLoption option,
+  CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
                             uint64_t param) override {
     switch (option) {
       case CURLOPT_POST:
@@ -63,40 +63,40 @@ class FakeLibCurl : public LibCurl {
     }
     return CURLE_OK;
   }
-  CURLcode curl_easy_setopt(CURL* curl, CURLoption option,
-                            const char* param) override {
-    return curl_easy_setopt(curl, option,
-                            reinterpret_cast<void*>(const_cast<char*>(param)));
+  CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
+                            const char *param) override {
+    return curl_easy_setopt(
+        curl, option, reinterpret_cast<void *>(const_cast<char *>(param)));
   }
-  CURLcode curl_easy_setopt(CURL* curl, CURLoption option,
-                            void* param) override {
+  CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
+                            void *param) override {
     switch (option) {
       case CURLOPT_URL:
-        url_ = reinterpret_cast<char*>(param);
+        url_ = reinterpret_cast<char *>(param);
         break;
       case CURLOPT_RANGE:
-        range_ = reinterpret_cast<char*>(param);
+        range_ = reinterpret_cast<char *>(param);
         break;
       case CURLOPT_CUSTOMREQUEST:
-        custom_request_ = reinterpret_cast<char*>(param);
+        custom_request_ = reinterpret_cast<char *>(param);
         break;
       case CURLOPT_HTTPHEADER:
-        headers_ = reinterpret_cast<std::vector<std::string>*>(param);
+        headers_ = reinterpret_cast<std::vector<std::string> *>(param);
         break;
       case CURLOPT_ERRORBUFFER:
-        error_buffer_ = reinterpret_cast<char*>(param);
+        error_buffer_ = reinterpret_cast<char *>(param);
         break;
       case CURLOPT_CAINFO:
-        ca_info_ = reinterpret_cast<char*>(param);
+        ca_info_ = reinterpret_cast<char *>(param);
         break;
       case CURLOPT_WRITEDATA:
-        write_data_ = reinterpret_cast<FILE*>(param);
+        write_data_ = reinterpret_cast<FILE *>(param);
         break;
       case CURLOPT_HEADERDATA:
-        header_data_ = reinterpret_cast<FILE*>(param);
+        header_data_ = reinterpret_cast<FILE *>(param);
         break;
       case CURLOPT_READDATA:
-        read_data_ = reinterpret_cast<FILE*>(param);
+        read_data_ = reinterpret_cast<FILE *>(param);
         break;
       case CURLOPT_XFERINFODATA:
         progress_data_ = param;
@@ -106,16 +106,16 @@ class FakeLibCurl : public LibCurl {
     }
     return CURLE_OK;
   }
-  CURLcode curl_easy_setopt(CURL* curl, CURLoption option,
-                            size_t (*param)(void*, size_t, size_t,
-                                            FILE*)) override {
+  CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
+                            size_t (*param)(void *, size_t, size_t,
+                                            FILE *)) override {
     read_callback_ = param;
     return CURLE_OK;
   }
 
-  CURLcode curl_easy_setopt(CURL* curl, CURLoption option,
-                            size_t (*param)(const void*, size_t, size_t,
-                                            void*)) override {
+  CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
+                            size_t (*param)(const void *, size_t, size_t,
+                                            void *)) override {
     switch (option) {
       case CURLOPT_WRITEFUNCTION:
         write_callback_ = param;
@@ -129,14 +129,14 @@ class FakeLibCurl : public LibCurl {
     return CURLE_OK;
   }
 
-  CURLcode curl_easy_setopt(CURL* curl, CURLoption option,
-                            int (*param)(void* clientp, curl_off_t dltotal,
+  CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
+                            int (*param)(void *clientp, curl_off_t dltotal,
                                          curl_off_t dlnow, curl_off_t ultotal,
                                          curl_off_t ulnow)) override {
     progress_callback_ = param;
     return CURLE_OK;
   }
-  CURLcode curl_easy_perform(CURL* curl) override {
+  CURLcode curl_easy_perform(CURL *curl) override {
     if (is_post_ || is_put_) {
       char buffer[3];
       int bytes_read;
@@ -154,7 +154,7 @@ class FakeLibCurl : public LibCurl {
         curl_easy_perform_result_ = CURLE_WRITE_ERROR;
       }
     }
-    for (const auto& header : response_headers_) {
+    for (const auto &header : response_headers_) {
       header_callback_(header.c_str(), 1, header.size(), header_data_);
     }
     if (error_buffer_) {
@@ -164,8 +164,8 @@ class FakeLibCurl : public LibCurl {
     return curl_easy_perform_result_;
   }
 
-  CURLcode curl_easy_getinfo(CURL* curl, CURLINFO info,
-                             uint64_t* value) override {
+  CURLcode curl_easy_getinfo(CURL *curl, CURLINFO info,
+                             uint64_t *value) override {
     switch (info) {
       case CURLINFO_RESPONSE_CODE:
         *value = response_code_;
@@ -176,8 +176,8 @@ class FakeLibCurl : public LibCurl {
     return CURLE_OK;
   }
 
-  CURLcode curl_easy_getinfo(CURL* curl, CURLINFO info,
-                             double* value) override {
+  CURLcode curl_easy_getinfo(CURL *curl, CURLINFO info,
+                             double *value) override {
     switch (info) {
       case CURLINFO_SIZE_DOWNLOAD:
         *value = response_content_.size();
@@ -188,8 +188,8 @@ class FakeLibCurl : public LibCurl {
     return CURLE_OK;
   }
 
-  void curl_easy_cleanup(CURL* curl) override { is_cleaned_up_ = true; }
-  void curl_free(void* p) override { free(p); }
+  void curl_easy_cleanup(CURL *curl) override { is_cleaned_up_ = true; }
+  void curl_free(void *p) override { free(p); }
 
   std::string response_content_;
   uint64_t response_code_;
@@ -200,24 +200,24 @@ class FakeLibCurl : public LibCurl {
   std::string range_;
   std::string custom_request_;
   std::string ca_info_;
-  char* error_buffer_ = nullptr;
+  char *error_buffer_ = nullptr;
   bool is_initialized_ = false;
   bool is_cleaned_up_ = false;
-  std::vector<std::string>* headers_ = nullptr;
+  std::vector<std::string> *headers_ = nullptr;
   bool is_post_ = false;
   bool is_put_ = false;
-  void* write_data_ = nullptr;
-  size_t (*write_callback_)(const void* ptr, size_t size, size_t nmemb,
-                            void* userdata) = nullptr;
-  void* header_data_ = nullptr;
-  size_t (*header_callback_)(const void* ptr, size_t size, size_t nmemb,
-                             void* userdata) = nullptr;
-  FILE* read_data_ = nullptr;
-  size_t (*read_callback_)(void* ptr, size_t size, size_t nmemb,
-                           FILE* userdata) = &fread;
-  int (*progress_callback_)(void* clientp, curl_off_t dltotal, curl_off_t dlnow,
+  void *write_data_ = nullptr;
+  size_t (*write_callback_)(const void *ptr, size_t size, size_t nmemb,
+                            void *userdata) = nullptr;
+  void *header_data_ = nullptr;
+  size_t (*header_callback_)(const void *ptr, size_t size, size_t nmemb,
+                             void *userdata) = nullptr;
+  FILE *read_data_ = nullptr;
+  size_t (*read_callback_)(void *ptr, size_t size, size_t nmemb,
+                           FILE *userdata) = &fread;
+  int (*progress_callback_)(void *clientp, curl_off_t dltotal, curl_off_t dlnow,
                             curl_off_t ultotal, curl_off_t ulnow) = nullptr;
-  void* progress_data_ = nullptr;
+  void *progress_data_ = nullptr;
   // Outcome of performing the request.
   std::string posted_content_;
   CURLcode curl_easy_perform_result_ = CURLE_OK;

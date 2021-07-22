@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-#include "absl/strings/str_cat.h"
 #include "ecclesia/lib/types/bytes.h"
+
+#include "absl/strings/str_cat.h"
 
 namespace ecclesia {
 namespace {

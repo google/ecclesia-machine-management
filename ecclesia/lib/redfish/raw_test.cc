@@ -103,7 +103,7 @@ const RawTestConfig kRawTestCases[] = {
 struct PrintToStringParamName {
   template <class ParamType>
   std::string operator()(
-      const ::testing::TestParamInfo<ParamType>& info) const {
+      const ::testing::TestParamInfo<ParamType> &info) const {
     auto interface = InterfaceTypeToString(info.param.interface_type);
     ecclesia::Check(interface.has_value(), "the interface is supported");
     return std::string(BackendTypeToString(info.param.backend_type)) + "_" +
@@ -431,7 +431,7 @@ class ManualServerTest : public ::testing::Test {
 TEST_F(ManualServerTest, PatchOk200) {
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("PATCH"));
         tensorflow::serving::net_http::SetContentType(req, "application/json");
         req->WriteResponseString(R"json({ "Name": "Hello" })json");
@@ -450,7 +450,7 @@ TEST_F(ManualServerTest, PatchOk200) {
 TEST_F(ManualServerTest, PatchOk200WithExtendedInfo) {
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("PATCH"));
         tensorflow::serving::net_http::SetContentType(req, "application/json");
         req->WriteResponseString(R"json({
@@ -483,7 +483,7 @@ TEST_F(ManualServerTest, PatchOk200WithExtendedInfo) {
 TEST_F(ManualServerTest, PatchOk202) {
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("PATCH"));
         req->AppendResponseHeader("Location", "/upload_monitor");
         req->ReplyWithStatus(
@@ -493,7 +493,7 @@ TEST_F(ManualServerTest, PatchOk202) {
   // 202 gets redirected:
   server_->RegisterRequestHandler(
       "/upload_monitor",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("GET"));
         tensorflow::serving::net_http::SetContentType(req, "application/json");
         req->WriteResponseString(R"json({ "Name": "Hello" })json");
@@ -512,7 +512,7 @@ TEST_F(ManualServerTest, PatchOk202) {
 TEST_F(ManualServerTest, PatchOk204) {
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("PATCH"));
         req->ReplyWithStatus(
             tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
@@ -529,7 +529,7 @@ TEST_F(ManualServerTest, PatchOk204) {
 TEST_F(ManualServerTest, Patch400WithExtendedInfo) {
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("PATCH"));
         tensorflow::serving::net_http::SetContentType(req, "application/json");
         req->WriteResponseString(R"json({
@@ -563,7 +563,7 @@ TEST_F(ManualServerTest, Patch400WithExtendedInfo) {
 TEST_F(ManualServerTest, Patch405) {
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("PATCH"));
         req->ReplyWithStatus(
             tensorflow::serving::net_http::HTTPStatusCode::METHOD_NA);
@@ -581,7 +581,7 @@ TEST_F(ManualServerTest, Patch405) {
 TEST_F(ManualServerTest, PostOk200) {
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("POST"));
         tensorflow::serving::net_http::SetContentType(req, "application/json");
         req->WriteResponseString(R"json({
@@ -606,7 +606,7 @@ TEST_F(ManualServerTest, PostOk200) {
 TEST_F(ManualServerTest, PostOk201) {
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("POST"));
         req->AppendResponseHeader("Location", "/redfish/v1/Chassis/chassis");
         req->ReplyWithStatus(
@@ -616,7 +616,7 @@ TEST_F(ManualServerTest, PostOk201) {
   // 202 gets redirected:
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis/chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("GET"));
         tensorflow::serving::net_http::SetContentType(req, "application/json");
         req->WriteResponseString(R"json({ "Name": "Hello" })json");
@@ -635,7 +635,7 @@ TEST_F(ManualServerTest, PostOk201) {
 TEST_F(ManualServerTest, PostOk204) {
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("POST"));
         req->ReplyWithStatus(
             tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
@@ -652,7 +652,7 @@ TEST_F(ManualServerTest, PostOk204) {
 TEST_F(ManualServerTest, Post400) {
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("POST"));
         tensorflow::serving::net_http::SetContentType(req, "application/json");
         req->WriteResponseString(R"json({
@@ -679,7 +679,7 @@ TEST_F(ManualServerTest, Post400) {
 TEST_F(ManualServerTest, Post400NoContent) {
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("POST"));
         req->ReplyWithStatus(
             tensorflow::serving::net_http::HTTPStatusCode::BAD_REQUEST);
@@ -697,7 +697,7 @@ TEST_F(ManualServerTest, Post400NoContent) {
 TEST_F(ManualServerTest, Post401NoContent) {
   server_->RegisterRequestHandler(
       "/redfish/v1/Chassis",
-      [](tensorflow::serving::net_http::ServerRequestInterface* req) {
+      [](tensorflow::serving::net_http::ServerRequestInterface *req) {
         EXPECT_THAT(req->http_method(), Eq("POST"));
         req->ReplyWithStatus(
             tensorflow::serving::net_http::HTTPStatusCode::UNAUTHORIZED);

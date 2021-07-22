@@ -64,7 +64,7 @@ extern const RedfishRawInterfaceOptions kDefaultRedfishRawInterfaceOptions;
 std::unique_ptr<RedfishInterface> NewRawInterface(
     const std::string &endpoint, RedfishInterface::TrustedEndpoint trusted,
     std::unique_ptr<ecclesia::HttpClient> client = nullptr,
-    const RedfishRawInterfaceOptions& options =
+    const RedfishRawInterfaceOptions &options =
         kDefaultRedfishRawInterfaceOptions);
 
 // Constructor method for creating a RawInterface with session auth.
@@ -74,7 +74,7 @@ std::unique_ptr<RedfishInterface> NewRawInterface(
 std::unique_ptr<RedfishInterface> NewRawSessionAuthInterface(
     const PasswordArgs &connectionArgs,
     std::unique_ptr<ecclesia::HttpClient> client = nullptr,
-    const RedfishRawInterfaceOptions& options =
+    const RedfishRawInterfaceOptions &options =
         kDefaultRedfishRawInterfaceOptions);
 
 // Constructor method for creating a RawInterface with basic auth.

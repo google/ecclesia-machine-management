@@ -17,12 +17,12 @@
 #ifndef ECCLESIA_MAGENT_REDFISH_INDUS_LOG_SERVICE_CLEAR_H_
 #define ECCLESIA_MAGENT_REDFISH_INDUS_LOG_SERVICE_CLEAR_H_
 
-#include <string>
-#include <vector>
-#include <cstdlib>
-
 #include <sys/stat.h>
 #include <sys/wait.h>
+
+#include <cstdlib>
+#include <string>
+#include <vector>
 
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
@@ -39,9 +39,9 @@ namespace ecclesia {
 
 class LogServiceClear : public Resource {
  public:
-  LogServiceClear() : Resource(
-      absl::StrCat(kLogServiceSystemEventsUri, "/Actions/", kLogService, ".",
-                   kClearLog)) {}
+  LogServiceClear()
+      : Resource(absl::StrCat(kLogServiceSystemEventsUri, "/Actions/",
+                              kLogService, ".", kClearLog)) {}
 
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
@@ -58,28 +58,22 @@ class LogServiceClear : public Resource {
           tensorflow::serving::net_http::HTTPStatusCode::METHOD_NA);
       return;
     } else if (!FileExists(script.c_str())) {
-      Respond("Base.1.0.GeneralError",
-              "Script not found",
-              tensorflow::serving::net_http::HTTPStatusCode::NOT_FOUND,
-              req);
+      Respond("Base.1.0.GeneralError", "Script not found",
+              tensorflow::serving::net_http::HTTPStatusCode::NOT_FOUND, req);
       return;
     }
 
     int status = std::system(script.c_str());
     if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-      Respond("Base.1.0.Success",
-              "Success",
-              tensorflow::serving::net_http::HTTPStatusCode::OK,
-              req);
-      } else {
-      Respond("Base.1.0.GeneralError",
-              "Failed to execute script",
-              tensorflow::serving::net_http::HTTPStatusCode::ERROR,
-              req);
+      Respond("Base.1.0.Success", "Success",
+              tensorflow::serving::net_http::HTTPStatusCode::OK, req);
+    } else {
+      Respond("Base.1.0.GeneralError", "Failed to execute script",
+              tensorflow::serving::net_http::HTTPStatusCode::ERROR, req);
     }
   }
 
-  static bool FileExists(const char* path) {
+  static bool FileExists(const char *path) {
     struct stat buffer;
     return stat(path, &buffer) == 0;
   }

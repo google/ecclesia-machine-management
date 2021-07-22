@@ -28,11 +28,11 @@ extern "C" {
 
 namespace libredfish {
 
-redfishAsyncOptions ConvertOptions(const RedfishRawInterfaceOptions& options);
+redfishAsyncOptions ConvertOptions(const RedfishRawInterfaceOptions &options);
 
 serviceHttpHandler NewLibredfishAdapter(
     std::unique_ptr<ecclesia::HttpClient> client,
-    const RedfishRawInterfaceOptions& default_options);
+    const RedfishRawInterfaceOptions &default_options);
 
 }  // namespace libredfish
 

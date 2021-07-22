@@ -163,8 +163,7 @@ absl::Duration PersistentUsageMap::InsertOrUpdateMapEntry(
 
 absl::Status PersistentUsageMap::MergeFromPersistentStore() {
   // Try to read data in from a local file.
-  riegeli::RecordReader reader(
-      riegeli::FdReader(persistent_file_, O_RDONLY));
+  riegeli::RecordReader reader(riegeli::FdReader(persistent_file_, O_RDONLY));
   std::string serialized_proto;
   if (!reader.ReadRecord(serialized_proto)) {
     return absl::NotFoundError(absl::StrFormat(

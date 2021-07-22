@@ -27,7 +27,7 @@ namespace ecclesia {
 class MockMceDecoder : public MceDecoderInterface {
  public:
   MOCK_METHOD(absl::StatusOr<MceDecodedMessage>, DecodeMceMessage,
-              (const MceLogMessage& raw_msg), (override));
+              (const MceLogMessage &raw_msg), (override));
 };
 
 }  // namespace ecclesia

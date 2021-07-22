@@ -129,14 +129,14 @@ void IpmitoolInterface::SessionSetSolEscapeChar(std::any intf,
       std::any_cast<struct ipmi_intf *>(intf), sol_escape_char);
 }
 
-void IpmitoolInterface::SessionSetCipherSuiteId(std::any intf,
-       enum cipher_suite_ids cipher_suite_id) {
+void IpmitoolInterface::SessionSetCipherSuiteId(
+    std::any intf, enum cipher_suite_ids cipher_suite_id) {
   if (!intf.has_value()) {
     FatalLog() << "intf is empty.";
     return;
   }
-  ipmi_intf_session_set_cipher_suite_id(
-      std::any_cast<struct ipmi_intf *>(intf), cipher_suite_id);
+  ipmi_intf_session_set_cipher_suite_id(std::any_cast<struct ipmi_intf *>(intf),
+                                        cipher_suite_id);
 }
 
 void IpmitoolInterface::SessionSetRetry(std::any intf, int retry) {

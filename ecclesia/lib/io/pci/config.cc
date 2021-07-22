@@ -243,7 +243,7 @@ absl::StatusOr<PciBusNum> PciType1ConfigSpace::SubordinateBusNum() const {
 absl::StatusOr<PciSubsystemSignature>
 PciType1ConfigSpace::SubsystemSignatureImpl() const {
   // For bridge types we need to look for a subsystem capability.
-  for (const PciCapability& capability : Capabilities()) {
+  for (const PciCapability &capability : Capabilities()) {
     auto maybe_subsys_cap = capability.GetIf<PciSubsystemCapability>();
     if (!maybe_subsys_cap.ok()) continue;
     return maybe_subsys_cap->SubsystemSignature();

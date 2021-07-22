@@ -28,8 +28,8 @@ inline constexpr uint64_t kBytesInMiB = 1 << 20;
 inline constexpr uint64_t kBytesInGiB = 1 << 30;
 
 inline constexpr uint64_t kBytesInKB = 1000;
-inline constexpr uint64_t kBytesInMB = 1000*kBytesInKB;
-inline constexpr uint64_t kBytesInGB = 1000*kBytesInMB;
+inline constexpr uint64_t kBytesInMB = 1000 * kBytesInKB;
+inline constexpr uint64_t kBytesInGB = 1000 * kBytesInMB;
 
 inline uint64_t BytesToKiB(uint64_t val) { return val >> 10; }
 inline uint64_t BytesToMiB(uint64_t val) { return val >> 20; }

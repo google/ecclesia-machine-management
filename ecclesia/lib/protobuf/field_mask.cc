@@ -34,7 +34,7 @@ template <typename T>
 struct ArgExtractor;
 
 template <typename T>
-struct ArgExtractor<void(T, google::protobuf::FieldMask*)> {
+struct ArgExtractor<void(T, google::protobuf::FieldMask *)> {
   using type = T;
 };
 using StringViewType = typename ArgExtractor<
@@ -42,22 +42,22 @@ using StringViewType = typename ArgExtractor<
 
 }  // namespace
 
-void FromString(absl::string_view str, google::protobuf::FieldMask* out) {
+void FromString(absl::string_view str, google::protobuf::FieldMask *out) {
   google::protobuf::util::FieldMaskUtil::FromString(
       StringViewType(str.data(), str.size()), out);
 }
-void Intersect(const google::protobuf::FieldMask& mask1,
-               const google::protobuf::FieldMask& mask2,
-               google::protobuf::FieldMask* out) {
+void Intersect(const google::protobuf::FieldMask &mask1,
+               const google::protobuf::FieldMask &mask2,
+               google::protobuf::FieldMask *out) {
   google::protobuf::util::FieldMaskUtil::Intersect(mask1, mask2, out);
 }
-bool TrimMessage(const google::protobuf::FieldMask& mask,
-                 google::protobuf::Message* message) {
+bool TrimMessage(const google::protobuf::FieldMask &mask,
+                 google::protobuf::Message *message) {
   return google::protobuf::util::FieldMaskUtil::TrimMessage(mask, message);
 }
 bool GetFieldDescriptors(
-    const google::protobuf::Descriptor* descriptor, absl::string_view path,
-    std::vector<const google::protobuf::FieldDescriptor*>* field_descriptors) {
+    const google::protobuf::Descriptor *descriptor, absl::string_view path,
+    std::vector<const google::protobuf::FieldDescriptor *> *field_descriptors) {
   return google::protobuf::util::FieldMaskUtil::GetFieldDescriptors(
       descriptor, StringViewType(path.data(), path.size()), field_descriptors);
 }

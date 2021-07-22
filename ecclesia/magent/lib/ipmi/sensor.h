@@ -40,15 +40,15 @@ struct SensorNum {
   explicit operator int() const { return (lun << 8 | id); }
 };
 
-inline bool operator==(const SensorNum& lhs, const SensorNum& rhs) {
+inline bool operator==(const SensorNum &lhs, const SensorNum &rhs) {
   return lhs.lun == rhs.lun && lhs.id == rhs.id;
 }
 
-inline bool operator!=(const SensorNum& lhs, const SensorNum& rhs) {
+inline bool operator!=(const SensorNum &lhs, const SensorNum &rhs) {
   return !(lhs == rhs);
 }
 
-inline bool operator<(const SensorNum& lhs, const SensorNum& rhs) {
+inline bool operator<(const SensorNum &lhs, const SensorNum &rhs) {
   return (lhs.lun < rhs.lun) || (lhs.lun == rhs.lun && lhs.id < rhs.id);
 }
 enum SensorType : int {
@@ -120,11 +120,11 @@ struct SensorKind {
   }
 };
 
-inline bool operator==(const SensorKind& lhs, const SensorKind& rhs) {
+inline bool operator==(const SensorKind &lhs, const SensorKind &rhs) {
   return lhs.type == rhs.type && lhs.unit == rhs.unit;
 }
 
-inline bool operator!=(const SensorKind& lhs, const SensorKind& rhs) {
+inline bool operator!=(const SensorKind &lhs, const SensorKind &rhs) {
   return !(lhs == rhs);
 }
 
@@ -145,16 +145,16 @@ class IpmiSensor {
   using Type = SensorType;
   using Unit = SensorUnit;
 
-  IpmiSensor(const std::string& name, Type type, Unit units)
+  IpmiSensor(const std::string &name, Type type, Unit units)
       : name_(name), type_(type), unit_(units) {}
 
-  IpmiSensor(const std::string& name, const SensorKind& kind)
+  IpmiSensor(const std::string &name, const SensorKind &kind)
       : name_(name), type_(kind.type), unit_(kind.unit) {}
 
   virtual ~IpmiSensor() {}
 
   // Get the legacy (compat) name.
-  virtual const std::string& GetName() const { return name_; }
+  virtual const std::string &GetName() const { return name_; }
 
   // Get the type.
   virtual Type GetType() const { return type_; }
@@ -168,15 +168,15 @@ class IpmiSensor {
   // polls the sensor directly and returns the current time for both
   // timestamp and next_timestamp.
   // Returns: true on success.
-  virtual bool Read(SensorReading* reading) const = 0;
+  virtual bool Read(SensorReading *reading) const = 0;
 
  private:
   std::string name_;
   Type type_;
   Unit unit_;
 
-  IpmiSensor(const IpmiSensor&) = delete;
-  IpmiSensor& operator=(const IpmiSensor&) = delete;
+  IpmiSensor(const IpmiSensor &) = delete;
+  IpmiSensor &operator=(const IpmiSensor &) = delete;
 };
 
 }  // namespace ecclesia

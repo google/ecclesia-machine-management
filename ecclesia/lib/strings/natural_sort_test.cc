@@ -49,8 +49,7 @@ TEST(StrComparisonTest, SortingItems) {
   for (int i = 31; i >= 0; i--) {
     list_of_dimms.push_back(absl::StrCat("DIMM", i));
   }
-  std::sort(list_of_dimms.begin(), list_of_dimms.end(),
-            NaturalSortLessThan);
+  std::sort(list_of_dimms.begin(), list_of_dimms.end(), NaturalSortLessThan);
 
   for (int i = 0; i < 32; i++) {
     EXPECT_EQ(list_of_dimms[i], absl::StrCat("DIMM", i));

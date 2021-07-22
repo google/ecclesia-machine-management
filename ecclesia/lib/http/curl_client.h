@@ -188,8 +188,8 @@ class CurlHttpClient : public HttpClient {
   Config GetConfig() const { return config_; }
 
  private:
-  absl::StatusOr<std::unique_ptr<HttpClient::HttpRequest>>
-      InitRequest(absl::string_view path);
+  absl::StatusOr<std::unique_ptr<HttpClient::HttpRequest>> InitRequest(
+      absl::string_view path);
   absl::StatusOr<HttpResponse> HttpMethod(Protocol cmd,
                                           std::unique_ptr<HttpRequest> request)
       ABSL_LOCKS_EXCLUDED(mu_);

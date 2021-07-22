@@ -30,8 +30,7 @@ namespace ecclesia {
 int NaturalSortCmp(absl::string_view lhs, absl::string_view rhs);
 
 // Less than comparator for Natural Sort
-inline bool NaturalSortLessThan(absl::string_view lhs,
-                                    absl::string_view rhs) {
+inline bool NaturalSortLessThan(absl::string_view lhs, absl::string_view rhs) {
   return NaturalSortCmp(lhs, rhs) < 0;
 }
 
