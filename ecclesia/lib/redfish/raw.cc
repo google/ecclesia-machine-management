@@ -440,15 +440,20 @@ class RawIntf : public RedfishInterface {
   RedfishVariant PatchUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
+    MallocChar content = KvSpanToJsonCharBuffer(kv_span);
+    return PatchUri(uri, absl::string_view(content.get()));
+  }
+
+  RedfishVariant PatchUri(absl::string_view uri,
+                          absl::string_view data) override {
     absl::ReaderMutexLock lock(&service_mutex_);
     if (!service_) {
       return RedfishVariant(
           absl::FailedPreconditionError("Not connected to a Redifsh service."));
     }
 
-    MallocChar content = KvSpanToJsonCharBuffer(kv_span);
     PayloadUniquePtr payload(
-        createRedfishPayloadFromString(content.get(), service_.get()));
+        createRedfishPayloadFromString(data.data(), service_.get()));
 
     AsyncLibredfishChannel channel;
     redfishAsyncOptions async_options = ConvertOptions(options_);
