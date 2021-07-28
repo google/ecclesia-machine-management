@@ -25,11 +25,15 @@
 #include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
+#include "ecclesia/lib/redfish/topology_config.pb.h"
 #include "ecclesia/lib/redfish/types.h"
 
 namespace libredfish {
 
-NodeTopology CreateTopologyFromRedfish(RedfishInterface *redfish_intf);
+NodeTopology CreateTopologyFromRedfish(
+    RedfishInterface *redfish_intf,
+    RedfishNodeTopologyRepresentation default_redfish_topology_reprensentation =
+        REDFISH_TOPOLOGY_UNSPECIFIED);
 
 // Returns true if both provided NodeTopologies have the same nodes. Nodes are
 // matched by their name, local_devpath, and type fields only. This does not

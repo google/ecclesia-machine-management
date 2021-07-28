@@ -114,6 +114,7 @@ cc_library(
         ":node_topology",
         ":property_definitions",
         ":property_values",
+        ":topology_config_cc_proto",
         ":topology_v2",
         ":types",
         ":utils",
@@ -310,10 +311,12 @@ cc_library(
 proto_library(
     name = "topology_config",
     srcs = ["topology_config.proto"],
+    visibility = ["//ecclesia:library_users"],
 )
 
 cc_proto_library(
     name = "topology_config_cc_proto",
+    visibility = ["//ecclesia:library_users"],
     deps = [":topology_config"],
 )
 

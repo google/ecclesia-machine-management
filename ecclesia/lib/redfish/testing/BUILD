@@ -25,7 +25,6 @@ cc_test(
     deps = [
         ":json_mockup",
         "//ecclesia/lib/redfish:interface",
-        "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:optional",
         "@com_google_googletest//:gtest_main",
     ],

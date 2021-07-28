@@ -35,6 +35,7 @@
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/property_values.h"
+#include "ecclesia/lib/redfish/topology_config.pb.h"
 #include "ecclesia/lib/redfish/topology_v2.h"
 #include "ecclesia/lib/redfish/types.h"
 #include "ecclesia/lib/redfish/utils.h"
@@ -500,7 +501,8 @@ class NodeId {
   NodeType type_;
 };
 
-bool IsNodeTopologyV2(RedfishInterface *redfish_intf) {
+RedfishNodeTopologyRepresentation GetNodeTopologyReprensentation(
+    RedfishInterface *redfish_intf) {
   auto service_root = redfish_intf->GetRoot().AsObject();
   if (service_root) {
     if (auto oem =
@@ -509,23 +511,38 @@ bool IsNodeTopologyV2(RedfishInterface *redfish_intf) {
       if (auto topology_type =
               oem->GetNodeValue<OemGooglePropertyTopologyRepresentation>();
           topology_type.has_value()) {
-        // If the service root doesn't report redfish-devpath-v1, we assume it
-        // is v2
-        return topology_type.value() != ecclesia::kTopologyRepresentationV1;
+        if (topology_type.value() == ecclesia::kTopologyRepresentationV1) {
+          return REDFISH_TOPOLOGY_V1;
+        }
+        if (topology_type.value() == ecclesia::kTopologyRepresentationV2) {
+          return REDFISH_TOPOLOGY_V2;
+        }
       }
     }
   }
-  return true;
+  return REDFISH_TOPOLOGY_UNSPECIFIED;
 }
 
 }  // namespace
 
-NodeTopology CreateTopologyFromRedfish(RedfishInterface *redfish_intf) {
-  if (IsNodeTopologyV2(redfish_intf)) {
-    return CreateTopologyFromRedfishV2(redfish_intf);
+NodeTopology CreateTopologyFromRedfish(
+    RedfishInterface *redfish_intf,
+    RedfishNodeTopologyRepresentation
+        default_redfish_topology_reprensentation) {
+  auto redfish_topology_version = GetNodeTopologyReprensentation(redfish_intf);
+  // If the Redfish Agent specifies it's using REDFISH_TOPOLOGY_V1, or if it's
+  // unspecified in the Redfish Agent but the default topology is
+  // REDFISH_TOPOLOGY_V1, use REDFISH_TOPOLOGY_V1 to create the assemblies and
+  // node topology.
+  if (redfish_topology_version == REDFISH_TOPOLOGY_V1 ||
+      (redfish_topology_version == REDFISH_TOPOLOGY_UNSPECIFIED &&
+       default_redfish_topology_reprensentation == REDFISH_TOPOLOGY_V1)) {
+    std::vector<Assembly> assemblies =
+        CreateAssembliesFromRedfish(redfish_intf);
+    return CreateNodeTopologyFromAssemblies(std::move(assemblies));
   }
-  std::vector<Assembly> assemblies = CreateAssembliesFromRedfish(redfish_intf);
-  return CreateNodeTopologyFromAssemblies(std::move(assemblies));
+  // Otherwise, use the REDFISH_TOPOLOGY_V2 to create node topology.
+  return CreateTopologyFromRedfishV2(redfish_intf);
 }
 
 bool NodeTopologiesHaveTheSameNodes(const NodeTopology &n1,

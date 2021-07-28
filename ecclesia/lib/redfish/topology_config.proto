@@ -22,6 +22,12 @@ syntax = "proto3";
 
 package libredfish;
 
+enum RedfishNodeTopologyRepresentation {
+  REDFISH_TOPOLOGY_UNSPECIFIED = 0;
+  REDFISH_TOPOLOGY_V1 = 1;
+  REDFISH_TOPOLOGY_V2 = 2;
+}
+
 // Resource type specific configurations for finding associated Redfish
 // resources
 // TODO(b/192486899): Add handling for specific versions of each resource

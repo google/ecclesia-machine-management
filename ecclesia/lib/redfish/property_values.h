@@ -36,6 +36,7 @@ namespace ecclesia {
 
 // Value definitions for the Oem.Google.TopologyRepresentation field.
 inline constexpr char kTopologyRepresentationV1[] = "redfish-devpath-v1";
+inline constexpr char kTopologyRepresentationV2[] = "redfish-devpath-v2";
 
 }  // namespace ecclesia
 
