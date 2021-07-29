@@ -24,8 +24,8 @@
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
+#include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/testing/node_topology_testing.h"
-#include "ecclesia/lib/redfish/testing/patchable_mockup_server.h"
 #include "ecclesia/lib/redfish/types.h"
 
 namespace libredfish {
@@ -64,14 +64,14 @@ TEST(RawInterfaceTestWithMockup, TestingMockupNodesArePopulated) {
 }
 
 TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
-  ecclesia::PatchableMockupServer mockup(
+  ecclesia::FakeRedfishServer mockup(
       "topology_v2_testing/mockup.shar",
       absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
   auto raw_intf = mockup.RedfishClientInterface();
 
   {
     // Reorder chassis so that root chassis has to be found via Link traversal
-    mockup.PatchUri("/redfish/v1/Chassis", R"json(
+    mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis", R"json(
       {
         "@odata.id": "/redfish/v1/Chassis",
         "@odata.type": "#ChassisCollection.ChassisCollection",
@@ -100,12 +100,12 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
     CheckAgainstTestingMockupFullDevpaths(
         CreateTopologyFromRedfishV2(raw_intf.get()));
 
-    mockup.ClearPatches();
+    mockup.ClearHandlers();
   }
   {
     // Reorder chassis so that root chassis has to be found via Link traversal
     // and via existing Cabling
-    mockup.PatchUri("/redfish/v1/Chassis", R"json(
+    mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis", R"json(
       {
         "@odata.id": "/redfish/v1/Chassis",
         "@odata.type": "#ChassisCollection.ChassisCollection",
@@ -134,12 +134,12 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
     CheckAgainstTestingMockupFullDevpaths(
         CreateTopologyFromRedfishV2(raw_intf.get()));
 
-    mockup.ClearPatches();
+    mockup.ClearHandlers();
   }
   {
     // Reorder chassis so that root chassis has to be found via Link traversal
     // and via existing Cabling (multi-level)
-    mockup.PatchUri("/redfish/v1/Chassis", R"json(
+    mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis", R"json(
       {
         "@odata.id": "/redfish/v1/Chassis",
         "@odata.type": "#ChassisCollection.ChassisCollection",
@@ -168,11 +168,11 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
     CheckAgainstTestingMockupFullDevpaths(
         CreateTopologyFromRedfishV2(raw_intf.get()));
 
-    mockup.ClearPatches();
+    mockup.ClearHandlers();
   }
   {
     // No Chassis to find a root from
-    mockup.PatchUri("/redfish/v1/Chassis", R"json(
+    mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis", R"json(
       {
         "@odata.id": "/redfish/v1/Chassis",
         "@odata.type": "#ChassisCollection.ChassisCollection",
@@ -185,19 +185,19 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
     auto topology = CreateTopologyFromRedfishV2(raw_intf.get());
     EXPECT_TRUE(topology.nodes.empty());
 
-    mockup.ClearPatches();
+    mockup.ClearHandlers();
   }
 }
 
 TEST(RawInterfaceTestWithPatchedMockup, TestingMockupBrokenOrCircularLink) {
-  ecclesia::PatchableMockupServer mockup(
+  ecclesia::FakeRedfishServer mockup(
       "topology_v2_testing/mockup.shar",
       absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
   auto raw_intf = mockup.RedfishClientInterface();
 
   {
     // Add broken/non-existent link to Drive
-    mockup.PatchUri("/redfish/v1/Chassis/child2", R"json(
+    mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis/child2", R"json(
       {
         "@odata.id": "/redfish/v1/Chassis/child2",
         "@odata.type": "#Chassis.v1_14_0.Chassis",
@@ -224,11 +224,11 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupBrokenOrCircularLink) {
     CheckAgainstTestingMockupFullDevpaths(
         CreateTopologyFromRedfishV2(raw_intf.get()));
 
-    mockup.ClearPatches();
+    mockup.ClearHandlers();
   }
   {
     // Add extraneous link to Storage that's already assigned a devpath
-    mockup.PatchUri("/redfish/v1/Chassis/child2", R"json(
+    mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis/child2", R"json(
       {
         "@odata.id": "/redfish/v1/Chassis/child2",
         "@odata.type": "#Chassis.v1_14_0.Chassis",
@@ -255,7 +255,7 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupBrokenOrCircularLink) {
     CheckAgainstTestingMockupFullDevpaths(
         CreateTopologyFromRedfishV2(raw_intf.get()));
 
-    mockup.ClearPatches();
+    mockup.ClearHandlers();
   }
 }
 

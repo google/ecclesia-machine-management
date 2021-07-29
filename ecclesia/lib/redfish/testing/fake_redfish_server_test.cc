@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/lib/redfish/testing/patchable_mockup_server.h"
+#include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 
 #include <memory>
 #include <string>
@@ -37,7 +37,7 @@ constexpr int kNumWorkerThreads = 1;
 using ::testing::Eq;
 
 TEST(PatchableMockupServer, CanProxy) {
-  PatchableMockupServer server(
+  FakeRedfishServer server(
       "indus_hmb_cn/mockup.shar",
       absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket"));
 
@@ -58,12 +58,13 @@ TEST(PatchableMockupServer, CanProxy) {
 }
 
 TEST(PatchableMockupServer, CanPatchDirect) {
-  PatchableMockupServer server(
+  FakeRedfishServer server(
       "indus_hmb_cn/mockup.shar",
       absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket"));
 
   constexpr char kMyPatch[] = R"json({ "Name": "My Patched Name" })json";
-  server.PatchUri("/redfish/v1/Chassis/chassis", absl::MakeSpan(kMyPatch));
+  server.AddHttpGetHandlerWithData("/redfish/v1/Chassis/chassis",
+                                   absl::MakeSpan(kMyPatch));
 
   auto redfish_intf = server.RedfishClientInterface();
 
@@ -83,12 +84,13 @@ TEST(PatchableMockupServer, CanPatchDirect) {
 }
 
 TEST(PatchableMockupServer, CanPatchViaCrawl) {
-  PatchableMockupServer server(
+  FakeRedfishServer server(
       "indus_hmb_cn/mockup.shar",
       absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket"));
 
   constexpr char kMyPatch[] = R"json({ "Name": "My Patched Name" })json";
-  server.PatchUri("/redfish/v1/Chassis/chassis", absl::MakeSpan(kMyPatch));
+  server.AddHttpGetHandlerWithData("/redfish/v1/Chassis/chassis",
+                                   absl::MakeSpan(kMyPatch));
 
   auto redfish_intf = server.RedfishClientInterface();
 

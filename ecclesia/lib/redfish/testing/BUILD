@@ -40,10 +40,10 @@ filegroup(
 )
 
 cc_library(
-    name = "patchable_mockup_server",
+    name = "fake_redfish_server",
     testonly = True,
-    srcs = ["patchable_mockup_server.cc"],
-    hdrs = ["patchable_mockup_server.h"],
+    srcs = ["fake_redfish_server.cc"],
+    hdrs = ["fake_redfish_server.h"],
     visibility = ["//ecclesia:library_users"],
     deps = [
         "//ecclesia/lib/file:path",
@@ -67,13 +67,13 @@ cc_library(
 )
 
 cc_test(
-    name = "patchable_mockup_server_test",
-    srcs = ["patchable_mockup_server_test.cc"],
+    name = "fake_redfish_server_test",
+    srcs = ["fake_redfish_server_test.cc"],
     data = [
         "//ecclesia/redfish_mockups/indus_hmb_cn:mockup.shar",
     ],
     deps = [
-        ":patchable_mockup_server",
+        ":fake_redfish_server",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:property",
