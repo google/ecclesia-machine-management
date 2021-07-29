@@ -16,6 +16,9 @@
 
 #include "ecclesia/lib/types/bytes.h"
 
+#include <cstdint>
+#include <string>
+
 #include "absl/strings/str_cat.h"
 
 namespace ecclesia {

@@ -8,17 +8,37 @@ cc_library(
     deps = ["@com_google_absl//absl/strings"],
 )
 
+cc_test(
+    name = "bytes_test",
+    size = "small",
+    timeout = "moderate",
+    srcs = ["bytes_test.cc"],
+    deps = [
+        ":bytes",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "enum",
+    hdrs = ["enum.h"],
+    visibility = ["//ecclesia:library_users"],
+)
+
+cc_test(
+    name = "enum_test",
+    srcs = ["enum_test.cc"],
+    deps = [
+        ":enum",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "fixed_range_int",
     hdrs = ["fixed_range_int.h"],
     visibility = ["//ecclesia:library_users"],
     deps = ["@com_google_absl//absl/types:optional"],
-)
-
-cc_library(
-    name = "overloaded",
-    hdrs = ["overloaded.h"],
-    visibility = ["//ecclesia:library_users"],
 )
 
 cc_test(
@@ -32,13 +52,8 @@ cc_test(
     ],
 )
 
-cc_test(
-    name = "bytes_test",
-    size = "small",
-    timeout = "moderate",
-    srcs = ["bytes_test.cc"],
-    deps = [
-        ":bytes",
-        "@com_google_googletest//:gtest_main",
-    ],
+cc_library(
+    name = "overloaded",
+    hdrs = ["overloaded.h"],
+    visibility = ["//ecclesia:library_users"],
 )
