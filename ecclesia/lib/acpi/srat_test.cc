@@ -16,9 +16,8 @@
 
 #include "ecclesia/lib/acpi/srat.h"
 
-#include <string.h>
-
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <utility>
 #include <vector>
