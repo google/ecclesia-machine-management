@@ -1,0 +1,27 @@
+import "ecclesia/lib/acpi/system_description_table.emb" as sdt
+
+[$default byte_order: "LittleEndian"]
+[(cpp) namespace: "ecclesia"]
+
+
+struct McfgHeader:
+  0  [+36]          sdt.SystemDescriptionTableHeader  header
+    -- Common ACPI table header
+
+  36 [+8]           UInt:8[]                          reserved
+
+
+struct McfgSegment:
+  0  [+8]           UInt      base_address
+    -- MMIO base address of extended configuration space.
+
+  8  [+2]           UInt      segment
+    -- PCI segment group number.
+
+  10 [+1]           UInt      start_bus_number
+    -- Start PCI bus number decoded by this bridge.
+
+  11 [+1]           UInt      end_bus_number
+    -- End PCI bus number decoded by this bridge.
+
+  12 [+4]           UInt:8[]  reserved
