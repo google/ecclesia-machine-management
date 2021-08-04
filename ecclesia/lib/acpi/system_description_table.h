@@ -235,13 +235,19 @@ class SystemDescriptionTableReader {
       return absl::nullopt;
     }
     maximum_sra_size -= sra_header.length().Read();
-
-    View short_sra_header =
-        MakeView(sra + sra_header.length().Read(), View::SizeInBytes());
+    if (maximum_sra_size < View::SizeInBytes()) {
+      return absl::nullopt;
+    }
+    uint32_t next_sra_length =
+        MakeView(sra + sra_header.length().Read(), View::SizeInBytes())
+            .length().Read();
+    if (maximum_sra_size < next_sra_length) {
+      return absl::nullopt;
+    }
     View next_sra_header = MakeView(sra + sra_header.length().Read(),
-                                    short_sra_header.length().Read());
-    if (!(maximum_sra_size && SraHeaderDescType::ValidateMaximumSize(
-                                  next_sra_header, maximum_sra_size))) {
+                                    next_sra_length);
+    if (!SraHeaderDescType::ValidateMaximumSize(next_sra_header,
+                                                maximum_sra_size)) {
       return absl::nullopt;
     }
     return SraHeaderDataViewType(next_sra_header.BackingStorage());
