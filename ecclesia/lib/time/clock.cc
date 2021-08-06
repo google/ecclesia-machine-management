@@ -28,6 +28,7 @@ namespace {
 class RealClock : public Clock {
  public:
   absl::Time Now() const override { return absl::Now(); }
+  void Sleep(absl::Duration d) override { absl::SleepFor(d); }
 };
 
 }  // namespace

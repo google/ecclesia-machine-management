@@ -49,6 +49,7 @@ class MockEventReader : public SystemEventReader {
 class MockClock : public Clock {
  public:
   MOCK_METHOD(absl::Time, Now, (), (const, override));
+  MOCK_METHOD(void, Sleep, (absl::Duration), (override));
 };
 
 class SystemEventVisitorTest : public ::testing::Test {

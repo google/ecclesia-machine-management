@@ -35,6 +35,8 @@ class Clock {
 
   virtual ~Clock() = default;
 
+  virtual void Sleep(absl::Duration d) = 0;
+
   // Returns current time.
   virtual absl::Time Now() const = 0;
 };
