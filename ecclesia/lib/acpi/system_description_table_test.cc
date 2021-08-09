@@ -26,6 +26,7 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/codec/endian.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/testing/status.h"
@@ -231,9 +232,9 @@ class SystemDescriptionTableReaderTest : public ::testing::Test {
     std::copy(kOemTableId.begin(), kOemTableId.end(),
               header_view_.oem_table_id().BackingStorage().data());
     header_view_.oem_revision().Write(kOemRevision);
-    uint32_t creator_id;
-    std::copy(kCreatorId.begin(), kCreatorId.end(), &creator_id);
-    header_view_.creator_id().Write(creator_id);
+    header_view_.creator_id().Write(LittleEndian::Load32(kCreatorId.data()));
+    static_assert(
+        kCreatorId.size() >= sizeof(header_view_.creator_id().Read()));
     header_view_.creator_revision().Write(kCreatorRevision);
 
     // Initialize the empty static resource allocation structures.

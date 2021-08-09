@@ -144,6 +144,7 @@ cc_test(
         ":srat_emb",
         ":system_description_table",
         ":system_description_table_emb",
+        "//ecclesia/lib/codec:endian",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/base:core_headers",
@@ -167,6 +168,7 @@ cc_test(
     ],
     deps = [
         ":system_description_table",
+        "//ecclesia/lib/codec:endian",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/testing:status",

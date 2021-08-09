@@ -33,6 +33,7 @@
 #include "ecclesia/lib/acpi/srat.emb.h"
 #include "ecclesia/lib/acpi/system_description_table.emb.h"
 #include "ecclesia/lib/acpi/system_description_table.h"
+#include "ecclesia/lib/codec/endian.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/testing/status.h"
 
@@ -317,9 +318,8 @@ class SratReaderTest : public ::testing::Test {
     memcpy(header_view.oem_table_id().BackingStorage().data(), "GOOGSRAT",
            header_view.oem_table_id().SizeInBytes());
     header_view.oem_revision().Write(0xdeadbeef);
-    uint32_t creator_id;
-    memcpy(&creator_id, "GOOG", sizeof(creator_id));
-    header_view.creator_id().Write(creator_id);
+    static_assert(sizeof("GOOG") >= sizeof(header_view.creator_id().Read()));
+    header_view.creator_id().Write(LittleEndian::Load32("GOOG"));
     header_view.creator_revision().Write(0xabadcafe);
 
     // Initialize all processor APIC affinity structures but only mark
