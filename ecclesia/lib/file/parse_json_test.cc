@@ -23,8 +23,7 @@
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/file/json_files.h"
 #include "ecclesia/lib/testing/status.h"
-#include "json/json.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 namespace {
@@ -32,13 +31,11 @@ namespace {
 TEST(ParseEmbeddedJson, Works) {
   ASSERT_EQ(ecclesia_testdata::kJsonFiles.size(), 2);
   ASSERT_EQ(ecclesia_testdata::kJsonFiles[0].name, "test_data/json.json");
-  Json::Value expected_contents;
-  expected_contents["A"] = Json::Value();
-  expected_contents["A"]["1"] = Json::objectValue;
-  expected_contents["A"]["2"] = Json::arrayValue;
-  expected_contents["A"]["2"].append("item1");
-  expected_contents["A"]["2"].append("item2");
-  expected_contents["B"] = Json::objectValue;
+  nlohmann::json expected_contents;
+  expected_contents["A"]["1"] = nlohmann::json::object();
+  expected_contents["A"]["2"] = nlohmann::json::array({"item1", "item2"});
+  expected_contents["B"] = nlohmann::json::object();
+
   EXPECT_THAT(ParseJsonValueFromEmbeddedFile("test_data/json.json",
                                              ecclesia_testdata::kJsonFiles),
               IsOkAndHolds(expected_contents));

@@ -32,15 +32,14 @@
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
-#include "json/json.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 
-// Given a path to an embedded file, attempts to parse into a Json::Value,
+// Given a path to an embedded file, attempts to parse into nlohmann:json,
 // returning a failing status if errors are encountered.
 template <size_t N>
-absl::StatusOr<const Json::Value> ParseJsonValueFromEmbeddedFile(
+absl::StatusOr<const nlohmann::json> ParseJsonValueFromEmbeddedFile(
     absl::string_view file_path, const std::array<EmbeddedFile, N> &array) {
   absl::optional<absl::string_view> embedded_file_contents(
       GetEmbeddedFileWithName(file_path, array));
@@ -50,14 +49,13 @@ absl::StatusOr<const Json::Value> ParseJsonValueFromEmbeddedFile(
     return absl::NotFoundError("Embedded file not found.");
   }
 
-  Json::CharReaderBuilder builder;
-  Json::Value json_contents;
-  JSONCPP_STRING errors;
+  // parse without allowing exceptions
+  nlohmann::json json_contents =
+      nlohmann::json::parse(embedded_file_contents.value(), nullptr, false);
 
-  const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
-  if (!reader->parse(embedded_file_contents->begin(),
-                     embedded_file_contents->end(), &json_contents, &errors)) {
-    ErrorLog() << "Error(s) parsing embedded file contents:" << errors;
+  // Check for parsing error
+  if (json_contents.is_discarded()) {
+    ErrorLog() << "Error(s) parsing embedded file contents.";
     return absl::InternalError("Embedded Data not JSON parseable.");
   }
 
