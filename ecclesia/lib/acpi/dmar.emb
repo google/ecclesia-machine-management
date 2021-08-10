@@ -1,4 +1,3 @@
-
 import "ecclesia/lib/acpi/system_description_table.emb" as sdt
 
 [$default byte_order: "LittleEndian"]
@@ -6,68 +5,72 @@ import "ecclesia/lib/acpi/system_description_table.emb" as sdt
 
 
 struct DmarHeader:
-  0  [+36]      sdt.SystemDescriptionTableHeader header
+  0  [+36]  sdt.SystemDescriptionTableHeader  header
     -- Common ACPI table header
 
-  36 [+1]       UInt                             host_address_width
+  36 [+1]   UInt                              host_address_width
     -- The maximum DMA physical addressability supported by this platform.
 
-  37 [+1]       UInt                             flags
+  37 [+1]   UInt                              flags
     -- See DmarFlags.
 
-  38 [+10]      UInt:8[]                         reserved
+  38 [+10]  UInt:8[]                          reserved
 
 
 struct DmarSraHeader:
   -- Header of all static resource allocation (SRA) structures that follow the
   -- system description tables with the DMAR signatures. We cannot use SraHeader
   -- directly because both type and length occupy two bytes.
-  0  [+2]  UInt              struct_type
+  0 [+2]  UInt  struct_type
     -- Type of the structure.
-  2  [+2]  UInt              length
+
+  2 [+2]  UInt  length
     -- Size of the structure in bytes.
 
 
 struct DmarHardwareUnitDefinition:
   -- Hardware Unit Definition structure.
-  0  [+4]  DmarSraHeader      header
-  4  [+1]  UInt               flags
-  5  [+1]  UInt               reserved
-  6  [+2]  UInt               pci_segment_number
+  0 [+4]  DmarSraHeader  header
+  4 [+1]  UInt           flags
+  5 [+1]  UInt           reserved
+  6 [+2]  UInt           pci_segment_number
     -- The PCI Segment associated with this unit.
-  8  [+8]  UInt               register_base_address
+
+  8 [+8]  UInt           register_base_address
     -- Base address of remapping hardware register-set for this unit.
 
 
 struct DmarReservedMemoryRegion:
   -- Hardware Unit Definition structure.
-  0  [+4]  DmarSraHeader      header
-  4  [+2]  UInt               reserved
-  6  [+2]  UInt               pci_segment_number
+  0  [+4]  DmarSraHeader  header
+  4  [+2]  UInt           reserved
+  6  [+2]  UInt           pci_segment_number
     -- The PCI Segment associated with this unit.
-  8  [+8]  UInt               register_base_address
+
+  8  [+8]  UInt           register_base_address
     -- Base address of 4KB-aligned reserved memory region.
-  16 [+8]  UInt               register_limit_address
+
+  16 [+8]  UInt           register_limit_address
     -- Last address of the reserved memory region.
 
 
 struct DmarRootPortAtsCapability:
   -- Root Port ATS Capability structure.
-  0  [+4]  DmarSraHeader      header
-  4  [+1]  UInt               flags
-  5  [+1]  UInt               reserved
-  6  [+2]  UInt               pci_segment_number
+  0 [+4]  DmarSraHeader  header
+  4 [+1]  UInt           flags
+  5 [+1]  UInt           reserved
+  6 [+2]  UInt           pci_segment_number
     -- The PCI Segment associated with this unit.
 
 
 struct DmarRemappingHardwareStaticAffinity:
   -- Root Port ATS Capability structure.
-  0  [+4]  DmarSraHeader      header
-  4  [+4]  UInt               reserved
-  8  [+8]  UInt               register_base_address
+  0  [+4]  DmarSraHeader  header
+  4  [+4]  UInt           reserved
+  8  [+8]  UInt           register_base_address
     -- Register Base Address of this Remap hardware unit reported in the
     -- corresponding DRHD structure.
-  16 [+2]  UInt               proximity_domain
+
+  16 [+2]  UInt           proximity_domain
     -- Proximity Domain to which the Remap hardware unit identified by the
     -- Register Base Address field belongs.
-
