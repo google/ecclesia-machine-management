@@ -227,11 +227,21 @@ http_archive(
         "https://github.com/ipmitool/ipmitool/archive/c3939dac2c060651361fc71516806f9ab8c38901.tar.gz"
     ],
     patches = [
-        "//ecclesia/oss:ipmitool.patches/ipmitool.ipmi_sdr.patch",
-        # Openssl 1.1 made struct EVP_MD_CTX opaque, so we have to heap
-        # allocate it.
-        "//ecclesia/oss:ipmitool.patches/ipmitool.ipmi_intf.patch",
-        "//ecclesia/oss:ipmitool.patches/ipmitool.fix_cast.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_ipmi_intf.h.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.src_ipmitool.c.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_helper.h.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_ipmi_sel.h.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.lib_ipmi_sel.c.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.src_plugins_ipmi_intf.c.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.src_plugins_lanplus_lanplus.c.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.src_ipmiext.c.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.lib_ipmi_main.c.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_ipmi_sdr.h.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.lib_ipmi_raw.c.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_ipmi.h.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.lib_ipmi_sdr.c.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_ipmi_user.h.patch",
+        "//ecclesia/oss:ipmitool.patches/ipmitool.lib_ipmi_user.c.patch",
     ],
     patch_cmds = [
         "./bootstrap",
@@ -339,6 +349,7 @@ http_archive(
     sha256 = "8f28ca19b1ebe96df6c1d76ecadf1aa4e7fcf151c0492e91b7401a47ce2add62",
     strip_prefix = "riegeli-9c3f3203ad04a45fe8743bb71cd0cd98c76e394d",
 )
+
 # Additional projects needed by riegeli.
 http_archive(
     name = "org_brotli",
@@ -346,6 +357,7 @@ http_archive(
     strip_prefix = "brotli-1.0.7",
     urls = ["https://github.com/google/brotli/archive/v1.0.7.zip"],
 )
+
 http_archive(
     name = "net_zstd",
     build_file = "@com_google_riegeli//third_party:net_zstd.BUILD",
@@ -353,6 +365,7 @@ http_archive(
     strip_prefix = "zstd-1.4.5/lib",
     urls = ["https://github.com/facebook/zstd/archive/v1.4.5.zip"],
 )
+
 http_archive(
     name = "highwayhash",
     build_file = "@com_google_riegeli//third_party:highwayhash.BUILD",
@@ -360,6 +373,7 @@ http_archive(
     strip_prefix = "highwayhash-276dd7b4b6d330e4734b756e97ccfb1b69cc2e12",
     urls = ["https://github.com/google/highwayhash/archive/276dd7b4b6d330e4734b756e97ccfb1b69cc2e12.zip"],
 )
+
 http_archive(
     name = "snappy",
     build_file = "@com_google_riegeli//third_party:snappy.BUILD",

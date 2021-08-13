@@ -1,0 +1,225 @@
+--- lib/ipmi_sdr.c.old	2021-08-12 22:03:15.000000000 -0700
++++ lib/ipmi_sdr.c	2021-07-09 09:05:08.000000000 -0700
+@@ -41,24 +41,25 @@
+ #include <sys/types.h>
+ #include <time.h>
+ 
+-#include <ipmitool/ipmi.h>
+-#include <ipmitool/log.h>
+-#include <ipmitool/ipmi_mc.h>
+-#include <ipmitool/ipmi_sdr.h>
+-#include <ipmitool/ipmi_sdradd.h>
+-#include <ipmitool/ipmi_sensor.h>
+-#include <ipmitool/ipmi_intf.h>
+-#include <ipmitool/ipmi_sel.h>
+-#include <ipmitool/ipmi_entity.h>
+-#include <ipmitool/ipmi_constants.h>
+-#include <ipmitool/ipmi_strings.h>
+-#include <ipmitool/ipmi_time.h>
++#include "include/ipmitool/ipmi.h"
++#include "include/ipmitool/log.h"
++#include "include/ipmitool/ipmi_mc.h"
++#include "include/ipmitool/ipmi_sdr.h"
++#include "include/ipmitool/ipmi_sdradd.h"
++#include "include/ipmitool/ipmi_sensor.h"
++#include "include/ipmitool/ipmi_intf.h"
++#include "include/ipmitool/ipmi_sel.h"
++#include "include/ipmitool/ipmi_entity.h"
++#include "include/ipmitool/ipmi_constants.h"
++#include "include/ipmitool/ipmi_strings.h"
++#include "include/ipmitool/ipmi_time.h"
+ 
+ #if HAVE_CONFIG_H
+-# include <config.h>
++# include "config.h"
+ #endif
+ 
+ extern int verbose;
++extern int csv_output;
+ static int use_built_in;	/* Uses DeviceSDRs instead of SDRR */
+ static int sdr_max_read_len = 0;
+ static int sdr_extended = 0;
+@@ -592,7 +593,11 @@
+ 				double val)
+ {
+ 	int m, b, k1, k2;
++	int iret;
+ 	double result;
++	double min, max;
++	uint8_t ubyte;
++	int8_t sbyte;
+ 
+ 	/* only works for analog sensors */
+ 	if (UNITS_ARE_DISCRETE((&sensor->cmn)))
+@@ -607,12 +612,60 @@
+ 	if (m == 0)
+ 		return 0;
+ 
+-	result = (((val / pow(10, k2)) - (b * pow(10, k1))) / m);
++	result = (((val / pow(10.0, k2)) - (b * pow(10.0, k1))) / m);
+ 
+-	if ((result - (int) result) >= .5)
+-		return (uint8_t) ceil(result);
+-	else
+-		return (uint8_t) result;
++	/* Set appropriate bounds, based on type of analog byte */
++	switch (sensor->cmn.unit.analog) {
++		case 0:
++			min = 0.0;
++			max = 255.0;
++			break;
++		case 1:
++			min = -127.0;
++			max = 127.0;
++			break;
++		case 2:
++			min = -128.0;
++			max = 127.0;
++			break;
++		default:
++			/* Oops! This isn't an analog sensor. */
++			return 0;
++	}
++
++	/* Clamp to bounds, avoiding rollover */
++	if (result < min) {
++		result = min;
++	}
++	if (result > max) {
++		result = max;
++	}
++
++	/* Round to integer */
++	if ((result - (int)result) >= .5) {
++		iret = ceil(result);
++	}
++	else {
++		iret = result;
++	}
++
++	/* Return signed or unsigned, based on type of analog byte */
++	switch (sensor->cmn.unit.analog) {
++		case 0:
++			ubyte = iret;
++			return ubyte;
++		case 1:
++			if (iret < 0) {
++				--iret;
++			}
++			/* fall through */
++		case 2:
++			sbyte = iret;
++			return sbyte;
++		default:
++			/* Oops! This isn't an analog sensor. */
++			return 0;
++	}
+ }
+ 
+ /* ipmi_sdr_get_sensor_thresholds  -  return thresholds for sensor
+@@ -967,7 +1020,7 @@
+ 			lprintf(LOG_ERR, "Get SDR %04x command failed",
+ 				itr->next);
+ 			continue;
+-		} else if (rsp->ccode == 0xc5) {
++		} else if (rsp->ccode == IPMI_CC_RES_CANCELED) {
+ 			/* lost reservation */
+ 			lprintf(LOG_DEBUG, "SDR reservation %04x cancelled. "
+ 				"Sleeping a bit and retrying...",
+@@ -1046,7 +1099,7 @@
+ 		return NULL;
+ 
+ 	header = ipmi_sdr_get_header(intf, itr);
+-	if (!header)
++	if (header == NULL)
+ 		return NULL;
+ 
+ 	itr->next = header->next;
+@@ -1231,8 +1284,9 @@
+ 			uint8_t event_type, int numeric_fmt)
+ {
+ 	/* iceblink - don't print some event status fields - CVS rev1.53 */
++#ifndef NDEBUG
+ 	return 0;
+-
++#else
+ 	switch (numeric_fmt) {
+ 	case DISCRETE_SENSOR:
+ 		ipmi_sdr_print_discrete_state(intf, "Assert Event Mask", sensor_type,
+@@ -1310,6 +1364,7 @@
+ 	}
+ 
+ 	return 0;
++#endif
+ }
+ 
+ int
+@@ -1441,7 +1496,7 @@
+  * @sensor:		Common Sensor Record SDR pointer
+  * @full:		Full Sensor Record SDR pointer (if applicable)
+  * @hysteresis_value:	Actual hysteresis value
+- * @hvstr:		hysteresis value Identifier String
++ * @hdrstr:		hysteresis value Identifier String
+  *
+  * returns void
+  */
+@@ -1449,7 +1504,7 @@
+ ipmi_sdr_print_sensor_hysteresis(struct sdr_record_common_sensor *sensor,
+ 		 struct sdr_record_full_sensor   *full,
+ 		 uint8_t hysteresis_value,
+-		 const char *hvstr)
++		 const char *hdrstr)
+ {
+ 	/*
+ 	 * compact can have pos/neg hysteresis, but they cannot be analog!
+@@ -1458,9 +1513,9 @@
+ 	 */
+ 	if (!full || UNITS_ARE_DISCRETE(sensor)) {
+ 		if ( hysteresis_value == 0x00 || hysteresis_value == 0xff ) {
+-			printf(" %s   : Unspecified\n", hvstr);
++			printf(" %s   : Unspecified\n", hdrstr);
+ 		} else {
+-			printf(" %s   : 0x%02X\n", hvstr, hysteresis_value);
++			printf(" %s   : 0x%02X\n", hdrstr, hysteresis_value);
+ 		}
+ 		return;
+ 	}
+@@ -1468,9 +1523,9 @@
+ 	double creading = sdr_convert_sensor_hysterisis(full, hysteresis_value);
+ 	if ( hysteresis_value == 0x00 || hysteresis_value == 0xff ||
+ 	     creading == 0.0 ) {
+-		printf(" %s   : Unspecified\n", hvstr);
++		printf(" %s   : Unspecified\n", hdrstr);
+ 	} else {
+-		printf(" %s   : %.3f\n", hvstr, creading);
++		printf(" %s   : %.3f\n", hdrstr, creading);
+ 	}
+ }
+ 
+@@ -1568,6 +1623,7 @@
+ 		 uint8_t sdr_record_type, int precision)
+ {
+ 	static struct sensor_reading sr;
++	unsigned int idlen;
+ 
+ 	if (!sensor)
+ 		return NULL;
+@@ -1576,8 +1632,7 @@
+ 	memset(&sr, 0, sizeof(sr));
+ 
+ 	switch (sdr_record_type) {
+-		unsigned int idlen;
+-		case (SDR_RECORD_TYPE_FULL_SENSOR):
++		case SDR_RECORD_TYPE_FULL_SENSOR:
+ 			sr.full = (struct sdr_record_full_sensor *)sensor;
+ 			idlen = sr.full->id_code & 0x1f;
+ 			idlen = idlen < sizeof(sr.s_id) ?
+@@ -2111,7 +2166,7 @@
+ 	return 0;
+ }
+ 
+-static inline int
++inline int
+ get_offset(uint8_t x)
+ {
+ 	int i;

@@ -1,0 +1,44 @@
+--- src/plugins/ipmi_intf.c	2021-08-12 17:00:02.000000000 -0700
++++ src/plugins/ipmi_intf.c	2020-10-30 08:43:58.000000000 -0700
+@@ -34,7 +34,7 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #if defined(HAVE_CONFIG_H)
+-# include <config.h>
++# include "config.h"
+ #endif
+ 
+ #if defined(IPMI_INTF_LAN) || defined (IPMI_INTF_LANPLUS)
+@@ -264,9 +264,9 @@
+ }
+ 
+ void
+-ipmi_intf_session_set_privlvl(struct ipmi_intf * intf, uint8_t level)
++ipmi_intf_session_set_privlvl(struct ipmi_intf * intf, uint8_t privlvl)
+ {
+-	intf->ssn_params.privlvl = level;
++	intf->ssn_params.privlvl = privlvl;
+ }
+ 
+ void
+@@ -344,6 +344,20 @@
+ 	ipmi_intf_session_set_hostname(intf, NULL);
+ }
+ 
++int ipmi_open(struct ipmi_intf *intf) {
++  if (intf == NULL) {
++    return -1;
++  }
++  return intf->open(intf);
++}
++
++void ipmi_close(struct ipmi_intf *intf) {
++  if (intf == NULL) {
++    return;
++  }
++  intf->close(intf);
++}
++
+ #if defined(IPMI_INTF_LAN) || defined (IPMI_INTF_LANPLUS)
+ int
+ ipmi_intf_socket_connect(struct ipmi_intf * intf)
