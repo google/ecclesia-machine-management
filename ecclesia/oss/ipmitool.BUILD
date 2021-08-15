@@ -45,6 +45,7 @@ cc_library(
         "lib/ipmi_user.c",
         "lib/ipmi_vita.c",
         "lib/log.c",
+        "src/ipmiext.c",
         "src/plugins/imb/imb.c",
         "src/plugins/imb/imbapi.c",
         "src/plugins/ipmi_intf.c",
@@ -62,8 +63,6 @@ cc_library(
     ],
     hdrs = [
         "include/config.h",
-        "include/ipmitool/ipmi_quantaoem.h",
-        "include/ipmitool/ipmi_time.h",
         "include/ipmitool/bswap.h",
         "include/ipmitool/helper.h",
         "include/ipmitool/hpm2.h",
@@ -94,6 +93,7 @@ cc_library(
         "include/ipmitool/ipmi_oem.h",
         "include/ipmitool/ipmi_pef.h",
         "include/ipmitool/ipmi_picmg.h",
+        "include/ipmitool/ipmi_quantaoem.h",
         "include/ipmitool/ipmi_raw.h",
         "include/ipmitool/ipmi_sdr.h",
         "include/ipmitool/ipmi_sdradd.h",
@@ -104,6 +104,7 @@ cc_library(
         "include/ipmitool/ipmi_sol.h",
         "include/ipmitool/ipmi_strings.h",
         "include/ipmitool/ipmi_sunoem.h",
+        "include/ipmitool/ipmi_time.h",
         "include/ipmitool/ipmi_tsol.h",
         "include/ipmitool/ipmi_user.h",
         "include/ipmitool/ipmi_vita.h",
@@ -134,8 +135,8 @@ cc_library(
         "-lm",
     ],
     deps = [
-        "@libedit//:pretend_to_be_gnu_readline_system",
-        "@ncurses//:ncurses",
         "@boringssl//:crypto",
+        "@libedit//:pretend_to_be_gnu_readline_system",
+        "@ncurses",
     ],
 )
