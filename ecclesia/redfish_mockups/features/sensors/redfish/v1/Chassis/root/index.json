@@ -1,0 +1,16 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/root",
+    "@odata.type": "#Chassis.v1_14_0.Chassis",
+    "ChassisType": "RackMount",
+    "Id": "root",
+    "Name": "sensors",
+    "Power": {
+        "@odata.id": "/redfish/v1/Chassis/root/Power"
+    },
+    "Sensors": {
+        "@odata.id": "/redfish/v1/Chassis/root/Sensors"
+    },
+    "Thermal": {
+        "@odata.id": "/redfish/v1/Chassis/root/Thermal"
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/root/Sensors",
+    "@odata.type": "#SensorCollection.SensorCollection",
+    "Description": "Collection of Sensors for this Chassis",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/root/Sensors/cpu0_pvccd_hv_Output_Current"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/root/Sensors/cpu0_pvccd_hv_Output_Power"
+        }
+    ],
+    "Members@odata.count": 2,
+    "Name": "Sensors"
+}

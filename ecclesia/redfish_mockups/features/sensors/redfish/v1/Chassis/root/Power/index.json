@@ -1,0 +1,43 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/root/Power",
+    "@odata.type": "#Power.v1_5_2.Power",
+    "Id": "Power",
+    "Name": "Power",
+    "Redundancy": [],
+    "Voltages": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/root/Power#/Voltages/0",
+            "@odata.type": "#Power.v1_0_0.Voltage",
+            "LowerThresholdCritical": 1.14,
+            "LowerThresholdNonCritical": 1.14,
+            "MaxReadingRange": 2.0,
+            "MemberId": "bmc_p1v1_Output_Voltage",
+            "MinReadingRange": 0.0,
+            "Name": "bmc p1v1 Output Voltage",
+            "ReadingVolts": 1.175,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": 1.21,
+            "UpperThresholdNonCritical": 1.21
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/root/Power#/Voltages/1",
+            "@odata.type": "#Power.v1_0_0.Voltage",
+            "LowerThresholdCritical": 1.088,
+            "LowerThresholdNonCritical": 1.088,
+            "MaxReadingRange": 2.0,
+            "MemberId": "cpu0_pvccd_hv_Output_Voltage",
+            "MinReadingRange": 0.0,
+            "Name": "cpu0 pvccd hv Output Voltage",
+            "ReadingVolts": 1.134,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": 1.192,
+            "UpperThresholdNonCritical": 1.192
+        }
+    ]
+}

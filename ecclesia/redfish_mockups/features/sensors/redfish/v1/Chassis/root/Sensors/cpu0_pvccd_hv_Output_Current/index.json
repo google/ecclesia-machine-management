@@ -1,0 +1,28 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/root/Sensors/cpu0_pvccd_hv_Output_Current",
+    "@odata.type": "#Sensor.v1_0_0.Sensor",
+    "Id": "cpu0_pvccd_hv_Output_Current",
+    "Name": "cpu0 pvccd hv Output Current",
+    "Reading": 1.7,
+    "ReadingRangeMax": 38.0,
+    "ReadingRangeMin": -6.0,
+    "ReadingUnits": "Amperes",
+    "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+    },
+    "Thresholds": {
+        "LowerCaution": {
+            "Reading": -5.0
+        },
+        "LowerCritical": {
+            "Reading": -5.0
+        },
+        "UpperCaution": {
+            "Reading": 27.0
+        },
+        "UpperCritical": {
+            "Reading": 27.0
+        }
+    }
+}

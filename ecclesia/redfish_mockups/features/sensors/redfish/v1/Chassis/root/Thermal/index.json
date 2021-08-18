@@ -1,0 +1,109 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/root/Thermal",
+    "@odata.type": "#Thermal.v1_4_0.Thermal",
+    "Fans": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/root/Thermal#/Fans/0",
+            "@odata.type": "#Thermal.v1_3_0.Fan",
+            "MaxReadingRange": 100,
+            "MemberId": "fan0_pwm",
+            "MinReadingRange": 0,
+            "Name": "fan0 pwm",
+            "Reading": 100,
+            "ReadingUnits": "Percent",
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            }
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/root/Thermal#/Fans/1",
+            "@odata.type": "#Thermal.v1_3_0.Fan",
+            "LowerThresholdCritical": 600,
+            "LowerThresholdNonCritical": 600,
+            "MaxReadingRange": 20000,
+            "MemberId": "fan0_tach",
+            "MinReadingRange": 0,
+            "Name": "fan0 tach",
+            "Reading": 16384,
+            "ReadingUnits": "RPM",
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": 18480,
+            "UpperThresholdNonCritical": 18480
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/root/Thermal#/Fans/2",
+            "@odata.type": "#Thermal.v1_3_0.Fan",
+            "MaxReadingRange": 100,
+            "MemberId": "fan1_pwm",
+            "MinReadingRange": 0,
+            "Name": "fan1 pwm",
+            "Reading": 100,
+            "ReadingUnits": "Percent",
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            }
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/root/Thermal#/Fans/3",
+            "@odata.type": "#Thermal.v1_3_0.Fan",
+            "LowerThresholdCritical": 600,
+            "LowerThresholdNonCritical": 600,
+            "MaxReadingRange": 20000,
+            "MemberId": "fan1_tach",
+            "MinReadingRange": 0,
+            "Name": "fan1 tach",
+            "Reading": 16384,
+            "ReadingUnits": "RPM",
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": 18480,
+            "UpperThresholdNonCritical": 18480
+        }
+    ],
+    "Id": "Thermal",
+    "Name": "Thermal",
+    "Redundancy": [],
+    "Temperatures": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/root/Thermal#/Temperatures/0",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": 0.0,
+            "LowerThresholdNonCritical": 0.0,
+            "MaxReadingRangeTemp": 127.0,
+            "MemberId": "brick2_p12v_Temperature",
+            "MinReadingRangeTemp": -128.0,
+            "Name": "brick2 p12v Temperature",
+            "ReadingCelsius": 34.0,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": 115.0,
+            "UpperThresholdNonCritical": 115.0
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/root/Thermal#/Temperatures/1",
+            "@odata.type": "#Thermal.v1_3_0.Temperature",
+            "LowerThresholdCritical": 0.0,
+            "LowerThresholdNonCritical": 0.0,
+            "MaxReadingRangeTemp": 127.0,
+            "MemberId": "cpu0_nbm_Temperature",
+            "MinReadingRangeTemp": -128.0,
+            "Name": "cpu0 nbm Temperature",
+            "ReadingCelsius": 0.0,
+            "Status": {
+                "Health": "OK",
+                "State": "Enabled"
+            },
+            "UpperThresholdCritical": 80.0,
+            "UpperThresholdNonCritical": 80.0
+        }
+    ]
+}
