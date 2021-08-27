@@ -23,6 +23,7 @@
 #include "ecclesia/magent/redfish/core/index_resource.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -35,11 +36,11 @@ class StorageControllerCollection : public IndexResource<std::string> {
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override {
-    Json::Value json;
+    nlohmann::json json;
 
     json[kOdataType] =
         "#StorageControllerCollection.StorageControllerCollection";
-    json[kOdataId] = std::string(req->uri_path());
+    json[kOdataId] = req->uri_path();
     json[kOdataContext] =
         "/redfish/v1/"
         "$metadata#StorageControllerCollection.StorageControllerCollection";

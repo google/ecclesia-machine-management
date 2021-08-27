@@ -31,7 +31,7 @@
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/cpu.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -68,7 +68,7 @@ class Processor : public IndexResource<int> {
       return;
     }
     const auto &cpu_info = cpu->GetCpuInfo();
-    Json::Value json;
+    nlohmann::json json;
     json[kOdataType] = "#Processor.v1_7_0.Processor";
     json[kOdataId] = std::string(req->uri_path());
     json[kOdataContext] = "/redfish/v1/$metadata#Processor.Processor";

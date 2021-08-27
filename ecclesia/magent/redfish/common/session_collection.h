@@ -24,7 +24,7 @@
 #include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -39,7 +39,7 @@ class SessionCollection : public Resource {
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override {
-    Json::Value json;
+    nlohmann::json json;
     AddStaticFields(&json);
     json[kMembersCount] = 0;
     GetJsonArray(&json, kMembers);
@@ -53,7 +53,7 @@ class SessionCollection : public Resource {
         tensorflow::serving::net_http::HTTPStatusCode::UNAUTHORIZED);
   }
 
-  void AddStaticFields(Json::Value *json) {
+  void AddStaticFields(nlohmann::json *json) {
     (*json)[kOdataId] = std::string(Uri());
     (*json)[kOdataType] = "#SessionCollection.SessionCollection";
     (*json)[kOdataContext] =

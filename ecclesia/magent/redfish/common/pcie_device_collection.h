@@ -24,7 +24,7 @@
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -40,7 +40,7 @@ namespace ecclesia {
 //   },
 //.  ...
 // ]
-Json::Value GetPcieDeviceUrlsAsJsonArray(SystemModel *system_model);
+nlohmann::json GetPcieDeviceUrlsAsJsonArray(SystemModel *system_model);
 
 class PCIeDeviceCollection : public Resource {
  public:
@@ -51,7 +51,7 @@ class PCIeDeviceCollection : public Resource {
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override;
 
-  void AddStaticFields(Json::Value *json) {
+  void AddStaticFields(nlohmann::json *json) {
     (*json)[kOdataType] = "#PCIeDeviceCollection.PCIeDeviceCollection";
     (*json)[kOdataId] = std::string(Uri());
     (*json)[kOdataContext] =

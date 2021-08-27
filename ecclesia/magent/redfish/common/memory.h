@@ -30,7 +30,7 @@
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/dimm.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -58,7 +58,7 @@ class Memory : public IndexResource<int> {
       return;
     }
     const auto &dimm_info = dimm->GetDimmInfo();
-    Json::Value json;
+    nlohmann::json json;
     json[kOdataType] = "#Memory.v1_8_0.Memory";
     json[kOdataId] = std::string(req->uri_path());
     json[kOdataContext] = "/redfish/v1/$metadata#Memory.Memory";

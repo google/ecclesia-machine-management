@@ -36,7 +36,7 @@
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -71,7 +71,7 @@ void PCIeFunction::Get(
     return;
   }
 
-  Json::Value json;
+  nlohmann::json json;
   json[kOdataType] = "#PCIeFunction.v1_2_3.PCIeFunction";
   json[kOdataId] = std::string(req->uri_path());
   json[kOdataContext] = "/redfish/v1/$metadata#PCIeFunction.PCIeFunction";
@@ -141,11 +141,11 @@ void PCIeFunction::Get(
     auto *downstream = GetJsonArray(links_oem_google, kDownsteamPCIeFunctions);
     for (const auto &child : pcie_connections->children) {
       PciDbdLocation pcie_dev_id(child);
-      Json::Value pcie_func_link;
+      nlohmann::json pcie_func_link;
       pcie_func_link[kOdataId] = absl::Substitute(
           "$0/$1/$2/$3/$4", kComputerSystemUri, kPCIeDevices,
           pcie_dev_id.ToString(), kPCIeFunctions, child.function().value());
-      downstream->append(pcie_func_link);
+      downstream->push_back(pcie_func_link);
     }
   }
 

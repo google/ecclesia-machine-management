@@ -27,7 +27,7 @@
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/nvme.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -36,7 +36,7 @@ namespace ecclesia {
 void Storage::Get(tensorflow::serving::net_http::ServerRequestInterface *req,
                   const ParamsType &params) {
   std::string storage_index = std::get<std::string>(params[0]);
-  Json::Value json;
+  nlohmann::json json;
   json[kOdataType] = "#Storage.v1_9_0.Storage";
   json[kOdataId] = std::string(req->uri_path());
   json[kOdataContext] = "/redfish/v1/$metadata#Storage.Storage";
@@ -50,7 +50,7 @@ void Storage::Get(tensorflow::serving::net_http::ServerRequestInterface *req,
   json[kName] = nvme_plugin->access_intf->GetKernelName();
 
   // Create Controllers
-  Json::Value controllers_obj(Json::objectValue);
+  nlohmann::json controllers_obj;
   controllers_obj[kOdataId] = absl::StrCat(req->uri_path(), "/Controllers");
   json[kControllers] = controllers_obj;
 

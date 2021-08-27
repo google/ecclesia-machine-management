@@ -29,7 +29,7 @@
 #include "ecclesia/magent/sysmodel/x86/dimm.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
 #include "ecclesia/magent/sysmodel/x86/thermal.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -42,7 +42,7 @@ class Thermal : public Resource {
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override {
-    Json::Value json;
+    nlohmann::json json;
     AddStaticFields(&json);
     int num_sensors = system_model_->NumDimmThermalSensors();
     json[kTemperaturesCount] = num_sensors;
@@ -53,7 +53,7 @@ class Thermal : public Resource {
     for (int i = 0; i < num_sensors; i++) {
       PciThermalSensor *sensor = system_model_->GetDimmThermalSensor(i);
 
-      Json::Value thermal;
+      nlohmann::json thermal;
       thermal[kOdataId] = absl::StrCat(kThermalUri, "#/Temperatures/", i);
       thermal[kOdataType] = "#Thermal.v1_6_0.Temperature";
       thermal[kMemberId] = std::to_string(i);
@@ -66,11 +66,11 @@ class Thermal : public Resource {
       }
       thermal[kUpperThresholdCritical] = sensor->UpperThresholdCritical();
 
-      Json::Value dimm;
+      nlohmann::json dimm;
       dimm[kOdataId] = absl::StrCat(kMemoryCollectionUri, "/", i);
-      GetJsonArray(&thermal, kRelatedItem)->append(dimm);
+      GetJsonArray(&thermal, kRelatedItem)->push_back(dimm);
 
-      Json::Value status;
+      nlohmann::json status;
       if (system_model_->GetDimm(i)->GetDimmInfo().present) {
         status[kState] = kEnabled;
       } else {
@@ -79,13 +79,13 @@ class Thermal : public Resource {
 
       thermal[kStatus] = status;
 
-      members->append(thermal);
+      members->push_back(thermal);
     }
 
     JSONResponseOK(json, req);
   }
 
-  void AddStaticFields(Json::Value *json) {
+  void AddStaticFields(nlohmann::json *json) {
     (*json)[kOdataType] = "#Thermal.v1_6_0.Thermal";
     (*json)[kOdataId] = std::string(Uri());
     (*json)[kOdataContext] = "/redfish/v1/$metadata#Thermal.Thermal";

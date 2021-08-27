@@ -28,7 +28,7 @@
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -43,7 +43,7 @@ class ComputerSystem : public Resource {
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override {
-    Json::Value json;
+    nlohmann::json json;
     json[kOdataType] = "#ComputerSystem.v1_8_0.ComputerSystem";
     json[kOdataId] = std::string(Uri());
     json[kOdataContext] = "/redfish/v1/$metadata#ComputerSystem.ComputerSystem";
@@ -61,7 +61,7 @@ class ComputerSystem : public Resource {
 
     // Add the PCIe Devices which is an array of links of the PCIeDevice
     // resources.
-    Json::Value pcie_devices = GetPcieDeviceUrlsAsJsonArray(system_model_);
+    nlohmann::json pcie_devices = GetPcieDeviceUrlsAsJsonArray(system_model_);
     json[kPCIeDevices] = pcie_devices;
 
     auto *oem = GetJsonObject(&json, kOem);

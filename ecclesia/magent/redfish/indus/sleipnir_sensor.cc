@@ -92,7 +92,7 @@ absl::flat_hash_map<std::string, std::string> related_item_map{
 void SleipnirIpmiSensor::Get(
     tensorflow::serving::net_http::ServerRequestInterface *req,
     const ParamsType &params) {
-  Json::Value json;
+  nlohmann::json json;
   std::string sensor_name = std::get<std::string>(params[0]);
 
   auto sleipnir_sensors = system_model_->GetAllIpmiSensors();
@@ -117,16 +117,16 @@ void SleipnirIpmiSensor::Get(
 
       if (absl::StartsWith(sensor_name, "sleipnir_Fan")) {
         int idx = sensor_name[12] - '0';
-        Json::Value assoc;
+        nlohmann::json assoc;
         assoc[kOdataId] = absl::StrCat(
             "/redfish/v1/Chassis/Sleipnir/Assembly#/Assemblies/", 9 + idx);
-        GetJsonArray(&json, kRelatedItem)->append(assoc);
+        GetJsonArray(&json, kRelatedItem)->push_back(assoc);
       }
       break;
     }
     // auto *status = GetJsonObject(&json, kStatus);
     //(*status)[kState] = "Enabled";
-    Json::Value status;
+    nlohmann::json status;
     status[kState] = kEnabled;
     status[kHealth] = "OK";
     json[kStatus] = status;

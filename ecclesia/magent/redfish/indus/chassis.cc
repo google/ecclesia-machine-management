@@ -30,7 +30,7 @@
 #include "ecclesia/magent/sysmodel/x86/chassis.h"
 #include "ecclesia/magent/sysmodel/x86/fru.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -68,9 +68,9 @@ void Chassis::Get(tensorflow::serving::net_http::ServerRequestInterface *req,
     return;
   }
   const ChassisId &chassis_id = found_chassis.value();
-  Json::Value json;
+  nlohmann::json json;
   json[kOdataType] = "#Chassis.v1_6_0.Chassis";
-  json[kOdataId] = std::string(req->uri_path());
+  json[kOdataId] = req->uri_path();
   json[kOdataContext] = "/redfish/v1/$metadata#Chassis.Chassis";
   json[kChassisType] = GetChassisTypeAsString(chassis_id);
 
@@ -97,9 +97,9 @@ void Chassis::Get(tensorflow::serving::net_http::ServerRequestInterface *req,
 
   auto *links = GetJsonObject(&json, kLinks);
   auto *computer_systems = GetJsonArray(links, kComputerSystems);
-  Json::Value linked_computer_systems;
+  nlohmann::json linked_computer_systems;
   linked_computer_systems[kOdataId] = kComputerSystemUri;
-  computer_systems->append(linked_computer_systems);
+  computer_systems->push_back(linked_computer_systems);
 
   if (chassis_id == ChassisId::kSleipnir) {
     auto *sensors = GetJsonObject(&json, kSensor);

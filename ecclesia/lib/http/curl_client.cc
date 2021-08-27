@@ -22,7 +22,6 @@
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/status/macros.h"
-#include "json/writer.h"
 
 namespace ecclesia {
 

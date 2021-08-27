@@ -30,7 +30,7 @@
 #include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 ABSL_DECLARE_FLAG(std::string, system_event_clear_script_path);
@@ -82,9 +82,9 @@ class LogServiceClear : public Resource {
       absl::string_view rf_code, absl::string_view msg,
       tensorflow::serving::net_http::HTTPStatusCode code,
       tensorflow::serving::net_http::ServerRequestInterface *req) {
-    Json::Value res;
-    res[kResponseError][kResponseCode] = std::string(rf_code);
-    res[kResponseError][kResponseMessage] = std::string(msg);
+    nlohmann::json res;
+    res[kResponseError][kResponseCode] = rf_code;
+    res[kResponseError][kResponseMessage] = msg;
     JSONResponse(res, code, req);
   }
 };

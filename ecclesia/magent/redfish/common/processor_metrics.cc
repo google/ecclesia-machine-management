@@ -34,7 +34,7 @@
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -93,7 +93,7 @@ void ProcessorMetrics::Get(
       GetCpuErrors(system_model_);
 
   // Fill in the json response
-  Json::Value json;
+  nlohmann::json json;
   AddStaticFields(&json);
   json[kOdataId] = std::string(req->uri_path());
 

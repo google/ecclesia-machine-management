@@ -26,7 +26,7 @@
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 #include "re2/re2.h"
 
@@ -40,7 +40,7 @@ class StorageCollection : public Resource {
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override {
-    Json::Value json;
+    nlohmann::json json;
     AddStaticFields(&json);
     std::vector<std::string> nvme_locations =
         system_model_->GetNvmePhysLocations();
@@ -65,7 +65,7 @@ class StorageCollection : public Resource {
     JSONResponseOK(json, req);
   }
 
-  void AddStaticFields(Json::Value *json) {
+  void AddStaticFields(nlohmann::json *json) {
     (*json)[kOdataType] = "#StorageCollection.StorageCollection";
     (*json)[kOdataId] = std::string(Uri());
     (*json)[kOdataContext] =

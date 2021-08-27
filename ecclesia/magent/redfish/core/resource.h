@@ -25,7 +25,7 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/variant.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
@@ -104,16 +104,17 @@ std::unique_ptr<Resource> CreateResource(
 
 // Generate a response with the input json object and an HTTP status code.
 inline void JSONResponse(
-    const Json::Value &json, tensorflow::serving::net_http::HTTPStatusCode code,
+    const nlohmann::json &json,
+    tensorflow::serving::net_http::HTTPStatusCode code,
     tensorflow::serving::net_http::ServerRequestInterface *req) {
   tensorflow::serving::net_http::SetContentType(req, "application/json");
-  req->WriteResponseString(json.toStyledString());
+  req->WriteResponseString(json.dump());
   req->ReplyWithStatus(code);
 }
 
 // Generate a response with the input json object and set http status OK.
 inline void JSONResponseOK(
-    const Json::Value &json,
+    const nlohmann::json &json,
     tensorflow::serving::net_http::ServerRequestInterface *req) {
   JSONResponse(json, tensorflow::serving::net_http::HTTPStatusCode::OK, req);
 }

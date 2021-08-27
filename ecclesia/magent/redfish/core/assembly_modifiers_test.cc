@@ -26,7 +26,7 @@
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/magent/redfish/core/assembly.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
-#include "json/reader.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 namespace {
@@ -57,17 +57,16 @@ TEST(PcieFunctionAssemblyModifier, AssemblyMissing) {
   const std::string kStaticAssembly = R"json({})json";
   const std::string kBadUri = "/redfish/v1/not/the/right/uri";
 
-  Json::Reader reader;
-  Json::Value value;
-  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+  nlohmann::json value = nlohmann::json::parse(kStaticAssembly, nullptr, false);
+  ASSERT_FALSE(value.is_discarded());
 
-  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  absl::flat_hash_map<std::string, nlohmann::json> assemblies;
   assemblies.insert(std::make_pair(kBadUri, std::move(value)));
   EXPECT_FALSE(CreateStandardPcieFunctionModifier()(assemblies).ok());
 
   // Check that assembly is not modified
   EXPECT_EQ(FlattenStylizedJsonString(
-                assemblies.find(kBadUri)->second.toStyledString()),
+      assemblies.find(kBadUri)->second.dump()),
             FlattenStylizedJsonString(kStaticAssembly));
 }
 
@@ -80,17 +79,16 @@ TEST(PcieFunctionAssemblyModifier, AssemblyNameMissing) {
     }
   )json";
 
-  Json::Reader reader;
-  Json::Value value;
-  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+  nlohmann::json value = nlohmann::json::parse(kStaticAssembly, nullptr, false);
+  ASSERT_FALSE(value.is_discarded());
 
-  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  absl::flat_hash_map<std::string, nlohmann::json> assemblies;
   assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
   EXPECT_FALSE(CreateStandardPcieFunctionModifier()(assemblies).ok());
 
   // Check that assembly is not modified
   EXPECT_EQ(FlattenStylizedJsonString(
-                (assemblies.find(kTestAssemblyUri)->second.toStyledString())),
+                (assemblies.find(kTestAssemblyUri)->second.dump())),
             FlattenStylizedJsonString(kStaticAssembly));
 }
 
@@ -103,17 +101,16 @@ TEST(PcieFunctionAssemblyModifier, ComponentsMissing) {
     }
   )json";
 
-  Json::Reader reader;
-  Json::Value value;
-  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+  nlohmann::json value = nlohmann::json::parse(kStaticAssembly, nullptr, false);
+  ASSERT_FALSE(value.is_discarded());
 
-  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  absl::flat_hash_map<std::string, nlohmann::json> assemblies;
   assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
   EXPECT_FALSE(CreateStandardPcieFunctionModifier()(assemblies).ok());
 
   // Check that assembly is not modified
   EXPECT_EQ(FlattenStylizedJsonString(
-                (assemblies.find(kTestAssemblyUri)->second.toStyledString())),
+                (assemblies.find(kTestAssemblyUri)->second.dump())),
             FlattenStylizedJsonString(kStaticAssembly));
 }
 
@@ -137,17 +134,16 @@ TEST(PcieFunctionAssemblyModifier, ComponentNameMissing) {
     }
   )json";
 
-  Json::Reader reader;
-  Json::Value value;
-  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+  nlohmann::json value = nlohmann::json::parse(kStaticAssembly, nullptr, false);
+  ASSERT_FALSE(value.is_discarded());
 
-  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  absl::flat_hash_map<std::string, nlohmann::json> assemblies;
   assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
   EXPECT_FALSE(CreateStandardPcieFunctionModifier()(assemblies).ok());
 
   // Check that assembly is not modified
   EXPECT_EQ(FlattenStylizedJsonString(
-                (assemblies.find(kTestAssemblyUri)->second.toStyledString())),
+                (assemblies.find(kTestAssemblyUri)->second.dump())),
             FlattenStylizedJsonString(kStaticAssembly));
 }
 
@@ -171,11 +167,10 @@ TEST(PcieFunctionAssemblyModifier, ModifyAssembly) {
     }
   )json";
 
-  Json::Reader reader;
-  Json::Value value;
-  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+  nlohmann::json value = nlohmann::json::parse(kStaticAssembly, nullptr, false);
+  ASSERT_FALSE(value.is_discarded());
 
-  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  absl::flat_hash_map<std::string, nlohmann::json> assemblies;
   assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
   EXPECT_TRUE(CreateStandardPcieFunctionModifier()(assemblies).ok());
 
@@ -185,7 +180,7 @@ TEST(PcieFunctionAssemblyModifier, ModifyAssembly) {
           ->second[kAssemblies][0][kOem][kGoogle][kComponents][0]
                   [kAssociatedWith];
   ASSERT_GT(test_associated_with.size(), 0);
-  ASSERT_EQ(test_associated_with[0][kOdataId].asString(),
+  ASSERT_EQ(test_associated_with[0][kOdataId].get<std::string>(),
             kExpectedPcieFunctionOdataId);
 }
 
@@ -193,17 +188,16 @@ TEST(AddComponentModifier, AssemblyMissing) {
   const std::string kStaticAssembly = R"json({})json";
   const std::string kBadUri = "/redfish/v1/not/the/right/uri";
 
-  Json::Reader reader;
-  Json::Value value;
-  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+  nlohmann::json value = nlohmann::json::parse(kStaticAssembly, nullptr, false);
+  ASSERT_FALSE(value.is_discarded());
 
-  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  absl::flat_hash_map<std::string, nlohmann::json> assemblies;
   assemblies.insert(std::make_pair(kBadUri, std::move(value)));
   EXPECT_FALSE(CreateStandardComponentModifier()(assemblies).ok());
 
   // Check that assembly is not modified
   EXPECT_EQ(FlattenStylizedJsonString(
-                assemblies.find(kBadUri)->second.toStyledString()),
+                assemblies.find(kBadUri)->second.dump()),
             FlattenStylizedJsonString(kStaticAssembly));
 }
 
@@ -216,17 +210,16 @@ TEST(AddComponentModifier, AssemblyNameMissing) {
     }
   )json";
 
-  Json::Reader reader;
-  Json::Value value;
-  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+  nlohmann::json value = nlohmann::json::parse(kStaticAssembly, nullptr, false);
+  ASSERT_FALSE(value.is_discarded());
 
-  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  absl::flat_hash_map<std::string, nlohmann::json> assemblies;
   assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
   EXPECT_FALSE(CreateStandardComponentModifier()(assemblies).ok());
 
   // Check that assembly is not modified
   EXPECT_EQ(FlattenStylizedJsonString(
-                (assemblies.find(kTestAssemblyUri)->second.toStyledString())),
+                (assemblies.find(kTestAssemblyUri)->second.dump())),
             FlattenStylizedJsonString(kStaticAssembly));
 }
 
@@ -240,17 +233,16 @@ TEST(AddComponentModifier, ComponentsMissing) {
     }
   )json";
 
-  Json::Reader reader;
-  Json::Value value;
-  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+  nlohmann::json value = nlohmann::json::parse(kStaticAssembly, nullptr, false);
+  ASSERT_FALSE(value.is_discarded());
 
-  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  absl::flat_hash_map<std::string, nlohmann::json> assemblies;
   assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
   EXPECT_FALSE(CreateStandardComponentModifier()(assemblies).ok());
 
   // Check that assembly is not modified
   EXPECT_EQ(FlattenStylizedJsonString(
-                (assemblies.find(kTestAssemblyUri)->second.toStyledString())),
+                (assemblies.find(kTestAssemblyUri)->second.dump())),
             FlattenStylizedJsonString(kStaticAssembly));
 }
 
@@ -277,11 +269,10 @@ TEST(AddComponentModifier, ComponentNameMissing) {
     }
   )json";
 
-  Json::Reader reader;
-  Json::Value value;
-  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+  nlohmann::json value = nlohmann::json::parse(kStaticAssembly, nullptr, false);
+  ASSERT_FALSE(value.is_discarded());
 
-  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  absl::flat_hash_map<std::string, nlohmann::json> assemblies;
   assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
   EXPECT_TRUE(CreateStandardComponentModifier()(assemblies).ok());
 
@@ -290,7 +281,7 @@ TEST(AddComponentModifier, ComponentNameMissing) {
       assemblies.find(kTestAssemblyUri)
           ->second[kAssemblies][0][kOem][kGoogle][kComponents];
   EXPECT_EQ(components.size(), 2);
-  EXPECT_EQ(components[1][kName].asString(), kTestComponentName);
+  EXPECT_EQ(components[1][kName].get<std::string>(), kTestComponentName);
 }
 
 TEST(AddComponentModifier, ComponentNameExists) {
@@ -316,11 +307,10 @@ TEST(AddComponentModifier, ComponentNameExists) {
     }
   )json";
 
-  Json::Reader reader;
-  Json::Value value;
-  ASSERT_TRUE(reader.parse(kStaticAssembly, value));
+  nlohmann::json value = nlohmann::json::parse(kStaticAssembly, nullptr, false);
+  ASSERT_FALSE(value.is_discarded());
 
-  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  absl::flat_hash_map<std::string, nlohmann::json> assemblies;
   assemblies.insert(std::make_pair(kTestAssemblyUri, std::move(value)));
   EXPECT_TRUE(CreateStandardComponentModifier()(assemblies).ok());
 

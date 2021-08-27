@@ -37,7 +37,7 @@
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/nvme.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -59,7 +59,7 @@ class Drive : public IndexResource<std::string> {
       return;
     }
     // Fill in the json response
-    Json::Value json;
+    nlohmann::json json;
     json[kOdataType] = "#Drive.v1_11_0.Drive";
     json[kOdataId] = std::string(req->uri_path());
     json[kOdataContext] = "/redfish/v1/$metadata#Drive.Drive";

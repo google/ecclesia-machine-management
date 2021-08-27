@@ -25,7 +25,7 @@
 #include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/magent/redfish/core/resource.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
@@ -49,7 +49,7 @@ class Assembly : public Resource {
   // It's caller's responsibility to ensure the modifier makes the change as
   // expected.
   using AssemblyModifier = std::function<absl::Status(
-      absl::flat_hash_map<std::string, Json::Value> &)>;
+      absl::flat_hash_map<std::string, nlohmann::json> &)>;
 
   // This constructor simply loads all the JSON files in the assemblies_dir
   // without making any change. The static content in the JSON files will be
@@ -78,7 +78,7 @@ class Assembly : public Resource {
 
   // Maintain a map of Assembly URI to the json response for the corresponding
   // assembly resource
-  const absl::flat_hash_map<std::string, Json::Value> assemblies_;
+  const absl::flat_hash_map<std::string, nlohmann::json> assemblies_;
 };
 
 }  // namespace ecclesia

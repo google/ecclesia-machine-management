@@ -19,7 +19,7 @@
 
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -31,8 +31,7 @@ class Root : public Resource {
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override {
-    Json::Value json;
-    json["v1"] = kServiceRootUri;
+    nlohmann::json json{{"v1", kServiceRootUri}};
     JSONResponseOK(json, req);
   }
 };

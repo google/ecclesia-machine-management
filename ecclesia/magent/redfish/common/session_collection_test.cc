@@ -31,7 +31,7 @@
 #include "ecclesia/lib/redfish/raw.h"
 #include "ecclesia/magent/lib/thread_pool/thread_pool.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
-#include "json/reader.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/client/public/httpclient.h"
 #include "tensorflow_serving/util/net_http/client/public/httpclient_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver.h"
@@ -44,14 +44,14 @@ namespace {
 constexpr absl::string_view kFileName =
     "magent/redfish/common/test_data/session_collection.json";
 
-void ReadJsonFromFile(const std::string &filename, Json::Value *value) {
+void ReadJsonFromFile(const std::string &filename, nlohmann::json *value) {
   ApifsFile apifs_file((std::string(GetTestDataDependencyPath(kFileName))));
   absl::StatusOr<std::string> maybe_contents = apifs_file.Read();
   ASSERT_TRUE(maybe_contents.ok());
   std::string expected = *maybe_contents;
 
-  Json::Reader reader;
-  ASSERT_TRUE(reader.parse(expected, *value));
+  *value = nlohmann::json::parse(expected, nullptr, false);
+  ASSERT_FALSE(value->is_discarded());
 }
 
 class RequestExecutor : public tensorflow::serving::net_http::EventExecutor {
@@ -99,7 +99,7 @@ class SessionCollectionTest : public ::testing::Test {
 // Compare the resource properties to the expected properties.
 TEST_F(SessionCollectionTest, QuerySessionCollection) {
   // Read the expected json object
-  Json::Value expected;
+  nlohmann::json expected;
   ReadJsonFromFile(GetTestDataDependencyPath(kFileName), &expected);
 
   ASSERT_TRUE(server_->StartAcceptingRequests());
@@ -112,9 +112,9 @@ TEST_F(SessionCollectionTest, QuerySessionCollection) {
   libredfish::RedfishVariant response = redfish_intf->GetUri(kSessionsUri);
 
   // Parse the raw contents and compare it to the expected session collection.
-  Json::Reader reader;
-  Json::Value actual;
-  ASSERT_TRUE(reader.parse(response.DebugString(), actual));
+  nlohmann::json actual = nlohmann::json::parse(response.DebugString(), nullptr,
+                                                false);
+  ASSERT_FALSE(actual.is_discarded());
   EXPECT_EQ(expected, actual);
 }
 

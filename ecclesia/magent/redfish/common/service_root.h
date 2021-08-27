@@ -25,7 +25,7 @@
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/redfish/core/service_root_resource.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -35,8 +35,8 @@ class ServiceRoot : public ServiceRootResource {
   ServiceRoot() : ServiceRootResource(kServiceRootUri) {}
 
  protected:
-  Json::Value BasicRoot() const {
-    Json::Value json;
+  nlohmann::json BasicRoot() const {
+    nlohmann::json json;
     json[kOdataType] = "#ServiceRoot.v1_5_0.ServiceRoot";
     json[kOdataId] = std::string(Uri());
     json[kOdataContext] = "/redfish/v1/$metadata#ServiceRoot.ServiceRoot";
@@ -50,7 +50,7 @@ class ServiceRoot : public ServiceRootResource {
     (*GetJsonObject(&json, kChassis))[kOdataId] = kChassisCollectionUri;
     (*GetJsonObject(&json, kUpdateService))[kOdataId] = kUpdateServiceUri;
     (*GetJsonObject(&json, kSessionService))[kOdataId] = kSessionServiceUri;
-    Json::Value *links = GetJsonObject(&json, kLinks);
+    nlohmann::json *links = GetJsonObject(&json, kLinks);
     (*GetJsonObject(links, kSessions))[kOdataId] = kSessionsUri;
     return json;
   }

@@ -79,8 +79,7 @@
 #include "ecclesia/magent/sysmodel/x86/fru.h"
 #include "ecclesia/magent/sysmodel/x86/nvme.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/json.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 
 namespace ecclesia {
@@ -98,7 +97,7 @@ Assembly::AssemblyModifier CreateModifierToAddFruInfo(
     const SysmodelFru &sysmodel_fru, const std::string &assembly_url,
     const std::string &assembly_name) {
   return [sysmodel_fru, assembly_url, assembly_name](
-             absl::flat_hash_map<std::string, Json::Value> &assemblies) {
+             absl::flat_hash_map<std::string, nlohmann::json> &assemblies) {
     auto assembly_iter = assemblies.find(assembly_url);
     if (assembly_iter == assemblies.end()) {
       return absl::NotFoundError(absl::StrCat(
@@ -201,8 +200,8 @@ constexpr absl::string_view kSoftwareName = "magent-indus";
 Assembly::AssemblyModifier CreateModifierToAttachSpicy16Fru(
     int connector_id, absl::optional<SysmodelFru> fru) {
   return [fru, connector_id](
-             absl::flat_hash_map<std::string, Json::Value> &assemblies) {
-    // Step 1: create and append the spicy16 FRU to the Indus Assemblies.
+             absl::flat_hash_map<std::string, nlohmann::json> &assemblies) {
+    // Step 1: create and push_back the spicy16 FRU to the Indus Assemblies.
     const std::string indus_assembly_url =
         absl::StrCat(kChassisUri, "/Assembly");
     auto assembly_iter = assemblies.find(indus_assembly_url);
@@ -214,22 +213,21 @@ Assembly::AssemblyModifier CreateModifierToAttachSpicy16Fru(
     auto &indus_assembly_resource_json = assembly_iter->second;
     int member_id = indus_assembly_resource_json[kAssemblies].size();
     // 1.1 Construct JSON value with spicy16 assembly static info.
-    Json::Reader reader;
-    Json::Value value;
-    reader.parse(kSpicy16AssemblyStaticJson, value);
+    nlohmann::json value = nlohmann::json::parse(kSpicy16AssemblyStaticJson,
+                                                 nullptr, false);
     // Add dynamic info in the JSON content.
     std::string self_url =
         absl::StrFormat("%s/Assembly#/Assemblies/%d", kChassisUri, member_id);
     value[kOdataId] = self_url;
     value[kMemberId] = member_id;
-    Json::Value attached_to;
+    nlohmann::json attached_to;
     attached_to[kOdataId] =
         absl::StrFormat("%s/Assembly#/Assemblies/0/Oem/Google/Components/%d",
                         kChassisUri, connector_id);
-    value[kOem][kGoogle][kAttachedTo].append(attached_to);
-    Json::Value associated_with;
+    value[kOem][kGoogle][kAttachedTo].push_back(attached_to);
+    nlohmann::json associated_with;
     associated_with[kOdataId] = self_url;
-    value[kOem][kGoogle][kComponents][0][kAssociatedWith].append(
+    value[kOem][kGoogle][kComponents][0][kAssociatedWith].push_back(
         associated_with);
     value[kOem][kGoogle][kComponents][0][kOdataId] =
         absl::StrFormat("%s/Assembly#/Assemblies/%d/Oem/Google/Components/0",
@@ -248,7 +246,7 @@ Assembly::AssemblyModifier CreateModifierToAttachSpicy16Fru(
     }
     // 1.2 Append the json to the end of the assemblies array. The member ID is
     // already updated.
-    indus_assembly_resource_json[kAssemblies].append(value);
+    indus_assembly_resource_json[kAssemblies].push_back(value);
 
     // Step 2: modify the reference of the created spicy16 assembly in Sleipnir
     // Assemblies.
@@ -266,8 +264,8 @@ Assembly::AssemblyModifier CreateModifierToAttachSpicy16Fru(
     int matched_sweet16_idx = -1;
     for (int idx = 0; idx < sleipnir_assembly_resource_json[kAssemblies].size();
          idx++) {
-      if (sleipnir_assembly_resource_json[kAssemblies][idx][kName].asString() ==
-          kSweet16CableAssemblyName) {
+      if (sleipnir_assembly_resource_json[kAssemblies][idx][kName]
+              .get_ref<std::string&>() == kSweet16CableAssemblyName) {
         matched_sweet16_idx = idx;
         // Here it assumes there are two spicy16 intp cards and two sweet16
         // cables. And the first & second sweet16 cable match the spicy16 card

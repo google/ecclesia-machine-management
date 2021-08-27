@@ -34,14 +34,14 @@
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/nvme.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
 namespace {
 
-void AddStaticFields(Json::Value *json, absl::string_view uri) {
+void AddStaticFields(nlohmann::json *json, absl::string_view uri) {
   (*json)[kOdataId] = std::string(uri);
   (*json)[kOdataType] = "#StorageController.v1_1_0.StorageController";
   (*json)[kOdataContext] =
@@ -51,20 +51,20 @@ void AddStaticFields(Json::Value *json, absl::string_view uri) {
 }
 
 // Add link to PCIe function.
-void AddLinks(Json::Value *json,
+void AddLinks(nlohmann::json *json,
               const SystemModel::NvmePluginInfo &nvme_plugin) {
   if (!json) return;
 
   auto *links = GetJsonObject(json, kLinks);
   auto *pcie_functions = GetJsonArray(links, kPCIeFunctions);
-  Json::Value pcie_func_link;
+  nlohmann::json pcie_func_link;
   const PciDbdfLocation &pci_location = nvme_plugin.location.pci_location;
   pcie_func_link[kOdataId] =
       absl::StrFormat("%s/%s/%04x:%02x:%02x/%s/%x", kComputerSystemUri,
                       kPCIeDevices, pci_location.domain().value(),
                       pci_location.bus().value(), pci_location.device().value(),
                       kPCIeFunctions, pci_location.function().value());
-  pcie_functions->append(pcie_func_link);
+  pcie_functions->push_back(pcie_func_link);
 }
 
 // From NVME Spec revision 1.3, below is the bit mask of the "critical warning"
@@ -77,7 +77,7 @@ void AddLinks(Json::Value *json,
 // [5] pmr_unreliable
 // There is no corresponding field of critical_temperature_warning in the
 // Redfish standard NVMeSMARTCriticalWarnings
-void AddNvmeSmartCriticalWarnings(Json::Value *json_critical_warnings,
+void AddNvmeSmartCriticalWarnings(nlohmann::json *json_critical_warnings,
                                   uint8_t critical_warning_attribute) {
   if (!json_critical_warnings) return;
 
@@ -94,7 +94,7 @@ void AddNvmeSmartCriticalWarnings(Json::Value *json_critical_warnings,
       static_cast<bool>(critical_warning[5]);
 }
 
-void AddNvmeControllerProperties(Json::Value *json,
+void AddNvmeControllerProperties(nlohmann::json *json,
                                  uint8_t critical_warning_attribute) {
   if (!json) return;
 
@@ -105,7 +105,7 @@ void AddNvmeControllerProperties(Json::Value *json,
                                critical_warning_attribute);
 }
 
-void AddSmartAttributes(Json::Value *json,
+void AddSmartAttributes(nlohmann::json *json,
                         ecclesia::SmartLogPageInterface *smart_log) {
   if (!json || !smart_log) return;
   // Add the rest of the SMART attributes in OEM fields.
@@ -135,7 +135,7 @@ void StorageController::Get(
         tensorflow::serving::net_http::HTTPStatusCode::NOT_FOUND);
     return;
   }
-  Json::Value json;
+  nlohmann::json json;
   AddStaticFields(&json, req->uri_path());
   AddLinks(&json, *nvme_plugin);
 
@@ -148,10 +148,10 @@ void StorageController::Get(
   // Add supported controller protocol
   auto *controller_protocols =
       GetJsonArray(&json, kSupportedControllerProtocols);
-  controller_protocols->append("PCIe");
+  controller_protocols->push_back("PCIe");
   // Add supported device protocol
   auto *device_protocols = GetJsonArray(&json, kSupportedDeviceProtocols);
-  device_protocols->append("NVMe");
+  device_protocols->push_back("NVMe");
 
   JSONResponseOK(json, req);
 }

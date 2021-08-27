@@ -36,7 +36,7 @@ cc_library(
         "@com_google_absl//absl/types:variant",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@com_googlesource_code_re2//:re2",
-        "@com_jsoncpp//:json",
+        "@com_json//:json",
     ],
 )
 
@@ -49,7 +49,18 @@ cc_test(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
-        "@com_jsoncpp//:json",
+        "@com_json//:json",
+    ],
+)
+
+cc_test(
+    name = "json_helper_test",
+    srcs = ["json_helper_test.cc"],
+    deps = [
+        ":redfish_core",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+        "@com_json//:json",
     ],
 )
 

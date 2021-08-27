@@ -19,9 +19,12 @@
 
 #include <cassert>
 #include <string>
+#include <initializer_list>
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 
@@ -29,24 +32,43 @@ namespace ecclesia {
 
 // Create and return an empty json object with the given name nested inside
 // the input json object
-inline Json::Value *GetJsonObject(Json::Value *json, const std::string &name) {
-  assert(json && json->isObject());
-  return &((*json)[name] = Json::Value(Json::objectValue));
+inline nlohmann::json *GetJsonObject(
+    nlohmann::json *json, const std::string &name) {
+  assert(json && json->is_object());
+  return &((*json)[name] = nlohmann::json::object());
 }
 
 // Create and return an empty json array with the given name nested inside
 // the input json object
-inline Json::Value *GetJsonArray(Json::Value *json, const std::string &name) {
-  assert(json && json->isObject());
-  return &((*json)[name] = Json::Value(Json::arrayValue));
+inline nlohmann::json *GetJsonArray(
+    nlohmann::json *json, const std::string &name) {
+  assert(json && json->is_object());
+  return &((*json)[name] = nlohmann::json::array());
 }
 
 // Given an array instance for the "Members" array, append a collection member
-inline void AppendCollectionMember(Json::Value *array, const std::string &uri) {
-  if (!array->isArray()) return;
-  Json::Value member;
-  member[kOdataId] = uri;
-  array->append(member);
+inline void AppendCollectionMember(
+    nlohmann::json *array, const std::string &uri) {
+  if (!array->is_array()) return;
+  nlohmann::json member{{kOdataId, uri}};
+  array->push_back(member);
+}
+
+// Drills down a nested JSON object, using a serious of keys. If any of the
+// drill-down steps fails, returns a status.
+inline absl::StatusOr<nlohmann::json*> JsonDrillDown(
+    nlohmann::json &data, const std::initializer_list<absl::string_view> keys) {
+  nlohmann::json *node = &data;
+  for (absl::string_view key : keys) {
+    auto node_iter = node->find(key);
+    if (node_iter == node->end()) {
+      return absl::Status(absl::StatusCode::kNotFound,
+                          absl::StrCat("Key “", key, "” not found"));
+    } else {
+      node = &(*node_iter);
+    }
+  }
+  return node;
 }
 
 }  // namespace ecclesia

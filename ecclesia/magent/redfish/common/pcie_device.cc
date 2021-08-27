@@ -33,7 +33,7 @@
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -86,7 +86,7 @@ void PCIeDevice::Get(tensorflow::serving::net_http::ServerRequestInterface *req,
     return;
   }
 
-  Json::Value json;
+  nlohmann::json json;
   json[kOdataType] = "#PCIeDevice.v1_5_0.PCIeDevice";
   json[kOdataId] = std::string(req->uri_path());
   json[kOdataContext] = "/redfish/v1/$metadata#PCIeDevice.PCIeDevice";
@@ -121,10 +121,10 @@ void PCIeDevice::Get(tensorflow::serving::net_http::ServerRequestInterface *req,
     if (pcie_dev == nullptr) {
       break;
     }
-    Json::Value pcie_func_link;
+    nlohmann::json pcie_func_link;
     pcie_func_link[kOdataId] =
         absl::Substitute("$0/$1/$2", req->uri_path(), kPCIeFunctions, pci_func);
-    pcie_functions->append(pcie_func_link);
+    pcie_functions->push_back(pcie_func_link);
   }
 
   JSONResponseOK(json, req);

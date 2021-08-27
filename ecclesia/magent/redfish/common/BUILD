@@ -62,7 +62,7 @@ cc_library(
         "@com_google_absl//absl/types:variant",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@com_googlesource_code_re2//:re2",
-        "@com_jsoncpp//:json",
+        "@com_json//:json",
     ],
 )
 
@@ -87,7 +87,7 @@ cc_test(
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/client/public:http_client_api",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        "@com_jsoncpp//:json",
+        "@com_json//:json",
     ],
 )
 
@@ -114,7 +114,7 @@ cc_test(
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@com_googlesource_code_re2//:re2",
-        "@com_jsoncpp//:json",
+        "@com_json//:json",
     ],
 )
 
@@ -141,6 +141,6 @@ cc_test(
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/client/public:http_client_api",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        "@com_jsoncpp//:json",
+        "@com_json//:json",
     ],
 )

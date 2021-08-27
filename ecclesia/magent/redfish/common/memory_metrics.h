@@ -27,7 +27,7 @@
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -48,7 +48,7 @@ class MemoryMetrics : public IndexResource<int> {
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override;
 
-  void AddStaticFields(Json::Value *json) {
+  void AddStaticFields(nlohmann::json *json) {
     (*json)[kOdataType] = "#MemoryMetrics.v1_2_0.MemoryMetrics";
     (*json)[kOdataContext] =
         "/redfish/v1/$metadata#MemoryMetrics.MemoryMetrics";

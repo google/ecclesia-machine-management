@@ -23,7 +23,7 @@
 #include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -38,7 +38,7 @@ class SessionService : public Resource {
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override {
-    Json::Value json;
+    nlohmann::json json;
     AddStaticFields(&json);
 
     JSONResponseOK(json, req);
@@ -51,7 +51,7 @@ class SessionService : public Resource {
   }
 
   // Update resource properties with standard, fixed values for required fields.
-  void AddStaticFields(Json::Value *json) {
+  void AddStaticFields(nlohmann::json *json) {
     (*json)[kOdataId] = std::string(Uri());
     (*json)[kOdataType] = "#SessionService.v1_1_6.SessionService";
     (*json)[kId] = kSessionService;

@@ -25,7 +25,7 @@
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -38,7 +38,7 @@ class ProcessorCollection : public Resource {
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override {
-    Json::Value json;
+    nlohmann::json json;
     AddStaticFields(&json);
     int num_cpus = system_model_->NumCpus();
     json[kMembersCount] = num_cpus;
@@ -49,7 +49,7 @@ class ProcessorCollection : public Resource {
     JSONResponseOK(json, req);
   }
 
-  void AddStaticFields(Json::Value *json) {
+  void AddStaticFields(nlohmann::json *json) {
     (*json)[kOdataId] = std::string(Uri());
     (*json)[kOdataType] = "#ProcessorCollection.ProcessorCollection";
     (*json)[kOdataContext] =

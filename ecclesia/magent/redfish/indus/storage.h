@@ -28,7 +28,7 @@
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -45,11 +45,11 @@ class Storage : public IndexResource<std::string> {
   // This helper function add Drive links to the Storage resource. We assume
   // there is only one drive for each Storage, even though the "Drives" array
   // supports mutiple elements.
-  static void AddDrives(Json::Value *json, absl::string_view url) {
+  static void AddDrives(nlohmann::json *json, absl::string_view url) {
     auto *drives = GetJsonArray(json, kDrives);
-    Json::Value drive;
+    nlohmann::json drive;
     drive[kOdataId] = absl::StrFormat("%s/%s/%d", url, kDrives, 0);
-    drives->append(drive);
+    drives->push_back(drive);
   }
 
   SystemModel *const system_model_;

@@ -25,13 +25,13 @@
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
 
-Json::Value GetPcieDeviceUrlsAsJsonArray(SystemModel *system_model) {
-  Json::Value array(Json::arrayValue);
+nlohmann::json GetPcieDeviceUrlsAsJsonArray(SystemModel *system_model) {
+  nlohmann::json array = nlohmann::json::array({});
 
   std::vector<PciDbdfLocation> pcie_locations =
       system_model->GetPcieDeviceLocations();
@@ -45,10 +45,11 @@ Json::Value GetPcieDeviceUrlsAsJsonArray(SystemModel *system_model) {
   }
 
   for (const auto &pcie_dev_id : pcie_dev_ids) {
-    Json::Value entry;
-    entry[kOdataId] =
-        absl::StrCat(kPCIeDeviceCollectionUri, "/", pcie_dev_id.ToString());
-    array.append(entry);
+    const nlohmann::json entry{
+      { kOdataId,
+        absl::StrCat(kPCIeDeviceCollectionUri, "/", pcie_dev_id.ToString()) },
+    };
+    array.push_back(entry);
   }
 
   return array;
@@ -57,14 +58,14 @@ Json::Value GetPcieDeviceUrlsAsJsonArray(SystemModel *system_model) {
 void PCIeDeviceCollection::Get(
     tensorflow::serving::net_http::ServerRequestInterface *req,
     const ParamsType &params) {
-  Json::Value json;
+  nlohmann::json json;
   AddStaticFields(&json);
 
-  Json::Value members = GetPcieDeviceUrlsAsJsonArray(system_model_);
+  nlohmann::json members = GetPcieDeviceUrlsAsJsonArray(system_model_);
   json[kMembers] = members;
   // The members JSON has no reason to be non-array. But still check it for
   // safety.
-  if (members.isArray()) {
+  if (members.is_array()) {
     json[kMembersCount] = members.size();
   }
 

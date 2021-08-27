@@ -28,7 +28,7 @@
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "ecclesia/magent/sysmodel/x86/chassis.h"
 #include "ecclesia/magent/sysmodel/x86/sysmodel.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -40,9 +40,9 @@ class LogService : public Resource {
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override {
-    Json::Value json;
+    nlohmann::json json;
     json[kOdataType] = "#LogService.v1_2_0.LogService";
-    json[kOdataId] = std::string(Uri());
+    json[kOdataId] = Uri();
     std::string action_key = absl::StrCat("#", kLogService, ".", kClearLog);
     json[kActions][action_key][kTarget] =
         absl::StrCat(Uri(), "/Actions/", kLogService, ".", kClearLog);

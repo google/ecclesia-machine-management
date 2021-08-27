@@ -31,8 +31,6 @@
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
-#include "json/json.h"
-#include "json/value.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 #include "re2/re2.h"
@@ -42,41 +40,40 @@ namespace ecclesia {
 namespace {
 
 // Parse a text JSON file and return a json object corresponding to the root
-Json::Value ReadJsonFile(const std::string &file_path) {
+nlohmann::json ReadJsonFile(const std::string &file_path) {
   std::string file_contents;
   std::string line;
   std::ifstream file(file_path);
-  if (!file.is_open()) return Json::Value();
+  if (!file.is_open()) return nlohmann::json();
   while (getline(file, line)) {
     file_contents.append(line);
   }
   file.close();
-  Json::Reader reader;
-  Json::Value value;
-  if (reader.parse(file_contents, value)) {
-    return value;
+  nlohmann::json value = nlohmann::json::parse(file_contents, nullptr, false);
+  if (value.is_discarded()) {
+    return nlohmann::json();
   }
-  return Json::Value();
+  return value;
 }
 
 // Given a path to a directory containing JSON files that represent assembly
 // resources, this function loads up the static data into a dictionary and then
 // applies the given modifiers to the dictionary.
-absl::flat_hash_map<std::string, Json::Value> GetAssemblies(
+absl::flat_hash_map<std::string, nlohmann::json> GetAssemblies(
     absl::string_view dir_path,
     std::vector<Assembly::AssemblyModifier> assembly_modifiers) {
   // First, load static JSON files into the assemblies which is an URL to JSON
   // value mapping.
-  absl::flat_hash_map<std::string, Json::Value> assemblies;
+  absl::flat_hash_map<std::string, nlohmann::json> assemblies;
   WithEachFileInDirectory(dir_path, [&](absl::string_view filename) {
     std::string file_path = JoinFilePaths(dir_path, filename);
     // Assemblies. Instead of blindly loading all the *.json files, it's
     // desirable to detect the present assemblies in the system and then load
     // the corresponding JSON file.
     if (absl::EndsWith(file_path, ".json")) {
-      Json::Value root = ReadJsonFile(file_path);
-      if (root[kOdataId].isString()) {
-        assemblies[root[kOdataId].asString()] = root;
+      nlohmann::json root = ReadJsonFile(file_path);
+      if (auto id = root.find(kOdataId); id != root.end()) {
+        assemblies[id->get<std::string>()] = root;
       }
     }
   }).IgnoreError();

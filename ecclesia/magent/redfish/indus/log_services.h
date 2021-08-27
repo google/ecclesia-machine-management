@@ -20,6 +20,7 @@
 #include <string>
 
 #include "ecclesia/magent/redfish/common/log_services.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 
@@ -30,7 +31,7 @@ class LogServiceCollectionIndus : public LogServiceCollection {
  private:
   void Get(tensorflow::serving::net_http::ServerRequestInterface *req,
            const ParamsType &params) override {
-    Json::Value json;
+    nlohmann::json json;
     json[kOdataType] = "#LogServiceCollection.LogServiceCollection";
     json[kOdataId] = std::string(Uri());
     json[kName] = "Log Service Collection";
