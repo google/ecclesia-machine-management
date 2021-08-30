@@ -150,11 +150,6 @@ absl::StatusOr<struct stat> ApifsFile::Stat() const {
 }
 
 absl::StatusOr<std::string> ApifsFile::Read() const {
-  if (!Exists()) {
-    return absl::NotFoundError(
-        absl::StrFormat("File not found at path: %s", path_));
-  }
-
   const int fd = open(path_.c_str(), O_RDONLY);
   if (fd < 0) {
     return absl::NotFoundError(absl::StrFormat(
