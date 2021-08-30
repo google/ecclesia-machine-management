@@ -152,7 +152,11 @@ absl::StatusOr<struct stat> ApifsFile::Stat() const {
 absl::StatusOr<std::string> ApifsFile::Read() const {
   const int fd = open(path_.c_str(), O_RDONLY);
   if (fd < 0) {
-    return absl::NotFoundError(absl::StrFormat(
+    if (errno == ENOENT) {
+      return absl::NotFoundError(
+          absl::StrFormat("File not found at path: %s", path_));
+    }
+    return absl::InternalError(absl::StrFormat(
         "unable to open the file at path: %s, errno: %d", path_, errno));
   }
   auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
@@ -180,13 +184,13 @@ absl::StatusOr<std::string> ApifsFile::Read() const {
 }
 
 absl::Status ApifsFile::Write(absl::string_view value) const {
-  if (!Exists()) {
-    return absl::NotFoundError(
-        absl::StrFormat("File not found at path: %s", path_));
-  }
   const int fd = open(path_.c_str(), O_WRONLY | O_TRUNC);
   if (fd < 0) {
-    return absl::NotFoundError(
+    if (errno == ENOENT) {
+      return absl::NotFoundError(
+          absl::StrFormat("File not found at path: %s", path_));
+    }
+    return absl::InternalError(
         absl::StrFormat("unable to open the file at path: %s", path_));
   }
   auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
@@ -211,14 +215,13 @@ absl::Status ApifsFile::Write(absl::string_view value) const {
 
 absl::Status ApifsFile::ReadRange(uint64_t offset,
                                   absl::Span<char> value) const {
-  if (!Exists()) {
-    return absl::NotFoundError(
-        absl::StrFormat("File not found at path: %s", path_));
-  }
-
   int fd = open(path_.c_str(), O_RDONLY);
   if (fd < 0) {
-    return absl::NotFoundError(absl::StrFormat(
+    if (errno == ENOENT) {
+      return absl::NotFoundError(
+          absl::StrFormat("File not found at path: %s", path_));
+    }
+    return absl::InternalError(absl::StrFormat(
         "Unable to open the file at path: %s, errno: %d", path_, errno));
   }
   auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
@@ -234,13 +237,13 @@ absl::Status ApifsFile::ReadRange(uint64_t offset,
 
 absl::Status ApifsFile::WriteRange(uint64_t offset,
                                    absl::Span<const char> value) const {
-  if (!Exists()) {
-    return absl::NotFoundError(
-        absl::StrFormat("File not found at path: %s", path_));
-  }
   const int fd = open(path_.c_str(), O_WRONLY);
   if (fd < 0) {
-    return absl::NotFoundError(
+    if (errno == ENOENT) {
+      return absl::NotFoundError(
+          absl::StrFormat("File not found at path: %s", path_));
+    }
+    return absl::InternalError(
         absl::StrFormat("Unable to open the file at path: %s", path_));
   }
   auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
@@ -248,7 +251,7 @@ absl::Status ApifsFile::WriteRange(uint64_t offset,
   size_t size = value.size();
   int wlen = pwrite(fd, value.data(), size, offset);
   if (wlen != size) {
-    return absl::NotFoundError(
+    return absl::InternalError(
         absl::StrFormat("Failed to write %d bytes to msr %s", size, path_));
   }
   return absl::OkStatus();
