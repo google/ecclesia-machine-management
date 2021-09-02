@@ -73,6 +73,7 @@ cc_library(
     includes = ["libevent/include"],
     linkopts = ["-lpthread"],
     linkstatic = 1,
+    visibility = ["//visibility:public"],
 )
 
 filegroup(

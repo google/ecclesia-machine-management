@@ -139,4 +139,5 @@ cc_library(
         "@libedit//:pretend_to_be_gnu_readline_system",
         "@ncurses",
     ],
+    visibility = ["//visibility:public"],
 )

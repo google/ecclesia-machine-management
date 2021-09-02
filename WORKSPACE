@@ -171,6 +171,9 @@ http_archive(
 #tensorflow. Commit from June 23, 2021 making HTTP server support PATCH
 http_archive(
     name = "com_google_tensorflow_serving",
+    patches = [
+        "//ecclesia/oss:tensorflow.patches/tensorflow.visibility.patch",
+    ],
     sha256 = "9635a59a23981bb61661b94059fd10f8365b3f316212b0eb5c5c9ffb8be911b6",
     strip_prefix = "serving-6cbc4a9eb419c8078c3a4e791381cda70dd8fc78",
     urls = ["https://github.com/tensorflow/serving/archive/6cbc4a9eb419c8078c3a4e791381cda70dd8fc78.zip"],
