@@ -44,10 +44,21 @@ http_archive(
 
 # Google APIs imports. Required to build googleapis.
 load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
+
 switched_rules_by_language(
     name = "com_google_googleapis_imports",
     cc = True,
     grpc = True,
+)
+
+# Needs to come before grpc_deps() to be respected.
+http_archive(
+    name = "boringssl",
+    sha256 = "66e1b0675d58b35f9fe3224b26381a6d707c3293eeee359c813b4859a6446714",
+    strip_prefix = "boringssl-9b7498d5aba71e545747d65dc65a4d4424477ff0",
+    urls = [
+        "https://github.com/google/boringssl/archive/9b7498d5aba71e545747d65dc65a4d4424477ff0.tar.gz",
+    ],
 )
 
 # gRPC. Official release 1.33.2. Name is required by Google APIs.
@@ -57,7 +68,9 @@ http_archive(
     strip_prefix = "grpc-1.33.2",
     urls = ["https://github.com/grpc/grpc/archive/v1.33.2.tar.gz"],
 )
+
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+
 grpc_deps()
 
 # Skylib libraries.
@@ -75,12 +88,14 @@ http_archive(
     strip_prefix = "rules_python-4b84ad270387a7c439ebdccfd530e2339601ef27",
     urls = ["https://github.com/bazelbuild/rules_python/archive/4b84ad270387a7c439ebdccfd530e2339601ef27.tar.gz"],
 )
+
 http_archive(
     name = "rules_pkg",
     sha256 = "b9d1387deed06eef45edd3eb7fd166577b8ad1884cb6a17898d136059d03933c",
     strip_prefix = "rules_pkg-0.2.6-1/pkg",
     urls = ["https://github.com/bazelbuild/rules_pkg/archive/0.2.6-1.tar.gz"],
 )
+
 http_archive(
     # Needed for gRPC.
     name = "build_bazel_rules_swift",
@@ -97,7 +112,9 @@ http_archive(
     strip_prefix = "rules_boost-a32cad61d9166d28ed86d0e07c0d9bca8db9cb82",
     urls = ["https://github.com/nelhage/rules_boost/archive/a32cad61d9166d28ed86d0e07c0d9bca8db9cb82.tar.gz"],
 )
+
 load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
+
 boost_deps()
 
 # Subpar, an external equivalent for building .par files.
@@ -190,21 +207,12 @@ http_archive(
 )
 
 http_archive(
-    name = "boringssl",
-    sha256 = "66e1b0675d58b35f9fe3224b26381a6d707c3293eeee359c813b4859a6446714",
-    strip_prefix = "boringssl-9b7498d5aba71e545747d65dc65a4d4424477ff0",
-    urls = [
-        "https://github.com/google/boringssl/archive/9b7498d5aba71e545747d65dc65a4d4424477ff0.tar.gz",
-    ],
-)
-
-http_archive(
     name = "ncurses",
     build_file = "@//ecclesia/oss:ncurses.BUILD",
     sha256 = "30306e0c76e0f9f1f0de987cf1c82a5c21e1ce6568b9227f7da5b71cbea86c9d",
     strip_prefix = "ncurses-6.2",
     urls = [
-        "http://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.2.tar.gz"
+        "http://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.2.tar.gz",
     ],
 )
 
@@ -221,10 +229,10 @@ http_archive(
 http_archive(
     name = "ipmitool",
     build_file = "@//ecclesia/oss:ipmitool.BUILD",
-    sha256 = "c8549064def9c38acd8d3d9bf976952e792b714206285c9c4b9ff6c9c56a17fc",
-    strip_prefix = "ipmitool-c3939dac2c060651361fc71516806f9ab8c38901",
-    urls = [
-        "https://github.com/ipmitool/ipmitool/archive/c3939dac2c060651361fc71516806f9ab8c38901.tar.gz"
+    patch_cmds = [
+        "./bootstrap",
+        "./configure CFLAGS=-fPIC CXXFLAGS=-fPIC --enable-shared=no",
+        "cp ./config.h include",
     ],
     patches = [
         "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_ipmi_intf.h.patch",
@@ -243,10 +251,10 @@ http_archive(
         "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_ipmi_user.h.patch",
         "//ecclesia/oss:ipmitool.patches/ipmitool.lib_ipmi_user.c.patch",
     ],
-    patch_cmds = [
-        "./bootstrap",
-        "./configure CFLAGS=-fPIC CXXFLAGS=-fPIC --enable-shared=no",
-        "cp ./config.h include",
+    sha256 = "c8549064def9c38acd8d3d9bf976952e792b714206285c9c4b9ff6c9c56a17fc",
+    strip_prefix = "ipmitool-c3939dac2c060651361fc71516806f9ab8c38901",
+    urls = [
+        "https://github.com/ipmitool/ipmitool/archive/c3939dac2c060651361fc71516806f9ab8c38901.tar.gz",
     ],
 )
 
@@ -274,11 +282,6 @@ http_archive(
 http_archive(
     name = "libredfish",
     build_file = "@//ecclesia/oss:libredfish.BUILD",
-    sha256 = "301563b061da5862e2dfa7da367d37298856eace5aabba80cabf15a42b6ed3d3",
-    strip_prefix = "libredfish-1.2.8",
-    urls = [
-        "https://github.com/DMTF/libredfish/archive/1.2.8.tar.gz",
-    ],
     patches = [
         "//ecclesia/oss:libredfish.patches/01.redfishService.h.patch",
         "//ecclesia/oss:libredfish.patches/02.queue.h.patch",
@@ -293,14 +296,16 @@ http_archive(
         "//ecclesia/oss:libredfish.patches/10.mtls_auth.service.c.patch",
         "//ecclesia/oss:libredfish.patches/11.http_handler.patch",
     ],
+    sha256 = "301563b061da5862e2dfa7da367d37298856eace5aabba80cabf15a42b6ed3d3",
+    strip_prefix = "libredfish-1.2.8",
+    urls = [
+        "https://github.com/DMTF/libredfish/archive/1.2.8.tar.gz",
+    ],
 )
 
 http_archive(
     name = "redfishMockupServer",
     build_file = "@//ecclesia/oss:redfishMockupServer.BUILD",
-    sha256 = "2a4663441b205189686dfcc9a4082fc8c30cb1637126281fb291ad69cabb43f9",
-    strip_prefix = "Redfish-Mockup-Server-1.1.0",
-    urls = ["https://github.com/DMTF/Redfish-Mockup-Server/archive/1.1.0.tar.gz"],
     patches = [
         "//ecclesia/oss:redfishMockupServer.patches/01.remove_grequest.patch",
         "//ecclesia/oss:redfishMockupServer.patches/02.add_ipv6.patch",
@@ -310,28 +315,31 @@ http_archive(
         "//ecclesia/oss:redfishMockupServer.patches/06.add_mtls_support.patch",
         "//ecclesia/oss:redfishMockupServer.patches/07.add_eventservice_support.patch",
     ],
+    sha256 = "2a4663441b205189686dfcc9a4082fc8c30cb1637126281fb291ad69cabb43f9",
+    strip_prefix = "Redfish-Mockup-Server-1.1.0",
+    urls = ["https://github.com/DMTF/Redfish-Mockup-Server/archive/1.1.0.tar.gz"],
 )
 
 http_archive(
     name = "libsodium",
     build_file = "@//ecclesia/oss:libsodium.BUILD",
+    patches = [
+        "//ecclesia/oss:libsodium.patches/libsodium.01.version_h.patch",
+    ],
     sha256 = "d59323c6b712a1519a5daf710b68f5e7fde57040845ffec53850911f10a5d4f4",
     strip_prefix = "libsodium-1.0.18",
     urls = ["https://github.com/jedisct1/libsodium/archive/1.0.18.tar.gz"],
-    patches = [
-      "//ecclesia/oss:libsodium.patches/libsodium.01.version_h.patch",
-    ]
 )
 
 http_archive(
     name = "zeromq",
     build_file = "@//ecclesia/oss:zeromq.BUILD",
+    patches = [
+        "//ecclesia/oss:zeromq.patches/zmq.01.add_platform_hpp.patch",
+    ],
     sha256 = "27d1e82a099228ee85a7ddb2260f40830212402c605a4a10b5e5498a7e0e9d03",
     strip_prefix = "zeromq-4.2.1",
     urls = ["https://github.com/zeromq/libzmq/releases/download/v4.2.1/zeromq-4.2.1.tar.gz"],
-    patches = [
-      "//ecclesia/oss:zeromq.patches/zmq.01.add_platform_hpp.patch"
-    ],
 )
 
 http_archive(
@@ -345,9 +353,9 @@ http_archive(
 # Riegeli. Uses the latest commit as of Mar 17, 2021.
 http_archive(
     name = "com_google_riegeli",
-    url = "https://github.com/google/riegeli/archive/9c3f3203ad04a45fe8743bb71cd0cd98c76e394d.tar.gz",
     sha256 = "8f28ca19b1ebe96df6c1d76ecadf1aa4e7fcf151c0492e91b7401a47ce2add62",
     strip_prefix = "riegeli-9c3f3203ad04a45fe8743bb71cd0cd98c76e394d",
+    url = "https://github.com/google/riegeli/archive/9c3f3203ad04a45fe8743bb71cd0cd98c76e394d.tar.gz",
 )
 
 # Additional projects needed by riegeli.
