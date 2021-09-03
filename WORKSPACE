@@ -10,6 +10,14 @@ http_archive(
     urls = ["https://github.com/google/googletest/archive/release-1.10.0.tar.gz"],
 )
 
+# Google benchmark. Official release 1.5.6.
+http_archive(
+    name = "com_github_google_benchmark",
+    sha256 = "789f85b4810d13ff803834ea75999e41b326405d83d6a538baf01499eda96102",
+    strip_prefix = "benchmark-1.5.6",
+    urls = ["https://github.com/google/benchmark/archive/refs/tags/v1.5.6.tar.gz"],
+)
+
 # Abseil. Latest feature not releases yet. Picked up a commit from Sep 2, 2020
 http_archive(
     name = "com_google_absl",

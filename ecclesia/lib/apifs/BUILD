@@ -36,3 +36,17 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_binary(
+    name = "apifs_benchmark",
+    srcs = ["apifs_benchmark.cc"],
+    linkstatic = True,
+    deps = [
+        ":apifs",
+        "//ecclesia/lib/logging",
+        "@com_github_google_benchmark//:benchmark_main",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
