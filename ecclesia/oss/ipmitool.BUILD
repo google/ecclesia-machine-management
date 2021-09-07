@@ -134,10 +134,10 @@ cc_library(
     linkopts = [
         "-lm",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         "@boringssl//:crypto",
         "@libedit//:pretend_to_be_gnu_readline_system",
         "@ncurses",
     ],
-    visibility = ["//visibility:public"],
 )
