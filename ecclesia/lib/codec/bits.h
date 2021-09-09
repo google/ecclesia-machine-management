@@ -159,20 +159,21 @@ class MaskedAddress {
 // Represents a range of addresses.
 class AddressRange {
  public:
-  // End < begin is a valid condition signifying an empty range.
+  // last < first is a valid condition signifying an empty range.
   // Begin and end are inclusive.
-  AddressRange(uint64_t begin, uint64_t end) : begin_(begin), end_(end) {}
+  AddressRange(uint64_t first, uint64_t last) : first_(first), last_(last) {}
   // The empty range.
   AddressRange() : AddressRange(1, 0) {}
 
   bool operator==(const AddressRange &range) const {
-    return begin_ == range.begin_ && end_ == range.end_;
+    return first_ == range.first_ && last_ == range.last_;
   }
   bool operator!=(const AddressRange &range) const { return !(*this == range); }
 
-  // The range is empty if end < begin.
+  // The range is empty if last < first. Upon an First/Last address access request
+  // to an empty range , return value of BeginAddress for both First and Last.
   bool Empty() const;
-  // An address is in the range if begin <= address <= end.
+  // An address is in the range if first <= address <= last.
   bool InRange(uint64_t address) const;
 
   // Check if all the possible addresses within the MaskedAddress fall within
@@ -183,10 +184,13 @@ class AddressRange {
   // AddressRange.
   bool OverlapsMask(MaskedAddress address) const;
 
+  uint64_t FirstAddress() const;
+  uint64_t LastAddress() const;
+
  private:
   friend std::ostream &operator<<(std::ostream &out, const AddressRange &addr);
-  uint64_t begin_;
-  uint64_t end_;
+  uint64_t first_;
+  uint64_t last_;
 };
 
 }  // namespace ecclesia

@@ -203,6 +203,18 @@ TEST(MaskedAddressTest, Contiguous) {
   EXPECT_TRUE(MaskedAddress(0xdeadbeef, ~0x00000000).Contiguous());
 }
 
+TEST(AddressRangeTest, CheckFirstAndLast) {
+  AddressRange range(0x12345678, 0xdeadbeef);
+  EXPECT_FALSE(range.Empty());
+  EXPECT_EQ(range.FirstAddress(), 0x12345678);
+  EXPECT_EQ(range.LastAddress(), 0xdeadbeef);
+
+  AddressRange empty_range(0x12345678, 0x12345677);
+  EXPECT_TRUE(empty_range.Empty());
+  EXPECT_EQ(empty_range.FirstAddress(), 0x12345678);
+  EXPECT_EQ(empty_range.LastAddress(), 0x12345678);
+}
+
 TEST(AddressRangeTest, EqualAndNotEqual) {
   AddressRange range0(0x12345678, 0xdeadbeef);
   AddressRange range1(0, 0xdeadbeef);
