@@ -97,17 +97,16 @@ void MemoryMetrics::Get(
   json[kOdataId] = std::string(req->uri_path());
 
   // Error counts are added as an Oem field
-  auto *oem = GetJsonObject(&json, kOem);
-  auto *google = GetJsonObject(oem, kGoogle);
-  auto *memory_error_counts = GetJsonObject(google, kMemoryErrorCounts);
+  auto *lifetime = GetJsonObject(&json, kLifeTime);
 
-  if (mem_errors.contains(dimm_num)) {
-    (*memory_error_counts)[kCorrectable] = mem_errors.at(dimm_num).correctable;
-    (*memory_error_counts)[kUncorrectable] =
-        mem_errors.at(dimm_num).uncorrectable;
+  if (auto itr = mem_errors.find(dimm_num); itr != mem_errors.end()) {
+    (*lifetime)[kCorrectableECCErrorCount] =
+        itr->second.correctable;
+    (*lifetime)[kUncorrectableECCErrorCount] =
+        itr->second.uncorrectable;
   } else {
-    (*memory_error_counts)[kCorrectable] = 0;
-    (*memory_error_counts)[kUncorrectable] = 0;
+    (*lifetime)[kCorrectableECCErrorCount] = 0;
+    (*lifetime)[kUncorrectableECCErrorCount] = 0;
   }
 
   JSONResponseOK(json, req);

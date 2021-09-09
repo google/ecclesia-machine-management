@@ -33,6 +33,7 @@ inline constexpr char kUpdateService[] = "UpdateService";
 inline constexpr char kMembers[] = "Members";
 inline constexpr char kMembersCount[] = "Members@odata.count";
 inline constexpr char kOem[] = "Oem";
+inline constexpr char kLifeTime[] = "LifeTime";
 inline constexpr char kGoogle[] = "Google";
 inline constexpr char kMemory[] = "Memory";
 inline constexpr char kSensor[] = "Sensors";
@@ -68,6 +69,9 @@ inline constexpr char kAssembly[] = "Assembly";
 inline constexpr char kMemoryErrorCounts[] = "MemoryErrorCounts";
 inline constexpr char kCorrectable[] = "Correctable";
 inline constexpr char kUncorrectable[] = "Uncorrectable";
+inline constexpr char kCorrectableECCErrorCount[] = "CorrectableECCErrorCount";
+inline constexpr char kUncorrectableECCErrorCount[] =
+    "UncorrectableECCErrorCount";
 inline constexpr char kMetrics[] = "Metrics";
 inline constexpr char kMemoryMetrics[] = "MemoryMetrics";
 inline constexpr char kMaxSpeedMHz[] = "MaxSpeedMHz";

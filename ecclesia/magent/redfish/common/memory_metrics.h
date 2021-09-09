@@ -49,7 +49,7 @@ class MemoryMetrics : public IndexResource<int> {
            const ParamsType &params) override;
 
   void AddStaticFields(nlohmann::json *json) {
-    (*json)[kOdataType] = "#MemoryMetrics.v1_2_0.MemoryMetrics";
+    (*json)[kOdataType] = "#MemoryMetrics.v1_4_0.MemoryMetrics";
     (*json)[kOdataContext] =
         "/redfish/v1/$metadata#MemoryMetrics.MemoryMetrics";
     (*json)[kName] = "Memory Metrics";
