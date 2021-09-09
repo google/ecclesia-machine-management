@@ -100,7 +100,7 @@ class NvmeDevice : public NvmeDeviceInterface {
 
     nvme_passthru_cmd cmd = {
         .opcode = kNvmeOpcodeAdminIdentify,
-        .nsid = 0,
+        .nsid = starting_namespace_id,
         .addr = reinterpret_cast<uint64_t>(buffer.c_str()),
         .data_len = IdentifyListNamespaceFormat::IntrinsicSizeInBytes(),
         .cdw10 = kCnsIdentifyListNs,

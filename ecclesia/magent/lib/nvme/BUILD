@@ -173,9 +173,11 @@ cc_test(
         ":libnvme",
         ":mock_nvme_device",
         ":nvme_types_emb",
+        "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )

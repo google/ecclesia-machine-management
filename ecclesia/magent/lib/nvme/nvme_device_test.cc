@@ -32,6 +32,8 @@
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/substitute.h"
+#include "ecclesia/lib/testing/status.h"
 #include "ecclesia/magent/lib/nvme/controller_registers.h"
 #include "ecclesia/magent/lib/nvme/identify_namespace.h"
 #include "ecclesia/magent/lib/nvme/mock_nvme_device.h"
@@ -44,10 +46,14 @@ namespace {
 using ::testing::AllOf;
 using ::testing::Field;
 using ::testing::HasSubstr;
+using ::testing::Invoke;
 using ::testing::Pointee;
 using ::testing::Return;
 
 const uint8_t kNvmeOpcodeSanitizeNvm = 0x84;
+const uint8_t kNvmeOpcodeAdminIdentify = 0x6;
+const uint8_t kCnsIdentifyListNs = 0x02;
+const int kPartialNsidCount = 2;
 
 class MockNvmeAccessInterface : public NvmeAccessInterface {
  public:
@@ -136,6 +142,79 @@ TEST(EnumerateAllNamespacesTest, ThreeCommandsWorthOfNsids) {
   auto ret = nvme.EnumerateAllNamespaces();
   ASSERT_TRUE(ret.ok());
   EXPECT_THAT(ret.value(), expected_set);
+}
+
+absl::Status ReturnShortNsList(nvme_passthru_cmd* cmd) {
+  uint32_t* nsid = reinterpret_cast<uint32_t*>(cmd->addr);
+  memset(nsid, 0, cmd->data_len);
+  nsid[0] = 1;
+  return absl::OkStatus();
+}
+
+// Test the typical case: a device with a small number of namespaces.
+TEST(EnumerateNamespacesAfterTest, ShortList) {
+  auto MockAccess = absl::make_unique<MockNvmeAccessInterface>();
+
+  EXPECT_CALL(
+      *MockAccess,
+      ExecuteAdminCommand(AllOf(
+          Pointee(Field(&nvme_passthru_cmd::opcode, kNvmeOpcodeAdminIdentify)),
+          Pointee(Field(&nvme_passthru_cmd::nsid, 0)),
+          Pointee(Field(&nvme_passthru_cmd::cdw10, kCnsIdentifyListNs)))))
+      .WillOnce(Invoke(ReturnShortNsList));
+
+  auto nvme = CreateNvmeDevice(std::move(MockAccess));
+  std::set<uint32_t> expected_set{1};
+
+  EXPECT_THAT(nvme->EnumerateAllNamespaces(), IsOkAndHolds(expected_set));
+}
+
+absl::Status ReturnNsList(nvme_passthru_cmd* cmd) {
+  int nsid_count;
+
+  switch (cmd->nsid) {
+    case 0:
+    case IdentifyListNamespaceFormat::capacity():
+      nsid_count = IdentifyListNamespaceFormat::capacity();
+      break;
+    case IdentifyListNamespaceFormat::capacity() * 2:
+      nsid_count = kPartialNsidCount;
+      break;
+    default:
+      return absl::InvalidArgumentError(
+          absl::Substitute("Unexpected nsid $0", cmd->nsid));
+  }
+
+  uint32_t* nsid = reinterpret_cast<uint32_t*>(cmd->addr);
+  memset(nsid, 0, cmd->data_len);
+  for (int i = 0; i < nsid_count; i++) {
+    nsid[i] = cmd->nsid + i + 1;
+  }
+
+  return absl::OkStatus();
+}
+
+// A device which has more than two commands' worth of NSIDs.
+TEST(EnumerateNamespacesAfterTest, ThreeCommandsWorthOfNsids) {
+  auto MockAccess = absl::make_unique<MockNvmeAccessInterface>();
+
+  EXPECT_CALL(
+      *MockAccess,
+      ExecuteAdminCommand(AllOf(
+          Pointee(Field(&nvme_passthru_cmd::opcode, kNvmeOpcodeAdminIdentify)),
+          Pointee(Field(&nvme_passthru_cmd::cdw10, kCnsIdentifyListNs)))))
+      .Times(3)
+      .WillRepeatedly(Invoke(ReturnNsList));
+
+  std::set<uint32_t> expected_set;
+  for (uint32_t i = 0;
+       i < IdentifyListNamespaceFormat::capacity() * 2 + kPartialNsidCount;
+       ++i) {
+    expected_set.insert(i + 1);
+  }
+
+  auto nvme = CreateNvmeDevice(std::move(MockAccess));
+  EXPECT_THAT(nvme->EnumerateAllNamespaces(), IsOkAndHolds(expected_set));
 }
 
 TEST(EnumerateAllNamespacesAndInfoTest, IdentifyNamespaceErrorPropagates) {
