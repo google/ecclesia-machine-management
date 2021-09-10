@@ -47,6 +47,8 @@ inline constexpr char kRfPropertyDriveReset[] = "#Drive.Reset";
 inline constexpr char kRfPropertyResetType[] = "ResetType";
 inline constexpr char kRfPropertyProtocolOem[] = "OEM";
 inline constexpr char kRfPropertyOem[] = "Oem";
+inline constexpr char kRfPropertyLifeTime[] = "LifeTime";
+inline constexpr char kRfPropertyCacheMetricsTotal[] = "CacheMetricsTotal";
 inline constexpr char kRfPropertyProcessors[] = "Processors";
 inline constexpr char kRfPropertyMetrics[] = "Metrics";
 inline constexpr char kRfPropertyEnvironmentMetrics[] = "EnvironmentMetrics";
@@ -218,6 +220,10 @@ DEFINE_REDFISH_PROPERTY(PropertyMessage, std::string, "Message");
 DEFINE_REDFISH_PROPERTY(PropertyVersion, std::string, "Version");
 DEFINE_REDFISH_PROPERTY(PropertyLocationType, std::string, "LocationType");
 DEFINE_REDFISH_PROPERTY(PropertyServiceLabel, std::string, "ServiceLabel");
+DEFINE_REDFISH_PROPERTY(PropertyCorrectableECCErrorCount, int,
+                        "CorrectableECCErrorCount");
+DEFINE_REDFISH_PROPERTY(PropertyUncorrectableECCErrorCount, int,
+                        "UncorrectableECCErrorCount");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
