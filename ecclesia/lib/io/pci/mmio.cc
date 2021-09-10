@@ -30,15 +30,15 @@
 
 namespace ecclesia {
 
-MmioRegion::MmioRegion(absl::string_view physical_mem_device,
-                       uint64_t pci_mmconfig_base,
-                       const PciDbdfLocation &location)
+PciMmioRegion::PciMmioRegion(absl::string_view physical_mem_device,
+                             uint64_t pci_mmconfig_base,
+                             const PciDbdfLocation &location)
     : PciRegion(kPciConfigSpaceSize),
       mmio_(MappedMemory::Create(std::string(physical_mem_device),
                                  pci_mmconfig_base + LocationToOffset(location),
                                  Size(), MappedMemory::Type::kReadWrite)) {}
 
-absl::StatusOr<uint8_t> MmioRegion::Read8(OffsetType offset) const {
+absl::StatusOr<uint8_t> PciMmioRegion::Read8(OffsetType offset) const {
   ECCLESIA_RETURN_IF_ERROR(mmio_.status());
   uint8_t result;
   ECCLESIA_RETURN_IF_ERROR(
@@ -46,14 +46,14 @@ absl::StatusOr<uint8_t> MmioRegion::Read8(OffsetType offset) const {
   return result;
 }
 
-absl::Status MmioRegion::Write8(OffsetType offset, uint8_t value) {
+absl::Status PciMmioRegion::Write8(OffsetType offset, uint8_t value) {
   ECCLESIA_RETURN_IF_ERROR(mmio_.status());
   ECCLESIA_RETURN_IF_ERROR(
       WriteConfig<uint8_t>(offset, absl::MakeSpan(&value, sizeof(value))));
   return absl::OkStatus();
 }
 
-absl::StatusOr<uint16_t> MmioRegion::Read16(OffsetType offset) const {
+absl::StatusOr<uint16_t> PciMmioRegion::Read16(OffsetType offset) const {
   ECCLESIA_RETURN_IF_ERROR(mmio_.status());
   uint8_t data[sizeof(uint16_t)];
   ECCLESIA_RETURN_IF_ERROR(
@@ -61,14 +61,14 @@ absl::StatusOr<uint16_t> MmioRegion::Read16(OffsetType offset) const {
   return LittleEndian::Load16(data);
 }
 
-absl::Status MmioRegion::Write16(OffsetType offset, uint16_t value) {
+absl::Status PciMmioRegion::Write16(OffsetType offset, uint16_t value) {
   ECCLESIA_RETURN_IF_ERROR(mmio_.status());
   uint8_t data[sizeof(uint16_t)];
   LittleEndian::Store16(value, data);
   return WriteConfig<uint16_t>(offset, absl::MakeSpan(data, sizeof(data)));
 }
 
-absl::StatusOr<uint32_t> MmioRegion::Read32(OffsetType offset) const {
+absl::StatusOr<uint32_t> PciMmioRegion::Read32(OffsetType offset) const {
   ECCLESIA_RETURN_IF_ERROR(mmio_.status());
   uint8_t data[sizeof(uint32_t)];
   ECCLESIA_RETURN_IF_ERROR(
@@ -76,7 +76,7 @@ absl::StatusOr<uint32_t> MmioRegion::Read32(OffsetType offset) const {
   return LittleEndian::Load32(data);
 }
 
-absl::Status MmioRegion::Write32(OffsetType offset, uint32_t value) {
+absl::Status PciMmioRegion::Write32(OffsetType offset, uint32_t value) {
   ECCLESIA_RETURN_IF_ERROR(mmio_.status());
   uint8_t data[sizeof(uint32_t)];
   LittleEndian::Store32(value, data);

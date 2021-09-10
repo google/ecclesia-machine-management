@@ -43,7 +43,7 @@ constexpr absl::StatusCode kInternalError = absl::StatusCode::kInternal;
 }  // namespace
 
 TEST(MmioNoDevice, ReadFailure) {
-  MmioRegion pci("/nonexistent", 0, kDefaultLocation);
+  PciMmioRegion pci("/nonexistent", 0, kDefaultLocation);
 
   EXPECT_EQ(pci.Read8(0).status().code(), kInternalError);
   EXPECT_EQ(pci.Read16(0).status().code(), kInternalError);
@@ -51,7 +51,7 @@ TEST(MmioNoDevice, ReadFailure) {
 }
 
 TEST(MmioNoDevice, WriteFailure) {
-  MmioRegion pci("/nonexistent", 0, kDefaultLocation);
+  PciMmioRegion pci("/nonexistent", 0, kDefaultLocation);
 
   const uint8_t val8 = 0xef;
   const uint16_t val16 = 0xbeef;
@@ -61,7 +61,7 @@ TEST(MmioNoDevice, WriteFailure) {
   EXPECT_EQ(pci.Write32(0, val32).code(), kInternalError);
 }
 
-class MmioRegionTest : public testing::Test {
+class PciMmioRegionTest : public testing::Test {
  protected:
   void SetUp() override {}
 
@@ -95,9 +95,9 @@ class MmioRegionTest : public testing::Test {
   int size_;
 };
 
-TEST_F(MmioRegionTest, ReadConfigDev0Success) {
+TEST_F(PciMmioRegionTest, ReadConfigDev0Success) {
   SetupMmconfigForBuses(256);
-  MmioRegion pci(mmconfig_filename_, kBaseAddr, kDefaultLocation);
+  PciMmioRegion pci(mmconfig_filename_, kBaseAddr, kDefaultLocation);
 
   const uint32_t expected_val = 0xdeadbeef;
   LittleEndian::Store32(expected_val, mmconfig_ + kBaseAddr);
@@ -119,13 +119,13 @@ TEST_F(MmioRegionTest, ReadConfigDev0Success) {
   }
 }
 
-TEST_F(MmioRegionTest, ReadConfigSuccess) {
+TEST_F(PciMmioRegionTest, ReadConfigSuccess) {
   SetupMmconfigForBuses(256);
   const auto loc = PciDbdfLocation::Make<0, 1, 2, 3>();
-  MmioRegion pci(mmconfig_filename_, kBaseAddr, loc);
+  PciMmioRegion pci(mmconfig_filename_, kBaseAddr, loc);
 
   const uint32_t expected_val = 0xdeadbeef;
-  const uint64_t pci_offset = MmioRegion::LocationToOffset(loc) + 0x38;
+  const uint64_t pci_offset = PciMmioRegion::LocationToOffset(loc) + 0x38;
   LittleEndian::Store32(expected_val, mmconfig_ + kBaseAddr + pci_offset);
 
   {
@@ -145,15 +145,15 @@ TEST_F(MmioRegionTest, ReadConfigSuccess) {
   }
 }
 
-TEST_F(MmioRegionTest, WriteConfigSuccess) {
+TEST_F(PciMmioRegionTest, WriteConfigSuccess) {
   SetupMmconfigForBuses(256);
   const auto loc = PciDbdfLocation::Make<0, 3, 2, 1>();
-  MmioRegion pci(mmconfig_filename_, kBaseAddr, loc);
+  PciMmioRegion pci(mmconfig_filename_, kBaseAddr, loc);
 
   // Fill memory with alternating 0's and 1's for overwrite checking
   std::fill(mmconfig_, mmconfig_ + size_, 0xaa);
 
-  const uint64_t pci_offset = MmioRegion::LocationToOffset(loc) + 0x38;
+  const uint64_t pci_offset = PciMmioRegion::LocationToOffset(loc) + 0x38;
   {
     EXPECT_EQ(pci.Write8(0x38, 0xef).code(), kOkStatus);
 

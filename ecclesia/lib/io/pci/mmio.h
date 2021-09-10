@@ -30,16 +30,17 @@
 
 namespace ecclesia {
 
-// Creates a read-write MMIO interface into a PCI device's config space.
-class MmioRegion : public PciRegion {
+// Creates a read-write MMIO interface into a PCI device's config space. This is
+// specifically for accessing a PCI device.
+class PciMmioRegion : public PciRegion {
  public:
   // Args:
   //   physical_mem_device: path to physical memory device (e.g. /dev/mem)
   //   pci_mmconfig_base: base address in physical memory of PCI memory-mapped
-  //       space.
+  //       space.:
   //   location: D:B:D:F format location of PCI device.
-  MmioRegion(absl::string_view physical_mem_device, uint64_t pci_mmconfig_base,
-             const PciDbdfLocation &location);
+  PciMmioRegion(absl::string_view physical_mem_device,
+                uint64_t pci_mmconfig_base, const PciDbdfLocation &location);
 
   absl::StatusOr<uint8_t> Read8(OffsetType offset) const override;
   absl::Status Write8(OffsetType offset, uint8_t value) override;
