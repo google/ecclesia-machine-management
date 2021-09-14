@@ -4,6 +4,39 @@
 licenses(["notice"])
 
 cc_library(
+    name = "generic_mmio",
+    srcs = ["generic_mmio.cc"],
+    hdrs = ["generic_mmio.h"],
+    visibility = ["//ecclesia:library_users"],
+    deps = [
+        "//ecclesia/lib/codec:bits",
+        "//ecclesia/lib/codec:endian",
+        "//ecclesia/lib/file:mmap",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "generic_mmio_test",
+    size = "small",
+    srcs = ["generic_mmio_test.cc"],
+    deps = [
+        ":generic_mmio",
+        "//ecclesia/lib/codec:bits",
+        "//ecclesia/lib/codec:endian",
+        "//ecclesia/lib/file:path",
+        "//ecclesia/lib/file:test_filesystem",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "ioctl",
     srcs = ["ioctl.cc"],
     hdrs = ["ioctl.h"],
