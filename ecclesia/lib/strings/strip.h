@@ -22,14 +22,14 @@
 namespace ecclesia {
 
 // Trim the suffix white spaces from the string.
-absl::string_view TrimSuffixWhiteSpaces(absl::string_view in_str);
+absl::string_view TrimSuffixWhitespace(absl::string_view in_str);
 
 // Trim the prefix white spaces from the string.
-absl::string_view TrimPrefixWhiteSpaces(absl::string_view in_str);
+absl::string_view TrimPrefixWhitespace(absl::string_view in_str);
 
 // Trim the white spaces from both ends of the string.
 inline absl::string_view TrimString(absl::string_view in_str) {
-  return TrimSuffixWhiteSpaces(TrimPrefixWhiteSpaces(in_str));
+  return TrimSuffixWhitespace(TrimPrefixWhitespace(in_str));
 }
 
 }  // namespace ecclesia

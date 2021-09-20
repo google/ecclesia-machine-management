@@ -24,24 +24,24 @@
 namespace ecclesia {
 namespace {
 
-TEST(StringStripTest, TrimSuffixWhiteSpaces) {
-  EXPECT_EQ(TrimSuffixWhiteSpaces("abc "), "abc");
-  EXPECT_EQ(TrimSuffixWhiteSpaces("abc xyz   "), "abc xyz");
-  EXPECT_EQ(TrimSuffixWhiteSpaces("abc\t"), "abc");
-  EXPECT_EQ(TrimSuffixWhiteSpaces(" abc"), " abc");
-  EXPECT_EQ(TrimSuffixWhiteSpaces(" a b c "), " a b c");
-  EXPECT_EQ(TrimSuffixWhiteSpaces(""), "");
-  EXPECT_EQ(TrimSuffixWhiteSpaces(" "), "");
+TEST(StringStripTest, TrimSuffixWhitespace) {
+  EXPECT_EQ(TrimSuffixWhitespace("abc "), "abc");
+  EXPECT_EQ(TrimSuffixWhitespace("abc xyz   "), "abc xyz");
+  EXPECT_EQ(TrimSuffixWhitespace("abc\t"), "abc");
+  EXPECT_EQ(TrimSuffixWhitespace(" abc"), " abc");
+  EXPECT_EQ(TrimSuffixWhitespace(" a b c "), " a b c");
+  EXPECT_EQ(TrimSuffixWhitespace(""), "");
+  EXPECT_EQ(TrimSuffixWhitespace(" "), "");
 }
 
-TEST(StringStripTest, TrimPrefixWhiteSpaces) {
-  EXPECT_EQ(TrimPrefixWhiteSpaces("abc "), "abc ");
-  EXPECT_EQ(TrimPrefixWhiteSpaces(" abc xyz"), "abc xyz");
-  EXPECT_EQ(TrimPrefixWhiteSpaces("\tabc\t"), "abc\t");
-  EXPECT_EQ(TrimPrefixWhiteSpaces(" abc"), "abc");
-  EXPECT_EQ(TrimPrefixWhiteSpaces(" a b c "), "a b c ");
-  EXPECT_EQ(TrimPrefixWhiteSpaces(""), "");
-  EXPECT_EQ(TrimPrefixWhiteSpaces(" "), "");
+TEST(StringStripTest, TrimPrefixWhitespace) {
+  EXPECT_EQ(TrimPrefixWhitespace("abc "), "abc ");
+  EXPECT_EQ(TrimPrefixWhitespace(" abc xyz"), "abc xyz");
+  EXPECT_EQ(TrimPrefixWhitespace("\tabc\t"), "abc\t");
+  EXPECT_EQ(TrimPrefixWhitespace(" abc"), "abc");
+  EXPECT_EQ(TrimPrefixWhitespace(" a b c "), "a b c ");
+  EXPECT_EQ(TrimPrefixWhitespace(""), "");
+  EXPECT_EQ(TrimPrefixWhitespace(" "), "");
 }
 
 TEST(StringStripTest, TrimString) {

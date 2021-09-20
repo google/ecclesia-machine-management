@@ -20,22 +20,25 @@
 
 namespace ecclesia {
 namespace {
-constexpr absl::string_view kWhiteSpaces = " \n\r\t\f\v";
-}
 
-absl::string_view TrimSuffixWhiteSpaces(absl::string_view in_str) {
-  const auto pos = in_str.find_last_not_of(kWhiteSpaces);
+constexpr absl::string_view kWhitespaceChars = " \n\r\t\f\v";
+
+}  // namespace
+
+absl::string_view TrimSuffixWhitespace(absl::string_view in_str) {
+  const auto pos = in_str.find_last_not_of(kWhitespaceChars);
   if (pos != absl::string_view::npos) {
     return in_str.substr(0, pos + 1);
   }
   return absl::string_view();
 }
 
-absl::string_view TrimPrefixWhiteSpaces(absl::string_view in_str) {
-  const auto pos = in_str.find_first_not_of(kWhiteSpaces);
+absl::string_view TrimPrefixWhitespace(absl::string_view in_str) {
+  const auto pos = in_str.find_first_not_of(kWhitespaceChars);
   if (pos != absl::string_view::npos) {
     return in_str.substr(pos);
   }
   return absl::string_view();
 }
+
 }  // namespace ecclesia
