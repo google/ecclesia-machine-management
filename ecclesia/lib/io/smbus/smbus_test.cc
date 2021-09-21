@@ -79,7 +79,16 @@ TEST(AccessInterfaceTest, IsHashable) {
   EXPECT_EQ(iter->second, "0-004f");
 }
 
-TEST(SmbusLocationTest, TestTryMake) {
+TEST(SmbusLocationTest, TryMake) {
+  EXPECT_EQ(SmbusLocation::TryMake(12, 0x8f), absl::nullopt);
+  EXPECT_EQ(SmbusLocation::TryMake(256, 0x7f), absl::nullopt);
+  EXPECT_EQ(SmbusLocation::TryMake(10, 0x1f),
+            (SmbusLocation::Make<10, 0x1f>()));
+  EXPECT_EQ(SmbusLocation::TryMake(12, 0x23),
+            (SmbusLocation::Make<12, 0x23>()));
+}
+
+TEST(SmbusLocationTest, FromString) {
   EXPECT_EQ(SmbusLocation::FromString(""), absl::nullopt);
   EXPECT_EQ(SmbusLocation::FromString("12"), absl::nullopt);
   EXPECT_EQ(SmbusLocation::FromString("12-23-34"), absl::nullopt);
@@ -87,12 +96,10 @@ TEST(SmbusLocationTest, TestTryMake) {
   EXPECT_EQ(SmbusLocation::FromString("a-23"), absl::nullopt);
   EXPECT_EQ(SmbusLocation::FromString("12-8f"), absl::nullopt);
   EXPECT_EQ(SmbusLocation::FromString("256-7f"), absl::nullopt);
-  EXPECT_EQ(SmbusLocation::FromString("10-1f")->bus(), SmbusBus::Make<10>());
-  EXPECT_EQ(SmbusLocation::FromString("10-1f")->address(),
-            SmbusAddress::Make<0x1f>());
-  EXPECT_EQ(SmbusLocation::FromString("12-23")->bus(), SmbusBus::Make<12>());
-  EXPECT_EQ(SmbusLocation::FromString("12-23")->address(),
-            SmbusAddress::Make<0x23>());
+  EXPECT_EQ(SmbusLocation::FromString("10-1f"),
+            (SmbusLocation::Make<10, 0x1f>()));
+  EXPECT_EQ(SmbusLocation::FromString("12-23"),
+            (SmbusLocation::Make<12, 0x23>()));
 }
 
 }  // namespace

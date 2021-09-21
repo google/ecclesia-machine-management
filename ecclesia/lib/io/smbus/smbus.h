@@ -63,6 +63,16 @@ class SmbusLocation {
     return SmbusLocation(SmbusBus::Make<bus>(), SmbusAddress::Make<address>());
   }
 
+  // Create an SmbusLocation whose range is checked at run time.
+  static absl::optional<SmbusLocation> TryMake(int bus, int address) {
+    auto maybe_bus = SmbusBus::TryMake(bus);
+    auto maybe_address = SmbusAddress::TryMake(address);
+    if (!maybe_bus || !maybe_address) {
+      return absl::nullopt;
+    }
+    return SmbusLocation(*maybe_bus, *maybe_address);
+  }
+
   // Try to create SmbusLocation from bus+address string representation
   static absl::optional<SmbusLocation> FromString(
       absl::string_view smbus_location);

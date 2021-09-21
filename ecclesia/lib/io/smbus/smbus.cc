@@ -30,12 +30,7 @@ absl::optional<SmbusLocation> SmbusLocation::FromString(
                       RE2::Hex(&address_num))) {
     return absl::nullopt;
   }
-  auto bus = SmbusBus::TryMake(bus_num);
-  auto address = SmbusAddress::TryMake(address_num);
-  if (!bus.has_value() || !address.has_value()) {
-    return absl::nullopt;
-  }
-  return SmbusLocation(*bus, *address);
+  return SmbusLocation::TryMake(bus_num, address_num);
 }
 
 }  // namespace ecclesia
