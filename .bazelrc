@@ -1,2 +1,3 @@
 build --cxxopt='-std=c++17' --host_cxxopt='-std=c++17'
+build --cxxopt='-Wno-sign-compare'
 build --define=grpc_no_ares=true
