@@ -27,6 +27,8 @@
 
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/string_view.h"
+#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/types/fixed_range_int.h"
 
@@ -60,6 +62,10 @@ class SmbusLocation {
   static constexpr SmbusLocation Make() {
     return SmbusLocation(SmbusBus::Make<bus>(), SmbusAddress::Make<address>());
   }
+
+  // Try to create SmbusLocation from bus+address string representation
+  static absl::optional<SmbusLocation> FromString(
+      absl::string_view smbus_location);
 
   // Accessors for reading the bus and address.
   SmbusBus bus() const { return bus_; }
