@@ -61,10 +61,10 @@ class MappedMemory {
   // Using a moved-from mapping will return empty spans and views.
   MappedMemory(const MappedMemory &) = delete;
   MappedMemory &operator=(const MappedMemory &) = delete;
-  MappedMemory(MappedMemory &&other) : mapping_(other.mapping_) {
+  MappedMemory(MappedMemory &&other) noexcept : mapping_(other.mapping_) {
     other.mapping_ = {nullptr, 0, 0, 0, false};
   }
-  MappedMemory &operator=(MappedMemory &&other) {
+  MappedMemory &operator=(MappedMemory &&other) noexcept {
     mapping_ = other.mapping_;
     other.mapping_ = {nullptr, 0, 0, 0, false};
     return *this;

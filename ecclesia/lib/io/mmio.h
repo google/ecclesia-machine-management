@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_IO_GENERIC_MMIO_H_
-#define ECCLESIA_LIB_IO_GENERIC_MMIO_H_
+#ifndef ECCLESIA_LIB_IO_MMIO_H_
+#define ECCLESIA_LIB_IO_MMIO_H_
 
 #include <cstdint>
 
@@ -29,14 +29,15 @@
 
 namespace ecclesia {
 
-class MmioAccessInterface {
+// A type representing access to a range of memory-mapped I/O.
+class MmioRange {
  public:
-  // The type used to specify offsets into the memory range.
+  // The type used to specify offsets into the memory range. We support using
+  // 64-bit address spaces and so this is a 64-bit integer.
   using OffsetType = uint64_t;
 
-  virtual ~MmioAccessInterface() = default;
+  virtual ~MmioRange() = default;
 
-  size_t virtual Size() const = 0;
   // Read/write function that access within this region
   // Offset is relative to the start of the region.
   virtual absl::StatusOr<uint8_t> Read8(OffsetType offset) const = 0;
@@ -47,10 +48,12 @@ class MmioAccessInterface {
 
   virtual absl::StatusOr<uint32_t> Read32(OffsetType offset) const = 0;
   virtual absl::Status Write32(OffsetType offset, uint32_t data) = 0;
+
+  size_t virtual Size() const = 0;
 };
 
-// Creates a generic read-write MMIO accessor into a memory range.
-class MmioAccess : public MmioAccessInterface {
+// An implementation of MmioRange backed by a memory device file.
+class MmioRangeFromFile : public MmioRange {
  public:
   // Args:
   //   size: size of the range.
@@ -58,13 +61,28 @@ class MmioAccess : public MmioAccessInterface {
   //   that can be accessed by MmioRegion will be [start_address,
   //   first_address+size).
   //   physical_mem_device: path to physical memory device (e.g. /dev/mem)
-  MmioAccess(size_t size, uint64_t first_address,
-             absl::string_view physical_mem_device);
+  MmioRangeFromFile(size_t size, uint64_t first_address,
+                    absl::string_view physical_mem_device);
 
-  MmioAccess(AddressRange mmap_addr_range,
-             absl::string_view physical_mem_device);
+  MmioRangeFromFile(AddressRange mmap_addr_range,
+                    absl::string_view physical_mem_device);
 
-  ~MmioAccess() = default;
+  // Access to the underlying device cannot be shared between instances of this
+  // object so it is not copyable. It can be moved.
+  //
+  // The moved-from object will be left with an empty range.
+  MmioRangeFromFile(const MmioRangeFromFile &) = delete;
+  MmioRangeFromFile &operator=(const MmioRangeFromFile &) = delete;
+  MmioRangeFromFile(MmioRangeFromFile &&other) noexcept
+      : size_(other.size_), mmap_(std::move(other.mmap_)) {
+    other.size_ = 0;
+  }
+  MmioRangeFromFile &operator=(MmioRangeFromFile &&other) noexcept {
+    size_ = other.size_;
+    other.size_ = 0;
+    mmap_ = std::move(other.mmap_);
+    return *this;
+  }
 
   absl::StatusOr<uint8_t> Read8(OffsetType offset) const override;
   absl::Status Write8(OffsetType offset, uint8_t value) override;
@@ -89,14 +107,14 @@ class MmioAccess : public MmioAccessInterface {
           "offset %#x is not aligned with read size %d", offset, sizeof(T)));
     }
 
-    ECCLESIA_RETURN_IF_ERROR(mmio_.status());
+    ECCLESIA_RETURN_IF_ERROR(mmap_.status());
     if (offset + span.size() > Size()) {
       return absl::InvalidArgumentError(absl::StrFormat(
           "register access %#x bytes @ %#x", span.size(), offset));
     }
 
     absl::Span<const uint8_t> mem =
-        mmio_.value().MemoryAsReadOnlySpan<uint8_t>();
+        mmap_.value().MemoryAsReadOnlySpan<uint8_t>();
     // This is the critical part that forces an aligned, specific-size data copy
     // from mmap'd PCI config space.
     const T typed_value =
@@ -112,13 +130,13 @@ class MmioAccess : public MmioAccessInterface {
           "offset %#x is not aligned with read size %d", offset, sizeof(T)));
     }
 
-    ECCLESIA_RETURN_IF_ERROR(mmio_.status());
+    ECCLESIA_RETURN_IF_ERROR(mmap_.status());
     if (offset + span.size() > Size()) {
       return absl::InvalidArgumentError(absl::StrFormat(
           "register access %#x bytes @ %#x", span.size(), offset));
     }
 
-    absl::Span<uint8_t> mem = mmio_.value().MemoryAsReadWriteSpan<uint8_t>();
+    absl::Span<uint8_t> mem = mmap_.value().MemoryAsReadWriteSpan<uint8_t>();
     if (mem.empty()) {
       return absl::InternalError("could not get mapped memory for writing");
     }
@@ -130,10 +148,10 @@ class MmioAccess : public MmioAccessInterface {
     return absl::OkStatus();
   }
 
-  const size_t size_;
-  absl::StatusOr<MappedMemory> mmio_;
+  size_t size_;
+  absl::StatusOr<MappedMemory> mmap_;
 };
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_IO_GENERIC_MMIO_H_
+#endif  // ECCLESIA_LIB_IO_MMIO_H_

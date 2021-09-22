@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/lib/io/generic_mmio.h"
+#include "ecclesia/lib/io/mmio.h"
 
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -40,7 +40,7 @@ constexpr absl::StatusCode kInternalError = absl::StatusCode::kInternal;
 }  // namespace
 
 TEST(MmioSanity, EmptyRange) {
-  MmioAccess mmio(AddressRange(1, 0), "/nonexistent");
+  MmioRangeFromFile mmio(AddressRange(1, 0), "/nonexistent");
 
   EXPECT_EQ(mmio.Read8(0).status().code(), kInternalError);
   EXPECT_EQ(mmio.Read16(0).status().code(), kInternalError);
@@ -48,7 +48,7 @@ TEST(MmioSanity, EmptyRange) {
 }
 
 TEST(MmioNoDevice, ReadFailure) {
-  MmioAccess mmio(AddressRange(0, 0), "/nonexistent");
+  MmioRangeFromFile mmio(AddressRange(0, 0), "/nonexistent");
 
   EXPECT_EQ(mmio.Read8(0).status().code(), kInternalError);
   EXPECT_EQ(mmio.Read16(0).status().code(), kInternalError);
@@ -56,7 +56,7 @@ TEST(MmioNoDevice, ReadFailure) {
 }
 
 TEST(MmioNoDevice, WriteFailure) {
-  MmioAccess mmio(AddressRange(0, 0), "/nonexistent");
+  MmioRangeFromFile mmio(AddressRange(0, 0), "/nonexistent");
 
   const uint8_t val8 = 0xef;
   const uint16_t val16 = 0xbeef;
@@ -68,8 +68,6 @@ TEST(MmioNoDevice, WriteFailure) {
 
 class MmioAccessTest : public testing::Test {
  protected:
-  void SetUp() override {}
-
   void SetupMmconfig(int size) {
     size_ = size;
     // Create a sparse file to represent PCI config space and mmap it.
@@ -100,7 +98,7 @@ class MmioAccessTest : public testing::Test {
 
 TEST_F(MmioAccessTest, ReadSuccess) {
   SetupMmconfig(256);
-  MmioAccess mmio(AddressRange(0, 256), mmconfig_filename_);
+  MmioRangeFromFile mmio(AddressRange(0, 256), mmconfig_filename_);
 
   const uint32_t expected_val = 0xdeadbeef;
   LittleEndian::Store32(expected_val, mmconfig_);
@@ -125,7 +123,7 @@ TEST_F(MmioAccessTest, ReadSuccess) {
 TEST_F(MmioAccessTest, WriteSuccess) {
   SetupMmconfig(256);
   uint64_t first_address = 16;
-  MmioAccess mmio(AddressRange(first_address, 256), mmconfig_filename_);
+  MmioRangeFromFile mmio(AddressRange(first_address, 256), mmconfig_filename_);
 
   // Fill memory with alternating 0's and 1's for overwrite checking
   std::fill(mmconfig_, mmconfig_ + size_, 0xaa);

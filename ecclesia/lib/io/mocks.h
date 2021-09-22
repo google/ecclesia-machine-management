@@ -18,13 +18,13 @@
 #define ECCLESIA_LIB_IO_MOCKS_H_
 
 #include "gmock/gmock.h"
-#include "ecclesia/lib/io/generic_mmio.h"
+#include "ecclesia/lib/io/mmio.h"
 
 namespace ecclesia {
 
-class MockMmioAccess : public MmioAccessInterface {
+class MockMmioRange : public MmioRange {
  public:
-  explicit MockMmioAccess(size_t size) : size_(size) {}
+  explicit MockMmioRange(size_t size) : size_(size) {}
 
   MOCK_METHOD(absl::StatusOr<uint8_t>, Read8, (OffsetType offset),
               (const, override));

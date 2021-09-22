@@ -4,9 +4,9 @@
 licenses(["notice"])
 
 cc_library(
-    name = "generic_mmio",
-    srcs = ["generic_mmio.cc"],
-    hdrs = ["generic_mmio.h"],
+    name = "mmio",
+    srcs = ["mmio.cc"],
+    hdrs = ["mmio.h"],
     visibility = ["//ecclesia:library_users"],
     deps = [
         "//ecclesia/lib/codec:bits",
@@ -22,11 +22,11 @@ cc_library(
 )
 
 cc_test(
-    name = "generic_mmio_test",
+    name = "mmio_test",
     size = "small",
-    srcs = ["generic_mmio_test.cc"],
+    srcs = ["mmio_test.cc"],
     deps = [
-        ":generic_mmio",
+        ":mmio",
         "//ecclesia/lib/codec:bits",
         "//ecclesia/lib/codec:endian",
         "//ecclesia/lib/file:path",
@@ -67,7 +67,7 @@ cc_library(
     hdrs = ["mocks.h"],
     visibility = ["//ecclesia:library_users"],
     deps = [
-        ":generic_mmio",
+        ":mmio",
         "@com_google_googletest//:gtest_main",
     ],
 )
