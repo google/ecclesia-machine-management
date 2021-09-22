@@ -61,6 +61,17 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "mocks",
+    testonly = True,
+    hdrs = ["mocks.h"],
+    visibility = ["//ecclesia:library_users"],
+    deps = [
+        ":generic_mmio",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_test(
     name = "msr_test",
     size = "small",
