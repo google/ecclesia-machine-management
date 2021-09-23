@@ -134,6 +134,7 @@ cc_test(
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_emboss//runtime/cpp:cpp_utils",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -198,7 +199,6 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@com_google_emboss//runtime/cpp:cpp_utils",
     ],
 )
 

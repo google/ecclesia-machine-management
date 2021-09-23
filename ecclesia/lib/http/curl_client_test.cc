@@ -16,10 +16,19 @@
 
 #include "ecclesia/lib/http/curl_client.h"
 
-#include <fstream>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+#include <vector>
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
+#include "curl/curl.h"
+#include "ecclesia/lib/http/cred.pb.h"
 
 namespace ecclesia {
 namespace {

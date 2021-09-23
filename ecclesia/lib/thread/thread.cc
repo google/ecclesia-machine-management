@@ -17,6 +17,7 @@
 #include "ecclesia/lib/thread/thread.h"
 
 #include <functional>
+#include <memory>
 #include <thread>  // NOLINT(build/c++11)
 
 namespace ecclesia {

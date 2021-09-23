@@ -17,8 +17,8 @@
 #ifndef ECCLESIA_LIB_REDFISH_STORAGE_H_
 #define ECCLESIA_LIB_REDFISH_STORAGE_H_
 
-#include <iosfwd>
 #include <string>
+#include <vector>
 
 #include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"

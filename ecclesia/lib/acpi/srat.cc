@@ -16,7 +16,8 @@
 
 #include "ecclesia/lib/acpi/srat.h"
 
-#include <cstdint>
+#include "ecclesia/lib/acpi/system_description_table.emb.h"
+#include "runtime/cpp/emboss_prelude.h"
 
 namespace ecclesia {
 

@@ -18,11 +18,14 @@
 #define ECCLESIA_LIB_IO_PCI_MMIO_H_
 
 #include <cstdint>
+#include <cstring>
+#include <string>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/span.h"
 #include "ecclesia/lib/file/mmap.h"
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/pci/region.h"

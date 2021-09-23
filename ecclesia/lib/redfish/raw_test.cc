@@ -16,7 +16,6 @@
 
 #include "ecclesia/lib/redfish/raw.h"
 
-#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -26,11 +25,15 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "absl/types/optional.h"
+#include "absl/types/span.h"
+#include "absl/types/variant.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/property.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "ecclesia/magent/daemons/common.h"

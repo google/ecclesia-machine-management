@@ -21,7 +21,6 @@
 #ifndef ECCLESIA_MAGENT_LIB_FRU_FRU_H_
 #define ECCLESIA_MAGENT_LIB_FRU_FRU_H_
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <ctime>

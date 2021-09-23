@@ -16,6 +16,7 @@
 
 #include "ecclesia/magent/sysmodel/x86/fru.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <utility>

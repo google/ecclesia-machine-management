@@ -16,9 +16,9 @@
 
 #include "ecclesia/magent/redfish/common/processor_metrics.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
-#include <utility>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"

@@ -17,6 +17,7 @@
 #include "ecclesia/lib/codec/bits.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <ostream>
 
 namespace ecclesia {

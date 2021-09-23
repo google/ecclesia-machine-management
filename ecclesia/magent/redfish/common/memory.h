@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_MAGENT_REDFISH_COMMON_MEMORY_H_
 #define ECCLESIA_MAGENT_REDFISH_COMMON_MEMORY_H_
 
+#include <cstdint>
 #include <string>
 #include <type_traits>
 

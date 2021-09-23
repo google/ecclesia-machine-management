@@ -53,6 +53,7 @@
 
 #include "absl/base/attributes.h"
 #include "absl/synchronization/mutex.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/logging/interfaces.h"
 #include "ecclesia/lib/time/clock.h"
 

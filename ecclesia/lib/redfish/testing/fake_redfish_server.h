@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_TESTING_FAKE_REDFISH_SERVER_H_
 #define ECCLESIA_LIB_REDFISH_TESTING_FAKE_REDFISH_SERVER_H_
 
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -24,12 +25,12 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
-#include "absl/time/time.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
 

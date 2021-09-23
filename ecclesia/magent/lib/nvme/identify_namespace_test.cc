@@ -20,12 +20,14 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/numeric/int128.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "runtime/cpp/emboss_prelude.h"
 
 namespace ecclesia {
 namespace {

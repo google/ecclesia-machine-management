@@ -19,11 +19,14 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/acpi/mcfg.emb.h"
 #include "ecclesia/lib/acpi/system_description_table.h"
+#include "runtime/cpp/emboss_cpp_util.h"
 
 namespace ecclesia {
 // Structure that encapsulates the ACPI multiple APIC description table (MADT).

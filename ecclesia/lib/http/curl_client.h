@@ -17,12 +17,19 @@
 #ifndef ECCLESIA_LIB_HTTP_CURL_CLIENT_H_
 #define ECCLESIA_LIB_HTTP_CURL_CLIENT_H_
 
-#include "absl/base/attributes.h"
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <memory>
+#include <string>
+
+#include "absl/base/thread_annotations.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "curl/curl.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"
-#include "ecclesia/lib/redfish/interface.h"
 
 namespace ecclesia {
 

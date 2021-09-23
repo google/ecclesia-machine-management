@@ -16,8 +16,11 @@
 
 #include "ecclesia/lib/http/codes.h"
 
+#include <cstddef>
+
 #include "absl/algorithm/container.h"
 #include "absl/status/status.h"
+#include "absl/strings/string_view.h"
 
 namespace ecclesia {
 namespace {

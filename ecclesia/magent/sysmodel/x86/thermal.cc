@@ -16,24 +16,18 @@
 
 #include "ecclesia/magent/sysmodel/x86/thermal.h"
 
-#include <cstdint>
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
 #include "absl/memory/memory.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/str_cat.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "ecclesia/lib/io/constants.h"
-#include "ecclesia/lib/io/msr.h"
 #include "ecclesia/lib/io/pci/config.h"
 #include "ecclesia/lib/io/pci/pci.h"
 #include "ecclesia/lib/io/pci/region.h"
 #include "ecclesia/lib/io/pci/sysfs.h"
-#include "ecclesia/magent/lib/event_logger/intel_cpu_topology.h"
 #include "ecclesia/magent/sysmodel/thermal.h"
 
 namespace ecclesia {

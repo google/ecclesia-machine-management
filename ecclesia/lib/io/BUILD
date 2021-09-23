@@ -32,6 +32,7 @@ cc_test(
         "//ecclesia/lib/file:path",
         "//ecclesia/lib/file:test_filesystem",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -68,6 +69,8 @@ cc_library(
     visibility = ["//ecclesia:library_users"],
     deps = [
         ":mmio",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_main",
     ],
 )

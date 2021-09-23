@@ -16,19 +16,25 @@
 
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 
-#include <spawn.h>
-#include <sys/wait.h>
+#include <functional>
+#include <memory>
+#include <string>
+#include <utility>
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/meta/type_traits.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
-#include "ecclesia/lib/file/path.h"
-#include "ecclesia/lib/file/test_filesystem.h"
-#include "ecclesia/lib/file/uds.h"
+#include "absl/time/time.h"
+#include "absl/types/span.h"
+#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/lib/logging/posix.h"
+#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/raw.h"
+#include "ecclesia/lib/redfish/test_mockup.h"
 #include "ecclesia/magent/daemons/common.h"
-#include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
+#include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {

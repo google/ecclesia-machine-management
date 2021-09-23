@@ -21,8 +21,8 @@
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
 #include <sys/sysinfo.h>
+#include <unistd.h>
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>

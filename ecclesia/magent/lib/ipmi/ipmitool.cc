@@ -31,6 +31,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
+#include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -44,6 +45,7 @@
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/magent/lib/fru/fru.h"
 #include "ecclesia/magent/lib/ipmi/ipmi.h"
+#include "ecclesia/magent/lib/ipmi/sensor.h"
 #include "ecclesia/magent/proto/config.pb.h"
 
 extern "C" {

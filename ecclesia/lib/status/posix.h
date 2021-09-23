@@ -18,9 +18,9 @@
 #define ECCLESIA_LIB_STATUS_POSIX_H_
 
 #include <cerrno>
-#include <string_view>
 
 #include "absl/status/status.h"
+#include "absl/strings/string_view.h"
 
 namespace ecclesia {
 

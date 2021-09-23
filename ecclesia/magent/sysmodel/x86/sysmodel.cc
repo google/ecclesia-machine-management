@@ -21,7 +21,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <iterator>
 #include <memory>
 #include <string>
 #include <utility>
@@ -45,19 +44,24 @@
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/smbios/reader.h"
+#include "ecclesia/lib/smbios/system_event_log.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/magent/lib/event_logger/event_logger.h"
-#include "ecclesia/magent/lib/event_logger/system_event_visitors.h"
+#include "ecclesia/magent/lib/event_reader/elog.emb.h"
 #include "ecclesia/magent/lib/event_reader/elog_reader.h"
 #include "ecclesia/magent/lib/event_reader/event_reader.h"
 #include "ecclesia/magent/lib/event_reader/mced_reader.h"
+#include "ecclesia/magent/lib/ipmi/ipmi.h"
 #include "ecclesia/magent/sysmodel/x86/chassis.h"
 #include "ecclesia/magent/sysmodel/x86/cpu.h"
 #include "ecclesia/magent/sysmodel/x86/dimm.h"
 #include "ecclesia/magent/sysmodel/x86/fru.h"
 #include "ecclesia/magent/sysmodel/x86/nvme.h"
+#include "ecclesia/magent/sysmodel/x86/pci_storage.h"
 #include "ecclesia/magent/sysmodel/x86/sleipnir_sensor.h"
 #include "ecclesia/magent/sysmodel/x86/thermal.h"
+#include "runtime/cpp/emboss_cpp_util.h"
+#include "runtime/cpp/emboss_prelude.h"
 
 namespace ecclesia {
 

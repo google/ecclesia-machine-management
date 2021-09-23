@@ -18,9 +18,8 @@
 #define ECCLESIA_MAGENT_LIB_IPMI_SENSOR_H_
 
 #include <cstdint>
-#include <functional>
-#include <memory>
 #include <string>
+#include <utility>
 
 #include "absl/time/time.h"
 

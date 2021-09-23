@@ -17,6 +17,8 @@
 #include "ecclesia/lib/io/usb/proto_lib.h"
 
 #include <cstddef>
+#include <string>
+#include <type_traits>
 #include <vector>
 
 #include "absl/strings/numbers.h"

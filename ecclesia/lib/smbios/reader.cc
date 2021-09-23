@@ -22,14 +22,15 @@
 #include <fstream>  // IWYU pragma: keep
 #include <memory>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
+#include "ecclesia/lib/smbios/baseboard_information.h"
 #include "ecclesia/lib/smbios/bios.h"
 #include "ecclesia/lib/smbios/entry_point.emb.h"
 #include "ecclesia/lib/smbios/internal.h"
@@ -37,6 +38,7 @@
 #include "ecclesia/lib/smbios/processor_information.h"
 #include "ecclesia/lib/smbios/structures.emb.h"
 #include "ecclesia/lib/smbios/system_event_log.h"
+#include "ecclesia/lib/smbios/system_information.h"
 #include "ecclesia/lib/strings/natural_sort.h"
 #include "runtime/cpp/emboss_enum_view.h"
 #include "runtime/cpp/emboss_prelude.h"

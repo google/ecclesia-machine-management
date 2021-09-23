@@ -5,6 +5,7 @@ licenses(["notice"])
 cc_library(
     name = "sensor",
     hdrs = ["sensor.h"],
+    visibility = ["//ecclesia:magent_library_users"],
     deps = [
         "@com_google_absl//absl/time",
     ],
@@ -16,9 +17,9 @@ cc_library(
     visibility = ["//ecclesia:magent_library_users"],
     deps = [
         ":sensor",
-        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -49,12 +50,14 @@ cc_library(
     visibility = ["//ecclesia:magent_library_users"],
     deps = [
         ":ipmi",
+        ":sensor",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/status:macros",
         "//ecclesia/magent/lib/fru:ipmi_fru",
         "//ecclesia/magent/proto:magent_config_cc_proto",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/meta:type_traits",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -73,7 +76,9 @@ cc_library(
     visibility = ["//ecclesia:magent_library_users"],
     deps = [
         ":ipmi",
+        ":sensor",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
     ],

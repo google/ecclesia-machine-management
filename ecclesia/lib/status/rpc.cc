@@ -20,9 +20,10 @@
 
 #include "google/protobuf/any.pb.h"
 #include "google/rpc/status.pb.h"
-#include "grpcpp/impl/codegen/status.h"
 #include "absl/status/status.h"
 #include "absl/strings/cord.h"
+#include "absl/strings/string_view.h"
+#include "grpcpp/support/status.h"
 
 namespace ecclesia {
 

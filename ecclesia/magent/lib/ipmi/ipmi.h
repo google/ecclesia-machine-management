@@ -25,9 +25,9 @@
 #include <tuple>
 #include <vector>
 
-#include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/magent/lib/ipmi/sensor.h"
 

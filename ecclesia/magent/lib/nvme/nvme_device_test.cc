@@ -20,10 +20,13 @@
 #include <sys/sysinfo.h>
 
 #include <cstdint>
+#include <cstring>
 #include <iterator>
 #include <map>
 #include <memory>
 #include <set>
+#include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 

@@ -68,6 +68,7 @@ cc_library(
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
@@ -98,7 +99,10 @@ cc_test(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:optional",
+        "@com_google_absl//absl/types:span",
+        "@com_google_absl//absl/types:variant",
         "@com_google_googletest//:gtest_main",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
     ],
@@ -135,6 +139,7 @@ cc_test(
         "//ecclesia/redfish_mockups/indus_hmb_cn_playground:mockup.shar",
     ],
     deps = [
+        ":node_topology",
         ":test_mockup",
         ":topology",
         ":types",
@@ -143,7 +148,6 @@ cc_test(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -213,6 +217,7 @@ cc_library(
         ":raw",
         "//ecclesia/lib/file:path",
         "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/http:client",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/logging:posix",
         "//ecclesia/lib/network:testing",
@@ -222,7 +227,6 @@ cc_library(
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:variant",
-        "@com_google_googletest//:gtest",
     ],
 )
 
@@ -233,6 +237,7 @@ cc_library(
     deps = [
         ":interface",
         ":property_definitions",
+        "@com_google_absl//absl/types:optional",
     ],
 )
 

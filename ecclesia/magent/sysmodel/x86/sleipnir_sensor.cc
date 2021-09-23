@@ -16,17 +16,14 @@
 
 #include "ecclesia/magent/sysmodel/x86/sleipnir_sensor.h"
 
-#include <cstdint>
 #include <string>
 #include <vector>
 
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/str_format.h"
-#include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
+#include "absl/types/span.h"
+#include "ecclesia/magent/lib/ipmi/ipmi.h"
+#include "ecclesia/magent/lib/ipmi/sensor.h"
 #include "re2/re2.h"
 
 namespace ecclesia {

@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_LIB_IO_PCI_MOCKS_H_
 #define ECCLESIA_LIB_IO_PCI_MOCKS_H_
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>

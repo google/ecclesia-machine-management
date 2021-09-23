@@ -18,6 +18,7 @@
 #define ECCLESIA_LIB_ACPI_SYSTEM_DESCRIPTION_TABLE_H_
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <memory>
@@ -25,14 +26,13 @@
 #include <vector>
 
 #include "absl/memory/memory.h"
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "ecclesia/lib/acpi/system_description_table.emb.h"
 #include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/lib/status/macros.h"
+#include "runtime/cpp/emboss_cpp_util.h"
 
 namespace ecclesia {
 

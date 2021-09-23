@@ -17,13 +17,17 @@
 #ifndef ECCLESIA_LIB_ACPI_DMAR_H_
 #define ECCLESIA_LIB_ACPI_DMAR_H_
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/acpi/dmar.emb.h"
 #include "ecclesia/lib/acpi/system_description_table.h"
+#include "runtime/cpp/emboss_cpp_util.h"
 
 namespace ecclesia {
 

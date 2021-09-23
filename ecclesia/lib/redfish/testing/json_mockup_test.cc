@@ -16,12 +16,15 @@
 
 #include "ecclesia/lib/redfish/testing/json_mockup.h"
 
+#include <assert.h>
+
 #include <cstdint>
 #include <memory>
 #include <string>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/time/time.h"
 #include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
 

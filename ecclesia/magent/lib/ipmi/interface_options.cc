@@ -17,6 +17,7 @@
 #include "ecclesia/magent/lib/ipmi/interface_options.h"
 
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "google/protobuf/io/zero_copy_stream_impl.h"
 #include "absl/cleanup/cleanup.h"

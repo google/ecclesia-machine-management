@@ -15,16 +15,24 @@
  */
 
 #include "ecclesia/magent/redfish/core/assembly_modifiers.h"
-#include "ecclesia/magent/redfish/core/json_helper.h"
-#include "single_include/nlohmann/json.hpp"
+
+#include <string>
+#include <utility>
+
+#include "absl/container/flat_hash_map.h"
+#include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
-#include "absl/strings/str_replace.h"
+#include "ecclesia/lib/io/pci/location.h"
+#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
+#include "ecclesia/magent/redfish/core/assembly.h"
+#include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/uri_generation.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 

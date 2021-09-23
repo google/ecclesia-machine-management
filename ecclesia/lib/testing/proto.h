@@ -36,7 +36,6 @@
 #ifndef ECCLESIA_LIB_TESTING_PROTO_H_
 #define ECCLESIA_LIB_TESTING_PROTO_H_
 
-#include <iterator>
 #include <memory>
 #include <ostream>
 #include <string>

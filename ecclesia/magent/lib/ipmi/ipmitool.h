@@ -27,9 +27,11 @@
 #include <vector>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/magent/lib/ipmi/ipmi.h"
+#include "ecclesia/magent/lib/ipmi/sensor.h"
 #include "ecclesia/magent/proto/config.pb.h"
 
 namespace ecclesia {

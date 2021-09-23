@@ -16,14 +16,25 @@
 
 #include "ecclesia/lib/acpi/dmar.h"
 
+#include <algorithm>
+#include <cstdint>
+#include <ios>
+#include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/acpi/dmar.emb.h"
+#include "ecclesia/lib/acpi/system_description_table.emb.h"
 #include "ecclesia/lib/acpi/system_description_table.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/testing/status.h"
+#include "runtime/cpp/emboss_cpp_util.h"
+#include "runtime/cpp/emboss_prelude.h"
 
 namespace ecclesia {
 

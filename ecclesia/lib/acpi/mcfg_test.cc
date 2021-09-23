@@ -17,16 +17,24 @@
 #include "ecclesia/lib/acpi/mcfg.h"
 
 #include <algorithm>
+#include <cstdint>
+#include <ios>
+#include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/flags/flag.h"
-#include "absl/strings/str_cat.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
+#include "ecclesia/lib/acpi/mcfg.emb.h"
+#include "ecclesia/lib/acpi/system_description_table.emb.h"
 #include "ecclesia/lib/acpi/system_description_table.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/testing/status.h"
+#include "runtime/cpp/emboss_cpp_util.h"
+#include "runtime/cpp/emboss_prelude.h"
 
 namespace ecclesia {
 

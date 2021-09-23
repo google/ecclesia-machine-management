@@ -21,6 +21,7 @@
 
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/meta/type_traits.h"
 #include "absl/strings/str_format.h"
 #include "absl/types/optional.h"
 

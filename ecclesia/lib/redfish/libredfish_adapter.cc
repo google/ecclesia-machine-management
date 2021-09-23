@@ -18,6 +18,7 @@
 
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <deque>
 #include <memory>
 #include <string>
@@ -25,16 +26,17 @@
 
 #include "absl/base/thread_annotations.h"
 #include "absl/memory/memory.h"
-#include "absl/strings/match.h"
-#include "absl/strings/str_cat.h"
-#include "absl/strings/string_view.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/synchronization/mutex.h"
+#include "absl/time/time.h"
+#include "ecclesia/lib/http/client.h"
+#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/raw.h"
 #include "ecclesia/lib/thread/thread.h"
 
 extern "C" {
-#include "redfishPayload.h"
 #include "redfishRawAsync.h"
 #include "redfishService.h"
 }  // extern "C"

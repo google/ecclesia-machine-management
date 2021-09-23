@@ -16,12 +16,14 @@
 
 #include "ecclesia/magent/redfish/core/assembly_modifiers.h"
 
+#include <functional>
 #include <string>
 #include <utility>
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/meta/type_traits.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_replace.h"
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/magent/redfish/core/assembly.h"

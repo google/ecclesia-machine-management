@@ -16,7 +16,6 @@
 
 #include "ecclesia/lib/http/client.h"
 
-#include <memory>
 #include <string>
 
 #include "absl/status/status.h"

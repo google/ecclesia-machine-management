@@ -17,9 +17,11 @@
 #ifndef ECCLESIA_LIB_SMBIOS_SYSTEM_INFORMATION_H_
 #define ECCLESIA_LIB_SMBIOS_SYSTEM_INFORMATION_H_
 
-#include <string>
+#include <cstddef>
 
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/smbios/internal.h"
+#include "ecclesia/lib/smbios/structures.emb.h"
 
 namespace ecclesia {
 

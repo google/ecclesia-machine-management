@@ -16,8 +16,11 @@
 
 #include "ecclesia/lib/io/usb/proto_lib.h"
 
+#include <type_traits>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/types/optional.h"
 #include "ecclesia/lib/io/usb/usb.h"
 #include "ecclesia/lib/io/usb/usb.pb.h"
 #include "ecclesia/lib/protobuf/parse.h"

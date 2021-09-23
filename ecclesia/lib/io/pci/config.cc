@@ -17,6 +17,7 @@
 #include "ecclesia/lib/io/pci/config.h"
 
 #include <cstdint>
+#include <utility>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"

@@ -16,7 +16,6 @@
 
 #include "ecclesia/magent/redfish/core/uri_generation.h"
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "ecclesia/lib/io/pci/location.h"
 

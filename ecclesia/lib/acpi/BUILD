@@ -33,8 +33,11 @@ cc_library(
     deps = [
         ":dmar_emb",
         ":system_description_table",
+        ":system_description_table_emb",
         "//ecclesia/lib/logging",
+        "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
+        "@com_google_emboss//runtime/cpp:cpp_utils",
     ],
 )
 
@@ -53,6 +56,9 @@ cc_library(
     deps = [
         ":mcfg_emb",
         ":system_description_table",
+        ":system_description_table_emb",
+        "@com_google_absl//absl/strings",
+        "@com_google_emboss//runtime/cpp:cpp_utils",
     ],
 )
 
@@ -71,7 +77,9 @@ cc_library(
     deps = [
         ":srat_emb",
         ":system_description_table",
+        ":system_description_table_emb",
         "@com_google_absl//absl/strings",
+        "@com_google_emboss//runtime/cpp:cpp_utils",
     ],
 )
 
@@ -89,14 +97,13 @@ cc_library(
     deps = [
         ":system_description_table_emb",
         "//ecclesia/lib/logging",
-        "//ecclesia/lib/status:macros",
-        "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/types:optional",
+        "@com_google_emboss//runtime/cpp:cpp_utils",
     ],
 )
 
@@ -107,10 +114,14 @@ cc_test(
     data = ["test_data/sys_firmware_acpi_tables_DMAR"],
     deps = [
         ":dmar",
+        ":dmar_emb",
         ":system_description_table",
+        ":system_description_table_emb",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_emboss//runtime/cpp:cpp_utils",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -122,11 +133,14 @@ cc_test(
     data = ["test_data/sys_firmware_acpi_tables_MCFG"],
     deps = [
         ":mcfg",
+        ":mcfg_emb",
         ":system_description_table",
+        ":system_description_table_emb",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/testing:status",
-        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_emboss//runtime/cpp:cpp_utils",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -146,13 +160,15 @@ cc_test(
         ":system_description_table_emb",
         "//ecclesia/lib/codec:endian",
         "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/logging",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/base:core_headers",
-        "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
+        "@com_google_emboss//runtime/cpp:cpp_utils",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -168,14 +184,18 @@ cc_test(
     ],
     deps = [
         ":system_description_table",
+        ":system_description_table_emb",
         "//ecclesia/lib/codec:endian",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/types:optional",
+        "@com_google_emboss//runtime/cpp:cpp_utils",
         "@com_google_googletest//:gtest_main",
     ],
 )

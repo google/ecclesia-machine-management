@@ -19,10 +19,9 @@
 #ifndef ECCLESIA_LIB_CODEC_BITS_H_
 #define ECCLESIA_LIB_CODEC_BITS_H_
 
-#include <bitset>
 #include <climits>
-#include <cstddef>
 #include <cstdint>
+#include <iosfwd>
 #include <iterator>
 #include <type_traits>
 

@@ -18,12 +18,12 @@
 #define ECCLESIA_MAGENT_REDFISH_CORE_INDEX_RESOURCE_H_
 
 #include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
-#include "absl/strings/match.h"
-#include "absl/strings/numbers.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/variant.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/strings/regex.h"
 #include "ecclesia/lib/types/overloaded.h"
 #include "ecclesia/magent/redfish/core/resource.h"

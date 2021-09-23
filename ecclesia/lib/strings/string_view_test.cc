@@ -16,8 +16,10 @@
 
 #include "ecclesia/lib/strings/string_view.h"
 
-#include "gmock/gmock.h"
+#include <string>
+
 #include "gtest/gtest.h"
+#include "absl/strings/string_view.h"
 
 namespace ecclesia {
 namespace {

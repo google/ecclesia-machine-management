@@ -17,9 +17,7 @@
 #include "ecclesia/lib/redfish/topology.h"
 
 #include <memory>
-#include <ostream>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -27,8 +25,8 @@
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
-#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "ecclesia/lib/redfish/testing/json_mockup.h"
 #include "ecclesia/lib/redfish/testing/node_topology_testing.h"

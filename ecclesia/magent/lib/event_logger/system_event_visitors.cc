@@ -16,7 +16,6 @@
 
 #include "ecclesia/magent/lib/event_logger/system_event_visitors.h"
 
-#include <cstdint>
 #include <memory>
 #include <type_traits>
 
@@ -25,7 +24,6 @@
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
 #include "absl/types/variant.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/mcedecoder/mce_decode.h"
 #include "ecclesia/lib/mcedecoder/mce_messages.h"
 #include "ecclesia/magent/lib/event_reader/elog.emb.h"

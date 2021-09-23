@@ -16,9 +16,14 @@
 
 #include "ecclesia/lib/acpi/mcfg.h"
 
+#include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #include "ecclesia/lib/acpi/mcfg.emb.h"
+#include "ecclesia/lib/acpi/system_description_table.emb.h"
+#include "runtime/cpp/emboss_cpp_util.h"
+#include "runtime/cpp/emboss_prelude.h"
 
 namespace ecclesia {
 

@@ -25,10 +25,11 @@ cc_library(
         "//ecclesia/lib/smbios:reader",
         "//ecclesia/lib/time:clock",
         "//ecclesia/magent/lib/event_logger",
-        "//ecclesia/magent/lib/event_logger:system_event_visitors",
         "//ecclesia/magent/lib/event_reader",
+        "//ecclesia/magent/lib/event_reader:elog_emb",
         "//ecclesia/magent/lib/event_reader:elog_reader",
         "//ecclesia/magent/lib/event_reader:mced_reader",
+        "//ecclesia/magent/lib/ipmi",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/memory",
@@ -39,6 +40,7 @@ cc_library(
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
         "@com_google_absl//absl/types:variant",
+        "@com_google_emboss//runtime/cpp:cpp_utils",
     ],
 )
 
@@ -102,13 +104,11 @@ cc_library(
     hdrs = ["thermal.h"],
     visibility = ["//ecclesia:magent_library_users"],
     deps = [
-        "//ecclesia/lib/io:msr",
         "//ecclesia/lib/io/pci",
         "//ecclesia/lib/io/pci:config",
         "//ecclesia/lib/io/pci:location",
         "//ecclesia/lib/io/pci:region",
         "//ecclesia/lib/io/pci:sysfs",
-        "//ecclesia/magent/lib/event_logger:intel_cpu_topology",
         "//ecclesia/magent/sysmodel:thermal",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status:statusor",
@@ -233,12 +233,8 @@ cc_library(
     hdrs = ["pci_storage.h"],
     visibility = ["//ecclesia:magent_library_users"],
     deps = [
-        "//ecclesia/lib/apifs",
-        "//ecclesia/lib/file:path",
         "//ecclesia/lib/io/pci:location",
-        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
     ],
 )
@@ -250,11 +246,10 @@ cc_library(
     visibility = ["//ecclesia:magent_library_users"],
     deps = [
         "//ecclesia/magent/lib/ipmi",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
+        "//ecclesia/magent/lib/ipmi:sensor",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/types:optional",
+        "@com_google_absl//absl/types:span",
         "@com_googlesource_code_re2//:re2",
     ],
 )

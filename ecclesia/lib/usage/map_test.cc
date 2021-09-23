@@ -16,10 +16,12 @@
 
 #include "ecclesia/lib/usage/map.h"
 
+#include <cstddef>
 #include <string>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/file/test_filesystem.h"

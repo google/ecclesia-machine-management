@@ -20,8 +20,8 @@
 #define ECCLESIA_LIB_STATUS_RPC_H_
 
 #include "google/rpc/status.pb.h"
-#include "grpcpp/impl/codegen/status.h"
 #include "absl/status/status.h"
+#include "grpcpp/support/status.h"
 
 namespace ecclesia {
 

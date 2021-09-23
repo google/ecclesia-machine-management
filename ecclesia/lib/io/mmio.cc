@@ -16,13 +16,15 @@
 
 #include "ecclesia/lib/io/mmio.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 
 #include "absl/status/status.h"
-#include "absl/strings/str_format.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/codec/bits.h"
 #include "ecclesia/lib/codec/endian.h"
 #include "ecclesia/lib/file/mmap.h"
 #include "ecclesia/lib/status/macros.h"

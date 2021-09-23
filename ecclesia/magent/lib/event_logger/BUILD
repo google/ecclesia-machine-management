@@ -40,7 +40,6 @@ cc_library(
     visibility = ["//ecclesia:magent_library_users"],
     deps = [
         ":event_logger",
-        "//ecclesia/lib/logging",
         "//ecclesia/lib/mcedecoder:mce_decode",
         "//ecclesia/lib/mcedecoder:mce_messages",
         "//ecclesia/magent/lib/event_reader",

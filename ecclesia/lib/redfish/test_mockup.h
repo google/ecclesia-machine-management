@@ -19,6 +19,7 @@
 
 #include <sys/types.h>
 
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -26,8 +27,8 @@
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
 #include "absl/types/variant.h"
+#include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/raw.h"
 
 namespace libredfish {
 

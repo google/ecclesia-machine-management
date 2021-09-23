@@ -17,7 +17,12 @@
 #ifndef ECCLESIA_LIB_IO_MOCKS_H_
 #define ECCLESIA_LIB_IO_MOCKS_H_
 
+#include <cstddef>
+#include <cstdint>
+
 #include "gmock/gmock.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "ecclesia/lib/io/mmio.h"
 
 namespace ecclesia {

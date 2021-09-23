@@ -24,8 +24,10 @@
 
 #include "gmock/gmock.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/types/span.h"
 #include "ecclesia/magent/lib/ipmi/ipmi.h"
+#include "ecclesia/magent/lib/ipmi/sensor.h"
 
 namespace ecclesia {
 

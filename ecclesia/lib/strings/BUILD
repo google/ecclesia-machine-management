@@ -69,6 +69,7 @@ cc_test(
     srcs = ["string_view_test.cc"],
     deps = [
         ":string_view",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )

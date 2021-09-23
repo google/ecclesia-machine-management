@@ -18,11 +18,13 @@
 #define ECCLESIA_MAGENT_REDFISH_CORE_JSON_HELPER_H_
 
 #include <cassert>
-#include <string>
 #include <initializer_list>
+#include <string>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "single_include/nlohmann/json.hpp"
 

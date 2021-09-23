@@ -21,7 +21,6 @@
 #include <memory>
 
 #include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "ecclesia/lib/thread/thread.h"
 
 namespace ecclesia {

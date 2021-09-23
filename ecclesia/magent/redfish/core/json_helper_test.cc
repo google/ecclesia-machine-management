@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "ecclesia/magent/redfish/core/assembly_modifiers.h"
+#include "ecclesia/magent/redfish/core/json_helper.h"
 
 #include <string>
 
 #include "gtest/gtest.h"
-#include "ecclesia/magent/redfish/core/json_helper.h"
+#include "absl/status/statusor.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {

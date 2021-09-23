@@ -17,10 +17,14 @@
 #include "ecclesia/lib/acpi/dmar.h"
 
 #include <cstdint>
+#include <string>
 
 #include "absl/strings/str_format.h"
-#include "ecclesia/lib/acpi/dmar.emb.h"
+#include "ecclesia/lib/acpi/system_description_table.emb.h"
+#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
+#include "runtime/cpp/emboss_cpp_util.h"
+#include "runtime/cpp/emboss_prelude.h"
 
 namespace ecclesia {
 

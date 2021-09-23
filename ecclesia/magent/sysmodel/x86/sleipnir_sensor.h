@@ -20,7 +20,9 @@
 #include <string>
 #include <vector>
 
+#include "absl/types/span.h"
 #include "ecclesia/magent/lib/ipmi/ipmi.h"
+#include "ecclesia/magent/lib/ipmi/sensor.h"
 
 namespace ecclesia {
 

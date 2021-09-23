@@ -25,7 +25,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/magent/lib/nvme/controller_registers.emb.h"
-#include "runtime/cpp/emboss_cpp_util.h"
 
 namespace ecclesia {
 

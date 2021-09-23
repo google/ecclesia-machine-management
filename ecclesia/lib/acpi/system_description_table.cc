@@ -16,19 +16,22 @@
 
 #include "ecclesia/lib/acpi/system_description_table.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "absl/cleanup/cleanup.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/acpi/system_description_table.emb.h"
-#include "ecclesia/lib/acpi/system_description_table.h"
+#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
+#include "runtime/cpp/emboss_cpp_util.h"
+#include "runtime/cpp/emboss_prelude.h"
 
 namespace ecclesia {
 

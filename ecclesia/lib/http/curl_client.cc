@@ -16,11 +16,29 @@
 
 #include "ecclesia/lib/http/curl_client.h"
 
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "absl/base/call_once.h"
+#include "absl/container/flat_hash_map.h"
+#include "absl/memory/memory.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/ascii.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "absl/strings/string_view.h"
+#include "absl/synchronization/mutex.h"
+#include "curl/curl.h"
+#include "ecclesia/lib/http/client.h"
+#include "ecclesia/lib/http/cred.pb.h"
+#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/status/macros.h"
 
 namespace ecclesia {

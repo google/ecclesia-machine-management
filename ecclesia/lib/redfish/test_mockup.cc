@@ -22,8 +22,10 @@
 
 #include <cstddef>
 #include <cstdlib>
+#include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "absl/base/macros.h"
 #include "absl/memory/memory.h"
@@ -35,6 +37,7 @@
 #include "absl/types/variant.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/logging/posix.h"

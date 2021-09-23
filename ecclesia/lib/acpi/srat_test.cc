@@ -16,26 +16,32 @@
 
 #include "ecclesia/lib/acpi/srat.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/base/macros.h"
-#include "absl/flags/flag.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
-#include "absl/strings/str_cat.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/acpi/srat.emb.h"
 #include "ecclesia/lib/acpi/system_description_table.emb.h"
 #include "ecclesia/lib/acpi/system_description_table.h"
 #include "ecclesia/lib/codec/endian.h"
 #include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/logging/globals.h"
+#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/testing/status.h"
+#include "runtime/cpp/emboss_cpp_util.h"
+#include "runtime/cpp/emboss_prelude.h"
 
 namespace ecclesia {
 

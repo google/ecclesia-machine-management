@@ -16,6 +16,7 @@
 
 #include "ecclesia/magent/redfish/common/memory_metrics.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
@@ -26,8 +27,6 @@
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
 #include "absl/types/variant.h"
-#include "ecclesia/lib/mcedecoder/cpu_topology.h"
-#include "ecclesia/magent/lib/event_logger/indus/system_event_visitors.h"
 #include "ecclesia/magent/lib/event_logger/intel_cpu_topology.h"
 #include "ecclesia/magent/lib/event_logger/system_event_visitors.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"

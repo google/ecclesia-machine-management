@@ -21,6 +21,7 @@
 #include <string>
 
 #include "absl/time/time.h"
+#include "absl/types/optional.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/redfish/interface.h"
 

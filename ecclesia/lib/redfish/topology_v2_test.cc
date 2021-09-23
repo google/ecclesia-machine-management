@@ -16,6 +16,8 @@
 
 #include "ecclesia/lib/redfish/topology_v2.h"
 
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "gmock/gmock.h"

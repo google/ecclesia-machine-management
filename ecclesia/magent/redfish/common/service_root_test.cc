@@ -34,11 +34,8 @@
 #include "ecclesia/magent/lib/thread_pool/thread_pool.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "single_include/nlohmann/json.hpp"
-#include "tensorflow_serving/util/net_http/client/public/httpclient.h"
-#include "tensorflow_serving/util/net_http/client/public/httpclient_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
-#include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 
 namespace ecclesia {
 namespace {

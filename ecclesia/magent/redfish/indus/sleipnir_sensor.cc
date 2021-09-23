@@ -16,6 +16,25 @@
 
 #include "ecclesia/magent/redfish/indus/sleipnir_sensor.h"
 
+#include <string>
+
+#include "absl/container/flat_hash_map.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/match.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
+#include "absl/types/variant.h"
+#include "ecclesia/magent/lib/ipmi/interface_options.h"
+#include "ecclesia/magent/lib/ipmi/ipmitool.h"
+#include "ecclesia/magent/lib/ipmi/sensor.h"
+#include "ecclesia/magent/redfish/core/json_helper.h"
+#include "ecclesia/magent/redfish/core/redfish_keywords.h"
+#include "ecclesia/magent/redfish/core/resource.h"
+#include "ecclesia/magent/sysmodel/x86/sleipnir_sensor.h"
+#include "ecclesia/magent/sysmodel/x86/sysmodel.h"
+#include "single_include/nlohmann/json.hpp"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
+
 namespace ecclesia {
 
 namespace {
