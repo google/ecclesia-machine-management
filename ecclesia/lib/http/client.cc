@@ -22,8 +22,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
-#include "json/reader.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 
@@ -40,14 +39,14 @@ std::string GetHttpMethodName(ecclesia::Protocol protocol) {
   }
 }
 
-absl::StatusOr<Json::Value> HttpClient::HttpResponse::GetBodyJson() {
-  auto json = Json::Value();
-  Json::Reader reader;
-  if (!reader.parse(body, json)) {
-    return absl::InvalidArgumentError(absl::Substitute(
-        "Failed to parse json: '$0'", reader.getFormattedErrorMessages()));
+absl::StatusOr<nlohmann::json> HttpClient::HttpResponse::GetBodyJson() {
+  nlohmann::json parsed =
+      nlohmann::json::parse(body, nullptr, /*allow_exceptions=*/false);
+  if (parsed.is_discarded()) {
+    return absl::InvalidArgumentError(
+        absl::Substitute("Failed to parse json:\n$0", body));
   }
-  return json;
+  return parsed;
 }
 
 }  // namespace ecclesia

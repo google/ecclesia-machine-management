@@ -24,7 +24,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "json/value.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 
@@ -60,7 +60,7 @@ class HttpClient {
   // Http response that contains http status code, header and body
   struct HttpResponse {
     // The unique_ptr returned outlives the HttpResponse.
-    absl::StatusOr<Json::Value> GetBodyJson();
+    absl::StatusOr<nlohmann::json> GetBodyJson();
 
     int code = 0;
     std::string body;

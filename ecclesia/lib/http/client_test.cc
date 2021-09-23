@@ -18,8 +18,7 @@
 
 #include "gtest/gtest.h"
 #include "absl/status/statusor.h"
-#include "json/value.h"
-#include "json/writer.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 namespace {
@@ -135,7 +134,7 @@ TEST(BodyJson, NestedJsonTest) {
     })json";
 
   // Test that Json::Value returned from GetBodyJson() outlives HttpReponse.
-  absl::StatusOr<Json::Value> maybe_json;
+  absl::StatusOr<nlohmann::json> maybe_json;
   {
     HttpClient::HttpResponse rsp{
         .code = 0, .body = kSomeRequest, .headers = {}};
