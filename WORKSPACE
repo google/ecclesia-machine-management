@@ -191,15 +191,6 @@ load("@com_google_tensorflow_serving//tensorflow_serving:workspace.bzl", "tf_ser
 
 tf_serving_workspace()
 
-#jsoncpp. Official release 1.9.2.
-http_archive(
-    name = "com_jsoncpp",
-    build_file = "@//ecclesia/oss:jsoncpp.BUILD",
-    sha256 = "77a402fb577b2e0e5d0bdc1cf9c65278915cdb25171e3452c68b6da8a561f8f0",
-    strip_prefix = "jsoncpp-1.9.2",
-    urls = ["https://github.com/open-source-parsers/jsoncpp/archive/1.9.2.tar.gz"],
-)
-
 # JSON for Modern C++ version 3.9.1.
 http_archive(
     name = "com_json",

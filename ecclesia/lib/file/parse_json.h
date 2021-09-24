@@ -15,7 +15,7 @@
  */
 
 // Provides a helper function for parsing an embedded JSON file into a
-// Json::Value using the third party JsonCPP library.
+// nlohmann::json using the third party json.hpp library.
 
 #ifndef ECCLESIA_LIB_FILE_PARSE_JSON_H_
 #define ECCLESIA_LIB_FILE_PARSE_JSON_H_
@@ -37,7 +37,7 @@ namespace ecclesia {
 // Given a path to an embedded file, attempts to parse into nlohmann:json,
 // returning a failing status if errors are encountered.
 template <size_t N>
-absl::StatusOr<const nlohmann::json> ParseJsonValueFromEmbeddedFile(
+absl::StatusOr<nlohmann::json> ParseJsonValueFromEmbeddedFile(
     absl::string_view file_path, const std::array<EmbeddedFile, N> &array) {
   std::optional<absl::string_view> embedded_file_contents(
       GetEmbeddedFileWithName(file_path, array));
