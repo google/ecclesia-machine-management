@@ -38,6 +38,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -48,7 +49,6 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 
 namespace ecclesia {
 
@@ -89,7 +89,7 @@ class PersistentUsageMap {
     // limit for the underlying file. The file format imposes some fixed
     // additional overhead on top of the serialized proto, and so the total
     // persisted bytes can exceed this by some small, fixed amount.
-    absl::optional<size_t> maximum_proto_size;
+    std::optional<size_t> maximum_proto_size;
   };
 
   // Construct a new persistent usage map using the given options. This will
@@ -204,7 +204,7 @@ class PersistentUsageMap {
   // Policy flags controlling the behavior of the map.
   absl::Duration auto_write_on_older_than_;
   absl::Duration trim_entries_older_than_;
-  absl::optional<size_t> maximum_proto_size_;
+  std::optional<size_t> maximum_proto_size_;
 
   // The underlying timestamp map, used in memory.
   mutable absl::Mutex mutex_;

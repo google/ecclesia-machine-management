@@ -17,7 +17,9 @@
 #include "ecclesia/lib/redfish/raw.h"
 
 #include <memory>
+#include <optional>
 #include <string>
+#include <variant>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -26,9 +28,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/logging/logging.h"
@@ -71,7 +71,7 @@ absl::string_view BackendTypeToString(BackendType backend_type) {
 
 enum class InterfaceType { kNoAuth, kBasicAuth, kSessionAuth, kTlsAuth };
 
-absl::optional<absl::string_view> InterfaceTypeToString(
+std::optional<absl::string_view> InterfaceTypeToString(
     InterfaceType interface_type) {
   switch (interface_type) {
     case InterfaceType::kBasicAuth:
@@ -84,7 +84,7 @@ absl::optional<absl::string_view> InterfaceTypeToString(
       return "TlsAuth";
     default:
       // The interface type is not supported yet!
-      return absl::nullopt;
+      return std::nullopt;
   }
 }
 
@@ -115,7 +115,7 @@ struct PrintToStringParamName {
 };
 
 std::unique_ptr<TestingMockupServer> GetTlsServer() {
-  return absl::make_unique<TestingMockupServer>(
+  return std::make_unique<TestingMockupServer>(
       "indus_hmb_cn/mockup.shar",
       TestingMockupServer::ServerTlsConfig{
           .cert_file =
@@ -149,7 +149,7 @@ TEST_F(RawInterfaceTest, FailedConnectionReturnsNullInterface) {
 TEST_F(RawInterfaceTest, ClientsWithoutCertsAreRejected) {
   auto mockup_server = GetTlsServer();
   auto config =
-      absl::get<TestingMockupServer::ConfigNetwork>(mockup_server->GetConfig());
+      std::get<TestingMockupServer::ConfigNetwork>(mockup_server->GetConfig());
   auto endpoint = absl::StrCat("https://", config.hostname, ":", config.port);
   auto interface = NewRawInterface(endpoint, RedfishInterface::kTrusted);
   EXPECT_THAT(interface->GetRoot().AsObject(), IsNull());
@@ -158,7 +158,7 @@ TEST_F(RawInterfaceTest, ClientsWithoutCertsAreRejected) {
 TEST_F(RawInterfaceTest, ClientsWithoutProperCertsAreRejected) {
   auto mockup_server = GetTlsServer();
   auto config =
-      absl::get<TestingMockupServer::ConfigNetwork>(mockup_server->GetConfig());
+      std::get<TestingMockupServer::ConfigNetwork>(mockup_server->GetConfig());
   TlsArgs args;
   args.endpoint = absl::StrCat("https://", config.hostname, ":", config.port);
   args.verify_hostname = false;
@@ -205,12 +205,12 @@ class RawInterfaceWithParamTest
   void SetUp() {
     switch (GetParam().interface_type) {
       case InterfaceType::kBasicAuth:
-        mockup_server_ = absl::make_unique<TestingMockupServer>(
+        mockup_server_ = std::make_unique<TestingMockupServer>(
             "barebones_session_auth/mockup.shar");
         raw_intf_ = mockup_server_->RedfishClientBasicAuthInterface();
         break;
       case InterfaceType::kSessionAuth:
-        mockup_server_ = absl::make_unique<TestingMockupServer>(
+        mockup_server_ = std::make_unique<TestingMockupServer>(
             "barebones_session_auth/mockup.shar");
         raw_intf_ = mockup_server_->RedfishClientSessionAuthInterface();
         break;
@@ -220,7 +220,7 @@ class RawInterfaceWithParamTest
         break;
       default:
         mockup_server_ =
-            absl::make_unique<TestingMockupServer>("indus_hmb_cn/mockup.shar");
+            std::make_unique<TestingMockupServer>("indus_hmb_cn/mockup.shar");
         raw_intf_ = mockup_server_->RedfishClientInterface();
     }
   }

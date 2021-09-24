@@ -18,10 +18,10 @@
 #define ECCLESIA_MAGENT_REDFISH_CORE_COLLECTION_RESOURCE_H_
 
 #include <string>
+#include <variant>
 
 #include "absl/strings/string_view.h"
 #include "absl/strings/strip.h"
-#include "absl/types/variant.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"

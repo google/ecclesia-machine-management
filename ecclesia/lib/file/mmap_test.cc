@@ -17,6 +17,7 @@
 #include "ecclesia/lib/file/mmap.h"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -24,7 +25,6 @@
 #include "gtest/gtest.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/testing/status.h"

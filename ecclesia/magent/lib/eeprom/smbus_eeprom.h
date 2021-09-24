@@ -21,12 +21,12 @@
 
 #include <cstddef>
 #include <functional>
+#include <optional>
 #include <string>
 #include <utility>
 
 #include "absl/base/thread_annotations.h"
 #include "absl/synchronization/mutex.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/io/smbus/smbus.h"
 #include "ecclesia/magent/lib/eeprom/eeprom.h"
@@ -42,7 +42,7 @@ class SmbusEeprom : public Eeprom {
     SizeType size;
     ModeType mode;
     // Function which creates a SMBUS device for reading the EEPROM.
-    std::function<absl::optional<SmbusDevice>()> get_device;
+    std::function<std::optional<SmbusDevice>()> get_device;
   };
 
   explicit SmbusEeprom(Option option) : option_(std::move(option)) {}
@@ -53,7 +53,7 @@ class SmbusEeprom : public Eeprom {
   Eeprom::ModeType GetMode() const override { return option_.mode; }
 
  protected:
-  absl::optional<SmbusDevice> GetDevice() const { return option_.get_device(); }
+  std::optional<SmbusDevice> GetDevice() const { return option_.get_device(); }
 
  private:
   Option option_;
@@ -69,15 +69,15 @@ class SmbusEeprom2ByteAddr : public SmbusEeprom {
   SmbusEeprom2ByteAddr &operator=(const SmbusEeprom2ByteAddr &) = delete;
 
   // Currently only support sequential read
-  absl::optional<int> ReadBytes(size_t offset,
-                                absl::Span<unsigned char> value) const override;
-  absl::optional<int> WriteBytes(
+  std::optional<int> ReadBytes(size_t offset,
+                               absl::Span<unsigned char> value) const override;
+  std::optional<int> WriteBytes(
       size_t offset, absl::Span<const unsigned char> data) const override;
 
  private:
   // Reads the eeprom one byte at a time.
-  absl::optional<int> SequentialRead(size_t offset,
-                                     absl::Span<unsigned char> value) const
+  std::optional<int> SequentialRead(size_t offset,
+                                    absl::Span<unsigned char> value) const
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(device_mutex_);
 
   mutable absl::Mutex device_mutex_;
@@ -95,11 +95,11 @@ class SmbusEeprom2K : public SmbusEeprom {
     return {.type = ecclesia::Eeprom::SizeType::kFixed, .size = kEepromSize};
   }
 
-  absl::optional<int> ReadBytes(size_t offset,
-                                absl::Span<unsigned char> value) const override;
-  absl::optional<int> WriteBytes(
+  std::optional<int> ReadBytes(size_t offset,
+                               absl::Span<unsigned char> value) const override;
+  std::optional<int> WriteBytes(
       size_t offset, absl::Span<const unsigned char> data) const override {
-    return absl::nullopt;
+    return std::nullopt;
   }
 
  private:

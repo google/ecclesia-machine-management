@@ -16,13 +16,13 @@
 
 #include "ecclesia/lib/io/pci/location.h"
 
+#include <optional>
 #include <string>
 
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/meta/type_traits.h"
 #include "absl/strings/str_format.h"
-#include "absl/types/optional.h"
 
 namespace ecclesia {
 namespace {
@@ -53,27 +53,27 @@ TEST(PciLocationTest, VerifyIdentityOps) {
 TEST(PciLocationTest, PciLocationFailTests) {
   // from empty string
   auto loc = PciDbdfLocation::FromString("");
-  EXPECT_EQ(loc, absl::nullopt);
+  EXPECT_EQ(loc, std::nullopt);
 
   // short form not parsable.
   loc = PciDbdfLocation::FromString("02:01.0");
-  EXPECT_EQ(loc, absl::nullopt);
+  EXPECT_EQ(loc, std::nullopt);
 
   // Strict format: 0001:02:03.4, 0 padding is enforced.
   loc = PciDbdfLocation::FromString("0001:2:3.4");
-  EXPECT_EQ(loc, absl::nullopt);
+  EXPECT_EQ(loc, std::nullopt);
 
   // Invalid character.
   loc = PciDbdfLocation::FromString("0001:02:0g.7");
-  EXPECT_EQ(loc, absl::nullopt);
+  EXPECT_EQ(loc, std::nullopt);
 
   // Function number out of range.
   loc = PciDbdfLocation::FromString("0001:02:03.9");
-  EXPECT_EQ(loc, absl::nullopt);
+  EXPECT_EQ(loc, std::nullopt);
 
   // TryMake: Function number out of range.
   loc = PciDbdfLocation::TryMake(1, 2, 3, 9);
-  EXPECT_EQ(loc, absl::nullopt);
+  EXPECT_EQ(loc, std::nullopt);
 }
 
 TEST(PciLocationTest, TestComparator) {

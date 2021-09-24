@@ -18,6 +18,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <queue>
 #include <string>
 #include <utility>
@@ -31,7 +32,6 @@
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/strip.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
@@ -49,7 +49,7 @@ namespace {
 constexpr absl::string_view kDefaultTopologyConfigName =
     "topology_configs/redfish_2021_1.textpb";
 
-absl::optional<TopologyConfig> LoadTopologyConfigFromConfigName(
+std::optional<TopologyConfig> LoadTopologyConfigFromConfigName(
     absl::string_view config_name) {
   auto filedata =
       ecclesia::GetEmbeddedFileWithName(config_name, kTopologyConfig);
@@ -59,7 +59,7 @@ absl::optional<TopologyConfig> LoadTopologyConfigFromConfigName(
       return config;
     }
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 
 // Function to iterate through all cables with valid Location tags and call
@@ -75,7 +75,7 @@ void FindAllCablesHelper(
         const auto cable_links = (*cable_json)[kRfPropertyLinks].AsObject();
         if (!cable_links) return;
 
-        absl::optional<std::string> upstream_uri;
+        std::optional<std::string> upstream_uri;
         for (const auto &upstream_link : cable_linkages.upstream_links()) {
           // Assuming there is only one upstream resource
           if (auto upstream_obj = (*cable_links)[upstream_link][0].AsObject()) {
@@ -106,7 +106,7 @@ struct ResourceTypeAndVersion {
 };
 
 const ResourceTypeAndVersion GetResourceTypeAndVersionFromOdataType(
-    const absl::optional<std::string> &type) {
+    const std::optional<std::string> &type) {
   // Resource type should be of format "#<Resource>.v<version>.<Resource>"
   if (type.has_value()) {
     std::vector<std::string> type_parts = absl::StrSplit(*type, '.');
@@ -183,18 +183,18 @@ std::vector<std::string> FindAllDownstreamsUris(const RedfishObject &obj,
 }
 
 // Helper function to find root chassis from service root
-absl::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
-                                               const TopologyConfig &config) {
+std::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
+                                              const TopologyConfig &config) {
   const std::string chassis_link = config.find_root_node().chassis_link();
 
-  absl::optional<std::string> chassis_uri;
+  std::optional<std::string> chassis_uri;
   if (const auto chassis_obj =
           redfish_intf->GetRoot()[kRfPropertyChassis][kRfPropertyMembers][0]
               .AsObject();
       chassis_obj) {
     chassis_uri = chassis_obj->GetUri();
   }
-  if (!chassis_uri.has_value()) return absl::nullopt;
+  if (!chassis_uri.has_value()) return std::nullopt;
 
   // Iterate through cables to find upstream connections
   absl::flat_hash_map<std::string, std::string>
@@ -210,7 +210,7 @@ absl::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
                       });
 
   std::string current_chassis_uri = *std::move(chassis_uri);
-  absl::optional<std::string> upstream_uri;
+  std::optional<std::string> upstream_uri;
   if (auto upstream_chassis_link =
           redfish_intf
               ->GetUri(current_chassis_uri)[kRfPropertyLinks][chassis_link]
@@ -252,16 +252,16 @@ absl::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
   if (redfish_intf->GetUri(current_chassis_uri).AsObject()) {
     return current_chassis_uri;
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 
-absl::optional<std::string> FindRootNodeUri(RedfishInterface *redfish_intf,
-                                            const TopologyConfig &config) {
+std::optional<std::string> FindRootNodeUri(RedfishInterface *redfish_intf,
+                                           const TopologyConfig &config) {
   const auto finding_root = config.find_root_node();
   if (finding_root.has_chassis_link()) {
     return FindRootChassisUri(redfish_intf, config);
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 
 using UriToAttachedCableUris =
@@ -294,7 +294,7 @@ constexpr absl::string_view kLocationTypeSlot = "Slot";
 NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
   NodeTopology topology;
 
-  absl::optional<TopologyConfig> config =
+  std::optional<TopologyConfig> config =
       LoadTopologyConfigFromConfigName(kDefaultTopologyConfigName);
   if (!config.has_value()) {
     ecclesia::FatalLog() << "No valid config found with name: "
@@ -365,7 +365,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
       const auto node_location =
           location_attribute[kRfPropertyPartLocation].AsObject();
 
-      absl::optional<std::string> location_type =
+      std::optional<std::string> location_type =
           node_location->GetNodeValue<PropertyLocationType>();
       if (!location_type.has_value()) {
         ecclesia::ErrorLog()

@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -33,7 +34,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/acpi/system_description_table.emb.h"
 #include "ecclesia/lib/codec/endian.h"
 #include "ecclesia/lib/file/test_filesystem.h"

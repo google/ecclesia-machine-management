@@ -17,6 +17,7 @@
 #include "ecclesia/lib/io/usb/usb.h"
 
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -24,7 +25,6 @@
 #include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/io/usb/mocks.h"
 

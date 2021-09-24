@@ -166,7 +166,7 @@ std::unique_ptr<BiosInformation> SmbiosReader::GetBiosInformation() const {
   for (auto &entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::BIOS_INFORMATION) {
-      return absl::make_unique<BiosInformation>(&entry);
+      return std::make_unique<BiosInformation>(&entry);
     }
   }
   return nullptr;
@@ -176,7 +176,7 @@ std::unique_ptr<SystemInformation> SmbiosReader::GetSystemInformation() const {
   for (auto &entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::SYSTEM_INFORMATION) {
-      return absl::make_unique<SystemInformation>(&entry);
+      return std::make_unique<SystemInformation>(&entry);
     }
   }
   return nullptr;
@@ -187,7 +187,7 @@ std::unique_ptr<BaseboardInformation> SmbiosReader::GetBaseboardInformation()
   for (auto &entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::BASEBOARD_INFORMATION) {
-      return absl::make_unique<BaseboardInformation>(&entry);
+      return std::make_unique<BaseboardInformation>(&entry);
     }
   }
   return nullptr;
@@ -215,7 +215,7 @@ std::unique_ptr<SystemEventLog> SmbiosReader::GetSystemEventLog() const {
   for (auto &entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::SYSTEM_EVENT_LOG) {
-      return absl::make_unique<SystemEventLog>(&entry);
+      return std::make_unique<SystemEventLog>(&entry);
     }
   }
   return nullptr;

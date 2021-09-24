@@ -24,11 +24,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/magent/lib/ipmi/ipmi.h"
 #include "ecclesia/magent/lib/ipmi/sensor.h"
@@ -107,8 +107,7 @@ struct IpmiResponse {
 
 class Ipmitool : public IpmiInterface {
  public:
-  explicit Ipmitool(
-      absl::optional<ecclesia::MagentConfig::IpmiCredential> cred);
+  explicit Ipmitool(std::optional<ecclesia::MagentConfig::IpmiCredential> cred);
 
   std::vector<BmcFruInterfaceInfo> GetAllFrus() override {
     return ipmi_impl_->GetAllFrus();

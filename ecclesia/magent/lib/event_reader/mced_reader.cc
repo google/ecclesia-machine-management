@@ -24,6 +24,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <optional>
 #include <queue>
 #include <string>
 #include <type_traits>
@@ -33,7 +34,6 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/logging/posix.h"
@@ -95,7 +95,7 @@ using StringViewType =
 // third_party/mosys/modules/architecture/common/mce/mced.cc
 // Parses a line of text obtained from the mcedaemon into the MachineCheck
 // structure
-absl::optional<MachineCheck> ParseLine(absl::string_view mced_line) {
+std::optional<MachineCheck> ParseLine(absl::string_view mced_line) {
   MachineCheck mce;
   char type;
   std::string value_str;
@@ -177,21 +177,21 @@ absl::optional<MachineCheck> ParseLine(absl::string_view mced_line) {
   }
   // Sanity check that we parsed a minimum amount of data.
   if (mce.bank.has_value() && mce.mci_status.has_value()) return mce;
-  return absl::nullopt;
+  return std::nullopt;
 }
 
-// Return value absl::nullopt implies error in parsing the mce
-absl::optional<MachineCheck> ReadOneMce(FILE *socket_file,
-                                        McedaemonSocketInterface *socket_intf) {
+// Return value std::nullopt implies error in parsing the mce
+std::optional<MachineCheck> ReadOneMce(FILE *socket_file,
+                                       McedaemonSocketInterface *socket_intf) {
   char line_buffer[kMcedMaxLineLength];
 
   if (!socket_intf->CallFgets(line_buffer, kMcedMaxLineLength, socket_file)) {
     PosixErrorLog() << "error reading line from socket_file.";
-    return absl::nullopt;
+    return std::nullopt;
   }
   absl::string_view mced_line(line_buffer);
   // Process only valid lines
-  if (mced_line.find('\n') == std::string::npos) return absl::nullopt;
+  if (mced_line.find('\n') == std::string::npos) return std::nullopt;
   return ParseLine(mced_line);
 }
 
@@ -224,7 +224,7 @@ void McedaemonReader::Loop() {
   do {
     // Open a socket and get a file stream to read mces from
     if (FILE *socket_file = InitSocket(mced_socket_path_, socket_intf_)) {
-      absl::optional<MachineCheck> mce;
+      std::optional<MachineCheck> mce;
       while ((mce = ReadOneMce(socket_file, socket_intf_))) {
         absl::MutexLock l(&mces_lock_);
         mces_.push({.record = mce.value()});

@@ -17,10 +17,10 @@
 #ifndef ECCLESIA_MAGENT_SYSMODEL_X86_CPU_H_
 #define ECCLESIA_MAGENT_SYSMODEL_X86_CPU_H_
 
+#include <optional>
 #include <string>
 #include <vector>
 
-#include "absl/types/optional.h"
 #include "ecclesia/lib/smbios/processor_information.h"
 #include "ecclesia/lib/smbios/reader.h"
 
@@ -29,7 +29,7 @@ namespace ecclesia {
 struct CpuInfo {
   std::string name;
   bool enabled;
-  absl::optional<CpuSignature> cpu_signature;
+  std::optional<CpuSignature> cpu_signature;
   int max_speed_mhz;
   std::string serial_number;
   std::string part_number;

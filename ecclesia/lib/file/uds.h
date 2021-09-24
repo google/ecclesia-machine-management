@@ -37,9 +37,8 @@
 #include <sys/types.h>
 
 #include <functional>
+#include <optional>
 #include <string>
-
-#include "absl/types/optional.h"
 
 namespace ecclesia {
 
@@ -55,8 +54,8 @@ enum class DomainSocketPermissions {
 // This is used by functions that allow maniupulating the socket or directory
 // ownership. A value being unspecified is interpreted as "don't change it".
 struct DomainSocketOwners {
-  absl::optional<uid_t> uid;
-  absl::optional<gid_t> gid;
+  std::optional<uid_t> uid;
+  std::optional<gid_t> gid;
 };
 
 // Given a path to a socket root, return a bool indicating if this path is

@@ -17,7 +17,8 @@
 #ifndef ECCLESIA_LIB_IO_USB_PROTO_LIB_H_
 #define ECCLESIA_LIB_IO_USB_PROTO_LIB_H_
 
-#include "absl/types/optional.h"
+#include <optional>
+
 #include "ecclesia/lib/io/usb/usb.h"
 #include "ecclesia/lib/io/usb/usb.pb.h"
 
@@ -26,7 +27,7 @@ namespace ecclesia {
 // Functions for converting ecclesia::UsbLocation to and from
 // ecclesia::UsbLocationProtobuf
 UsbLocationProtobuf UsbLocationToProto(const UsbLocation &location);
-absl::optional<UsbLocation> UsbLocationFromProto(
+std::optional<UsbLocation> UsbLocationFromProto(
     const UsbLocationProtobuf &location);
 
 // Function for converting ecclesia::UsbSignature to

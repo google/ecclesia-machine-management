@@ -19,30 +19,31 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <optional>
+
 #include "google/protobuf/io/zero_copy_stream_impl.h"
 #include "absl/cleanup/cleanup.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/magent/proto/config.pb.h"
 
 namespace ecclesia {
 
-absl::optional<ecclesia::MagentConfig::IpmiCredential> GetIpmiCredentialFromPb(
+std::optional<ecclesia::MagentConfig::IpmiCredential> GetIpmiCredentialFromPb(
     const char *path) {
   ecclesia::MagentConfig magent_config;
 
   int fd = open(path, O_RDONLY);
   if (fd < 0) {
     WarningLog() << "Fail to open " << path;
-    return absl::nullopt;
+    return std::nullopt;
   }
   auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
 
   google::protobuf::io::FileInputStream input(fd);
   if (!magent_config.ParseFromZeroCopyStream(&input)) {
     WarningLog() << "Fail to parse " << path;
-    return absl::nullopt;
+    return std::nullopt;
   }
 
   return magent_config.ipmi_cred();

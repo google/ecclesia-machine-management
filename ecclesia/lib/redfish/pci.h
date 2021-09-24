@@ -17,7 +17,8 @@
 #ifndef ECCLESIA_LIB_REDFISH_PCI_H_
 #define ECCLESIA_LIB_REDFISH_PCI_H_
 
-#include "absl/types/optional.h"
+#include <optional>
+
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/pci/signature.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -32,7 +33,7 @@ namespace libredfish {
 //   "Device": "0x00",
 //   "Function": "0x0"
 // }
-absl::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
+std::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
     const RedfishObject &pci_location_obj);
 
 // Given a pcie function redfish object, read the vendor id, device id,
@@ -44,7 +45,7 @@ absl::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
 //   "SubsystemId": "0xABCD",
 //   "SubsystemVendorId": "0xABCD",
 // }
-absl::optional<ecclesia::PciFullSignature> ReadPciFullSignature(
+std::optional<ecclesia::PciFullSignature> ReadPciFullSignature(
     const RedfishObject &pcie_function_obj);
 
 }  // namespace libredfish

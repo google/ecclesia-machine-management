@@ -17,13 +17,13 @@
 #include "ecclesia/magent/redfish/indus/sleipnir_sensor.h"
 
 #include <string>
+#include <variant>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/variant.h"
 #include "ecclesia/magent/lib/ipmi/interface_options.h"
 #include "ecclesia/magent/lib/ipmi/ipmitool.h"
 #include "ecclesia/magent/lib/ipmi/sensor.h"

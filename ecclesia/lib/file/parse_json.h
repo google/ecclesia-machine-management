@@ -22,11 +22,11 @@
 
 #include <array>
 #include <cstddef>
+#include <optional>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
@@ -39,10 +39,10 @@ namespace ecclesia {
 template <size_t N>
 absl::StatusOr<const nlohmann::json> ParseJsonValueFromEmbeddedFile(
     absl::string_view file_path, const std::array<EmbeddedFile, N> &array) {
-  absl::optional<absl::string_view> embedded_file_contents(
+  std::optional<absl::string_view> embedded_file_contents(
       GetEmbeddedFileWithName(file_path, array));
 
-  if (embedded_file_contents == absl::nullopt) {
+  if (embedded_file_contents == std::nullopt) {
     ErrorLog() << "Embedded file with name " << file_path << " not found";
     return absl::NotFoundError("Embedded file not found.");
   }

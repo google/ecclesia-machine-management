@@ -18,10 +18,10 @@
 #define ECCLESIA_LIB_REDFISH_RAW_H_
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/redfish/interface.h"
 
@@ -46,7 +46,7 @@ struct TlsArgs {
   // Absolute path to the PEM encoded private key file;
   std::string key_file;
   // Absolute path to the certificate authority bundle;
-  absl::optional<std::string> ca_cert_file;
+  std::optional<std::string> ca_cert_file;
 };
 
 // Options for the interface as a whole.

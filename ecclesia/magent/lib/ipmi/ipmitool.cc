@@ -25,8 +25,10 @@
 #include <cstring>
 #include <ctime>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
@@ -37,9 +39,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/status/macros.h"
@@ -455,7 +455,7 @@ class IpmiFullCompactSensor {
 
   struct sdr_record_full_sensor *GetFullSensorPtr() const {
     if (IsFullType()) {
-      return absl::get<SdrRecordUniquePtr<struct sdr_record_full_sensor>>(
+      return std::get<SdrRecordUniquePtr<struct sdr_record_full_sensor>>(
                  sensor_)
           .get();
     }
@@ -472,8 +472,8 @@ class IpmiFullCompactSensor {
   static constexpr int kStateByteAssertedBit = 0x02;
   static constexpr int kPresenceSensorErrorBit = 0x02;
 
-  absl::variant<SdrRecordUniquePtr<struct sdr_record_full_sensor>,
-                SdrRecordUniquePtr<struct sdr_record_compact_sensor>>
+  std::variant<SdrRecordUniquePtr<struct sdr_record_full_sensor>,
+               SdrRecordUniquePtr<struct sdr_record_compact_sensor>>
       sensor_;
 
   struct sdr_record_common_sensor *common_;
@@ -491,7 +491,7 @@ class IpmitoolImpl : public IpmiInterface {
   };
 
   explicit IpmitoolImpl(
-      absl::optional<ecclesia::MagentConfig::IpmiCredential> cred)
+      std::optional<ecclesia::MagentConfig::IpmiCredential> cred)
       : cred_(std::move(cred)), intf_(GetIpmiIntf()) {}
 
   std::vector<BmcFruInterfaceInfo> GetAllFrus() override {
@@ -603,12 +603,12 @@ class IpmitoolImpl : public IpmiInterface {
   absl::flat_hash_map<SensorNum, std::unique_ptr<IpmiFullCompactSensor>>
       fullcompact_sensors_cache_;
 
-  absl::optional<ecclesia::MagentConfig::IpmiCredential> cred_;
+  std::optional<ecclesia::MagentConfig::IpmiCredential> cred_;
   ipmi_intf *intf_;
   IpmitoolInterface ipmitool_intf_;
 
   ipmi_intf *GetIpmiIntf() {
-    if (cred_ == absl::nullopt) {
+    if (cred_ == std::nullopt) {
       ErrorLog() << "Fail to create ipmi interface due to invalid credential.";
       return nullptr;
     }
@@ -990,7 +990,7 @@ class IpmitoolImpl : public IpmiInterface {
   }
 };
 
-Ipmitool::Ipmitool(absl::optional<ecclesia::MagentConfig::IpmiCredential> cred)
-    : ipmi_impl_(absl::make_unique<IpmitoolImpl>(cred)) {}
+Ipmitool::Ipmitool(std::optional<ecclesia::MagentConfig::IpmiCredential> cred)
+    : ipmi_impl_(std::make_unique<IpmitoolImpl>(cred)) {}
 
 }  // namespace ecclesia

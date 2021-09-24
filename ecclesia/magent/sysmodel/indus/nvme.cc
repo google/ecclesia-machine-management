@@ -18,12 +18,12 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/io/pci/config.h"
 #include "ecclesia/lib/io/pci/discovery.h"
 #include "ecclesia/lib/io/pci/location.h"
@@ -46,7 +46,7 @@ void ScanNvmeAsPciPlugins(const PciTopologyInterface *pci_topology,
                           std::function<std::string(int)> connector_name_func,
                           std::vector<NvmeLocation> *nvme_locations) {
   for (int pci_dev = 0; pci_dev <= 3; ++pci_dev) {
-    absl::optional<PciDbdfLocation> pci_location = PciDbdfLocation::TryMake(
+    std::optional<PciDbdfLocation> pci_location = PciDbdfLocation::TryMake(
         pci_domain.value(), pci_bus.value(), pci_dev, 0);
     if (!pci_location.has_value() ||
         !pci_nodes_map.contains(pci_location.value())) {

@@ -19,11 +19,11 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/mcedecoder/mce_decode.h"
 #include "ecclesia/lib/mcedecoder/mce_messages.h"
 #include "ecclesia/magent/lib/event_logger/event_logger.h"
@@ -74,7 +74,7 @@ class MceDecoderAdapter {
   MceDecoderAdapter(std::unique_ptr<MceDecoderInterface> mce_decoder)
       : mce_decoder_(std::move(mce_decoder)) {}
 
-  absl::optional<MceDecodedMessage> Decode(const MachineCheck &mce);
+  std::optional<MceDecodedMessage> Decode(const MachineCheck &mce);
 
  private:
   std::unique_ptr<MceDecoderInterface> mce_decoder_;
@@ -91,7 +91,7 @@ class CpuErrorCountingVisitor : public SystemEventVisitor {
 
   bool Visit(const SystemEventRecord &record) override;
 
-  absl::optional<absl::Time> GetLatestRecordTimeStamp() const {
+  std::optional<absl::Time> GetLatestRecordTimeStamp() const {
     return last_record_timestamp_;
   }
 
@@ -105,7 +105,7 @@ class CpuErrorCountingVisitor : public SystemEventVisitor {
   // Time stamp of the latest(first, since visit direction is from end) record
   // that was visited. Providing this information to the client will allow for
   // incremental accumulation of error counts
-  absl::optional<absl::Time> last_record_timestamp_;
+  std::optional<absl::Time> last_record_timestamp_;
 
   // The visitor constructs this map as it visits each system event record.
   // Key is the cpu / socket number
@@ -123,7 +123,7 @@ class DimmErrorCountingVisitor : public SystemEventVisitor {
 
   bool Visit(const SystemEventRecord &record) override;
 
-  absl::optional<absl::Time> GetLatestRecordTimeStamp() const {
+  std::optional<absl::Time> GetLatestRecordTimeStamp() const {
     return last_record_timestamp_;
   }
 
@@ -137,7 +137,7 @@ class DimmErrorCountingVisitor : public SystemEventVisitor {
   // Time stamp of the latest(first, since visit direction is from end) record
   // that was visited. Providing this information to the client will allow for
   // incremental accumulation of error counts
-  absl::optional<absl::Time> last_record_timestamp_;
+  std::optional<absl::Time> last_record_timestamp_;
 
   // The visitor constructs this map as it visits each system event record.
   // Key is the dimm number

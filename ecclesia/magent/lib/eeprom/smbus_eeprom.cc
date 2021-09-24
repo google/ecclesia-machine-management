@@ -24,12 +24,12 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <optional>
 #include <utility>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/synchronization/mutex.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/io/smbus/smbus.h"
 #include "ecclesia/lib/logging/globals.h"
@@ -95,15 +95,15 @@ absl::StatusOr<size_t> ReadByWord(size_t offset, size_t len,
 }
 }  // namespace
 
-absl::optional<int> SmbusEeprom2ByteAddr::SequentialRead(
+std::optional<int> SmbusEeprom2ByteAddr::SequentialRead(
     size_t offset, absl::Span<unsigned char> value) const {
   // We can't actually use smbus block read because the driver doesn't know how
   // to do the 2-byte address write. So we do the best we can by performing the
   // address write once, then calling read byte repeatedly to keep the overhead
   // to a minimum.
 
-  absl::optional<SmbusDevice> device = GetDevice();
-  if (!device) return absl::nullopt;
+  std::optional<SmbusDevice> device = GetDevice();
+  if (!device) return std::nullopt;
 
   // Write the eeprom offset as a command byte + data byte.
   uint8_t hi = offset >> 8;
@@ -115,7 +115,7 @@ absl::optional<int> SmbusEeprom2ByteAddr::SequentialRead(
     ErrorLog() << "smbus device " << device->location()
                << " Failed to write smbus register 0x" << std::hex << offset
                << '\n';
-    return absl::nullopt;
+    return std::nullopt;
   }
 
   // Read the block a byte a time.
@@ -126,7 +126,7 @@ absl::optional<int> SmbusEeprom2ByteAddr::SequentialRead(
       ErrorLog() << "smbus device " << device->location()
                  << " Failed to read smbus register 0x" << std::hex
                  << offset + i;
-      return absl::nullopt;
+      return std::nullopt;
     }
     value[i] = val;
   }
@@ -134,7 +134,7 @@ absl::optional<int> SmbusEeprom2ByteAddr::SequentialRead(
   return i;
 }
 
-absl::optional<int> SmbusEeprom2ByteAddr::ReadBytes(
+std::optional<int> SmbusEeprom2ByteAddr::ReadBytes(
     size_t offset, absl::Span<unsigned char> value) const {
   memset(value.data(), 0, value.size());
 
@@ -143,16 +143,16 @@ absl::optional<int> SmbusEeprom2ByteAddr::ReadBytes(
   return SequentialRead(offset, value);
 }
 
-absl::optional<int> SmbusEeprom2ByteAddr::WriteBytes(
+std::optional<int> SmbusEeprom2ByteAddr::WriteBytes(
     size_t offset, absl::Span<const unsigned char> data) const {
-  return absl::nullopt;
+  return std::nullopt;
 }
 
-absl::optional<int> SmbusEeprom2K::ReadBytes(
+std::optional<int> SmbusEeprom2K::ReadBytes(
     size_t offset, absl::Span<unsigned char> value) const {
-  absl::optional<SmbusDevice> device = GetDevice();
+  std::optional<SmbusDevice> device = GetDevice();
   if (!device.has_value()) {
-    return absl::nullopt;
+    return std::nullopt;
   }
 
   memset(value.data(), 0, value.size());
@@ -160,7 +160,7 @@ absl::optional<int> SmbusEeprom2K::ReadBytes(
   // Check if the requested read length exceeds the size of the eeprom
   if (len < 1 || len > kEepromSize) {
     ErrorLog() << "Requested read length exceeds the size of the eeprom.";
-    return absl::nullopt;
+    return std::nullopt;
   }
 
   // First try block read, if any error happens then fall back to word read.
@@ -170,7 +170,7 @@ absl::optional<int> SmbusEeprom2K::ReadBytes(
   if (!maybe_num_bytes_read.ok() || maybe_num_bytes_read.value() != len) {
     maybe_num_bytes_read = ReadByWord(offset, len, value, device.value());
     if (!maybe_num_bytes_read.ok() || maybe_num_bytes_read.value() != len) {
-      return absl::nullopt;
+      return std::nullopt;
     }
   }
 

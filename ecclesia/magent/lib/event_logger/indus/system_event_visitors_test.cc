@@ -17,6 +17,7 @@
 #include "ecclesia/magent/lib/event_logger/indus/system_event_visitors.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -30,7 +31,6 @@
 #include "absl/strings/str_format.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/mcedecoder/cpu_topology.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/magent/lib/event_logger/event_logger.h"
@@ -44,7 +44,7 @@ using ::testing::Return;
 
 class MockEventReader : public SystemEventReader {
  public:
-  MOCK_METHOD(absl::optional<SystemEventRecord>, ReadEvent, ());
+  MOCK_METHOD(std::optional<SystemEventRecord>, ReadEvent, ());
 };
 
 class MockClock : public Clock {
@@ -106,11 +106,11 @@ TEST_F(IndusVisitorTest, MemoryErrorCounts) {
       .WillOnce(Return(SystemEventRecord{.record = mces[0]}))
       .WillOnce([&]() {
         last_event_logged_.Notify();
-        return absl::nullopt;
+        return std::nullopt;
       })
-      .WillRepeatedly(Return(absl::nullopt));
+      .WillRepeatedly(Return(std::nullopt));
 
-  std::unique_ptr<MockClock> clock = absl::make_unique<MockClock>();
+  std::unique_ptr<MockClock> clock = std::make_unique<MockClock>();
 
   EXPECT_CALL(*clock.get(), Now)
       .WillOnce(Return(absl::UnixEpoch() + absl::Seconds(1)))
@@ -128,7 +128,7 @@ TEST_F(IndusVisitorTest, MemoryErrorCounts) {
   {
     // Visit all of the events
     auto dimm_visitor = CreateIndusDimmErrorCountingVisitor(
-        absl::UnixEpoch(), absl::make_unique<FakeCpuTopology>());
+        absl::UnixEpoch(), std::make_unique<FakeCpuTopology>());
 
     logger.Visit(dimm_visitor.get());
 
@@ -144,7 +144,7 @@ TEST_F(IndusVisitorTest, MemoryErrorCounts) {
     // Visit the last 3 records
     auto dimm_visitor = CreateIndusDimmErrorCountingVisitor(
         absl::UnixEpoch() + absl::Seconds(2),
-        absl::make_unique<FakeCpuTopology>());
+        std::make_unique<FakeCpuTopology>());
 
     logger.Visit(dimm_visitor.get());
 
@@ -187,11 +187,11 @@ TEST_F(IndusVisitorTest, CpuErrorCounts) {
       .WillOnce(Return(SystemEventRecord{.record = mces[0]}))
       .WillOnce([&]() {
         last_event_logged_.Notify();
-        return absl::nullopt;
+        return std::nullopt;
       })
-      .WillRepeatedly(Return(absl::nullopt));
+      .WillRepeatedly(Return(std::nullopt));
 
-  std::unique_ptr<MockClock> clock = absl::make_unique<MockClock>();
+  std::unique_ptr<MockClock> clock = std::make_unique<MockClock>();
 
   EXPECT_CALL(*clock.get(), Now)
       .WillOnce(Return(absl::UnixEpoch() + absl::Seconds(1)))
@@ -209,7 +209,7 @@ TEST_F(IndusVisitorTest, CpuErrorCounts) {
   {
     // Visit all of the 5 events
     auto cpu_visitor = CreateIndusCpuErrorCountingVisitor(
-        absl::UnixEpoch(), absl::make_unique<FakeCpuTopology>());
+        absl::UnixEpoch(), std::make_unique<FakeCpuTopology>());
     logger.Visit(cpu_visitor.get());
     auto cpu_error_counts = cpu_visitor->GetCpuErrorCounts();
     EXPECT_EQ(cpu_error_counts.size(), 2);
@@ -221,9 +221,9 @@ TEST_F(IndusVisitorTest, CpuErrorCounts) {
 
   {
     // Visit the last 2 records
-    auto cpu_visitor = CreateIndusCpuErrorCountingVisitor(
-        absl::UnixEpoch() + absl::Seconds(3),
-        absl::make_unique<FakeCpuTopology>());
+    auto cpu_visitor =
+        CreateIndusCpuErrorCountingVisitor(absl::UnixEpoch() + absl::Seconds(3),
+                                           std::make_unique<FakeCpuTopology>());
     logger.Visit(cpu_visitor.get());
     auto cpu_error_counts = cpu_visitor->GetCpuErrorCounts();
     EXPECT_EQ(cpu_error_counts.size(), 2);

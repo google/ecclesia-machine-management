@@ -39,10 +39,10 @@ TEST(MceDecodeTest, DecodeCorrectableMemoryControllerWriteError) {
   const int lpu_id = 54;
   const int bank = 7;
   const int socket_id = 1;
-  auto cpu_topology = absl::make_unique<MockCpuTopology>();
+  auto cpu_topology = std::make_unique<MockCpuTopology>();
   EXPECT_CALL(*cpu_topology, GetSocketIdForLpu(lpu_id))
       .WillOnce(Return(socket_id));
-  auto dimm_translator = absl::make_unique<IndusDimmTranslator>();
+  auto dimm_translator = std::make_unique<IndusDimmTranslator>();
 
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
@@ -76,10 +76,10 @@ TEST(MceDecodeTest, DecodeUnCorrectableMemoryControllerReadError) {
   const int lpu_id = 56;
   const int bank = 7;
   const int socket_id = 1;
-  auto cpu_topology = absl::make_unique<MockCpuTopology>();
+  auto cpu_topology = std::make_unique<MockCpuTopology>();
   EXPECT_CALL(*cpu_topology, GetSocketIdForLpu(lpu_id))
       .WillOnce(Return(socket_id));
-  auto dimm_translator = absl::make_unique<IndusDimmTranslator>();
+  auto dimm_translator = std::make_unique<IndusDimmTranslator>();
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 
@@ -112,10 +112,10 @@ TEST(MceDecodeTest, DecodeCorrectableMultipleMemError) {
   const int lpu_id = 6;
   const int bank = 13;
   const int socket_id = 0;
-  auto cpu_topology = absl::make_unique<MockCpuTopology>();
+  auto cpu_topology = std::make_unique<MockCpuTopology>();
   EXPECT_CALL(*cpu_topology, GetSocketIdForLpu(lpu_id))
       .WillOnce(Return(socket_id));
-  auto dimm_translator = absl::make_unique<IndusDimmTranslator>();
+  auto dimm_translator = std::make_unique<IndusDimmTranslator>();
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 
@@ -154,10 +154,10 @@ TEST(MceDecodeTest, DecodeUnCorrectableCpuCacheError) {
   const int lpu_id = 59;
   const int bank = 1;
   const int socket_id = 1;
-  auto cpu_topology = absl::make_unique<MockCpuTopology>();
+  auto cpu_topology = std::make_unique<MockCpuTopology>();
   EXPECT_CALL(*cpu_topology, GetSocketIdForLpu(lpu_id))
       .WillOnce(Return(socket_id));
-  auto dimm_translator = absl::make_unique<IndusDimmTranslator>();
+  auto dimm_translator = std::make_unique<IndusDimmTranslator>();
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 
@@ -192,10 +192,10 @@ TEST(MceDecodeTest, DecodeUnCorrectableInstructionFetchError) {
   const int lpu_id = 18;
   const int bank = 0;
   const int socket_id = 0;
-  auto cpu_topology = absl::make_unique<MockCpuTopology>();
+  auto cpu_topology = std::make_unique<MockCpuTopology>();
   EXPECT_CALL(*cpu_topology, GetSocketIdForLpu(lpu_id))
       .WillOnce(Return(socket_id));
-  auto dimm_translator = absl::make_unique<IndusDimmTranslator>();
+  auto dimm_translator = std::make_unique<IndusDimmTranslator>();
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 
@@ -230,10 +230,10 @@ TEST(MceDecodeTest, DecodeCorruptedMce) {
   const int lpu_id = 18;
   const int bank = 0;
   const int socket_id = 0;
-  auto cpu_topology = absl::make_unique<MockCpuTopology>();
+  auto cpu_topology = std::make_unique<MockCpuTopology>();
   EXPECT_CALL(*cpu_topology, GetSocketIdForLpu(lpu_id))
       .WillOnce(Return(socket_id));
-  auto dimm_translator = absl::make_unique<IndusDimmTranslator>();
+  auto dimm_translator = std::make_unique<IndusDimmTranslator>();
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 
@@ -262,10 +262,10 @@ TEST(MceDecodeTest, Decode3StrikeTimeoutError) {
   const int lpu_id = 10;
   const int bank = 3;
   const int socket_id = 1;
-  auto cpu_topology = absl::make_unique<MockCpuTopology>();
+  auto cpu_topology = std::make_unique<MockCpuTopology>();
   EXPECT_CALL(*cpu_topology, GetSocketIdForLpu(lpu_id))
       .WillOnce(Return(socket_id));
-  auto dimm_translator = absl::make_unique<IndusDimmTranslator>();
+  auto dimm_translator = std::make_unique<IndusDimmTranslator>();
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 
@@ -302,10 +302,10 @@ TEST(MceDecodeTest, DecodeTorTimeoutError) {
   const int lpu_id = 20;
   const int bank = 10;
   const int socket_id = 1;
-  auto cpu_topology = absl::make_unique<MockCpuTopology>();
+  auto cpu_topology = std::make_unique<MockCpuTopology>();
   EXPECT_CALL(*cpu_topology, GetSocketIdForLpu(lpu_id))
       .WillOnce(Return(socket_id));
-  auto dimm_translator = absl::make_unique<IndusDimmTranslator>();
+  auto dimm_translator = std::make_unique<IndusDimmTranslator>();
   MceDecoder mce_decoder(CpuVendor::kIntel, CpuIdentifier::kSkylake,
                          std::move(cpu_topology), std::move(dimm_translator));
 

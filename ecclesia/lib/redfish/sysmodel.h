@@ -19,8 +19,8 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 
-#include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 

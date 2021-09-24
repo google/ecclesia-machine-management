@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -30,7 +31,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/io/pci/discovery.h"
 #include "ecclesia/lib/io/pci/location.h"
@@ -78,7 +78,7 @@ class SystemModel {
   ~SystemModel() {}
 
   std::size_t NumDimms() const;
-  absl::optional<Dimm> GetDimm(std::size_t index);
+  std::optional<Dimm> GetDimm(std::size_t index);
 
   // The number of DIMM thermal sensors. This should be the same as the number
   // of DIMMs.
@@ -90,7 +90,7 @@ class SystemModel {
   std::vector<SleipnirSensor> GetAllIpmiSensors() const;
 
   std::size_t NumCpus() const;
-  absl::optional<Cpu> GetCpu(std::size_t index);
+  std::optional<Cpu> GetCpu(std::size_t index);
 
   std::size_t NumFruReaders() const;
   template <typename IteratorF>
@@ -103,7 +103,7 @@ class SystemModel {
   SysmodelFruReaderIntf *GetFruReader(absl::string_view fru_name) const;
 
   std::vector<ChassisId> GetAllChassis() const;
-  absl::optional<ChassisId> GetChassisByName(
+  std::optional<ChassisId> GetChassisByName(
       absl::string_view chassis_name) const;
 
   struct NvmePluginInfo {
@@ -114,7 +114,7 @@ class SystemModel {
   // Get the physical location strings of the NVMe plugins.
   std::vector<std::string> GetNvmePhysLocations() const;
   // Get the NVMe plugin info by physical location.
-  absl::optional<NvmePluginInfo> GetNvmeByPhysLocation(
+  std::optional<NvmePluginInfo> GetNvmeByPhysLocation(
       absl::string_view phys_location) const;
 
   std::vector<PciStorageLocation> GetPciStorageLocations() const;
@@ -133,7 +133,7 @@ class SystemModel {
   }
 
   struct PciNodeConnections {
-    absl::optional<PciDbdfLocation> parent;
+    std::optional<PciDbdfLocation> parent;
     std::vector<PciDbdfLocation> children;
   };
 
@@ -145,7 +145,7 @@ class SystemModel {
 
   std::vector<PciDbdfLocation> GetPcieDeviceLocations() const;
 
-  absl::optional<uint32_t> GetBootNumber();
+  std::optional<uint32_t> GetBootNumber();
 
   // Returns the system uptime in unit of seconds.
   absl::StatusOr<int64_t> GetSystemUptimeSeconds() const;
@@ -212,7 +212,7 @@ class SystemModel {
   const absl::Span<const PciSensorParams> dimm_thermal_params_;
   const absl::Span<const IpmiInterface::BmcSensorInterfaceInfo> ipmi_sensors_;
 
-  absl::optional<uint32_t> boot_number_;
+  std::optional<uint32_t> boot_number_;
   // Iterate through BIOS Event Log to load boot number from events
   void LoadBootNumberFromElogReader(ElogReader &elog_reader);
 };

@@ -18,11 +18,11 @@
 #define ECCLESIA_LIB_REDFISH_NUMBERS_H_
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <type_traits>
 
 #include "absl/strings/numbers.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
 
 namespace libredfish {
@@ -32,12 +32,12 @@ namespace libredfish {
 template <typename ResourceT,
           std::enable_if_t<
               std::is_same_v<typename ResourceT::type, std::string>, int> = 0>
-inline absl::optional<int32_t> RedfishStrTo32Base(const RedfishObject &obj) {
+inline std::optional<int32_t> RedfishStrTo32Base(const RedfishObject &obj) {
   auto maybe_value = obj.GetNodeValue<ResourceT>();
   int32_t number;
   if (!maybe_value.has_value() ||
       !absl::numbers_internal::safe_strto32_base(*maybe_value, &number, 0)) {
-    return absl::nullopt;
+    return std::nullopt;
   }
   return number;
 }

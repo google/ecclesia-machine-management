@@ -19,6 +19,7 @@
 #include <sys/types.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -31,7 +32,6 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/io/pci/discovery.h"
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/usb/ids.h"
@@ -119,9 +119,9 @@ Assembly::AssemblyModifier CreateModifierToAddFruInfo(
 }
 
 // A helper function to get valid SysmodelFru if existing or nullopt.
-absl::optional<SysmodelFru> GetValidFru(SysmodelFruReaderIntf *fru_reader) {
+std::optional<SysmodelFru> GetValidFru(SysmodelFruReaderIntf *fru_reader) {
   if (fru_reader == nullptr) {
-    return absl::nullopt;
+    return std::nullopt;
   }
   return fru_reader->Read();
 }
@@ -198,7 +198,7 @@ constexpr absl::string_view kSoftwareName = "magent-indus";
 }  // namespace
 
 Assembly::AssemblyModifier CreateModifierToAttachSpicy16Fru(
-    int connector_id, absl::optional<SysmodelFru> fru) {
+    int connector_id, std::optional<SysmodelFru> fru) {
   return [fru, connector_id](
              absl::flat_hash_map<std::string, nlohmann::json> &assemblies) {
     // Step 1: create and push_back the spicy16 FRU to the Indus Assemblies.

@@ -24,8 +24,10 @@
 #include <cstdlib>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "absl/base/macros.h"
 #include "absl/memory/memory.h"
@@ -33,8 +35,6 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/http/client.h"
@@ -83,7 +83,7 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
     argv[i] = &string_argv[i][0];
   }
   SetUpMockupServer(
-      argv, [this]() { return RedfishClientInterface(); }, absl::nullopt);
+      argv, [this]() { return RedfishClientInterface(); }, std::nullopt);
 }
 
 TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar)
@@ -103,7 +103,7 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar)
     argv[i] = &string_argv[i][0];
   }
   SetUpMockupServer(
-      argv, [this]() { return RedfishClientInterface(); }, absl::nullopt);
+      argv, [this]() { return RedfishClientInterface(); }, std::nullopt);
 }
 
 TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
@@ -141,7 +141,7 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
 void TestingMockupServer::SetUpMockupServer(
     char **server_argv,
     const std::function<std::unique_ptr<RedfishInterface>()> &factory,
-    absl::optional<absl::Duration> start_estimation) {
+    std::optional<absl::Duration> start_estimation) {
   // Launch the supprocess using spawn. We spawn it into a unique process group
   // so that at shutdown we can terminate the entire tree.
   absl::Time start_time = absl::Now();
@@ -214,8 +214,8 @@ TestingMockupServer::~TestingMockupServer() {
 std::unique_ptr<RedfishInterface> TestingMockupServer::RedfishClientInterface(
     std::unique_ptr<ecclesia::HttpClient> client) {
   std::string endpoint =
-      absl::visit([](auto &conn) { return ConfigToEndpoint("http", conn); },
-                  connection_config_);
+      std::visit([](auto &conn) { return ConfigToEndpoint("http", conn); },
+                 connection_config_);
   auto intf = libredfish::NewRawInterface(endpoint, RedfishInterface::kTrusted,
                                           std::move(client));
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
@@ -228,8 +228,8 @@ TestingMockupServer::RedfishClientBasicAuthInterface() {
   args.username = "FakeName";
   args.password = "FakePassword";
   args.endpoint =
-      absl::visit([](auto &conn) { return ConfigToEndpoint("http", conn); },
-                  connection_config_);
+      std::visit([](auto &conn) { return ConfigToEndpoint("http", conn); },
+                 connection_config_);
   auto intf = libredfish::NewRawBasicAuthInterface(args);
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
@@ -242,8 +242,8 @@ TestingMockupServer::RedfishClientSessionAuthInterface(
   args.username = "FakeName";
   args.password = "FakePassword";
   args.endpoint =
-      absl::visit([](auto &conn) { return ConfigToEndpoint("http", conn); },
-                  connection_config_);
+      std::visit([](auto &conn) { return ConfigToEndpoint("http", conn); },
+                 connection_config_);
   auto intf = libredfish::NewRawSessionAuthInterface(args, std::move(client));
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
@@ -256,8 +256,8 @@ TestingMockupServer::RedfishClientTlsAuthInterface() {
 
   TlsArgs args;
   args.endpoint =
-      absl::visit([](auto &conn) { return ConfigToEndpoint("https", conn); },
-                  connection_config_);
+      std::visit([](auto &conn) { return ConfigToEndpoint("https", conn); },
+                 connection_config_);
   args.verify_hostname = client_tls_config_->verify_hostname;
   args.verify_peer = client_tls_config_->verify_peer;
   args.cert_file = client_tls_config_->cert_file;
@@ -268,8 +268,8 @@ TestingMockupServer::RedfishClientTlsAuthInterface() {
   return intf;
 }
 
-absl::variant<TestingMockupServer::ConfigNetwork,
-              TestingMockupServer::ConfigUnix>
+std::variant<TestingMockupServer::ConfigNetwork,
+             TestingMockupServer::ConfigUnix>
 TestingMockupServer::GetConfig() const {
   return connection_config_;
 }

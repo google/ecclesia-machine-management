@@ -17,10 +17,10 @@
 #ifndef ECCLESIA_MAGENT_THERMAL_H_
 #define ECCLESIA_MAGENT_THERMAL_H_
 
+#include <optional>
 #include <string>
 
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 
 namespace ecclesia {
 
@@ -30,7 +30,7 @@ class ThermalSensor {
       : name_(name), upper_threshold_critical_(upper_threshold_critical) {}
   virtual ~ThermalSensor() = default;
 
-  virtual absl::optional<int> Read() = 0;
+  virtual std::optional<int> Read() = 0;
   const std::string &Name() const { return name_; }
   const int UpperThresholdCritical() const { return upper_threshold_critical_; }
 

@@ -16,11 +16,11 @@
 
 #include "ecclesia/magent/redfish/common/pcie_device_collection.h"
 
+#include <optional>
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"
 #include "absl/strings/str_cat.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"

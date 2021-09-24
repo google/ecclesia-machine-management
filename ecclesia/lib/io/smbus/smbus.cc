@@ -16,19 +16,20 @@
 
 #include "ecclesia/lib/io/smbus/smbus.h"
 
+#include <optional>
+
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "re2/re2.h"
 
 namespace ecclesia {
 
-absl::optional<SmbusLocation> SmbusLocation::FromString(
+std::optional<SmbusLocation> SmbusLocation::FromString(
     absl::string_view smbus_location) {
   static constexpr LazyRE2 kRegex = {"(\\d+)-([[:xdigit:]]{2})$"};
   int bus_num, address_num;
   if (!RE2::FullMatch(smbus_location, *kRegex, RE2::Arg(&bus_num),
                       RE2::Hex(&address_num))) {
-    return absl::nullopt;
+    return std::nullopt;
   }
   return SmbusLocation::TryMake(bus_num, address_num);
 }

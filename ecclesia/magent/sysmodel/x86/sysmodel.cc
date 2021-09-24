@@ -22,8 +22,10 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
@@ -33,8 +35,6 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/io/pci/config.h"
 #include "ecclesia/lib/io/pci/discovery.h"
 #include "ecclesia/lib/io/pci/location.h"
@@ -70,12 +70,12 @@ std::size_t SystemModel::NumDimms() const {
   return dimms_.size();
 }
 
-absl::optional<Dimm> SystemModel::GetDimm(std::size_t index) {
+std::optional<Dimm> SystemModel::GetDimm(std::size_t index) {
   absl::ReaderMutexLock ml(&dimms_lock_);
   if (index < dimms_.size()) {
     return dimms_[index];
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 
 std::size_t SystemModel::NumDimmThermalSensors() const {
@@ -101,12 +101,12 @@ std::size_t SystemModel::NumCpus() const {
   return cpus_.size();
 }
 
-absl::optional<Cpu> SystemModel::GetCpu(std::size_t index) {
+std::optional<Cpu> SystemModel::GetCpu(std::size_t index) {
   absl::ReaderMutexLock ml(&cpus_lock_);
   if (index < cpus_.size()) {
     return cpus_[index];
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 
 std::size_t SystemModel::NumFruReaders() const {
@@ -129,7 +129,7 @@ std::vector<ChassisId> SystemModel::GetAllChassis() const {
   absl::ReaderMutexLock ml(&chassis_lock_);
   return chassis_;
 }
-absl::optional<ChassisId> SystemModel::GetChassisByName(
+std::optional<ChassisId> SystemModel::GetChassisByName(
     absl::string_view chassis_name) const {
   absl::ReaderMutexLock ml(&chassis_lock_);
   for (const auto &chassis_id : chassis_) {
@@ -137,7 +137,7 @@ absl::optional<ChassisId> SystemModel::GetChassisByName(
       return chassis_id;
     }
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 
 std::size_t SystemModel::NumNvmePlugins() const {
@@ -154,7 +154,7 @@ std::vector<std::string> SystemModel::GetNvmePhysLocations() const {
   return phys_locations;
 }
 
-absl::optional<SystemModel::NvmePluginInfo> SystemModel::GetNvmeByPhysLocation(
+std::optional<SystemModel::NvmePluginInfo> SystemModel::GetNvmeByPhysLocation(
     absl::string_view phys_location) const {
   absl::ReaderMutexLock ml(&nvme_plugins_lock_);
   auto iter = nvme_plugins_.find(phys_location);
@@ -162,7 +162,7 @@ absl::optional<SystemModel::NvmePluginInfo> SystemModel::GetNvmeByPhysLocation(
     return NvmePluginInfo{iter->second.location,
                           iter->second.access_intf.get()};
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 
 std::vector<PciStorageLocation> SystemModel::GetPciStorageLocations() const {
@@ -185,7 +185,7 @@ SystemModel::GetPciNodeConnections(const PciDbdfLocation &pci_location) const {
   SystemModel::PciNodeConnections node_connections;
   auto *parent = iter->second->Parent();
   if (parent == nullptr) {
-    node_connections.parent = absl::nullopt;
+    node_connections.parent = std::nullopt;
   } else {
     node_connections.parent = parent->Location();
   }
@@ -211,7 +211,7 @@ std::vector<PciDbdfLocation> SystemModel::GetPcieDeviceLocations() const {
 void SystemModel::LoadBootNumberFromElogReader(ElogReader &elog_reader) {
   for (auto event = elog_reader.ReadEvent(); event.has_value();
        event = elog_reader.ReadEvent()) {
-    auto maybe_elog = absl::get_if<Elog>(&event->record);
+    auto maybe_elog = std::get_if<Elog>(&event->record);
     if (!maybe_elog) continue;
     const auto &elog_record_view = maybe_elog->GetElogRecordView();
 
@@ -242,7 +242,7 @@ void SystemModel::LoadBootNumberFromElogReader(ElogReader &elog_reader) {
   }
 }
 
-absl::optional<uint32_t> SystemModel::GetBootNumber() { return boot_number_; }
+std::optional<uint32_t> SystemModel::GetBootNumber() { return boot_number_; }
 
 absl::StatusOr<int64_t> SystemModel::GetSystemUptimeSeconds() const {
   struct sysinfo sys_info;
@@ -267,7 +267,7 @@ SystemModel::GetAcpiPathsFromPciTopology() const {
 }
 
 SystemModel::SystemModel(SysmodelParams params)
-    : smbios_reader_(absl::make_unique<SmbiosReader>(
+    : smbios_reader_(std::make_unique<SmbiosReader>(
           params.smbios_entry_point_path, params.smbios_tables_path)),
       field_translator_(std::move(params.field_translator)),
       pci_topology_(std::make_unique<SysfsPciTopology>()),
@@ -369,15 +369,15 @@ SystemModel::SystemModel(SysmodelParams params)
 
   // Create event readers to feed into the event logger
   std::vector<std::unique_ptr<SystemEventReader>> readers;
-  readers.push_back(absl::make_unique<McedaemonReader>(params.mced_socket_path,
-                                                       &mcedaemon_socket_));
+  readers.push_back(std::make_unique<McedaemonReader>(params.mced_socket_path,
+                                                      &mcedaemon_socket_));
   if (auto system_event_log = smbios_reader_->GetSystemEventLog()) {
-    readers.push_back(absl::make_unique<ElogReader>(
-        std::move(system_event_log), params.sysfs_mem_file_path));
+    readers.push_back(std::make_unique<ElogReader>(std::move(system_event_log),
+                                                   params.sysfs_mem_file_path));
   }
 
-  event_logger_ = absl::make_unique<SystemEventLogger>(std::move(readers),
-                                                       Clock::RealClock());
+  event_logger_ = std::make_unique<SystemEventLogger>(std::move(readers),
+                                                      Clock::RealClock());
 
   // Load boot number from SMBIOS if it's there
   auto maybe_boot_number =

@@ -20,12 +20,12 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
 
 namespace libredfish {

@@ -17,12 +17,12 @@
 #ifndef ECCLESIA_MAGENT_SYSMODEL_X86_PCI_STORAGE_H_
 #define ECCLESIA_MAGENT_SYSMODEL_X86_PCI_STORAGE_H_
 
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
 
 #include "absl/status/statusor.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/io/pci/location.h"
 
 namespace ecclesia {

@@ -17,11 +17,11 @@
 #ifndef ECCLESIA_MAGENT_SYSMODEL_FRU_H_
 #define ECCLESIA_MAGENT_SYSMODEL_FRU_H_
 
+#include <optional>
 #include <string>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/magent/lib/eeprom/smbus_eeprom.h"
 

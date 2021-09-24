@@ -16,11 +16,11 @@
 
 #include "ecclesia/lib/smbios/processor_information.h"
 
+#include <optional>
 #include <string>
 
 #include "absl/strings/match.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/smbios/structures.emb.h"
 #include "runtime/cpp/emboss_prelude.h"
 
@@ -73,14 +73,14 @@ CpuSignature ProcessorInformation::GetSignatureAmd() const {
   return signature;
 }
 
-absl::optional<CpuSignature> ProcessorInformation::GetSignature() const {
+std::optional<CpuSignature> ProcessorInformation::GetSignature() const {
   if (IsIntelProcessor()) {
     return this->GetSignaturex86();
   }
   if (IsAmdProcessor()) {
     return this->GetSignatureAmd();
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 
 bool ProcessorInformation::IsIntelProcessor() const {

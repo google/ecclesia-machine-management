@@ -19,10 +19,10 @@
 
 #include <cstddef>
 #include <cstring>
+#include <optional>
 #include <utility>
 
 #include "gmock/gmock.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/magent/lib/eeprom/smbus_eeprom.h"
 
@@ -31,9 +31,9 @@ namespace ecclesia {
 class MockSmbusEeprom : public SmbusEeprom {
  public:
   explicit MockSmbusEeprom(Option option) : SmbusEeprom(std::move(option)) {}
-  MOCK_METHOD(absl::optional<int>, ReadBytes,
+  MOCK_METHOD(std::optional<int>, ReadBytes,
               (size_t, absl::Span<unsigned char>), (const, override));
-  MOCK_METHOD(absl::optional<int>, WriteBytes,
+  MOCK_METHOD(std::optional<int>, WriteBytes,
               (size_t, absl::Span<const unsigned char>), (const, override));
 };
 

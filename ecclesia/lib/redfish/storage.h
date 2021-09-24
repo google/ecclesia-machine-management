@@ -17,17 +17,17 @@
 #ifndef ECCLESIA_LIB_REDFISH_STORAGE_H_
 #define ECCLESIA_LIB_REDFISH_STORAGE_H_
 
+#include <optional>
 #include <string>
 #include <vector>
 
-#include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
 
 namespace libredfish {
 
 struct SmartReading {
   std::string name;                 // The key to be reported in the response
-  absl::optional<int> maybe_value;  // The value read from the redfish resource
+  std::optional<int> maybe_value;   // The value read from the redfish resource
 };
 
 // Parse Nvme smart data from SMARTAttributes redfish object
@@ -43,7 +43,7 @@ std::vector<SmartReading> ReadSmartData(const RedfishObject &obj);
 
 // Parse Nvme smart data from redfish storage object, the smart data is stored
 // under StorageControllers.NVMeControllerProperties.Oem.Google.SMARTAttributes
-absl::optional<std::vector<SmartReading>> ReadSmartDataFromStorageController(
+std::optional<std::vector<SmartReading>> ReadSmartDataFromStorageController(
     const RedfishObject &obj);
 
 }  // namespace libredfish

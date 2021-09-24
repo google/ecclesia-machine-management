@@ -91,9 +91,9 @@ class SessionServiceTest : public ::testing::Test {
   void InitServer() {
     port_ = FindUnusedPortOrDie();
     auto options =
-        absl::make_unique<tensorflow::serving::net_http::ServerOptions>();
+        std::make_unique<tensorflow::serving::net_http::ServerOptions>();
     options->AddPort(port_);
-    options->SetExecutor(absl::make_unique<RequestExecutor>(4));
+    options->SetExecutor(std::make_unique<RequestExecutor>(4));
     server_ =
         tensorflow::serving::net_http::CreateEvHTTPServer(std::move(options));
   }

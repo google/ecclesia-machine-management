@@ -22,9 +22,9 @@
 
 #include <array>
 #include <cstddef>
+#include <optional>
 
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 
@@ -64,14 +64,14 @@ using EmbeddedFileArray = const std::array<EmbeddedFile, N>;
 // entries you should load the references into a more complex data structure
 // that supports more efficient lookups.
 template <size_t N>
-absl::optional<absl::string_view> GetEmbeddedFileWithName(
+std::optional<absl::string_view> GetEmbeddedFileWithName(
     absl::string_view name, const std::array<EmbeddedFile, N> &array) {
   for (const auto &entry : array) {
     if (entry.name == name) {
       return entry.data;
     }
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 template <size_t N>
 absl::string_view GetEmbeddedFileWithNameOrDie(

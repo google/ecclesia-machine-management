@@ -17,6 +17,7 @@
 #include "ecclesia/magent/lib/nvme/device_self_test_log.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -24,7 +25,6 @@
 #include "gtest/gtest.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
-#include "absl/types/optional.h"
 #include "ecclesia/magent/lib/nvme/nvme_types.emb.h"
 
 namespace ecclesia {
@@ -155,12 +155,12 @@ TEST(DeviceSelfTestLogTest, ParseDeviceSelfTestLog) {
                 DeviceSelfTestResult::kExtendedTest);
     }
     EXPECT_EQ(results[i].SelfTestResult(), DeviceSelfTestResult::kSuccess);
-    EXPECT_EQ(results[i].FailedSegmentNumber(), absl::nullopt);
+    EXPECT_EQ(results[i].FailedSegmentNumber(), std::nullopt);
     EXPECT_EQ(results[i].PowerOnHours(), 0x5f);
-    EXPECT_EQ(results[i].FailingNamespace(), absl::nullopt);
-    EXPECT_EQ(results[i].FailingLBA(), absl::nullopt);
-    EXPECT_EQ(results[i].StatusCodeType(), absl::nullopt);
-    EXPECT_EQ(results[i].StatusCode(), absl::nullopt);
+    EXPECT_EQ(results[i].FailingNamespace(), std::nullopt);
+    EXPECT_EQ(results[i].FailingLBA(), std::nullopt);
+    EXPECT_EQ(results[i].StatusCodeType(), std::nullopt);
+    EXPECT_EQ(results[i].StatusCode(), std::nullopt);
     EXPECT_EQ(results[i].VendorSpecificField(), 0x0);
   }
 }

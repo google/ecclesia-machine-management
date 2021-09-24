@@ -17,6 +17,7 @@
 #include "ecclesia/lib/logging/logging.h"
 
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <utility>
@@ -28,7 +29,6 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/interfaces.h"
 #include "ecclesia/lib/time/clock_fake.h"
@@ -130,7 +130,7 @@ class TestRecordingMessageMatcher
   }
 
  private:
-  absl::optional<absl::string_view> prefix_;
+  std::optional<absl::string_view> prefix_;
   absl::string_view text_;
 };
 ::testing::Matcher<const TestRecordingLogger::Message &> IsLogMessage(
@@ -145,7 +145,7 @@ class TestRecordingMessageMatcher
 // Create and register a test logger and then return a pointer to it for tests
 // to use in actually verifying the logging behavior.
 TestRecordingLogger *RegisterTestLogging() {
-  auto owned_logger = absl::make_unique<TestRecordingLogger>();
+  auto owned_logger = std::make_unique<TestRecordingLogger>();
   auto *logger = owned_logger.get();
   SetGlobalLogger(std::move(owned_logger));
   return logger;
@@ -218,7 +218,7 @@ TEST(LoggingDeathTest, CheckConditionTerminates) {
 }
 
 TEST(LoggingTest, DieIfNullDoesNotDieOnNotNull) {
-  std::unique_ptr<int> heap_int = DieIfNull(absl::make_unique<int>(278));
+  std::unique_ptr<int> heap_int = DieIfNull(std::make_unique<int>(278));
   int *raw_heap_int = DieIfNull(heap_int.get());
   EXPECT_EQ(heap_int.get(), raw_heap_int);
 }

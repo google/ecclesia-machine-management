@@ -34,9 +34,9 @@ std::unique_ptr<MceDecoder> CreateIndusMceDecoder(
     std::unique_ptr<CpuTopologyInterface> cpu_topology) {
   CpuVendor vendor = CpuVendor::kIntel;
   CpuIdentifier identifier = CpuIdentifier::kSkylake;
-  return absl::make_unique<MceDecoder>(
-      vendor, identifier, std::move(cpu_topology),
-      absl::make_unique<IndusDimmTranslator>());
+  return std::make_unique<MceDecoder>(vendor, identifier,
+                                      std::move(cpu_topology),
+                                      std::make_unique<IndusDimmTranslator>());
 }
 
 }  // namespace
@@ -46,9 +46,9 @@ std::unique_ptr<CpuErrorCountingVisitor> CreateIndusCpuErrorCountingVisitor(
     std::unique_ptr<CpuTopologyInterface> cpu_topology) {
   auto mce_decoder = CreateIndusMceDecoder(std::move(cpu_topology));
   auto mce_adapter =
-      absl::make_unique<MceDecoderAdapter>(std::move(mce_decoder));
-  return absl::make_unique<CpuErrorCountingVisitor>(lower_bound,
-                                                    std::move(mce_adapter));
+      std::make_unique<MceDecoderAdapter>(std::move(mce_decoder));
+  return std::make_unique<CpuErrorCountingVisitor>(lower_bound,
+                                                   std::move(mce_adapter));
 }
 
 std::unique_ptr<DimmErrorCountingVisitor> CreateIndusDimmErrorCountingVisitor(
@@ -56,9 +56,9 @@ std::unique_ptr<DimmErrorCountingVisitor> CreateIndusDimmErrorCountingVisitor(
     std::unique_ptr<CpuTopologyInterface> cpu_topology) {
   auto mce_decoder = CreateIndusMceDecoder(std::move(cpu_topology));
   auto mce_adapter =
-      absl::make_unique<MceDecoderAdapter>(std::move(mce_decoder));
-  return absl::make_unique<DimmErrorCountingVisitor>(lower_bound,
-                                                     std::move(mce_adapter));
+      std::make_unique<MceDecoderAdapter>(std::move(mce_decoder));
+  return std::make_unique<DimmErrorCountingVisitor>(lower_bound,
+                                                    std::move(mce_adapter));
 }
 
 }  // namespace ecclesia

@@ -18,14 +18,14 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
+#include <variant>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/mcedecoder/cpu_topology.h"
 #include "ecclesia/magent/lib/event_logger/indus/system_event_visitors.h"
 #include "ecclesia/magent/lib/event_logger/intel_cpu_topology.h"
@@ -53,7 +53,7 @@ const absl::flat_hash_map<int, CpuErrorCount> &GetCpuErrors(
 
   std::unique_ptr<CpuErrorCountingVisitor> visitor =
       CreateIndusCpuErrorCountingVisitor(last_event_timestamp,
-                                         absl::make_unique<IntelCpuTopology>());
+                                         std::make_unique<IntelCpuTopology>());
 
   system_model->VisitSystemEvents(visitor.get());
   // update the last event time stamp

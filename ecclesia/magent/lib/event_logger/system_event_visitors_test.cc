@@ -17,6 +17,7 @@
 #include "ecclesia/magent/lib/event_logger/system_event_visitors.h"
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -28,7 +29,6 @@
 #include "absl/status/statusor.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/mcedecoder/mce_decode_mock.h"
 #include "ecclesia/lib/mcedecoder/mce_messages.h"
 #include "ecclesia/lib/time/clock.h"
@@ -43,7 +43,7 @@ using ::testing::Return;
 
 class MockEventReader : public SystemEventReader {
  public:
-  MOCK_METHOD(absl::optional<SystemEventRecord>, ReadEvent, ());
+  MOCK_METHOD(std::optional<SystemEventRecord>, ReadEvent, ());
 };
 
 class MockClock : public Clock {
@@ -71,11 +71,11 @@ TEST_F(SystemEventVisitorTest, MemoryErrorCounts) {
       .WillOnce(Return(SystemEventRecord{.record = MachineCheck{}}))
       .WillOnce([&]() {
         last_event_logged_.Notify();
-        return absl::nullopt;
+        return std::nullopt;
       })
-      .WillRepeatedly(Return(absl::nullopt));
+      .WillRepeatedly(Return(std::nullopt));
 
-  std::unique_ptr<MockClock> clock = absl::make_unique<MockClock>();
+  std::unique_ptr<MockClock> clock = std::make_unique<MockClock>();
 
   EXPECT_CALL(*clock, Now)
       .WillOnce(Return(absl::UnixEpoch() + absl::Seconds(1)))
@@ -107,14 +107,14 @@ TEST_F(SystemEventVisitorTest, MemoryErrorCounts) {
 
   {
     // Visit all of the events.
-    auto mce_decoder = absl::make_unique<MockMceDecoder>();
+    auto mce_decoder = std::make_unique<MockMceDecoder>();
 
     EXPECT_CALL(*mce_decoder, DecodeMceMessage(_))
         .WillRepeatedly(testing::Invoke(decode_message));
 
     auto dimm_visitor = DimmErrorCountingVisitor(
         absl::UnixEpoch(),
-        absl::make_unique<MceDecoderAdapter>(std::move(mce_decoder)));
+        std::make_unique<MceDecoderAdapter>(std::move(mce_decoder)));
 
     logger.Visit(&dimm_visitor);
 
@@ -139,11 +139,11 @@ TEST_F(SystemEventVisitorTest, CpuErrorCounts) {
       .WillOnce(Return(SystemEventRecord{.record = MachineCheck{}}))
       .WillOnce([&]() {
         last_event_logged_.Notify();
-        return absl::nullopt;
+        return std::nullopt;
       })
-      .WillRepeatedly(Return(absl::nullopt));
+      .WillRepeatedly(Return(std::nullopt));
 
-  std::unique_ptr<MockClock> clock = absl::make_unique<MockClock>();
+  std::unique_ptr<MockClock> clock = std::make_unique<MockClock>();
 
   EXPECT_CALL(*clock, Now)
       .WillOnce(Return(absl::UnixEpoch() + absl::Seconds(1)))
@@ -175,14 +175,14 @@ TEST_F(SystemEventVisitorTest, CpuErrorCounts) {
 
   {
     // Visit all of the events
-    auto mce_decoder = absl::make_unique<MockMceDecoder>();
+    auto mce_decoder = std::make_unique<MockMceDecoder>();
 
     EXPECT_CALL(*mce_decoder, DecodeMceMessage(_))
         .WillRepeatedly(testing::Invoke(decode_message));
 
     auto cpu_visitor = CpuErrorCountingVisitor(
         absl::UnixEpoch(),
-        absl::make_unique<MceDecoderAdapter>(std::move(mce_decoder)));
+        std::make_unique<MceDecoderAdapter>(std::move(mce_decoder)));
 
     logger.Visit(&cpu_visitor);
 
@@ -207,11 +207,11 @@ TEST_F(SystemEventVisitorTest, CpuErrorExcludeWhitelisted) {
       .WillOnce(Return(SystemEventRecord{.record = MachineCheck{}}))
       .WillOnce([&]() {
         last_event_logged_.Notify();
-        return absl::nullopt;
+        return std::nullopt;
       })
-      .WillRepeatedly(Return(absl::nullopt));
+      .WillRepeatedly(Return(std::nullopt));
 
-  std::unique_ptr<MockClock> clock = absl::make_unique<MockClock>();
+  std::unique_ptr<MockClock> clock = std::make_unique<MockClock>();
 
   EXPECT_CALL(*clock, Now)
       .WillOnce(Return(absl::UnixEpoch() + absl::Seconds(1)))
@@ -249,14 +249,14 @@ TEST_F(SystemEventVisitorTest, CpuErrorExcludeWhitelisted) {
 
   {
     // Visit all of the events
-    auto mce_decoder = absl::make_unique<MockMceDecoder>();
+    auto mce_decoder = std::make_unique<MockMceDecoder>();
 
     EXPECT_CALL(*mce_decoder, DecodeMceMessage(_))
         .WillRepeatedly(testing::Invoke(decode_message));
 
     auto cpu_visitor = CpuErrorCountingVisitor(
         absl::UnixEpoch(),
-        absl::make_unique<MceDecoderAdapter>(std::move(mce_decoder)));
+        std::make_unique<MceDecoderAdapter>(std::move(mce_decoder)));
 
     logger.Visit(&cpu_visitor);
 

@@ -20,6 +20,7 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -27,7 +28,6 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
@@ -36,18 +36,18 @@
 
 namespace ecclesia {
 
-absl::optional<UsbPortSequence> UsbPortSequence::TryMake(
+std::optional<UsbPortSequence> UsbPortSequence::TryMake(
     absl::Span<const int> ports) {
   if (ports.size() > kDeviceChainMaxLength) {
     WarningLog() << "Usb ports excceed max length";
-    return absl::nullopt;
+    return std::nullopt;
   }
 
   StoredArray stored_ports;
   for (size_t i = 0; i < ports.size(); ++i) {
     auto maybe_port = UsbPort::TryMake(ports[i]);
     if (!maybe_port.has_value()) {
-      return absl::nullopt;
+      return std::nullopt;
     }
     stored_ports[i].value = *maybe_port;
   }
@@ -56,14 +56,13 @@ absl::optional<UsbPortSequence> UsbPortSequence::TryMake(
 
 size_t UsbPortSequence::Size() const { return size_; }
 
-absl::optional<UsbPort> UsbPortSequence::Port(size_t index) const {
-  if (index >= size_) return absl::nullopt;
+std::optional<UsbPort> UsbPortSequence::Port(size_t index) const {
+  if (index >= size_) return std::nullopt;
   return ports_[index].value;
 }
 
-absl::optional<UsbPortSequence> UsbPortSequence::Downstream(
-    UsbPort port) const {
-  if (size_ == kDeviceChainMaxLength) return absl::nullopt;
+std::optional<UsbPortSequence> UsbPortSequence::Downstream(UsbPort port) const {
+  if (size_ == kDeviceChainMaxLength) return std::nullopt;
 
   // The downstream sequence is this sequence with the port number appended.
   StoredArray child_ports = ports_;

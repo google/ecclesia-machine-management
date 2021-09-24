@@ -21,10 +21,10 @@
 #ifndef ECCLESIA_LIB_FILE_TEST_FILESYSTEM_H_
 #define ECCLESIA_LIB_FILE_TEST_FILESYSTEM_H_
 
+#include <optional>
 #include <string>
 
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 
 namespace ecclesia {
 

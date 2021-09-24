@@ -18,13 +18,13 @@
 
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
 #include "absl/synchronization/mutex.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/magent/lib/event_reader/event_reader.h"
 

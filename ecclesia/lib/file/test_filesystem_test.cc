@@ -20,13 +20,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <optional>
 #include <string>
 #include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/cleanup/cleanup.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/file/path.h"
 
 namespace ecclesia {
@@ -41,11 +41,11 @@ bool PathExists(const std::string &path) {
 }
 
 // Read in the contents of a path. Returns nullopt if the read fails.
-absl::optional<std::string> PathContents(const std::string &path) {
+std::optional<std::string> PathContents(const std::string &path) {
   // Open the file.
   int fd = open(path.c_str(), O_RDONLY);
   if (fd == -1) {
-    return absl::nullopt;
+    return std::nullopt;
   }
   auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
 
@@ -53,7 +53,7 @@ absl::optional<std::string> PathContents(const std::string &path) {
   char buffer[4096];
   std::string contents;
   while (ssize_t rc = read(fd, buffer, sizeof(buffer))) {
-    if (rc == -1) return absl::nullopt;
+    if (rc == -1) return std::nullopt;
     contents.append(buffer, rc);
   }
   return std::move(contents);
@@ -61,13 +61,13 @@ absl::optional<std::string> PathContents(const std::string &path) {
 
 // Returns the link pointed to by a given path. Returns nullopt if reading the
 // link target fails.
-absl::optional<std::string> PathLinkTarget(const std::string &path) {
+std::optional<std::string> PathLinkTarget(const std::string &path) {
   // Buffer for holding the link. In theory links could be larger, in practice
   // in all these tests you shouldn't have link paths that take >4KiB.
   char buffer[4096];
   ssize_t rc = readlink(path.c_str(), buffer, sizeof(buffer));
   if (rc == -1) {
-    return absl::nullopt;
+    return std::nullopt;
   }
   return std::string(buffer, rc);
 }

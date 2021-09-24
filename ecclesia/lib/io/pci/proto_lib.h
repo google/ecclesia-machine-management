@@ -24,7 +24,8 @@
 #ifndef ECCLESIA_LIB_IO_PCI_PROTO_LIB_H_
 #define ECCLESIA_LIB_IO_PCI_PROTO_LIB_H_
 
-#include "absl/types/optional.h"
+#include <optional>
+
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/pci/pci.pb.h"
 #include "ecclesia/lib/io/pci/signature.h"
@@ -32,17 +33,17 @@
 namespace ecclesia {
 
 PciLocationProtobuf PciLocationToProto(const PciDbdfLocation &location);
-absl::optional<PciDbdfLocation> PciLocationFromProto(
+std::optional<PciDbdfLocation> PciLocationFromProto(
     const PciLocationProtobuf &location);
 
 PciBaseSignatureProtobuf PciBaseSignatureToProto(
     const PciBaseSignature &signature);
-absl::optional<PciBaseSignature> PciBaseSignatureFromProto(
+std::optional<PciBaseSignature> PciBaseSignatureFromProto(
     const PciBaseSignatureProtobuf &signature);
 
 PciSubsystemSignatureProtobuf PciSubsystemSignatureToProto(
     const PciSubsystemSignature &signature);
-absl::optional<PciSubsystemSignature> PciSubsystemSignatureFromProto(
+std::optional<PciSubsystemSignature> PciSubsystemSignatureFromProto(
     const PciSubsystemSignatureProtobuf &signature);
 
 }  // namespace ecclesia

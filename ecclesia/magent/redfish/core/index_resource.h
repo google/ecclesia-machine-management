@@ -20,10 +20,10 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "absl/strings/string_view.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/strings/regex.h"
 #include "ecclesia/lib/types/overloaded.h"
 #include "ecclesia/magent/redfish/core/resource.h"
@@ -67,14 +67,13 @@ class IndexResource : public Resource {
  protected:
   // Helper method to validate the resource index from the request URI
   // To be called from the Get/Post methods
-  bool ValidateResourceIndex(const absl::variant<int, std::string> &param,
+  bool ValidateResourceIndex(const std::variant<int, std::string> &param,
                              int num_resources) {
-    return absl::visit(
-        Overloaded{[num_resources](int index) {
-                     return (index >= 0 && index < num_resources);
-                   },
-                   [](std::string index) { return true; }},
-        param);
+    return std::visit(Overloaded{[num_resources](int index) {
+                                   return (index >= 0 && index < num_resources);
+                                 },
+                                 [](std::string index) { return true; }},
+                      param);
   }
 
  private:
@@ -93,7 +92,7 @@ class IndexResource : public Resource {
       return;
     }
 
-    std::vector<absl::variant<int, std::string>> indices;
+    std::vector<std::variant<int, std::string>> indices;
     std::apply(
         [&indices](auto &&...elements) {
           (indices.push_back(std::forward<decltype(elements)>(elements)), ...);
@@ -105,7 +104,7 @@ class IndexResource : public Resource {
 
   void HandleRequestWithindices(
       tensorflow::serving::net_http::ServerRequestInterface *req,
-      const std::vector<absl::variant<int, std::string>> &indices) {
+      const std::vector<std::variant<int, std::string>> &indices) {
     // Pass along the index to the Get() / Post() handlers
     if (req->http_method() == "GET") {
       Get(req, indices);

@@ -16,13 +16,13 @@
 
 #include "ecclesia/lib/types/fixed_range_int.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
-#include "absl/types/optional.h"
 
 namespace ecclesia {
 namespace {
@@ -36,10 +36,10 @@ class MyIntClass : public FixedRangeInteger<MyIntClass, int, 3, 42> {
 };
 
 TEST(FixedRangeIntegerTest, RangeCheck) {
-  EXPECT_EQ(MyIntClass::TryMake(2), absl::nullopt);
+  EXPECT_EQ(MyIntClass::TryMake(2), std::nullopt);
   EXPECT_EQ(MyIntClass::TryMake(3)->value(), 3);
   EXPECT_EQ(MyIntClass::TryMake(42)->value(), 42);
-  EXPECT_EQ(MyIntClass::TryMake(43), absl::nullopt);
+  EXPECT_EQ(MyIntClass::TryMake(43), std::nullopt);
 }
 
 TEST(FixedRangeIntegerTest, Clamp) {

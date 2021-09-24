@@ -17,10 +17,10 @@
 #ifndef ECCLESIA_MAGENT_SYSMODEL_X86_CHASSIS_H_
 #define ECCLESIA_MAGENT_SYSMODEL_X86_CHASSIS_H_
 
+#include <optional>
 #include <string>
 #include <vector>
 
-#include "absl/types/optional.h"
 #include "ecclesia/lib/io/usb/usb.h"
 
 namespace ecclesia {
@@ -86,7 +86,7 @@ inline std::string GetChassisTypeAsString(ChassisId chassis_id) {
 
 // This method detects and returns USB-based Chassis (expansion tray) if any
 // matched Chassis is found or nullopt if none was found.
-absl::optional<ChassisId> DetectChassisByUsb(
+std::optional<ChassisId> DetectChassisByUsb(
     UsbDiscoveryInterface *usb_discover_intf);
 
 // This function returns a vector of Chassis IDs in the system. Those Redfish

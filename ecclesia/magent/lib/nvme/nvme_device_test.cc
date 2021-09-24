@@ -156,7 +156,7 @@ absl::Status ReturnShortNsList(nvme_passthru_cmd* cmd) {
 
 // Test the typical case: a device with a small number of namespaces.
 TEST(EnumerateNamespacesAfterTest, ShortList) {
-  auto MockAccess = absl::make_unique<MockNvmeAccessInterface>();
+  auto MockAccess = std::make_unique<MockNvmeAccessInterface>();
 
   EXPECT_CALL(
       *MockAccess,
@@ -199,7 +199,7 @@ absl::Status ReturnNsList(nvme_passthru_cmd* cmd) {
 
 // A device which has more than two commands' worth of NSIDs.
 TEST(EnumerateNamespacesAfterTest, ThreeCommandsWorthOfNsids) {
-  auto MockAccess = absl::make_unique<MockNvmeAccessInterface>();
+  auto MockAccess = std::make_unique<MockNvmeAccessInterface>();
 
   EXPECT_CALL(
       *MockAccess,
@@ -335,7 +335,7 @@ TEST(IndexOfFormatWithLbaSizeTest, NoSupportedFormats) {
 }
 
 TEST(SanitizeTest, ExitFailureModeSuccess) {
-  auto MockAccess = absl::make_unique<MockNvmeAccessInterface>();
+  auto MockAccess = std::make_unique<MockNvmeAccessInterface>();
   EXPECT_CALL(
       *MockAccess,
       ExecuteAdminCommand(AllOf(
@@ -349,7 +349,7 @@ TEST(SanitizeTest, ExitFailureModeSuccess) {
 }
 
 TEST(SanitizeTest, CryptoSanitizeSuccess) {
-  auto MockAccess = absl::make_unique<MockNvmeAccessInterface>();
+  auto MockAccess = std::make_unique<MockNvmeAccessInterface>();
   EXPECT_CALL(
       *MockAccess,
       ExecuteAdminCommand(AllOf(
@@ -362,7 +362,7 @@ TEST(SanitizeTest, CryptoSanitizeSuccess) {
 }
 
 TEST(SanitizeTest, BlockSanitizeSuccess) {
-  auto MockAccess = absl::make_unique<MockNvmeAccessInterface>();
+  auto MockAccess = std::make_unique<MockNvmeAccessInterface>();
   EXPECT_CALL(
       *MockAccess,
       ExecuteAdminCommand(AllOf(
@@ -375,7 +375,7 @@ TEST(SanitizeTest, BlockSanitizeSuccess) {
 }
 
 TEST(SanitizeTest, OverWriteSanitizeSuccess) {
-  auto MockAccess = absl::make_unique<MockNvmeAccessInterface>();
+  auto MockAccess = std::make_unique<MockNvmeAccessInterface>();
   EXPECT_CALL(
       *MockAccess,
       ExecuteAdminCommand(AllOf(
@@ -390,7 +390,7 @@ TEST(SanitizeTest, OverWriteSanitizeSuccess) {
 }
 
 TEST(SanitizeTest, ExitFailureModeFail) {
-  auto MockAccess = absl::make_unique<MockNvmeAccessInterface>();
+  auto MockAccess = std::make_unique<MockNvmeAccessInterface>();
   EXPECT_CALL(
       *MockAccess,
       ExecuteAdminCommand(AllOf(
@@ -406,7 +406,7 @@ TEST(SanitizeTest, ExitFailureModeFail) {
 }
 
 TEST(SanitizeTest, CryptoSanitizeFail) {
-  auto MockAccess = absl::make_unique<MockNvmeAccessInterface>();
+  auto MockAccess = std::make_unique<MockNvmeAccessInterface>();
   EXPECT_CALL(
       *MockAccess,
       ExecuteAdminCommand(AllOf(
@@ -421,7 +421,7 @@ TEST(SanitizeTest, CryptoSanitizeFail) {
 }
 
 TEST(SanitizeTest, BlockSanitizeFail) {
-  auto MockAccess = absl::make_unique<MockNvmeAccessInterface>();
+  auto MockAccess = std::make_unique<MockNvmeAccessInterface>();
   EXPECT_CALL(
       *MockAccess,
       ExecuteAdminCommand(AllOf(
@@ -436,7 +436,7 @@ TEST(SanitizeTest, BlockSanitizeFail) {
 }
 
 TEST(SanitizeTest, OverWriteSanitizeFail) {
-  auto MockAccess = absl::make_unique<MockNvmeAccessInterface>();
+  auto MockAccess = std::make_unique<MockNvmeAccessInterface>();
   EXPECT_CALL(
       *MockAccess,
       ExecuteAdminCommand(AllOf(

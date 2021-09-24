@@ -22,13 +22,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <iosfwd>
+#include <optional>
 #include <tuple>
 #include <utility>
 
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/types/fixed_range_int.h"
 
@@ -64,17 +64,17 @@ class SmbusLocation {
   }
 
   // Create an SmbusLocation whose range is checked at run time.
-  static absl::optional<SmbusLocation> TryMake(int bus, int address) {
+  static std::optional<SmbusLocation> TryMake(int bus, int address) {
     auto maybe_bus = SmbusBus::TryMake(bus);
     auto maybe_address = SmbusAddress::TryMake(address);
     if (!maybe_bus || !maybe_address) {
-      return absl::nullopt;
+      return std::nullopt;
     }
     return SmbusLocation(*maybe_bus, *maybe_address);
   }
 
   // Try to create SmbusLocation from bus+address string representation
-  static absl::optional<SmbusLocation> FromString(
+  static std::optional<SmbusLocation> FromString(
       absl::string_view smbus_location);
 
   // Accessors for reading the bus and address.

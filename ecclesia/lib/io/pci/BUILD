@@ -51,7 +51,6 @@ cc_library(
         "//ecclesia/lib/types:fixed_range_int",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
-        "@com_google_absl//absl/types:optional",
         "@com_googlesource_code_re2//:re2",
     ],
 )
@@ -65,7 +64,6 @@ cc_test(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/meta:type_traits",
         "@com_google_absl//absl/strings:str_format",
-        "@com_google_absl//absl/types:optional",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -109,10 +107,7 @@ cc_library(
     name = "signature",
     hdrs = ["signature.h"],
     visibility = ["//ecclesia:library_users"],
-    deps = [
-        "//ecclesia/lib/types:fixed_range_int",
-        "@com_google_absl//absl/types:optional",
-    ],
+    deps = ["//ecclesia/lib/types:fixed_range_int"],
 )
 
 cc_library(
@@ -133,7 +128,6 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:optional",
     ],
 )
 
@@ -171,7 +165,6 @@ cc_library(
         ":cc_proto",
         ":location",
         ":signature",
-        "@com_google_absl//absl/types:optional",
     ],
 )
 
@@ -185,7 +178,6 @@ cc_test(
         ":signature",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/testing:proto",
-        "@com_google_absl//absl/types:optional",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -212,7 +204,6 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
         "@com_googlesource_code_re2//:re2",
     ],

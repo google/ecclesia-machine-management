@@ -34,7 +34,6 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
-        "@com_google_absl//absl/types:variant",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@com_googlesource_code_re2//:re2",
         "@com_json//:json",

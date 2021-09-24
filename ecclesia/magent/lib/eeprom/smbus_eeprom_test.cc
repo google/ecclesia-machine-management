@@ -19,13 +19,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <type_traits>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/status/status.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/io/smbus/mocks.h"
 #include "ecclesia/lib/io/smbus/smbus.h"
@@ -91,7 +91,7 @@ TEST(SmbusEepromDeviceTest, Methods) {
   size_t len;
   std::vector<unsigned char> data1(6);
 
-  absl::optional<SmbusDevice> smbus_device =
+  std::optional<SmbusDevice> smbus_device =
       motherboard_eeprom_option.get_device();
   ASSERT_TRUE(smbus_device.has_value());
 
@@ -145,7 +145,7 @@ TEST_F(SmbusEeprom2ByteAddrTest, DeviceRead8Success) {
   uint8_t expected = 0xbe;
   EXPECT_CALL(access_, Read8(_, _, _)).WillOnce(SmbusRead8(&expected));
 
-  absl::optional<SmbusDevice> device = motherboard_eeprom_option_.get_device();
+  std::optional<SmbusDevice> device = motherboard_eeprom_option_.get_device();
   ASSERT_TRUE(device.has_value());
 
   uint8_t data;
@@ -157,7 +157,7 @@ TEST_F(SmbusEeprom2ByteAddrTest, DeviceRead16Success) {
   uint16_t expected = 0xbeef;
   EXPECT_CALL(access_, Read16(_, _, _)).WillOnce(SmbusRead16(&expected));
 
-  absl::optional<SmbusDevice> device = motherboard_eeprom_option_.get_device();
+  std::optional<SmbusDevice> device = motherboard_eeprom_option_.get_device();
   ASSERT_TRUE(device.has_value());
 
   uint16_t data;
@@ -170,7 +170,7 @@ TEST_F(SmbusEeprom2ByteAddrTest, ReadBlockI2cSuccess) {
   EXPECT_CALL(access_, ReadBlockI2C(_, _, _, _))
       .WillOnce(SmbusReadBlock(expected.data(), expected.size()));
 
-  absl::optional<SmbusDevice> device = motherboard_eeprom_option_.get_device();
+  std::optional<SmbusDevice> device = motherboard_eeprom_option_.get_device();
   ASSERT_TRUE(device.has_value());
 
   size_t len;
@@ -184,7 +184,7 @@ TEST_F(SmbusEeprom2ByteAddrTest, DeviceReceiveByteSuccess) {
   uint8_t expected = 0xbe;
   EXPECT_CALL(access_, ReceiveByte(_, _)).WillOnce(SmbusReceiveByte(&expected));
 
-  absl::optional<SmbusDevice> device = motherboard_eeprom_option_.get_device();
+  std::optional<SmbusDevice> device = motherboard_eeprom_option_.get_device();
   ASSERT_TRUE(device.has_value());
 
   uint8_t data;
@@ -252,7 +252,7 @@ class SmbusEeprom2KTest : public ::testing::Test {
 TEST_F(SmbusEeprom2KTest, I2cReadExceedLimit) {
   constexpr int kBufferSize = 260;
   unsigned char read_buffer[kBufferSize];
-  EXPECT_THAT(eeprom_.ReadBytes(0, read_buffer), Eq(absl::nullopt));
+  EXPECT_THAT(eeprom_.ReadBytes(0, read_buffer), Eq(std::nullopt));
 }
 
 TEST_F(SmbusEeprom2KTest, I2cRead1ByteBlockUnsupported) {
@@ -325,7 +325,7 @@ TEST_F(SmbusEeprom2KTest, I2cRead10BytesFirstBlockReadUnexpected) {
 
   constexpr int kBufferSize = 10;
   unsigned char read_buffer[kBufferSize];
-  EXPECT_THAT(eeprom_.ReadBytes(0, read_buffer), Eq(absl::nullopt));
+  EXPECT_THAT(eeprom_.ReadBytes(0, read_buffer), Eq(std::nullopt));
 }
 
 TEST_F(SmbusEeprom2KTest, I2cRead10BytesSecondBlockReadUnexpected) {
@@ -340,7 +340,7 @@ TEST_F(SmbusEeprom2KTest, I2cRead10BytesSecondBlockReadUnexpected) {
 
   constexpr int kBufferSize = 10;
   unsigned char read_buffer[kBufferSize];
-  EXPECT_THAT(eeprom_.ReadBytes(0, read_buffer), Eq(absl::nullopt));
+  EXPECT_THAT(eeprom_.ReadBytes(0, read_buffer), Eq(std::nullopt));
 }
 
 TEST_F(SmbusEeprom2KTest, I2cRead8BytesBlockUnsupported) {
@@ -381,14 +381,14 @@ TEST_F(SmbusEeprom2KTest, I2cRead8BytesWordFail) {
 
   constexpr int kBufferSize = 8;
   unsigned char read_buffer[kBufferSize];
-  EXPECT_THAT(eeprom_.ReadBytes(0, read_buffer), Eq(absl::nullopt));
+  EXPECT_THAT(eeprom_.ReadBytes(0, read_buffer), Eq(std::nullopt));
 }
 
 TEST_F(SmbusEeprom2KTest, WriteBytesNullOpt) {
   std::vector<unsigned char> data(8, 0xbe);
 
   EXPECT_THAT(eeprom_.WriteBytes(0x55, absl::MakeConstSpan(data)),
-              Eq(absl::nullopt));
+              Eq(std::nullopt));
 }
 
 }  // namespace

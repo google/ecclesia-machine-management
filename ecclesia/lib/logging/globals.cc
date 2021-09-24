@@ -32,7 +32,7 @@ namespace {
 // Function that holds the underlying global logger stream factory.
 LoggerStreamFactory &GetGlobalLoggerStreamFactory() {
   static auto &lsf = *(new LoggerStreamFactory(
-      absl::make_unique<DefaultLogger>(Clock::RealClock())));
+      std::make_unique<DefaultLogger>(Clock::RealClock())));
   return lsf;
 }
 

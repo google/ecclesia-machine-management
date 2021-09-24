@@ -76,7 +76,7 @@ class ServiceRootTest : public ::testing::Test {
  public:
   ServiceRootTest() {
     InitServer();
-    service_root_ = absl::make_unique<ServiceRoot>();
+    service_root_ = std::make_unique<ServiceRoot>();
     service_root_->RegisterRequestHandler(server_.get());
   }
 
@@ -95,9 +95,9 @@ class ServiceRootTest : public ::testing::Test {
  private:
   void InitServer() {
     port_ = FindUnusedPortOrDie();
-    auto options = absl::make_unique<ServerOptions>();
+    auto options = std::make_unique<ServerOptions>();
     options->AddPort(port_);
-    options->SetExecutor(absl::make_unique<RequestExecutor>(5));
+    options->SetExecutor(std::make_unique<RequestExecutor>(5));
     server_ = CreateEvHTTPServer(std::move(options));
   }
 };

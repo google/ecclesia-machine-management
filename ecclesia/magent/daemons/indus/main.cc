@@ -17,6 +17,7 @@
 // Redfish server for the Ecclesia Management Agent on Indus
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -29,7 +30,6 @@
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/io/ioctl.h"
@@ -97,12 +97,12 @@ constexpr char kI2cDevicePathSuffixSpicy16Intp4[] = "-0075/channel-3";
 // need kernel module i2c_mux_pca954x to be loaded.
 constexpr absl::string_view kSmbusPciAddressPath =
     "/sys/bus/pci/devices/0000:00:1f.4/";
-absl::optional<ecclesia::SmbusBus> GetEepromSmbusBus(
+std::optional<ecclesia::SmbusBus> GetEepromSmbusBus(
     absl::string_view i2c_device_path_suffix) {
   ecclesia::ApifsDirectory dir(std::string{kSmbusPciAddressPath});
   auto maybe_entries = dir.ListEntryPaths();
   if (!maybe_entries.ok()) {
-    return absl::nullopt;
+    return std::nullopt;
   }
 
   // We need to find the pci bus number.
@@ -118,7 +118,7 @@ absl::optional<ecclesia::SmbusBus> GetEepromSmbusBus(
   }
 
   if (pci_bus == -1 || pci_bus > ecclesia::SmbusBus::kMaxValue) {
-    return absl::nullopt;
+    return std::nullopt;
   }
 
   ecclesia::ApifsFile fs(
@@ -132,7 +132,7 @@ absl::optional<ecclesia::SmbusBus> GetEepromSmbusBus(
       return ecclesia::SmbusBus::TryMake(smbus_id);
     }
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 
 // We will read i2c bus offset 0x55 to get board information.
@@ -227,25 +227,25 @@ int main(int argc, char **argv) {
     fru_factories.push_back(ecclesia::SysmodelFruReaderFactory(
         "motherboard",
         [&]() -> std::unique_ptr<ecclesia::SysmodelFruReaderIntf> {
-          return absl::make_unique<ecclesia::FileSysmodelFruReader>(
+          return std::make_unique<ecclesia::FileSysmodelFruReader>(
               absl::GetFlag(FLAGS_mobo_raw_fru_path));
         }));
   } else {
     fru_factories.push_back(ecclesia::SysmodelFruReaderFactory(
         "motherboard",
         [&]() -> std::unique_ptr<ecclesia::SysmodelFruReaderIntf> {
-          return absl::make_unique<ecclesia::SmbusEepromFruReader>(
-              absl::make_unique<ecclesia::SmbusEeprom2ByteAddr>(
+          return std::make_unique<ecclesia::SmbusEepromFruReader>(
+              std::make_unique<ecclesia::SmbusEeprom2ByteAddr>(
                   ecclesia::SmbusEeprom::Option{
                       .name = "motherboard",
                       .size = {.type = ecclesia::Eeprom::SizeType::kFixed,
                                .size = 8 * 1024},
                       .mode = {.readable = 1, .writable = 0},
                       .get_device =
-                          [&]() -> absl::optional<ecclesia::SmbusDevice> {
+                          [&]() -> std::optional<ecclesia::SmbusDevice> {
                         auto eeprom_smbus_bus =
                             GetEepromSmbusBus(kI2cDevicePathSuffixMobo);
-                        if (!eeprom_smbus_bus) return absl::nullopt;
+                        if (!eeprom_smbus_bus) return std::nullopt;
                         ecclesia::SmbusLocation loc(*eeprom_smbus_bus,
                                                     kEepromSmbusAddressMobo);
                         ecclesia::SmbusDevice device(loc, &access);
@@ -257,16 +257,16 @@ int main(int argc, char **argv) {
   fru_factories.push_back(ecclesia::SysmodelFruReaderFactory(
       "spicy16_intp0",
       [&]() -> std::unique_ptr<ecclesia::SysmodelFruReaderIntf> {
-        return absl::make_unique<ecclesia::SmbusEepromFruReader>(
-            absl::make_unique<ecclesia::SmbusEeprom2K>(
+        return std::make_unique<ecclesia::SmbusEepromFruReader>(
+            std::make_unique<ecclesia::SmbusEeprom2K>(
                 ecclesia::SmbusEeprom::Option{
                     .name = "spicy16_intp0",
                     .mode = {.readable = 1, .writable = 0},
                     .get_device =
-                        [&]() -> absl::optional<ecclesia::SmbusDevice> {
+                        [&]() -> std::optional<ecclesia::SmbusDevice> {
                       auto eeprom_smbus_bus =
                           GetEepromSmbusBus(kI2cDevicePathSuffixSpicy16Intp0);
-                      if (!eeprom_smbus_bus) return absl::nullopt;
+                      if (!eeprom_smbus_bus) return std::nullopt;
                       ecclesia::SmbusLocation loc(*eeprom_smbus_bus,
                                                   kEepromSmbusAddressSpicy16);
                       ecclesia::SmbusDevice device(loc, &access);
@@ -277,16 +277,16 @@ int main(int argc, char **argv) {
   fru_factories.push_back(ecclesia::SysmodelFruReaderFactory(
       "spicy16_intp4",
       [&]() -> std::unique_ptr<ecclesia::SysmodelFruReaderIntf> {
-        return absl::make_unique<ecclesia::SmbusEepromFruReader>(
-            absl::make_unique<ecclesia::SmbusEeprom2K>(
+        return std::make_unique<ecclesia::SmbusEepromFruReader>(
+            std::make_unique<ecclesia::SmbusEeprom2K>(
                 ecclesia::SmbusEeprom::Option{
                     .name = "spicy16_intp4",
                     .mode = {.readable = 1, .writable = 0},
                     .get_device =
-                        [&]() -> absl::optional<ecclesia::SmbusDevice> {
+                        [&]() -> std::optional<ecclesia::SmbusDevice> {
                       auto eeprom_smbus_bus =
                           GetEepromSmbusBus(kI2cDevicePathSuffixSpicy16Intp4);
-                      if (!eeprom_smbus_bus) return absl::nullopt;
+                      if (!eeprom_smbus_bus) return std::nullopt;
                       ecclesia::SmbusLocation loc(*eeprom_smbus_bus,
                                                   kEepromSmbusAddressSpicy16);
                       ecclesia::SmbusDevice device(loc, &access);
@@ -301,8 +301,8 @@ int main(int argc, char **argv) {
     fru_factories.push_back(ecclesia::SysmodelFruReaderFactory(
         absl::StrCat("sleipnir_", fru.name),
         [&]() -> std::unique_ptr<ecclesia::SysmodelFruReaderIntf> {
-          return absl::make_unique<ecclesia::IpmiSysmodelFruReader>(&ipmi,
-                                                                    fru.fru_id);
+          return std::make_unique<ecclesia::IpmiSysmodelFruReader>(&ipmi,
+                                                                   fru.fru_id);
         }));
   }
 
@@ -310,7 +310,7 @@ int main(int argc, char **argv) {
 
   ecclesia::SysmodelParams params = {
       .field_translator =
-          absl::make_unique<ecclesia::IndusSmbiosFieldTranslator>(),
+          std::make_unique<ecclesia::IndusSmbiosFieldTranslator>(),
       .smbios_entry_point_path = kSmbiosEntryPointPath,
       .smbios_tables_path = kSmbiosTablesPath,
       .mced_socket_path = absl::GetFlag(FLAGS_mced_socket_path),
@@ -325,7 +325,7 @@ int main(int argc, char **argv) {
       .pci_storage_discover_getter = nullptr};
 
   std::unique_ptr<ecclesia::SystemModel> system_model =
-      absl::make_unique<ecclesia::SystemModel>(std::move(params));
+      std::make_unique<ecclesia::SystemModel>(std::move(params));
 
   auto server = ecclesia::CreateServer(absl::GetFlag(FLAGS_port));
   server->RegisterRequestHandler(

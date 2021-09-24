@@ -21,6 +21,7 @@
 #include <fstream>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -29,7 +30,6 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/magent/lib/eeprom/smbus_eeprom.h"
 #include "ecclesia/magent/lib/fru/fru.h"
@@ -144,19 +144,19 @@ absl::string_view SysmodelFru::GetPartNumber() const {
   return fru_info_.part_number;
 }
 
-absl::optional<SysmodelFru> IpmiSysmodelFruReader::Read() {
+std::optional<SysmodelFru> IpmiSysmodelFruReader::Read() {
   if (cached_fru_.has_value()) return cached_fru_;
 
   // 8 bytes header followed by 64 bytes boardinfo.
   std::vector<uint8_t> data(72);
   absl::Status status = ipmi_intf_->ReadFru(fru_id_, 0, absl::MakeSpan(data));
   if (!status.ok()) {
-    return absl::nullopt;
+    return std::nullopt;
   }
   VectorFruImageSource fru_image(absl::MakeSpan(data));
   BoardInfoArea bia;
   if (bia.FillFromImage(fru_image, 8) == 0) {
-    return absl::nullopt;
+    return std::nullopt;
   }
   FruInfo fru_info;
   fru_info.manufacturer = bia.manufacturer().GetDataAsString();
@@ -167,26 +167,26 @@ absl::optional<SysmodelFru> IpmiSysmodelFruReader::Read() {
   return cached_fru_;
 }
 
-absl::optional<SysmodelFru> SmbusEepromFruReader::Read() {
+std::optional<SysmodelFru> SmbusEepromFruReader::Read() {
   // If we have something valid in the cache, return it.
   if (cached_fru_.has_value()) return cached_fru_;
 
   // Otherwise try to read it into the cache for the first time.
-  if (!eeprom_) return absl::nullopt;
+  if (!eeprom_) return std::nullopt;
   FruInfo info;
   absl::Status status = SmbusGetBoardInfo(*eeprom_, info);
-  if (!status.ok()) return absl::nullopt;
+  if (!status.ok()) return std::nullopt;
   cached_fru_.emplace(info);
   return cached_fru_;
 }
 
-absl::optional<SysmodelFru> FileSysmodelFruReader::Read() {
+std::optional<SysmodelFru> FileSysmodelFruReader::Read() {
   // If we have something valid in the cache, return it.
   if (cached_fru_.has_value()) return cached_fru_;
 
   // Otherwise try to read it into the cache for the first time.
   std::ifstream file(filepath_, std::ios::binary);
-  if (!file.is_open()) return absl::nullopt;
+  if (!file.is_open()) return std::nullopt;
 
   // Do not skip newlines in binary mode.
   file.unsetf(std::ios::skipws);
@@ -196,12 +196,12 @@ absl::optional<SysmodelFru> FileSysmodelFruReader::Read() {
                   std::istream_iterator<unsigned char>());
 
   // Return if we failed to read anything
-  if (fru_data.empty()) return absl::nullopt;
+  if (fru_data.empty()) return std::nullopt;
 
   FruInfo info;
   absl::Status status =
       ProcessBoardFromFruImage(absl::MakeSpan(fru_data), info);
-  if (!status.ok()) return absl::nullopt;
+  if (!status.ok()) return std::nullopt;
   cached_fru_.emplace(info);
   return cached_fru_;
 }

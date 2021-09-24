@@ -18,14 +18,14 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
+#include <variant>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/io/pci/config.h"
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/pci/pci.h"

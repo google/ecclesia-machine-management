@@ -19,10 +19,10 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 #include "gtest/gtest.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/file/all_files.h"
 #include "ecclesia/lib/file/flat_files.h"
 #include "ecclesia/lib/file/text_files.h"
@@ -78,13 +78,13 @@ TEST(EmbeddedFile, BinaryFileFromFlatFiles) {
 TEST(EmbeddedFile, GetWithValidName) {
   // These checks should never return nullopt.
   EXPECT_NE(GetEmbeddedFileWithName("test_data/text.txt", kTextFiles),
-            absl::nullopt);
+            std::nullopt);
   EXPECT_NE(GetEmbeddedFileWithName("test_data/text.txt",
                                     ecclesia_testdata::kAllFiles),
-            absl::nullopt);
+            std::nullopt);
   EXPECT_NE(GetEmbeddedFileWithName("test_data/blob.bin",
                                     ecclesia_testdata::kAllFiles),
-            absl::nullopt);
+            std::nullopt);
   // These checks should never die.
   GetEmbeddedFileWithNameOrDie("test_data/text.txt", kTextFiles);
   GetEmbeddedFileWithNameOrDie("test_data/text.txt",
@@ -95,13 +95,13 @@ TEST(EmbeddedFile, GetWithValidName) {
 
 TEST(EmbeddedFile, GetWithBadName) {
   EXPECT_EQ(GetEmbeddedFileWithName("test_data/blob.bin", kTextFiles),
-            absl::nullopt);
+            std::nullopt);
   EXPECT_EQ(GetEmbeddedFileWithName("test_data/blob.txt",
                                     ecclesia_testdata::kAllFiles),
-            absl::nullopt);
+            std::nullopt);
   EXPECT_EQ(GetEmbeddedFileWithName("test_data/text.bin",
                                     ecclesia_testdata::kAllFiles),
-            absl::nullopt);
+            std::nullopt);
 }
 
 TEST(EmbeddedFileDeathTest, GetWithBadName) {

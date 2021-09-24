@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -29,7 +30,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/acpi/system_description_table.emb.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "runtime/cpp/emboss_cpp_util.h"
@@ -198,14 +198,14 @@ class SystemDescriptionTableReader {
   // Retrieve a pointer to the first static resource allocation structure.
   // If no structure is found nullptr is returned.
   template <typename SraHeaderDataViewType = View>
-  absl::optional<SraHeaderDataViewType> GetFirstSraStructure() const {
+  std::optional<SraHeaderDataViewType> GetFirstSraStructure() const {
     View sra_header =
         MakeView(table_data_ + header_size(), View::SizeInBytes());
     View sra_structure =
         MakeView(table_data_ + header_size(), sra_header.length().Read());
     if (!SraHeaderDescType::ValidateMaximumSize(
             sra_structure, GetHeaderView().length().Read() - header_size())) {
-      return absl::nullopt;
+      return std::nullopt;
     }
     return SraHeaderDataViewType(sra_structure.BackingStorage());
   }
@@ -214,7 +214,7 @@ class SystemDescriptionTableReader {
   // referenced by this class get a pointer to the next static resource
   // allocation structure.
   template <typename SraHeaderDataViewType = View>
-  absl::optional<SraHeaderDataViewType> GetNextSraStructure(
+  std::optional<SraHeaderDataViewType> GetNextSraStructure(
       SraHeaderDataViewType sra_header) const {
     const uint32_t hdr_size = header_size();
     const char* sra_start = table_data_ + hdr_size;
@@ -232,23 +232,23 @@ class SystemDescriptionTableReader {
           "%p table",
           sra_header.BackingStorage().data(),
           CreateTable()->GetSignatureString(), table_data_);
-      return absl::nullopt;
+      return std::nullopt;
     }
     maximum_sra_size -= sra_header.length().Read();
     if (maximum_sra_size < View::SizeInBytes()) {
-      return absl::nullopt;
+      return std::nullopt;
     }
     uint32_t next_sra_length =
         MakeView(sra + sra_header.length().Read(), View::SizeInBytes())
             .length().Read();
     if (maximum_sra_size < next_sra_length) {
-      return absl::nullopt;
+      return std::nullopt;
     }
     View next_sra_header = MakeView(sra + sra_header.length().Read(),
                                     next_sra_length);
     if (!SraHeaderDescType::ValidateMaximumSize(next_sra_header,
                                                 maximum_sra_size)) {
-      return absl::nullopt;
+      return std::nullopt;
     }
     return SraHeaderDataViewType(next_sra_header.BackingStorage());
   }
@@ -260,7 +260,7 @@ class SystemDescriptionTableReader {
   std::vector<SraHeaderDataViewType> GetSraStructures(
       SraHeaderFilter& filter) const {
     std::vector<SraHeaderDataViewType> result;
-    for (absl::optional<View> sra_header = GetFirstSraStructure(); sra_header;
+    for (std::optional<View> sra_header = GetFirstSraStructure(); sra_header;
          sra_header = GetNextSraStructure(*sra_header)) {
       if (filter.Filter(*sra_header)) {
         result.push_back(SraHeaderDataViewType(sra_header->BackingStorage()));

@@ -17,6 +17,7 @@
 #include "ecclesia/magent/sysmodel/x86/nvme.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -24,7 +25,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/io/pci/location.h"

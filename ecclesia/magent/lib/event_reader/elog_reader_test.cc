@@ -21,14 +21,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "gtest/gtest.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/smbios/internal.h"
 #include "ecclesia/lib/smbios/structures.emb.h"
@@ -99,8 +99,8 @@ class ElogReaderTest : public ::testing::Test {
     info.formatted_data_start = system_event_log_entry_.data();
     info.unformed_data_start = info.formatted_data_start + smbios_struct_size;
 
-    table_entry_ = absl::make_unique<TableEntry>(info);
-    system_event_log_ = absl::make_unique<SystemEventLog>(table_entry_.get());
+    table_entry_ = std::make_unique<TableEntry>(info);
+    system_event_log_ = std::make_unique<SystemEventLog>(table_entry_.get());
   }
 };
 

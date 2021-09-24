@@ -53,7 +53,7 @@ constexpr auto kSupportedProtocols = CURLPROTO_HTTP | CURLPROTO_HTTPS;
 
 std::unique_ptr<LibCurlProxy> LibCurlProxy::CreateInstance() {
   absl::call_once(curl_init_once, curl_global_init, CURL_GLOBAL_ALL);
-  return absl::make_unique<LibCurlProxy>();
+  return std::make_unique<LibCurlProxy>();
 }
 
 CURL *LibCurlProxy::curl_easy_init() { return ::curl_easy_init(); }

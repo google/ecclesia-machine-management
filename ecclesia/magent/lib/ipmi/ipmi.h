@@ -21,13 +21,13 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/magent/lib/ipmi/sensor.h"
 
@@ -69,8 +69,8 @@ class IpmiInterface {
     IpmiSensor::Unit unit;
     bool settable;
     EntityIdentifier entity_id;
-    absl::optional<double> min_threshold;
-    absl::optional<double> max_threshold;
+    std::optional<double> min_threshold;
+    std::optional<double> max_threshold;
     friend bool operator==(const BmcSensorInterfaceInfo &o1,
                            const BmcSensorInterfaceInfo &o2) {
       return o1.id == o2.id && o1.name == o2.name && o1.type == o2.type &&

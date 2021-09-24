@@ -22,10 +22,10 @@
 #define ECCLESIA_MAGENT_LIB_EVENT_READER_ELOG_READER_H_
 
 #include <memory>
+#include <optional>
 #include <queue>
 #include <string>
 
-#include "absl/types/optional.h"
 #include "ecclesia/lib/smbios/system_event_log.h"
 #include "ecclesia/magent/lib/event_reader/event_reader.h"
 
@@ -38,8 +38,8 @@ class ElogReader : public SystemEventReader {
   ElogReader(std::unique_ptr<SystemEventLog> system_event_log,
              const std::string &mem_file);
 
-  absl::optional<SystemEventRecord> ReadEvent() override {
-    if (elogs_.empty()) return absl::nullopt;
+  std::optional<SystemEventRecord> ReadEvent() override {
+    if (elogs_.empty()) return std::nullopt;
     SystemEventRecord event{elogs_.front()};
     elogs_.pop();
     return event;

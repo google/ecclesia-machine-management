@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -29,7 +30,6 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/magent/lib/nvme/nvme_types.emb.h"
 #include "runtime/cpp/emboss_cpp_util.h"
 #include "runtime/cpp/emboss_prelude.h"
@@ -87,8 +87,8 @@ class DeviceSelfTestResult {
   }
 
   // Failing segment number if known.
-  absl::optional<uint8_t> FailedSegmentNumber() const {
-    if (SelfTestResult() != kFailedWithKnownSegment) return absl::nullopt;
+  std::optional<uint8_t> FailedSegmentNumber() const {
+    if (SelfTestResult() != kFailedWithKnownSegment) return std::nullopt;
     return self_test_result_.segment_number().Read();
   }
 
@@ -97,26 +97,26 @@ class DeviceSelfTestResult {
   }
 
   // Namespace the Failing LBA occurred on if known.
-  absl::optional<uint32_t> FailingNamespace() const {
-    if (!self_test_result_.nsid_valid().Read()) return absl::nullopt;
+  std::optional<uint32_t> FailingNamespace() const {
+    if (!self_test_result_.nsid_valid().Read()) return std::nullopt;
     return self_test_result_.nsid().Read();
   }
 
   // One of the failing LBAs if known.
-  absl::optional<uint64_t> FailingLBA() const {
-    if (!self_test_result_.flba_valid().Read()) return absl::nullopt;
+  std::optional<uint64_t> FailingLBA() const {
+    if (!self_test_result_.flba_valid().Read()) return std::nullopt;
     return self_test_result_.flba().Read();
   }
 
   // Status code type if known.
-  absl::optional<uint8_t> StatusCodeType() const {
-    if (!self_test_result_.sct_valid().Read()) return absl::nullopt;
+  std::optional<uint8_t> StatusCodeType() const {
+    if (!self_test_result_.sct_valid().Read()) return std::nullopt;
     return self_test_result_.status_code_type().Read();
   }
 
   // Status code if known.
-  absl::optional<uint8_t> StatusCode() const {
-    if (!self_test_result_.sc_valid().Read()) return absl::nullopt;
+  std::optional<uint8_t> StatusCode() const {
+    if (!self_test_result_.sc_valid().Read()) return std::nullopt;
     return self_test_result_.status_code().Read();
   }
 

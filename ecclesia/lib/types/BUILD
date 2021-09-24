@@ -38,7 +38,6 @@ cc_library(
     name = "fixed_range_int",
     hdrs = ["fixed_range_int.h"],
     visibility = ["//ecclesia:library_users"],
-    deps = ["@com_google_absl//absl/types:optional"],
 )
 
 cc_test(
@@ -47,7 +46,6 @@ cc_test(
     deps = [
         ":fixed_range_int",
         "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/types:optional",
         "@com_google_googletest//:gtest_main",
     ],
 )

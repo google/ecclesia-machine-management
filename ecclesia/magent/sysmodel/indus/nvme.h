@@ -17,10 +17,10 @@
 #ifndef ECCLESIA_MAGENT_SYSMODEL_INDUS_NVME_H_
 #define ECCLESIA_MAGENT_SYSMODEL_INDUS_NVME_H_
 
+#include <optional>
 #include <vector>
 
 #include "absl/status/statusor.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/io/pci/discovery.h"
 #include "ecclesia/magent/sysmodel/x86/nvme.h"
 

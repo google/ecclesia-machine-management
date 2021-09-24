@@ -19,12 +19,12 @@
 
 #include <memory>
 #include <string>
+#include <variant>
 
 #include "absl/memory/memory.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
@@ -88,7 +88,7 @@ class ODataMetadata {
 inline std::unique_ptr<ODataMetadata> CreateMetadata(
     tensorflow::serving::net_http::HTTPServerInterface *server,
     absl::string_view odata_metadata_path) {
-  auto metadata = absl::make_unique<ODataMetadata>(odata_metadata_path);
+  auto metadata = std::make_unique<ODataMetadata>(odata_metadata_path);
   metadata->RegisterRequestHandler(server);
   return metadata;
 }

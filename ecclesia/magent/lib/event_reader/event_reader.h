@@ -20,11 +20,11 @@
 #include <assert.h>
 
 #include <cstdint>
+#include <optional>
+#include <variant>
 #include <vector>
 
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/magent/lib/event_reader/elog.emb.h"
 #include "runtime/cpp/emboss_cpp_util.h"
 
@@ -32,26 +32,26 @@ namespace ecclesia {
 
 // Raw machine check exception as read from mcedaemon
 struct MachineCheck {
-  absl::optional<uint64_t> mci_status;  /* MCi_STATUS */
-  absl::optional<uint64_t> mci_address; /* MCi_ADDR */
-  absl::optional<uint64_t> mci_misc;    /* MCi_MISC */
-  absl::optional<uint64_t> mci_synd;    /* MCi_SYND (Syndrome; SMCA-only) */
+  std::optional<uint64_t> mci_status;  /* MCi_STATUS */
+  std::optional<uint64_t> mci_address; /* MCi_ADDR */
+  std::optional<uint64_t> mci_misc;    /* MCi_MISC */
+  std::optional<uint64_t> mci_synd;    /* MCi_SYND (Syndrome; SMCA-only) */
   /* MCi_IPID (IP Identification; SMCA-only) */
-  absl::optional<uint64_t> mci_ipid;
-  absl::optional<uint64_t> mcg_status; /* MCG_STATUS */
-  absl::optional<uint64_t> tsc;        /* CPU timestamp counter */
-  absl::optional<absl::Time> time;     /* MCED timestamp */
-  absl::optional<uint64_t> ip;         /* CPU instruction pointer */
-  absl::optional<int32_t> boot;        /* boot number (-1 for unknown) */
-  absl::optional<int32_t> cpu;         /* excepting CPU */
-  absl::optional<uint32_t> cpuid_eax;  /* CPUID 1, EAX (0 for unknown) */
+  std::optional<uint64_t> mci_ipid;
+  std::optional<uint64_t> mcg_status; /* MCG_STATUS */
+  std::optional<uint64_t> tsc;        /* CPU timestamp counter */
+  std::optional<absl::Time> time;     /* MCED timestamp */
+  std::optional<uint64_t> ip;         /* CPU instruction pointer */
+  std::optional<int32_t> boot;        /* boot number (-1 for unknown) */
+  std::optional<int32_t> cpu;         /* excepting CPU */
+  std::optional<uint32_t> cpuid_eax;  /* CPUID 1, EAX (0 for unknown) */
   /* CPU initial APIC ID (-1UL for unknown) */
-  absl::optional<uint32_t> init_apic_id;
-  absl::optional<int32_t> socket;   /* CPU socket number (-1 for unknown) */
-  absl::optional<uint32_t> mcg_cap; /* MCG_CAP (0 for unknown) */
-  absl::optional<uint16_t> cs;      /* CPU code segment */
-  absl::optional<uint8_t> bank;     /* MC bank */
-  absl::optional<int8_t> vendor;    /* CPU vendor (enum cpu_vendor) */
+  std::optional<uint32_t> init_apic_id;
+  std::optional<int32_t> socket;   /* CPU socket number (-1 for unknown) */
+  std::optional<uint32_t> mcg_cap; /* MCG_CAP (0 for unknown) */
+  std::optional<uint16_t> cs;      /* CPU code segment */
+  std::optional<uint8_t> bank;     /* MC bank */
+  std::optional<int8_t> vendor;    /* CPU vendor (enum cpu_vendor) */
 };
 
 // Google BIOS Event log record
@@ -78,7 +78,7 @@ class Elog {
 struct SystemEventRecord {
   // Time at which the event was logged by SystemEventReader
   absl::Time timestamp;
-  absl::variant<MachineCheck, Elog> record;
+  std::variant<MachineCheck, Elog> record;
 };
 
 // Abstract class to represent a reader for system events.
@@ -89,7 +89,7 @@ class SystemEventReader {
   // Read a single system event. If there are no outstanding events, the method
   // returns no value. The client is expected to periodically poll the reader
   // for system events.
-  virtual absl::optional<SystemEventRecord> ReadEvent() = 0;
+  virtual std::optional<SystemEventRecord> ReadEvent() = 0;
 };
 
 }  // namespace ecclesia

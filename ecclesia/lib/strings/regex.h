@@ -17,11 +17,11 @@
 #ifndef ECCLESIA_LIB_STRINGS_REGEX_H_
 #define ECCLESIA_LIB_STRINGS_REGEX_H_
 
+#include <optional>
 #include <tuple>
 #include <utility>
 
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "re2/re2.h"
 
 namespace ecclesia {
@@ -29,8 +29,8 @@ namespace ecclesia {
 // and return a tuple with types defined by ArgTypes if matches, otherwise
 // return nullopt.
 template <typename... ArgTypes>
-absl::optional<std::tuple<ArgTypes...>> RegexFullMatch(absl::string_view str,
-                                                       const RE2 &pattern) {
+std::optional<std::tuple<ArgTypes...>> RegexFullMatch(absl::string_view str,
+                                                      const RE2 &pattern) {
   std::tuple<ArgTypes...> values;
   if (std::apply(
           [&](ArgTypes &&...params) {
@@ -39,7 +39,7 @@ absl::optional<std::tuple<ArgTypes...>> RegexFullMatch(absl::string_view str,
           std::move(values))) {
     return values;
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 }  // namespace ecclesia
 

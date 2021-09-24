@@ -17,13 +17,13 @@
 #ifndef ECCLESIA_MAGENT_REDFISH_COMMON_SYSTEM_H_
 #define ECCLESIA_MAGENT_REDFISH_COMMON_SYSTEM_H_
 
+#include <optional>
 #include <string>
 #include <utility>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/magent/redfish/common/pcie_device_collection.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"

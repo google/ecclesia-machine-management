@@ -17,9 +17,9 @@
 #include "ecclesia/lib/redfish/storage.h"
 
 #include <memory>
+#include <optional>
 #include <vector>
 
-#include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 
@@ -43,13 +43,13 @@ std::vector<SmartReading> ReadSmartData(const RedfishObject &obj) {
   return readings;
 }
 
-absl::optional<std::vector<SmartReading>> ReadSmartDataFromStorageController(
+std::optional<std::vector<SmartReading>> ReadSmartDataFromStorageController(
     const RedfishObject &obj) {
   auto smart_attributes_obj =
       obj[libredfish::kRfPropertyOem][libredfish::kRfOemPropertyGoogle]
          [libredfish::kRfOemPropertySmartAttributes]
              .AsObject();
-  if (!smart_attributes_obj) return absl::nullopt;
+  if (!smart_attributes_obj) return std::nullopt;
 
   return ReadSmartData(*smart_attributes_obj);
 }

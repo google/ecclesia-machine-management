@@ -19,10 +19,10 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/pci/pci.h"
@@ -58,7 +58,7 @@ class PciThermalSensor : public ThermalSensor {
   PciThermalSensor(PciThermalSensor &&) = default;
   PciThermalSensor &operator=(PciThermalSensor &&) = default;
 
-  absl::optional<int> Read() override;
+  std::optional<int> Read() override;
 
  private:
   // Thermal info offset

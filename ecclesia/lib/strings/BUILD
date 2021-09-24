@@ -19,7 +19,6 @@ cc_library(
     visibility = ["//ecclesia:library_users"],
     deps = [
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:optional",
         "@com_googlesource_code_re2//:re2",
     ],
 )
@@ -58,7 +57,6 @@ cc_test(
     srcs = ["regex_test.cc"],
     deps = [
         ":regex",
-        "@com_google_absl//absl/types:optional",
         "@com_google_googletest//:gtest_main",
         "@com_googlesource_code_re2//:re2",
     ],

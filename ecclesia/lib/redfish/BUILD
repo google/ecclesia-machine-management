@@ -19,9 +19,7 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
-        "@com_google_absl//absl/types:variant",
     ],
 )
 
@@ -72,9 +70,7 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
-        "@com_google_absl//absl/types:variant",
         "@libredfish",
     ],
 )
@@ -100,9 +96,7 @@ cc_test(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
-        "@com_google_absl//absl/types:variant",
         "@com_google_googletest//:gtest_main",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
     ],
@@ -127,7 +121,6 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/meta:type_traits",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:optional",
     ],
 )
 
@@ -189,7 +182,6 @@ cc_library(
     deps = [
         ":interface",
         ":property_definitions",
-        "@com_google_absl//absl/types:optional",
     ],
 )
 
@@ -225,8 +217,6 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:optional",
-        "@com_google_absl//absl/types:variant",
     ],
 )
 
@@ -237,7 +227,6 @@ cc_library(
     deps = [
         ":interface",
         ":property_definitions",
-        "@com_google_absl//absl/types:optional",
     ],
 )
 
@@ -248,7 +237,6 @@ cc_library(
     deps = [
         ":interface",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:optional",
     ],
 )
 
@@ -260,7 +248,6 @@ cc_library(
     deps = [
         ":interface",
         ":property_definitions",
-        "@com_google_absl//absl/types:optional",
     ],
 )
 
@@ -275,7 +262,6 @@ cc_library(
         ":property_definitions",
         "//ecclesia/lib/io/pci:location",
         "//ecclesia/lib/io/pci:signature",
-        "@com_google_absl//absl/types:optional",
     ],
 )
 
@@ -298,7 +284,6 @@ cc_library(
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/meta:type_traits",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:optional",
         "@com_google_protobuf//:protobuf",
     ],
 )

@@ -20,19 +20,19 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/http/codes.h"
 
 namespace libredfish {
@@ -99,7 +99,7 @@ class RedfishVariant final {
 
   // A helper class to denote a loop through an iterator.
   class IndexEach {};
-  using IndexType = absl::variant<std::string, size_t, IndexEach>;
+  using IndexType = std::variant<std::string, size_t, IndexEach>;
 
   // A helper class for lazy evaluation of an index operator chain, when
   // IndexEach is involved.
@@ -191,7 +191,7 @@ class RedfishVariant final {
 
   // Returns the httpcode, if one is available. See the class-level docstring
   // for more information.
-  const absl::optional<ecclesia::HttpResponseCode> &httpcode() const {
+  const std::optional<ecclesia::HttpResponseCode> &httpcode() const {
     return httpcode_;
   }
 
@@ -230,7 +230,7 @@ class RedfishVariant final {
  private:
   std::unique_ptr<ImplIntf> ptr_;
   absl::Status status_;
-  absl::optional<ecclesia::HttpResponseCode> httpcode_;
+  std::optional<ecclesia::HttpResponseCode> httpcode_;
 };
 
 // RedfishIterable provides an interface for accessing properties of either
@@ -303,7 +303,7 @@ class RedfishObject {
   // the node is an "@odata.id" field, the RedfishInterface will be queried
   // to retrieve the payload corresponding to that "@odata.id".
   virtual RedfishVariant operator[](const std::string &node_name) const = 0;
-  virtual absl::optional<std::string> GetUri() = 0;
+  virtual std::optional<std::string> GetUri() = 0;
 
   virtual std::string DebugString() = 0;
 
@@ -311,14 +311,14 @@ class RedfishObject {
   // If the node does not exist or if the value could not be retrieved, nullopt
   // will be returned. Returns typed value or nullopt on error.
   template <typename T>
-  absl::optional<T> GetNodeValue(absl::string_view node_name) const {
+  std::optional<T> GetNodeValue(absl::string_view node_name) const {
     T val;
     auto node = (*this)[node_name.data()];
-    if (!node.GetValue(&val)) return absl::nullopt;
+    if (!node.GetValue(&val)) return std::nullopt;
     return val;
   }
   template <typename PropertyDefinitionT>
-  absl::optional<typename PropertyDefinitionT::type> GetNodeValue() const {
+  std::optional<typename PropertyDefinitionT::type> GetNodeValue() const {
     return GetNodeValue<typename PropertyDefinitionT::type>(
         PropertyDefinitionT::Name);
   }
@@ -328,7 +328,7 @@ class RedfishObject {
 class RedfishInterface {
  public:
   using ValueVariant =
-      absl::variant<int, bool, std::string, const char *, double>;
+      std::variant<int, bool, std::string, const char *, double>;
 
   virtual ~RedfishInterface() {}
 
@@ -440,7 +440,7 @@ void RedfishVariant::IndexHelper::Do(const RedfishVariant &root,
   // The chain is not empty. We will evaluate the 1st index in the chain, and
   // leave the rest to the next layer of recursion.
   const IndexType &index = indices[0];
-  absl::visit(
+  std::visit(
       [&](auto &&index_value) {
         using T = std::decay_t<decltype(index_value)>;
         auto rest = indices.last(indices.size() - 1);

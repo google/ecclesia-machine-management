@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <initializer_list>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -30,7 +31,6 @@
 #include "absl/meta/type_traits.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
@@ -274,11 +274,11 @@ void GenerateDevpaths(std::vector<Assembly> *assemblies) {
 }
 
 // Parses a raw Redfish Assembly payload into an Assembly data structure.
-absl::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
+std::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
   Assembly assembly;
 
   auto fru_name = assembly_payload->GetNodeValue<PropertyName>();
-  if (!fru_name.has_value()) return absl::nullopt;
+  if (!fru_name.has_value()) return std::nullopt;
   assembly.name = fru_name.value();
 
   auto oem = (*assembly_payload)[kRfPropertyOem].AsObject();
@@ -304,7 +304,7 @@ absl::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
   for (auto component_resource : *components) {
     auto component_resource_obj = component_resource.AsObject();
     if (!component_resource_obj) continue;
-    auto component = absl::make_unique<Component>();
+    auto component = std::make_unique<Component>();
 
     auto odata_id = component_resource_obj->GetNodeValue<PropertyOdataId>();
     if (!odata_id.has_value()) continue;
@@ -397,7 +397,7 @@ NodeTopology CreateNodeTopologyFromAssemblies(
     // as we go.
     std::vector<std::unique_ptr<Node>> current_nodes;
     for (const auto &component : assembly.components) {
-      auto node = absl::make_unique<Node>();
+      auto node = std::make_unique<Node>();
 
       node->name = component->name;
       node->local_devpath = component->local_devpath;

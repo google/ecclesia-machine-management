@@ -19,10 +19,10 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/smbios/internal.h"
 #include "ecclesia/lib/smbios/structures.emb.h"
 #include "runtime/cpp/emboss_cpp_util.h"
@@ -99,7 +99,7 @@ class ProcessorInformation {
     return this->GetMessageView().processor_family().Read();
   }
 
-  absl::optional<CpuSignature> GetSignature() const;
+  std::optional<CpuSignature> GetSignature() const;
 
  private:
   CpuSignature GetSignaturex86() const;

@@ -20,12 +20,12 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/magent/lib/eeprom/smbus_eeprom.h"
 #include "ecclesia/magent/lib/ipmi/ipmi.h"
@@ -64,7 +64,7 @@ class SysmodelFruReaderIntf {
   virtual ~SysmodelFruReaderIntf() {}
 
   // Returns a SysmodelFru instance if available.
-  virtual absl::optional<SysmodelFru> Read() = 0;
+  virtual std::optional<SysmodelFru> Read() = 0;
 };
 
 // FileSysmodelFruReader provides a caching interface for reading FRUs from a
@@ -75,12 +75,12 @@ class FileSysmodelFruReader : public SysmodelFruReaderIntf {
   FileSysmodelFruReader(std::string filepath)
       : filepath_(std::move(filepath)) {}
 
-  absl::optional<SysmodelFru> Read() override;
+  std::optional<SysmodelFru> Read() override;
 
  private:
   std::string filepath_;
   // Stores the cached FRU that was read.
-  absl::optional<SysmodelFru> cached_fru_;
+  std::optional<SysmodelFru> cached_fru_;
 };
 
 // This class provides a caching interface for reading a FRU via the IPMI
@@ -92,13 +92,13 @@ class IpmiSysmodelFruReader : public SysmodelFruReaderIntf {
   explicit IpmiSysmodelFruReader(IpmiInterface *ipmi_intf, uint16_t fru_id)
       : ipmi_intf_(ipmi_intf), fru_id_(fru_id) {}
 
-  absl::optional<SysmodelFru> Read() override;
+  std::optional<SysmodelFru> Read() override;
 
  private:
   IpmiInterface *const ipmi_intf_;
   const uint16_t fru_id_;
   // Stores the cached FRU that was read.
-  absl::optional<SysmodelFru> cached_fru_;
+  std::optional<SysmodelFru> cached_fru_;
 };
 
 // SmbusEepromFruReader provides a caching interface for reading FRUs from a
@@ -112,12 +112,12 @@ class SmbusEepromFruReader : public SysmodelFruReaderIntf {
   // If the FRU contents are cached, the cached content is returned. Otherwise
   // performs the low level FRU read, and if successful, populates the cache
   // and returns the read.
-  absl::optional<SysmodelFru> Read() override;
+  std::optional<SysmodelFru> Read() override;
 
  private:
   std::unique_ptr<SmbusEeprom> eeprom_;
   // Stores the cached FRU that was read.
-  absl::optional<SysmodelFru> cached_fru_;
+  std::optional<SysmodelFru> cached_fru_;
 };
 
 // SysmodelFruReaderFactory wraps a lambda for constructing a SysmodelFruReader

@@ -18,10 +18,10 @@
 #define ECCLESIA_MAGENT_REDFISH_INDUS_REDFISH_SERVICE_H_
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/magent/redfish/core/assembly.h"
 #include "ecclesia/magent/redfish/core/odata_metadata.h"
 #include "ecclesia/magent/redfish/core/resource.h"
@@ -36,7 +36,7 @@ namespace ecclesia {
 // downstream sweet16 cable in the Sleipnir assemblies. If the input fru has
 // value, the FRU info will also be added to the assembly.
 Assembly::AssemblyModifier CreateModifierToAttachSpicy16Fru(
-    int connector_id, absl::optional<SysmodelFru> fru);
+    int connector_id, std::optional<SysmodelFru> fru);
 
 // The top level class which encapsulates all the redfish resources exported by
 // the management agent.

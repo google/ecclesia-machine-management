@@ -51,9 +51,9 @@ CreateServer(int port) {
   // Size of the thread pool for handling incoming http requests
   constexpr unsigned kNumWorkerThreads = 5;
   auto options =
-      absl::make_unique<tensorflow::serving::net_http::ServerOptions>();
+      std::make_unique<tensorflow::serving::net_http::ServerOptions>();
   options->AddPort(port);
-  options->SetExecutor(absl::make_unique<RequestExecutor>(kNumWorkerThreads));
+  options->SetExecutor(std::make_unique<RequestExecutor>(kNumWorkerThreads));
   auto server = CreateEvHTTPServer(std::move(options));
   return server;
 }

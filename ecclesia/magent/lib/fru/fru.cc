@@ -315,7 +315,7 @@ absl::Status Fru::FillFromImage(const FruImageSource &fru_image, size_t *size) {
   }
 
   if (common_header.chassis_info_area_starting_offset().Read() > 0) {
-    chassis_info_area = absl::make_unique<ChassisInfoArea>();
+    chassis_info_area = std::make_unique<ChassisInfoArea>();
     end_byte = chassis_info_area->FillFromImage(
         fru_image,
         FruChunksToBytes(
@@ -327,7 +327,7 @@ absl::Status Fru::FillFromImage(const FruImageSource &fru_image, size_t *size) {
   }
 
   if (common_header.board_info_area_starting_offset().Read() > 0) {
-    board_info_area = absl::make_unique<BoardInfoArea>();
+    board_info_area = std::make_unique<BoardInfoArea>();
     end_byte = board_info_area->FillFromImage(
         fru_image, FruChunksToBytes(
                        common_header.board_info_area_starting_offset().Read()));
@@ -338,7 +338,7 @@ absl::Status Fru::FillFromImage(const FruImageSource &fru_image, size_t *size) {
   }
 
   if (common_header.product_info_area_starting_offset().Read() > 0) {
-    product_info_area = absl::make_unique<ProductInfoArea>();
+    product_info_area = std::make_unique<ProductInfoArea>();
     end_byte = product_info_area->FillFromImage(
         fru_image,
         FruChunksToBytes(
@@ -350,7 +350,7 @@ absl::Status Fru::FillFromImage(const FruImageSource &fru_image, size_t *size) {
   }
 
   if (common_header.multirecord_area_starting_offset().Read() > 0) {
-    multi_record_area = absl::make_unique<MultiRecordArea>();
+    multi_record_area = std::make_unique<MultiRecordArea>();
     end_byte = multi_record_area->FillFromImage(
         fru_image,
         FruChunksToBytes(

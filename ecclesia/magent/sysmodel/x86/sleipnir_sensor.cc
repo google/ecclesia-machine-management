@@ -16,11 +16,11 @@
 
 #include "ecclesia/magent/sysmodel/x86/sleipnir_sensor.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "absl/strings/str_cat.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/magent/lib/ipmi/ipmi.h"
 #include "ecclesia/magent/lib/ipmi/sensor.h"

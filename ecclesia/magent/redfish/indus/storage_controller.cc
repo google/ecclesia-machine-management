@@ -19,14 +19,14 @@
 #include <bitset>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
+#include <variant>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/magent/lib/nvme/smart_log_page.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"

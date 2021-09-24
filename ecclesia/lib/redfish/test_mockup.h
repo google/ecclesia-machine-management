@@ -21,12 +21,12 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
+#include <variant>
 
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/redfish/interface.h"
 
@@ -48,7 +48,7 @@ class TestingMockupServer {
     bool verify_hostname;
     std::string cert_file;
     std::string key_file;
-    absl::optional<std::string> ca_cert_file;
+    std::optional<std::string> ca_cert_file;
   };
 
   // In the BUILD file of your test implementation, ensure that you have
@@ -102,20 +102,20 @@ class TestingMockupServer {
   struct ConfigUnix {
     std::string socket_path;
   };
-  absl::variant<ConfigNetwork, ConfigUnix> GetConfig() const;
+  std::variant<ConfigNetwork, ConfigUnix> GetConfig() const;
 
  private:
   void SetUpMockupServer(
       char **server_argv,
       const std::function<std::unique_ptr<RedfishInterface>()> &factory,
-      absl::optional<absl::Duration> start_estimation);
+      std::optional<absl::Duration> start_estimation);
 
   // The connection configuration of this mockup.
-  absl::variant<ConfigNetwork, ConfigUnix> connection_config_;
+  std::variant<ConfigNetwork, ConfigUnix> connection_config_;
   // The pid of the server subprocess.
   pid_t server_pid_;
   // Client side Tls configuration of this mockup.
-  absl::optional<ClientTlsConfig> client_tls_config_;
+  std::optional<ClientTlsConfig> client_tls_config_;
 };
 
 }  // namespace libredfish

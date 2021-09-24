@@ -17,6 +17,7 @@
 #include "ecclesia/magent/sysmodel/x86/chassis.h"
 
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -24,7 +25,6 @@
 #include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/io/usb/ids.h"
 #include "ecclesia/lib/io/usb/mocks.h"
 #include "ecclesia/lib/io/usb/usb.h"

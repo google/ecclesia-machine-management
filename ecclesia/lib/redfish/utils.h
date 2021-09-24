@@ -18,9 +18,9 @@
 #define ECCLESIA_LIB_REDFISH_UTILS_H_
 
 #include <memory>
+#include <optional>
 #include <string>
 
-#include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 

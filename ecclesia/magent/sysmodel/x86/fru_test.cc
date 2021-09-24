@@ -19,13 +19,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/status/status.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/magent/lib/eeprom/smbus_eeprom.h"
 #include "ecclesia/magent/lib/eeprom/smbus_eeprom_mock.h"
@@ -74,11 +74,11 @@ TEST(SmbusEepromFruReaderTest, ReadFailure) {
   SmbusEeprom::Option eeprom_option_;
   std::unique_ptr<MockSmbusEeprom> smbus_eeprom =
       std::make_unique<MockSmbusEeprom>(eeprom_option_);
-  EXPECT_CALL(*smbus_eeprom, ReadBytes(_, _)).WillOnce(Return(absl::nullopt));
+  EXPECT_CALL(*smbus_eeprom, ReadBytes(_, _)).WillOnce(Return(std::nullopt));
 
   SmbusEepromFruReader fru_reader(std::move(smbus_eeprom));
 
-  EXPECT_THAT(fru_reader.Read(), Eq(absl::nullopt));
+  EXPECT_THAT(fru_reader.Read(), Eq(std::nullopt));
 }
 
 TEST(SmbusEepromFruReaderTest, ReadFruSuccess) {

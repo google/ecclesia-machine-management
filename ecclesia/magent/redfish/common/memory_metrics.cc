@@ -18,15 +18,15 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/magent/lib/event_logger/intel_cpu_topology.h"
 #include "ecclesia/magent/lib/event_logger/system_event_visitors.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"
@@ -51,7 +51,7 @@ const absl::flat_hash_map<int, DimmErrorCount> &GetMemoryErrors(
       *(new absl::flat_hash_map<int, DimmErrorCount>());
 
   std::unique_ptr<DimmErrorCountingVisitor> visitor =
-      factory(last_event_timestamp, absl::make_unique<IntelCpuTopology>());
+      factory(last_event_timestamp, std::make_unique<IntelCpuTopology>());
 
   system_model->VisitSystemEvents(visitor.get());
   // update the last event time stamp

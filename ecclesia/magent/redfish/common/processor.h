@@ -17,14 +17,14 @@
 #ifndef ECCLESIA_MAGENT_REDFISH_COMMON_PROCESSOR_H_
 #define ECCLESIA_MAGENT_REDFISH_COMMON_PROCESSOR_H_
 
+#include <optional>
 #include <string>
 #include <type_traits>
+#include <variant>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/smbios/processor_information.h"
 #include "ecclesia/magent/redfish/core/index_resource.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"

@@ -16,9 +16,10 @@
 
 #include "ecclesia/lib/io/pci/proto_lib.h"
 
+#include <optional>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/pci/pci.pb.h"
 #include "ecclesia/lib/io/pci/signature.h"
@@ -56,23 +57,23 @@ TEST(PciLocationFromProto, SuccessfulConversions) {
 TEST(PciLocationFromProto, FailedConversions) {
   PciLocationProtobuf bad_domain =
       ParseTextProtoOrDie("domain: 0x10000 bus: 2 device: 3 function: 4");
-  EXPECT_THAT(PciLocationFromProto(bad_domain), Eq(absl::nullopt));
+  EXPECT_THAT(PciLocationFromProto(bad_domain), Eq(std::nullopt));
 
   PciLocationProtobuf bad_bus =
       ParseTextProtoOrDie("domain: 1 bus: 0x100 device: 3 function: 4");
-  EXPECT_THAT(PciLocationFromProto(bad_bus), Eq(absl::nullopt));
+  EXPECT_THAT(PciLocationFromProto(bad_bus), Eq(std::nullopt));
 
   PciLocationProtobuf bad_device =
       ParseTextProtoOrDie("domain: 1 bus: 2 device: 0x20 function: 4");
-  EXPECT_THAT(PciLocationFromProto(bad_device), Eq(absl::nullopt));
+  EXPECT_THAT(PciLocationFromProto(bad_device), Eq(std::nullopt));
 
   PciLocationProtobuf bad_function =
       ParseTextProtoOrDie("domain: 1 bus: 2 device: 3 function: 0x8");
-  EXPECT_THAT(PciLocationFromProto(bad_function), Eq(absl::nullopt));
+  EXPECT_THAT(PciLocationFromProto(bad_function), Eq(std::nullopt));
 
   PciLocationProtobuf all_bad =
       ParseTextProtoOrDie("domain: -1 bus: -1 device: -1 function: -1");
-  EXPECT_THAT(PciLocationFromProto(all_bad), Eq(absl::nullopt));
+  EXPECT_THAT(PciLocationFromProto(all_bad), Eq(std::nullopt));
 }
 
 TEST(PciBaseSignatureToProto, SuccessfulConversions) {
@@ -99,15 +100,15 @@ TEST(PciBaseSignatureFromProto, SuccessfulConversions) {
 TEST(PciBaseSignatureFromProto, FailedConversions) {
   PciBaseSignatureProtobuf bad_vid =
       ParseTextProtoOrDie("vendor_id: 0x10000 device_id: 0x0021");
-  EXPECT_THAT(PciBaseSignatureFromProto(bad_vid), Eq(absl::nullopt));
+  EXPECT_THAT(PciBaseSignatureFromProto(bad_vid), Eq(std::nullopt));
 
   PciBaseSignatureProtobuf bad_did =
       ParseTextProtoOrDie("vendor_id: 0x1ae0 device_id: 0x10000");
-  EXPECT_THAT(PciBaseSignatureFromProto(bad_did), Eq(absl::nullopt));
+  EXPECT_THAT(PciBaseSignatureFromProto(bad_did), Eq(std::nullopt));
 
   PciBaseSignatureProtobuf all_bad =
       ParseTextProtoOrDie("vendor_id: -1 device_id: -1");
-  EXPECT_THAT(PciBaseSignatureFromProto(all_bad), Eq(absl::nullopt));
+  EXPECT_THAT(PciBaseSignatureFromProto(all_bad), Eq(std::nullopt));
 }
 
 TEST(PciSubsystemSignatureToProto, SuccessfulConversions) {
@@ -134,15 +135,15 @@ TEST(PciSubsystemSignatureFromProto, SuccessfulConversions) {
 TEST(PciSubsystemSignatureFromProto, FailedConversions) {
   PciSubsystemSignatureProtobuf bad_ssvid =
       ParseTextProtoOrDie("vendor_id: 0x10000 id: 0x0045");
-  EXPECT_THAT(PciSubsystemSignatureFromProto(bad_ssvid), Eq(absl::nullopt));
+  EXPECT_THAT(PciSubsystemSignatureFromProto(bad_ssvid), Eq(std::nullopt));
 
   PciSubsystemSignatureProtobuf bad_ssid =
       ParseTextProtoOrDie("vendor_id: 0x1ae0 id: 0x10000");
-  EXPECT_THAT(PciSubsystemSignatureFromProto(bad_ssid), Eq(absl::nullopt));
+  EXPECT_THAT(PciSubsystemSignatureFromProto(bad_ssid), Eq(std::nullopt));
 
   PciSubsystemSignatureProtobuf all_bad =
       ParseTextProtoOrDie("vendor_id: -1 id: -1");
-  EXPECT_THAT(PciSubsystemSignatureFromProto(all_bad), Eq(absl::nullopt));
+  EXPECT_THAT(PciSubsystemSignatureFromProto(all_bad), Eq(std::nullopt));
 }
 
 }  // namespace

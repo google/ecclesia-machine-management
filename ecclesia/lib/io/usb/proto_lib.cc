@@ -17,6 +17,7 @@
 #include "ecclesia/lib/io/usb/proto_lib.h"
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -24,7 +25,6 @@
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/io/usb/usb.h"
 #include "ecclesia/lib/io/usb/usb.pb.h"
 
@@ -46,10 +46,10 @@ UsbLocationProtobuf UsbLocationToProto(const UsbLocation &location) {
   return proto_location;
 }
 
-absl::optional<UsbLocation> UsbLocationFromProto(
+std::optional<UsbLocation> UsbLocationFromProto(
     const UsbLocationProtobuf &location) {
   auto maybe_bus = UsbBusLocation::TryMake(location.bus());
-  absl::optional<UsbPortSequence> maybe_port_sequence;
+  std::optional<UsbPortSequence> maybe_port_sequence;
   // Check if root device aka ports = "0"
   if (location.ports() != "0") {
     std::vector<int> ports;
@@ -58,7 +58,7 @@ absl::optional<UsbLocation> UsbLocationFromProto(
       if (absl::SimpleAtoi(port_str, &port_num)) {
         ports.push_back(port_num);
       } else {
-        return absl::nullopt;
+        return std::nullopt;
       }
     }
     maybe_port_sequence = UsbPortSequence::TryMake(ports);
@@ -68,7 +68,7 @@ absl::optional<UsbLocation> UsbLocationFromProto(
   if (maybe_bus.has_value() && maybe_port_sequence.has_value()) {
     return UsbLocation(maybe_bus.value(), maybe_port_sequence.value());
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 
 UsbSignatureProtobuf UsbSignatureToProto(const UsbSignature &signature) {

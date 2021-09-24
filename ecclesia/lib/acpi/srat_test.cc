@@ -519,7 +519,7 @@ class SratTestV3 : public ::testing::Test {
         GetTestDataDependencyPath(kTestSysfsAcpiSratPath));
     Check(table.ok(), "successfully read file") << table.status().ToString();
 
-    srat_ = absl::make_unique<Srat>(std::move(table.value()));
+    srat_ = std::make_unique<Srat>(std::move(table.value()));
   }
 
  protected:

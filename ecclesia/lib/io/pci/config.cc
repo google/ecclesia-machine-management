@@ -17,13 +17,13 @@
 #include "ecclesia/lib/io/pci/config.h"
 
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/codec/bits.h"
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/pci/region.h"

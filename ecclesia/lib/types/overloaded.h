@@ -20,7 +20,7 @@
 namespace ecclesia {
 
 // See https://en.cppreference.com/w/cpp/utility/variant/visit, recipe 4. This
-// allows writing std::visit calls on absl::variants in a nice way.
+// allows writing std::visit calls on std::variants in a nice way.
 template <class... Ts>
 struct Overloaded : Ts... {
   using Ts::operator()...;

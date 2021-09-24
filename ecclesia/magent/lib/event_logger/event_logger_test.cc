@@ -19,7 +19,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -27,8 +29,6 @@
 #include "absl/memory/memory.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/clock.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/magent/lib/event_reader/elog.emb.h"
 #include "ecclesia/magent/lib/event_reader/event_reader.h"
@@ -43,7 +43,7 @@ using ::testing::Return;
 
 class MockEventReader : public SystemEventReader {
  public:
-  MOCK_METHOD(absl::optional<SystemEventRecord>, ReadEvent, ());
+  MOCK_METHOD(std::optional<SystemEventRecord>, ReadEvent, ());
 };
 
 class EventLoggerTest : public ::testing::Test {
@@ -72,9 +72,9 @@ class EventLoggerTest : public ::testing::Test {
         .WillOnce(Return(elog_f(EventType::END_OF_LOG)))
         .WillOnce([&]() {
           last_event_logged_.Notify();
-          return absl::nullopt;
+          return std::nullopt;
         })
-        .WillRepeatedly(Return(absl::nullopt));
+        .WillRepeatedly(Return(std::nullopt));
   }
 
   MockEventReader *reader_;
@@ -87,7 +87,7 @@ class TypeExtractingVisitor : public SystemEventVisitor {
       : SystemEventVisitor(direction) {}
 
   bool Visit(const SystemEventRecord &record) {
-    const auto &elog_record = absl::get<Elog>(record.record);
+    const auto &elog_record = std::get<Elog>(record.record);
     record_types_.push_back(elog_record.GetElogRecordView().id().Read());
     return true;
   }

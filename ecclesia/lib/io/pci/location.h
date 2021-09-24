@@ -22,13 +22,13 @@
 #define ECCLESIA_LIB_IO_PCI_LOCATION_H_
 
 #include <iosfwd>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
 
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/types/fixed_range_int.h"
 
 namespace ecclesia {
@@ -80,8 +80,8 @@ class PciDbdfLocation {
   }
 
   // Create a PciLocation whose range is checked at run time.
-  static absl::optional<PciDbdfLocation> TryMake(int domain, int bus,
-                                                 int device, int function) {
+  static std::optional<PciDbdfLocation> TryMake(int domain, int bus, int device,
+                                                int function) {
     auto maybe_domain = PciDomain::TryMake(domain);
     auto maybe_bus = PciBusNum::TryMake(bus);
     auto maybe_device = PciDeviceNum::TryMake(device);
@@ -89,7 +89,7 @@ class PciDbdfLocation {
 
     if (!maybe_domain.has_value() || !maybe_bus.has_value() ||
         !maybe_device.has_value() || !maybe_function.has_value()) {
-      return absl::nullopt;
+      return std::nullopt;
     }
 
     return PciDbdfLocation(maybe_domain.value(), maybe_bus.value(),
@@ -98,7 +98,7 @@ class PciDbdfLocation {
 
   // Try and construct a location object from a string that uses the format
   // produced by the ToString operations.
-  static absl::optional<PciDbdfLocation> FromString(absl::string_view str);
+  static std::optional<PciDbdfLocation> FromString(absl::string_view str);
 
   // Accessors for the individual components of the location.
   constexpr PciDomain domain() const { return domain_; }
@@ -191,15 +191,15 @@ class PciDbdLocation {
   }
 
   // Create a PciDeviceLocation whose range is checked at run time.
-  static absl::optional<PciDbdLocation> TryMake(int domain, int bus,
-                                                int device) {
+  static std::optional<PciDbdLocation> TryMake(int domain, int bus,
+                                               int device) {
     auto maybe_domain = PciDomain::TryMake(domain);
     auto maybe_bus = PciBusNum::TryMake(bus);
     auto maybe_device = PciDeviceNum::TryMake(device);
 
     if (!maybe_domain.has_value() || !maybe_bus.has_value() ||
         !maybe_device.has_value()) {
-      return absl::nullopt;
+      return std::nullopt;
     }
 
     return PciDbdLocation(maybe_domain.value(), maybe_bus.value(),
@@ -208,7 +208,7 @@ class PciDbdLocation {
 
   // Try and construct a location object from a string that uses the format
   // produced by the ToString operations.
-  static absl::optional<PciDbdLocation> FromString(absl::string_view str);
+  static std::optional<PciDbdLocation> FromString(absl::string_view str);
 
   // Accessors for the individual components of the location.
   constexpr PciDomain domain() const { return domain_; }

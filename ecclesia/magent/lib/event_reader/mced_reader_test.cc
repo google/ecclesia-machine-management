@@ -20,14 +20,14 @@
 
 #include <cstdio>
 #include <cstring>
+#include <optional>
 #include <string>
+#include <variant>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/magent/lib/event_reader/event_reader.h"
 
 namespace ecclesia {

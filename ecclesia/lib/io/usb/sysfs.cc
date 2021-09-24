@@ -18,6 +18,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -29,7 +30,6 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/io/usb/usb.h"
@@ -87,20 +87,20 @@ absl::Status ReadUintFromSysfs(const ApifsFile &api_fs, bool is_hex,
 // a device entry at "usbX" where X is the number of the USB controller (i.e.
 // the bus number). This is generally a symlink to the actual device entry in
 // the PCI part of sysfs.
-absl::optional<UsbLocation> DirectoryToUsbLocation(absl::string_view dirname) {
+std::optional<UsbLocation> DirectoryToUsbLocation(absl::string_view dirname) {
   int bus;
   std::string port_substr;
   if (RE2::FullMatch(dirname, "usb(\\d+)", &bus)) {
     auto usb_bus = UsbBusLocation::TryMake(bus);
     if (!usb_bus.has_value()) {
-      return absl::nullopt;
+      return std::nullopt;
     }
     return UsbLocation(usb_bus.value(), UsbPortSequence());
   } else if (RE2::FullMatch(dirname, "(\\d+)-(\\d+(?:\\.\\d+)*)", &bus,
                             &port_substr)) {
     auto maybe_usb_bus = UsbBusLocation::TryMake(bus);
     if (!maybe_usb_bus.has_value()) {
-      return absl::nullopt;
+      return std::nullopt;
     }
 
     std::vector<int> ports;
@@ -118,12 +118,12 @@ absl::optional<UsbLocation> DirectoryToUsbLocation(absl::string_view dirname) {
           }
         }
       } else {
-        return absl::nullopt;
+        return std::nullopt;
       }
     }
     return UsbLocation(maybe_usb_bus.value(), seq);
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 }  // namespace
 

@@ -65,10 +65,9 @@
 #define ECCLESIA_LIB_TYPES_FIXED_RANGE_INT_H_
 
 #include <limits>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-#include "absl/types/optional.h"
 
 namespace ecclesia {
 
@@ -111,11 +110,11 @@ class FixedRangeInteger {
 
   // Run-time factory function. Returns nullopt if the given value is out of
   // range, otherwise returns the value of T.
-  static absl::optional<T> TryMake(IntType value) {
+  static std::optional<T> TryMake(IntType value) {
     if (value >= kMinValue && value <= kMaxValue) {
       return T(BaseType(value));
     } else {
-      return absl::nullopt;
+      return std::nullopt;
     }
   }
 

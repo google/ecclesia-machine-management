@@ -20,16 +20,16 @@
 #include <sys/socket.h>
 
 #include <cstdio>
+#include <optional>
 #include <queue>
 #include <string>
 #include <thread>  // NOLINT(build/c++11)
 #include <utility>
+#include <variant>
 
 #include "absl/base/thread_annotations.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/synchronization/notification.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/magent/lib/event_reader/event_reader.h"
 
 namespace ecclesia {
@@ -78,9 +78,9 @@ class McedaemonReader : public SystemEventReader {
   McedaemonReader(std::string mced_socket_path,
                   McedaemonSocketInterface *socket_intf);
 
-  absl::optional<SystemEventRecord> ReadEvent() override {
+  std::optional<SystemEventRecord> ReadEvent() override {
     absl::MutexLock l(&mces_lock_);
-    if (mces_.empty()) return absl::nullopt;
+    if (mces_.empty()) return std::nullopt;
     auto event = std::move(mces_.front());
     mces_.pop();
     return event;

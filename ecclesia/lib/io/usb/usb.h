@@ -23,12 +23,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <vector>
 
 #include "absl/status/statusor.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/types/fixed_range_int.h"
 
@@ -109,7 +109,7 @@ class UsbPortSequence {
 
   // Run-time factory function. Returns nullopt if the given value is out of
   // range, either due to out of range values or too many ports.
-  static absl::optional<UsbPortSequence> TryMake(absl::Span<const int> ports);
+  static std::optional<UsbPortSequence> TryMake(absl::Span<const int> ports);
 
   UsbPortSequence(const UsbPortSequence &other) = default;
   UsbPortSequence &operator=(const UsbPortSequence &other) = default;
@@ -119,11 +119,11 @@ class UsbPortSequence {
 
   // Fetch the port at a particular position in the sequence. Returns nullopt if
   // the index is out of range.
-  absl::optional<UsbPort> Port(size_t index) const;
+  std::optional<UsbPort> Port(size_t index) const;
 
   // Compute the port sequence for a particular port downstream of this
   // sequence. Returns nullopt if the sequence is already at the maximum length.
-  absl::optional<UsbPortSequence> Downstream(UsbPort port) const;
+  std::optional<UsbPortSequence> Downstream(UsbPort port) const;
 
   friend bool operator==(const UsbPortSequence &lhs,
                          const UsbPortSequence &rhs);
@@ -170,9 +170,7 @@ class UsbLocation {
   // Read the bus and port numbers.
   UsbBusLocation Bus() const { return bus_; }
   size_t NumPorts() const { return ports_.Size(); }
-  absl::optional<UsbPort> Port(size_t index) const {
-    return ports_.Port(index);
-  }
+  std::optional<UsbPort> Port(size_t index) const { return ports_.Port(index); }
 
   friend bool operator==(const UsbLocation &lhs, const UsbLocation &rhs);
   friend bool operator!=(const UsbLocation &lhs, const UsbLocation &rhs);

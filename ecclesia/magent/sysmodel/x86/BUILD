@@ -37,9 +37,7 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
-        "@com_google_absl//absl/types:variant",
         "@com_google_emboss//runtime/cpp:cpp_utils",
     ],
 )
@@ -73,7 +71,6 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
-        "@com_google_absl//absl/types:optional",
         "@com_google_emboss//runtime/cpp:cpp_utils",
         "@com_googlesource_code_re2//:re2",
     ],
@@ -85,7 +82,6 @@ cc_library(
     hdrs = ["fru.h"],
     visibility = ["//ecclesia:magent_library_users"],
     deps = [
-        "//ecclesia/lib/logging",
         "//ecclesia/magent/lib/eeprom",
         "//ecclesia/magent/lib/fru:ipmi_fru",
         "//ecclesia/magent/lib/ipmi",
@@ -93,7 +89,6 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -113,7 +108,6 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -127,7 +121,6 @@ cc_library(
         "//ecclesia/lib/io/usb",
         "//ecclesia/lib/io/usb:ids",
         "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/types:optional",
     ],
 )
 
@@ -145,7 +138,6 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:optional",
     ],
 )
 
@@ -171,7 +163,6 @@ cc_test(
         "//ecclesia/magent/lib/eeprom:smbus_eeprom_mock",
         "//ecclesia/magent/lib/ipmi:ipmi_mock",
         "@com_google_absl//absl/status",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
     ],
@@ -187,7 +178,6 @@ cc_test(
         "//ecclesia/lib/io/usb:mocks",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/types:optional",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -222,7 +212,6 @@ cc_test(
         "//ecclesia/lib/io/pci:location",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
     ],
@@ -235,7 +224,6 @@ cc_library(
     deps = [
         "//ecclesia/lib/io/pci:location",
         "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/types:optional",
     ],
 )
 
@@ -248,7 +236,6 @@ cc_library(
         "//ecclesia/magent/lib/ipmi",
         "//ecclesia/magent/lib/ipmi:sensor",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
         "@com_googlesource_code_re2//:re2",
     ],

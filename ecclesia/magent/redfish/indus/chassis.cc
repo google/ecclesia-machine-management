@@ -16,14 +16,14 @@
 
 #include "ecclesia/magent/redfish/indus/chassis.h"
 
+#include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
@@ -37,12 +37,12 @@
 namespace ecclesia {
 namespace {
 
-absl::optional<SysmodelFru> GetFruInfo(SystemModel *system_model,
-                                       absl::string_view fru_name) {
+std::optional<SysmodelFru> GetFruInfo(SystemModel *system_model,
+                                      absl::string_view fru_name) {
   SysmodelFruReaderIntf *fru_reader = system_model->GetFruReader(fru_name);
-  if (!fru_reader) return absl::nullopt;
-  absl::optional<SysmodelFru> fru = fru_reader->Read();
-  if (!fru.has_value()) return absl::nullopt;
+  if (!fru_reader) return std::nullopt;
+  std::optional<SysmodelFru> fru = fru_reader->Read();
+  if (!fru.has_value()) return std::nullopt;
   return std::move(*fru);
 }
 
@@ -60,7 +60,7 @@ void Chassis::Get(tensorflow::serving::net_http::ServerRequestInterface *req,
   if (chassis_req_name == "chassis") {
     chassis_name = "Indus";
   }
-  absl::optional<ChassisId> found_chassis =
+  std::optional<ChassisId> found_chassis =
       system_model_->GetChassisByName(chassis_name);
   if (!found_chassis.has_value()) {
     req->ReplyWithStatus(

@@ -20,11 +20,11 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/variant.h"
 #include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
@@ -57,7 +57,7 @@ class Resource {
   }
 
  protected:
-  using ParamsType = std::vector<absl::variant<int, std::string>>;
+  using ParamsType = std::vector<std::variant<int, std::string>>;
   // Generates a response for Http GET request
   // "params" is to allow a regex dispatcher to pass capture values to the
   // method.
@@ -97,7 +97,7 @@ template <typename ResourceType, typename... Args>
 std::unique_ptr<Resource> CreateResource(
     tensorflow::serving::net_http::HTTPServerInterface *server,
     Args &&...args) {
-  auto resource = absl::make_unique<ResourceType>(std::forward<Args>(args)...);
+  auto resource = std::make_unique<ResourceType>(std::forward<Args>(args)...);
   resource->RegisterRequestHandler(server);
   return std::move(resource);
 }

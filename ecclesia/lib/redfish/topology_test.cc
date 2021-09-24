@@ -79,22 +79,22 @@ TEST(NodeTopologiesHaveTheSameNodes, IdenticalNodes) {
                     .type = kBoard};
 
   NodeTopology n1;
-  n1.nodes.push_back(absl::make_unique<Node>(phys));
-  n1.nodes.push_back(absl::make_unique<Node>(phys_connector_pe0));
-  n1.nodes.push_back(absl::make_unique<Node>(phys_connector_pe1));
-  n1.nodes.push_back(absl::make_unique<Node>(pe0));
-  n1.nodes.push_back(absl::make_unique<Node>(pe1));
-  n1.nodes.push_back(absl::make_unique<Node>(pe1_connector_downlink));
-  n1.nodes.push_back(absl::make_unique<Node>(pe1_downlink));
+  n1.nodes.push_back(std::make_unique<Node>(phys));
+  n1.nodes.push_back(std::make_unique<Node>(phys_connector_pe0));
+  n1.nodes.push_back(std::make_unique<Node>(phys_connector_pe1));
+  n1.nodes.push_back(std::make_unique<Node>(pe0));
+  n1.nodes.push_back(std::make_unique<Node>(pe1));
+  n1.nodes.push_back(std::make_unique<Node>(pe1_connector_downlink));
+  n1.nodes.push_back(std::make_unique<Node>(pe1_downlink));
 
   NodeTopology n2;
-  n2.nodes.push_back(absl::make_unique<Node>(phys));
-  n2.nodes.push_back(absl::make_unique<Node>(phys_connector_pe0));
-  n2.nodes.push_back(absl::make_unique<Node>(phys_connector_pe1));
-  n2.nodes.push_back(absl::make_unique<Node>(pe0));
-  n2.nodes.push_back(absl::make_unique<Node>(pe1));
-  n2.nodes.push_back(absl::make_unique<Node>(pe1_connector_downlink));
-  n2.nodes.push_back(absl::make_unique<Node>(pe1_downlink));
+  n2.nodes.push_back(std::make_unique<Node>(phys));
+  n2.nodes.push_back(std::make_unique<Node>(phys_connector_pe0));
+  n2.nodes.push_back(std::make_unique<Node>(phys_connector_pe1));
+  n2.nodes.push_back(std::make_unique<Node>(pe0));
+  n2.nodes.push_back(std::make_unique<Node>(pe1));
+  n2.nodes.push_back(std::make_unique<Node>(pe1_connector_downlink));
+  n2.nodes.push_back(std::make_unique<Node>(pe1_downlink));
 
   EXPECT_TRUE(NodeTopologiesHaveTheSameNodes(n1, n2));
 }
@@ -117,22 +117,22 @@ TEST(NodeTopologiesHaveTheSameNodes, OrderDoesntMatter) {
                     .type = kBoard};
 
   NodeTopology n1;
-  n1.nodes.push_back(absl::make_unique<Node>(phys));
-  n1.nodes.push_back(absl::make_unique<Node>(phys_connector_pe0));
-  n1.nodes.push_back(absl::make_unique<Node>(phys_connector_pe1));
-  n1.nodes.push_back(absl::make_unique<Node>(pe0));
-  n1.nodes.push_back(absl::make_unique<Node>(pe1));
-  n1.nodes.push_back(absl::make_unique<Node>(pe1_connector_downlink));
-  n1.nodes.push_back(absl::make_unique<Node>(pe1_downlink));
+  n1.nodes.push_back(std::make_unique<Node>(phys));
+  n1.nodes.push_back(std::make_unique<Node>(phys_connector_pe0));
+  n1.nodes.push_back(std::make_unique<Node>(phys_connector_pe1));
+  n1.nodes.push_back(std::make_unique<Node>(pe0));
+  n1.nodes.push_back(std::make_unique<Node>(pe1));
+  n1.nodes.push_back(std::make_unique<Node>(pe1_connector_downlink));
+  n1.nodes.push_back(std::make_unique<Node>(pe1_downlink));
 
   NodeTopology n2;
-  n2.nodes.push_back(absl::make_unique<Node>(phys_connector_pe0));
-  n2.nodes.push_back(absl::make_unique<Node>(phys));
-  n2.nodes.push_back(absl::make_unique<Node>(pe0));
-  n2.nodes.push_back(absl::make_unique<Node>(phys_connector_pe1));
-  n2.nodes.push_back(absl::make_unique<Node>(pe1_connector_downlink));
-  n2.nodes.push_back(absl::make_unique<Node>(pe1));
-  n2.nodes.push_back(absl::make_unique<Node>(pe1_downlink));
+  n2.nodes.push_back(std::make_unique<Node>(phys_connector_pe0));
+  n2.nodes.push_back(std::make_unique<Node>(phys));
+  n2.nodes.push_back(std::make_unique<Node>(pe0));
+  n2.nodes.push_back(std::make_unique<Node>(phys_connector_pe1));
+  n2.nodes.push_back(std::make_unique<Node>(pe1_connector_downlink));
+  n2.nodes.push_back(std::make_unique<Node>(pe1));
+  n2.nodes.push_back(std::make_unique<Node>(pe1_downlink));
 
   EXPECT_TRUE(NodeTopologiesHaveTheSameNodes(n1, n2));
 }
@@ -145,13 +145,13 @@ TEST(NodeTopologiesHaveTheSameNodes, MissingNodesDetected) {
   Node pe0{.name = "fuzzyback", .local_devpath = "/phys/PE0", .type = kBoard};
 
   NodeTopology n1;
-  n1.nodes.push_back(absl::make_unique<Node>(phys));
-  n1.nodes.push_back(absl::make_unique<Node>(phys_connector_pe0));
-  n1.nodes.push_back(absl::make_unique<Node>(pe0));
+  n1.nodes.push_back(std::make_unique<Node>(phys));
+  n1.nodes.push_back(std::make_unique<Node>(phys_connector_pe0));
+  n1.nodes.push_back(std::make_unique<Node>(pe0));
 
   NodeTopology n2;
-  n2.nodes.push_back(absl::make_unique<Node>(phys));
-  n2.nodes.push_back(absl::make_unique<Node>(phys_connector_pe0));
+  n2.nodes.push_back(std::make_unique<Node>(phys));
+  n2.nodes.push_back(std::make_unique<Node>(phys_connector_pe0));
 
   EXPECT_FALSE(NodeTopologiesHaveTheSameNodes(n1, n2));
 }
@@ -175,18 +175,18 @@ TEST(NodeTopologiesHaveTheSameNodes, NewNameDetected) {
                         .type = kBoard};
 
   NodeTopology n1;
-  n1.nodes.push_back(absl::make_unique<Node>(phys));
-  n1.nodes.push_back(absl::make_unique<Node>(phys_connector_pe1));
-  n1.nodes.push_back(absl::make_unique<Node>(pe1));
-  n1.nodes.push_back(absl::make_unique<Node>(pe1_connector_downlink));
-  n1.nodes.push_back(absl::make_unique<Node>(pe1_downlink_old));
+  n1.nodes.push_back(std::make_unique<Node>(phys));
+  n1.nodes.push_back(std::make_unique<Node>(phys_connector_pe1));
+  n1.nodes.push_back(std::make_unique<Node>(pe1));
+  n1.nodes.push_back(std::make_unique<Node>(pe1_connector_downlink));
+  n1.nodes.push_back(std::make_unique<Node>(pe1_downlink_old));
 
   NodeTopology n2;
-  n2.nodes.push_back(absl::make_unique<Node>(phys));
-  n2.nodes.push_back(absl::make_unique<Node>(phys_connector_pe1));
-  n2.nodes.push_back(absl::make_unique<Node>(pe1));
-  n2.nodes.push_back(absl::make_unique<Node>(pe1_connector_downlink));
-  n2.nodes.push_back(absl::make_unique<Node>(pe1_downlink_new));
+  n2.nodes.push_back(std::make_unique<Node>(phys));
+  n2.nodes.push_back(std::make_unique<Node>(phys_connector_pe1));
+  n2.nodes.push_back(std::make_unique<Node>(pe1));
+  n2.nodes.push_back(std::make_unique<Node>(pe1_connector_downlink));
+  n2.nodes.push_back(std::make_unique<Node>(pe1_downlink_new));
 
   EXPECT_FALSE(NodeTopologiesHaveTheSameNodes(n1, n2));
 }
@@ -201,12 +201,12 @@ TEST(NodeTopologiesHaveTheSameNodes, NewDevpathDetected) {
                           .type = kConnector};
 
   NodeTopology n1;
-  n1.nodes.push_back(absl::make_unique<Node>(phys));
-  n1.nodes.push_back(absl::make_unique<Node>(phys_connector_pe1));
+  n1.nodes.push_back(std::make_unique<Node>(phys));
+  n1.nodes.push_back(std::make_unique<Node>(phys_connector_pe1));
 
   NodeTopology n2;
-  n2.nodes.push_back(absl::make_unique<Node>(phys));
-  n2.nodes.push_back(absl::make_unique<Node>(phys_connector_pe2));
+  n2.nodes.push_back(std::make_unique<Node>(phys));
+  n2.nodes.push_back(std::make_unique<Node>(phys_connector_pe2));
 
   EXPECT_FALSE(NodeTopologiesHaveTheSameNodes(n1, n2));
 }
@@ -220,12 +220,12 @@ TEST(NodeTopologiesHaveTheSameNodes, NewTypeDetected) {
   Node pe1_new{.name = "plugin", .local_devpath = "/phys/PE1", .type = kBoard};
 
   NodeTopology n1;
-  n1.nodes.push_back(absl::make_unique<Node>(phys));
-  n1.nodes.push_back(absl::make_unique<Node>(phys_connector_pe1));
+  n1.nodes.push_back(std::make_unique<Node>(phys));
+  n1.nodes.push_back(std::make_unique<Node>(phys_connector_pe1));
 
   NodeTopology n2;
-  n2.nodes.push_back(absl::make_unique<Node>(phys));
-  n2.nodes.push_back(absl::make_unique<Node>(pe1_new));
+  n2.nodes.push_back(std::make_unique<Node>(phys));
+  n2.nodes.push_back(std::make_unique<Node>(pe1_new));
 
   EXPECT_FALSE(NodeTopologiesHaveTheSameNodes(n1, n2));
 }

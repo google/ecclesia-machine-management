@@ -138,7 +138,7 @@ absl::StatusOr<ControllerRegisters> NvmeLinuxAccess::GetControllerRegisters()
 
 std::unique_ptr<NvmeDeviceInterface> CreateNvmeLinuxDevice(
     const std::string &device_path) {
-  auto access = absl::make_unique<NvmeLinuxAccess>(device_path);
+  auto access = std::make_unique<NvmeLinuxAccess>(device_path);
   return CreateNvmeDevice(std::move(access));
 }
 

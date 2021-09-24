@@ -18,6 +18,7 @@
 #define ECCLESIA_MAGENT_SYSMODEL_X86_NVME_H_
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -25,7 +26,6 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/magent/lib/nvme/identify_controller.h"
 #include "ecclesia/magent/lib/nvme/nvme_device.h"

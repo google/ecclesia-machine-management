@@ -18,7 +18,6 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/synchronization",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -32,7 +31,6 @@ cc_test(
         "//ecclesia/lib/io/smbus",
         "//ecclesia/lib/io/smbus:mocks",
         "@com_google_absl//absl/status",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
     ],
@@ -45,7 +43,6 @@ cc_library(
     visibility = ["//ecclesia:magent_library_users"],
     deps = [
         ":eeprom",
-        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
     ],

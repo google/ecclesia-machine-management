@@ -20,8 +20,10 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "absl/base/thread_annotations.h"
 #include "absl/memory/memory.h"
@@ -30,9 +32,7 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/logging/logging.h"
@@ -99,7 +99,7 @@ MallocChar KvSpanToJsonCharBuffer(
         kv_span) {
   json_t *post_payload = json_object();
   for (const auto &kv_pair : kv_span) {
-    absl::visit(
+    std::visit(
         [&](auto val) {
           JsonValue jValue(val);
           json_object_set(post_payload, kv_pair.first.data(), jValue.get());
@@ -145,11 +145,11 @@ class RawPayload {
     return ret;
   }
 
-  absl::optional<std::string> GetUri() {
+  std::optional<std::string> GetUri() {
     MallocChar output(getPayloadUri(payload_.get()));
-    if (!output) return absl::nullopt;
+    if (!output) return std::nullopt;
     std::string ret(output.get());
-    if (ret.empty()) return absl::nullopt;
+    if (ret.empty()) return std::nullopt;
     return ret;
   }
 
@@ -268,9 +268,9 @@ class RawObject : public RedfishObject {
 
   RedfishVariant operator[](const std::string &node_name) const override {
     return RedfishVariant(
-        absl::make_unique<RawVariantImpl>(payload_->GetNode(node_name)));
+        std::make_unique<RawVariantImpl>(payload_->GetNode(node_name)));
   }
-  absl::optional<std::string> GetUri() override { return payload_->GetUri(); }
+  std::optional<std::string> GetUri() override { return payload_->GetUri(); }
   std::string DebugString() override { return payload_->DebugString(); }
 
  private:
@@ -288,7 +288,7 @@ class RawIterable : public RedfishIterable {
   bool Empty() override { return payload_->Empty(); }
   RedfishVariant operator[](int index) const override {
     return RedfishVariant(
-        absl::make_unique<RawVariantImpl>(payload_->GetIndex(index)));
+        std::make_unique<RawVariantImpl>(payload_->GetIndex(index)));
   }
 
  private:
@@ -297,13 +297,13 @@ class RawIterable : public RedfishIterable {
 
 std::unique_ptr<RedfishObject> RawVariantImpl::AsObject() const {
   if (!payload_) return nullptr;
-  return absl::make_unique<RawObject>(payload_);
+  return std::make_unique<RawObject>(payload_);
 }
 
 std::unique_ptr<RedfishIterable> RawVariantImpl::AsIterable() const {
   if (!payload_) return nullptr;
   if (!payload_->IsIndexable()) return nullptr;
-  return absl::make_unique<RawIterable>(payload_);
+  return std::make_unique<RawIterable>(payload_);
 }
 
 // Struct to hold the results of a Redfish HTTP operation.
@@ -397,7 +397,7 @@ class RawIntf : public RedfishInterface {
           absl::FailedPreconditionError("not connected to a Redifsh service"));
     }
     return RedfishVariant(
-        absl::make_unique<RawVariantImpl>(RawPayload::NewShared(
+        std::make_unique<RawVariantImpl>(RawPayload::NewShared(
             PayloadUniquePtr(getPayloadByUri(service_.get(), uri.data())))));
   }
 
@@ -433,7 +433,7 @@ class RawIntf : public RedfishInterface {
     // Return the result as a variant.
     LibredfishCallbackResult async_payload = channel.WaitForPayloadAndConsume();
     return RedfishVariant(
-        absl::make_unique<RawVariantImpl>(
+        std::make_unique<RawVariantImpl>(
             RawPayload::NewShared(std::move(async_payload.payload))),
         ecclesia::HttpResponseCodeFromInt(async_payload.http_code));
   }
@@ -470,7 +470,7 @@ class RawIntf : public RedfishInterface {
     // Return the result as a variant.
     LibredfishCallbackResult async_payload = channel.WaitForPayloadAndConsume();
     return RedfishVariant(
-        absl::make_unique<RawVariantImpl>(
+        std::make_unique<RawVariantImpl>(
             RawPayload::NewShared(std::move(async_payload.payload))),
         ecclesia::HttpResponseCodeFromInt(async_payload.http_code));
   }
@@ -500,7 +500,7 @@ std::unique_ptr<RedfishInterface> NewRawInterface(
   // Handler is consumed even on failure.
   ServiceUniquePtr service(createServiceEnumeratorExt(endpoint.c_str(), nullptr,
                                                       nullptr, 0, &handler));
-  return absl::make_unique<RawIntf>(std::move(service), trusted, options);
+  return std::make_unique<RawIntf>(std::move(service), trusted, options);
 }
 
 // Constructor method for creating a RawInterface with auth session.
@@ -527,8 +527,8 @@ std::unique_ptr<RedfishInterface> NewRawSessionAuthInterface(
   if (service == nullptr) {
     return nullptr;
   }
-  return absl::make_unique<RawIntf>(std::move(service),
-                                    RedfishInterface::kTrusted, options);
+  return std::make_unique<RawIntf>(std::move(service),
+                                   RedfishInterface::kTrusted, options);
 }
 
 std::unique_ptr<RedfishInterface> NewRawBasicAuthInterface(
@@ -543,9 +543,9 @@ std::unique_ptr<RedfishInterface> NewRawBasicAuthInterface(
 
   ServiceUniquePtr service(createServiceEnumerator(
       connectionArgs.endpoint.c_str(), nullptr, &auth, 0));
-  return absl::make_unique<RawIntf>(std::move(service),
-                                    RedfishInterface::kTrusted,
-                                    kDefaultRedfishRawInterfaceOptions);
+  return std::make_unique<RawIntf>(std::move(service),
+                                   RedfishInterface::kTrusted,
+                                   kDefaultRedfishRawInterfaceOptions);
 }
 
 std::unique_ptr<RedfishInterface> NewRawTlsAuthInterface(
@@ -563,9 +563,9 @@ std::unique_ptr<RedfishInterface> NewRawTlsAuthInterface(
 
   ServiceUniquePtr service(createServiceEnumerator(
       connectionArgs.endpoint.c_str(), nullptr, &auth, 0));
-  return absl::make_unique<RawIntf>(std::move(service),
-                                    RedfishInterface::kTrusted,
-                                    kDefaultRedfishRawInterfaceOptions);
+  return std::make_unique<RawIntf>(std::move(service),
+                                   RedfishInterface::kTrusted,
+                                   kDefaultRedfishRawInterfaceOptions);
 }
 
 }  // namespace libredfish

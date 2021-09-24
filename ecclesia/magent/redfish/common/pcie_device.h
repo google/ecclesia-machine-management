@@ -17,10 +17,10 @@
 #ifndef ECCLESIA_MAGENT_REDFISH_COMMON_PCIE_DEVICE_H_
 #define ECCLESIA_MAGENT_REDFISH_COMMON_PCIE_DEVICE_H_
 
+#include <optional>
 #include <string>
+#include <variant>
 
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/magent/redfish/core/index_resource.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"

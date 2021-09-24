@@ -17,12 +17,12 @@
 #include "ecclesia/magent/sysmodel/x86/thermal.h"
 
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
 #include "absl/memory/memory.h"
 #include "absl/status/statusor.h"
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/io/pci/config.h"
 #include "ecclesia/lib/io/pci/pci.h"
@@ -41,14 +41,14 @@ PciThermalSensor::PciThermalSensor(const PciSensorParams &params,
       offset_(params.offset),
       device_(std::move(device)) {}
 
-absl::optional<int> PciThermalSensor::Read() {
+std::optional<int> PciThermalSensor::Read() {
   if (device_) {
     auto maybe_uint16 = device_->ConfigSpace()->Region()->Read16(offset_);
     if (maybe_uint16.ok()) {
       return maybe_uint16.value();
     }
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 
 std::vector<PciThermalSensor> CreatePciThermalSensors(

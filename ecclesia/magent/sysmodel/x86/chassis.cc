@@ -16,23 +16,23 @@
 
 #include "ecclesia/magent/sysmodel/x86/chassis.h"
 
+#include <optional>
 #include <vector>
 
 #include "absl/status/statusor.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/io/usb/ids.h"
 #include "ecclesia/lib/io/usb/usb.h"
 
 namespace ecclesia {
 
-absl::optional<ChassisId> DetectChassisByUsb(
+std::optional<ChassisId> DetectChassisByUsb(
     UsbDiscoveryInterface *usb_discover_intf) {
   auto sleipnir_location =
       FindUsbDeviceWithSignature(usb_discover_intf, kUsbSignatureSleipnirBmc);
   if (sleipnir_location.ok()) {
     return ChassisId::kSleipnir;
   }
-  return absl::nullopt;
+  return std::nullopt;
 }
 
 std::vector<ChassisId> CreateChassis(UsbDiscoveryInterface *usb_discover_intf) {

@@ -26,9 +26,9 @@
 #ifndef ECCLESIA_LIB_IO_PCI_SIGNATURE_H_
 #define ECCLESIA_LIB_IO_PCI_SIGNATURE_H_
 
+#include <optional>
 #include <tuple>
 
-#include "absl/types/optional.h"
 #include "ecclesia/lib/types/fixed_range_int.h"
 
 namespace ecclesia {
@@ -58,12 +58,12 @@ class PciBaseSignature {
     return PciBaseSignature(PciIdNum::Make<vid>(), PciIdNum::Make<did>());
   }
 
-  static absl::optional<PciBaseSignature> TryMake(int vid, int did) {
+  static std::optional<PciBaseSignature> TryMake(int vid, int did) {
     auto maybe_vendor_id = PciIdNum::TryMake(vid);
     auto maybe_device_id = PciIdNum::TryMake(did);
 
     if (!maybe_vendor_id || !maybe_device_id) {
-      return absl::nullopt;
+      return std::nullopt;
     }
 
     return PciBaseSignature(*maybe_vendor_id, *maybe_device_id);
@@ -103,12 +103,12 @@ class PciSubsystemSignature {
                                  PciIdNum::Make<ssid>());
   }
 
-  static absl::optional<PciSubsystemSignature> TryMake(int ssvid, int ssid) {
+  static std::optional<PciSubsystemSignature> TryMake(int ssvid, int ssid) {
     auto maybe_vendor_id = PciIdNum::TryMake(ssvid);
     auto maybe_id = PciIdNum::TryMake(ssid);
 
     if (!maybe_vendor_id || !maybe_id) {
-      return absl::nullopt;
+      return std::nullopt;
     }
 
     return PciSubsystemSignature(*maybe_vendor_id, *maybe_id);
@@ -149,13 +149,13 @@ class PciFullSignature {
                             PciSubsystemSignature::Make<ssvid, ssid>());
   }
 
-  static absl::optional<PciFullSignature> TryMake(int vid, int did, int ssvid,
-                                                  int ssid) {
+  static std::optional<PciFullSignature> TryMake(int vid, int did, int ssvid,
+                                                 int ssid) {
     auto maybe_base = PciBaseSignature::TryMake(vid, did);
     auto maybe_subsystem = PciSubsystemSignature::TryMake(ssvid, ssid);
 
     if (!maybe_base || !maybe_subsystem) {
-      return absl::nullopt;
+      return std::nullopt;
     }
 
     return PciFullSignature(*maybe_base, *maybe_subsystem);

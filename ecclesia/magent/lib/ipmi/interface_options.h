@@ -19,12 +19,13 @@
 #ifndef ECCLESIA_MAGENT_LIB_IPMI_INTERFACE_OPTIONS_H_
 #define ECCLESIA_MAGENT_LIB_IPMI_INTERFACE_OPTIONS_H_
 
-#include "absl/types/optional.h"
+#include <optional>
+
 #include "ecclesia/magent/proto/config.pb.h"
 
 namespace ecclesia {
 
-absl::optional<ecclesia::MagentConfig::IpmiCredential> GetIpmiCredentialFromPb(
+std::optional<ecclesia::MagentConfig::IpmiCredential> GetIpmiCredentialFromPb(
     const char *path);
 
 }  // namespace ecclesia

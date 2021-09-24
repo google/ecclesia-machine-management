@@ -16,7 +16,8 @@
 
 #include "ecclesia/lib/io/pci/proto_lib.h"
 
-#include "absl/types/optional.h"
+#include <optional>
+
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/pci/pci.pb.h"
 #include "ecclesia/lib/io/pci/signature.h"
@@ -32,7 +33,7 @@ PciLocationProtobuf PciLocationToProto(const PciDbdfLocation &location) {
   return protobuf;
 }
 
-absl::optional<PciDbdfLocation> PciLocationFromProto(
+std::optional<PciDbdfLocation> PciLocationFromProto(
     const PciLocationProtobuf &location) {
   return PciDbdfLocation::TryMake(location.domain(), location.bus(),
                                   location.device(), location.function());
@@ -46,7 +47,7 @@ PciBaseSignatureProtobuf PciBaseSignatureToProto(
   return protobuf;
 }
 
-absl::optional<PciBaseSignature> PciBaseSignatureFromProto(
+std::optional<PciBaseSignature> PciBaseSignatureFromProto(
     const PciBaseSignatureProtobuf &signature) {
   return PciBaseSignature::TryMake(signature.vendor_id(),
                                    signature.device_id());
@@ -60,7 +61,7 @@ PciSubsystemSignatureProtobuf PciSubsystemSignatureToProto(
   return protobuf;
 }
 
-absl::optional<PciSubsystemSignature> PciSubsystemSignatureFromProto(
+std::optional<PciSubsystemSignature> PciSubsystemSignatureFromProto(
     const PciSubsystemSignatureProtobuf &signature) {
   return PciSubsystemSignature::TryMake(signature.vendor_id(), signature.id());
 }

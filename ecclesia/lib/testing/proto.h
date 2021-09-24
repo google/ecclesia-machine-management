@@ -166,7 +166,7 @@ class ProtoMatcherBase {
 
   // Create a message differencer for use in comparisons.
   std::unique_ptr<google::protobuf::util::MessageDifferencer> MakeDifferencer() const {
-    auto differencer = absl::make_unique<google::protobuf::util::MessageDifferencer>();
+    auto differencer = std::make_unique<google::protobuf::util::MessageDifferencer>();
     differencer->set_repeated_field_comparison(repeated_field_comparison_);
     return differencer;
   }

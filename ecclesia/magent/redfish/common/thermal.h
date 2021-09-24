@@ -17,12 +17,12 @@
 #ifndef ECCLESIA_MAGENT_REDFISH_COMMON_THERMAL_H_
 #define ECCLESIA_MAGENT_REDFISH_COMMON_THERMAL_H_
 
+#include <optional>
 #include <string>
 #include <utility>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/magent/redfish/core/json_helper.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"

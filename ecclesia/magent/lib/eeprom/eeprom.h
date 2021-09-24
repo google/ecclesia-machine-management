@@ -23,8 +23,8 @@
 
 #include <cstddef>
 #include <cstdlib>
+#include <optional>
 
-#include "absl/types/optional.h"
 #include "absl/types/span.h"
 
 namespace ecclesia {
@@ -43,7 +43,7 @@ class Eeprom {
       kFixed = 0,
       kDynamic = 1,
     } type;
-    absl::optional<size_t> size;
+    std::optional<size_t> size;
   };
 
   Eeprom() {}
@@ -58,12 +58,12 @@ class Eeprom {
 
   // Read value.size() bytes from the eeprom.
   // Returns: number of bytes successfully read or <0 on error.
-  virtual absl::optional<int> ReadBytes(
+  virtual std::optional<int> ReadBytes(
       size_t offset, absl::Span<unsigned char> value) const = 0;
 
   // Write to the eeprom.
   // Returns: number of bytes successfully written or <0 on error.
-  virtual absl::optional<int> WriteBytes(
+  virtual std::optional<int> WriteBytes(
       size_t offset, absl::Span<const unsigned char> data) const = 0;
 };
 

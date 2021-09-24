@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 #include <cstddef>
+#include <optional>
 #include <string>
 
 #include "absl/cleanup/cleanup.h"
@@ -28,7 +29,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/posix.h"
 

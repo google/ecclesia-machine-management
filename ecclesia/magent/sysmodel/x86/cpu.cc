@@ -17,6 +17,7 @@
 #include "ecclesia/magent/sysmodel/x86/cpu.h"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -26,7 +27,6 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/io/constants.h"
 #include "ecclesia/lib/io/msr.h"
 #include "ecclesia/lib/smbios/processor_information.h"

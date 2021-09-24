@@ -9,8 +9,6 @@ cc_library(
     deps = [
         ":elog_emb",
         "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:optional",
-        "@com_google_absl//absl/types:variant",
         "@com_google_emboss//runtime/cpp:cpp_utils",
     ],
 )
@@ -32,8 +30,6 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:optional",
-        "@com_google_absl//absl/types:variant",
         "@com_googlesource_code_re2//:re2",
     ],
 )
@@ -49,7 +45,6 @@ cc_library(
         "//ecclesia/lib/logging",
         "//ecclesia/lib/smbios:reader",
         "//ecclesia/lib/smbios:structures_emb",
-        "@com_google_absl//absl/types:optional",
         "@com_google_emboss//runtime/cpp:cpp_utils",
     ],
 )
@@ -67,8 +62,6 @@ cc_test(
         ":event_reader",
         ":mced_reader",
         "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:optional",
-        "@com_google_absl//absl/types:variant",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -88,8 +81,6 @@ cc_test(
         "//ecclesia/lib/smbios:structures_emb",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:optional",
-        "@com_google_absl//absl/types:variant",
         "@com_google_emboss//runtime/cpp:cpp_utils",
         "@com_google_googletest//:gtest_main",
     ],

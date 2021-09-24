@@ -17,13 +17,13 @@
 #include "ecclesia/magent/lib/event_logger/system_event_visitors.h"
 
 #include <memory>
+#include <optional>
 #include <type_traits>
+#include <variant>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
-#include "absl/types/variant.h"
 #include "ecclesia/lib/mcedecoder/mce_decode.h"
 #include "ecclesia/lib/mcedecoder/mce_messages.h"
 #include "ecclesia/magent/lib/event_reader/elog.emb.h"
@@ -50,7 +50,7 @@ MachineCheck TransformElogToMachineCheck(
   return result;
 }
 
-// A functor to visit absl::variant<MachineCheck, Elog> and generate cpu error
+// A functor to visit std::variant<MachineCheck, Elog> and generate cpu error
 // counts
 class DecodeAndUpdateCpuCounts {
  public:
@@ -100,7 +100,7 @@ class DecodeAndUpdateCpuCounts {
   absl::flat_hash_map<int, CpuErrorCount> *error_counts_;
 };
 
-// A functor to visit absl::variant<MachineCheck, Elog> and generate dimm error
+// A functor to visit std::variant<MachineCheck, Elog> and generate dimm error
 // counts
 class DecodeAndUpdateDimmCounts {
  public:
@@ -154,7 +154,7 @@ class DecodeAndUpdateDimmCounts {
 
 }  // namespace
 
-absl::optional<MceDecodedMessage> MceDecoderAdapter::Decode(
+std::optional<MceDecodedMessage> MceDecoderAdapter::Decode(
     const MachineCheck &mce) {
   MceLogMessage raw_mce;
   if (mce.cpu) raw_mce.lpu_id = mce.cpu.value();
@@ -168,7 +168,7 @@ absl::optional<MceDecodedMessage> MceDecoderAdapter::Decode(
   if (maybe_decoded_mce.ok()) {
     return *maybe_decoded_mce;
   } else {
-    return absl::nullopt;
+    return std::nullopt;
   }
 }
 
@@ -179,8 +179,8 @@ bool CpuErrorCountingVisitor::Visit(const SystemEventRecord &record) {
   if (!last_record_timestamp_) {
     last_record_timestamp_ = record.timestamp;
   }
-  absl::visit(DecodeAndUpdateCpuCounts(mce_decoder_.get(), &cpu_error_counts_),
-              record.record);
+  std::visit(DecodeAndUpdateCpuCounts(mce_decoder_.get(), &cpu_error_counts_),
+             record.record);
   return true;
 }
 
@@ -191,9 +191,8 @@ bool DimmErrorCountingVisitor::Visit(const SystemEventRecord &record) {
   if (!last_record_timestamp_) {
     last_record_timestamp_ = record.timestamp;
   }
-  absl::visit(
-      DecodeAndUpdateDimmCounts(mce_decoder_.get(), &dimm_error_counts_),
-      record.record);
+  std::visit(DecodeAndUpdateDimmCounts(mce_decoder_.get(), &dimm_error_counts_),
+             record.record);
   return true;
 }
 

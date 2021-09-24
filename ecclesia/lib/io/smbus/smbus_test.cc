@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/io/smbus/smbus.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -23,25 +24,24 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/meta/type_traits.h"
 #include "absl/strings/str_format.h"
-#include "absl/types/optional.h"
 
 namespace ecclesia {
 namespace {
 
 TEST(SmbusBusTest, TestRangeCheck) {
-  EXPECT_EQ(SmbusBus::TryMake(-1), absl::nullopt);
+  EXPECT_EQ(SmbusBus::TryMake(-1), std::nullopt);
   EXPECT_EQ(SmbusBus::TryMake(0)->value(), 0);
   EXPECT_EQ(SmbusBus::TryMake(1)->value(), 1);
   EXPECT_EQ(SmbusBus::TryMake(255)->value(), 255);
-  EXPECT_EQ(SmbusBus::TryMake(256), absl::nullopt);
+  EXPECT_EQ(SmbusBus::TryMake(256), std::nullopt);
 }
 
 TEST(SmbusAddressTest, TestRangeCheck) {
-  EXPECT_EQ(SmbusAddress::TryMake(-1), absl::nullopt);
+  EXPECT_EQ(SmbusAddress::TryMake(-1), std::nullopt);
   EXPECT_EQ(SmbusAddress::TryMake(0x00)->value(), 0x00);
   EXPECT_EQ(SmbusAddress::TryMake(0x01)->value(), 0x01);
   EXPECT_EQ(SmbusAddress::TryMake(0x7f)->value(), 0x7f);
-  EXPECT_EQ(SmbusAddress::TryMake(0x80), absl::nullopt);
+  EXPECT_EQ(SmbusAddress::TryMake(0x80), std::nullopt);
 }
 
 TEST(SmbusLocationTest, TestComparator) {
@@ -81,8 +81,8 @@ TEST(AccessInterfaceTest, IsHashable) {
 }
 
 TEST(SmbusLocationTest, TryMake) {
-  EXPECT_EQ(SmbusLocation::TryMake(12, 0x8f), absl::nullopt);
-  EXPECT_EQ(SmbusLocation::TryMake(256, 0x7f), absl::nullopt);
+  EXPECT_EQ(SmbusLocation::TryMake(12, 0x8f), std::nullopt);
+  EXPECT_EQ(SmbusLocation::TryMake(256, 0x7f), std::nullopt);
   EXPECT_EQ(SmbusLocation::TryMake(10, 0x1f),
             (SmbusLocation::Make<10, 0x1f>()));
   EXPECT_EQ(SmbusLocation::TryMake(12, 0x23),
@@ -90,13 +90,13 @@ TEST(SmbusLocationTest, TryMake) {
 }
 
 TEST(SmbusLocationTest, FromString) {
-  EXPECT_EQ(SmbusLocation::FromString(""), absl::nullopt);
-  EXPECT_EQ(SmbusLocation::FromString("12"), absl::nullopt);
-  EXPECT_EQ(SmbusLocation::FromString("12-23-34"), absl::nullopt);
-  EXPECT_EQ(SmbusLocation::FromString("12-2g"), absl::nullopt);
-  EXPECT_EQ(SmbusLocation::FromString("a-23"), absl::nullopt);
-  EXPECT_EQ(SmbusLocation::FromString("12-8f"), absl::nullopt);
-  EXPECT_EQ(SmbusLocation::FromString("256-7f"), absl::nullopt);
+  EXPECT_EQ(SmbusLocation::FromString(""), std::nullopt);
+  EXPECT_EQ(SmbusLocation::FromString("12"), std::nullopt);
+  EXPECT_EQ(SmbusLocation::FromString("12-23-34"), std::nullopt);
+  EXPECT_EQ(SmbusLocation::FromString("12-2g"), std::nullopt);
+  EXPECT_EQ(SmbusLocation::FromString("a-23"), std::nullopt);
+  EXPECT_EQ(SmbusLocation::FromString("12-8f"), std::nullopt);
+  EXPECT_EQ(SmbusLocation::FromString("256-7f"), std::nullopt);
   EXPECT_EQ(SmbusLocation::FromString("10-1f"),
             (SmbusLocation::Make<10, 0x1f>()));
   EXPECT_EQ(SmbusLocation::FromString("12-23"),

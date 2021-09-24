@@ -28,6 +28,8 @@
 #include <tuple>
 #include <utility>
 
+#include <optional>
+
 #include "google/protobuf/timestamp.pb.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/cleanup/cleanup.h"
@@ -39,7 +41,6 @@
 #include "absl/strings/str_format.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
-#include "absl/types/optional.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/usage/serialization.pb.h"
