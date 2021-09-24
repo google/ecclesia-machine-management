@@ -27,12 +27,14 @@
 #include <string>
 
 #include "gtest/gtest.h"
+#include "absl/cleanup/cleanup.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/codec/bits.h"
 #include "ecclesia/lib/codec/endian.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/testing/status.h"
 
 namespace ecclesia {
 
@@ -44,55 +46,37 @@ constexpr absl::StatusCode kInternalError = absl::StatusCode::kInternal;
 }  // namespace
 
 TEST(MmioSanity, EmptyRange) {
-  MmioRangeFromFile mmio(AddressRange(1, 0), "/nonexistent");
-
-  EXPECT_EQ(mmio.Read8(0).status().code(), kInternalError);
-  EXPECT_EQ(mmio.Read16(0).status().code(), kInternalError);
-  EXPECT_EQ(mmio.Read32(0).status().code(), kInternalError);
+  auto mmio = MmioRangeFromFile::Create(AddressRange(1, 0), "/nonexistent");
+  EXPECT_THAT(mmio, IsStatusInvalidArgument());
 }
 
-TEST(MmioNoDevice, ReadFailure) {
-  MmioRangeFromFile mmio(AddressRange(0, 0), "/nonexistent");
-
-  EXPECT_EQ(mmio.Read8(0).status().code(), kInternalError);
-  EXPECT_EQ(mmio.Read16(0).status().code(), kInternalError);
-  EXPECT_EQ(mmio.Read32(0).status().code(), kInternalError);
-}
-
-TEST(MmioNoDevice, WriteFailure) {
-  MmioRangeFromFile mmio(AddressRange(0, 0), "/nonexistent");
-
-  const uint8_t val8 = 0xef;
-  const uint16_t val16 = 0xbeef;
-  const uint32_t val32 = 0xdeadbeef;
-  EXPECT_EQ(mmio.Write8(0, val8).code(), kInternalError);
-  EXPECT_EQ(mmio.Write16(0, val16).code(), kInternalError);
-  EXPECT_EQ(mmio.Write32(0, val32).code(), kInternalError);
+TEST(MmioNoDevice, FileFailure) {
+  auto mmio = MmioRangeFromFile::Create(AddressRange(0, 0), "/nonexistent");
+  EXPECT_THAT(mmio, IsStatusInternal());
 }
 
 class MmioAccessTest : public testing::Test {
  protected:
+  ~MmioAccessTest() override {
+    munmap(mmconfig_, size_);
+    unlink(mmconfig_filename_.c_str());
+  }
+
   void SetupMmconfig(int size) {
     size_ = size;
     // Create a sparse file to represent PCI config space and mmap it.
     mmconfig_filename_ = JoinFilePaths(GetTestTempdirPath(), "mmconfig");
     int fd = open(mmconfig_filename_.c_str(), O_CREAT | O_RDWR | O_TRUNC,
                   S_IRWXU | S_IRWXG);
+    auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+
     ASSERT_GE(fd, 0);
     lseek(fd, size_, SEEK_SET);
     write(fd, "\x00", 1);
 
     mmconfig_ = reinterpret_cast<uint8_t *>(
         mmap(nullptr, size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
-
-    close(fd);
-
     EXPECT_TRUE(mmconfig_);
-  }
-
-  void TearDown() override {
-    munmap(mmconfig_, size_);
-    unlink(mmconfig_filename_.c_str());
   }
 
   int size_;
@@ -102,23 +86,25 @@ class MmioAccessTest : public testing::Test {
 
 TEST_F(MmioAccessTest, ReadSuccess) {
   SetupMmconfig(256);
-  MmioRangeFromFile mmio(AddressRange(0, 256), mmconfig_filename_);
+  auto mmio =
+      MmioRangeFromFile::Create(AddressRange(0, 256), mmconfig_filename_);
+  ASSERT_THAT(mmio, IsOk());
 
   const uint32_t expected_val = 0xdeadbeef;
   LittleEndian::Store32(expected_val, mmconfig_);
 
   {
-    auto maybe_val = mmio.Read8(0);
+    auto maybe_val = mmio->Read8(0);
     ASSERT_TRUE(maybe_val.ok()) << maybe_val.status();
     EXPECT_EQ(maybe_val.value(), 0xef);
   }
   {
-    auto maybe_val = mmio.Read16(0);
+    auto maybe_val = mmio->Read16(0);
     ASSERT_TRUE(maybe_val.ok()) << maybe_val.status();
     EXPECT_EQ(maybe_val.value(), 0xbeef);
   }
   {
-    auto maybe_val = mmio.Read32(0);
+    auto maybe_val = mmio->Read32(0);
     ASSERT_TRUE(maybe_val.ok()) << maybe_val.status();
     EXPECT_EQ(maybe_val.value(), 0xdeadbeef);
   }
@@ -127,14 +113,16 @@ TEST_F(MmioAccessTest, ReadSuccess) {
 TEST_F(MmioAccessTest, WriteSuccess) {
   SetupMmconfig(256);
   uint64_t first_address = 16;
-  MmioRangeFromFile mmio(AddressRange(first_address, 256), mmconfig_filename_);
+  auto mmio = MmioRangeFromFile::Create(AddressRange(first_address, 256),
+                                        mmconfig_filename_);
+  ASSERT_THAT(mmio, IsOk());
 
   // Fill memory with alternating 0's and 1's for overwrite checking
   std::fill(mmconfig_, mmconfig_ + size_, 0xaa);
 
   uint64_t offset = 0x38;
   {
-    EXPECT_EQ(mmio.Write8(offset, 0xef).code(), kOkStatus);
+    EXPECT_EQ(mmio->Write8(offset, 0xef).code(), kOkStatus);
 
     // Read back 32 bytes even though only 8 bytes were written, to verify that
     // nothing overwrote the space beyond 8 bytes.
@@ -143,7 +131,7 @@ TEST_F(MmioAccessTest, WriteSuccess) {
     EXPECT_EQ(0xaaaaaaef, val);
   }
   {
-    EXPECT_EQ(mmio.Write16(offset, 0xbeef).code(), kOkStatus);
+    EXPECT_EQ(mmio->Write16(offset, 0xbeef).code(), kOkStatus);
 
     // Read back 32 bytes even though only 8 bytes were
     uint32_t val;
@@ -151,7 +139,7 @@ TEST_F(MmioAccessTest, WriteSuccess) {
     EXPECT_EQ(0xaaaabeef, val);
   }
   {
-    EXPECT_EQ(mmio.Write32(offset, 0xdeadbeef).code(), kOkStatus);
+    EXPECT_EQ(mmio->Write32(offset, 0xdeadbeef).code(), kOkStatus);
 
     uint32_t val;
     memcpy(&val, mmconfig_ + first_address + offset, sizeof(val));

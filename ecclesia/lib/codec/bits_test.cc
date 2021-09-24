@@ -213,6 +213,11 @@ TEST(AddressRangeTest, CheckFirstAndLast) {
   EXPECT_TRUE(empty_range.Empty());
   EXPECT_EQ(empty_range.FirstAddress(), 0x12345678);
   EXPECT_EQ(empty_range.LastAddress(), 0x12345678);
+
+  AddressRange single_range(0x12345678, 0x12345678);
+  EXPECT_FALSE(single_range.Empty());
+  EXPECT_EQ(single_range.FirstAddress(), 0x12345678);
+  EXPECT_EQ(single_range.LastAddress(), 0x12345678);
 }
 
 TEST(AddressRangeTest, EqualAndNotEqual) {

@@ -58,7 +58,7 @@ std::ostream &operator<<(std::ostream &out, const MaskedAddress &ma) {
   return out;
 }
 
-bool AddressRange::Empty() const { return last_ <= first_; }
+bool AddressRange::Empty() const { return last_ < first_; }
 
 bool AddressRange::InRange(uint64_t address) const {
   if (Empty()) {

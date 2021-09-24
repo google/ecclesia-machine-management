@@ -60,6 +60,17 @@ class MmioRange {
 // An implementation of MmioRange backed by a memory device file.
 class MmioRangeFromFile : public MmioRange {
  public:
+  // Create a MMIO range backed by a memory device file, covering the specified
+  // address range. The range can be specified as either a base_address+size or
+  // as a AddressRange.
+  //
+  // If the file was successfully mapped then an object will be returned with an
+  // OK status. Otherwise an error will be returned.
+  static absl::StatusOr<MmioRangeFromFile> Create(
+      uint64_t base_address, size_t size,
+      absl::string_view physical_mem_device);
+  static absl::StatusOr<MmioRangeFromFile> Create(
+      AddressRange address_range, absl::string_view physical_mem_device);
   // Args:
   //   size: size of the range.
   //   first_address: The start address to the range. The exposed byte range
@@ -102,6 +113,11 @@ class MmioRangeFromFile : public MmioRange {
   size_t Size() const override { return size_; }
 
  private:
+  // Underlying constructor for the range. The constructor arguments are assumed
+  // to be already valid, verified by the factory function(s).
+  MmioRangeFromFile(size_t size, MappedMemory mmap)
+      : size_(size), mmap_(std::move(mmap)) {}
+
   // Helper functions for generic-sized reads/writes.
   // The typename T specifies the size (e.g. uint32_t) to enforce aligned
   // reads/writes.
@@ -112,14 +128,12 @@ class MmioRangeFromFile : public MmioRange {
           "offset %#x is not aligned with read size %d", offset, sizeof(T)));
     }
 
-    ECCLESIA_RETURN_IF_ERROR(mmap_.status());
     if (offset + span.size() > Size()) {
       return absl::InvalidArgumentError(absl::StrFormat(
           "register access %#x bytes @ %#x", span.size(), offset));
     }
 
-    absl::Span<const uint8_t> mem =
-        mmap_.value().MemoryAsReadOnlySpan<uint8_t>();
+    absl::Span<const uint8_t> mem = mmap_.MemoryAsReadOnlySpan<uint8_t>();
     // This is the critical part that forces an aligned, specific-size data copy
     // from mmap'd PCI config space.
     const T typed_value =
@@ -135,13 +149,12 @@ class MmioRangeFromFile : public MmioRange {
           "offset %#x is not aligned with read size %d", offset, sizeof(T)));
     }
 
-    ECCLESIA_RETURN_IF_ERROR(mmap_.status());
     if (offset + span.size() > Size()) {
       return absl::InvalidArgumentError(absl::StrFormat(
           "register access %#x bytes @ %#x", span.size(), offset));
     }
 
-    absl::Span<uint8_t> mem = mmap_.value().MemoryAsReadWriteSpan<uint8_t>();
+    absl::Span<uint8_t> mem = mmap_.MemoryAsReadWriteSpan<uint8_t>();
     if (mem.empty()) {
       return absl::InternalError("could not get mapped memory for writing");
     }
@@ -154,7 +167,7 @@ class MmioRangeFromFile : public MmioRange {
   }
 
   size_t size_;
-  absl::StatusOr<MappedMemory> mmap_;
+  MappedMemory mmap_;
 };
 
 }  // namespace ecclesia
