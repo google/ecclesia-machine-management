@@ -44,6 +44,7 @@ void FakeRedfishServer::ClearHandlers() {
   http_get_handlers_.clear();
   http_patch_handlers_.clear();
   http_post_handlers_.clear();
+  http_delete_handlers_.clear();
 }
 
 void FakeRedfishServer::AddHttpGetHandlerWithData(std::string uri,
@@ -94,6 +95,17 @@ void FakeRedfishServer::HandleHttpPost(
   itr->second(req);
 }
 
+void FakeRedfishServer::HandleHttpDelete(
+    ::tensorflow::serving::net_http::ServerRequestInterface *req) {
+  absl::MutexLock mu(&patch_lock_);
+  auto itr = http_delete_handlers_.find(req->uri_path());
+  if (itr == http_delete_handlers_.end()) {
+    FatalLog() << "Unhandled DELETE to URI: " << req->uri_path();
+    return;
+  }
+  itr->second(req);
+}
+
 void FakeRedfishServer::AddHttpGetHandler(std::string uri,
                                           HandlerFunc handler) {
   absl::MutexLock mu(&patch_lock_);
@@ -110,6 +122,12 @@ void FakeRedfishServer::AddHttpPostHandler(std::string uri,
                                            HandlerFunc handler) {
   absl::MutexLock mu(&patch_lock_);
   http_post_handlers_[uri] = std::move(handler);
+}
+
+void FakeRedfishServer::AddHttpDeleteHandler(std::string uri,
+                                             HandlerFunc handler) {
+  absl::MutexLock mu(&patch_lock_);
+  http_delete_handlers_[uri] = std::move(handler);
 }
 
 std::unique_ptr<libredfish::RedfishInterface>
@@ -135,6 +153,8 @@ FakeRedfishServer::FakeRedfishServer(absl::string_view mockup_shar,
           this->HandleHttpPost(req);
         } else if (req->http_method() == "PATCH") {
           this->HandleHttpPatch(req);
+        } else if (req->http_method() == "DELETE") {
+          this->HandleHttpDelete(req);
         }
       };
   proxy_server_->RegisterRequestDispatcher(
