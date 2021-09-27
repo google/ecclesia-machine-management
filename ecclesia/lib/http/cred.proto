@@ -5,6 +5,4 @@ package ecclesia;
 message HttpCredential {
   string username = 1;
   string password = 2;
-  string hostname = 3;
-  uint32 port = 4;
 }

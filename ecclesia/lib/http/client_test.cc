@@ -16,17 +16,19 @@
 
 #include "ecclesia/lib/http/client.h"
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/status/statusor.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 namespace {
 
+using testing::Eq;
+
 TEST(BodyJson, JsonTestFail) {
   HttpClient::HttpResponse rsp{.code = 0, .body = "fasdfasgd", .headers = {}};
-  auto maybe_json = rsp.GetBodyJson();
-  EXPECT_FALSE(maybe_json.ok());
+  auto json = rsp.GetBodyJson();
+  EXPECT_TRUE(json.is_discarded());
 }
 
 TEST(BodyJson, SimpleJsonTest) {
@@ -79,12 +81,11 @@ TEST(BodyJson, SimpleJsonTest) {
   )json";
 
   HttpClient::HttpResponse rsp{.code = 0, .body = kV1, .headers = {}};
-  auto maybe_json = rsp.GetBodyJson();
+  auto json = rsp.GetBodyJson();
 
-  ASSERT_TRUE(maybe_json.ok());
-  EXPECT_EQ((*maybe_json)["@odata.id"], "/redfish/v1");
-  EXPECT_EQ((*maybe_json)["UUID"], "9f93b55e-f481-4f19-bca1-9a9fc5f13fc8");
-  EXPECT_EQ((*maybe_json)["Tasks"]["@odata.id"], "/redfish/v1/TaskService");
+  ASSERT_FALSE(json.is_discarded());
+  EXPECT_THAT(json, Eq(nlohmann::json::parse(kV1, nullptr,
+                                             /*allow_exceptions=*/false)));
 }
 
 TEST(BodyJson, NestedJsonTest) {
@@ -134,28 +135,12 @@ TEST(BodyJson, NestedJsonTest) {
     })json";
 
   // Test that Json::Value returned from GetBodyJson() outlives HttpReponse.
-  absl::StatusOr<nlohmann::json> maybe_json;
-  {
-    HttpClient::HttpResponse rsp{
-        .code = 0, .body = kSomeRequest, .headers = {}};
-    maybe_json = rsp.GetBodyJson();
-    ASSERT_TRUE(maybe_json.ok());
-  }
-
-  EXPECT_EQ((*maybe_json)["ContentLength"], 1324);
-  EXPECT_EQ((*maybe_json)["inputs"][0]["context"]["locale_language"], "en");
-  EXPECT_EQ(
-      (*maybe_json)["inputs"][0]["payload"]["commands"][0]["devices"][0]["id"],
-      "027ba93d-a8e1-4127-8f66-1c97831153a4");
-  EXPECT_EQ((*maybe_json)["inputs"][0]["payload"]["commands"][0]["devices"][0]
-                         ["customData"]["capabilities"]["max_kelvin"],
-            9000);
-  EXPECT_EQ((*maybe_json)["inputs"][0]["payload"]["commands"][0]["execution"][0]
-                         ["command"],
-            "action.devices.commands.OnOff");
-  EXPECT_EQ((*maybe_json)["inputs"][0]["payload"]["commands"][0]["execution"][0]
-                         ["params"]["on"],
-            false);
+  nlohmann::json json = nlohmann::json::value_t::discarded;
+  HttpClient::HttpResponse rsp{.code = 0, .body = kSomeRequest, .headers = {}};
+  json = rsp.GetBodyJson();
+  ASSERT_FALSE(json.is_discarded());
+  EXPECT_THAT(json, Eq(nlohmann::json::parse(kSomeRequest, nullptr,
+                                             /*allow_exceptions=*/false)));
 }
 
 }  // namespace

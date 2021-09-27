@@ -183,20 +183,9 @@ class CurlHttpClient : public HttpClient {
   absl::StatusOr<HttpResponse> Patch(
       std::unique_ptr<HttpRequest> request) override;
 
-  // Helper methods for simple cases.
-  // "path" is an absolute Redfish path, e.g., "/redfish/v1".
-  absl::StatusOr<HttpResponse> GetPath(absl::string_view path);
-  absl::StatusOr<HttpResponse> PostPath(absl::string_view path,
-                                        absl::string_view post);
-  absl::StatusOr<HttpResponse> DeletePath(absl::string_view path);
-  absl::StatusOr<HttpResponse> PatchPath(absl::string_view path,
-                                         absl::string_view patch);
-
   Config GetConfig() const { return config_; }
 
  private:
-  absl::StatusOr<std::unique_ptr<HttpClient::HttpRequest>> InitRequest(
-      absl::string_view path);
   absl::StatusOr<HttpResponse> HttpMethod(Protocol cmd,
                                           std::unique_ptr<HttpRequest> request)
       ABSL_LOCKS_EXCLUDED(mu_);
@@ -206,12 +195,9 @@ class CurlHttpClient : public HttpClient {
   static size_t BodyCallback(const void *data, size_t size, size_t nmemb,
                              void *userp);
 
-  std::string ComposeUri(absl::string_view uri);
-
   std::unique_ptr<LibCurl> libcurl_;
   HttpCredential cred_;
   Config config_;
-  const std::string host_;
   const std::string user_pwd_;
 
   CURL *curl_ ABSL_GUARDED_BY(mu_);

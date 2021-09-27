@@ -21,24 +21,36 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "curl/curl.h"
+#include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"
+#include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
+#include "single_include/nlohmann/json.hpp"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
 namespace {
+
+using testing::Eq;
+using testing::Gt;
 
 HttpCredential GetSimpleCredential() {
   auto cred = HttpCredential();
   cred.set_username("user");
   cred.set_password("password");
-  cred.set_hostname("0000::0000:0000:0000:0000%eth2");
-  cred.set_port(0);
   return cred;
 }
 
@@ -245,6 +257,379 @@ TEST(CurlHttpClient, TestDefaultConfig) {
   EXPECT_EQ(config.dns_timeout, 60);
   EXPECT_FALSE(config.follow_redirect);
   EXPECT_EQ(config.max_recv_speed, -1);
+}
+
+class CurlHttpClientTest : public ::testing::Test {
+ protected:
+  CurlHttpClientTest()
+      : server_("barebones_session_auth/mockup.shar",
+                absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket")),
+        endpoint_(absl::StrFormat("%s:%d", server_.GetConfig().hostname,
+                                  server_.GetConfig().port)),
+        curl_http_client_(LibCurlProxy::CreateInstance(), HttpCredential()) {}
+
+  FakeRedfishServer server_;
+  const std::string endpoint_;
+  CurlHttpClient curl_http_client_;
+};
+
+TEST_F(CurlHttpClientTest, CanGet) {
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1", endpoint_);
+  auto result = curl_http_client_.Get(std::move(req));
+  ASSERT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(200));
+  nlohmann::json expected =
+      nlohmann::json::parse(R"json({
+  "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+  "@odata.id": "/redfish/v1",
+  "@odata.type": "#ServiceRoot.v1_5_0.ServiceRoot",
+  "Chassis": {
+      "@odata.id": "/redfish/v1/Chassis"
+  },
+  "Id": "RootService",
+  "Links": {
+      "Sessions": {
+          "@odata.id": "/redfish/v1/SessionService/Sessions"
+      }
+  },
+  "Name": "Root Service",
+  "RedfishVersion": "1.6.1"
+})json",
+                            nullptr, /*allow_exceptions=*/false);
+  EXPECT_THAT(result->GetBodyJson(), Eq(expected));
+}
+
+TEST_F(CurlHttpClientTest, GetInvalidJson) {
+  bool called = false;
+  server_.AddHttpGetHandler(
+      "/redfish/v1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        // Return some invalid JSON.
+        req->WriteResponseString("{");
+        req->Reply();
+      });
+
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1", endpoint_);
+  auto result = curl_http_client_.Get(std::move(req));
+  ASSERT_TRUE(called);
+  EXPECT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(200));
+  EXPECT_TRUE(result->GetBodyJson().is_discarded());
+}
+
+TEST_F(CurlHttpClientTest, GetError) {
+  auto result_json = nlohmann::json::parse(R"json({
+  "error": {
+    "code": "Base.1.0.GeneralError",
+    "message": "A general error has occurred.  See Resolution for information on how to resolve the error, or @Message.ExtendedInfo if Resolution is not provided."
+  }
+})json");
+
+  bool called = false;
+  server_.AddHttpGetHandler(
+      "/redfish/v1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called = true;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::ERROR);
+      });
+
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1", endpoint_);
+  auto result = curl_http_client_.Get(std::move(req));
+  ASSERT_TRUE(called);
+  EXPECT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(500));
+  EXPECT_THAT(result->GetBodyJson(), Eq(result_json));
+}
+
+TEST_F(CurlHttpClientTest, CanPost) {
+  auto request_json = nlohmann::json::parse(R"json({
+  "ResetType": "PowerCycle"
+})json");
+  auto result_json = nlohmann::json::parse(R"json({
+  "error": {
+    "code": "Base.1.0.Success",
+    "message": "Successfully Completed Request",
+    "@Message.ExtendedInfo": [
+      {
+      "@odata.type": "#Message.v1_0_0.Message",
+      "MessageId": "Base.1.0.Success",
+      "Message": "Successfully Completed Request",
+      "Severity": "OK",
+      "Resolution": "None"
+      }
+    ]
+  }
+})json");
+
+  bool called = false;
+  server_.AddHttpPostHandler(
+      "/redfish/v1/Chassis/1/Actions/Chassis.Reset",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        EXPECT_THAT(read_request, Eq(request_json));
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->Reply();
+      });
+
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1/Chassis/1/Actions/Chassis.Reset",
+                             endpoint_);
+  req->body = request_json.dump();
+  auto result = curl_http_client_.Post(std::move(req));
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->GetBodyJson(), Eq(result_json));
+}
+
+TEST_F(CurlHttpClientTest, PostInvalidJson) {
+  auto request_json = nlohmann::json::parse(R"json({
+  "ResetType": "PowerCycle"
+})json");
+  bool called = false;
+  server_.AddHttpPostHandler(
+      "/redfish/v1/Chassis/1/Actions/Chassis.Reset",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        // Return some invalid JSON.
+        req->WriteResponseString("{");
+        req->Reply();
+      });
+
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1/Chassis/1/Actions/Chassis.Reset",
+                             endpoint_);
+  req->body = request_json.dump();
+  auto result = curl_http_client_.Post(std::move(req));
+  ASSERT_TRUE(called);
+  EXPECT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(200));
+  EXPECT_TRUE(result->GetBodyJson().is_discarded());
+}
+
+TEST_F(CurlHttpClientTest, PostError) {
+  auto request_json = nlohmann::json::parse(R"json({
+  "ResetType": "PowerCycle"
+})json");
+  auto result_json = nlohmann::json::parse(R"json({
+  "error": {
+    "code": "Base.1.0.GeneralError",
+    "message": "A general error has occurred.  See Resolution for information on how to resolve the error, or @Message.ExtendedInfo if Resolution is not provided."
+  }
+})json");
+
+  bool called = false;
+  server_.AddHttpPostHandler(
+      "/redfish/v1/Chassis/1/Actions/Chassis.Reset",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called = true;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::ERROR);
+      });
+
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1/Chassis/1/Actions/Chassis.Reset",
+                             endpoint_);
+  req->body = request_json.dump();
+  auto result = curl_http_client_.Post(std::move(req));
+  ASSERT_TRUE(called);
+  EXPECT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(500));
+  EXPECT_THAT(result->GetBodyJson(), Eq(result_json));
+}
+
+TEST_F(CurlHttpClientTest, CanPatch) {
+  auto request_json = nlohmann::json::parse(R"json({
+  "Name": "TestName"
+})json");
+  auto result_json = nlohmann::json::parse(R"json({
+    "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
+    "@odata.id": "/redfish/v1/Chassis/1",
+    "@odata.type": "#Chassis.v1_10_0.Chassis",
+    "Id": "chassis",
+    "Name": "TestName",
+    "Status": {
+        "State": "StandbyOffline"
+    }
+})json");
+
+  bool called = false;
+  server_.AddHttpPatchHandler(
+      "/redfish/v1/Chassis/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        EXPECT_THAT(read_request, Eq(request_json));
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->Reply();
+      });
+
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1/Chassis/1", endpoint_);
+  req->body = request_json.dump();
+  auto result = curl_http_client_.Patch(std::move(req));
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->GetBodyJson(), Eq(result_json));
+}
+
+TEST_F(CurlHttpClientTest, PatchInvalidJson) {
+  auto request_json = nlohmann::json::parse(R"json({
+  "Name": "TestName"
+})json");
+  bool called = false;
+  server_.AddHttpPatchHandler(
+      "/redfish/v1/Chassis/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        // Return some invalid JSON.
+        req->WriteResponseString("{");
+        req->Reply();
+      });
+
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1/Chassis/1", endpoint_);
+  req->body = request_json.dump();
+  auto result = curl_http_client_.Patch(std::move(req));
+  ASSERT_TRUE(called);
+  EXPECT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(200));
+  EXPECT_TRUE(result->GetBodyJson().is_discarded());
+}
+
+TEST_F(CurlHttpClientTest, PatchError) {
+  auto request_json = nlohmann::json::parse(R"json({
+  "Name": "TestName"
+})json");
+  auto result_json = nlohmann::json::parse(R"json({
+  "error": {
+    "code": "Base.1.0.GeneralError",
+    "message": "A general error has occurred.  See Resolution for information on how to resolve the error, or @Message.ExtendedInfo if Resolution is not provided."
+  }
+})json");
+
+  bool called = false;
+  server_.AddHttpPatchHandler(
+      "/redfish/v1/Chassis/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called = true;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::ERROR);
+      });
+
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1/Chassis/1", endpoint_);
+  req->body = request_json.dump();
+  auto result = curl_http_client_.Patch(std::move(req));
+  ASSERT_TRUE(called);
+  EXPECT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(500));
+  EXPECT_THAT(result->GetBodyJson(), Eq(result_json));
+}
+
+TEST_F(CurlHttpClientTest, CanDelete) {
+  auto result_json = nlohmann::json::parse(R"json({
+    "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
+    "@odata.id": "/redfish/v1/Chassis/1",
+    "@odata.type": "#Chassis.v1_10_0.Chassis",
+    "Id": "chassis",
+    "Name": "Name",
+    "Status": {
+        "State": "StandbyOffline"
+    }
+})json");
+
+  bool called = false;
+  server_.AddHttpDeleteHandler(
+      "/redfish/v1/Chassis/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->Reply();
+      });
+
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1/Chassis/1", endpoint_);
+  auto result = curl_http_client_.Delete(std::move(req));
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->GetBodyJson(), Eq(result_json));
+}
+
+TEST_F(CurlHttpClientTest, DeleteError) {
+  auto result_json = nlohmann::json::parse(R"json({
+  "error": {
+    "code": "Base.1.0.GeneralError",
+    "message": "A general error has occurred.  See Resolution for information on how to resolve the error, or @Message.ExtendedInfo if Resolution is not provided."
+  }
+})json");
+
+  bool called = false;
+  server_.AddHttpDeleteHandler(
+      "/redfish/v1/Chassis/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called = true;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::ERROR);
+      });
+
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1/Chassis/1", endpoint_);
+  auto result = curl_http_client_.Delete(std::move(req));
+  ASSERT_TRUE(called);
+  EXPECT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(500));
+  EXPECT_THAT(result->GetBodyJson(), Eq(result_json));
 }
 
 }  // namespace

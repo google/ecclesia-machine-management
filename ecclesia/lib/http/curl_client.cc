@@ -25,12 +25,14 @@
 #include <vector>
 
 #include "absl/base/call_once.h"
+#include "absl/cleanup/cleanup.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/ascii.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
@@ -39,7 +41,6 @@
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/lib/status/macros.h"
 
 namespace ecclesia {
 
@@ -145,7 +146,6 @@ CurlHttpClient::CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
       libcurl_(std::move(libcurl)),
       cred_(std::move(cred)),
       config_(std::move(config)),
-      host_(cred_.hostname()),
       user_pwd_(absl::StrCat(cred_.username(), ":", cred_.password())) {
   curl_ = libcurl_->curl_easy_init();
 }
@@ -172,58 +172,12 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Patch(
   return HttpMethod(Protocol::kPatch, std::move(request));
 }
 
-std::string CurlHttpClient::ComposeUri(absl::string_view path) {
-  // We're assuming "path" begins with "/".
-  return absl::StrCat("https://$0$1", host_, path);
-}
-
-absl::StatusOr<std::unique_ptr<HttpClient::HttpRequest>>
-CurlHttpClient::InitRequest(absl::string_view path) {
-  if (path.empty() || path.front() != '/') {
-    return absl::InvalidArgumentError(
-        "path must be non-empty beginning with \"/\"");
-  }
-  auto rqst = std::make_unique<HttpClient::HttpRequest>();
-  rqst->uri = ComposeUri(path);
-  return rqst;
-}
-
-absl::StatusOr<HttpClient::HttpResponse> CurlHttpClient::GetPath(
-    absl::string_view path) {
-  ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<HttpClient::HttpRequest> rqst,
-                            InitRequest(path));
-  return Get(std::move(rqst));
-}
-
-absl::StatusOr<HttpClient::HttpResponse> CurlHttpClient::PostPath(
-    absl::string_view path, absl::string_view post) {
-  ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<HttpClient::HttpRequest> rqst,
-                            InitRequest(path));
-  rqst->body = post;
-  return Post(std::move(rqst));
-}
-
-absl::StatusOr<HttpClient::HttpResponse> CurlHttpClient::DeletePath(
-    absl::string_view path) {
-  ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<HttpClient::HttpRequest> rqst,
-                            InitRequest(path));
-  return Delete(std::move(rqst));
-}
-
-absl::StatusOr<HttpClient::HttpResponse> CurlHttpClient::PatchPath(
-    absl::string_view path, absl::string_view patch) {
-  ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<HttpClient::HttpRequest> rqst,
-                            InitRequest(path));
-  rqst->body = patch;
-  return Patch(std::move(rqst));
-}
-
 absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
     Protocol cmd, std::unique_ptr<HttpRequest> request) {
   absl::MutexLock l(&mu_);
   SetDefaultCurlOpts();
 
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_URL, request->uri);
+  libcurl_->curl_easy_setopt(curl_, CURLOPT_URL, request->uri.c_str());
 
   if (!user_pwd_.empty()) {
     libcurl_->curl_easy_setopt(curl_, CURLOPT_USERPWD, user_pwd_.c_str());
@@ -252,11 +206,12 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
   }
 
   struct curl_slist *request_headers = NULL;
+  auto cleanup = absl::MakeCleanup(
+      [request_headers]() { curl_slist_free_all(request_headers); });
   for (const auto &hdr : request->headers) {
     struct curl_slist *list = curl_slist_append(
         request_headers, absl::StrCat(hdr.first, ":", hdr.second).c_str());
     if (list == nullptr) {
-      curl_slist_free_all(request_headers);
       return absl::ResourceExhaustedError("request header list");
     }
     request_headers = list;
@@ -272,10 +227,20 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
   libcurl_->curl_easy_setopt(curl_, CURLOPT_WRITEHEADER, &response_headers);
 
   CURLcode code = libcurl_->curl_easy_perform(curl_);
+  if (code != CURLE_OK) {
+    return absl::InternalError(
+        absl::StrFormat("cURL failure: %s", curl_easy_strerror(code)));
+  }
+  uint64_t long_response_code = 0;
+  int returned_code = 0;
+  if (libcurl_->curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE,
+                                  &long_response_code) == CURLE_OK) {
+    returned_code = static_cast<int>(long_response_code);
+  }
 
-  curl_slist_free_all(request_headers);
-  return HttpClient::HttpResponse{
-      .code = code, .body = response_body, .headers = response_headers};
+  return HttpClient::HttpResponse{.code = returned_code,
+                                  .body = response_body,
+                                  .headers = response_headers};
 }
 
 // userp is set through framework over third_CURLOPT_WRITEDATA
@@ -287,9 +252,11 @@ size_t CurlHttpClient::HeaderCallback(const void *data, size_t size,
   if (str[0] != '\r' && str[1] != '\n') {
     auto s = std::string(str, size * nmemb);
     std::vector<std::string> v = absl::StrSplit(s, absl::MaxSplits(':', 1));
-    absl::StripAsciiWhitespace(&v[0]);
-    absl::StripAsciiWhitespace(&v[1]);
-    headers->try_emplace(v[0], v[1]);
+    if (v.size() == 2) {
+      absl::StripAsciiWhitespace(&v[0]);
+      absl::StripAsciiWhitespace(&v[1]);
+      headers->try_emplace(v[0], v[1]);
+    }
   }
 
   return size * nmemb;
