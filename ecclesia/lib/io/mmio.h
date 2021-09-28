@@ -71,17 +71,6 @@ class MmioRangeFromFile : public MmioRange {
       absl::string_view physical_mem_device);
   static absl::StatusOr<MmioRangeFromFile> Create(
       AddressRange address_range, absl::string_view physical_mem_device);
-  // Args:
-  //   size: size of the range.
-  //   first_address: The start address to the range. The exposed byte range
-  //   that can be accessed by MmioRegion will be [start_address,
-  //   first_address+size).
-  //   physical_mem_device: path to physical memory device (e.g. /dev/mem)
-  MmioRangeFromFile(size_t size, uint64_t first_address,
-                    absl::string_view physical_mem_device);
-
-  MmioRangeFromFile(AddressRange mmap_addr_range,
-                    absl::string_view physical_mem_device);
 
   // Access to the underlying device cannot be shared between instances of this
   // object so it is not copyable. It can be moved.
