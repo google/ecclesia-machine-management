@@ -36,6 +36,7 @@
   <edmx:Reference Uri="/redfish/v1/schema/MemoryMetrics_v1.xml">
     <edmx:Include Namespace="MemoryMetrics"/>
     <edmx:Include Namespace="MemoryMetrics.v1_2_0"/>
+    <edmx:Include Namespace="MemoryMetrics.v1_4_0"/>
   </edmx:Reference>
   <edmx:Reference Uri="/redfish/v1/schema/PCIeDevice_v1.xml">
     <edmx:Include Namespace="PCIeDevice"/>
