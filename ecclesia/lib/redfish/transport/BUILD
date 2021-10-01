@@ -1,0 +1,52 @@
+# Transport interfaces for Redfish
+
+licenses(["notice"])
+
+cc_library(
+    name = "interface",
+    hdrs = ["interface.h"],
+    visibility = ["//ecclesia:redfish_users"],
+    deps = [
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_json//:json",
+    ],
+)
+
+cc_library(
+    name = "http",
+    srcs = ["http.cc"],
+    hdrs = ["http.h"],
+    visibility = ["//ecclesia:redfish_users"],
+    deps = [
+        ":interface",
+        "//ecclesia/lib/http:client",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/functional:bind_front",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+        "@com_json//:json",
+    ],
+)
+
+cc_test(
+    name = "http_test",
+    srcs = ["http_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/barebones_session_auth:mockup.shar",
+    ],
+    deps = [
+        ":http",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/http:cred_cc_proto",
+        "//ecclesia/lib/http:curl_client",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+    ],
+)
