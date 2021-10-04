@@ -42,18 +42,15 @@ class HttpRedfishTransportTest : public ::testing::Test {
         absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket"));
     auto config = server_->GetConfig();
     HttpCredential creds;
-    curl_http_client_ =
+    auto curl_http_client =
         std::make_unique<CurlHttpClient>(LibCurlProxy::CreateInstance(), creds);
-    transport_ = std::make_unique<HttpRedfishTransport>(
-        std::move(curl_http_client_),
+    transport_ = HttpRedfishTransport::MakeNetwork(
+        std::move(curl_http_client),
         absl::StrFormat("%s:%d", config.hostname, config.port));
   }
 
   std::unique_ptr<FakeRedfishServer> server_;
-  std::unique_ptr<HttpRedfishTransport> transport_;
-
- private:
-  std::unique_ptr<CurlHttpClient> curl_http_client_;
+  std::unique_ptr<RedfishTransport> transport_;
 };
 
 TEST_F(HttpRedfishTransportTest, CanGet) {

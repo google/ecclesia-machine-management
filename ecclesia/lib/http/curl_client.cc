@@ -179,6 +179,11 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
 
   libcurl_->curl_easy_setopt(curl_, CURLOPT_URL, request->uri.c_str());
 
+  if (!request->unix_socket_path.empty()) {
+    libcurl_->curl_easy_setopt(curl_, CURLOPT_UNIX_SOCKET_PATH,
+                               request->unix_socket_path.c_str());
+  }
+
   if (!user_pwd_.empty()) {
     libcurl_->curl_easy_setopt(curl_, CURLOPT_USERPWD, user_pwd_.c_str());
   }
@@ -266,8 +271,7 @@ size_t CurlHttpClient::HeaderCallback(const void *data, size_t size,
 size_t CurlHttpClient::BodyCallback(const void *data, size_t size, size_t nmemb,
                                     void *userp) {
   std::string *body = static_cast<std::string *>(userp);
-  const std::string str(static_cast<const char *>(data), size * nmemb);
-  *body = std::move(str);
+  body->append(static_cast<const char *>(data), size * nmemb);
   return size * nmemb;
 }
 

@@ -24,6 +24,32 @@ cc_library(
 )
 
 cc_library(
+    name = "json_ptr",
+    srcs = ["json_ptr.cc"],
+    hdrs = [
+        "json_ptr.h",
+    ],
+    copts = ["-fexceptions"],  # Needed for nlohmann::json's json_ptr.
+    features = ["-use_header_modules"],  # Incompatible with -fexceptions.
+    visibility = ["//ecclesia:redfish_users"],
+    deps = [
+        "//ecclesia/lib/logging",
+        "@com_google_absl//absl/strings",
+        "@com_json//:json",
+    ],
+)
+
+cc_test(
+    name = "json_ptr_test",
+    srcs = ["json_ptr_test.cc"],
+    deps = [
+        ":json_ptr",
+        "@com_google_googletest//:gtest_main",
+        "@com_json//:json",
+    ],
+)
+
+cc_library(
     name = "property",
     hdrs = ["property.h"],
     visibility = ["//ecclesia:redfish_users"],
@@ -213,6 +239,7 @@ cc_library(
         "//ecclesia/lib/logging",
         "//ecclesia/lib/logging:posix",
         "//ecclesia/lib/network:testing",
+        "//ecclesia/lib/redfish/transport:interface",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",

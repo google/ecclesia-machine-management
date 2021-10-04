@@ -50,6 +50,9 @@ class HttpClient {
     // The full URI, i.e., "http://host/redfish/v1", not "/redfish/v1".
     std::string uri;
 
+    // Unix domain socket path, if applicable. Empty if not used.
+    std::string unix_socket_path = "";
+
     // Only used by Post requests.
     std::string body;
 

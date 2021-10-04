@@ -37,6 +37,11 @@ class RedfishTransport {
 
   virtual ~RedfishTransport() = default;
 
+  // Updates the endpoint for this transport implementation to a network addr.
+  virtual void UpdateToNetworkEndpoint(absl::string_view endpoint) = 0;
+  // Updates the endpoint for this transport implementation to a unix socket.
+  virtual void UpdateToUdsEndpoint(absl::string_view unix_domain_socket) = 0;
+
   // REST operations.
   // These return a Status if the operation failed to be sent/received.
   // The application-level success or failure is captured in Result.code.
