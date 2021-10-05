@@ -58,16 +58,6 @@ struct RedfishRawInterfaceOptions {
 // The default set of method options.
 extern const RedfishRawInterfaceOptions kDefaultRedfishRawInterfaceOptions;
 
-// Constructor method for creating a RawInterface.
-// If client is non-null then it is used for HTTP requests instead of the
-// default which is libcurl.
-// Returns nullptr in case the interface failed to be constructed.
-std::unique_ptr<RedfishInterface> NewRawInterface(
-    const std::string &endpoint, RedfishInterface::TrustedEndpoint trusted,
-    std::unique_ptr<ecclesia::HttpClient> client = nullptr,
-    const RedfishRawInterfaceOptions &options =
-        kDefaultRedfishRawInterfaceOptions);
-
 // Constructor method for creating a RawInterface with session auth.
 // If client is non-null then it is used for HTTP requests instead of the
 // default which is libcurl.

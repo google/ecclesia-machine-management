@@ -16,7 +16,9 @@
 
 #include "ecclesia/lib/redfish/json_ptr.h"
 
-#include "ecclesia/lib/logging/logging.h"
+#include <string>
+
+#include "absl/strings/string_view.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {

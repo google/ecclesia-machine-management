@@ -28,11 +28,16 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/http/client.h"
+#include "ecclesia/lib/http/cred.pb.h"
+#include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/raw.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
+#include "ecclesia/lib/redfish/transport/http.h"
+#include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/magent/daemons/common.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
@@ -134,8 +139,15 @@ std::unique_ptr<libredfish::RedfishInterface>
 FakeRedfishServer::RedfishClientInterface() {
   std::string endpoint =
       absl::StrCat("http://localhost:", proxy_server_->listen_port());
-  auto intf = libredfish::NewRawInterface(
-      endpoint, libredfish::RedfishInterface::kTrusted);
+
+  HttpCredential creds;
+  auto curl_http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), std::move(creds));
+  auto transport = HttpRedfishTransport::MakeNetwork(
+      std::move(curl_http_client), endpoint);
+
+  auto intf = libredfish::NewHttpInterface(
+      std::move(transport), libredfish::RedfishInterface::kTrusted);
   ecclesia::Check(intf != nullptr, "can connect to the redfish proxy server");
   return intf;
 }

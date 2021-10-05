@@ -16,16 +16,26 @@
 
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/transport/http.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace libredfish {
 namespace {

@@ -28,9 +28,14 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/strip.h"
 #include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/http/client.h"
+#include "ecclesia/lib/http/cred.pb.h"
+#include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/raw.h"
+#include "ecclesia/lib/redfish/transport/http.h"
+#include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/magent/lib/thread_pool/thread_pool.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "single_include/nlohmann/json.hpp"
@@ -108,9 +113,12 @@ TEST_F(ServiceRootTest, QueryServiceRoot) {
   ReadJsonFromFile(GetTestDataDependencyPath(kFileName), &expected);
 
   ASSERT_TRUE(server_->StartAcceptingRequests());
-  auto redfish_intf =
-      libredfish::NewRawInterface(absl::StrCat("localhost:", port_),
-                                  libredfish::RedfishInterface::kTrusted);
+  auto curl_http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential());
+  auto transport = HttpRedfishTransport::MakeNetwork(
+      std::move(curl_http_client), absl::StrCat("localhost:", port_));
+  auto redfish_intf = libredfish::NewHttpInterface(
+      std::move(transport), libredfish::RedfishInterface::kTrusted);
 
   // Perform an http get request on the service root resource.
   libredfish::RedfishVariant response = redfish_intf->GetUri(kServiceRootUri);
@@ -128,9 +136,12 @@ TEST_F(ServiceRootTest, QueryServiceRootEquivalentUri) {
   ReadJsonFromFile(GetTestDataDependencyPath(kFileName), &expected);
 
   ASSERT_TRUE(server_->StartAcceptingRequests());
-  auto redfish_intf =
-      libredfish::NewRawInterface(absl::StrCat("localhost:", port_),
-                                  libredfish::RedfishInterface::kTrusted);
+  auto curl_http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential());
+  auto transport = HttpRedfishTransport::MakeNetwork(
+      std::move(curl_http_client), absl::StrCat("localhost:", port_));
+  auto redfish_intf = libredfish::NewHttpInterface(
+      std::move(transport), libredfish::RedfishInterface::kTrusted);
 
   // Perform an http get request on the service root resource without the
   // trailing forward slash and expect the URI to be treated as equivalent.

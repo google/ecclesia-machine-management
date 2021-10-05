@@ -484,25 +484,6 @@ class RawIntf : public RedfishInterface {
 
 }  // namespace
 
-// Constructor method for creating a RawIntf.
-std::unique_ptr<RedfishInterface> NewRawInterface(
-    const std::string &endpoint,
-    libredfish::RedfishInterface::TrustedEndpoint trusted,
-    std::unique_ptr<ecclesia::HttpClient> client,
-    const RedfishRawInterfaceOptions &options) {
-  serviceHttpHandler handler{};
-  if (client) {
-    handler = NewLibredfishAdapter(std::move(client), options);
-  }
-
-  // createServiceEnumerator only returns NULL if calloc fails, regardless of
-  // whether the endpoint is valid or reachable.
-  // Handler is consumed even on failure.
-  ServiceUniquePtr service(createServiceEnumeratorExt(endpoint.c_str(), nullptr,
-                                                      nullptr, 0, &handler));
-  return std::make_unique<RawIntf>(std::move(service), trusted, options);
-}
-
 // Constructor method for creating a RawInterface with auth session.
 std::unique_ptr<RedfishInterface> NewRawSessionAuthInterface(
     const PasswordArgs &connectionArgs,

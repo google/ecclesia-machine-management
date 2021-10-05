@@ -17,15 +17,20 @@
 #include "ecclesia/lib/redfish/transport/http.h"
 
 #include <memory>
+#include <string>
+#include <utility>
+#include <variant>
 
 #include "absl/functional/bind_front.h"
 #include "absl/memory/memory.h"
-#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/http/client.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/status/macros.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 namespace {

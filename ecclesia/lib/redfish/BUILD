@@ -33,7 +33,6 @@ cc_library(
     features = ["-use_header_modules"],  # Incompatible with -fexceptions.
     visibility = ["//ecclesia:redfish_users"],
     deps = [
-        "//ecclesia/lib/logging",
         "@com_google_absl//absl/strings",
         "@com_json//:json",
     ],
@@ -111,20 +110,15 @@ cc_test(
     ],
     deps = [
         ":interface",
-        ":property_definitions",
         ":raw",
         ":test_mockup",
         "//ecclesia/lib/file:test_filesystem",
-        "//ecclesia/lib/http:codes",
         "//ecclesia/lib/logging",
-        "//ecclesia/magent/daemons:magent_hdr",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
-        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
     ],
 )
 
@@ -236,9 +230,13 @@ cc_library(
         "//ecclesia/lib/file:path",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/http:client",
+        "//ecclesia/lib/http:cred_cc_proto",
+        "//ecclesia/lib/http:curl_client",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/logging:posix",
         "//ecclesia/lib/network:testing",
+        "//ecclesia/lib/redfish/transport:http",
+        "//ecclesia/lib/redfish/transport:http_redfish_intf",
         "//ecclesia/lib/redfish/transport:interface",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/memory",

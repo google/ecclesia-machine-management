@@ -17,6 +17,8 @@
 #ifndef ECCLESIA_LIB_REDFISH_TRANSPORT_HTTP_H_
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_HTTP_H_
 
+#include <memory>
+#include <string>
 #include <variant>
 
 #include "absl/base/thread_annotations.h"

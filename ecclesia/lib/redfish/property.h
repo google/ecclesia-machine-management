@@ -21,6 +21,8 @@ namespace libredfish {
 
 // The base class for all property definitions. Subclasses must declare a type
 // and a string Name.
+template <typename PropertyDefinitionSubtypeT, typename PropertyType> struct PropertyDefinition;
+
 template <typename PropertyDefinitionSubtypeT, typename PropertyType>
 struct PropertyDefinition {
   using type = PropertyType;

@@ -38,12 +38,17 @@
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/http/client.h"
+#include "ecclesia/lib/http/cred.pb.h"
+#include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/logging/posix.h"
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/raw.h"
+#include "ecclesia/lib/redfish/transport/http.h"
+#include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 
 extern char **environ;
 
@@ -68,6 +73,20 @@ std::string ConfigToEndpoint(absl::string_view scheme,
 std::string ConfigToEndpoint(absl::string_view scheme,
                              const TestingMockupServer::ConfigNetwork &config) {
   return absl::StrCat(scheme, "://", config.hostname, ":", config.port);
+}
+
+std::unique_ptr<ecclesia::RedfishTransport> ConfigToTransport(
+    std::unique_ptr<ecclesia::HttpClient> client,
+    const TestingMockupServer::ConfigNetwork &conn) {
+  return ecclesia::HttpRedfishTransport::MakeNetwork(
+      std::move(client),
+      absl::StrCat("http://", conn.hostname, ":", conn.port));
+}
+std::unique_ptr<ecclesia::RedfishTransport> ConfigToTransport(
+    std::unique_ptr<ecclesia::HttpClient> client,
+    const TestingMockupServer::ConfigUnix &conn) {
+  return ecclesia::HttpRedfishTransport::MakeUds(std::move(client),
+                                                 conn.socket_path);
 }
 
 }  // namespace
@@ -213,11 +232,19 @@ TestingMockupServer::~TestingMockupServer() {
 
 std::unique_ptr<RedfishInterface> TestingMockupServer::RedfishClientInterface(
     std::unique_ptr<ecclesia::HttpClient> client) {
-  std::string endpoint =
-      std::visit([](auto &conn) { return ConfigToEndpoint("http", conn); },
-                 connection_config_);
-  auto intf = libredfish::NewRawInterface(endpoint, RedfishInterface::kTrusted,
-                                          std::move(client));
+  if (client == nullptr) {
+    client = std::make_unique<ecclesia::CurlHttpClient>(
+        ecclesia::LibCurlProxy::CreateInstance(), ecclesia::HttpCredential());
+  }
+
+  std::unique_ptr<ecclesia::RedfishTransport> transport = std::visit(
+      [&client](auto &conn) {
+        return ConfigToTransport(std::move(client), conn);
+      },
+      connection_config_);
+
+  auto intf = libredfish::NewHttpInterface(
+      std::move(transport), libredfish::RedfishInterface::kTrusted);
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
 }
