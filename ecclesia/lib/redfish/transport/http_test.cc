@@ -16,8 +16,7 @@
 
 #include "ecclesia/lib/redfish/transport/http.h"
 
-#include <stdint.h>
-
+#include <cstdint>
 #include <memory>
 #include <utility>
 

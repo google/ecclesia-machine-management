@@ -16,9 +16,8 @@
 
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 
-#include <stddef.h>
-#include <stdint.h>
-
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
