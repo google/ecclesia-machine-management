@@ -127,12 +127,16 @@ void SleipnirIpmiSensor::Get(
       json[kName] = sensor_name;
       json[kReadingType] = ValToStr(kSensorTypes, info.type, "unknown");
       json[kReadingUnits] = ValToStr(kSensorUnit, info.unit, "unknown");
-      auto maybe_value = ipmi.ReadSensor(info.id);
-      double value = 0;
-      if (maybe_value.ok()) {
-        value = maybe_value.value();
+      auto value = ipmi.ReadSensor(info.id);
+      // Only set the status field and the reading if it succeeds in reading the
+      // sensor via IPMI.
+      if (value.ok()) {
+        nlohmann::json status;
+        status[kState] = kEnabled;
+        status[kHealth] = "OK";
+        json[kStatus] = status;
+        json[kReading] = *value;
       }
-      json[kReading] = value;
 
       if (absl::StartsWith(sensor_name, "sleipnir_Fan")) {
         int idx = sensor_name[12] - '0';
@@ -143,12 +147,6 @@ void SleipnirIpmiSensor::Get(
       }
       break;
     }
-    // auto *status = GetJsonObject(&json, kStatus);
-    //(*status)[kState] = "Enabled";
-    nlohmann::json status;
-    status[kState] = kEnabled;
-    status[kHealth] = "OK";
-    json[kStatus] = status;
   }
 
   JSONResponseOK(json, req);
