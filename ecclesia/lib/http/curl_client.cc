@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "absl/base/call_once.h"
+#include "absl/base/const_init.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
@@ -135,6 +136,35 @@ void LibCurlProxy::curl_easy_cleanup(CURL *curl) {
 
 void LibCurlProxy::curl_free(void *p) { ::curl_free(p); }
 
+CURLSH *LibCurlProxy::curl_share_init() { return ::curl_share_init(); }
+
+void LibCurlProxy::curl_share_cleanup(CURLSH *share) {
+  ::curl_share_cleanup(share);
+}
+
+CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH *share, CURLSHoption option,
+                                           curl_lock_data param) {
+  return ::curl_share_setopt(share, option, param);
+}
+
+CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH *share, CURLSHoption option,
+                                           void (*param)(CURL *, curl_lock_data,
+                                                         curl_lock_access,
+                                                         void *)) {
+  return ::curl_share_setopt(share, option, param);
+}
+
+CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH *share, CURLSHoption option,
+                                           void *param) {
+  return ::curl_share_setopt(share, option, param);
+}
+
+CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH *share, CURLSHoption option,
+                                           void (*param)(CURL *, curl_lock_data,
+                                                         void *)) {
+  return ::curl_share_setopt(share, option, param);
+}
+
 CurlHttpClient::CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
                                HttpCredential cred)
     : CurlHttpClient(std::move(libcurl), cred, {}) {}
@@ -147,10 +177,22 @@ CurlHttpClient::CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
       cred_(std::move(cred)),
       config_(std::move(config)),
       user_pwd_(absl::StrCat(cred_.username(), ":", cred_.password())) {
-  curl_ = libcurl_->curl_easy_init();
+  // Setup share interface
+  shared_connection_ = libcurl_->curl_share_init();
+  // Setup interface to share the actual underlying cached connection
+  libcurl_->curl_share_setopt(shared_connection_, CURLSHOPT_SHARE,
+                      CURL_LOCK_DATA_CONNECT);
+  // Setup locking and unlocking functions so that share interface is thread
+  // safe
+  libcurl_->curl_share_setopt(shared_connection_, CURLSHOPT_LOCKFUNC,
+                              &LockSharedMutex);
+  libcurl_->curl_share_setopt(shared_connection_, CURLSHOPT_UNLOCKFUNC,
+                              &UnlockSharedMutex);
 }
 
-CurlHttpClient::~CurlHttpClient() { libcurl_->curl_easy_cleanup(curl_); }
+CurlHttpClient::~CurlHttpClient() {
+  libcurl_->curl_share_cleanup(shared_connection_);
+}
 
 absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Get(
     std::unique_ptr<HttpRequest> request) {
@@ -174,38 +216,44 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Patch(
 
 absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
     Protocol cmd, std::unique_ptr<HttpRequest> request) {
-  absl::MutexLock l(&mu_);
-  SetDefaultCurlOpts();
+  CURL *curl = libcurl_->curl_easy_init();
+  if (!curl) return absl::InternalError("Failed to create curl handle");
+  absl::Cleanup curl_cleanup([&]() { libcurl_->curl_easy_cleanup(curl); });
+  SetDefaultCurlOpts(curl);
 
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_URL, request->uri.c_str());
+  libcurl_->curl_easy_setopt(curl, CURLOPT_URL, request->uri.c_str());
+
+  // Error buffer to write to while curl handle is active
+  char errbuf[CURL_ERROR_SIZE];
+  libcurl_->curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
 
   if (!request->unix_socket_path.empty()) {
-    libcurl_->curl_easy_setopt(curl_, CURLOPT_UNIX_SOCKET_PATH,
+    libcurl_->curl_easy_setopt(curl, CURLOPT_UNIX_SOCKET_PATH,
                                request->unix_socket_path.c_str());
   }
 
   if (!user_pwd_.empty()) {
-    libcurl_->curl_easy_setopt(curl_, CURLOPT_USERPWD, user_pwd_.c_str());
+    libcurl_->curl_easy_setopt(curl, CURLOPT_USERPWD, user_pwd_.c_str());
   }
 
   switch (cmd) {
     case Protocol::kGet:
-      libcurl_->curl_easy_setopt(curl_, CURLOPT_HTTPGET, 1L);
+      libcurl_->curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
       break;
     case Protocol::kPost:
-      libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE,
+      libcurl_->curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE,
                                  request->body.size());
-      libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
+      libcurl_->curl_easy_setopt(curl, CURLOPT_POSTFIELDS,
                                  request->body.data());
       break;
     case Protocol::kDelete:
-      libcurl_->curl_easy_setopt(curl_, CURLOPT_CUSTOMREQUEST, "DELETE");
+      libcurl_->curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
       break;
     case Protocol::kPatch:
-      libcurl_->curl_easy_setopt(curl_, CURLOPT_CUSTOMREQUEST, "PATCH");
-      libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDSIZE,
+      libcurl_->curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
+      libcurl_->curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE,
                                  request->body.size());
-      libcurl_->curl_easy_setopt(curl_, CURLOPT_POSTFIELDS,
+      libcurl_->curl_easy_setopt(curl, CURLOPT_POSTFIELDS,
                                  request->body.data());
       break;
   }
@@ -221,24 +269,24 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
     }
     request_headers = list;
   }
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_HTTPHEADER, request_headers);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_HTTPHEADER, request_headers);
 
   std::string response_body;
   HttpHeaders response_headers;
 
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, BodyCallback);
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response_body);
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_HEADERFUNCTION, HeaderCallback);
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_WRITEHEADER, &response_headers);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, BodyCallback);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_body);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, HeaderCallback);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_WRITEHEADER, &response_headers);
 
-  CURLcode code = libcurl_->curl_easy_perform(curl_);
+  CURLcode code = libcurl_->curl_easy_perform(curl);
   if (code != CURLE_OK) {
     return absl::InternalError(
         absl::StrFormat("cURL failure: %s", curl_easy_strerror(code)));
   }
   uint64_t long_response_code = 0;
   int returned_code = 0;
-  if (libcurl_->curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE,
+  if (libcurl_->curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE,
                                   &long_response_code) == CURLE_OK) {
     returned_code = static_cast<int>(long_response_code);
   }
@@ -275,62 +323,74 @@ size_t CurlHttpClient::BodyCallback(const void *data, size_t size, size_t nmemb,
   return size * nmemb;
 }
 
-void CurlHttpClient::SetDefaultCurlOpts() {
-  if (!curl_) {
-    ecclesia::ErrorLog() << "curl_ is nullptr.";
+ABSL_CONST_INIT absl::Mutex CurlHttpClient::shared_mutex_(absl::kConstInit);
+
+void CurlHttpClient::LockSharedMutex(CURL *handle, curl_lock_data data,
+                                     curl_lock_access laccess, void *useptr) {
+  shared_mutex_.Lock();
+}
+void CurlHttpClient::UnlockSharedMutex(CURL *handle, curl_lock_data data,
+                                       void *useptr) {
+  shared_mutex_.Unlock();
+}
+
+void CurlHttpClient::SetDefaultCurlOpts(CURL *curl) const {
+  if (!curl) {
+    ErrorLog() << "curl is nullptr.";
     return;
   }
-  libcurl_->curl_easy_reset(curl_);
+  libcurl_->curl_easy_reset(curl);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_NOSIGNAL, (uint64_t)1L);
 
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_ERRORBUFFER, errbuf_);
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_NOSIGNAL, (uint64_t)1L);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, false);
 
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYPEER, false);
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_SSL_VERIFYHOST, false);
-
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_HTTP_TRANSFER_DECODING,
+  libcurl_->curl_easy_setopt(curl, CURLOPT_HTTP_TRANSFER_DECODING,
                              config_.raw ? false : true);
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_VERBOSE,
+  libcurl_->curl_easy_setopt(curl, CURLOPT_VERBOSE,
                              config_.verbose ? true : false);
   if (config_.verbose_cb != nullptr) {
-    (libcurl_->curl_easy_setopt(curl_, CURLOPT_DEBUGFUNCTION,
+    (libcurl_->curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION,
                                 config_.verbose_cb));
   }
 
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_PROXY, config_.proxy.c_str());
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_TIMEOUT,
+  libcurl_->curl_easy_setopt(curl, CURLOPT_PROXY, config_.proxy.c_str());
+  libcurl_->curl_easy_setopt(curl, CURLOPT_TIMEOUT,
                              static_cast<uint32_t>(config_.request_timeout));
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_CONNECTTIMEOUT,
+  libcurl_->curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT,
                              static_cast<uint32_t>(config_.connect_timeout));
 
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_DNS_CACHE_TIMEOUT,
+  libcurl_->curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT,
                              static_cast<uint32_t>(config_.dns_timeout));
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_FOLLOWLOCATION,
+  libcurl_->curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION,
                              config_.follow_redirect ? true : false);
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_PROTOCOLS,
+  libcurl_->curl_easy_setopt(curl, CURLOPT_PROTOCOLS,
                              static_cast<uint32_t>(kSupportedProtocols));
 
-  libcurl_->curl_easy_setopt(curl_, CURLOPT_REDIR_PROTOCOLS,
+  libcurl_->curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS,
                              static_cast<uint32_t>(kSupportedProtocols));
   if (config_.max_recv_speed >= 0) {
-    libcurl_->curl_easy_setopt(curl_, CURLOPT_MAX_RECV_SPEED_LARGE,
+    libcurl_->curl_easy_setopt(curl, CURLOPT_MAX_RECV_SPEED_LARGE,
                                static_cast<curl_off_t>(config_.max_recv_speed));
   }
   switch (config_.resolver) {
     case Resolver::kIPAny:
       libcurl_->curl_easy_setopt(
-          curl_, CURLOPT_IPRESOLVE,
+          curl, CURLOPT_IPRESOLVE,
           static_cast<uint32_t>(CURL_IPRESOLVE_WHATEVER));
       break;
     case Resolver::kIPv4Only:
-      libcurl_->curl_easy_setopt(curl_, CURLOPT_IPRESOLVE,
+      libcurl_->curl_easy_setopt(curl, CURLOPT_IPRESOLVE,
                                  static_cast<uint32_t>(CURL_IPRESOLVE_V4));
       break;
     case Resolver::kIPv6Only:
-      libcurl_->curl_easy_setopt(curl_, CURLOPT_IPRESOLVE,
+      libcurl_->curl_easy_setopt(curl, CURLOPT_IPRESOLVE,
                                  static_cast<uint32_t>(CURL_IPRESOLVE_V6));
       break;
   }
+
+  // Share connections from other curl connections
+  libcurl_->curl_easy_setopt(curl, CURLOPT_SHARE, shared_connection_);
 }
 
 }  // namespace ecclesia

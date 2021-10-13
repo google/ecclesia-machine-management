@@ -83,6 +83,21 @@ class LibCurl {
 
   virtual void curl_easy_cleanup(CURL *curl) = 0;
   virtual void curl_free(void *p) = 0;
+
+  virtual CURLSH *curl_share_init() = 0;
+  virtual void curl_share_cleanup(CURLSH *share) = 0;
+
+  virtual CURLSHcode curl_share_setopt(CURLSH *share, CURLSHoption option,
+                                       curl_lock_data param) = 0;
+  virtual CURLSHcode curl_share_setopt(CURLSH *share, CURLSHoption option,
+                                       void (*param)(CURL *, curl_lock_data,
+                                                     curl_lock_access,
+                                                     void *)) = 0;
+  virtual CURLSHcode curl_share_setopt(CURLSH *share, CURLSHoption option,
+                                       void *param) = 0;
+  virtual CURLSHcode curl_share_setopt(CURLSH *share, CURLSHoption option,
+                                       void (*param)(CURL *, curl_lock_data,
+                                                     void *)) = 0;
 };
 
 class LibCurlProxy : public LibCurl {
@@ -135,6 +150,22 @@ class LibCurlProxy : public LibCurl {
   void curl_easy_cleanup(CURL *curl) override;
 
   void curl_free(void *p) override;
+
+  CURLSH *curl_share_init() override;
+
+  void curl_share_cleanup(CURLSH *share) override;
+
+  CURLSHcode curl_share_setopt(CURLSH *share, CURLSHoption option,
+                               curl_lock_data param) override;
+  CURLSHcode curl_share_setopt(CURLSH *share, CURLSHoption option,
+                               void (*param)(CURL *, curl_lock_data,
+                                             curl_lock_access,
+                                             void *)) override;
+  CURLSHcode curl_share_setopt(CURLSH *share, CURLSHoption option,
+                               void *param) override;
+  CURLSHcode curl_share_setopt(CURLSH *share, CURLSHoption option,
+                               void (*param)(CURL *, curl_lock_data,
+                                             void *)) override;
 };
 
 class CurlHttpClient : public HttpClient {
@@ -187,22 +218,36 @@ class CurlHttpClient : public HttpClient {
 
  private:
   absl::StatusOr<HttpResponse> HttpMethod(Protocol cmd,
-                                          std::unique_ptr<HttpRequest> request)
-      ABSL_LOCKS_EXCLUDED(mu_);
-  void SetDefaultCurlOpts() ABSL_EXCLUSIVE_LOCKS_REQUIRED(mu_);
+                                          std::unique_ptr<HttpRequest> request);
+  void SetDefaultCurlOpts(CURL *curl) const;
   static size_t HeaderCallback(const void *data, size_t size, size_t nmemb,
                                void *userp);
   static size_t BodyCallback(const void *data, size_t size, size_t nmemb,
                              void *userp);
+
+  // The following mutex is used to statically lock the CURLSH pointer
+  // shared_connection_.
+  static absl::Mutex shared_mutex_;
+
+  // Locking and unlocking functions to be passed to Libcurl share interface
+  // The parameters are required by share interface but are unused in the actual
+  // function definition.
+  static void LockSharedMutex(CURL *handle, curl_lock_data data,
+                              curl_lock_access laccess, void *useptr)
+      ABSL_EXCLUSIVE_LOCK_FUNCTION(shared_mutex_);
+  static void UnlockSharedMutex(CURL *handle, curl_lock_data data, void *useptr)
+      ABSL_UNLOCK_FUNCTION(shared_mutex_);
 
   std::unique_ptr<LibCurl> libcurl_;
   HttpCredential cred_;
   Config config_;
   const std::string user_pwd_;
 
-  CURL *curl_ ABSL_GUARDED_BY(mu_);
-  char errbuf_[CURL_ERROR_SIZE] ABSL_GUARDED_BY(mu_) = {};
-  absl::Mutex mu_;
+  // CURL share interface (https://curl.se/libcurl/c/libcurl-share.html)
+  // The share interface lets us captalize on the fact that we're connecting to
+  // the same endpoints. By doing so, we can save CPU usage on setting and
+  // finding connections (e.g. TCP handshake)
+  CURLSH *shared_connection_;
 };
 
 }  // namespace ecclesia
