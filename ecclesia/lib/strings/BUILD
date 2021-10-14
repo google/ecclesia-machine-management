@@ -6,7 +6,7 @@ cc_library(
     name = "natural_sort",
     srcs = ["natural_sort.cc"],
     hdrs = ["natural_sort.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/logging",
         "@com_google_absl//absl/strings",
@@ -16,7 +16,7 @@ cc_library(
 cc_library(
     name = "regex",
     hdrs = ["regex.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/strings",
         "@com_googlesource_code_re2//:re2",
@@ -26,7 +26,7 @@ cc_library(
 cc_library(
     name = "string_view",
     hdrs = ["string_view.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = ["@com_google_absl//absl/strings"],
 )
 
@@ -34,7 +34,7 @@ cc_library(
     name = "strip",
     srcs = ["strip.cc"],
     hdrs = ["strip.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = ["@com_google_absl//absl/strings"],
 )
 

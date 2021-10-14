@@ -12,7 +12,7 @@ cc_library(
         "property.h",
         "property_definitions.h",
     ],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/http:codes",
         "@com_google_absl//absl/status",
@@ -31,7 +31,7 @@ cc_library(
     ],
     copts = ["-fexceptions"],  # Needed for nlohmann::json's json_ptr.
     features = ["-use_header_modules"],  # Incompatible with -fexceptions.
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/strings",
         "@com_json//:json",
@@ -51,13 +51,13 @@ cc_test(
 cc_library(
     name = "property",
     hdrs = ["property.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "property_definitions",
     hdrs = ["property_definitions.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":property",
         "@com_google_absl//absl/base:core_headers",
@@ -68,7 +68,7 @@ cc_library(
 cc_library(
     name = "property_values",
     hdrs = ["property_values.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
@@ -81,7 +81,7 @@ cc_library(
         "libredfish_adapter.h",
         "raw.h",
     ],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":interface",
         "//ecclesia/lib/http:client",
@@ -126,7 +126,7 @@ cc_library(
     name = "topology",
     srcs = ["topology.cc"],
     hdrs = ["topology.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":interface",
         ":node_topology",
@@ -187,18 +187,14 @@ cc_test(
 cc_library(
     name = "types",
     hdrs = ["types.h"],
-    visibility = [
-        "//ecclesia:mmanager_backend_users",
-        "//ecclesia:redfish_users",
-    ],
-    deps = [],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "sysmodel",
     srcs = ["sysmodel.cc"],
     hdrs = ["sysmodel.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":interface",
         ":property_definitions",
@@ -208,10 +204,7 @@ cc_library(
 cc_library(
     name = "result",
     hdrs = ["result.h"],
-    visibility = [
-        "//ecclesia:mmanager_backend_users",
-        "//ecclesia:redfish_users",
-    ],
+    visibility = ["//visibility:public"],
     deps = ["@com_google_absl//absl/strings"],
 )
 
@@ -220,10 +213,7 @@ cc_library(
     testonly = True,
     srcs = ["test_mockup.cc"],
     hdrs = ["test_mockup.h"],
-    visibility = [
-        "//ecclesia:mmanager_backend_users",
-        "//ecclesia:redfish_users",
-    ],
+    visibility = ["//visibility:public"],
     deps = [
         ":interface",
         ":raw",
@@ -248,7 +238,7 @@ cc_library(
 cc_library(
     name = "utils",
     hdrs = ["utils.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":interface",
         ":property_definitions",
@@ -258,7 +248,7 @@ cc_library(
 cc_library(
     name = "numbers",
     hdrs = ["numbers.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":interface",
         "@com_google_absl//absl/strings",
@@ -269,7 +259,7 @@ cc_library(
     name = "storage",
     srcs = ["storage.cc"],
     hdrs = ["storage.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":interface",
         ":property_definitions",
@@ -280,7 +270,7 @@ cc_library(
     name = "pci",
     srcs = ["pci.cc"],
     hdrs = ["pci.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":interface",
         ":numbers",
@@ -294,7 +284,7 @@ cc_library(
     name = "topology_v2",
     srcs = ["topology_v2.cc"],
     hdrs = ["topology_v2.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":interface",
         ":node_topology",
@@ -316,7 +306,7 @@ cc_library(
 cc_library(
     name = "node_topology",
     hdrs = ["node_topology.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":types",
         "@com_google_absl//absl/container:flat_hash_map",
@@ -326,12 +316,12 @@ cc_library(
 proto_library(
     name = "topology_config",
     srcs = ["topology_config.proto"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_proto_library(
     name = "topology_config_cc_proto",
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [":topology_config"],
 )
 

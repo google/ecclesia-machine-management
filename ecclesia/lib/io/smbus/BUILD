@@ -4,7 +4,7 @@ cc_library(
     name = "smbus",
     srcs = ["smbus.cc"],
     hdrs = ["smbus.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/types:fixed_range_int",
         "@com_google_absl//absl/status",
@@ -32,7 +32,7 @@ cc_library(
     name = "mocks",
     testonly = True,
     hdrs = ["mocks.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":smbus",
         "@com_google_absl//absl/status",
@@ -45,7 +45,7 @@ cc_library(
     name = "kernel_dev",
     srcs = ["kernel_dev.cc"],
     hdrs = ["kernel_dev.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":smbus",
         "//ecclesia/lib/io:ioctl",
@@ -78,11 +78,11 @@ cc_test(
 proto_library(
     name = "proto",
     srcs = ["smbus.proto"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_proto_library(
     name = "cc_proto",
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [":proto"],
 )

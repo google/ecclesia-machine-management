@@ -7,7 +7,7 @@ cc_library(
     testonly = True,
     srcs = ["json_mockup.cc"],
     hdrs = ["json_mockup.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/logging",
         "//ecclesia/lib/redfish:interface",
@@ -36,7 +36,7 @@ filegroup(
         "cert/*.crt",
         "cert/*.key",
     ]),
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
@@ -44,7 +44,7 @@ cc_library(
     testonly = True,
     srcs = ["fake_redfish_server.cc"],
     hdrs = ["fake_redfish_server.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/http:client",
         "//ecclesia/lib/http:cred_cc_proto",
@@ -90,7 +90,7 @@ cc_library(
     testonly = True,
     srcs = ["node_topology_testing.cc"],
     hdrs = ["node_topology_testing.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/redfish:node_topology",
         "//ecclesia/lib/redfish:types",

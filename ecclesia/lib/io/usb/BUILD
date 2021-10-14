@@ -4,7 +4,7 @@ cc_library(
     name = "usb",
     srcs = ["usb.cc"],
     hdrs = ["usb.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/logging",
         "//ecclesia/lib/status:macros",
@@ -34,7 +34,7 @@ cc_library(
     name = "mocks",
     testonly = True,
     hdrs = ["mocks.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":usb",
         "@com_google_absl//absl/status:statusor",
@@ -45,7 +45,7 @@ cc_library(
 cc_library(
     name = "ids",
     hdrs = ["ids.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [":usb"],
 )
 
@@ -53,7 +53,7 @@ cc_library(
     name = "sysfs",
     srcs = ["sysfs.cc"],
     hdrs = ["sysfs.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":usb",
         "//ecclesia/lib/apifs",
@@ -71,7 +71,7 @@ cc_library(
     name = "proto_lib",
     srcs = ["proto_lib.cc"],
     hdrs = ["proto_lib.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":cc_proto",
         ":usb",
@@ -111,11 +111,11 @@ cc_test(
 proto_library(
     name = "proto",
     srcs = ["usb.proto"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_proto_library(
     name = "cc_proto",
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [":proto"],
 )

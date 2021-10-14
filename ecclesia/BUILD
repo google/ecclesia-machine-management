@@ -9,26 +9,6 @@ licenses(["notice"])
 
 exports_files(["LICENSE"])
 
-# Code allowed to use any of our generic libraries.
-package_group(
-    name = "library_users",
-    packages = ["//ecclesia/..."],
-)
-
-# Code intended for use in the Redfish backend.
-package_group(
-    name = "redfish_users",
-    packages = [
-        "//ecclesia/lib/http/...",
-        "//ecclesia/lib/redfish/...",
-        "//ecclesia/magent/redfish/...",
-        "//ecclesia/mmanager/backends/redfish/...",
-        "//ecclesia/mmanager/frontends/...",
-        "//ecclesia/mmanager/middles/collector/...",
-        "//ecclesia/redfish_mockups/tests/...",
-    ],
-)
-
 # Code intended for redfish service and interoperability validation.
 package_group(
     name = "redfish_validator_users",

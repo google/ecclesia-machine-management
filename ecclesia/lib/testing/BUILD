@@ -18,7 +18,7 @@ cc_library(
     name = "proto",
     testonly = True,
     hdrs = ["proto.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
@@ -32,7 +32,7 @@ cc_library(
     name = "status",
     testonly = True,
     hdrs = ["status.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

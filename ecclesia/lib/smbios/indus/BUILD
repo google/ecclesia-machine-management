@@ -6,7 +6,7 @@ cc_library(
         "platform_translator.h",
     ],
     visibility = [
-        "//ecclesia:library_users",
+        "//visibility:public",
     ],
     deps = [
         "//ecclesia/lib/smbios:platform_translator",

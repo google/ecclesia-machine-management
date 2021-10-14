@@ -10,7 +10,7 @@ cc_library(
         "eeprom.h",
         "smbus_eeprom.h",
     ],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/io/smbus",
         "//ecclesia/lib/logging",

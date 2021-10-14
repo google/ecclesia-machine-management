@@ -3,7 +3,7 @@ licenses(["notice"])
 cc_library(
     name = "discovery",
     hdrs = ["discovery.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":location",
         ":pci",
@@ -18,7 +18,7 @@ cc_library(
     name = "mocks",
     testonly = True,
     hdrs = ["mocks.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":config",
         ":discovery",
@@ -35,7 +35,7 @@ cc_library(
 cc_library(
     name = "region",
     hdrs = ["region.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -46,7 +46,7 @@ cc_library(
     name = "location",
     srcs = ["location.cc"],
     hdrs = ["location.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/types:fixed_range_int",
         "@com_google_absl//absl/strings",
@@ -72,7 +72,7 @@ cc_library(
     name = "mmio",
     srcs = ["mmio.cc"],
     hdrs = ["mmio.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":location",
         ":region",
@@ -106,7 +106,7 @@ cc_test(
 cc_library(
     name = "signature",
     hdrs = ["signature.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = ["//ecclesia/lib/types:fixed_range_int"],
 )
 
@@ -117,7 +117,7 @@ cc_library(
         "config.h",
         "registers.h",
     ],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":location",
         ":region",
@@ -134,7 +134,7 @@ cc_library(
 cc_library(
     name = "pci",
     hdrs = ["pci.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":config",
         ":location",
@@ -147,12 +147,12 @@ cc_library(
 proto_library(
     name = "proto",
     srcs = ["pci.proto"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_proto_library(
     name = "cc_proto",
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [":proto"],
 )
 
@@ -160,7 +160,7 @@ cc_library(
     name = "proto_lib",
     srcs = ["proto_lib.cc"],
     hdrs = ["proto_lib.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":cc_proto",
         ":location",
@@ -186,7 +186,7 @@ cc_library(
     name = "sysfs",
     srcs = ["sysfs.cc"],
     hdrs = ["sysfs.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":config",
         ":discovery",

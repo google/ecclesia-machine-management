@@ -4,7 +4,7 @@ cc_library(
     name = "bytes",
     srcs = ["bytes.cc"],
     hdrs = ["bytes.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = ["@com_google_absl//absl/strings"],
 )
 
@@ -22,7 +22,7 @@ cc_test(
 cc_library(
     name = "enum",
     hdrs = ["enum.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_test(
@@ -37,7 +37,7 @@ cc_test(
 cc_library(
     name = "fixed_range_int",
     hdrs = ["fixed_range_int.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_test(
@@ -53,5 +53,5 @@ cc_test(
 cc_library(
     name = "overloaded",
     hdrs = ["overloaded.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
 )

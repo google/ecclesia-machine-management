@@ -6,7 +6,7 @@ cc_library(
     name = "client",
     srcs = ["client.cc"],
     hdrs = ["client.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status",
@@ -32,7 +32,7 @@ cc_library(
     name = "codes",
     srcs = ["codes.cc"],
     hdrs = ["codes.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/algorithm:container",
         "@com_google_absl//absl/status",
@@ -54,7 +54,7 @@ cc_library(
     name = "curl_client",
     srcs = ["curl_client.cc"],
     hdrs = ["curl_client.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":client",
         ":cred_cc_proto",
@@ -100,11 +100,11 @@ cc_test(
 proto_library(
     name = "cred_proto",
     srcs = ["cred.proto"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_proto_library(
     name = "cred_cc_proto",
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [":cred_proto"],
 )

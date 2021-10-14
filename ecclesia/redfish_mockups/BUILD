@@ -18,7 +18,7 @@ bzl_library(
 filegroup(
     name = "serve_mockup",
     srcs = ["serve_mockup.sh"],
-    visibility = [":redfish_mockup_rules"],
+    visibility = ["//visibility:public"],
 )
 
 # Package group for all redfish_mockups build rules that require common libs.

@@ -10,7 +10,7 @@ emboss_cc_library(
 emboss_cc_library(
     name = "structures_emb",
     srcs = ["structures.emb"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
@@ -19,7 +19,7 @@ cc_library(
         "platform_translator.h",
     ],
     visibility = [
-        "//ecclesia:library_users",
+        "//visibility:public",
     ],
     deps = [
         "@com_google_absl//absl/strings",
@@ -44,7 +44,7 @@ cc_library(
         "system_information.h",
     ],
     visibility = [
-        "//ecclesia:library_users",
+        "//visibility:public",
     ],
     deps = [
         ":entry_point_emb",

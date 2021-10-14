@@ -18,7 +18,7 @@ cc_library(
     name = "thread",
     srcs = ["thread.cc"],
     hdrs = ["thread.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
@@ -28,7 +28,7 @@ cc_library(
         "thread_mock.h",
     ],
     tags = ["nozapfhahn"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":thread",
         "@com_google_googletest//:gtest",

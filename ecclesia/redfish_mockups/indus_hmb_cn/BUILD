@@ -7,9 +7,5 @@ licenses(["notice"])
 
 redfish_mockup(
     name = "mockup.shar",
-    visibility = [
-        "//ecclesia:mmanager_binary_tests",
-        "//ecclesia:mmanager_middle_users",
-        "//ecclesia:redfish_users",
-    ],
+    visibility = ["//visibility:public"],
 )

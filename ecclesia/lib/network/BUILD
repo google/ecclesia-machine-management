@@ -4,7 +4,7 @@ cc_library(
     name = "hosts",
     srcs = ["hosts.cc"],
     hdrs = ["hosts.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = ["@com_google_absl//absl/strings"],
 )
 
@@ -24,7 +24,7 @@ cc_library(
     testonly = True,
     srcs = ["testing.cc"],
     hdrs = ["testing.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/logging",
         "//ecclesia/lib/logging:posix",

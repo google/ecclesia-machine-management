@@ -11,7 +11,7 @@ cc_library(
         "interfaces.h",
         "logging.h",
     ],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/time:clock",
         "@com_google_absl//absl/base:core_headers",
@@ -40,7 +40,7 @@ cc_library(
     name = "posix",
     srcs = ["posix.cc"],
     hdrs = ["posix.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":logging",
         "@com_google_absl//absl/base:core_headers",
@@ -52,7 +52,7 @@ cc_library(
     name = "file",
     srcs = ["file.cc"],
     hdrs = ["file.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":logging",
         ":posix",
@@ -91,7 +91,7 @@ cc_library(
     name = "file_globals",
     srcs = ["file_globals.cc"],
     hdrs = ["file_globals.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":file",
         ":logging",

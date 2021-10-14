@@ -7,7 +7,7 @@ cc_library(
     name = "mmio",
     srcs = ["mmio.cc"],
     hdrs = ["mmio.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/codec:bits",
         "//ecclesia/lib/codec:endian",
@@ -43,7 +43,7 @@ cc_library(
     name = "ioctl",
     srcs = ["ioctl.cc"],
     hdrs = ["ioctl.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
@@ -53,7 +53,7 @@ cc_library(
         "constants.h",
         "msr.h",
     ],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/apifs",
         "//ecclesia/lib/codec:endian",
@@ -68,7 +68,7 @@ cc_library(
     name = "mocks",
     testonly = True,
     hdrs = ["mocks.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":mmio",
         "@com_google_absl//absl/status",

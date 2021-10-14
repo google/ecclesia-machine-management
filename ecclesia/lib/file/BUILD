@@ -5,7 +5,7 @@ licenses(["notice"])
 cc_binary(
     name = "cc_embed",
     srcs = ["cc_embed.cc"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":path",
         "//ecclesia/lib/logging",
@@ -19,7 +19,7 @@ cc_binary(
 cc_library(
     name = "cc_embed_interface",
     hdrs = ["cc_embed_interface.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/logging",
         "@com_google_absl//absl/strings",
@@ -71,7 +71,7 @@ cc_library(
     name = "dir",
     srcs = ["dir.cc"],
     hdrs = ["dir.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":path",
         "@com_google_absl//absl/container:flat_hash_map",
@@ -101,7 +101,7 @@ cc_library(
     name = "lockfile",
     srcs = ["lockfile.cc"],
     hdrs = ["lockfile.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/status:posix",
@@ -135,7 +135,7 @@ cc_library(
     name = "mmap",
     srcs = ["mmap.cc"],
     hdrs = ["mmap.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/logging",
         "//ecclesia/lib/logging:posix",
@@ -175,7 +175,7 @@ cc_data_library(
 cc_library(
     name = "parse_json",
     hdrs = ["parse_json.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":cc_embed_interface",
         "//ecclesia/lib/logging",
@@ -203,7 +203,7 @@ cc_library(
     name = "path",
     srcs = ["path.cc"],
     hdrs = ["path.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
@@ -251,7 +251,7 @@ cc_library(
     name = "uds",
     srcs = ["uds.cc"],
     hdrs = ["uds.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":path",
         "//ecclesia/lib/logging",

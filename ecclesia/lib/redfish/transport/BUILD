@@ -5,7 +5,7 @@ licenses(["notice"])
 cc_library(
     name = "interface",
     hdrs = ["interface.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -17,7 +17,7 @@ cc_library(
     name = "http",
     srcs = ["http.cc"],
     hdrs = ["http.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":interface",
         "//ecclesia/lib/http:client",
@@ -61,7 +61,7 @@ cc_library(
     name = "http_redfish_intf",
     srcs = ["http_redfish_intf.cc"],
     hdrs = ["http_redfish_intf.h"],
-    visibility = ["//ecclesia:redfish_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":http",
         ":interface",

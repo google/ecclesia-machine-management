@@ -10,7 +10,7 @@ cc_library(
     name = "bits",
     srcs = ["bits.cc"],
     hdrs = ["bits.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/numeric:bits",
@@ -31,7 +31,7 @@ cc_test(
 cc_library(
     name = "endian",
     hdrs = ["endian.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = ["@com_google_absl//absl/numeric:int128"],
 )
 
@@ -49,7 +49,7 @@ cc_library(
     name = "text",
     srcs = ["text.cc"],
     hdrs = ["text.h"],
-    visibility = ["//ecclesia:library_users"],
+    visibility = ["//visibility:public"],
     deps = [
         ":bits",
         "@com_google_absl//absl/status",
