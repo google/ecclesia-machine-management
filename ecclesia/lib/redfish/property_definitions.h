@@ -109,6 +109,7 @@ inline constexpr char kRfPropertyProcessorId[] = "ProcessorId";
 inline constexpr char kRfOemPropertySmartAttributes[] = "SMARTAttributes";
 inline constexpr char kRfOemPropertyBootNumber[] = "BootNumber";
 inline constexpr char kRfOemPropertySystemUptime[] = "SystemUptime";
+inline constexpr char kRfOemPropertyTelemetry[] = "Telemetry";
 
 inline constexpr char kRfPropertyMediaTypeSsd[] = "SSD";
 inline constexpr char kRfPropertyMemberId[] = "MemberId";
@@ -120,6 +121,7 @@ inline constexpr char kRfPropertyResponseMessage[] = "message";
 
 inline constexpr char kRfPropertyUpdateService[] = "UpdateService";
 inline constexpr char kRfPropertyFirmwareInventory[] = "FirmwareInventory";
+inline constexpr char kRfPropertyAdditionalDataUri[] = "AdditionalDataURI";
 
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
 DEFINE_REDFISH_RESOURCE(ResourceChassis, "Chassis");
