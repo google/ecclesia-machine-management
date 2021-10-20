@@ -24,7 +24,7 @@ namespace libredfish {
 
 // Function to create NodeTopology based on go/redfish-devpath2 design
 //
-// This funciton will find a root node and uses the redfish linkages to find
+// This function will find a root node and uses the redfish linkages to find
 // nodes and assign devpaths based on the Location.PartLocation attribute
 NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf);
 
