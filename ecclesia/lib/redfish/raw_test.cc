@@ -63,13 +63,11 @@ absl::string_view BackendTypeToString(BackendType backend_type) {
   }
 }
 
-enum class InterfaceType { kNoAuth, kBasicAuth, kSessionAuth, kTlsAuth };
+enum class InterfaceType { kNoAuth, kSessionAuth, kTlsAuth };
 
 std::optional<absl::string_view> InterfaceTypeToString(
     InterfaceType interface_type) {
   switch (interface_type) {
-    case InterfaceType::kBasicAuth:
-      return "BasicAuth";
     case InterfaceType::kSessionAuth:
       return "SessionAuth";
     case InterfaceType::kNoAuth:
@@ -89,7 +87,6 @@ struct RawTestConfig {
 
 const RawTestConfig kRawTestCases[] = {
     {BackendType::kDefault, InterfaceType::kNoAuth},
-    {BackendType::kDefault, InterfaceType::kBasicAuth},
     {BackendType::kDefault, InterfaceType::kSessionAuth},
     {BackendType::kDefault, InterfaceType::kTlsAuth},
     {BackendType::kEcclesiaCurl, InterfaceType::kNoAuth},
@@ -177,11 +174,6 @@ class RawInterfaceWithParamTest
   // Sets up raw_intf_ based on auth types
   void SetUp() {
     switch (GetParam().interface_type) {
-      case InterfaceType::kBasicAuth:
-        mockup_server_ = std::make_unique<TestingMockupServer>(
-            "barebones_session_auth/mockup.shar");
-        raw_intf_ = mockup_server_->RedfishClientBasicAuthInterface();
-        break;
       case InterfaceType::kSessionAuth:
         mockup_server_ = std::make_unique<TestingMockupServer>(
             "barebones_session_auth/mockup.shar");
