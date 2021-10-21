@@ -60,7 +60,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":property",
-        "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/time",
     ],
 )

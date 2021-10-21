@@ -23,13 +23,17 @@
 
 #include "absl/functional/bind_front.h"
 #include "absl/memory/memory.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/http/client.h"
+#include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/status/macros.h"
+#include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
@@ -38,6 +42,10 @@ namespace {
 // Use a dummy endpoint so that the URI stays valid, as required by cURL:
 // https://github.com/curl/curl/issues/936
 constexpr absl::string_view kUdsDummyEndpoint = "dummy";
+
+// Headers used for session authentication, as defined in the Redfish spec.
+constexpr absl::string_view kXAuthToken = "X-Auth-Token";
+constexpr absl::string_view kLocation = "Location";
 
 // Generic helper function for all REST operations.
 // RestOp is a functor which invokes the relevant REST operation.
@@ -49,16 +57,104 @@ absl::StatusOr<RedfishTransport::Result> RestHelper(
   RedfishTransport::Result result;
   result.code = resp.code;
   result.body = resp.GetBodyJson();
+  result.headers = std::move(resp.headers);
   return result;
 }
 
+// Helper function for retrieving the POST target to the SessionService.
+// The Redfish Spec suggests 2 options:
+// 1. via the @odata.id reference in Links.Sessions
+// 2. via SessionService.Sessions
+absl::StatusOr<std::string> GetSessionServicePostTarget(nlohmann::json root) {
+  // Try reading Links.Session
+  auto links_itr = root.find(libredfish::kRfPropertyLinks);
+  if (links_itr != root.end()) {
+    auto session_itr = links_itr->find(libredfish::kRfPropertySessions);
+    if (session_itr != links_itr->end()) {
+      auto odata_id = session_itr->find(libredfish::PropertyOdataId::Name);
+      if (odata_id != session_itr->end() && odata_id->is_string()) {
+        return odata_id->get<std::string>();
+      }
+    }
+  }
+
+  // Try reading SessionService Collection.
+  auto service_itr = root.find(libredfish::kRfPropertySessionService);
+  if (service_itr != root.end()) {
+    auto odata_id = service_itr->find(libredfish::PropertyOdataId::Name);
+    if (odata_id != service_itr->end() && odata_id->is_string()) {
+      return absl::StrCat(odata_id->get<std::string>(), "/",
+                          libredfish::kRfPropertySessions);
+    }
+  }
+
+  return absl::NotFoundError("No Session URI target found.");
+}
+
 }  // namespace
+
+HttpRedfishTransport::~HttpRedfishTransport() {
+  absl::ReaderMutexLock mu(&mutex_);
+  EndCurrentSession();
+}
+
+void HttpRedfishTransport::EndCurrentSession() {
+  if (!session_auth_uri_.empty()) {
+    LockedDelete(session_auth_uri_, "").IgnoreError();
+  }
+  session_auth_uri_.clear();
+  x_auth_token_.clear();
+}
+
+absl::Status HttpRedfishTransport::DoSessionAuth(std::string username,
+                                                 std::string password) {
+  absl::WriterMutexLock mu(&mutex_);
+  EndCurrentSession();
+  session_username_ = std::move(username);
+  session_password_ = std::move(password);
+  return LockedDoSessionAuth();
+}
+
+absl::Status HttpRedfishTransport::LockedDoSessionAuth() {
+  if (session_username_.empty() && session_password_.empty()) {
+    return absl::OkStatus();
+  }
+  ECCLESIA_ASSIGN_OR_RETURN(
+      Result root, LockedGet(libredfish::RedfishInterface::kServiceRoot));
+  ECCLESIA_ASSIGN_OR_RETURN(std::string post_uri,
+                            GetSessionServicePostTarget(root.body));
+
+  nlohmann::json session_post_payload;
+  session_post_payload[libredfish::PropertyUserName::Name] = session_username_;
+  session_post_payload[libredfish::PropertyPassword::Name] = session_password_;
+  absl::StatusOr<Result> session_post =
+      LockedPost(post_uri, session_post_payload.dump());
+  if (!session_post.ok()) {
+    return absl::InternalError(absl::StrCat("Could not establish session: ",
+                                            session_post.status().message()));
+  }
+  auto token = session_post->headers.find(kXAuthToken);
+  if (token == session_post->headers.end()) {
+    return absl::InternalError("No X-Auth-Token returned for POST.");
+  }
+  auto session_uri = session_post->headers.find(kLocation);
+  if (session_uri == session_post->headers.end()) {
+    return absl::InternalError("No session URI returned for POST.");
+  }
+  session_auth_uri_ = std::move(session_uri->second);
+  x_auth_token_ = std::move(token->second);
+
+  return absl::OkStatus();
+}
 
 std::unique_ptr<HttpClient::HttpRequest> HttpRedfishTransport::MakeRequest(
     TcpTarget target, absl::string_view path, absl::string_view data) {
   auto request = absl::make_unique<HttpClient::HttpRequest>();
   request->uri = absl::StrCat(target.endpoint, path);
   request->body = data;
+  if (!x_auth_token_.empty()) {
+    request->headers[kXAuthToken] = x_auth_token_;
+  }
   return request;
 }
 
@@ -68,6 +164,9 @@ std::unique_ptr<HttpClient::HttpRequest> HttpRedfishTransport::MakeRequest(
   request->uri = absl::StrCat(kUdsDummyEndpoint, path);
   request->body = data;
   request->unix_socket_path = target.path;
+  if (!x_auth_token_.empty()) {
+    request->headers[kXAuthToken] = x_auth_token_;
+  }
   return request;
 }
 
@@ -76,13 +175,13 @@ HttpRedfishTransport::HttpRedfishTransport(
     std::variant<TcpTarget, UdsTarget> target)
     : client_(std::move(client)), target_(std::move(target)) {}
 
-std::unique_ptr<RedfishTransport> HttpRedfishTransport::MakeNetwork(
+std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeNetwork(
     std::unique_ptr<HttpClient> client, std::string endpoint) {
   return absl::WrapUnique(new HttpRedfishTransport(
       std::move(client), TcpTarget{std::move(endpoint)}));
 }
 
-std::unique_ptr<RedfishTransport> HttpRedfishTransport::MakeUds(
+std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeUds(
     std::unique_ptr<HttpClient> client, std::string unix_domain_socket) {
   return absl::WrapUnique(new HttpRedfishTransport(
       std::move(client), UdsTarget{std::string(unix_domain_socket)}));
@@ -91,29 +190,44 @@ std::unique_ptr<RedfishTransport> HttpRedfishTransport::MakeUds(
 void HttpRedfishTransport::UpdateToNetworkEndpoint(
     absl::string_view tcp_endpoint) {
   absl::WriterMutexLock mu(&mutex_);
+  EndCurrentSession();
   target_ = TcpTarget{std::string(tcp_endpoint)};
+  LockedDoSessionAuth().IgnoreError();
 }
 
 void HttpRedfishTransport::UpdateToUdsEndpoint(
     absl::string_view unix_domain_socket) {
   absl::WriterMutexLock mu(&mutex_);
+  EndCurrentSession();
   target_ = UdsTarget{std::string(unix_domain_socket)};
+  LockedDoSessionAuth().IgnoreError();
 }
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Get(
     absl::string_view path) {
   absl::ReaderMutexLock mu(&mutex_);
-  return RestHelper(
-      std::visit([&](const auto &t) { return MakeRequest(t, path, ""); },
-                 target_),
-      absl::bind_front(&HttpClient::Get, client_.get()));
+  return LockedGet(path);
+}
+
+absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedGet(
+    absl::string_view path) {
+  return RestHelper(std::visit([&](const auto &t) ABSL_SHARED_LOCKS_REQUIRED(
+                                   mutex_) { return MakeRequest(t, path, ""); },
+                               target_),
+                    absl::bind_front(&HttpClient::Get, client_.get()));
 }
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Post(
     absl::string_view path, absl::string_view data) {
   absl::ReaderMutexLock mu(&mutex_);
+  return LockedPost(path, data);
+}
+
+absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedPost(
+    absl::string_view path, absl::string_view data) {
   return RestHelper(
-      std::visit([&](const auto &t) { return MakeRequest(t, path, data); },
+      std::visit([&](const auto &t) ABSL_SHARED_LOCKS_REQUIRED(
+                     mutex_) { return MakeRequest(t, path, data); },
                  target_),
       absl::bind_front(&HttpClient::Post, client_.get()));
 }
@@ -121,8 +235,14 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Post(
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Patch(
     absl::string_view path, absl::string_view data) {
   absl::ReaderMutexLock mu(&mutex_);
+  return LockedPatch(path, data);
+}
+
+absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedPatch(
+    absl::string_view path, absl::string_view data) {
   return RestHelper(
-      std::visit([&](const auto &t) { return MakeRequest(t, path, data); },
+      std::visit([&](const auto &t) ABSL_SHARED_LOCKS_REQUIRED(
+                     mutex_) { return MakeRequest(t, path, data); },
                  target_),
       absl::bind_front(&HttpClient::Patch, client_.get()));
 }
@@ -130,8 +250,14 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Patch(
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Delete(
     absl::string_view path, absl::string_view data) {
   absl::ReaderMutexLock mu(&mutex_);
+  return LockedDelete(path, data);
+}
+
+absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedDelete(
+    absl::string_view path, absl::string_view data) {
   return RestHelper(
-      std::visit([&](const auto &t) { return MakeRequest(t, path, data); },
+      std::visit([&](const auto &t) ABSL_SHARED_LOCKS_REQUIRED(
+                     mutex_) { return MakeRequest(t, path, data); },
                  target_),
       absl::bind_front(&HttpClient::Delete, client_.get()));
 }

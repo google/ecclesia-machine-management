@@ -330,6 +330,8 @@ class RedfishInterface {
   using ValueVariant =
       std::variant<int, bool, std::string, const char *, double>;
 
+  static inline constexpr absl::string_view kServiceRoot = "/redfish/v1";
+
   virtual ~RedfishInterface() {}
 
   // An endpoint is trusted if all of the information coming from the endpoint

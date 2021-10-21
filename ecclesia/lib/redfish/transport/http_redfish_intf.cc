@@ -282,7 +282,7 @@ class HttpRedfishInterface : public RedfishInterface {
     }
   }
 
-  RedfishVariant GetRoot() override { return GetUri("/redfish/v1"); }
+  RedfishVariant GetRoot() override { return GetUri(kServiceRoot); }
 
   // GetUri fetches the given URI and resolves any JSON pointers. Note that
   // this method must not resolve any references (i.e. JSON object containing

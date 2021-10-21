@@ -52,6 +52,8 @@ inline constexpr char kRfPropertyCacheMetricsTotal[] = "CacheMetricsTotal";
 inline constexpr char kRfPropertyProcessors[] = "Processors";
 inline constexpr char kRfPropertyMetrics[] = "Metrics";
 inline constexpr char kRfPropertyEnvironmentMetrics[] = "EnvironmentMetrics";
+inline constexpr char kRfPropertySessions[] = "Sessions";
+inline constexpr char kRfPropertySessionService[] = "SessionService";
 inline constexpr char kRfPropertySystems[] = "Systems";
 inline constexpr char kRfPropertyManagers[] = "Managers";
 inline constexpr char kRfPropertyEthernetInterfaces[] = "EthernetInterfaces";
@@ -226,6 +228,8 @@ DEFINE_REDFISH_PROPERTY(PropertyCorrectableECCErrorCount, int,
                         "CorrectableECCErrorCount");
 DEFINE_REDFISH_PROPERTY(PropertyUncorrectableECCErrorCount, int,
                         "UncorrectableECCErrorCount");
+DEFINE_REDFISH_PROPERTY(PropertyUserName, std::string, "UserName");
+DEFINE_REDFISH_PROPERTY(PropertyPassword, std::string, "Password");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");

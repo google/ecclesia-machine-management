@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_TRANSPORT_INTERFACE_H_
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_INTERFACE_H_
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "single_include/nlohmann/json.hpp"
@@ -33,6 +34,8 @@ class RedfishTransport {
     int code = 0;
     // If the response body was JSON format, it will be parsed here.
     nlohmann::json body = nlohmann::json::value_t::discarded;
+    // Headers returned in the response.
+    absl::flat_hash_map<std::string, std::string> headers;
   };
 
   virtual ~RedfishTransport() = default;

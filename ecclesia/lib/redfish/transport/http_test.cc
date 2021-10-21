@@ -33,6 +33,7 @@
 #include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/testing/status.h"
 #include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
@@ -53,13 +54,14 @@ class HttpRedfishTransportTest : public ::testing::Test {
     HttpCredential creds;
     auto curl_http_client =
         std::make_unique<CurlHttpClient>(LibCurlProxy::CreateInstance(), creds);
-    transport_ = HttpRedfishTransport::MakeNetwork(
-        std::move(curl_http_client),
-        absl::StrFormat("%s:%d", config.hostname, config.port));
+    network_endpoint_ = absl::StrFormat("%s:%d", config.hostname, config.port);
+    transport_ = HttpRedfishTransport::MakeNetwork(std::move(curl_http_client),
+                                                   network_endpoint_);
   }
 
   std::unique_ptr<FakeRedfishServer> server_;
-  std::unique_ptr<RedfishTransport> transport_;
+  std::string network_endpoint_;
+  std::unique_ptr<HttpRedfishTransport> transport_;
 };
 
 TEST_F(HttpRedfishTransportTest, CanGet) {
@@ -395,6 +397,679 @@ TEST_F(HttpRedfishTransportTest, DeleteError) {
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(500));
   EXPECT_THAT(result->body, Eq(result_json));
+}
+
+TEST_F(HttpRedfishTransportTest, CanEstablishSessionRootSessionCollection) {
+  auto request_json = nlohmann::json::parse(R"json({
+  "UserName": "test_username",
+  "Password": "test_password"
+})json");
+  auto result_json = nlohmann::json::parse(R"json({
+  "@odata.id": "/redfish/v1/Session/Sessions/1",
+  "@odata.type": "#Session.v1_0_0.Session",
+  "Id": "1",
+  "Name": "User Session",
+  "Description": "User Session",
+  "UserName": "test_username",
+  "Password": null
+})json");
+  auto root_json = nlohmann::json::parse(R"json({
+  "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+  "@odata.id": "/redfish/v1",
+  "@odata.type": "#ServiceRoot.v1_5_0.ServiceRoot",
+  "SessionService": {
+    "@odata.id": "/redfish/v1/SessionService"
+  }
+})json");
+
+  auto get_handler =
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(root_json.dump());
+        req->Reply();
+      };
+
+  server_->AddHttpGetHandler("/redfish/v1", get_handler);
+  server_->AddHttpGetHandler("/redfish/v1/", get_handler);
+
+  bool called = false;
+  server_->AddHttpPostHandler(
+      "/redfish/v1/SessionService/Sessions",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        EXPECT_THAT(read_request, Eq(request_json));
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->AppendResponseHeader("X-Auth-Token", "a1b2c3");
+        req->AppendResponseHeader("Location", "/redfish/v1/Session/Sessions/1");
+        req->Reply();
+      });
+
+  auto result = transport_->DoSessionAuth("test_username", "test_password");
+  EXPECT_TRUE(called);
+  EXPECT_TRUE(result.ok()) << result.message();
+
+  // Send a GET and check that we are sending the session token in the header.
+  bool req_get_called = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/test/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req_get_called = true;
+        EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("a1b2c3"));
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+  auto get_result = transport_->Get("/redfish/v1/test/uri");
+  EXPECT_TRUE(req_get_called);
+  EXPECT_TRUE(get_result.ok()) << get_result.status().message();
+
+  // Handle the delete when the transport is destroyed.
+  bool delete_called = false;
+  server_->AddHttpDeleteHandler(
+      "/redfish/v1/Session/Sessions/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        delete_called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
+      });
+  transport_.reset();
+  EXPECT_TRUE(delete_called);
+}
+
+TEST_F(HttpRedfishTransportTest, CanEstablishSessionServiceRootLinks) {
+  auto request_json = nlohmann::json::parse(R"json({
+  "UserName": "test_username",
+  "Password": "test_password"
+})json");
+  auto result_json = nlohmann::json::parse(R"json({
+  "@odata.id": "/redfish/v1/Session/Sessions/1",
+  "@odata.type": "#Session.v1_0_0.Session",
+  "Id": "1",
+  "Name": "User Session",
+  "Description": "User Session",
+  "UserName": "test_username",
+  "Password": null
+})json");
+  auto root_json = nlohmann::json::parse(R"json({
+  "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+  "@odata.id": "/redfish/v1",
+  "@odata.type": "#ServiceRoot.v1_5_0.ServiceRoot",
+  "Links": {
+      "Sessions": {
+          "@odata.id": "/redfish/v1/SessionService/Sessions"
+      }
+  }
+})json");
+
+  bool root_called = false;
+  auto get_handler =
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        root_called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(root_json.dump());
+        req->Reply();
+      };
+
+  server_->AddHttpGetHandler("/redfish/v1", get_handler);
+  server_->AddHttpGetHandler("/redfish/v1/", get_handler);
+
+  bool called = false;
+  server_->AddHttpPostHandler(
+      "/redfish/v1/SessionService/Sessions",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        EXPECT_THAT(read_request, Eq(request_json));
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->AppendResponseHeader("X-Auth-Token", "a1b2c3");
+        req->AppendResponseHeader("Location", "/redfish/v1/Session/Sessions/1");
+        req->Reply();
+      });
+
+  auto result = transport_->DoSessionAuth("test_username", "test_password");
+  EXPECT_TRUE(called);
+  EXPECT_TRUE(result.ok()) << result.message();
+
+  // Send a GET and check that we are sending the session token in the header.
+  bool req_get_called = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/test/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req_get_called = true;
+        EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("a1b2c3"));
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+  auto get_result = transport_->Get("/redfish/v1/test/uri");
+  EXPECT_TRUE(req_get_called);
+  EXPECT_TRUE(get_result.ok()) << get_result.status().message();
+
+  // Handle the delete when the transport is destroyed.
+  bool delete_called = false;
+  server_->AddHttpDeleteHandler(
+      "/redfish/v1/Session/Sessions/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        delete_called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
+      });
+  transport_.reset();
+  EXPECT_TRUE(delete_called);
+}
+
+TEST_F(HttpRedfishTransportTest, PostOperationsAfterAuthIncludeHeader) {
+  auto result_json = nlohmann::json::parse(R"json({
+  "@odata.id": "/redfish/v1/Session/Sessions/1",
+  "@odata.type": "#Session.v1_0_0.Session",
+  "Id": "1",
+  "Name": "User Session",
+  "Description": "User Session",
+  "UserName": "test_username",
+  "Password": null
+})json");
+
+  bool called = false;
+  server_->AddHttpPostHandler(
+      "/redfish/v1/SessionService/Sessions",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->AppendResponseHeader("X-Auth-Token", "a1b2c3");
+        req->AppendResponseHeader("Location", "/redfish/v1/Session/Sessions/1");
+        req->Reply();
+      });
+
+  auto result = transport_->DoSessionAuth("test_username", "test_password");
+  EXPECT_TRUE(called);
+  EXPECT_TRUE(result.ok()) << result.message();
+
+  // Send a POST and check that we are sending the session token in the header.
+  bool req_get_called = false;
+  server_->AddHttpPostHandler(
+      "/redfish/v1/test/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req_get_called = true;
+        EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("a1b2c3"));
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+  auto get_result = transport_->Post("/redfish/v1/test/uri", "");
+  EXPECT_TRUE(req_get_called);
+  EXPECT_TRUE(get_result.ok()) << get_result.status().message();
+
+  // Handle the delete when the transport is destroyed.
+  bool delete_called = false;
+  server_->AddHttpDeleteHandler(
+      "/redfish/v1/Session/Sessions/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        delete_called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
+      });
+  transport_.reset();
+  EXPECT_TRUE(delete_called);
+}
+
+TEST_F(HttpRedfishTransportTest, FailEstablishSessionNoSessionSupported) {
+  auto root_json = nlohmann::json::parse(R"json({
+  "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+  "@odata.id": "/redfish/v1",
+  "@odata.type": "#ServiceRoot.v1_5_0.ServiceRoot"
+})json");
+
+  bool root_called = false;
+  auto get_handler =
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        root_called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(root_json.dump());
+        req->Reply();
+      };
+
+  server_->AddHttpGetHandler("/redfish/v1", get_handler);
+  server_->AddHttpGetHandler("/redfish/v1/", get_handler);
+
+  auto result = transport_->DoSessionAuth("test_username", "test_password");
+  EXPECT_THAT(result, IsStatusNotFound()) << result.message();
+}
+
+TEST_F(HttpRedfishTransportTest, FailEstablishSessionNoAuthToken) {
+  auto result_json = nlohmann::json::parse(R"json({
+  "@odata.id": "/redfish/v1/Session/Sessions/1",
+  "@odata.type": "#Session.v1_0_0.Session",
+  "Id": "1",
+  "Name": "User Session",
+  "Description": "User Session",
+  "UserName": "test_username",
+  "Password": null
+})json");
+
+  bool called = false;
+  server_->AddHttpPostHandler(
+      "/redfish/v1/SessionService/Sessions",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->AppendResponseHeader("Location", "/redfish/v1/Session/Sessions/1");
+        req->Reply();
+      });
+
+  auto result = transport_->DoSessionAuth("test_username", "test_password");
+  EXPECT_TRUE(called);
+  EXPECT_THAT(result, IsStatusInternal()) << result.message();
+}
+
+TEST_F(HttpRedfishTransportTest, FailEstablishSessionNoLocation) {
+  auto result_json = nlohmann::json::parse(R"json({
+  "@odata.id": "/redfish/v1/Session/Sessions/1",
+  "@odata.type": "#Session.v1_0_0.Session",
+  "Id": "1",
+  "Name": "User Session",
+  "Description": "User Session",
+  "UserName": "test_username",
+  "Password": null
+})json");
+
+  bool called = false;
+  server_->AddHttpPostHandler(
+      "/redfish/v1/SessionService/Sessions",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->AppendResponseHeader("X-Auth-Token", "a1b2c3");
+        req->Reply();
+      });
+
+  auto result = transport_->DoSessionAuth("test_username", "test_password");
+  EXPECT_TRUE(called);
+  EXPECT_THAT(result, IsStatusInternal()) << result.message();
+}
+
+TEST_F(HttpRedfishTransportTest, FailEstablishSessionHttpError) {
+  auto result_json = nlohmann::json::parse(R"json({
+  "@odata.id": "/redfish/v1/Session/Sessions/1",
+  "@odata.type": "#Session.v1_0_0.Session",
+  "Id": "1",
+  "Name": "User Session",
+  "Description": "User Session",
+  "UserName": "test_username",
+  "Password": null
+})json");
+
+  bool called = false;
+  server_->AddHttpPostHandler(
+      "/redfish/v1/SessionService/Sessions",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::NOT_FOUND);
+      });
+
+  auto result = transport_->DoSessionAuth("test_username", "test_password");
+  EXPECT_TRUE(called);
+  EXPECT_THAT(result, IsStatusInternal()) << result.message();
+}
+
+TEST_F(HttpRedfishTransportTest, CanEstablishSessionServiceAfterUpdate) {
+  auto result_json = nlohmann::json::parse(R"json({
+  "@odata.id": "/redfish/v1/Session/Sessions/1",
+  "@odata.type": "#Session.v1_0_0.Session",
+  "Id": "1",
+  "Name": "User Session",
+  "Description": "User Session",
+  "UserName": "test_username",
+  "Password": null
+})json");
+
+  int post_called_count = 0;
+  server_->AddHttpPostHandler(
+      "/redfish/v1/SessionService/Sessions",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        post_called_count++;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->AppendResponseHeader("X-Auth-Token", "a1b2c3");
+        req->AppendResponseHeader("Location", "/redfish/v1/Session/Sessions/1");
+        req->Reply();
+      });
+
+  auto result = transport_->DoSessionAuth("test_username", "test_password");
+  EXPECT_THAT(post_called_count, Eq(1));
+  EXPECT_TRUE(result.ok()) << result.message();
+
+  // Send a GET and check that we are sending the session token in the header.
+  bool req_get_called = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/test/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req_get_called = true;
+        EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("a1b2c3"));
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+  auto get_result = transport_->Get("/redfish/v1/test/uri");
+  EXPECT_TRUE(req_get_called);
+  EXPECT_TRUE(get_result.ok()) << get_result.status().message();
+
+  // Handle the delete when the update occurs.
+  bool delete_called = false;
+  server_->AddHttpDeleteHandler(
+      "/redfish/v1/Session/Sessions/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        delete_called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
+      });
+  transport_->UpdateToNetworkEndpoint(network_endpoint_);
+  EXPECT_TRUE(delete_called);
+  EXPECT_THAT(post_called_count, Eq(2));
+}
+
+TEST_F(HttpRedfishTransportTest, CanDeleteTokenIfSessionAuthFails) {
+  auto result_json = nlohmann::json::parse(R"json({
+  "@odata.id": "/redfish/v1/Session/Sessions/1",
+  "@odata.type": "#Session.v1_0_0.Session",
+  "Id": "1",
+  "Name": "User Session",
+  "Description": "User Session",
+  "UserName": "test_username",
+  "Password": null
+})json");
+
+  bool post_called = false;
+  server_->AddHttpPostHandler(
+      "/redfish/v1/SessionService/Sessions",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        post_called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->AppendResponseHeader("X-Auth-Token", "a1b2c3");
+        req->AppendResponseHeader("Location", "/redfish/v1/Session/Sessions/1");
+        req->Reply();
+      });
+
+  auto result = transport_->DoSessionAuth("test_username", "test_password");
+  EXPECT_TRUE(post_called);
+  EXPECT_TRUE(result.ok()) << result.message();
+
+  // Send a GET and check that we are sending the session token in the header.
+  bool req_get_called = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/test/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req_get_called = true;
+        EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("a1b2c3"));
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+  auto get_result = transport_->Get("/redfish/v1/test/uri");
+  EXPECT_TRUE(req_get_called);
+  EXPECT_TRUE(get_result.ok()) << get_result.status().message();
+
+  // Handle the delete when the update occurs.
+  bool delete_called = false;
+  server_->AddHttpDeleteHandler(
+      "/redfish/v1/Session/Sessions/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        delete_called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
+      });
+  // Fail to return X-Auth-Token.
+  server_->AddHttpPostHandler(
+      "/redfish/v1/SessionService/Sessions",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::NOT_FOUND);
+      });
+  transport_->UpdateToNetworkEndpoint(network_endpoint_);
+  EXPECT_TRUE(delete_called);
+
+  // Send a GET and check that we are sending the no session token.
+  req_get_called = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/test/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req_get_called = true;
+        EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq(""));
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+  get_result = transport_->Get("/redfish/v1/test/uri");
+  EXPECT_TRUE(req_get_called);
+  EXPECT_TRUE(get_result.ok()) << get_result.status().message();
+}
+
+TEST_F(HttpRedfishTransportTest, CanDoSessionAuthTwice) {
+  auto request_json = nlohmann::json::parse(R"json({
+  "UserName": "test_username",
+  "Password": "test_password"
+})json");
+  auto request_json2 = nlohmann::json::parse(R"json({
+  "UserName": "test_username2",
+  "Password": "test_password2"
+})json");
+  auto result_json = nlohmann::json::parse(R"json({
+  "@odata.id": "/redfish/v1/Session/Sessions/1",
+  "@odata.type": "#Session.v1_0_0.Session",
+  "Id": "1",
+  "Name": "User Session",
+  "Description": "User Session",
+  "UserName": "test_username",
+  "Password": null
+})json");
+
+  bool called = false;
+  server_->AddHttpPostHandler(
+      "/redfish/v1/SessionService/Sessions",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        EXPECT_THAT(read_request, Eq(request_json));
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->AppendResponseHeader("X-Auth-Token", "a1b2c3");
+        req->AppendResponseHeader("Location", "/redfish/v1/Session/Sessions/1");
+        req->Reply();
+      });
+
+  auto result = transport_->DoSessionAuth("test_username", "test_password");
+  EXPECT_TRUE(called);
+  EXPECT_TRUE(result.ok()) << result.message();
+
+  // Send a GET and check that we are sending the session token in the header.
+  bool req_get_called = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/test/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req_get_called = true;
+        EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("a1b2c3"));
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+  auto get_result = transport_->Get("/redfish/v1/test/uri");
+  EXPECT_TRUE(req_get_called);
+  EXPECT_TRUE(get_result.ok()) << get_result.status().message();
+
+  // Handle DELETE and second POST.
+  bool delete_called = false;
+  server_->AddHttpDeleteHandler(
+      "/redfish/v1/Session/Sessions/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        delete_called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->ReplyWithStatus(
+            tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
+      });
+  called = false;
+  server_->AddHttpPostHandler(
+      "/redfish/v1/SessionService/Sessions",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        EXPECT_THAT(read_request, Eq(request_json2));
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->AppendResponseHeader("X-Auth-Token", "d4e5f6");
+        req->AppendResponseHeader("Location", "/redfish/v1/Session/Sessions/1");
+        req->Reply();
+      });
+  auto result2 = transport_->DoSessionAuth("test_username2", "test_password2");
+  EXPECT_TRUE(delete_called);
+  EXPECT_TRUE(result2.ok()) << result2.message();
+
+  // Send a GET and check that we are sending the new session token.
+  req_get_called = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/test/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req_get_called = true;
+        EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("d4e5f6"));
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+  get_result = transport_->Get("/redfish/v1/test/uri");
+  EXPECT_TRUE(req_get_called);
+  EXPECT_TRUE(get_result.ok()) << get_result.status().message();
 }
 
 }  // namespace
