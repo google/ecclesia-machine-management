@@ -75,14 +75,14 @@ std::string ConfigToEndpoint(absl::string_view scheme,
   return absl::StrCat(scheme, "://", config.hostname, ":", config.port);
 }
 
-std::unique_ptr<ecclesia::RedfishTransport> ConfigToTransport(
+std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
     std::unique_ptr<ecclesia::HttpClient> client,
     const TestingMockupServer::ConfigNetwork &conn) {
   return ecclesia::HttpRedfishTransport::MakeNetwork(
       std::move(client),
       absl::StrCat("http://", conn.hostname, ":", conn.port));
 }
-std::unique_ptr<ecclesia::RedfishTransport> ConfigToTransport(
+std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
     std::unique_ptr<ecclesia::HttpClient> client,
     const TestingMockupServer::ConfigUnix &conn) {
   return ecclesia::HttpRedfishTransport::MakeUds(std::move(client),
@@ -252,13 +252,27 @@ std::unique_ptr<RedfishInterface> TestingMockupServer::RedfishClientInterface(
 std::unique_ptr<RedfishInterface>
 TestingMockupServer::RedfishClientSessionAuthInterface(
     std::unique_ptr<ecclesia::HttpClient> client) {
-  PasswordArgs args;
-  args.username = "FakeName";
-  args.password = "FakePassword";
-  args.endpoint =
-      std::visit([](auto &conn) { return ConfigToEndpoint("http", conn); },
-                 connection_config_);
-  auto intf = libredfish::NewRawSessionAuthInterface(args, std::move(client));
+  if (client == nullptr) {
+    client = std::make_unique<ecclesia::CurlHttpClient>(
+        ecclesia::LibCurlProxy::CreateInstance(), ecclesia::HttpCredential());
+  }
+
+  std::unique_ptr<ecclesia::HttpRedfishTransport> transport = std::visit(
+      [&client](auto &conn) {
+        return ConfigToTransport(std::move(client), conn);
+      },
+      connection_config_);
+  ecclesia::Check(transport != nullptr, "can create a redfish transport.");
+
+  if (auto auth_status = transport->DoSessionAuth("FakeName", "FakePassword");
+      !auth_status.ok()) {
+    ecclesia::ErrorLog() << "Failed to do session auth: "
+                         << auth_status.message();
+    return nullptr;
+  }
+
+  auto intf = libredfish::NewHttpInterface(
+      std::move(transport), libredfish::RedfishInterface::kTrusted);
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
 }
