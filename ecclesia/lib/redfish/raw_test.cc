@@ -63,7 +63,7 @@ absl::string_view BackendTypeToString(BackendType backend_type) {
   }
 }
 
-enum class InterfaceType { kNoAuth, kSessionAuth, kTlsAuth };
+enum class InterfaceType { kNoAuth, kSessionAuth };
 
 std::optional<absl::string_view> InterfaceTypeToString(
     InterfaceType interface_type) {
@@ -72,8 +72,6 @@ std::optional<absl::string_view> InterfaceTypeToString(
       return "SessionAuth";
     case InterfaceType::kNoAuth:
       return "NoAuth";
-    case InterfaceType::kTlsAuth:
-      return "TlsAuth";
     default:
       // The interface type is not supported yet!
       return std::nullopt;
@@ -88,7 +86,6 @@ struct RawTestConfig {
 const RawTestConfig kRawTestCases[] = {
     {BackendType::kDefault, InterfaceType::kNoAuth},
     {BackendType::kDefault, InterfaceType::kSessionAuth},
-    {BackendType::kDefault, InterfaceType::kTlsAuth},
     {BackendType::kEcclesiaCurl, InterfaceType::kNoAuth},
 };
 
@@ -105,39 +102,8 @@ struct PrintToStringParamName {
   }
 };
 
-std::unique_ptr<TestingMockupServer> GetTlsServer() {
-  return std::make_unique<TestingMockupServer>(
-      "indus_hmb_cn/mockup.shar",
-      TestingMockupServer::ServerTlsConfig{
-          .cert_file =
-              ecclesia::GetTestDataDependencyPath(kMockupServerCertFile),
-          .key_file = ecclesia::GetTestDataDependencyPath(kMockupServerKeyFile),
-          .ca_cert_file =
-              ecclesia::GetTestDataDependencyPath(kMockupServerCAFile)},
-      TestingMockupServer::ClientTlsConfig{
-          .verify_peer = true,
-          .verify_hostname = false,
-          .cert_file = ecclesia::GetTestDataDependencyPath(kClientCertFile),
-          .key_file = ecclesia::GetTestDataDependencyPath(kClientKeyFile),
-          .ca_cert_file = ecclesia::GetTestDataDependencyPath(kClientCAFile)});
-}
-
 // The class handles non value-parameterized tests.
 class RawInterfaceTest : public ::testing::Test {};
-
-TEST_F(RawInterfaceTest, ClientsWithoutProperCertsAreRejected) {
-  auto mockup_server = GetTlsServer();
-  auto config =
-      std::get<TestingMockupServer::ConfigNetwork>(mockup_server->GetConfig());
-  TlsArgs args;
-  args.endpoint = absl::StrCat("https://", config.hostname, ":", config.port);
-  args.verify_hostname = false;
-  args.verify_peer = false;
-  args.cert_file = kMockupServerCertFile;
-  args.key_file = kMockupServerKeyFile;
-  auto interface = NewRawTlsAuthInterface(args);
-  EXPECT_THAT(interface->GetRoot().AsObject(), IsNull());
-}
 
 // Todo(nanzhou) add this test case into RawInterfaceWithParamTest once
 // indus_hmb_cn_mockup has SessionService
@@ -178,10 +144,6 @@ class RawInterfaceWithParamTest
         mockup_server_ = std::make_unique<TestingMockupServer>(
             "barebones_session_auth/mockup.shar");
         raw_intf_ = mockup_server_->RedfishClientSessionAuthInterface();
-        break;
-      case InterfaceType::kTlsAuth:
-        mockup_server_ = GetTlsServer();
-        raw_intf_ = mockup_server_->RedfishClientTlsAuthInterface();
         break;
       default:
         mockup_server_ =

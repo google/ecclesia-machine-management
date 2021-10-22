@@ -34,21 +34,6 @@ struct PasswordArgs {
   std::string password;
 };
 
-// Redfish arguments for TLS based Authentication.
-//   if verify_peer is true, ca_cert_file is optional;
-//   if verify_peer is false, ca_cert_file is discarded.
-struct TlsArgs {
-  std::string endpoint;
-  bool verify_peer;
-  bool verify_hostname;
-  // Absolute path to the PEM encoded certificate file;
-  std::string cert_file;
-  // Absolute path to the PEM encoded private key file;
-  std::string key_file;
-  // Absolute path to the certificate authority bundle;
-  std::optional<std::string> ca_cert_file;
-};
-
 // Options for the interface as a whole.
 struct RedfishRawInterfaceOptions {
   // The default timeout. A value of zero means no timeout.
@@ -74,11 +59,6 @@ std::unique_ptr<RedfishInterface> NewRawSessionAuthInterface(
 // needed nor tested.
 std::unique_ptr<RedfishInterface> NewRawBasicAuthInterface(
     const PasswordArgs &connectionArgs);
-
-// Constructor method for creating a RawInterface with Tls auth.
-// Returns nullptr in case the interface failed to be constructed.
-std::unique_ptr<RedfishInterface> NewRawTlsAuthInterface(
-    const TlsArgs &connectionArgs);
 
 }  // namespace libredfish
 

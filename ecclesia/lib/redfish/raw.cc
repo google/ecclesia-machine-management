@@ -529,24 +529,4 @@ std::unique_ptr<RedfishInterface> NewRawBasicAuthInterface(
                                    kDefaultRedfishRawInterfaceOptions);
 }
 
-std::unique_ptr<RedfishInterface> NewRawTlsAuthInterface(
-    const TlsArgs &connectionArgs) {
-  enumeratorAuthentication auth;
-  auth.authType = REDFISH_AUTH_TLS;
-
-  auth.authCodes.authTls.verifyPeer = connectionArgs.verify_peer;
-  auth.authCodes.authTls.verifyHostname = connectionArgs.verify_hostname;
-  auth.authCodes.authTls.caCertFile = connectionArgs.ca_cert_file.has_value()
-                                          ? connectionArgs.ca_cert_file->c_str()
-                                          : nullptr;
-  auth.authCodes.authTls.clientCertFile = connectionArgs.cert_file.c_str();
-  auth.authCodes.authTls.clientKeyFile = connectionArgs.key_file.c_str();
-
-  ServiceUniquePtr service(createServiceEnumerator(
-      connectionArgs.endpoint.c_str(), nullptr, &auth, 0));
-  return std::make_unique<RawIntf>(std::move(service),
-                                   RedfishInterface::kTrusted,
-                                   kDefaultRedfishRawInterfaceOptions);
-}
-
 }  // namespace libredfish

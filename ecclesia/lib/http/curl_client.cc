@@ -22,6 +22,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "absl/base/call_once.h"
@@ -50,6 +51,33 @@ namespace {
 absl::once_flag curl_init_once;
 
 constexpr auto kSupportedProtocols = CURLPROTO_HTTP | CURLPROTO_HTTPS;
+
+// SetCurlOpts is an overloaded helper function for setting curl options from
+// the different credential configs supported.
+void SetCurlOpts(LibCurl *libcurl, CURL *curl, HttpCredential creds) {
+  libcurl->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false);
+  libcurl->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, false);
+  if (!creds.username().empty() && !creds.password().empty()) {
+    libcurl->curl_easy_setopt(
+        curl, CURLOPT_USERPWD,
+        absl::StrCat(creds.username(), ":", creds.password()));
+  }
+}
+void SetCurlOpts(LibCurl *libcurl, CURL *curl, TlsCredential creds) {
+  libcurl->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST,
+                            creds.verify_hostname());
+  libcurl->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, creds.verify_peer());
+  if (creds.verify_peer() && !creds.server_ca_cert_file().empty()) {
+    libcurl->curl_easy_setopt(curl, CURLOPT_CAINFO,
+                              creds.server_ca_cert_file());
+  }
+  if (!creds.cert_file().empty()) {
+    libcurl->curl_easy_setopt(curl, CURLOPT_SSLCERT, creds.cert_file());
+  }
+  if (!creds.key_file().empty()) {
+    libcurl->curl_easy_setopt(curl, CURLOPT_SSLKEY, creds.key_file());
+  }
+}
 
 }  // namespace
 
@@ -166,22 +194,21 @@ CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH *share, CURLSHoption option,
 }
 
 CurlHttpClient::CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
-                               HttpCredential cred)
-    : CurlHttpClient(std::move(libcurl), cred, {}) {}
+                               std::variant<HttpCredential, TlsCredential> cred)
+    : CurlHttpClient(std::move(libcurl), std::move(cred), {}) {}
 
 CurlHttpClient::CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
-                               HttpCredential cred,
+                               std::variant<HttpCredential, TlsCredential> cred,
                                CurlHttpClient::Config config)
     : HttpClient(),
       libcurl_(std::move(libcurl)),
-      cred_(std::move(cred)),
       config_(std::move(config)),
-      user_pwd_(absl::StrCat(cred_.username(), ":", cred_.password())) {
+      cred_(std::move(cred)) {
   // Setup share interface
   shared_connection_ = libcurl_->curl_share_init();
   // Setup interface to share the actual underlying cached connection
   libcurl_->curl_share_setopt(shared_connection_, CURLSHOPT_SHARE,
-                      CURL_LOCK_DATA_CONNECT);
+                              CURL_LOCK_DATA_CONNECT);
   // Setup locking and unlocking functions so that share interface is thread
   // safe
   libcurl_->curl_share_setopt(shared_connection_, CURLSHOPT_LOCKFUNC,
@@ -232,9 +259,8 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
                                request->unix_socket_path.c_str());
   }
 
-  if (!user_pwd_.empty()) {
-    libcurl_->curl_easy_setopt(curl, CURLOPT_USERPWD, user_pwd_.c_str());
-  }
+  std::visit([&](auto creds) { SetCurlOpts(libcurl_.get(), curl, creds); },
+             cred_);
 
   switch (cmd) {
     case Protocol::kGet:
@@ -341,9 +367,6 @@ void CurlHttpClient::SetDefaultCurlOpts(CURL *curl) const {
   }
   libcurl_->curl_easy_reset(curl);
   libcurl_->curl_easy_setopt(curl, CURLOPT_NOSIGNAL, (uint64_t)1L);
-
-  libcurl_->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false);
-  libcurl_->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, false);
 
   libcurl_->curl_easy_setopt(curl, CURLOPT_HTTP_TRANSFER_DECODING,
                              config_.raw ? false : true);

@@ -2,7 +2,29 @@ syntax = "proto3";
 
 package ecclesia;
 
+// Use HTTP credentials for basic auth.
+// If the fields are left empty, no auth will be used.
 message HttpCredential {
   string username = 1;
   string password = 2;
+}
+
+// Use TLS credentials for auth.
+message TlsCredential {
+  // If true, verifies the Redfish server's SSL cert.
+  // See https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYPEER.html
+  bool verify_peer = 1;
+  // If true, verifies the certificate name against the hostname.
+  // See https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYHOST.html
+  bool verify_hostname = 2;
+  // If nonempty, path to CA bundle for verifying the Redfish server.
+  // This is only used if verify_peer is set to true.
+  // See https://curl.se/libcurl/c/CURLOPT_CAINFO.html
+  string server_ca_cert_file = 3;
+  // If nonempty, filepath to this client's SSL certificate.
+  // See https://curl.se/libcurl/c/CURLOPT_SSLCERT.html
+  string cert_file = 4;
+  // If nonempty, filepath to this client's private keyfile.
+  // See https://curl.se/libcurl/c/CURLOPT_SSLKEY.html
+  string key_file = 5;
 }

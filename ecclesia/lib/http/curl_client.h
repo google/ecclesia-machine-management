@@ -195,8 +195,10 @@ class CurlHttpClient : public HttpClient {
     HttpClient::Resolver resolver = Resolver::kIPAny;
   };
 
-  CurlHttpClient(std::unique_ptr<LibCurl> libcurl, HttpCredential cred);
-  CurlHttpClient(std::unique_ptr<LibCurl> libcurl, HttpCredential cred,
+  CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
+                 std::variant<HttpCredential, TlsCredential> cred);
+  CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
+                 std::variant<HttpCredential, TlsCredential> cred,
                  Config config);
   ~CurlHttpClient() override;
 
@@ -239,9 +241,9 @@ class CurlHttpClient : public HttpClient {
       ABSL_UNLOCK_FUNCTION(shared_mutex_);
 
   std::unique_ptr<LibCurl> libcurl_;
-  HttpCredential cred_;
   Config config_;
-  const std::string user_pwd_;
+  // Credentials can be either HTTP or mTLS auth.
+  const std::variant<HttpCredential, TlsCredential> cred_;
 
   // CURL share interface (https://curl.se/libcurl/c/libcurl-share.html)
   // The share interface lets us captalize on the fact that we're connecting to
