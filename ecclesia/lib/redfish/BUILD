@@ -71,57 +71,6 @@ cc_library(
 )
 
 cc_library(
-    name = "raw",
-    srcs = [
-        "libredfish_adapter.cc",
-        "raw.cc",
-    ],
-    hdrs = [
-        "libredfish_adapter.h",
-        "raw.h",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":interface",
-        "//ecclesia/lib/http:client",
-        "//ecclesia/lib/http:codes",
-        "//ecclesia/lib/logging",
-        "//ecclesia/lib/thread",
-        "@com_google_absl//absl/base:core_headers",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/synchronization",
-        "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:span",
-        "@libredfish",
-    ],
-)
-
-cc_test(
-    name = "raw_test",
-    srcs = ["raw_test.cc"],
-    data = [
-        "//ecclesia/lib/redfish/testing:testing_cert",
-        "//ecclesia/redfish_mockups/barebones_session_auth:mockup.shar",
-        "//ecclesia/redfish_mockups/indus_hmb_cn:mockup.shar",
-    ],
-    deps = [
-        ":interface",
-        ":raw",
-        ":test_mockup",
-        "//ecclesia/lib/file:test_filesystem",
-        "//ecclesia/lib/logging",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/time",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_library(
     name = "topology",
     srcs = ["topology.cc"],
     hdrs = ["topology.h"],
@@ -215,7 +164,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":interface",
-        ":raw",
         "//ecclesia/lib/file:path",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/http:client",
