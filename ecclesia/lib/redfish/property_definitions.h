@@ -32,7 +32,8 @@ namespace libredfish {
 // String definitions of property fields to search programmatically. These
 // are separate from the PropertyDefinitions for now as we cannot define the
 // Redfish types "Array" and "Object" at the moment.
-
+inline constexpr char kRfPropertyRedfish[] = "redfish";
+inline constexpr char kRfPropertyV1[] = "v1";
 inline constexpr char kRfPropertyActions[] = "Actions";
 inline constexpr char kRfPropertyAllowableValues[] = "AllowableValues";
 inline constexpr char kRfPropertyAssemblies[] = "Assemblies";

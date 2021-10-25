@@ -132,6 +132,18 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "devpath_test",
+    srcs = ["devpath_test.cc"],
+    deps = [
+        ":devpath",
+        ":node_topology",
+        "//ecclesia/lib/redfish/testing:json_mockup",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "types",
     hdrs = ["types.h"],
@@ -257,6 +269,18 @@ cc_library(
     deps = [
         ":types",
         "@com_google_absl//absl/container:flat_hash_map",
+    ],
+)
+
+cc_library(
+    name = "devpath",
+    srcs = ["devpath.cc"],
+    hdrs = ["devpath.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":interface",
+        ":node_topology",
+        "@com_google_absl//absl/strings",
     ],
 )
 
