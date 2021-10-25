@@ -282,29 +282,6 @@ http_archive(
 )
 
 http_archive(
-    name = "libredfish",
-    build_file = "@//ecclesia/oss:libredfish.BUILD",
-    patches = [
-        "//ecclesia/oss:libredfish.patches/01.redfishService.h.patch",
-        "//ecclesia/oss:libredfish.patches/02.queue.h.patch",
-        "//ecclesia/oss:libredfish.patches/03.queue.c.patch",
-        "//ecclesia/oss:libredfish.patches/04.service.c.patch",
-        "//ecclesia/oss:libredfish.patches/05.internal_service.h.patch",
-        "//ecclesia/oss:libredfish.patches/06.asyncRaw.c.patch",
-        "//ecclesia/oss:libredfish.patches/07.mtls_auth.redfishService.h.patch",
-        "//ecclesia/oss:libredfish.patches/08.mtls_auth.asyncRaw.c.patch",
-        "//ecclesia/oss:libredfish.patches/09.mtls_auth.internal_service.h.patch",
-        "//ecclesia/oss:libredfish.patches/10.http_handler.patch",
-        "//ecclesia/oss:libredfish.patches/11.payload_json_incref.patch",
-    ],
-    sha256 = "301563b061da5862e2dfa7da367d37298856eace5aabba80cabf15a42b6ed3d3",
-    strip_prefix = "libredfish-1.2.8",
-    urls = [
-        "https://github.com/DMTF/libredfish/archive/1.2.8.tar.gz",
-    ],
-)
-
-http_archive(
     name = "redfishMockupServer",
     build_file = "@//ecclesia/oss:redfishMockupServer.BUILD",
     patches = [
