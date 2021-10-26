@@ -846,11 +846,11 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionServiceAfterUpdate) {
   EXPECT_TRUE(get_result.ok()) << get_result.status().message();
 
   // Handle the delete when the update occurs.
-  bool delete_called = false;
+  int delete_count = 0;
   server_->AddHttpDeleteHandler(
       "/redfish/v1/Session/Sessions/1",
       [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
-        delete_called = true;
+        ++delete_count;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
@@ -858,8 +858,13 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionServiceAfterUpdate) {
             tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
       });
   transport_->UpdateToNetworkEndpoint(network_endpoint_);
-  EXPECT_TRUE(delete_called);
+  EXPECT_THAT(delete_count, Eq(1));
   EXPECT_THAT(post_called_count, Eq(2));
+
+  // Clean up transport_ before the test ends so that our DeleteHandler doesn't
+  // fall out of scope.
+  transport_.reset();
+  EXPECT_THAT(delete_count, Eq(2));
 }
 
 TEST_F(HttpRedfishTransportTest, CanDeleteTokenIfSessionAuthFails) {
@@ -1018,11 +1023,11 @@ TEST_F(HttpRedfishTransportTest, CanDoSessionAuthTwice) {
   EXPECT_TRUE(get_result.ok()) << get_result.status().message();
 
   // Handle DELETE and second POST.
-  bool delete_called = false;
+  int delete_count = 0;
   server_->AddHttpDeleteHandler(
       "/redfish/v1/Session/Sessions/1",
       [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
-        delete_called = true;
+        ++delete_count;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
@@ -1051,7 +1056,7 @@ TEST_F(HttpRedfishTransportTest, CanDoSessionAuthTwice) {
         req->Reply();
       });
   auto result2 = transport_->DoSessionAuth("test_username2", "test_password2");
-  EXPECT_TRUE(delete_called);
+  EXPECT_THAT(delete_count, Eq(1));
   EXPECT_TRUE(result2.ok()) << result2.message();
 
   // Send a GET and check that we are sending the new session token.
@@ -1070,6 +1075,11 @@ TEST_F(HttpRedfishTransportTest, CanDoSessionAuthTwice) {
   get_result = transport_->Get("/redfish/v1/test/uri");
   EXPECT_TRUE(req_get_called);
   EXPECT_TRUE(get_result.ok()) << get_result.status().message();
+
+  // Clean up transport_ before the test ends so that our DeleteHandler doesn't
+  // fall out of scope.
+  transport_.reset();
+  EXPECT_THAT(delete_count, Eq(2));
 }
 
 }  // namespace
