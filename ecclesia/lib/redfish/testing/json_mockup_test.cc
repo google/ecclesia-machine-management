@@ -34,7 +34,7 @@ namespace {
 using ::testing::Eq;
 
 TEST(JsonMockup, InvalidJsonDies) {
-  EXPECT_DEATH(NewJsonMockupInterface("{"), "Could not load JSON:");
+  EXPECT_DEATH(NewJsonMockupInterface("{"), "Could not load JSON.");
 }
 
 TEST(JsonMockup, CanGetFields) {
@@ -273,6 +273,15 @@ TEST(JsonMockup, InvalidCollectionsAreNotIterable) {
     )json");
     auto root_itr = json_intf->GetRoot().AsIterable();
     ASSERT_FALSE(root_itr) << "Missing Members should fail";
+  }
+  {
+    auto json_intf = NewJsonMockupInterface(R"json(
+      {
+        "Members": "NotAnArray"
+      }
+    )json");
+    auto root_itr = json_intf->GetRoot().AsIterable();
+    ASSERT_FALSE(root_itr) << "Non-array Members element should fail";
   }
 }
 

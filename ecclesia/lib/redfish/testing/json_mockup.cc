@@ -25,7 +25,9 @@
 #include <utility>
 
 #include "absl/memory/memory.h"
+#include "absl/status/status.h"
 #include "absl/strings/numbers.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
@@ -33,89 +35,86 @@
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "jansson.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace libredfish {
 namespace {
 
-struct JsonDeleter {
-  inline void operator()(json_t *ptr) const { json_decref(ptr); }
-};
-using JsonUniquePtr = std::unique_ptr<json_t, JsonDeleter>;
-struct FreeDeleter {
-  inline void operator()(void *ptr) const { free(ptr); }
-};
-using MallocChar = std::unique_ptr<char, FreeDeleter>;
-
 class JsonMockupVariantImpl : public RedfishVariant::ImplIntf {
  public:
-  explicit JsonMockupVariantImpl(json_t *json_view) : json_view_(json_view) {}
+  explicit JsonMockupVariantImpl(nlohmann::json json_view)
+      : json_view_(std::move(json_view)) {}
   std::unique_ptr<RedfishObject> AsObject() const override;
   std::unique_ptr<RedfishIterable> AsIterable() const override;
   std::string DebugString() const override;
 
   bool GetValue(std::string *val) const override {
-    if (json_view_ == nullptr || !json_is_string(json_view_)) return false;
-    *val = std::string(json_string_value(json_view_));
+    if (!json_view_.is_string()) return false;
+    *val = json_view_.get<std::string>();
     return true;
   }
   bool GetValue(int32_t *val) const override {
-    if (json_view_ == nullptr || !json_is_integer(json_view_)) return false;
-    *val = (int)json_integer_value(json_view_);
+    if (!json_view_.is_number_integer()) return false;
+    *val = json_view_.get<int32_t>();
     return true;
   }
   bool GetValue(int64_t *val) const override {
-    if (json_view_ == nullptr || !json_is_integer(json_view_)) return false;
-    *val = json_integer_value(json_view_);
+    if (!json_view_.is_number_integer()) return false;
+    *val = json_view_.get<int64_t>();
     return true;
   }
   bool GetValue(double *val) const override {
-    if (json_view_ == nullptr || !json_is_real(json_view_)) return false;
-    *val = json_real_value(json_view_);
+    if (!json_view_.is_number()) return false;
+    *val = json_view_.get<double>();
     return true;
   }
   bool GetValue(bool *val) const override {
-    if (json_view_ == nullptr || !json_is_boolean(json_view_)) return false;
-    *val = json_boolean_value(json_view_);
+    if (!json_view_.is_boolean()) return false;
+    *val = json_view_.get<bool>();
     return true;
   }
   bool GetValue(absl::Time *val) const override {
-    std::string dt_string;
-    if (!GetValue(&dt_string)) return false;
+    if (!json_view_.is_string()) return false;
+    std::string dt_string = json_view_.get<std::string>();
     std::string err;
     absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", dt_string, val, &err);
     return err.empty();
   }
 
  private:
-  json_t *json_view_;
+  nlohmann::json json_view_;
 };
 
 class JsonMockupObject : public RedfishObject {
  public:
-  explicit JsonMockupObject(json_t *json_view)
-      : json_view_(ecclesia::DieIfNull(json_view)) {}
+  explicit JsonMockupObject(nlohmann::json json_view)
+      : json_view_(std::move(json_view)) {}
   RedfishVariant operator[](const std::string &node_name) const override {
-    return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(
-        json_object_get(json_view_, node_name.c_str())));
+    auto node = json_view_.find(node_name);
+    if (node == json_view_.end())
+      return RedfishVariant(absl::NotFoundError(
+          absl::StrCat("no node '", node_name,
+                       "' in JSON: ", json_view_.dump(/*indent=*/1))));
+    return RedfishVariant(
+        std::make_unique<JsonMockupVariantImpl>(node.value()));
   }
   std::optional<std::string> GetUri() override {
     return GetNodeValue<std::string>("@odata.id");
   }
-  std::string DebugString() override { return "Unsupported."; }
+  std::string DebugString() override { return json_view_.dump(/*indent=*/1); }
 
-  json_t *json_view_;
+  nlohmann::json json_view_;
 };
 
 class JsonMockupIterable : public RedfishIterable {
  public:
-  explicit JsonMockupIterable(json_t *json_view)
-      : json_view_(ecclesia::DieIfNull(json_view)) {}
+  explicit JsonMockupIterable(nlohmann::json json_view)
+      : json_view_(std::move(json_view)) {}
   size_t Size() override {
     // Case 1: JSON is array
-    if (json_is_array(json_view_)) return json_array_size(json_view_);
+    if (json_view_.is_array()) return json_view_.size();
     // Case 2: JSON is possibly a Redfish Collection
-    if (json_is_object(json_view_)) {
+    if (json_view_.is_object()) {
       JsonMockupObject obj(json_view_);
       auto size = obj.GetNodeValue<int>("Members@odata.count");
       if (size.has_value()) return size.value();
@@ -125,66 +124,60 @@ class JsonMockupIterable : public RedfishIterable {
   bool Empty() override { return Size() == 0; }
   RedfishVariant operator[](int index) const override {
     // Case 1: JSON is array
-    if (json_is_array(json_view_)) {
-      return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(
-          json_array_get(json_view_, index)));
+    if (json_view_.is_array() && index >= 0 && json_view_.size() > index) {
+      return RedfishVariant(
+          std::make_unique<JsonMockupVariantImpl>(json_view_.at(index)));
     }
     // Case 2: JSON is possibly a Redfish Collection
-    if (json_is_object(json_view_)) {
-      JsonMockupObject obj(json_view_);
-      auto members_view = obj["Members"].AsIterable();
-      if (members_view) {
-        return (*members_view)[index];
+    if (json_view_.is_object()) {
+      auto arr = json_view_.find("Members");
+      if (arr != json_view_.end() && arr.value().is_array() && index >= 0 &&
+          arr.value().size() > index) {
+        return RedfishVariant(
+            std::make_unique<JsonMockupVariantImpl>(arr.value().at(index)));
       }
     }
     // Default case: return nothing
-    return RedfishVariant(nullptr);
+    return RedfishVariant(absl::NotFoundError(
+        absl::StrCat("Could not find index: ", index,
+                     " in JSON: ", json_view_.dump(/*indent=*/1))));
   }
 
  private:
-  json_t *json_view_;
+  nlohmann::json json_view_;
 };
 
 std::unique_ptr<RedfishObject> JsonMockupVariantImpl::AsObject() const {
-  if (!json_view_) {
-    return nullptr;
+  if (json_view_.is_object()) {
+    return std::make_unique<JsonMockupObject>(json_view_);
   }
-  return std::make_unique<JsonMockupObject>(json_view_);
+  return nullptr;
 }
 
 std::unique_ptr<RedfishIterable> JsonMockupVariantImpl::AsIterable() const {
-  if (!json_view_) {
-    return nullptr;
-  }
   // Verify that we are actually iterable, either as an array or a Collection
-  if (json_is_array(json_view_)) {
+  if (json_view_.is_array()) {
     return std::make_unique<JsonMockupIterable>(json_view_);
-  } else if (json_is_object(json_view_)) {
-    json_t *members = json_object_get(json_view_, "Members");
-    if (!members || !json_is_array(members)) return nullptr;
-    json_t *size = json_object_get(json_view_, "Members@odata.count");
-    if (!size || !json_is_integer(size)) return nullptr;
+  } else if (json_view_.is_object()) {
+    auto members = json_view_.find("Members");
+    if (members == json_view_.end() || !members->is_array()) return nullptr;
+    auto size = json_view_.find("Members@odata.count");
+    if (size == json_view_.end() || !size->is_number_integer()) return nullptr;
     return std::make_unique<JsonMockupIterable>(json_view_);
   }
   return nullptr;
 }
 
 std::string JsonMockupVariantImpl::DebugString() const {
-  if (!json_view_) return "(null payload)";
-  size_t flags = JSON_INDENT(2);
-  MallocChar output(json_dumps(json_view_, flags));
-  if (!output) return "(null output)";
-  std::string ret(output.get());
-  return ret;
+  return json_view_.dump(/*indent=*/1);
 }
 
 class JsonMockupMockup : public RedfishInterface {
  public:
   explicit JsonMockupMockup(absl::string_view raw_json) {
-    json_error_t err;
-    json_model_ = JsonUniquePtr(json_loads(raw_json.data(), 0, &err));
-    if (!json_model_) {
-      ecclesia::FatalLog() << "Could not load JSON: " << err.text;
+    json_model_ = nlohmann::json::parse(raw_json, nullptr, false);
+    if (json_model_.is_discarded()) {
+      ecclesia::FatalLog() << "Could not load JSON.";
     }
   }
   bool IsTrusted() const override { return true; }
@@ -195,44 +188,49 @@ class JsonMockupMockup : public RedfishInterface {
     ecclesia::FatalLog() << "Tried to update the endpoint of a JsonMockup";
   }
   RedfishVariant GetRoot() override {
-    return RedfishVariant(
-        std::make_unique<JsonMockupVariantImpl>(json_model_.get()));
+    return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(json_model_));
   }
   RedfishVariant GetUri(absl::string_view uri) override {
     // We will implement GetUri as walking the URI from the root JSON node.
-    RedfishVariant current_node(
-        std::make_unique<JsonMockupVariantImpl>(json_model_.get()));
+
+    auto current_json = json_model_;
     auto path_list = absl::StrSplit(uri, '/');
     for (const auto &p : path_list) {
       if (p.empty()) continue;
-      // Try treating it as an object:
-      if (auto obj = current_node.AsObject()) {
-        auto next_node = (*obj)[std::string(p)];
-        if (next_node.AsObject() || next_node.AsIterable()) {
-          current_node = std::move(next_node);
+      if (current_json.is_object()) {
+        // Treat it as a pure JSON object:
+        auto next_node = current_json.find(p);
+        if (next_node != current_json.end()) {
+          current_json = next_node.value();
           continue;
         }
+        // Treat it as a collection:
+        auto members = current_json.find("Members");
+        if (members != current_json.end() && members.value().is_array()) {
+          current_json = members.value();
+          // Intentionally fall through and allow the current_json.is_array()
+          // case handle the indexing.
+        }
       }
-      // Try treating it as an iterable:
-      if (auto iter = current_node.AsIterable()) {
+      if (current_json.is_array()) {
         size_t index;
-        if (absl::SimpleAtoi(p, &index)) {
-          auto next_node = (*iter)[index];
-          if (next_node.AsObject() || next_node.AsIterable()) {
-            current_node = std::move(next_node);
-            continue;
-          }
+        if (absl::SimpleAtoi(p, &index) && index >= 0 &&
+            index < current_json.size()) {
+          current_json = current_json.at(index);
+          continue;
         }
       }
       // We failed to make progress on the path
       return RedfishVariant();
     }
-    return current_node;
+    return RedfishVariant(
+        std::make_unique<JsonMockupVariantImpl>(current_json));
   }
   RedfishVariant PostUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
-    return RedfishVariant();
+    return RedfishVariant(
+        absl::UnimplementedError("Updates to json_mockup are not supported."));
   }
   RedfishVariant PostUri(absl::string_view uri,
                          absl::string_view data) override {
@@ -241,15 +239,17 @@ class JsonMockupMockup : public RedfishInterface {
   RedfishVariant PatchUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
-    return RedfishVariant();
+    return RedfishVariant(
+        absl::UnimplementedError("Updates to json_mockup are not supported."));
   }
   RedfishVariant PatchUri(absl::string_view uri,
                           absl::string_view data) override {
-    return RedfishVariant();
+    return RedfishVariant(
+        absl::UnimplementedError("Updates to json_mockup are not supported."));
   }
 
  private:
-  JsonUniquePtr json_model_;
+  nlohmann::json json_model_;
 };
 
 }  // namespace

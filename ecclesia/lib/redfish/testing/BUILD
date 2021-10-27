@@ -12,10 +12,11 @@ cc_library(
         "//ecclesia/lib/logging",
         "//ecclesia/lib/redfish:interface",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
-        "@jansson",
+        "@com_json//:json",
     ],
 )
 
