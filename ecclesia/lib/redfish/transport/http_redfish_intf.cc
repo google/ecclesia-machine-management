@@ -282,13 +282,15 @@ class HttpRedfishInterface : public RedfishInterface {
     }
   }
 
-  RedfishVariant GetRoot() override { return GetUri(kServiceRoot); }
+  RedfishVariant GetRoot(GetParams params) override {
+    return GetUri(kServiceRoot, params);
+  }
 
   // GetUri fetches the given URI and resolves any JSON pointers. Note that
   // this method must not resolve any references (i.e. JSON object containing
   // only "@odata.id") to avoid infinite recursion in case a bad Redfish
   // service has a loop in its OData references.
-  RedfishVariant GetUri(absl::string_view uri) override {
+  RedfishVariant GetUri(absl::string_view uri, GetParams params) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
     absl::StatusOr<ecclesia::RedfishTransport::Result> result =
         transport_->Get(uri);

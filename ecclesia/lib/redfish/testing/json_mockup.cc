@@ -187,10 +187,10 @@ class JsonMockupMockup : public RedfishInterface {
     // in case someone is expecting some particular behaviour.
     ecclesia::FatalLog() << "Tried to update the endpoint of a JsonMockup";
   }
-  RedfishVariant GetRoot() override {
+  RedfishVariant GetRoot(GetParams params) override {
     return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(json_model_));
   }
-  RedfishVariant GetUri(absl::string_view uri) override {
+  RedfishVariant GetUri(absl::string_view uri, GetParams params) override {
     // We will implement GetUri as walking the URI from the root JSON node.
 
     auto current_json = json_model_;

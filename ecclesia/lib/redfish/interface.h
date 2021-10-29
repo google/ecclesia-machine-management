@@ -334,6 +334,11 @@ class RedfishInterface {
 
   virtual ~RedfishInterface() {}
 
+  struct GetParams {
+    // Default constructor to propagate the default member values.
+    GetParams() {}
+  };
+
   // An endpoint is trusted if all of the information coming from the endpoint
   // can be reliably assumed to be from a Google-controlled source.
   // Examples of trusted endpoints are attested BMCs and prodimage running in
@@ -348,10 +353,11 @@ class RedfishInterface {
   virtual bool IsTrusted() const = 0;
 
   // Fetches the root payload and returns it.
-  virtual RedfishVariant GetRoot() = 0;
+  virtual RedfishVariant GetRoot(GetParams params = GetParams()) = 0;
 
   // Fetches the given URI and returns it.
-  virtual RedfishVariant GetUri(absl::string_view uri) = 0;
+  virtual RedfishVariant GetUri(absl::string_view uri,
+                                GetParams params = GetParams()) = 0;
 
   // Post to the given URI and returns result.
   virtual RedfishVariant PostUri(
@@ -383,8 +389,8 @@ class NullRedfish : public RedfishInterface {
   // The null endpoint is trusted as it doesn't provide any system information,
   // so there is nothing it could lie about.
   bool IsTrusted() const override { return true; }
-  RedfishVariant GetRoot() override { return RedfishVariant(); }
-  RedfishVariant GetUri(absl::string_view uri) override {
+  RedfishVariant GetRoot(GetParams params) override { return RedfishVariant(); }
+  RedfishVariant GetUri(absl::string_view uri, GetParams params) override {
     return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }
   RedfishVariant PostUri(
