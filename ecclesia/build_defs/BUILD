@@ -23,6 +23,7 @@ bzl_library(
 bzl_library(
     name = "constants",
     srcs = ["constants.bzl"],
+    visibility = ["//visibility:public"],
     deps = [":file"],
 )
 
