@@ -92,6 +92,24 @@ class PersistentUsageMap {
     std::optional<size_t> maximum_proto_size;
   };
 
+  // The type usage key map type. This is just an (operation, user) pair with
+  // a comparison and hashing function so that we can use it as the map key.
+  struct OperationUser {
+    std::string operation;
+    std::string user;
+  };
+  friend bool operator==(const OperationUser &lhs, const OperationUser &rhs) {
+    return std::tie(lhs.operation, lhs.user) ==
+           std::tie(rhs.operation, rhs.user);
+  }
+  friend bool operator!=(const OperationUser &lhs, const OperationUser &rhs) {
+    return !(lhs == rhs);
+  }
+  template <typename H>
+  friend H AbslHashValue(H h, const OperationUser &op_user) {
+    return H::combine(std::move(h), op_user.operation, op_user.user);
+  }
+
   // Construct a new persistent usage map using the given options. This will
   // initialize the map from persistent file(s) specified by the options.
   explicit PersistentUsageMap(Options options);
@@ -149,29 +167,18 @@ class PersistentUsageMap {
                  absl::Time timestamp = absl::Now())
       ABSL_LOCKS_EXCLUDED(mutex_);
 
+  // Record multiple new entries in the usae map. This works the same as if you
+  // were to call RecordUse in a loop, but it will only acquire the map lock a
+  // single time and do at most a single write to the persistent store.
+  void RecordUses(std::vector<OperationUser> uses,
+                  absl::Time timestamp = absl::Now())
+      ABSL_LOCKS_EXCLUDED(mutex_);
+
   // Flush the current contents of the map out to the persistent store. Returns
   // a not-OK status if the store failed for some reason.
   absl::Status WriteToPersistentStore() ABSL_LOCKS_EXCLUDED(mutex_);
 
  private:
-  // The type used as the map key. This is just an (operation, user) pair with
-  // a comparison and hashing function so that we can use it as the map key.
-  struct OperationUser {
-    std::string operation;
-    std::string user;
-  };
-  friend bool operator==(const OperationUser &lhs, const OperationUser &rhs) {
-    return std::tie(lhs.operation, lhs.user) ==
-           std::tie(rhs.operation, rhs.user);
-  }
-  friend bool operator!=(const OperationUser &lhs, const OperationUser &rhs) {
-    return !(lhs == rhs);
-  }
-  template <typename H>
-  friend H AbslHashValue(H h, const OperationUser &op_user) {
-    return H::combine(std::move(h), op_user.operation, op_user.user);
-  }
-
   // Helper that will update a single record, either inserting a new entry into
   // the map or updating an existing one. You already need to have assembled the
   // key and value, it just does the insert-or-update check.

@@ -112,17 +112,31 @@ absl::Time PersistentUsageMap::GetMostRecentTimestamp() const {
 
 void PersistentUsageMap::RecordUse(std::string operation, std::string user,
                                    absl::Time timestamp) {
-  OperationUser op_user = {std::move(operation), std::move(user)};
-  absl::MutexLock ml(&mutex_);
-  // Update the internal map.
-  absl::Duration entry_age =
-      InsertOrUpdateMapEntry(std::move(op_user), timestamp);
+  RecordUses({{std::move(operation), std::move(user)}}, timestamp);
+}
 
-  // If the entry age is greater than the write-on-older-than value then trigger
-  // a write of the persistent store. Note that we deliberately use > for the
-  // comparison and not >= so that if the write-on-older-than value is infinite
-  // duration then we _never_ auto-write.
-  if (entry_age > auto_write_on_older_than_) {
+void PersistentUsageMap::RecordUses(std::vector<OperationUser> uses,
+                                    absl::Time timestamp) {
+  absl::MutexLock ml(&mutex_);
+
+  // Track if we need to trigger a write.
+  bool need_write = false;
+  // Insert all of the entries into the map, and keep track of if we need to do
+  // a write out to the persistent file afterwards.
+  for (OperationUser &op_user : uses) {
+    absl::Duration entry_age =
+        InsertOrUpdateMapEntry(std::move(op_user), timestamp);
+    // If the entry age is greater than the write-on-older-than value then
+    // trigger a write of the persistent store. Note that we deliberately use >
+    // for the comparison and not >= so that if the write-on-older-than value is
+    // infinite duration then we _never_ auto-write.
+    if (entry_age > auto_write_on_older_than_) {
+      need_write = true;
+    }
+  }
+
+  // Write to the persistent store if necessary the updates require it.
+  if (need_write) {
     stats_.automatic_writes += 1;
     absl::Status write_result = WriteToPersistentStoreUnlocked();
     // We can't do anything with the write error, so just log it.

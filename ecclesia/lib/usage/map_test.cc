@@ -240,6 +240,35 @@ TEST_F(PersistentUsageMapTest, SaveRecordOnEveryUpdate) {
   EXPECT_THAT(stats.proto_size, Gt(0));
 }
 
+TEST_F(PersistentUsageMapTest, SaveRecordOnCombinedUpdate) {
+  PersistentUsageMap usage_map({
+      .persistent_file = fs_.GetTruePath("/on_every_combined_update.usage"),
+      .auto_write_on_older_than = absl::ZeroDuration(),
+  });
+
+  // Verify that we have no writes at the start.
+  auto stats = usage_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(0));
+  EXPECT_THAT(stats.automatic_writes, Eq(0));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Eq(0));
+
+  // Write out a few records. Then write them again, but they are too old.
+  absl::Time before_first = absl::Now();
+  usage_map.RecordUses(
+      {{"rpc1", "user"}, {"rpc2", "user"}, {"rpc3", "hacker"}});
+  usage_map.RecordUses({{"rpc1", "user"}, {"rpc2", "user"}, {"rpc3", "hacker"}},
+                       before_first);  // Too old, no write!
+
+  // Verify that we have five automatic writes.
+  EXPECT_THAT(usage_map.GetMostRecentTimestamp(), Gt(absl::InfinitePast()));
+  stats = usage_map.GetStats();
+  EXPECT_THAT(stats.total_writes, Eq(1));
+  EXPECT_THAT(stats.automatic_writes, Eq(1));
+  EXPECT_THAT(stats.failed_writes, Eq(0));
+  EXPECT_THAT(stats.proto_size, Gt(0));
+}
+
 TEST_F(PersistentUsageMapTest, SaveRecordOnOldUpdates) {
   PersistentUsageMap usage_map({
       .persistent_file = fs_.GetTruePath("/on_old_update.usage"),
