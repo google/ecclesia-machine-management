@@ -74,6 +74,25 @@ void OpenAndWriteFile(const std::string &path, int flags,
   }
 }
 
+// Read in the contents of a path. Crashes and logs if the read fails.
+std::string PathContents(const std::string &path) {
+  // Open the file.
+  int fd = open(path.c_str(), O_RDONLY);
+  if (fd == -1) {
+    FatalLog() << "open() was unable to return file descriptor: " << path;
+  }
+  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+
+  // Read from the file in 4k chunks until read returns 0, or fails.
+  char buffer[4096];
+  std::string contents;
+  while (ssize_t rc = read(fd, buffer, sizeof(buffer))) {
+    if (rc == -1) PosixFatalLog() << "read() failed for file " << path;
+    contents.append(buffer, rc);
+  }
+  return contents;
+}
+
 // Recursively remove everything in the given directory.
 void RemoveDirectoryTree(const std::string &path) {
   WithEachFileInDirectory(path, [&path](absl::string_view entry) {
@@ -178,6 +197,13 @@ void TestFilesystem::WriteFile(absl::string_view path, absl::string_view data) {
 
   // Open and write, truncating any existing file to empty.
   OpenAndWriteFile(GetTruePath(path), O_CREAT | O_TRUNC | O_WRONLY, data);
+}
+
+std::string TestFilesystem::ReadFile(absl::string_view path) {
+  CheckCondition(!path.empty());
+
+  // Open and read file.
+  return PathContents(GetTruePath(path));
 }
 
 void TestFilesystem::CreateSymlink(absl::string_view target,

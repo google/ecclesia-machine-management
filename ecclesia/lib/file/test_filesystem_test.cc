@@ -40,25 +40,6 @@ bool PathExists(const std::string &path) {
   return access(path.c_str(), F_OK) == 0;
 }
 
-// Read in the contents of a path. Returns nullopt if the read fails.
-std::optional<std::string> PathContents(const std::string &path) {
-  // Open the file.
-  int fd = open(path.c_str(), O_RDONLY);
-  if (fd == -1) {
-    return std::nullopt;
-  }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
-
-  // Read from the file in 4k chunks until read returns 0, or fails.
-  char buffer[4096];
-  std::string contents;
-  while (ssize_t rc = read(fd, buffer, sizeof(buffer))) {
-    if (rc == -1) return std::nullopt;
-    contents.append(buffer, rc);
-  }
-  return std::move(contents);
-}
-
 // Returns the link pointed to by a given path. Returns nullopt if reading the
 // link target fails.
 std::optional<std::string> PathLinkTarget(const std::string &path) {
@@ -122,13 +103,11 @@ TEST(TestFilesystem, CreateFile) {
   TestFilesystem fs(root_path);
 
   fs.CreateFile("/abcd", "1234567890");
-  EXPECT_THAT(PathContents(JoinFilePaths(root_path, "abcd")),
-              Optional(Eq("1234567890")));
+  EXPECT_THAT(fs.ReadFile("/abcd"), Eq("1234567890"));
 
   fs.CreateDir("/sub");
   fs.CreateFile("/sub/ghi", "hello world");
-  EXPECT_THAT(PathContents(JoinFilePaths(root_path, "sub", "ghi")),
-              Optional(Eq("hello world")));
+  EXPECT_THAT(fs.ReadFile("/sub/ghi"), Eq("hello world"));
 }
 
 TEST(TestFilesystem, WriteFileCreatesFiles) {
@@ -136,13 +115,11 @@ TEST(TestFilesystem, WriteFileCreatesFiles) {
   TestFilesystem fs(root_path);
 
   fs.WriteFile("/abcd", "1234567890");
-  EXPECT_THAT(PathContents(JoinFilePaths(root_path, "abcd")),
-              Optional(Eq("1234567890")));
+  EXPECT_THAT(fs.ReadFile("/abcd"), Eq("1234567890"));
 
   fs.CreateDir("/sub");
   fs.WriteFile("/sub/ghi", "hello world");
-  EXPECT_THAT(PathContents(JoinFilePaths(root_path, "sub", "ghi")),
-              Optional(Eq("hello world")));
+  EXPECT_THAT(fs.ReadFile("/sub/ghi"), Eq("hello world"));
 }
 
 TEST(TestFilesystem, CreateFileFailsOnExistingFiles) {
@@ -150,8 +127,7 @@ TEST(TestFilesystem, CreateFileFailsOnExistingFiles) {
   TestFilesystem fs(root_path);
 
   fs.CreateFile("/abcd", "1234567890");
-  EXPECT_THAT(PathContents(JoinFilePaths(root_path, "abcd")),
-              Optional(Eq("1234567890")));
+  EXPECT_THAT(fs.ReadFile("/abcd"), Eq("1234567890"));
 
   EXPECT_DEATH(fs.CreateFile("/abcd", "31415"), "open\\(\\) failed for file");
 }
@@ -161,12 +137,10 @@ TEST(TestFilesystem, WriteFileWorksOnExistingFiles) {
   TestFilesystem fs(root_path);
 
   fs.CreateFile("/abcd", "1234567890");
-  EXPECT_THAT(PathContents(JoinFilePaths(root_path, "abcd")),
-              Optional(Eq("1234567890")));
+  EXPECT_THAT(fs.ReadFile("/abcd"), Eq("1234567890"));
 
   fs.WriteFile("/abcd", "31415");
-  EXPECT_THAT(PathContents(JoinFilePaths(root_path, "abcd")),
-              Optional(Eq("31415")));
+  EXPECT_THAT(fs.ReadFile("/abcd"), Eq("31415"));
 }
 
 TEST(TestFilesystem, CreateSymlinkAbsolute) {
@@ -174,8 +148,7 @@ TEST(TestFilesystem, CreateSymlinkAbsolute) {
   TestFilesystem fs(root_path);
 
   fs.CreateFile("/abcd", "1234567890");
-  EXPECT_THAT(PathContents(JoinFilePaths(root_path, "abcd")),
-              Optional(Eq("1234567890")));
+  EXPECT_THAT(fs.ReadFile("/abcd"), Eq("1234567890"));
 
   fs.CreateSymlink("/abcd", "/xyz");
   EXPECT_THAT(PathLinkTarget(JoinFilePaths(root_path, "xyz")),
@@ -187,12 +160,10 @@ TEST(TestFilesystem, CreateSymlinkRelative) {
   TestFilesystem fs(root_path);
 
   fs.CreateFile("/abcd", "1234567890");
-  EXPECT_THAT(PathContents(JoinFilePaths(root_path, "abcd")),
-              Optional(Eq("1234567890")));
+  EXPECT_THAT(fs.ReadFile("/abcd"), Eq("1234567890"));
 
   fs.CreateSymlink("abcd", "/xyz");
-  EXPECT_THAT(PathLinkTarget(JoinFilePaths(root_path, "xyz")),
-              Optional(Eq("abcd")));
+  EXPECT_THAT(PathLinkTarget(JoinFilePaths(root_path, "xyz")), Eq("abcd"));
 }
 
 }  // namespace

@@ -97,6 +97,10 @@ class TestFilesystem {
   void CreateFile(absl::string_view path, absl::string_view data);
   void WriteFile(absl::string_view path, absl::string_view data);
 
+  // Read the contents of a file in the fake filesystem. It is considered a
+  // fatal error if there is a read error for the path given.
+  std::string ReadFile(absl::string_view path);
+
   // Create a symlink pointing to target at link_path. If the target is an
   // absolute path then it will be transformed into the "real" path using the
   // filesystem root. If the target is a relative path it will be used as-is.
