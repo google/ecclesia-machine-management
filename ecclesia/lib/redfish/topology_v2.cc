@@ -361,6 +361,19 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
           node_to_attach.parent);
       current_node_ptr = node_to_attach.parent;
     } else {
+      // Check to see if the current node is absent by checking the status; the
+      // assumption is that a lack of status or state means that the current
+      // node is attached to the topology
+      const auto status_object = (*node_json)[kRfPropertyStatus].AsObject();
+      if (status_object != nullptr &&
+          status_object->GetNodeValue<PropertyState>().value_or("") ==
+              kRfPropertyAbsent) {
+        ecclesia::InfoLog()
+            << node_to_attach.uri
+            << " is absent; not including in topology generation";
+        continue;
+      }
+
       // If Location && parent: create child node
       const auto node_location =
           location_attribute[kRfPropertyPartLocation].AsObject();

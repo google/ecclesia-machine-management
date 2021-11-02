@@ -4,8 +4,11 @@
   "Members": [
     {
       "@odata.id": "/redfish/v1/Systems/system/Memory/0"
+    },
+    {
+      "@odata.id": "/redfish/v1/Systems/system/Memory/1"
     }
   ],
-  "Members@odata.count": 1,
+  "Members@odata.count": 2,
   "Name": "Memory Collection"
 }
