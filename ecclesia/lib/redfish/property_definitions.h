@@ -208,6 +208,10 @@ DEFINE_REDFISH_PROPERTY(PropertyMaxPcieType, std::string, "MaxPCIeType");
 DEFINE_REDFISH_PROPERTY(PropertyLanesInUse, int, "LanesInUse");
 DEFINE_REDFISH_PROPERTY(PropertyMaxLanes, int, "MaxLanes");
 DEFINE_REDFISH_PROPERTY(PropertyProcessorIdStep, std::string, "Step");
+DEFINE_REDFISH_PROPERTY(PropertyProcessorIdFamily, std::string,
+                        "EffectiveFamily");
+DEFINE_REDFISH_PROPERTY(PropertyProcessorIdModel, std::string,
+                        "EffectiveModel");
 DEFINE_REDFISH_PROPERTY(PropertyDataSourceUri, std::string, "DataSourceUri");
 DEFINE_REDFISH_PROPERTY(PropertyRedfishActionInfo, std::string,
                         "@Redfish.ActionInfo");
