@@ -264,7 +264,8 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
 
   switch (cmd) {
     case Protocol::kGet:
-      libcurl_->curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+      libcurl_->curl_easy_setopt(curl, CURLOPT_HTTPGET,
+                                 static_cast<uint64_t>(1));
       break;
     case Protocol::kPost:
       libcurl_->curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE,

@@ -8,6 +8,7 @@ cc_library(
     hdrs = ["client.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//ecclesia/lib/logging",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

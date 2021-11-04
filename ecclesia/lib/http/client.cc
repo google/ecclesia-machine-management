@@ -18,6 +18,7 @@
 
 #include <string>
 
+#include "ecclesia/lib/logging/logging.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
@@ -33,6 +34,9 @@ std::string GetHttpMethodName(ecclesia::Protocol protocol) {
     case Protocol::kPatch:
       return "PATCH";
   }
+  // We use assert here to avoid g3 dependencies.
+  ecclesia::Check(false, "Unexpected value for Protocol");
+  return "GET";
 }
 
 nlohmann::json HttpClient::HttpResponse::GetBodyJson() {
