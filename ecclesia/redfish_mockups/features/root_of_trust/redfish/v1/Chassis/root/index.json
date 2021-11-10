@@ -1,0 +1,17 @@
+{
+  "@odata.id": "/redfish/v1/Chassis/root",
+  "@odata.type": "#Chassis.v1_14_0.Chassis",
+  "ChassisType": "RackMount",
+  "Id": "root",
+  "Assembly": {
+    "@odata.id": "/redfish/v1/Chassis/root/Assembly"
+  },
+  "Links": {
+    "Contains": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/hoth"
+      }
+    ]
+  },
+  "Name": "root"
+}
