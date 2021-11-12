@@ -9,7 +9,7 @@
   "Links": {
     "Contains": [
       {
-        "@odata.id": "/redfish/v1/Chassis/hoth"
+        "@odata.id": "/redfish/v1/Chassis/RootOfTrust"
       }
     ]
   },

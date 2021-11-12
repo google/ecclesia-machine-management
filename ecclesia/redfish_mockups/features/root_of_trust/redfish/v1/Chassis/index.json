@@ -6,9 +6,12 @@
       "@odata.id": "/redfish/v1/Chassis/root"
     },
     {
-      "@odata.id": "/redfish/v1/Chassis/hoth"
+      "@odata.id": "/redfish/v1/Chassis/RootOfTrust"
     }
   ],
   "Members@odata.count": 2,
-  "Name": "Chassis Collection"
+  "Name": "Chassis Collection",
+  "RootOfTrust":{
+      "@odata.id": "/redfish/v1/Chassis/RootOfTrust"
+  }
 }
