@@ -19,7 +19,26 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/time",
+        "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "interface_test",
+    srcs = ["interface_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/barebones_session_auth:mockup.shar",
+    ],
+    deps = [
+        ":interface",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/http:codes",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
     ],
 )
 

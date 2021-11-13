@@ -32,6 +32,7 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/http/codes.h"
 
@@ -145,24 +146,25 @@ class RedfishVariant final {
     const RedfishVariant &root_;
   };
 
-  RedfishVariant() : ptr_(nullptr) {}
+  RedfishVariant() : RedfishVariant(nullptr, absl::OkStatus(), absl::nullopt) {}
 
   // Construct from Status.
   explicit RedfishVariant(absl::Status status)
-      : ptr_(nullptr), status_(std::move(status)) {}
+      : RedfishVariant(nullptr, std::move(status), absl::nullopt) {}
 
   // Construct from ptr: the Redfish data is valid and there were no errors.
   explicit RedfishVariant(std::unique_ptr<ImplIntf> ptr)
-      : ptr_(std::move(ptr)), status_(absl::OkStatus()) {}
+      : RedfishVariant(std::move(ptr), absl::OkStatus(), absl::nullopt) {}
 
   // Construct from httpcode + error object. A Status is constructed by
   // converting the provided httpcode.
   RedfishVariant(std::unique_ptr<ImplIntf> ptr,
                  ecclesia::HttpResponseCode httpcode)
-      : ptr_(std::move(ptr)),
-        status_(ecclesia::HttpResponseCodeToCanonical(httpcode),
-                ecclesia::HttpResponseCodeToReasonPhrase(httpcode)),
-        httpcode_(httpcode) {}
+      : RedfishVariant(
+            std::move(ptr),
+            absl::Status(ecclesia::HttpResponseCodeToCanonical(httpcode),
+                         ecclesia::HttpResponseCodeToReasonPhrase(httpcode)),
+            httpcode) {}
 
   RedfishVariant(const RedfishVariant &) = delete;
   RedfishVariant &operator=(const RedfishVariant &) = delete;
@@ -228,6 +230,10 @@ class RedfishVariant final {
   }
 
  private:
+  RedfishVariant(std::unique_ptr<ImplIntf> ptr, absl::Status status,
+                 std::optional<ecclesia::HttpResponseCode> httpcode)
+      : ptr_(std::move(ptr)), status_(status), httpcode_(httpcode) {}
+
   std::unique_ptr<ImplIntf> ptr_;
   absl::Status status_;
   std::optional<ecclesia::HttpResponseCode> httpcode_;
@@ -414,20 +420,22 @@ class NullRedfish : public RedfishInterface {
 };
 
 RedfishVariant RedfishVariant::operator[](const std::string &property) const {
-  if (!ptr_) return RedfishVariant();
+  if (!status_.ok()) {
+    return RedfishVariant(nullptr, status_, httpcode_);
+  }
   if (std::unique_ptr<RedfishObject> obj = AsObject()) {
     return (*obj)[property];
-  } else {
-    return RedfishVariant(absl::InternalError("not a RedfishObject"));
   }
+  return RedfishVariant(absl::InternalError("not a RedfishObject"));
 }
 RedfishVariant RedfishVariant::operator[](const size_t index) const {
-  if (!ptr_) return RedfishVariant();
+  if (!status_.ok()) {
+    return RedfishVariant(nullptr, status_, httpcode_);
+  }
   if (std::unique_ptr<RedfishIterable> iter = AsIterable()) {
     return (*iter)[index];
-  } else {
-    return RedfishVariant(absl::InternalError("not a RedfishIterable"));
   }
+  return RedfishVariant(absl::InternalError("not a RedfishIterable"));
 }
 
 // Evaluates the index chain in a recursive fashion.
