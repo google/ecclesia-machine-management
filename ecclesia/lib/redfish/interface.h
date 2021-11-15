@@ -146,8 +146,6 @@ class RedfishVariant final {
     const RedfishVariant &root_;
   };
 
-  RedfishVariant() : RedfishVariant(nullptr, absl::OkStatus(), absl::nullopt) {}
-
   // Construct from Status.
   explicit RedfishVariant(absl::Status status)
       : RedfishVariant(nullptr, std::move(status), absl::nullopt) {}
@@ -395,7 +393,9 @@ class NullRedfish : public RedfishInterface {
   // The null endpoint is trusted as it doesn't provide any system information,
   // so there is nothing it could lie about.
   bool IsTrusted() const override { return true; }
-  RedfishVariant GetRoot(GetParams params) override { return RedfishVariant(); }
+  RedfishVariant GetRoot(GetParams params) override {
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
+  }
   RedfishVariant GetUri(absl::string_view uri, GetParams params) override {
     return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }

@@ -221,7 +221,8 @@ class JsonMockupMockup : public RedfishInterface {
         }
       }
       // We failed to make progress on the path
-      return RedfishVariant();
+      return RedfishVariant(
+          absl::NotFoundError(absl::StrCat("Could not resolve URI", uri)));
     }
     return RedfishVariant(
         std::make_unique<JsonMockupVariantImpl>(current_json));
@@ -234,7 +235,8 @@ class JsonMockupMockup : public RedfishInterface {
   }
   RedfishVariant PostUri(absl::string_view uri,
                          absl::string_view data) override {
-    return RedfishVariant();
+    return RedfishVariant(
+        absl::UnimplementedError("Updates to json_mockup are not supported."));
   }
   RedfishVariant PatchUri(
       absl::string_view uri,
