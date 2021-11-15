@@ -55,7 +55,7 @@ void IpmiEeprom::ReadEepromIntoCache() {
   // Reset the cache in case we hit an error
   cache_.clear();
 
-  uint16_t size;
+  uint16_t size = 0;
 
   if (absl::Status status = ipmi_->GetFruSize(fru_id_, &size); !status.ok()) {
     ErrorLog() << "Couldn't read IPMI FRU Inventory size FRU ID: "
