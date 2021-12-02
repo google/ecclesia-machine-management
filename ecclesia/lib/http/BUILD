@@ -12,7 +12,6 @@ cc_library(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
         "@com_json//:json",
     ],
 )
@@ -23,7 +22,6 @@ cc_test(
     srcs = ["client_test.cc"],
     deps = [
         ":client",
-        "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_main",
         "@com_json//:json",
     ],
