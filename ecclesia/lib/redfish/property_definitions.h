@@ -148,6 +148,9 @@ DEFINE_REDFISH_RESOURCE(ResourceSoftwareInventory, "SoftwareInventory");
 DEFINE_REDFISH_RESOURCE(ResourceAssemblyEntry, "/Assembly#/");
 DEFINE_REDFISH_RESOURCE(ResourceManager, "Manager");
 
+// OEM Google resources
+DEFINE_REDFISH_RESOURCE(OemResourceRootOfTrust, "RootOfTrust");
+
 DEFINE_REDFISH_PROPERTY(PropertyOdataId, std::string, "@odata.id");
 DEFINE_REDFISH_PROPERTY(PropertyOdataType, std::string, "@odata.type");
 DEFINE_REDFISH_PROPERTY(PropertyMembers, std::string, "Members");
@@ -257,6 +260,7 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyCriticalWarning, int,
                         "CriticalWarning");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyTopologyRepresentation, std::string,
                         "TopologyRepresentation");
+DEFINE_REDFISH_PROPERTY(OemPropertyRootOfTrust, std::string, "RootOfTrust");
 }  // namespace libredfish
 
 #endif  // ECCLESIA_LIB_REDFISH_PROPERTY_DEFINITIONS_H_

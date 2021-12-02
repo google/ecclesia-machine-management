@@ -24,6 +24,9 @@
 #include "ecclesia/lib/redfish/property_definitions.h"
 
 namespace libredfish {
+
+inline constexpr char kGoogleRoot[] = "/redfish/v1";
+
 // The following function overrides of QueryAllResources implement the search
 // algorithms for the specific Redfish Resources in the URIs defined in the
 // Redfish Schema Supplement. The supported URIs are non-exhaustive.
@@ -238,6 +241,20 @@ void Sysmodel::QueryAllResourceInternal(
       [&](std::unique_ptr<RedfishObject> &software) {
         result_callback(std::move(software));
       });
+}
+
+// RootOfTrust:
+// "/google/v1/Chassis/RootOfTrust/"
+void Sysmodel::QueryAllResourceInternal(
+    Token<OemResourceRootOfTrust>,
+    const std::function<void(std::unique_ptr<RedfishObject>)>
+        &result_callback) {
+  auto root = redfish_intf_->GetUri(kGoogleRoot);
+  auto root_of_trust =
+      root[kRfPropertyChassis][OemPropertyRootOfTrust::Name].AsObject();
+  if (root_of_trust != nullptr) {
+    result_callback(std::move(root_of_trust));
+  }
 }
 
 }  // namespace libredfish

@@ -126,6 +126,10 @@ class Sysmodel {
       Token<ResourceSoftwareInventory>,
       const std::function<void(std::unique_ptr<RedfishObject>)>
           &result_callback);
+  void QueryAllResourceInternal(
+      Token<OemResourceRootOfTrust>,
+      const std::function<void(std::unique_ptr<RedfishObject>)>
+          &result_callback);
 
   RedfishInterface *redfish_intf_;
 };
