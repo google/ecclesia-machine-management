@@ -69,12 +69,18 @@ http_archive(
     ],
 )
 
-# gRPC. Official release 1.33.2. Name is required by Google APIs.
+# gRPC. Taken from HEAD to include compiler fix for gcc error. Name is required
+# by Google APIs.
 http_archive(
     name = "com_github_grpc_grpc",
-    sha256 = "2060769f2d4b0d3535ba594b2ab614d7f68a492f786ab94b4318788d45e3278a",
-    strip_prefix = "grpc-1.33.2",
-    urls = ["https://github.com/grpc/grpc/archive/v1.33.2.tar.gz"],
+    patches = [
+        "//ecclesia/oss:grpc.patches/grpc.visibility.patch",
+        "//ecclesia/oss:grpc.patches/grpc.delete_ios.patch",
+    ],
+    patch_args = ["-p1"],
+    sha256 = "ca12845fd97777caa2277de31b80c59f2f777bde1e86e116bd21e5e0598c48d4",
+    strip_prefix = "grpc-74d0e3905e9d5a94f592813cb1f137fb60a907b8",
+    urls = ["https://github.com/grpc/grpc/archive/74d0e3905e9d5a94f592813cb1f137fb60a907b8.tar.gz"],
 )
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
