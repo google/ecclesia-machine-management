@@ -1,0 +1,28 @@
+diff --git a/redfishMockupServer.py b/redfishMockupServer.py
+index b3eb2c2..3c6a917 100644
+--- a/redfishMockupServer.py
++++ b/redfishMockupServer.py
+@@ -789,7 +789,8 @@ def main():
+ 
+         parser = argparse.ArgumentParser(description='Serve a static Redfish mockup.')
+         parser.add_argument('-H', '--host', '--Host', default='127.0.0.1',
+-                            help='hostname or IP address (default 127.0.0.1)')
++                            help='hostname or IP address (default 127.0.0.1).'
++                            'May use link local "%" scoping for IPv6 addresses.')
+         parser.add_argument('-p', '--port', '--Port', default=8000, type=int,
+                             help='host port (default 8000)')
+         parser.add_argument('-D', '--dir', '--Dir',
+@@ -875,7 +876,12 @@ def main():
+         if unix:
+             myServer = ThreadingUnixSocketHttpServer(unix, RfMockupServer);
+         else:
+-            myServer = ThreadingHTTPServer((hostname, port), RfMockupServer)
++            addr_info = (hostname, port)
++            # Binds to link local address interface.
++            if "%" in hostname:
++                hostname, intf = hostname.split('%')[:2]
++                addr_info = (hostname, port, 0, socket.if_nametoindex(intf))
++            myServer = ThreadingHTTPServer(addr_info, RfMockupServer)
+ 
+         if sslMode == 'tls' or sslMode == 'mtls':
+             logger.info("Using SSL with certfile: {}".format(sslCert))

@@ -1,0 +1,66 @@
+diff --git a/redfishMockupServer.py b/redfishMockupServer.py
+index b78f4a9..d6c5074 100644
+--- a/redfishMockupServer.py
++++ b/redfishMockupServer.py
+@@ -24,6 +24,7 @@ import socket
+ import os
+ import ssl
+ import logging
++import socketserver
+ from http.server import BaseHTTPRequestHandler, HTTPServer
+ from urllib.parse import urlparse, urlunparse, parse_qs
+ # GOOGLE: Fix import to work in google3/third_party
+@@ -74,6 +75,13 @@ def clean_path(path, isShort):
+ def is_safe_path(basedir, path):
+     return os.path.realpath(path).startswith(basedir)
+
++# This shim class allows us to support a unix domain socket server
++class UnixSocketHttpServer(socketserver.UnixStreamServer):
++    def get_request(self):
++        request, client_addr = super(UnixSocketHttpServer, self).get_request()
++        return (request, ["local", 0])
++
++
+ class RfMockupServer(BaseHTTPRequestHandler):
+         '''
+         returns index.json file for Serverthe specified URL
+@@ -701,6 +709,7 @@ def main():
+         parser.add_argument('-P', '--ssdp', action='store_true',
+                             help='make mockup SSDP discoverable')
+         parser.add_argument('--ipv6', action='store_true', help='use IPv6')
++        parser.add_argument('--unix', default=None, type=str, help='unix domains socket to connect to')
+
+         args = parser.parse_args()
+         hostname = args.host
+@@ -716,6 +725,7 @@ def main():
+         shortForm = args.short_form
+         ssdpStart = args.ssdp
+         ipv6 = args.ipv6
++        unix = args.unix
+
+         # check if mockup path was specified.  If not, use the built-in mockup
+         if mockDirPath is None:
+@@ -748,7 +758,11 @@ def main():
+         if ipv6:
+             HTTPServer.address_family = socket.AF_INET6
+
+-        myServer = HTTPServer((hostname, port), RfMockupServer)
++
++        if unix:
++            myServer = UnixSocketHttpServer(unix, RfMockupServer);
++        else:
++            myServer = HTTPServer((hostname, port), RfMockupServer)
+
+         if sslMode:
+             logger.info("Using SSL with certfile: {}".format(sslCert))
+@@ -799,6 +814,8 @@ def main():
+
+         myServer.server_close()
+         logger.critical("Shutting down http server")
++        if unix:
++            os.unlink(unix)
+
+
+ # the below is only executed if the program is run as a script
+--
+2.31.1.498.g6c1eba8ee3d-goog

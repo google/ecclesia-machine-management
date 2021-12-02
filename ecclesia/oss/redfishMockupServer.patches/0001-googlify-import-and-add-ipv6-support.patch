@@ -1,0 +1,56 @@
+diff --git a/redfishMockupServer.py b/redfishMockupServer.py
+index 489dbb6..e670041 100644
+--- a/redfishMockupServer.py
++++ b/redfishMockupServer.py
+@@ -13,15 +13,21 @@ import collections
+ import json
+ import threading
+ import datetime
++import socket
+
+-import grequests
++# GOOGLE: TODO(b/138945392): grequests depends on gevent, which doesn't work
++# with Python 3. We will remove this dependency for now, meaning
++# grequest-related features will be broken as intended until grequests is bumped
++# to python3. The only features we lose are event subscriptions.
++# import grequests
+
+ import os
+ import ssl
+ import logging
+ from http.server import BaseHTTPRequestHandler, HTTPServer
+ from urllib.parse import urlparse, urlunparse, parse_qs
+-from rfSsdpServer import RfSSDPServer
++# GOOGLE: Fix import to work in google3/third_party
++from redfishMockupServer.rfSsdpServer import RfSSDPServer
+
+ logger = logging.getLogger(__name__)
+ logger.setLevel(logging.DEBUG)
+@@ -686,6 +692,7 @@ def main():
+                             help='apply short form to mockup (omit filepath /redfish/v1)')
+         parser.add_argument('-P', '--ssdp', action='store_true',
+                             help='make mockup SSDP discoverable')
++        parser.add_argument('--ipv6', action='store_true', help='use IPv6')
+
+         args = parser.parse_args()
+         hostname = args.host
+@@ -700,6 +707,7 @@ def main():
+         sslKey = args.key
+         shortForm = args.short_form
+         ssdpStart = args.ssdp
++        ipv6 = args.ipv6
+
+         # check if mockup path was specified.  If not, use the built-in mockup
+         if mockDirPath is None:
+@@ -729,6 +737,9 @@ def main():
+                 sys.stderr.flush()
+                 sys.exit(1)
+
++        if ipv6:
++            HTTPServer.address_family = socket.AF_INET6
++
+         myServer = HTTPServer((hostname, port), RfMockupServer)
+
+         if sslMode:
+--
+2.31.1.498.g6c1eba8ee3d-goog
