@@ -48,7 +48,10 @@ package_group(
 # accessing the service metadata.
 package_group(
     name = "mmanager_metadata_users",
-    packages = ["//ecclesia/mmanager/service/..."],
+    packages = [
+        "//ecclesia/mmanager/middles/aggregator/...",
+        "//ecclesia/mmanager/service/...",
+    ],
 )
 
 # Machine manager shared libraries
