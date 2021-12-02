@@ -87,6 +87,55 @@ cc_test(
 )
 
 cc_library(
+    name = "grpc_dynamic_mockup_server",
+    testonly = True,
+    srcs = ["grpc_dynamic_mockup_server.cc"],
+    hdrs = ["grpc_dynamic_mockup_server.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//ecclesia/lib/http:codes",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish:test_mockup",
+        "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
+        "//ecclesia/lib/redfish/proto:redfish_v1_grpc_proto",
+        "//ecclesia/lib/status:rpc",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_test(
+    name = "grpc_dynamic_mockup_server_test",
+    srcs = ["grpc_dynamic_mockup_server_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/barebones_session_auth:mockup.shar",
+    ],
+    deps = [
+        ":grpc_dynamic_mockup_server",
+        "//ecclesia/lib/network:testing",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
+        "//ecclesia/lib/redfish/proto:redfish_v1_grpc_proto",
+        "//ecclesia/lib/redfish/transport:grpc_dynamic",
+        "//ecclesia/lib/redfish/transport:grpc_dynamic_options",
+        "//ecclesia/lib/status:rpc",
+        "//ecclesia/lib/testing:proto",
+        "//ecclesia/lib/testing:status",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
     name = "node_topology_testing",
     testonly = True,
     srcs = ["node_topology_testing.cc"],

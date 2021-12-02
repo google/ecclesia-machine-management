@@ -16,9 +16,12 @@
 
 #include "ecclesia/lib/status/rpc.h"
 
+#include <grpcpp/support/status.h>
+
 #include <string>
 
 #include "google/protobuf/any.pb.h"
+#include "google/rpc/code.pb.h"
 #include "google/rpc/status.pb.h"
 #include "absl/status/status.h"
 #include "absl/strings/cord.h"
@@ -48,6 +51,14 @@ google::rpc::Status StatusToRpcStatus(const absl::Status &status) {
         *any->mutable_value() = std::string(payload);
       });
   return ret;
+}
+
+grpc::Status StatusToGrpcStatus(const absl::Status &status) {
+  google::rpc::Status rpc_status = StatusToRpcStatus(status);
+  std::string error_details;
+  rpc_status.SerializeToString(&error_details);
+  return grpc::Status(static_cast<grpc::StatusCode>(status.code()),
+                      std::string(status.message()), std::move(error_details));
 }
 
 absl::Status StatusFromGrpcStatus(const grpc::Status &status) {

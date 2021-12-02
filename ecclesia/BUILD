@@ -10,7 +10,10 @@ licenses(["notice"])
 exports_files(["LICENSE"])
 
 # Code intended for GRPC Redfish usage
-package_group(name = "redfish_grpc_users")
+package_group(
+    name = "redfish_grpc_users",
+    packages = ["//ecclesia/..."],
+)
 
 # Code intended for redfish service and interoperability validation.
 package_group(
