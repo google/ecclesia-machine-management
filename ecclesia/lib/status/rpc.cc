@@ -30,16 +30,6 @@
 
 namespace ecclesia {
 
-absl::Status StatusFromRpcStatus(const google::rpc::Status &status) {
-  if (status.code() == 0) return absl::OkStatus();
-  absl::Status ret(static_cast<absl::StatusCode>(status.code()),
-                   status.message());
-  for (const google::protobuf::Any &detail : status.details()) {
-    ret.SetPayload(detail.type_url(), absl::Cord(detail.value()));
-  }
-  return ret;
-}
-
 google::rpc::Status StatusToRpcStatus(const absl::Status &status) {
   google::rpc::Status ret;
   ret.set_code(static_cast<int>(status.code()));
@@ -59,11 +49,6 @@ grpc::Status StatusToGrpcStatus(const absl::Status &status) {
   rpc_status.SerializeToString(&error_details);
   return grpc::Status(static_cast<grpc::StatusCode>(status.code()),
                       std::string(status.message()), std::move(error_details));
-}
-
-absl::Status StatusFromGrpcStatus(const grpc::Status &status) {
-  return absl::Status(static_cast<absl::StatusCode>(status.error_code()),
-                      status.error_message());
 }
 
 }  // namespace ecclesia

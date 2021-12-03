@@ -81,7 +81,7 @@ libredfish::RedfishVariant DoRpc(
 
   Struct response;
   grpc::Status status = rpc(context, request, &response);
-  return GetRedfishVariant(StatusFromGrpcStatus(status), std::move(response));
+  return GetRedfishVariant(AsAbslStatus(status), std::move(response));
 }
 
 template <class... Ts>

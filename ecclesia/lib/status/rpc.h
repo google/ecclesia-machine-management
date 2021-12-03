@@ -25,17 +25,11 @@
 
 namespace ecclesia {
 
-// Given an RPC status, convert it to an equivalent absl::Status.
-absl::Status StatusFromRpcStatus(const google::rpc::Status &status);
-
 // Given an absl::Status, convert it to an equivalent google::rpc::Status.
 google::rpc::Status StatusToRpcStatus(const absl::Status &status);
 
 // Given an absl::Status, convert it to an equivalent gRPC status.
 grpc::Status StatusToGrpcStatus(const absl::Status &status);
-
-// Given a gRPC status, convert it to an equivalent absl::Status.
-absl::Status StatusFromGrpcStatus(const grpc::Status &status);
 
 // Conversion helpers between abseil and open-source protobuf status. In google,
 // all statuses are abseil so the specialization should always be invoked.
