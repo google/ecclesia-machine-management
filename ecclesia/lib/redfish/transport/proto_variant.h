@@ -76,6 +76,10 @@ class ProtoObject : public libredfish::RedfishObject {
 
   std::string DebugString() override;
 
+  void ForEachProperty(
+      std::function<ForEachReturn(absl::string_view key,
+                                  libredfish::RedfishVariant value)>) override;
+
  private:
   google::protobuf::Struct proto_struct_;
 };

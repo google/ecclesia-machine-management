@@ -32,6 +32,7 @@ namespace libredfish {
 namespace {
 
 using ::testing::Eq;
+using ::testing::UnorderedElementsAre;
 
 TEST(JsonMockup, InvalidJsonDies) {
   EXPECT_DEATH(NewJsonMockupInterface("{"), "Could not load JSON.");
@@ -423,6 +424,62 @@ TEST(JsonMockup, DateTime) {
   assert(absl::LoadTimeZone("UTC", &utc));
   absl::Time dt_gold = absl::FromDateTime(2020, 7, 20, 0, 0, 35, utc);
   EXPECT_EQ(dt, dt_gold);
+}
+
+TEST(JsonMockup, ForEachProperty) {
+  auto json_intf = NewJsonMockupInterface(R"json(
+    {
+      "StringField": "string value",
+      "IntField": 2147483647,
+      "Int64Field": 9223372036854775807,
+      "DoubleField": 95.3,
+      "BoolFieldTrue": true,
+      "BoolFieldFalse": false,
+      "ObjField": { "Field": "yes" },
+      "ArrField": [ 1, 2, 3, 4, 5 ]
+    }
+  )json");
+
+  std::vector<std::pair<std::string, std::string>> all_properties;
+  json_intf->GetUri("/").AsObject()->ForEachProperty(
+      [&all_properties](absl::string_view name, RedfishVariant value) {
+        all_properties.push_back(
+            std::make_pair(std::string(name), value.DebugString()));
+        return RedfishObject::ForEachReturn::kContinue;
+      });
+  EXPECT_THAT(all_properties,
+              UnorderedElementsAre(
+                  std::make_pair("StringField", "\"string value\""),
+                  std::make_pair("IntField", "2147483647"),
+                  std::make_pair("Int64Field", "9223372036854775807"),
+                  std::make_pair("DoubleField", "95.3"),
+                  std::make_pair("BoolFieldTrue", "true"),
+                  std::make_pair("BoolFieldFalse", "false"),
+                  std::make_pair("ObjField", "{\n \"Field\": \"yes\"\n}"),
+                  std::make_pair("ArrField", "[\n 1,\n 2,\n 3,\n 4,\n 5\n]")));
+}
+
+TEST(JsonMockup, ForEachPropertyStop) {
+  auto json_intf = NewJsonMockupInterface(R"json(
+    {
+      "StringField": "string value",
+      "IntField": 2147483647,
+      "Int64Field": 9223372036854775807,
+      "DoubleField": 95.3,
+      "BoolFieldTrue": true,
+      "BoolFieldFalse": false,
+      "ObjField": { "Field": "yes" },
+      "ArrField": [ 1, 2, 3, 4, 5 ]
+    }
+  )json");
+  std::vector<std::pair<std::string, std::string>> all_properties;
+  int called = 0;
+  json_intf->GetUri("/").AsObject()->ForEachProperty(
+      [&called](absl::string_view name, RedfishVariant value) {
+        ++called;
+        return RedfishObject::ForEachReturn::kStop;
+      });
+  EXPECT_THAT(called, Eq(1));
 }
 
 }  // namespace

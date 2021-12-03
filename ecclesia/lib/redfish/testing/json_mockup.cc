@@ -103,6 +103,19 @@ class JsonMockupObject : public RedfishObject {
   }
   std::string DebugString() override { return json_view_.dump(/*indent=*/1); }
 
+  void ForEachProperty(
+      std::function<ForEachReturn(absl::string_view, RedfishVariant value)>
+          itr_func) override {
+    for (const auto &items : json_view_.items()) {
+      if (itr_func(items.key(),
+                   RedfishVariant(std::make_unique<JsonMockupVariantImpl>(
+                       items.value()))) ==
+          RedfishObject::ForEachReturn::kStop) {
+        break;
+      }
+    }
+  }
+
   nlohmann::json json_view_;
 };
 

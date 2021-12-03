@@ -37,6 +37,7 @@ cc_test(
     visibility = ["//visibility:public"],
     deps = [
         ":proto_variant",
+        "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
         "//ecclesia/lib/testing:status",

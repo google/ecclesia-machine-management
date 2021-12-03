@@ -31,6 +31,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
+#include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/testing/status.h"
@@ -44,8 +45,10 @@ using ::google::protobuf::Value;
 using ::libredfish::RedfishIterable;
 using ::libredfish::RedfishObject;
 using ::libredfish::RedfishVariant;
+using ::testing::Eq;
 using ::testing::IsNull;
 using ::testing::NotNull;
+using ::testing::UnorderedElementsAre;
 
 Value GetUrl(absl::string_view url_str) {
   Value url;
@@ -240,6 +243,120 @@ TEST(ProtoVariantTest, AsIterableNotListValue) {
   root.set_bool_value(true);
   RedfishVariant variant(absl::make_unique<ProtoVariantImpl>(root));
   EXPECT_THAT(variant.AsIterable(), IsNull());
+}
+
+TEST(ProtoVariantTest, ForEachProperty) {
+  Struct payload = ParseTextAsProtoOrDie<Struct>(R"pb(
+    fields {
+      key: "null"
+      value: { null_value: NULL_VALUE }
+    }
+    fields {
+      key: "num"
+      value: { number_value: 1 }
+    }
+    fields {
+      key: "str"
+      value: { string_value: "hi" }
+    }
+    fields {
+      key: "bool"
+      value: { bool_value: true }
+    }
+    fields {
+      key: "struct"
+      value: {
+        struct_value: {
+          fields {
+            key: "nested_str"
+            value: { string_value: "hi" }
+          }
+        }
+      }
+    }
+    fields {
+      key: "list"
+      value: {
+        list_value: {
+          values: { number_value: 1 }
+          values: { number_value: 2 }
+          values: { number_value: 3 }
+        }
+      }
+    }
+  )pb");
+  std::unique_ptr<RedfishObject> obj = absl::make_unique<ProtoObject>(payload);
+  std::vector<std::pair<std::string, std::string>> all_properties;
+  obj->ForEachProperty(
+      [&all_properties](absl::string_view name, RedfishVariant value) {
+        all_properties.push_back(
+            std::make_pair(std::string(name), value.DebugString()));
+        return RedfishObject::ForEachReturn::kContinue;
+      });
+  EXPECT_THAT(
+      all_properties,
+      UnorderedElementsAre(
+          std::make_pair("null", "null_value: NULL_VALUE\n"),
+          std::make_pair("num", "number_value: 1\n"),
+          std::make_pair("str", "string_value: \"hi\"\n"),
+          std::make_pair("bool", "bool_value: true\n"),
+          std::make_pair(
+              "struct",
+              "struct_value {\n  fields {\n    key: \"nested_str\"\n    value "
+              "{\n      string_value: \"hi\"\n    }\n  }\n}\n"),
+          std::make_pair("list",
+                         "list_value {\n  values {\n    number_value: 1\n  }\n "
+                         " values {\n    number_value: 2\n  }\n  values {\n    "
+                         "number_value: 3\n  }\n}\n")));
+}
+
+TEST(ProtoVariantTest, ForEachPropertyStop) {
+  Struct payload = ParseTextAsProtoOrDie<Struct>(R"pb(
+    fields {
+      key: "null"
+      value: { null_value: NULL_VALUE }
+    }
+    fields {
+      key: "num"
+      value: { number_value: 1 }
+    }
+    fields {
+      key: "str"
+      value: { string_value: "hi" }
+    }
+    fields {
+      key: "bool"
+      value: { bool_value: true }
+    }
+    fields {
+      key: "struct"
+      value: {
+        struct_value: {
+          fields {
+            key: "nested_str"
+            value: { string_value: "hi" }
+          }
+        }
+      }
+    }
+    fields {
+      key: "list"
+      value: {
+        list_value: {
+          values: { number_value: 1 }
+          values: { number_value: 2 }
+          values: { number_value: 3 }
+        }
+      }
+    }
+  )pb");
+  std::unique_ptr<RedfishObject> obj = absl::make_unique<ProtoObject>(payload);
+  int count = 0;
+  obj->ForEachProperty([&count](absl::string_view name, RedfishVariant value) {
+    count++;
+    return RedfishObject::ForEachReturn::kStop;
+  });
+  EXPECT_THAT(count, Eq(1));
 }
 
 }  // namespace

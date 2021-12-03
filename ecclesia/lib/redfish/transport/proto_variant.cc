@@ -101,7 +101,7 @@ bool ProtoVariantImpl::GetValue(bool *val) const {
   return true;
 }
 
-bool ProtoVariantImpl::GetValue(absl::Time* val) const {
+bool ProtoVariantImpl::GetValue(absl::Time *val) const {
   std::string dt_string;
   if (!GetValue(&dt_string)) {
     return false;
@@ -133,6 +133,18 @@ absl::optional<std::string> ProtoObject::GetUri() {
 }
 
 std::string ProtoObject::DebugString() { return proto_struct_.DebugString(); }
+
+void ProtoObject::ForEachProperty(
+    std::function<ForEachReturn(absl::string_view key,
+                                libredfish::RedfishVariant value)>
+        itr_func) {
+  for (const auto &kv : proto_struct_.fields()) {
+    if (itr_func(kv.first, RedfishVariant(absl::make_unique<ProtoVariantImpl>(
+                               kv.second))) == RedfishObject::kStop) {
+      break;
+    }
+  }
+}
 
 ProtoIterable::ProtoIterable(ListValue const &list_value)
     : list_value_(list_value) {}

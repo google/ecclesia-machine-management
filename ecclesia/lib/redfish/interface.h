@@ -326,6 +326,18 @@ class RedfishObject {
     return GetNodeValue<typename PropertyDefinitionT::type>(
         PropertyDefinitionT::Name);
   }
+
+  // ForEachProperty iterates over all properties in this object and invokes the
+  // provided callback function. The callback has signature:
+  //     ForEachReturn f(absl::string_view key, RedfishVariant value)
+  //     key is the property name.
+  //     value is the value returned as a RedfishVariant.
+  // The function can return kContinue to continue iterating over the remaining
+  // properties, or kStop to cease iterating over any additional properties.
+  enum ForEachReturn { kContinue = 0, kStop = 1 };
+  virtual void ForEachProperty(
+      std::function<ForEachReturn(absl::string_view key,
+                                  RedfishVariant value)>) = 0;
 };
 
 // RedfishInterface provides initial access points to the Redfish resource tree.

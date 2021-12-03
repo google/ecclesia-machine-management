@@ -161,6 +161,25 @@ class HttpIntfObjectImpl : public RedfishObject {
   }
   std::string DebugString() override { return result_.body.dump(); }
 
+  void ForEachProperty(
+      std::function<ForEachReturn(absl::string_view, RedfishVariant value)>
+          itr_func) {
+    for (const auto &items : result_.body.items()) {
+      if (itr_func(items.key(),
+                   RedfishVariant(
+                       std::make_unique<HttpIntfVariantImpl>(
+                           intf_,
+                           ecclesia::RedfishTransport::Result{
+                               .code = result_.code,
+                               .body = items.value(),
+                           }),
+                       ecclesia::HttpResponseCodeFromInt(result_.code))) ==
+          RedfishObject::ForEachReturn::kStop) {
+        break;
+      }
+    }
+  }
+
  private:
   RedfishInterface *intf_;
   ecclesia::RedfishTransport::Result result_;
