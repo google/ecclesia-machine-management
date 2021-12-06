@@ -185,16 +185,24 @@ std::vector<std::string> FindAllDownstreamsUris(const RedfishObject &obj,
 // Helper function to find root chassis from service root
 std::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
                                               const TopologyConfig &config) {
-  const std::string chassis_link = config.find_root_node().chassis_link();
+  auto chassis_iter = redfish_intf->GetRoot()[kRfPropertyChassis].AsIterable();
+  if (chassis_iter == nullptr) {
+    return std::nullopt;
+  }
 
+  // Iterate the Chassis resources and use the first valid chassis as the start
+  // point.
   std::optional<std::string> chassis_uri;
-  if (const auto chassis_obj =
-          redfish_intf->GetRoot()[kRfPropertyChassis][kRfPropertyMembers][0]
-              .AsObject();
-      chassis_obj) {
-    chassis_uri = chassis_obj->GetUri();
+  for (auto chassis : *chassis_iter) {
+    auto chassis_obj = chassis.AsObject();
+    if (chassis_obj) {
+      chassis_uri = chassis_obj->GetUri();
+      break;
+    }
   }
   if (!chassis_uri.has_value()) return std::nullopt;
+
+  const std::string chassis_link = config.find_root_node().chassis_link();
 
   // Iterate through cables to find upstream connections
   absl::flat_hash_map<std::string, std::string>
