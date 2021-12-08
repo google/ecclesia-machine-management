@@ -24,10 +24,17 @@
 //
 // ParseTextAsProtoOrDie<MessageType>(text):
 //   Parses "text" as the explicitly defined message type.
+//
+// ParseTextAsProtoVectorOrDie<MessageType>({text1, text2, ...}):
+//   Parses all of the "text1", "text2", and so on parameters as the explicitly
+//   defined message type and returns a vector of protos. Basically just a
+//   wrapper around ParseTextAsProtoOrDie, but useful for cutting down on a lot
+//   of repeated boilerplate when parsing N protos instead of 1.
 
 #ifndef ECCLESIA_LIB_PROTOBUF_PARSE_H_
 #define ECCLESIA_LIB_PROTOBUF_PARSE_H_
 
+#include <initializer_list>
 #include <string>
 #include <vector>
 
@@ -35,6 +42,7 @@
 #include "google/protobuf/text_format.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/interfaces.h"
 #include "ecclesia/lib/logging/logging.h"
@@ -116,6 +124,19 @@ class ParseTextProtoOrDieTemporary {
 inline ParseTextProtoOrDieTemporary ParseTextProtoOrDie(
     const std::string &text, SourceLocation loc = SourceLocation::current()) {
   return ParseTextProtoOrDieTemporary(text, loc);
+}
+
+template <typename MessageType>
+std::vector<MessageType> ParseTextAsProtoVectorOrDie(
+    std::initializer_list<absl::string_view> text_list,
+    SourceLocation loc = SourceLocation::current()) {
+  std::vector<MessageType> messages;
+  messages.reserve(text_list.size());
+  for (absl::string_view text : text_list) {
+    messages.push_back(
+        ParseTextAsProtoOrDie<MessageType>(std::string(text), loc));
+  }
+  return messages;
 }
 
 }  // namespace ecclesia
