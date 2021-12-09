@@ -300,6 +300,7 @@ http_archive(
       "//ecclesia/oss:redfishMockupServer.patches/0007-Add-mTLS-support.patch",
       "//ecclesia/oss:redfishMockupServer.patches/0008-Add-EventService-support.patch",
       "//ecclesia/oss:redfishMockupServer.patches/0009-add-link-local-support.patch",
+      "//ecclesia/oss:redfishMockupServer.patches/0010-add-google-service-root-support.patch",
     ],
     patch_args = ["-p1"],
     sha256 = "63a144428b0bdb0203ed302c6e9d58fba9dac5e1e399bc6a49cbb30c14b05c23",

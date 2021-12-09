@@ -1,0 +1,16 @@
+diff --git a/google3/third_party/py/redfishMockupServer/redfishMockupServer.py b/google3/third_party/py/redfishMockupServer/redfishMockupServer.py
+--- a/redfishMockupServer.py
++++ b/redfishMockupServer.py
+@@ -857,7 +857,11 @@ def main():
+ 
+         # check that we have a valid tall mockup--with /redfish in mockDir before proceeding
+         if not shortForm:
+-            slashRedfishDir = os.path.join(mockDir, "redfish")
++            rootDir = 'redfish'
++            if not os.path.exists(os.path.join(mockDir, rootDir)) and os.path.exists(
++                os.path.join(mockDir, 'google')):
++                rootDir = 'google'
++            slashRedfishDir = os.path.join(mockDir, rootDir)
+             if os.path.isdir(slashRedfishDir) is not True:
+                 logger.info("ERROR: Invalid Mockup Directory--no /redfish directory at top. Aborting")
+                 sys.stderr.flush()
