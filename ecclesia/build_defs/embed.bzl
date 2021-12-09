@@ -54,7 +54,7 @@ def cc_data_library(
                "--strip_prefixes=$(BINDIR),$(GENDIR),%s %s " +
                "$(locations :%s__data_filegroup)") %
               (name, cc_namespace, var_name, native.package_name(), flatten_arg, name),
-        tools = ["//ecclesia/lib/file:cc_embed"],
+        exec_tools = ["//ecclesia/lib/file:cc_embed"],
     )
 
     # Encapsulate the code an header files into a cc_library.
