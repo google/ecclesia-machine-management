@@ -22,13 +22,12 @@
 #include <variant>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
-#include "absl/time/time.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
-#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 

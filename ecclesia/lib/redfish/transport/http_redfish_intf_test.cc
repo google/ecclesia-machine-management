@@ -26,6 +26,7 @@
 #include "gtest/gtest.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"

@@ -17,8 +17,6 @@
 #ifndef ECCLESIA_LIB_REDFISH_TOPOLOGY_H_
 #define ECCLESIA_LIB_REDFISH_TOPOLOGY_H_
 
-#include <optional>
-
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/topology_config.pb.h"

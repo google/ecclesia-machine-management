@@ -21,8 +21,11 @@
 #include <utility>
 #include <variant>
 
+#include "absl/base/thread_annotations.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/functional/bind_front.h"
 #include "absl/memory/memory.h"
+#include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -33,7 +36,6 @@
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/status/macros.h"
-#include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {

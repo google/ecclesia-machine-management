@@ -24,9 +24,9 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/logging/logging.h"
-#include "grpc/grpc_security_constants.h"
 #include "grpcpp/security/credentials.h"
 #include "grpcpp/security/tls_certificate_provider.h"
+#include "grpcpp/security/tls_certificate_verifier.h"
 #include "grpcpp/security/tls_credentials_options.h"
 
 namespace ecclesia {

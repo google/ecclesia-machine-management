@@ -17,17 +17,17 @@
 #ifndef ECCLESIA_LIB_REDFISH_TRANSPORT_PROTO_VARIANT_H_
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_PROTO_VARIANT_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 
 #include "google/protobuf/struct.pb.h"
+#include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 
 namespace ecclesia {
 

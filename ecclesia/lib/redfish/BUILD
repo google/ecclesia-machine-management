@@ -37,6 +37,7 @@ cc_test(
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
     ],
@@ -156,8 +157,10 @@ cc_test(
     srcs = ["devpath_test.cc"],
     deps = [
         ":devpath",
+        ":interface",
         ":node_topology",
         "//ecclesia/lib/redfish/testing:json_mockup",
+        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
@@ -208,6 +211,7 @@ cc_library(
         "//ecclesia/lib/redfish/transport:interface",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
     ],
@@ -299,6 +303,7 @@ cc_library(
     deps = [
         ":interface",
         ":node_topology",
+        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
     ],
 )

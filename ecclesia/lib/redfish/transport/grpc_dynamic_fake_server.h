@@ -24,12 +24,12 @@
 
 #include "google/protobuf/struct.pb.h"
 #include "absl/strings/str_cat.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "grpcpp/security/server_credentials.h"
 #include "grpcpp/server.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
-#include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
-#include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 
 namespace ecclesia {
 

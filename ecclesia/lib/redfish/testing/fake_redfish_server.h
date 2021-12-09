@@ -19,7 +19,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <string>
 
 #include "absl/base/thread_annotations.h"

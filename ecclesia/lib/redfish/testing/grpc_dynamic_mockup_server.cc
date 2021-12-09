@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/redfish/testing/grpc_dynamic_mockup_server.h"
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -23,13 +24,16 @@
 
 #include "google/protobuf/struct.pb.h"
 #include "google/protobuf/util/json_util.h"
+#include "absl/base/thread_annotations.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
+#include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "ecclesia/lib/status/rpc.h"

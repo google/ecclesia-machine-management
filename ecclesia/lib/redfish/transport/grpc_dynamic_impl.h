@@ -18,8 +18,8 @@
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_GRPC_DYNAMIC_IMPL_H_
 
 #include <memory>
-#include <optional>
 #include <string>
+#include <utility>
 
 #include "absl/base/attributes.h"
 #include "absl/status/status.h"
@@ -27,11 +27,8 @@
 #include "absl/types/span.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "grpcpp/channel.h"
-#include "grpcpp/create_channel.h"
-#include "grpcpp/security/credentials.h"
-#include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
+#include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
 
 namespace ecclesia {
 

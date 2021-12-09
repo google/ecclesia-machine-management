@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -36,7 +37,6 @@
 #include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
 #include "ecclesia/lib/testing/status.h"
 #include "grpcpp/server_context.h"
-#include "grpcpp/support/status.h"
 
 namespace ecclesia {
 namespace {

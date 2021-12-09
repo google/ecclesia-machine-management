@@ -20,7 +20,6 @@
 #include <memory>
 
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 
 namespace libredfish {

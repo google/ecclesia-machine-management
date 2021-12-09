@@ -26,6 +26,7 @@ cc_test(
     deps = [
         ":json_mockup",
         "//ecclesia/lib/redfish:interface",
+        "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
         "@com_google_googletest//:gtest_main",
     ],
@@ -100,9 +101,13 @@ cc_library(
         "//ecclesia/lib/redfish/proto:redfish_v1_grpc_proto",
         "//ecclesia/lib/status:rpc",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/meta:type_traits",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
         "@com_google_protobuf//:protobuf",
     ],
 )

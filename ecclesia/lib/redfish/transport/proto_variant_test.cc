@@ -16,24 +16,22 @@
 
 #include "ecclesia/lib/redfish/transport/proto_variant.h"
 
-#include <stdint.h>
-
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "google/protobuf/struct.pb.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/memory/memory.h"
-#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/testing/status.h"
 
 namespace ecclesia {

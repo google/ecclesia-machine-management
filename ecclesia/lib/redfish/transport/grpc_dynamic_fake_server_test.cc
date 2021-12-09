@@ -22,7 +22,6 @@
 #include "google/protobuf/struct.pb.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/strings/string_view.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"

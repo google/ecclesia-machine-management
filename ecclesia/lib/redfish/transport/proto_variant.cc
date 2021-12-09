@@ -16,9 +16,9 @@
 
 #include "ecclesia/lib/redfish/transport/proto_variant.h"
 
-#include <stddef.h>
-#include <stdint.h>
-
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -30,7 +30,6 @@
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 
 namespace ecclesia {
 namespace {

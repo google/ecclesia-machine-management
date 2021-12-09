@@ -25,7 +25,6 @@
 #include "grpcpp/security/credentials.h"
 #include "grpcpp/security/tls_certificate_provider.h"
 #include "grpcpp/security/tls_certificate_verifier.h"
-#include "grpcpp/security/tls_credentials_options.h"
 
 namespace ecclesia {
 

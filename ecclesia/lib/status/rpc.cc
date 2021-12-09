@@ -16,7 +16,6 @@
 
 #include "ecclesia/lib/status/rpc.h"
 
-#include <grpcpp/support/status.h>
 
 #include <string>
 

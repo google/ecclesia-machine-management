@@ -17,6 +17,8 @@
 #ifndef ECCLESIA_LIB_REDFISH_TRANSPORT_INTERFACE_H_
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_INTERFACE_H_
 
+#include <string>
+
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"

@@ -41,7 +41,6 @@
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/auth_context.h"
 #include "grpcpp/security/credentials.h"
-#include "grpcpp/support/status.h"
 #include "grpcpp/support/time.h"  // IWYU pragma: keep
 
 namespace ecclesia {

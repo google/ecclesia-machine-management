@@ -16,15 +16,21 @@
 
 #include "ecclesia/lib/redfish/interface.h"
 
+#include <memory>
+#include <string>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/http/codes.h"
+#include "ecclesia/lib/redfish/property.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/testing/status.h"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace libredfish {
 namespace {
