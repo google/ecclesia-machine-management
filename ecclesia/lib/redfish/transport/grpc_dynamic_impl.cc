@@ -152,6 +152,9 @@ class GrpcRedfishCredentials : public grpc::MetadataCredentialsPlugin {
 bool GrpcDynamicImpl::IsTrusted() const { return trusted_ == kTrusted; }
 
 libredfish::RedfishVariant GrpcDynamicImpl::GetRoot(GetParams params) {
+  if (service_root_ == libredfish::ServiceRoot::kGoogle) {
+    return GetUri(kGoogleServiceRoot, params);
+  }
   return GetUri(kServiceRoot, params);
 }
 
@@ -204,6 +207,7 @@ GrpcDynamicImpl::GrpcDynamicImpl(const Target& target,
       stub_(RedfishV1::NewStub(
           grpc::CreateChannel(absl::StrCat(target_.fqdn, ":", target_.port),
                               options_.GetChannelCredentials()))),
-      trusted_(trusted) {}
+      trusted_(trusted),
+      service_root_(libredfish::ServiceRoot::kRedfish) {}
 
 }  // namespace ecclesia

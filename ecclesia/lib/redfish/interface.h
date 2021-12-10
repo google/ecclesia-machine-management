@@ -39,6 +39,8 @@
 
 namespace libredfish {
 
+enum class ServiceRoot { kRedfish, kGoogle };
+
 // Forward declare the typed view classes
 class RedfishIterable;
 class RedfishObject;
@@ -355,7 +357,15 @@ class RedfishInterface {
   using ValueVariant =
       std::variant<int, bool, std::string, const char *, double>;
 
-  static inline constexpr absl::string_view kServiceRoot = "/redfish/v1";
+  static constexpr inline absl::string_view ServiceRootToUri(
+      ServiceRoot service_root) {
+    switch (service_root) {
+      case (ServiceRoot::kRedfish):
+        return kServiceRoot;
+      case (ServiceRoot::kGoogle):
+        return kGoogleServiceRoot;
+    }
+  }
 
   virtual ~RedfishInterface() {}
 
@@ -401,6 +411,10 @@ class RedfishInterface {
   // Patch to the given URI and returns result.
   virtual RedfishVariant PatchUri(absl::string_view uri,
                                   absl::string_view data) = 0;
+
+ protected:
+  static inline constexpr absl::string_view kServiceRoot = "/redfish/v1";
+  static inline constexpr absl::string_view kGoogleServiceRoot = "/google/v1";
 };
 
 // Concrete implementation to provide a null placeholder interface which returns

@@ -65,18 +65,22 @@ class TestingMockupServer {
   // Then, provide the name of the mockup .shar file. Currently only mockups
   // defined in redfish_mockups are supported.For example:
   //   mockup_sar = "indus_hmb_cn_mockup.shar"
-  explicit TestingMockupServer(absl::string_view mockup_shar);
-  TestingMockupServer(absl::string_view mockup_shar,
-                      absl::string_view uds_path);
+  explicit TestingMockupServer(
+      absl::string_view mockup_shar,
+      ServiceRoot service_root = ServiceRoot::kRedfish);
+  TestingMockupServer(absl::string_view mockup_shar, absl::string_view uds_path,
+                      ServiceRoot service_root = ServiceRoot::kRedfish);
   // Creates an mTLS enabled mockup server
   TestingMockupServer(absl::string_view mockup_shar,
                       const ServerTlsConfig &server_config,
-                      const ClientTlsConfig &client_config);
+                      const ClientTlsConfig &client_config,
+                      ServiceRoot service_root = ServiceRoot::kRedfish);
   ~TestingMockupServer();
 
   // Returns a new RedfishInterface connected to the mockup server.
   std::unique_ptr<RedfishInterface> RedfishClientInterface(
-      std::unique_ptr<ecclesia::HttpClient> client = nullptr);
+      std::unique_ptr<ecclesia::HttpClient> client = nullptr,
+      ServiceRoot service_root = ServiceRoot::kRedfish);
 
   // Returns a new RedfishInterface connected to the mockup server.
   // Auth type is REDFISH_AUTH_SESSION

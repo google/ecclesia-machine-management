@@ -103,6 +103,7 @@ class GrpcDynamicImpl : public libredfish::RedfishInterface {
   // The stub is thread-safe and should be reused re-used for concurrent RPCs.
   std::unique_ptr<::redfish::v1::RedfishV1::Stub> stub_;
   TrustedEndpoint trusted_;
+  libredfish::ServiceRoot service_root_;
 };
 
 }  // namespace ecclesia

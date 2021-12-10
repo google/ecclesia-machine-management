@@ -32,7 +32,6 @@
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/http/client.h"
-#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/status/macros.h"
@@ -121,8 +120,7 @@ absl::Status HttpRedfishTransport::LockedDoSessionAuth() {
   if (session_username_.empty() && session_password_.empty()) {
     return absl::OkStatus();
   }
-  ECCLESIA_ASSIGN_OR_RETURN(
-      Result root, LockedGet(libredfish::RedfishInterface::kServiceRoot));
+  ECCLESIA_ASSIGN_OR_RETURN(Result root, LockedGet(GetRootUri()));
   ECCLESIA_ASSIGN_OR_RETURN(std::string post_uri,
                             GetSessionServicePostTarget(root.body));
 
@@ -174,19 +172,25 @@ std::unique_ptr<HttpClient::HttpRequest> HttpRedfishTransport::MakeRequest(
 
 HttpRedfishTransport::HttpRedfishTransport(
     std::unique_ptr<HttpClient> client,
-    std::variant<TcpTarget, UdsTarget> target)
-    : client_(std::move(client)), target_(std::move(target)) {}
+    std::variant<TcpTarget, UdsTarget> target,
+    libredfish::ServiceRoot service_root)
+    : client_(std::move(client)),
+      target_(std::move(target)),
+      service_root_(service_root) {}
 
 std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeNetwork(
-    std::unique_ptr<HttpClient> client, std::string endpoint) {
+    std::unique_ptr<HttpClient> client, std::string endpoint,
+    libredfish::ServiceRoot service_root) {
   return absl::WrapUnique(new HttpRedfishTransport(
-      std::move(client), TcpTarget{std::move(endpoint)}));
+      std::move(client), TcpTarget{std::move(endpoint)}, service_root));
 }
 
 std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeUds(
-    std::unique_ptr<HttpClient> client, std::string unix_domain_socket) {
+    std::unique_ptr<HttpClient> client, std::string unix_domain_socket,
+    libredfish::ServiceRoot service_root) {
   return absl::WrapUnique(new HttpRedfishTransport(
-      std::move(client), UdsTarget{std::string(unix_domain_socket)}));
+      std::move(client), UdsTarget{std::string(unix_domain_socket)},
+      service_root));
 }
 
 void HttpRedfishTransport::UpdateToNetworkEndpoint(
@@ -203,6 +207,10 @@ void HttpRedfishTransport::UpdateToUdsEndpoint(
   EndCurrentSession();
   target_ = UdsTarget{std::string(unix_domain_socket)};
   LockedDoSessionAuth().IgnoreError();
+}
+
+absl::string_view HttpRedfishTransport::GetRootUri() {
+  return libredfish::RedfishInterface::ServiceRootToUri(service_root_);
 }
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Get(

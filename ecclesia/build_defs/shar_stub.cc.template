@@ -21,6 +21,7 @@
 // The code here is not meant to be compiled directly, but instead expects that
 // the SHELL, SCRIPT and DATA_HEADER entries are expanded into a true .cc file.
 
+#include <filesystem>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -69,6 +70,14 @@ int RealMain(int argc, char *argv[]) {
   std::string shell_path(kShell);
   std::string script_path = JoinFilePaths(tempdir, kScript);
   setenv("ECCLESIA_DATA_DIR", tempdir.data(), 1);
+
+  // Set the root directory
+  if(std::filesystem::exists(JoinFilePaths(tempdir, "redfish"))) {
+    setenv("REDFISH_ROOT_DIR", "redfish", 1);
+  } else if(std::filesystem::exists(JoinFilePaths(tempdir, "google"))) {
+    setenv("REDFISH_ROOT_DIR", "google", 1);
+  }
+
   // The new argv adds two slots, one so that the path to the shell executable
   // itself can be inserted at the front, and one so that we can ensure the
   // vector terminates with a null pointer as execv() requires. We don't need a

@@ -94,7 +94,8 @@ std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
 }  // namespace
 
 TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
-                                         absl::string_view uds_path)
+                                         absl::string_view uds_path,
+                                         ServiceRoot service_root)
     : connection_config_(ConfigUnix{.socket_path = uds_path.data()}) {
   std::string mockup_path = ecclesia::GetTestDataDependencyPath(
       ecclesia::JoinFilePaths("redfish_mockups", mockup_shar));
@@ -104,10 +105,15 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
     argv[i] = &string_argv[i][0];
   }
   SetUpMockupServer(
-      argv, [this]() { return RedfishClientInterface(); }, std::nullopt);
+      argv,
+      [this, service_root]() {
+        return RedfishClientInterface(/*client=*/nullptr, service_root);
+      },
+      std::nullopt);
 }
 
-TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar)
+TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
+                                         ServiceRoot service_root)
     : connection_config_(ConfigNetwork{
           .hostname = "[::1]", .port = ecclesia::FindUnusedPortOrDie()}) {
   std::string mockup_path = ecclesia::GetTestDataDependencyPath(
@@ -124,12 +130,17 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar)
     argv[i] = &string_argv[i][0];
   }
   SetUpMockupServer(
-      argv, [this]() { return RedfishClientInterface(); }, std::nullopt);
+      argv,
+      [this, service_root]() {
+        return RedfishClientInterface(/*client=*/nullptr, service_root);
+      },
+      std::nullopt);
 }
 
 TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
                                          const ServerTlsConfig &server_config,
-                                         const ClientTlsConfig &client_config)
+                                         const ClientTlsConfig &client_config,
+                                         ServiceRoot service_root)
     : connection_config_(ConfigNetwork{
           .hostname = "[::1]", .port = ecclesia::FindUnusedPortOrDie()}),
       client_tls_config_(client_config) {
@@ -155,7 +166,10 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
     argv[i] = &string_argv[i][0];
   }
   SetUpMockupServer(
-      argv, [this]() { return RedfishClientTlsAuthInterface(); },
+      argv,
+      [this, service_root]() {
+        return RedfishClientInterface(/*client=*/nullptr, service_root);
+      },
       kDaemonAuthStartEstimation);
 }
 
@@ -193,8 +207,8 @@ void TestingMockupServer::SetUpMockupServer(
       continue;
     }
 
-    // Try to fetch the redfish URI from the server. If it works, we're running.
-    if (client->GetUri("/redfish").AsObject()) {
+    // Try to fetch the root URI from the server. If it works, we're running.
+    if (client->GetRoot().AsObject()) {
       server_ready = true;
       break;
     }
@@ -233,7 +247,7 @@ TestingMockupServer::~TestingMockupServer() {
 }
 
 std::unique_ptr<RedfishInterface> TestingMockupServer::RedfishClientInterface(
-    std::unique_ptr<ecclesia::HttpClient> client) {
+    std::unique_ptr<ecclesia::HttpClient> client, ServiceRoot service_root) {
   if (client == nullptr) {
     client = std::make_unique<ecclesia::CurlHttpClient>(
         ecclesia::LibCurlProxy::CreateInstance(), ecclesia::HttpCredential());
@@ -246,7 +260,8 @@ std::unique_ptr<RedfishInterface> TestingMockupServer::RedfishClientInterface(
       connection_config_);
 
   auto intf = libredfish::NewHttpInterface(
-      std::move(transport), libredfish::RedfishInterface::kTrusted);
+      std::move(transport), libredfish::RedfishInterface::kTrusted,
+      service_root);
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
 }

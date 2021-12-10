@@ -282,8 +282,11 @@ std::unique_ptr<RedfishIterable> HttpIntfVariantImpl::AsIterable() const {
 class HttpRedfishInterface : public RedfishInterface {
  public:
   HttpRedfishInterface(std::unique_ptr<ecclesia::RedfishTransport> transport,
-                       RedfishInterface::TrustedEndpoint trusted)
-      : transport_(std::move(transport)), trusted_(trusted) {}
+                       RedfishInterface::TrustedEndpoint trusted,
+                       ServiceRoot service_root = ServiceRoot::kRedfish)
+      : transport_(std::move(transport)),
+        trusted_(trusted),
+        service_root_(service_root) {}
 
   bool IsTrusted() const override {
     absl::ReaderMutexLock mu(&transport_mutex_);
@@ -305,6 +308,10 @@ class HttpRedfishInterface : public RedfishInterface {
   }
 
   RedfishVariant GetRoot(GetParams params) override {
+    if (service_root_ == ServiceRoot::kGoogle) {
+      return GetUri(kGoogleServiceRoot, params);
+    }
+
     return GetUri(kServiceRoot, params);
   }
 
@@ -379,14 +386,16 @@ class HttpRedfishInterface : public RedfishInterface {
   std::unique_ptr<ecclesia::RedfishTransport> transport_
       ABSL_GUARDED_BY(transport_mutex_);
   RedfishInterface::TrustedEndpoint trusted_ ABSL_GUARDED_BY(transport_mutex_);
+  ServiceRoot service_root_;
 };
 
 }  // namespace
 
 std::unique_ptr<RedfishInterface> NewHttpInterface(
     std::unique_ptr<ecclesia::RedfishTransport> transport,
-    RedfishInterface::TrustedEndpoint trusted) {
-  return std::make_unique<HttpRedfishInterface>(std::move(transport), trusted);
+    RedfishInterface::TrustedEndpoint trusted, ServiceRoot service_root) {
+  return std::make_unique<HttpRedfishInterface>(std::move(transport), trusted,
+                                                service_root);
 }
 
 }  // namespace libredfish

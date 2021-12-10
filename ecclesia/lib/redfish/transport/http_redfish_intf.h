@@ -27,7 +27,8 @@ namespace libredfish {
 // Constructs a RedfishInterface backed by a Redfish Transport.
 std::unique_ptr<RedfishInterface> NewHttpInterface(
     std::unique_ptr<ecclesia::RedfishTransport> transport,
-    RedfishInterface::TrustedEndpoint trusted);
+    RedfishInterface::TrustedEndpoint trusted,
+    ServiceRoot service_root = ServiceRoot::kRedfish);
 
 }  // namespace libredfish
 

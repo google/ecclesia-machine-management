@@ -47,6 +47,9 @@ class RedfishTransport {
   // Updates the endpoint for this transport implementation to a unix socket.
   virtual void UpdateToUdsEndpoint(absl::string_view unix_domain_socket) = 0;
 
+  // Fetches the root uri and returns it.
+  virtual absl::string_view GetRootUri() = 0;
+
   // REST operations.
   // These return a Status if the operation failed to be sent/received.
   // The application-level success or failure is captured in Result.code.
