@@ -27,6 +27,7 @@
 #include "google/protobuf/text_format.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/functional/function_ref.h"
 #include "absl/meta/type_traits.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
@@ -64,16 +65,16 @@ std::optional<TopologyConfig> LoadTopologyConfigFromConfigName(
 
 // Function to iterate through all cables with valid Location tags and call
 // callback_function on each
-void FindAllCablesHelper(
-    RedfishInterface *redfish_intf,
-    const TopologyConfig::CableLinkages &cable_linkages,
-    std::function<void(std::unique_ptr<RedfishObject> &cable_json,
-                       const std::string &upstream_uri)>
-        callback_function) {
+void FindAllCablesHelper(RedfishInterface *redfish_intf,
+                         const TopologyConfig::CableLinkages &cable_linkages,
+                         absl::FunctionRef<libredfish::RedfishIterReturnValue(
+                             std::unique_ptr<RedfishObject> &cable_json,
+                             const std::string &upstream_uri)>
+                             callback_function) {
   redfish_intf->GetRoot()[kRfPropertyCables][kRfPropertyMembers].Each().Do(
       [&](std::unique_ptr<RedfishObject> &cable_json) {
         const auto cable_links = (*cable_json)[kRfPropertyLinks].AsObject();
-        if (!cable_links) return;
+        if (!cable_links) return RedfishIterReturnValue::kContinue;
 
         std::optional<std::string> upstream_uri;
         for (const auto &upstream_link : cable_linkages.upstream_links()) {
@@ -87,16 +88,18 @@ void FindAllCablesHelper(
             upstream_uri = upstream_obj->GetUri();
           }
         }
-        if (!upstream_uri.has_value()) return;
+        if (!upstream_uri.has_value()) return RedfishIterReturnValue::kContinue;
 
         // In order to attach cable, we will require a PartLocation to be
         // present
         const auto cable_location =
             (*cable_json)[kRfPropertyLocation][kRfPropertyPartLocation]
                 .AsObject();
-        if (!cable_location) return;
+        if (!cable_location) return RedfishIterReturnValue::kContinue;
 
-        callback_function(cable_json, *upstream_uri);
+        libredfish::RedfishIterReturnValue retval =
+            callback_function(cable_json, *upstream_uri);
+        return retval;
       });
 }
 
@@ -148,6 +151,7 @@ std::vector<std::string> FindAllDownstreamsUris(const RedfishObject &obj,
       if (json->GetUri().has_value()) {
         downstream_uris.push_back(*json->GetUri());
       }
+      return RedfishIterReturnValue::kContinue;
     });
   }
 
@@ -158,6 +162,7 @@ std::vector<std::string> FindAllDownstreamsUris(const RedfishObject &obj,
           if (json->GetUri().has_value()) {
             downstream_uris.push_back(*json->GetUri());
           }
+          return RedfishIterReturnValue::kContinue;
         });
   }
 
@@ -176,6 +181,7 @@ std::vector<std::string> FindAllDownstreamsUris(const RedfishObject &obj,
           if (json->GetUri().has_value()) {
             downstream_uris.push_back(*json->GetUri());
           }
+          return RedfishIterReturnValue::kContinue;
         });
   }
 
@@ -215,6 +221,7 @@ std::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
                           cable_downstream_to_upstream_map[downstream_uri] =
                               upstream_uri;
                         }
+                        return RedfishIterReturnValue::kContinue;
                       });
 
   std::string current_chassis_uri = *std::move(chassis_uri);
@@ -284,6 +291,7 @@ UriToAttachedCableUris GetUpstreamUriToAttachedCableMap(
       [&](std::unique_ptr<RedfishObject> &cable_json,
           const std::string upstream_uri) {
         uri_to_cable_uri[upstream_uri].push_back(*cable_json->GetUri());
+        return RedfishIterReturnValue::kContinue;
       });
   return uri_to_cable_uri;
 }

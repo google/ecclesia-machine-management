@@ -20,6 +20,7 @@
 #include <functional>
 #include <memory>
 
+#include "absl/functional/function_ref.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 
@@ -41,8 +42,8 @@ class Sysmodel {
   // Redfish Schema Supplement.
   template <typename ResourceT>
   void QueryAllResources(
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback) {
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback) {
     // Invoke the overload using a Token of the appropriate type.
     QueryAllResourceInternal(Token<ResourceT>(), result_callback);
   }
@@ -59,76 +60,76 @@ class Sysmodel {
   // using a Token struct.
   void QueryAllResourceInternal(
       Token<ResourceChassis>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceSystem>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceEthernetInterface>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceMemory>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceStorage>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceDrive>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceProcessor>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceTemperature>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceVoltage>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceFan>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceSensor>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourcePcieFunction>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceComputerSystem>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceManager>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceLogService>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceLogEntry>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<ResourceSoftwareInventory>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   void QueryAllResourceInternal(
       Token<OemResourceRootOfTrust>,
-      const std::function<void(std::unique_ptr<RedfishObject>)>
-          &result_callback);
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
 
   RedfishInterface *redfish_intf_;
 };

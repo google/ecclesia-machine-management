@@ -21,6 +21,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/redfish:interface",
+        "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
@@ -200,6 +201,7 @@ cc_library(
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:json_ptr",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",

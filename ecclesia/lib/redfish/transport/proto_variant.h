@@ -24,6 +24,7 @@
 #include <string>
 
 #include "google/protobuf/struct.pb.h"
+#include "absl/functional/function_ref.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
@@ -77,8 +78,8 @@ class ProtoObject : public libredfish::RedfishObject {
   std::string DebugString() override;
 
   void ForEachProperty(
-      std::function<ForEachReturn(absl::string_view key,
-                                  libredfish::RedfishVariant value)>) override;
+      absl::FunctionRef<libredfish::RedfishIterReturnValue(
+          absl::string_view key, libredfish::RedfishVariant value)>) override;
 
  private:
   google::protobuf::Struct proto_struct_;

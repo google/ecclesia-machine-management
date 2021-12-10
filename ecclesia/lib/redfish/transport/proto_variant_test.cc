@@ -41,6 +41,7 @@ using ::google::protobuf::ListValue;
 using ::google::protobuf::Struct;
 using ::google::protobuf::Value;
 using ::libredfish::RedfishIterable;
+using ::libredfish::RedfishIterReturnValue;
 using ::libredfish::RedfishObject;
 using ::libredfish::RedfishVariant;
 using ::testing::Eq;
@@ -289,7 +290,7 @@ TEST(ProtoVariantTest, ForEachProperty) {
       [&all_properties](absl::string_view name, RedfishVariant value) {
         all_properties.push_back(
             std::make_pair(std::string(name), value.DebugString()));
-        return RedfishObject::ForEachReturn::kContinue;
+        return RedfishIterReturnValue::kContinue;
       });
   EXPECT_THAT(
       all_properties,
@@ -352,7 +353,7 @@ TEST(ProtoVariantTest, ForEachPropertyStop) {
   int count = 0;
   obj->ForEachProperty([&count](absl::string_view name, RedfishVariant value) {
     count++;
-    return RedfishObject::ForEachReturn::kStop;
+    return RedfishIterReturnValue::kStop;
   });
   EXPECT_THAT(count, Eq(1));
 }

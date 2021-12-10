@@ -38,6 +38,7 @@ using ::google::protobuf::NULL_VALUE;
 using ::google::protobuf::Struct;
 using ::google::protobuf::Value;
 using ::libredfish::RedfishIterable;
+using ::libredfish::RedfishIterReturnValue;
 using ::libredfish::RedfishObject;
 using ::libredfish::RedfishVariant;
 constexpr absl::string_view kODataId = "@odata.id";
@@ -134,12 +135,12 @@ absl::optional<std::string> ProtoObject::GetUri() {
 std::string ProtoObject::DebugString() { return proto_struct_.DebugString(); }
 
 void ProtoObject::ForEachProperty(
-    std::function<ForEachReturn(absl::string_view key,
-                                libredfish::RedfishVariant value)>
+    absl::FunctionRef<RedfishIterReturnValue(absl::string_view key,
+                                             libredfish::RedfishVariant value)>
         itr_func) {
   for (const auto &kv : proto_struct_.fields()) {
     if (itr_func(kv.first, RedfishVariant(absl::make_unique<ProtoVariantImpl>(
-                               kv.second))) == RedfishObject::kStop) {
+                               kv.second))) == RedfishIterReturnValue::kStop) {
       break;
     }
   }

@@ -11,6 +11,7 @@ cc_library(
     deps = [
         "//ecclesia/lib/logging",
         "//ecclesia/lib/redfish:interface",
+        "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",

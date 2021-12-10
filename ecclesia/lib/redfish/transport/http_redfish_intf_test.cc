@@ -159,6 +159,7 @@ TEST_F(HttpRedfishInterfaceTest, EachTest) {
       [&names](std::unique_ptr<libredfish::RedfishObject> &obj) {
         auto name = obj->GetNodeValue<libredfish::PropertyName>();
         if (name.has_value()) names.push_back(*std::move(name));
+        return libredfish::RedfishIterReturnValue::kContinue;
       });
   EXPECT_THAT(names, ElementsAre("chassis"));
 }
@@ -170,7 +171,7 @@ TEST_F(HttpRedfishInterfaceTest, ForEachPropertyTest) {
       [&all_properties](absl::string_view name, RedfishVariant value) {
         all_properties.push_back(
             std::make_pair(std::string(name), value.DebugString()));
-        return RedfishObject::ForEachReturn::kContinue;
+        return RedfishIterReturnValue::kContinue;
       });
   EXPECT_THAT(
       all_properties,
@@ -191,7 +192,7 @@ TEST_F(HttpRedfishInterfaceTest, ForEachPropertyTestStop) {
   chassis.AsObject()->ForEachProperty(
       [&called](absl::string_view name, RedfishVariant value) {
         ++called;
-        return RedfishObject::ForEachReturn::kStop;
+        return RedfishIterReturnValue::kStop;
       });
   EXPECT_THAT(called, Eq(1));
 }

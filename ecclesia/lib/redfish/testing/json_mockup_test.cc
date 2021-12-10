@@ -448,7 +448,7 @@ TEST(JsonMockup, ForEachProperty) {
       [&all_properties](absl::string_view name, RedfishVariant value) {
         all_properties.push_back(
             std::make_pair(std::string(name), value.DebugString()));
-        return RedfishObject::ForEachReturn::kContinue;
+        return RedfishIterReturnValue::kContinue;
       });
   EXPECT_THAT(all_properties,
               UnorderedElementsAre(
@@ -480,7 +480,7 @@ TEST(JsonMockup, ForEachPropertyStop) {
   json_intf->GetUri("/").AsObject()->ForEachProperty(
       [&called](absl::string_view name, RedfishVariant value) {
         ++called;
-        return RedfishObject::ForEachReturn::kStop;
+        return RedfishIterReturnValue::kStop;
       });
   EXPECT_THAT(called, Eq(1));
 }

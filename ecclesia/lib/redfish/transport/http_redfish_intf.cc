@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
@@ -162,9 +163,9 @@ class HttpIntfObjectImpl : public RedfishObject {
   }
   std::string DebugString() override { return result_.body.dump(); }
 
-  void ForEachProperty(
-      std::function<ForEachReturn(absl::string_view, RedfishVariant value)>
-          itr_func) {
+  void ForEachProperty(absl::FunctionRef<RedfishIterReturnValue(
+                           absl::string_view, RedfishVariant value)>
+                           itr_func) {
     for (const auto &items : result_.body.items()) {
       if (itr_func(items.key(),
                    RedfishVariant(
@@ -175,7 +176,7 @@ class HttpIntfObjectImpl : public RedfishObject {
                                .body = items.value(),
                            }),
                        ecclesia::HttpResponseCodeFromInt(result_.code))) ==
-          RedfishObject::ForEachReturn::kStop) {
+          RedfishIterReturnValue::kStop) {
         break;
       }
     }

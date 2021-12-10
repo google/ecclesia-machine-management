@@ -15,6 +15,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/http:codes",
+        "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
@@ -180,6 +181,7 @@ cc_library(
     deps = [
         ":interface",
         ":property_definitions",
+        "@com_google_absl//absl/functional:function_ref",
     ],
 )
 
@@ -279,6 +281,7 @@ cc_library(
         "//ecclesia/lib/logging",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/meta:type_traits",
         "@com_google_absl//absl/strings",
         "@com_google_protobuf//:protobuf",

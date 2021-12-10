@@ -28,6 +28,7 @@
 #include <variant>
 #include <vector>
 
+#include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
@@ -41,6 +42,14 @@ namespace libredfish {
 // Forward declare the typed view classes
 class RedfishIterable;
 class RedfishObject;
+
+// Return value for iterator functions passed to Redfish interface functions.
+enum class RedfishIterReturnValue {
+  // Continue searching for additional resources and invoking the callback.
+  kContinue = 0,
+  // Stop searching for resources. The callback will not be invoked again.
+  kStop
+};
 
 // RedfishVariant is the standard return type for all Redfish interfaces.
 // Its purpose is to force the caller to strictly specify the expected Redfish
@@ -98,6 +107,7 @@ class RedfishVariant final {
     virtual std::string DebugString() const = 0;
   };
 
+
   // A helper class to denote a loop through an iterator.
   class IndexEach {};
   using IndexType = std::variant<std::string, size_t, IndexEach>;
@@ -130,17 +140,16 @@ class RedfishVariant final {
     // passed to it as the sole argument. The node is passed as a unique_ptr to
     // the RedfishObject.
     template <typename F>
-    void Do(F what) const {
-      Do(root_, indices_, what);
+    RedfishIterReturnValue Do(F what) const {
+      return Do(root_, indices_, what);
     }
 
    private:
-    // template <typename F>
-    // void Do(const RedfishVariant &root, absl::Span<const IndexType> indices,
-    //         F what) const;
+    // Private helper to evaluate the entire chain recursively.
     template <typename F>
-    void Do(const RedfishVariant &root, absl::Span<const IndexType> indices,
-            F what) const;
+    RedfishIterReturnValue Do(const RedfishVariant &root,
+                              absl::Span<const IndexType> indices,
+                              F what) const;
 
     std::vector<IndexType> indices_;
     const RedfishVariant &root_;
@@ -329,15 +338,15 @@ class RedfishObject {
 
   // ForEachProperty iterates over all properties in this object and invokes the
   // provided callback function. The callback has signature:
-  //     ForEachReturn f(absl::string_view key, RedfishVariant value)
+  //     RedfishIterReturnValue f(absl::string_view key, RedfishVariant value)
   //     key is the property name.
   //     value is the value returned as a RedfishVariant.
-  // The function can return kContinue to continue iterating over the remaining
-  // properties, or kStop to cease iterating over any additional properties.
-  enum ForEachReturn { kContinue = 0, kStop = 1 };
+  // The function can return RedfishIterReturnValue::kContinue to continue
+  // iterating over the remaining properties, or kStop to cease iterating over
+  // any additional properties.
   virtual void ForEachProperty(
-      std::function<ForEachReturn(absl::string_view key,
-                                  RedfishVariant value)>) = 0;
+      absl::FunctionRef<RedfishIterReturnValue(absl::string_view key,
+                                               RedfishVariant value)>) = 0;
 };
 
 // RedfishInterface provides initial access points to the Redfish resource tree.
@@ -452,44 +461,53 @@ RedfishVariant RedfishVariant::operator[](const size_t index) const {
 
 // Evaluates the index chain in a recursive fashion.
 template <typename F>
-void RedfishVariant::IndexHelper::Do(const RedfishVariant &root,
-                                     absl::Span<const IndexType> indices,
-                                     F what) const {
+RedfishIterReturnValue RedfishVariant::IndexHelper::Do(
+    const RedfishVariant &root, absl::Span<const IndexType> indices,
+    F what) const {
   if (indices.empty()) {
     // The chain is empty. That means we have evaluated the whole chain. Variant
     // `root` should be one of the objects the chain matches. So we will just
     // call `what` on it, and stop the recursion.
     if (std::unique_ptr<RedfishObject> obj = root.AsObject()) {
-      what(obj);
+      return what(obj);
     }
-    return;
+    return RedfishIterReturnValue::kContinue;
   }
 
   // The chain is not empty. We will evaluate the 1st index in the chain, and
   // leave the rest to the next layer of recursion.
   const IndexType &index = indices[0];
-  std::visit(
-      [&](auto &&index_value) {
+  return std::visit(
+      [&](auto &&index_value) -> RedfishIterReturnValue {
         using T = std::decay_t<decltype(index_value)>;
         auto rest = indices.last(indices.size() - 1);
         if constexpr (std::is_same_v<T, std::string>) {
           // The index is a string. Likely we are looking at a RedfishObject.
           // Simply drill down.
-          Do(root[index_value], rest, what);
+          if (Do(root[index_value], rest, what) ==
+              RedfishIterReturnValue::kStop) {
+            return RedfishIterReturnValue::kStop;
+          }
         } else if constexpr (std::is_same_v<T, size_t>) {
           // The index is an integer. We should be looking at a RedfishIterable.
           // Simply drill down.
-          Do(root[index_value], rest, what);
+          if (Do(root[index_value], rest, what) ==
+              RedfishIterReturnValue::kStop) {
+            return RedfishIterReturnValue::kStop;
+          }
         } else if constexpr (std::is_same_v<T, IndexEach>) {
           // This segment of the chain is an `Each()`. Therefore we are looking
           // at a RedfishIterable, and need to iterate over its elements. We
           // then drill down to each of the elements.
           auto iter = root.AsIterable();
-          if (!iter) return;
+          if (!iter) return RedfishIterReturnValue::kContinue;
           for (auto entry : *iter) {
-            Do(entry, rest, what);
+            if (Do(entry, rest, what) == RedfishIterReturnValue::kStop) {
+              return RedfishIterReturnValue::kStop;
+            }
           }
         }
+        return RedfishIterReturnValue::kContinue;
       },
       index);
 }

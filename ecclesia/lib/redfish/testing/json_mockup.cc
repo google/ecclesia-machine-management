@@ -24,6 +24,7 @@
 #include <string>
 #include <utility>
 
+#include "absl/functional/function_ref.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/strings/numbers.h"
@@ -103,14 +104,13 @@ class JsonMockupObject : public RedfishObject {
   }
   std::string DebugString() override { return json_view_.dump(/*indent=*/1); }
 
-  void ForEachProperty(
-      std::function<ForEachReturn(absl::string_view, RedfishVariant value)>
-          itr_func) override {
+  void ForEachProperty(absl::FunctionRef<RedfishIterReturnValue(
+                           absl::string_view, RedfishVariant value)>
+                           itr_func) override {
     for (const auto &items : json_view_.items()) {
       if (itr_func(items.key(),
                    RedfishVariant(std::make_unique<JsonMockupVariantImpl>(
-                       items.value()))) ==
-          RedfishObject::ForEachReturn::kStop) {
+                       items.value()))) == RedfishIterReturnValue::kStop) {
         break;
       }
     }
