@@ -33,7 +33,7 @@
 namespace libredfish {
 namespace {
 
-using ::testing::ContainerEq;
+using ::testing::Pointwise;
 
 void CheckAgainstTestingMockupFullDevpaths(const NodeTopology &topology) {
   const std::vector<Node> expected_nodes = {
@@ -55,7 +55,7 @@ void CheckAgainstTestingMockupFullDevpaths(const NodeTopology &topology) {
     actual_nodes.push_back(*node);
   }
 
-  EXPECT_THAT(actual_nodes, ContainerEq(expected_nodes));
+  EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
 }
 
 TEST(RawInterfaceTestWithMockup, TestingMockupNodesArePopulated) {

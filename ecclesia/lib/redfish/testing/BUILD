@@ -151,5 +151,6 @@ cc_library(
         "//ecclesia/lib/redfish:node_topology",
         "//ecclesia/lib/redfish:types",
         "@com_google_absl//absl/strings:str_format",
+        "@com_google_googletest//:gtest",
     ],
 )

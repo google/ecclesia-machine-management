@@ -19,18 +19,12 @@
 #include <memory>
 #include <ostream>
 #include <string>
-#include <tuple>
 
 #include "absl/strings/str_format.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/types.h"
 
 namespace libredfish {
-
-bool operator==(const Node &n1, const Node &n2) {
-  return std::tie(n1.name, n1.local_devpath, n1.type) ==
-         std::tie(n2.name, n2.local_devpath, n2.type);
-}
 
 std::string ToString(NodeType type) {
   switch (type) {

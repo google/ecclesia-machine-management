@@ -36,12 +36,12 @@ namespace libredfish {
 
 namespace {
 
-using ::testing::ContainerEq;
 using ::testing::Contains;
 using ::testing::Eq;
 using ::testing::IsNull;
 using ::testing::Not;
 using ::testing::Pointee;
+using ::testing::Pointwise;
 using ::testing::UnorderedElementsAre;
 
 TEST(Topology, Empty) {
@@ -351,7 +351,7 @@ TEST(RawInterfaceTestWithMockup, IndusHmbCnMockupNodesArePopulated) {
     actual_nodes.push_back(*node);
   }
 
-  EXPECT_THAT(actual_nodes, ContainerEq(expected_nodes));
+  EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
 }
 
 TEST(RawInterfaceTestWithMockup, IndusHmbCnMockupDevpathToNodeMapMatches) {
@@ -377,189 +377,190 @@ TEST(RawInterfaceTestWithMockup, IndusHmbCnMockupUriMapIsCorrect) {
       "/redfish/v1/Chassis/chassis"));
   EXPECT_THAT(
       topology.uri_to_associated_node_map.at("/redfish/v1/Chassis/chassis"),
-      UnorderedElementsAre(Pointee(Node{"indus", "/phys", NodeType::kBoard})));
+      UnorderedElementsAre(
+          Pointee(RedfishNodeIdIs("indus", "/phys", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Processors/0"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Processors/0"),
-              UnorderedElementsAre(Pointee(
-                  Node{"cascadelake", "/phys/CPU0", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(RedfishNodeIdIs(
+                  "cascadelake", "/phys/CPU0", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Processors/1"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Processors/1"),
-              UnorderedElementsAre(Pointee(
-                  Node{"cascadelake", "/phys/CPU1", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(RedfishNodeIdIs(
+                  "cascadelake", "/phys/CPU1", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/0"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/0"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM0", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM0", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/1"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/1"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM1", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM1", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/2"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/2"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM2", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM2", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/3"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/3"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM3", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM3", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/4"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/4"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM4", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM4", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/5"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/5"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM5", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM5", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/6"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/6"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM6", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM6", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/7"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/7"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM7", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM7", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/8"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/8"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM8", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM8", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/9"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/9"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM9", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM9", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/10"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/10"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM10", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM10", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/11"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/11"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM11", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM11", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/12"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/12"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM12", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM12", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/13"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/13"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM13", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM13", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/14"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/14"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM14", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM14", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/15"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/15"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM15", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM15", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/16"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/16"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM16", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM16", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/17"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/17"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM17", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM17", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/18"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/18"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM18", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM18", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/19"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/19"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM19", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM19", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/20"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/20"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM20", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM20", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/21"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/21"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM21", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM21", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/22"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/22"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM22", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM22", NodeType::kBoard))));
 
   ASSERT_TRUE(topology.uri_to_associated_node_map.contains(
       "/redfish/v1/Systems/system/Memory/23"));
   EXPECT_THAT(topology.uri_to_associated_node_map.at(
                   "/redfish/v1/Systems/system/Memory/23"),
-              UnorderedElementsAre(
-                  Pointee(Node{"ddr4", "/phys/DIMM23", NodeType::kBoard})));
+              UnorderedElementsAre(Pointee(
+                  RedfishNodeIdIs("ddr4", "/phys/DIMM23", NodeType::kBoard))));
 }
 
 TEST(RawInterfaceTestWithMockup, NodesMatch) {

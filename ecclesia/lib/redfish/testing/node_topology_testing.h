@@ -22,15 +22,29 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <tuple>
 
+#include "gmock/gmock.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/types.h"
 
 namespace libredfish {
 
-// Define equality of two nodes being only their name, devpath, type. Ignore
-// the properties.
-bool operator==(const Node &n1, const Node &n2);
+// Matcher that compares a Node against a name, devpath and type.
+MATCHER_P3(RedfishNodeIdIs, name, devpath, type, "") {
+  return std::tie(arg.name, arg.local_devpath, arg.type) ==
+         std::tie(name, devpath, type);
+}
+
+// Matcher that compares a tuple of two nodes using only the node name, devpath
+// and type (i.e. ignoring associated URIs). Intended for use in combination
+// with Pointwise or UnorderedPointwise to compare containers of nodes.
+MATCHER(RedfishNodeEqId, "") {
+  const Node &lhs = std::get<0>(arg);
+  const Node &rhs = std::get<1>(arg);
+  return std::tie(lhs.name, lhs.local_devpath, lhs.type) ==
+         std::tie(rhs.name, rhs.local_devpath, rhs.type);
+}
 
 // Some print functions defined to simplify debugging with GMock output.
 std::string ToString(NodeType type);
