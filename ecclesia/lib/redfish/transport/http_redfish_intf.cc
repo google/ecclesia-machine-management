@@ -386,7 +386,7 @@ class HttpRedfishInterface : public RedfishInterface {
   std::unique_ptr<ecclesia::RedfishTransport> transport_
       ABSL_GUARDED_BY(transport_mutex_);
   RedfishInterface::TrustedEndpoint trusted_ ABSL_GUARDED_BY(transport_mutex_);
-  ServiceRoot service_root_;
+  const ServiceRoot service_root_;
 };
 
 }  // namespace

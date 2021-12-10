@@ -16,9 +16,9 @@
 
 declare -r SERVER="${ECCLESIA_DATA_DIR}/external/redfishMockupServer/redfishMockupServer.par"
 
-# Find the data directory of the mockup, just search for a "redfish" directory
+# Find the data directory of the mockup, just search for a REDFISH_ROOT_DIR directory
 # and take its parent
-declare -r DATA_DIR=$(find "${ECCLESIA_DATA_DIR}" -type d -name redfish)/..
+declare -r DATA_DIR=$(find "${ECCLESIA_DATA_DIR}" -type d -name "${REDFISH_ROOT_DIR}")/..
 
 # Run the server. Note that -D is already provided. Trying to provide another
 # -D argument is undefined behaviour.

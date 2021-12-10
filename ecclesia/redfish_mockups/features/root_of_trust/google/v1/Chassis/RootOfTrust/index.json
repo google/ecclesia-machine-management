@@ -1,11 +1,11 @@
 {
-  "@odata.id": "/redfish/v1/Chassis/RootOfTrust",
+  "@odata.id": "/google/v1/Chassis/RootOfTrust",
   "@odata.type": "#Chassis.v1_14_0.Chassis",
   "ChassisType": "RackMount",
   "Id": "RootOfTrust",
   "Links": {
     "ContainedBy": {
-      "@odata.id": "/redfish/v1/Chassis/root"
+      "@odata.id": "/google/v1/Chassis/root"
     }
   },
   "Location": {
