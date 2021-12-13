@@ -85,11 +85,13 @@ class TestingMockupServer {
   // Returns a new RedfishInterface connected to the mockup server.
   // Auth type is REDFISH_AUTH_SESSION
   std::unique_ptr<RedfishInterface> RedfishClientSessionAuthInterface(
-      std::unique_ptr<ecclesia::HttpClient> client = nullptr);
+      std::unique_ptr<ecclesia::HttpClient> client = nullptr,
+      ServiceRoot service_root = ServiceRoot::kRedfish);
 
   // Returns a new RedfishInterface connected to the mockup server.
   // Auth type is REDFISH_AUTH_TLS
-  std::unique_ptr<RedfishInterface> RedfishClientTlsAuthInterface();
+  std::unique_ptr<RedfishInterface> RedfishClientTlsAuthInterface(
+      ServiceRoot service_root = ServiceRoot::kRedfish);
 
   // The hostname and port the server will be listening on.
   struct ConfigNetwork {

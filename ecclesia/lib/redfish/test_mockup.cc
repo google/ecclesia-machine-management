@@ -76,19 +76,19 @@ std::string ConfigToEndpoint(absl::string_view scheme,
 }
 
 std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
-    std::unique_ptr<ecclesia::HttpClient> client,
-    absl::string_view scheme,
-    const TestingMockupServer::ConfigNetwork &conn) {
+    std::unique_ptr<ecclesia::HttpClient> client, absl::string_view scheme,
+    const TestingMockupServer::ConfigNetwork &conn,
+    libredfish::ServiceRoot service_root) {
   return ecclesia::HttpRedfishTransport::MakeNetwork(
       std::move(client),
-      absl::StrCat(scheme, "://", conn.hostname, ":", conn.port));
+      absl::StrCat(scheme, "://", conn.hostname, ":", conn.port), service_root);
 }
 std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
-    std::unique_ptr<ecclesia::HttpClient> client,
-    absl::string_view,
-    const TestingMockupServer::ConfigUnix &conn) {
-  return ecclesia::HttpRedfishTransport::MakeUds(std::move(client),
-                                                 conn.socket_path);
+    std::unique_ptr<ecclesia::HttpClient> client, absl::string_view,
+    const TestingMockupServer::ConfigUnix &conn,
+    libredfish::ServiceRoot service_root) {
+  return ecclesia::HttpRedfishTransport::MakeUds(
+      std::move(client), conn.socket_path, service_root);
 }
 
 }  // namespace
@@ -168,7 +168,7 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
   SetUpMockupServer(
       argv,
       [this, service_root]() {
-        return RedfishClientInterface(/*client=*/nullptr, service_root);
+        return RedfishClientTlsAuthInterface(service_root);
       },
       kDaemonAuthStartEstimation);
 }
@@ -254,8 +254,8 @@ std::unique_ptr<RedfishInterface> TestingMockupServer::RedfishClientInterface(
   }
 
   std::unique_ptr<ecclesia::RedfishTransport> transport = std::visit(
-      [&client](auto &conn) {
-        return ConfigToTransport(std::move(client), "http", conn);
+      [&client, service_root](auto &conn) {
+        return ConfigToTransport(std::move(client), "http", conn, service_root);
       },
       connection_config_);
 
@@ -268,15 +268,16 @@ std::unique_ptr<RedfishInterface> TestingMockupServer::RedfishClientInterface(
 
 std::unique_ptr<RedfishInterface>
 TestingMockupServer::RedfishClientSessionAuthInterface(
-    std::unique_ptr<ecclesia::HttpClient> client) {
+    std::unique_ptr<ecclesia::HttpClient> client,
+    libredfish::ServiceRoot service_root) {
   if (client == nullptr) {
     client = std::make_unique<ecclesia::CurlHttpClient>(
         ecclesia::LibCurlProxy::CreateInstance(), ecclesia::HttpCredential());
   }
 
   std::unique_ptr<ecclesia::HttpRedfishTransport> transport = std::visit(
-      [&client](auto &conn) {
-        return ConfigToTransport(std::move(client), "http", conn);
+      [&client, service_root](auto &conn) {
+        return ConfigToTransport(std::move(client), "http", conn, service_root);
       },
       connection_config_);
   ecclesia::Check(transport != nullptr, "can create a redfish transport.");
@@ -295,7 +296,8 @@ TestingMockupServer::RedfishClientSessionAuthInterface(
 }
 
 std::unique_ptr<RedfishInterface>
-TestingMockupServer::RedfishClientTlsAuthInterface() {
+TestingMockupServer::RedfishClientTlsAuthInterface(
+    libredfish::ServiceRoot service_root) {
   ecclesia::Check(client_tls_config_.has_value(),
                   "client TLS configuration exists");
 
@@ -309,13 +311,15 @@ TestingMockupServer::RedfishClientTlsAuthInterface() {
       ecclesia::LibCurlProxy::CreateInstance(), std::move(creds));
 
   std::unique_ptr<ecclesia::RedfishTransport> transport = std::visit(
-      [&client](auto &conn) {
-        return ConfigToTransport(std::move(client), "https", conn);
+      [&client, service_root](auto &conn) {
+        return ConfigToTransport(std::move(client), "https", conn,
+                                 service_root);
       },
       connection_config_);
 
   auto intf = libredfish::NewHttpInterface(
-      std::move(transport), libredfish::RedfishInterface::kTrusted);
+      std::move(transport), libredfish::RedfishInterface::kTrusted,
+      service_root);
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
 }
