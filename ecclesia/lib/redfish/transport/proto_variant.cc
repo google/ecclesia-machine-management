@@ -124,7 +124,7 @@ RedfishVariant ProtoObject::operator[](const std::string &node_name) const {
       proto_struct_.fields().at(node_name)));
 }
 
-absl::optional<std::string> ProtoObject::GetUri() {
+absl::optional<std::string> ProtoObject::GetUriString() {
   if (!proto_struct_.fields().contains(kODataId) ||
       !proto_struct_.fields().at(kODataId).has_string_value()) {
     return absl::nullopt;

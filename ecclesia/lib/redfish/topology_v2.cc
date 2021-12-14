@@ -81,11 +81,11 @@ void FindAllCablesHelper(RedfishInterface *redfish_intf,
           // Assuming there is only one upstream resource
           if (auto upstream_obj = (*cable_links)[upstream_link][0].AsObject()) {
             // Collection of Resources
-            upstream_uri = upstream_obj->GetUri();
+            upstream_uri = upstream_obj->GetUriString();
           } else if (auto upstream_obj =
                          (*cable_links)[upstream_link].AsObject()) {
             // Single Resource link
-            upstream_uri = upstream_obj->GetUri();
+            upstream_uri = upstream_obj->GetUriString();
           }
         }
         if (!upstream_uri.has_value()) return RedfishIterReturnValue::kContinue;
@@ -148,8 +148,8 @@ std::vector<std::string> FindAllDownstreamsUris(const RedfishObject &obj,
   for (const auto &array_attribute :
        resource_config.first_class_attributes().array_attributes()) {
     obj[array_attribute].Each().Do([&](std::unique_ptr<RedfishObject> &json) {
-      if (json->GetUri().has_value()) {
-        downstream_uris.push_back(*json->GetUri());
+      if (auto uri = json->GetUriString(); uri.has_value()) {
+        downstream_uris.push_back(*std::move(uri));
       }
       return RedfishIterReturnValue::kContinue;
     });
@@ -159,8 +159,8 @@ std::vector<std::string> FindAllDownstreamsUris(const RedfishObject &obj,
        resource_config.first_class_attributes().collection_attributes()) {
     obj[collection_attribute][kRfPropertyMembers].Each().Do(
         [&](std::unique_ptr<RedfishObject> &json) {
-          if (json->GetUri().has_value()) {
-            downstream_uris.push_back(*json->GetUri());
+          if (auto uri = json->GetUriString(); uri.has_value()) {
+            downstream_uris.push_back(*std::move(uri));
           }
           return RedfishIterReturnValue::kContinue;
         });
@@ -169,8 +169,8 @@ std::vector<std::string> FindAllDownstreamsUris(const RedfishObject &obj,
   for (const auto &single_link :
        resource_config.usable_links().singular_links()) {
     if (const auto json = obj[kRfPropertyLinks][single_link].AsObject(); json) {
-      if (json->GetUri().has_value()) {
-        downstream_uris.push_back(*json->GetUri());
+      if (auto uri = json->GetUriString(); uri.has_value()) {
+        downstream_uris.push_back(*std::move(uri));
       }
     }
   }
@@ -178,8 +178,8 @@ std::vector<std::string> FindAllDownstreamsUris(const RedfishObject &obj,
   for (const auto &array_link : resource_config.usable_links().array_links()) {
     obj[kRfPropertyLinks][array_link].Each().Do(
         [&](std::unique_ptr<RedfishObject> &json) {
-          if (json->GetUri().has_value()) {
-            downstream_uris.push_back(*json->GetUri());
+          if (auto uri = json->GetUriString(); uri.has_value()) {
+            downstream_uris.push_back(*std::move(uri));
           }
           return RedfishIterReturnValue::kContinue;
         });
@@ -202,7 +202,7 @@ std::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
   for (auto chassis : *chassis_iter) {
     auto chassis_obj = chassis.AsObject();
     if (chassis_obj) {
-      chassis_uri = chassis_obj->GetUri();
+      chassis_uri = chassis_obj->GetUriString();
       break;
     }
   }
@@ -231,7 +231,7 @@ std::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
               ->GetUri(current_chassis_uri)[kRfPropertyLinks][chassis_link]
               .AsObject();
       upstream_chassis_link) {
-    upstream_uri = upstream_chassis_link->GetUri();
+    upstream_uri = upstream_chassis_link->GetUriString();
   } else {
     const auto it = cable_downstream_to_upstream_map.find(current_chassis_uri);
     if (it != cable_downstream_to_upstream_map.end()) {
@@ -260,7 +260,7 @@ std::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
         break;
       }
     } else {
-      upstream_uri = upstream_link->GetUri();
+      upstream_uri = upstream_link->GetUriString();
     }
   }
   // If the current chassis uri is valid, return it
@@ -290,7 +290,9 @@ UriToAttachedCableUris GetUpstreamUriToAttachedCableMap(
       redfish_intf, cable_linkages,
       [&](std::unique_ptr<RedfishObject> &cable_json,
           const std::string upstream_uri) {
-        uri_to_cable_uri[upstream_uri].push_back(*cable_json->GetUri());
+        if (auto uri = cable_json->GetUriString(); uri.has_value()) {
+          uri_to_cable_uri[upstream_uri].push_back(*std::move(uri));
+        }
         return RedfishIterReturnValue::kContinue;
       });
   return uri_to_cable_uri;

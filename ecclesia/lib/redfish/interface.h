@@ -318,7 +318,8 @@ class RedfishObject {
   // the node is an "@odata.id" field, the RedfishInterface will be queried
   // to retrieve the payload corresponding to that "@odata.id".
   virtual RedfishVariant operator[](const std::string &node_name) const = 0;
-  virtual std::optional<std::string> GetUri() = 0;
+  // Returns the string URI of the current RedfishObject, if available.
+  virtual std::optional<std::string> GetUriString() = 0;
 
   virtual std::string DebugString() = 0;
 

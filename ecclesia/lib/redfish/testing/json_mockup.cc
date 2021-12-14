@@ -99,7 +99,7 @@ class JsonMockupObject : public RedfishObject {
     return RedfishVariant(
         std::make_unique<JsonMockupVariantImpl>(node.value()));
   }
-  std::optional<std::string> GetUri() override {
+  std::optional<std::string> GetUriString() override {
     return GetNodeValue<std::string>("@odata.id");
   }
   std::string DebugString() override { return json_view_.dump(/*indent=*/1); }

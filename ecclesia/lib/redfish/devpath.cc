@@ -45,14 +45,15 @@ std::optional<std::string> GetDevpathForUri(const NodeTopology &topology,
 std::optional<std::string> GetSensorDevpathFromNodeTopology(
     RedfishObject* obj, const NodeTopology& topology) {
   auto related_uri = (*obj)[kRfPropertyRelatedItem][0].AsObject();
-  if (related_uri != nullptr && related_uri->GetUri().has_value()) {
-    auto related_devpath = GetDevpathForUri(topology, *related_uri->GetUri());
+  if (related_uri != nullptr && related_uri->GetUriString().has_value()) {
+    auto related_devpath =
+        GetDevpathForUri(topology, *related_uri->GetUriString());
     if (related_devpath.has_value()) {
       return *related_devpath;
     }
   }
   // Fallback to providing devpath for obj
-  auto sensor_uri = obj->GetUri();
+  auto sensor_uri = obj->GetUriString();
   if (sensor_uri.has_value()) {
     auto sensor_devpath = GetDevpathForUri(topology, *sensor_uri);
     if (sensor_devpath.has_value()) {

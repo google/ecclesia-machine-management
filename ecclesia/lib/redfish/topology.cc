@@ -291,9 +291,10 @@ std::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
   auto attached_to = (*google)[kRfOemPropertyAttachedTo].AsIterable();
   if (attached_to && !attached_to->Empty()) {
     for (auto upstream_variant : *attached_to) {
-      if (auto upstream = upstream_variant.AsObject();
-          upstream && upstream->GetUri().has_value()) {
-        assembly.upstream_odata_ids.push_back(upstream->GetUri().value());
+      if (auto upstream = upstream_variant.AsObject(); upstream) {
+        if (auto uri = upstream->GetUriString(); uri.has_value()) {
+          assembly.upstream_odata_ids.push_back(std::move(*uri));
+        }
       }
     }
   }
@@ -338,7 +339,7 @@ std::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
     if (auto associated_with_iterable = associated_with.AsIterable()) {
       for (auto association : *associated_with_iterable) {
         if (auto association_obj = association.AsObject()) {
-          if (auto uri = association_obj->GetUri(); uri.has_value()) {
+          if (auto uri = association_obj->GetUriString(); uri.has_value()) {
             component->associated_uris.push_back(std::move(*uri));
           }
         }

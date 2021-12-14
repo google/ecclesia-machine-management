@@ -73,7 +73,7 @@ class ProtoObject : public libredfish::RedfishObject {
   libredfish::RedfishVariant operator[](
       const std::string &node_name) const override;
 
-  absl::optional<std::string> GetUri() override;
+  absl::optional<std::string> GetUriString() override;
 
   std::string DebugString() override;
 

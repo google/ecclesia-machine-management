@@ -125,7 +125,7 @@ TEST(JsonMockup, CanGetUriProperty) {
   auto root_obj = json_intf->GetRoot().AsObject();
   ASSERT_TRUE(root_obj) << "Root object should not be null.";
 
-  auto str_val = root_obj->GetUri();
+  auto str_val = root_obj->GetUriString();
   ASSERT_TRUE(str_val.has_value());
   EXPECT_THAT(str_val.value(), Eq("id"));
 }

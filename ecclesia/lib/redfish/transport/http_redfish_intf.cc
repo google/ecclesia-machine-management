@@ -156,7 +156,7 @@ class HttpIntfObjectImpl : public RedfishObject {
 
     return ResolveReference(result_.code, itr.value(), intf_);
   }
-  std::optional<std::string> GetUri() override {
+  std::optional<std::string> GetUriString() override {
     auto itr = result_.body.find(PropertyOdataId::Name);
     if (itr == result_.body.end()) return std::nullopt;
     return itr.value();

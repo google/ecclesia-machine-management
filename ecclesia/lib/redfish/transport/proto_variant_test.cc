@@ -101,13 +101,13 @@ Struct GetServiceRoot() {
 TEST(ProtoObjectTest, GetNodeByNameOk) {
   std::unique_ptr<RedfishObject> service_root =
       absl::make_unique<ProtoObject>(GetServiceRoot());
-  ASSERT_TRUE(service_root->GetUri().has_value());
-  EXPECT_EQ(service_root->GetUri(), "/redfish/v1");
+  ASSERT_TRUE(service_root->GetUriString().has_value());
+  EXPECT_EQ(service_root->GetUriString(), "/redfish/v1");
   std::unique_ptr<RedfishObject> account_service =
       (*service_root)["AccountService"].AsObject();
   ASSERT_THAT(account_service, NotNull());
-  ASSERT_TRUE(account_service->GetUri().has_value());
-  EXPECT_EQ(account_service->GetUri(), "/redfish/v1/AccountService");
+  ASSERT_TRUE(account_service->GetUriString().has_value());
+  EXPECT_EQ(account_service->GetUriString(), "/redfish/v1/AccountService");
 }
 
 TEST(ProtoObjectTest, GetNodeByNameNull) {
@@ -143,7 +143,8 @@ TEST(ProtoIterableTest, GetNodeByIndexOk) {
   std::unique_ptr<RedfishIterable> members =
       (*registries)["Members"].AsIterable();
   ASSERT_THAT(members, NotNull());
-  EXPECT_EQ((*members)[0].AsObject()->GetUri(), "/redfish/v1/Registries/Base");
+  EXPECT_EQ((*members)[0].AsObject()->GetUriString(),
+            "/redfish/v1/Registries/Base");
 }
 
 TEST(ProtoIterableTest, GetNodeByIndexNull) {

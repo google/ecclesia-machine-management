@@ -46,7 +46,7 @@ TEST(PatchableMockupServer, CanProxy) {
   auto chassis_obj =
       redfish_intf->GetUri("/redfish/v1/Chassis/chassis").AsObject();
   ASSERT_TRUE(chassis_obj);
-  EXPECT_THAT(chassis_obj->GetUri(), Eq("/redfish/v1/Chassis/chassis"));
+  EXPECT_THAT(chassis_obj->GetUriString(), Eq("/redfish/v1/Chassis/chassis"));
   EXPECT_THAT(chassis_obj->GetNodeValue<libredfish::PropertyName>(),
               Eq("Indus Chassis"));
 
