@@ -1,0 +1,17 @@
+{
+  "@odata.id": "/redfish/v1/Chassis/ERoT-GPU2",
+  "@odata.type": "#Chassis.v1_15_0.Chassis",
+  "Id": "ERoT-GPU2",
+  "Name": "ERoT-GPU2",
+  "ChassisType": "Component",
+  "Location": {
+    "PartLocation": {
+       "LocationType": "Embedded"
+    }
+  },
+  "Links": {
+    "ContainedBy": {
+      "@odata.id": "/redfish/v1/Chassis/root"
+    }
+  }
+}

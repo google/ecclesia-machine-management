@@ -1,0 +1,17 @@
+{
+  "@odata.id": "/redfish/v1/Chassis",
+  "@odata.type": "#ChassisCollection.ChassisCollection",
+  "Members": [
+    {
+      "@odata.id": "/redfish/v1/Chassis/root"
+    },
+    {
+      "@odata.id": "/redfish/v1/Chassis/ERoT-GPU1"
+    },
+    {
+      "@odata.id": "/redfish/v1/Chassis/ERoT-GPU2"
+    }
+  ],
+  "Members@odata.count": 3,
+  "Name": "Chassis Collection"
+}

@@ -264,4 +264,15 @@ void Sysmodel::QueryAllResourceInternal(
   }
 }
 
+// ComponentIntegrity:
+// "/redfish/v1/ComponentIntegrity/{id}"
+void Sysmodel::QueryAllResourceInternal(
+    Token<ResourceComponentIntegrity>,
+    absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+        result_callback) {
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertyComponentIntegrity].Each().Do(
+      [&](auto &obj) { return result_callback(std::move(obj)); });
+}
+
 }  // namespace libredfish

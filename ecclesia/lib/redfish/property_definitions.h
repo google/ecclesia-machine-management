@@ -41,6 +41,7 @@ inline constexpr char kRfPropertyAssembly[] = "Assembly";
 inline constexpr char kRfPropertyControllers[] = "Controllers";
 inline constexpr char kRfPropertyChassis[] = "Chassis";
 inline constexpr char kRfPropertyChassisReset[] = "#Chassis.Reset";
+inline constexpr char kRfPropertyComponentIntegrity[] = "ComponentIntegrity";
 inline constexpr char kRfPropertyMemory[] = "Memory";
 inline constexpr char kRfPropertyStorage[] = "Storage";
 inline constexpr char kRfPropertyDrives[] = "Drives";
@@ -130,6 +131,7 @@ inline constexpr char kRfPropertyAbsent[] = "Absent";
 
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
 DEFINE_REDFISH_RESOURCE(ResourceChassis, "Chassis");
+DEFINE_REDFISH_RESOURCE(ResourceComponentIntegrity, "ComponentIntegrity");
 DEFINE_REDFISH_RESOURCE(ResourceMemory, "Memory");
 DEFINE_REDFISH_RESOURCE(ResourceStorage, "Storage");
 DEFINE_REDFISH_RESOURCE(ResourceDrive, "Drive");
@@ -240,6 +242,8 @@ DEFINE_REDFISH_PROPERTY(PropertyUncorrectableECCErrorCount, int,
                         "UncorrectableECCErrorCount");
 DEFINE_REDFISH_PROPERTY(PropertyUserName, std::string, "UserName");
 DEFINE_REDFISH_PROPERTY(PropertyPassword, std::string, "Password");
+DEFINE_REDFISH_PROPERTY(PropertyTargetComponentURI, std::string,
+                        "TargetComponentURI");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
