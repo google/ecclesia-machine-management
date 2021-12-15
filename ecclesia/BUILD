@@ -27,7 +27,6 @@ package_group(
     packages = [
         "//ecclesia/lib/redfish/...",
         "//ecclesia/magent/...",
-        "//ecclesia/redfish/profiles/...",
     ],
 )
 

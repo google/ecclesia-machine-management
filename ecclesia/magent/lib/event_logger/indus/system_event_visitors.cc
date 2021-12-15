@@ -21,10 +21,10 @@
 
 #include "absl/memory/memory.h"
 #include "absl/time/time.h"
-#include "ecclesia/lib/mcedecoder/cpu_topology.h"
-#include "ecclesia/lib/mcedecoder/indus/dimm_translator.h"
-#include "ecclesia/lib/mcedecoder/mce_decode.h"
 #include "ecclesia/magent/lib/event_logger/system_event_visitors.h"
+#include "ecclesia/magent/lib/mcedecoder/cpu_topology.h"
+#include "ecclesia/magent/lib/mcedecoder/indus/dimm_translator.h"
+#include "ecclesia/magent/lib/mcedecoder/mce_decode.h"
 
 namespace ecclesia {
 

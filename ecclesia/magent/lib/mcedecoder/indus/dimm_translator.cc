@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include "ecclesia/lib/mcedecoder/indus/dimm_translator.h"
+#include "ecclesia/magent/lib/mcedecoder/indus/dimm_translator.h"
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "ecclesia/lib/mcedecoder/dimm_translator.h"
+#include "ecclesia/magent/lib/mcedecoder/dimm_translator.h"
 
 namespace ecclesia {
 namespace {

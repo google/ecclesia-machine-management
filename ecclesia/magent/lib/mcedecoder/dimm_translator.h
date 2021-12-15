@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_MCEDECODER_DIMM_TRANSLATOR_H_
-#define ECCLESIA_LIB_MCEDECODER_DIMM_TRANSLATOR_H_
+#ifndef ECCLESIA_MAGENT_LIB_MCEDECODER_DIMM_TRANSLATOR_H_
+#define ECCLESIA_MAGENT_LIB_MCEDECODER_DIMM_TRANSLATOR_H_
 
 #include "absl/status/statusor.h"
 
@@ -46,4 +46,4 @@ class DimmTranslatorInterface {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_MCEDECODER_DIMM_TRANSLATOR_H_
+#endif  // ECCLESIA_MAGENT_LIB_MCEDECODER_DIMM_TRANSLATOR_H_

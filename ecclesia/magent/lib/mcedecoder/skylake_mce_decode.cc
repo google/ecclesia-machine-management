@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/lib/mcedecoder/skylake_mce_decode.h"
+#include "ecclesia/magent/lib/mcedecoder/skylake_mce_decode.h"
 
 #include <cstdint>
 #include <set>
@@ -24,8 +24,8 @@
 #include "ecclesia/lib/codec/bits.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/lib/mcedecoder/dimm_translator.h"
-#include "ecclesia/lib/mcedecoder/mce_messages.h"
+#include "ecclesia/magent/lib/mcedecoder/dimm_translator.h"
+#include "ecclesia/magent/lib/mcedecoder/mce_messages.h"
 
 namespace ecclesia {
 namespace {

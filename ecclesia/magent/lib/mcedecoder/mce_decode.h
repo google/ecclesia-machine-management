@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_MCEDECODER_MCE_DECODE_H_
-#define ECCLESIA_LIB_MCEDECODER_MCE_DECODE_H_
+#ifndef ECCLESIA_MAGENT_LIB_MCEDECODER_MCE_DECODE_H_
+#define ECCLESIA_MAGENT_LIB_MCEDECODER_MCE_DECODE_H_
 
 #include <memory>
 #include <utility>
 
 #include "absl/status/statusor.h"
-#include "ecclesia/lib/mcedecoder/cpu_topology.h"
-#include "ecclesia/lib/mcedecoder/dimm_translator.h"
-#include "ecclesia/lib/mcedecoder/mce_messages.h"
+#include "ecclesia/magent/lib/mcedecoder/cpu_topology.h"
+#include "ecclesia/magent/lib/mcedecoder/dimm_translator.h"
+#include "ecclesia/magent/lib/mcedecoder/mce_messages.h"
 
 namespace ecclesia {
 
@@ -64,4 +64,4 @@ class MceDecoder : public MceDecoderInterface {
 };
 
 }  // namespace ecclesia
-#endif  // ECCLESIA_LIB_MCEDECODER_MCE_DECODE_H_
+#endif  // ECCLESIA_MAGENT_LIB_MCEDECODER_MCE_DECODE_H_

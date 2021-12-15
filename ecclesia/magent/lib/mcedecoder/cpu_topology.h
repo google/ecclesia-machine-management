@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_MCEDECODER_CPU_TOPOLOGY_MOCK_H_
-#define ECCLESIA_LIB_MCEDECODER_CPU_TOPOLOGY_MOCK_H_
+#ifndef ECCLESIA_MAGENT_LIB_MCEDECODER_CPU_TOPOLOGY_H_
+#define ECCLESIA_MAGENT_LIB_MCEDECODER_CPU_TOPOLOGY_H_
 
-#include "gmock/gmock.h"
 #include "absl/status/statusor.h"
-#include "ecclesia/lib/mcedecoder/cpu_topology.h"
 
 namespace ecclesia {
 
-class MockCpuTopology : public CpuTopologyInterface {
+class CpuTopologyInterface {
  public:
-  MOCK_METHOD(absl::StatusOr<int>, GetSocketIdForLpu, (int), (const, override));
+  virtual ~CpuTopologyInterface() = default;
+
+  // Given a logic processing unit (LPU) ID, return the corresponding CPU socket
+  // ID. If any exception happened or the matched CPU socket ID cannot be found,
+  // return a NotFoundError.
+  virtual absl::StatusOr<int> GetSocketIdForLpu(int lpu) const = 0;
 };
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_MCEDECODER_CPU_TOPOLOGY_MOCK_H_
+#endif  // ECCLESIA_MAGENT_LIB_MCEDECODER_CPU_TOPOLOGY_H_

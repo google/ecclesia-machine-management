@@ -22,8 +22,8 @@
 #include <utility>
 
 #include "absl/time/time.h"
-#include "ecclesia/lib/mcedecoder/cpu_topology.h"
 #include "ecclesia/magent/lib/event_logger/system_event_visitors.h"
+#include "ecclesia/magent/lib/mcedecoder/cpu_topology.h"
 #include "ecclesia/magent/redfish/core/index_resource.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"

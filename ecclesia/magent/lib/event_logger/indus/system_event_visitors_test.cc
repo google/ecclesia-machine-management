@@ -31,11 +31,11 @@
 #include "absl/strings/str_format.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
-#include "ecclesia/lib/mcedecoder/cpu_topology.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/magent/lib/event_logger/event_logger.h"
 #include "ecclesia/magent/lib/event_logger/system_event_visitors.h"
 #include "ecclesia/magent/lib/event_reader/event_reader.h"
+#include "ecclesia/magent/lib/mcedecoder/cpu_topology.h"
 
 namespace ecclesia {
 namespace {

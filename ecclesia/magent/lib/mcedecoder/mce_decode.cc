@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/lib/mcedecoder/mce_decode.h"
+#include "ecclesia/magent/lib/mcedecoder/mce_decode.h"
 
 #include <cstdint>
 #include <memory>
@@ -24,10 +24,10 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/codec/bits.h"
-#include "ecclesia/lib/mcedecoder/cpu_topology.h"
-#include "ecclesia/lib/mcedecoder/dimm_translator.h"
-#include "ecclesia/lib/mcedecoder/mce_messages.h"
-#include "ecclesia/lib/mcedecoder/skylake_mce_decode.h"
+#include "ecclesia/magent/lib/mcedecoder/cpu_topology.h"
+#include "ecclesia/magent/lib/mcedecoder/dimm_translator.h"
+#include "ecclesia/magent/lib/mcedecoder/mce_messages.h"
+#include "ecclesia/magent/lib/mcedecoder/skylake_mce_decode.h"
 
 namespace ecclesia {
 namespace {

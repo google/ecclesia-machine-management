@@ -14,23 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_MCEDECODER_CPU_TOPOLOGY_H_
-#define ECCLESIA_LIB_MCEDECODER_CPU_TOPOLOGY_H_
+#ifndef ECCLESIA_MAGENT_LIB_MCEDECODER_SKYLAKE_MCE_DECODE_H_
+#define ECCLESIA_MAGENT_LIB_MCEDECODER_SKYLAKE_MCE_DECODE_H_
 
-#include "absl/status/statusor.h"
+#include "ecclesia/magent/lib/mcedecoder/dimm_translator.h"
+#include "ecclesia/magent/lib/mcedecoder/mce_messages.h"
 
 namespace ecclesia {
 
-class CpuTopologyInterface {
- public:
-  virtual ~CpuTopologyInterface() = default;
-
-  // Given a logic processing unit (LPU) ID, return the corresponding CPU socket
-  // ID. If any exception happened or the matched CPU socket ID cannot be found,
-  // return a NotFoundError.
-  virtual absl::StatusOr<int> GetSocketIdForLpu(int lpu) const = 0;
-};
+// Decode Intel Skylake machine check exception. Add the decoded attributes and
+// message and return true after success; otherwise, return false.
+bool DecodeSkylakeMce(DimmTranslatorInterface *dimm_translator,
+                      MceAttributes *attributes,
+                      MceDecodedMessage *decoded_msg);
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_CPU_TOPOLOGY_H_
+#endif  // ECCLESIA_MAGENT_LIB_MCEDECODER_SKYLAKE_MCE_DECODE_H_

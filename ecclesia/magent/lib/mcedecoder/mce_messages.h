@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_MCEDECODER_MCE_MESSAGES_H_
-#define ECCLESIA_LIB_MCEDECODER_MCE_MESSAGES_H_
+#ifndef ECCLESIA_MAGENT_LIB_MCEDECODER_MCE_MESSAGES_H_
+#define ECCLESIA_MAGENT_LIB_MCEDECODER_MCE_MESSAGES_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -244,4 +244,4 @@ class MceAttributes {
 };
 
 }  // namespace ecclesia
-#endif  // ECCLESIA_LIB_MCEDECODER_MCE_MESSAGES_H_
+#endif  // ECCLESIA_MAGENT_LIB_MCEDECODER_MCE_MESSAGES_H_

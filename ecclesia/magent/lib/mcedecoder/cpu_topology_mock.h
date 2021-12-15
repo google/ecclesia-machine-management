@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_MCEDECODER_SKYLAKE_MCE_DECODE_H_
-#define ECCLESIA_LIB_MCEDECODER_SKYLAKE_MCE_DECODE_H_
+#ifndef ECCLESIA_MAGENT_LIB_MCEDECODER_CPU_TOPOLOGY_MOCK_H_
+#define ECCLESIA_MAGENT_LIB_MCEDECODER_CPU_TOPOLOGY_MOCK_H_
 
-#include "ecclesia/lib/mcedecoder/dimm_translator.h"
-#include "ecclesia/lib/mcedecoder/mce_messages.h"
+#include "gmock/gmock.h"
+#include "absl/status/statusor.h"
+#include "ecclesia/magent/lib/mcedecoder/cpu_topology.h"
 
 namespace ecclesia {
 
-// Decode Intel Skylake machine check exception. Add the decoded attributes and
-// message and return true after success; otherwise, return false.
-bool DecodeSkylakeMce(DimmTranslatorInterface *dimm_translator,
-                      MceAttributes *attributes,
-                      MceDecodedMessage *decoded_msg);
+class MockCpuTopology : public CpuTopologyInterface {
+ public:
+  MOCK_METHOD(absl::StatusOr<int>, GetSocketIdForLpu, (int), (const, override));
+};
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_MCEDECODER_SKYLAKE_MCE_DECODE_H_
+#endif  // ECCLESIA_MAGENT_LIB_MCEDECODER_CPU_TOPOLOGY_MOCK_H_

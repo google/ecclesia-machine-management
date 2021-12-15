@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_MCEDECODER_INDUS_INDUS_DIMM_TRANSLATOR_H_
-#define ECCLESIA_LIB_MCEDECODER_INDUS_INDUS_DIMM_TRANSLATOR_H_
+#ifndef ECCLESIA_MAGENT_LIB_MCEDECODER_INDUS_INDUS_DIMM_TRANSLATOR_H_
+#define ECCLESIA_MAGENT_LIB_MCEDECODER_INDUS_INDUS_DIMM_TRANSLATOR_H_
 
 #include "absl/status/statusor.h"
-#include "ecclesia/lib/mcedecoder/dimm_translator.h"
+#include "ecclesia/magent/lib/mcedecoder/dimm_translator.h"
 
 namespace ecclesia {
 
@@ -37,4 +37,4 @@ class IndusDimmTranslator : public DimmTranslatorInterface {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_MCEDECODER_INDUS_INDUS_DIMM_TRANSLATOR_H_
+#endif  // ECCLESIA_MAGENT_LIB_MCEDECODER_INDUS_INDUS_DIMM_TRANSLATOR_H_

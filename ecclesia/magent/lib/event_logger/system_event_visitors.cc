@@ -24,10 +24,10 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
-#include "ecclesia/lib/mcedecoder/mce_decode.h"
-#include "ecclesia/lib/mcedecoder/mce_messages.h"
 #include "ecclesia/magent/lib/event_reader/elog.emb.h"
 #include "ecclesia/magent/lib/event_reader/event_reader.h"
+#include "ecclesia/magent/lib/mcedecoder/mce_decode.h"
+#include "ecclesia/magent/lib/mcedecoder/mce_messages.h"
 #include "runtime/cpp/emboss_cpp_util.h"
 #include "runtime/cpp/emboss_prelude.h"
 

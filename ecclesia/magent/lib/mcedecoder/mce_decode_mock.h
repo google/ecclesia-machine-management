@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_MCEDECODER_MCE_DECODE_MOCK_H_
-#define ECCLESIA_LIB_MCEDECODER_MCE_DECODE_MOCK_H_
+#ifndef ECCLESIA_MAGENT_LIB_MCEDECODER_MCE_DECODE_MOCK_H_
+#define ECCLESIA_MAGENT_LIB_MCEDECODER_MCE_DECODE_MOCK_H_
 
 #include "gmock/gmock.h"
 #include "absl/status/statusor.h"
-#include "ecclesia/lib/mcedecoder/mce_decode.h"
-#include "ecclesia/lib/mcedecoder/mce_messages.h"
+#include "ecclesia/magent/lib/mcedecoder/mce_decode.h"
+#include "ecclesia/magent/lib/mcedecoder/mce_messages.h"
 
 namespace ecclesia {
 
@@ -32,4 +32,4 @@ class MockMceDecoder : public MceDecoderInterface {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_MCEDECODER_MCE_DECODE_MOCK_H_
+#endif  // ECCLESIA_MAGENT_LIB_MCEDECODER_MCE_DECODE_MOCK_H_
