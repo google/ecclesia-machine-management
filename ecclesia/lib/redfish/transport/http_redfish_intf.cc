@@ -52,7 +52,7 @@ namespace {
 nlohmann::json KvSpanToJson(
     absl::Span<const std::pair<std::string, RedfishInterface::ValueVariant>>
         kv_span) {
-  nlohmann::json json;
+  nlohmann::json json(nlohmann::json::value_t::object);
   for (const auto &kv_pair : kv_span) {
     std::visit([&](auto val) { json[kv_pair.first] = val; }, kv_pair.second);
   }
