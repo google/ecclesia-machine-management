@@ -65,9 +65,9 @@ class PciResources {
     return GetBaseAddressImpl(bar_id);
   }
   // Templated version for when the BAR number is known at compile time.
-  template <int BarId>
+  template <int bar_id>
   absl::StatusOr<BarInfo> GetBaseAddress() const {
-    return GetBaseAddressImpl(BarNum::Make<BarId>());
+    return GetBaseAddressImpl(BarNum::Make<bar_id>());
   }
 
  protected:

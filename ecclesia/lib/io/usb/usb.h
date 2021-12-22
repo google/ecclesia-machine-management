@@ -99,12 +99,12 @@ class UsbPortSequence {
   constexpr UsbPortSequence() : size_(0) {}
 
   // Compile-time factory function. Enforces the input range and length.
-  template <UsbPort::StoredType... Values>
+  template <UsbPort::StoredType... values>
   static constexpr UsbPortSequence Make() {
-    static_assert(sizeof...(Values) <= kDeviceChainMaxLength,
+    static_assert(sizeof...(values) <= kDeviceChainMaxLength,
                   "port sequence length exceeds the allowed maximum");
-    StoredArray ports = {UsbPortStorage(UsbPort::Make<Values>())...};
-    return UsbPortSequence(ports, sizeof...(Values));
+    StoredArray ports = {UsbPortStorage(UsbPort::Make<values>())...};
+    return UsbPortSequence(ports, sizeof...(values));
   }
 
   // Run-time factory function. Returns nullopt if the given value is out of

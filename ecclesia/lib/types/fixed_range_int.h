@@ -71,20 +71,20 @@
 
 namespace ecclesia {
 
-template <typename T, typename IntType, IntType MinValue, IntType MaxValue>
+template <typename T, typename IntType, IntType min_value, IntType max_value>
 class FixedRangeInteger {
  public:
   // The base type of subclasses of this template. Useful to simplify the
   // definition of the subclass constructor without having to repeat all of the
   // template parameters.
-  using BaseType = FixedRangeInteger<T, IntType, MinValue, MaxValue>;
+  using BaseType = FixedRangeInteger<T, IntType, min_value, max_value>;
 
   // The underlying integer type.
   using StoredType = IntType;
 
   // The min and max range this type enforces.
-  static constexpr IntType kMinValue = MinValue;
-  static constexpr IntType kMaxValue = MaxValue;
+  static constexpr IntType kMinValue = min_value;
+  static constexpr IntType kMaxValue = max_value;
 
   // Compile-time factory function. Enforces the input range via static_assert.
   template <IntType Value>
@@ -101,8 +101,8 @@ class FixedRangeInteger {
   template <typename IntParamType,
             std::enable_if_t<
                 std::is_integral_v<IntParamType> &&
-                    std::numeric_limits<IntParamType>::min() >= MinValue &&
-                    std::numeric_limits<IntParamType>::max() <= MaxValue,
+                    std::numeric_limits<IntParamType>::min() >= min_value &&
+                    std::numeric_limits<IntParamType>::max() <= max_value,
                 int> = 0>
   static constexpr T Make(IntParamType value) {
     return T(BaseType(value));
