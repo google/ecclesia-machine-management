@@ -53,16 +53,17 @@ using ::libredfish::RedfishInterface;
 using ::libredfish::RedfishVariant;
 using ::redfish::v1::RedfishV1;
 using ::redfish::v1::Request;
+using ::redfish::v1::Response;
 
 constexpr absl::string_view kTargetKey = "target";
 constexpr absl::string_view kResourceKey = "redfish-resource";
 
-RedfishVariant GetRedfishVariant(absl::Status status, Struct response) {
+RedfishVariant GetRedfishVariant(absl::Status status, Response response) {
   if (!status.ok()) {
     return RedfishVariant(status);
   }
   Value value;
-  value.set_allocated_struct_value(new Struct(std::move(response)));
+  value.set_allocated_struct_value(new Struct(response.message()));
   return RedfishVariant(absl::make_unique<ProtoVariantImpl>(value));
 }
 
@@ -78,7 +79,7 @@ libredfish::RedfishVariant DoRpc(
   grpc::ClientContext context;
   context.set_deadline(absl::ToChronoTime(absl::Now() + options.GetTimeout()));
 
-  Struct response;
+  Response response;
   grpc::Status status = rpc(context, request, &response);
   return GetRedfishVariant(AsAbslStatus(status), std::move(response));
 }
@@ -163,7 +164,7 @@ libredfish::RedfishVariant GrpcDynamicImpl::GetUri(absl::string_view uri,
   return DoRpc(
       uri, absl::nullopt, options_,
       [this, uri](grpc::ClientContext& context, const Request& request,
-                  Struct* response) -> grpc::Status {
+                  Response* response) -> grpc::Status {
         context.set_credentials(grpc::MetadataCredentialsFromPlugin(
             std::unique_ptr<grpc::MetadataCredentialsPlugin>(
                 new GrpcRedfishCredentials(target_.fqdn, uri.data()))));
@@ -177,7 +178,7 @@ libredfish::RedfishVariant GrpcDynamicImpl::PostUri(
   return DoRpc(
       uri, GetRequestMessage(kv_span), options_,
       [this, uri](grpc::ClientContext& context, const Request& request,
-                  Struct* response) -> grpc::Status {
+                  Response* response) -> grpc::Status {
         context.set_credentials(grpc::MetadataCredentialsFromPlugin(
             std::unique_ptr<grpc::MetadataCredentialsPlugin>(
                 new GrpcRedfishCredentials(target_.fqdn, uri.data()))));
@@ -191,7 +192,7 @@ libredfish::RedfishVariant GrpcDynamicImpl::PatchUri(
   return DoRpc(
       uri, GetRequestMessage(kv_span), options_,
       [this, uri](grpc::ClientContext& context, const Request& request,
-                  Struct* response) -> grpc::Status {
+                  Response* response) -> grpc::Status {
         context.set_credentials(grpc::MetadataCredentialsFromPlugin(
             std::unique_ptr<grpc::MetadataCredentialsPlugin>(
                 new GrpcRedfishCredentials(target_.fqdn, uri.data()))));

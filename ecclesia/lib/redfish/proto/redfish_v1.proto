@@ -26,16 +26,20 @@ message Request {
   google.protobuf.Struct message = 2;
 }
 
+message Response {
+  google.protobuf.Struct message = 1;
+}
+
 // The dynamic Redfish service definition.
 service RedfishV1 {
   // Sends a GET request
-  rpc Get(Request) returns (google.protobuf.Struct) {}
+  rpc Get(Request) returns (Response) {}
   // Sends a POST request
-  rpc Post(Request) returns (google.protobuf.Struct) {}
+  rpc Post(Request) returns (Response) {}
   // Sends a PATCH request
-  rpc Patch(Request) returns (google.protobuf.Struct) {}
+  rpc Patch(Request) returns (Response) {}
   // Sends a PUT request
-  rpc Put(Request) returns (google.protobuf.Struct) {}
+  rpc Put(Request) returns (Response) {}
   // Sends a DELETE request
-  rpc Delete(Request) returns (google.protobuf.Struct) {}
+  rpc Delete(Request) returns (Response) {}
 }

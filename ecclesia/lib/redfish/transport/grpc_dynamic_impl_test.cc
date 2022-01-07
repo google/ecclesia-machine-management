@@ -47,6 +47,7 @@ using ::libredfish::RedfishInterface;
 using ::libredfish::RedfishObject;
 using ::libredfish::RedfishVariant;
 using ::redfish::v1::Request;
+using ::redfish::v1::Response;
 using ::testing::Eq;
 using ::testing::IsNull;
 using ::testing::NotNull;
@@ -81,7 +82,7 @@ TEST_F(GrpcDynamicImplTest, UpdateEndpoint) {
 
 TEST_F(GrpcDynamicImplTest, StatusNotOk) {
   server_.SetCallback([](grpc::ServerContext*, const Request* request,
-                         Struct*) { return grpc::Status::CANCELLED; });
+                         Response*) { return grpc::Status::CANCELLED; });
   {
     SCOPED_TRACE("GetRoot");
     RedfishVariant variant = client_->GetRoot();
@@ -119,9 +120,9 @@ TEST_F(GrpcDynamicImplTest, GetRootOk) {
   expected_response.mutable_fields()->insert({"Hello", string_val});
   server_.SetCallback([&expected_response](grpc::ServerContext*,
                                            const Request* request,
-                                           Struct* response) {
+                                           Response* response) {
     EXPECT_EQ(request->url(), "/redfish/v1");
-    *response = expected_response;
+    *response->mutable_message() = expected_response;
     return grpc::Status::OK;
   });
   std::unique_ptr<RedfishObject> object = client_->GetRoot().AsObject();
@@ -137,9 +138,9 @@ TEST_F(GrpcDynamicImplTest, GetUriOk) {
   expected_response.mutable_fields()->insert({"Hello", string_val});
   server_.SetCallback([&expected_response](grpc::ServerContext*,
                                            const Request* request,
-                                           Struct* response) {
+                                           Response* response) {
     EXPECT_EQ(request->url(), "/hello");
-    *response = expected_response;
+    *response->mutable_message() = expected_response;
     return grpc::Status::OK;
   });
   std::unique_ptr<RedfishObject> object = client_->GetUri("/hello").AsObject();
@@ -157,7 +158,7 @@ TEST_F(GrpcDynamicImplTest, PostUriAndPatchUriOk) {
       {"int", 123},
       {"double", 1.0}};
   server_.SetCallback([&payloads](grpc::ServerContext*, const Request* request,
-                                  Struct* response) {
+                                  Response* response) {
     EXPECT_EQ(request->url(), "/magic");
     EXPECT_EQ(request->message().fields().at("string").string_value(),
               std::get<std::string>(payloads.at("string")));
@@ -193,13 +194,13 @@ using GrpcDynamicImplDeathTest = GrpcDynamicImplTest;
 
 TEST_F(GrpcDynamicImplDeathTest, PostUriWithStringView) {
   server_.SetCallback([](grpc::ServerContext*, const Request* request,
-                         Struct*) { return grpc::Status::CANCELLED; });
+                         Response*) { return grpc::Status::CANCELLED; });
   EXPECT_DEATH(client_->PostUri("", ""), "Use the kv_span version instead");
 }
 
 TEST_F(GrpcDynamicImplDeathTest, PatchUriWithStringView) {
   server_.SetCallback([](grpc::ServerContext*, const Request* request,
-                         Struct*) { return grpc::Status::CANCELLED; });
+                         Response*) { return grpc::Status::CANCELLED; });
   EXPECT_DEATH(client_->PatchUri("", ""), "Use the kv_span version instead");
 }
 

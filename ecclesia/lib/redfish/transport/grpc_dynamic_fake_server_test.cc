@@ -42,6 +42,7 @@ using ::google::protobuf::Struct;
 using ::google::protobuf::Value;
 using ::redfish::v1::RedfishV1;
 using ::redfish::v1::Request;
+using ::redfish::v1::Response;
 
 TEST(FakeServerTest, InsecureChannelDefault) {
   GrpcDynamicFakeServer fake_server;
@@ -67,18 +68,18 @@ TEST(FakeServerTest, InsecureChannelOk) {
   std::string expected_url = "/fake";
   fake_server.SetCallback([expected_response, expected_url](
                               grpc::ServerContext* context,
-                              const Request* request, Struct* response) {
+                              const Request* request, Response* response) {
     EXPECT_EQ(request->url(), expected_url);
-    *response = expected_response;
+    *response->mutable_message() = expected_response;
     return grpc::Status::OK;
   });
   grpc::ClientContext context;
   context.set_deadline(absl::ToChronoTime(absl::Now() + absl::Seconds(1)));
-  Struct response;
+  Response response;
   Request request;
   request.set_url(expected_url);
   EXPECT_TRUE(stub->Get(&context, request, &response).ok());
-  EXPECT_THAT(response, EqualsProto(expected_response));
+  EXPECT_THAT(response.message(), EqualsProto(expected_response));
 }
 
 TEST(FakeServerTest, InsecureChannelNotOk) {
@@ -89,7 +90,7 @@ TEST(FakeServerTest, InsecureChannelNotOk) {
 
   fake_server.SetCallback(
       [](grpc::ServerContext* context, const Request* request,
-         Struct* response) { return grpc::Status::CANCELLED; });
+         Response* response) { return grpc::Status::CANCELLED; });
   Request request;
   {
     SCOPED_TRACE("Get returns CANCELLED status");

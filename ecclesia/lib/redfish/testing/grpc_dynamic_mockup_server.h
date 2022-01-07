@@ -22,7 +22,6 @@
 #include <string>
 #include <utility>
 
-#include "google/protobuf/struct.pb.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/string_view.h"
@@ -87,7 +86,7 @@ class GrpcDynamicMockupServer {
   // Register a custom handler to respond to a given REST request for a URI.
   using HandlerFunc = std::function<grpc::Status(
       grpc::ServerContext* context, const ::redfish::v1::Request* request,
-      google::protobuf::Struct* response)>;
+      redfish::v1::Response* response)>;
   void AddHttpGetHandler(absl::string_view uri, HandlerFunc handler);
   void AddHttpPatchHandler(absl::string_view uri, HandlerFunc handler);
   void AddHttpPostHandler(absl::string_view uri, HandlerFunc handler);
@@ -115,19 +114,19 @@ class GrpcDynamicMockupServer {
 
     grpc::Status Get(grpc::ServerContext* context,
                      const ::redfish::v1::Request* request,
-                     google::protobuf::Struct* response) override;
+                     redfish::v1::Response* response) override;
     grpc::Status Post(grpc::ServerContext* context,
                       const ::redfish::v1::Request* request,
-                      google::protobuf::Struct* response) override;
+                      redfish::v1::Response* response) override;
     grpc::Status Patch(grpc::ServerContext* context,
                        const ::redfish::v1::Request* request,
-                       google::protobuf::Struct* response) override;
+                       redfish::v1::Response* response) override;
     grpc::Status Put(grpc::ServerContext* context,
                      const ::redfish::v1::Request* request,
-                     google::protobuf::Struct* response) override;
+                     redfish::v1::Response* response) override;
     grpc::Status Delete(grpc::ServerContext* context,
                         const ::redfish::v1::Request* request,
-                        google::protobuf::Struct* response) override;
+                        redfish::v1::Response* response) override;
     using HandlerFunc = GrpcDynamicMockupServer::HandlerFunc;
     void AddHttpGetHandler(absl::string_view uri, HandlerFunc handler)
         ABSL_LOCKS_EXCLUDED(patch_lock_);

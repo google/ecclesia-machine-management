@@ -22,7 +22,6 @@
 #include <string>
 #include <utility>
 
-#include "google/protobuf/struct.pb.h"
 #include "absl/strings/str_cat.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
@@ -40,43 +39,43 @@ class FakeRedfishV1Impl : public ::redfish::v1::RedfishV1::Service {
  public:
   FakeRedfishV1Impl()
       : callback_([](grpc::ServerContext*, const ::redfish::v1::Request*,
-                     google::protobuf::Struct*) {
+                     redfish::v1::Response*) {
           return grpc::Status::CANCELLED;
         }) {}
 
   grpc::Status Get(grpc::ServerContext* context,
                    const ::redfish::v1::Request* request,
-                   google::protobuf::Struct* response) override {
+                   redfish::v1::Response* response) override {
     return callback_(context, request, response);
   }
 
   grpc::Status Post(grpc::ServerContext* context,
                     const ::redfish::v1::Request* request,
-                    google::protobuf::Struct* response) override {
+                    redfish::v1::Response* response) override {
     return callback_(context, request, response);
   }
 
   grpc::Status Patch(grpc::ServerContext* context,
                      const ::redfish::v1::Request* request,
-                     google::protobuf::Struct* response) override {
+                     redfish::v1::Response* response) override {
     return callback_(context, request, response);
   }
 
   grpc::Status Put(grpc::ServerContext* context,
                    const ::redfish::v1::Request* request,
-                   google::protobuf::Struct* response) override {
+                   redfish::v1::Response* response) override {
     return callback_(context, request, response);
   }
 
   grpc::Status Delete(grpc::ServerContext* context,
                       const ::redfish::v1::Request* request,
-                      google::protobuf::Struct* response) override {
+                      redfish::v1::Response* response) override {
     return callback_(context, request, response);
   }
 
   void SetCallback(std::function<grpc::Status(grpc::ServerContext*,
                                               const ::redfish::v1::Request*,
-                                              google::protobuf::Struct*)>
+                                              redfish::v1::Response*)>
                        callback) {
     callback_ = std::move(callback);
   }
@@ -84,7 +83,7 @@ class FakeRedfishV1Impl : public ::redfish::v1::RedfishV1::Service {
  private:
   std::function<grpc::Status(grpc::ServerContext*,
                              const ::redfish::v1::Request*,
-                             google::protobuf::Struct*)>
+                             redfish::v1::Response*)>
       callback_;
 };
 
@@ -109,7 +108,7 @@ class GrpcDynamicFakeServer {
   int GetPort() const { return port_; }
   void SetCallback(std::function<grpc::Status(grpc::ServerContext*,
                                               const ::redfish::v1::Request*,
-                                              google::protobuf::Struct*)>
+                                              redfish::v1::Response*)>
                        callback);
 
  private:

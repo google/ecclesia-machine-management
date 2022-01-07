@@ -61,7 +61,6 @@ cc_library(
         "//ecclesia/lib/redfish/proto:redfish_v1_grpc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/strings",
-        "@com_google_protobuf//:protobuf",
     ],
 )
 

@@ -21,7 +21,6 @@
 #include <string>
 #include <utility>
 
-#include "google/protobuf/struct.pb.h"
 #include "absl/strings/str_cat.h"
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
@@ -59,7 +58,7 @@ GrpcDynamicFakeServer::~GrpcDynamicFakeServer() { grpc_server_->Shutdown(); }
 
 void GrpcDynamicFakeServer::SetCallback(
     std::function<grpc::Status(grpc::ServerContext*, const Request*,
-                               google::protobuf::Struct*)>
+                               redfish::v1::Response*)>
         callback) {
   service_impl_.SetCallback(std::move(callback));
 }

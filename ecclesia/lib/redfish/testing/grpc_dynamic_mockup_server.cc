@@ -22,7 +22,6 @@
 #include <string>
 #include <utility>
 
-#include "google/protobuf/struct.pb.h"
 #include "google/protobuf/util/json_util.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
@@ -49,8 +48,8 @@ namespace {
 
 using ::redfish::v1::Request;
 
-absl::Status SetGrpcResponseAndReturnStatus(
-    libredfish::RedfishVariant variant, google::protobuf::Struct* response) {
+absl::Status SetGrpcResponseAndReturnStatus(libredfish::RedfishVariant variant,
+                                            redfish::v1::Response* response) {
   absl::Status status = absl::OkStatus();
   if (!variant.httpcode().has_value()) {
     return absl::InternalError("The response doesn't have HTTP code.");
@@ -58,8 +57,8 @@ absl::Status SetGrpcResponseAndReturnStatus(
   status = absl::Status(HttpResponseCodeToCanonical(*variant.httpcode()),
                         HttpResponseCodeToReasonPhrase(*variant.httpcode()));
   if (variant.AsObject() != nullptr) {
-    if (absl::Status status = AsAbslStatus(
-            google::protobuf::util::JsonStringToMessage(variant.DebugString(), response));
+    if (absl::Status status = AsAbslStatus(google::protobuf::util::JsonStringToMessage(
+            variant.DebugString(), response->mutable_message()));
         !status.ok()) {
       return status;
     }
@@ -71,7 +70,7 @@ absl::Status SetGrpcResponseAndReturnStatus(
 
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Get(
     grpc::ServerContext* context, const Request* request,
-    google::protobuf::Struct* response) {
+    redfish::v1::Response* response) {
   absl::MutexLock mu(&patch_lock_);
   if (auto itr = rest_get_handlers_.find(request->url());
       itr != rest_get_handlers_.end()) {
@@ -82,7 +81,7 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Get(
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Post(
     grpc::ServerContext* context, const Request* request,
-    google::protobuf::Struct* response) {
+    redfish::v1::Response* response) {
   absl::MutexLock mu(&patch_lock_);
   if (auto itr = rest_post_handlers_.find(request->url());
       itr != rest_post_handlers_.end()) {
@@ -100,7 +99,7 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Post(
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Patch(
     grpc::ServerContext* context, const Request* request,
-    google::protobuf::Struct* response) {
+    redfish::v1::Response* response) {
   absl::MutexLock mu(&patch_lock_);
   if (auto itr = rest_patch_handlers_.find(request->url());
       itr != rest_patch_handlers_.end()) {
@@ -118,13 +117,13 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Patch(
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Put(
     grpc::ServerContext* context, const Request* request,
-    google::protobuf::Struct* response) {
+    redfish::v1::Response* response) {
   return StatusToGrpcStatus(
       absl::UnimplementedError("Put RPC is not implemented yet."));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Delete(
     grpc::ServerContext* context, const Request* request,
-    google::protobuf::Struct* response) {
+    redfish::v1::Response* response) {
   // DELETE.
   return StatusToGrpcStatus(
       absl::UnimplementedError("Delete RPC is not implemented yet."));
