@@ -1,0 +1,11 @@
+{
+  "@odata.id": "/redfish/v1/Chassis/ERoT-GPU2/Certificates/0",
+  "@odata.type": "#Certificate.v1_5_0.Certificate",
+  "Id": "0",
+  "Name": "Certificate 0",
+  "CertificateString": "-----BEGIN CERTIFICATE-----\nfake-cert-content-erot1\n-----END CERTIFICATE-----",
+  "CertificateType": "PEMchain",
+  "SPDM": {
+    "SlotId": 0
+  }
+}

@@ -1,26 +1,29 @@
 {
-  "@odata.id":"/redfish/v1/ComponentIntegrity/ComponentIntegrity-ERoT-GPU1",
-  "@odata.type":"#ComponentIntegrity.v1_0_0.ComponentIntegrity",
-  "ChassisType":"RackMount",
-  "Id":"ComponentIntegrity-ERoT-GPU1",
-  "Links":{
-    "ContainedBy":{
-      "@odata.id":"/redfish/v1/Chassis/root"
+  "@odata.id": "/redfish/v1/ComponentIntegrity/ComponentIntegrity-ERoT-GPU1",
+  "@odata.type": "#ComponentIntegrity.v1_0_0.ComponentIntegrity",
+  "ChassisType": "RackMount",
+  "Id": "ComponentIntegrity-ERoT-GPU1",
+  "ComponentIntegrityType": "SPDM",
+  "ComponentIntegrityTypeVersion": "1.1.0",
+  "ComponentIntegrityEnabled": true,
+  "TargetComponentURI": "/redfish/v1/Chassis/ERoT-GPU1",
+  "Location": {
+    "PartLocation": {
+      "LocationType": "Embedded"
     }
   },
-  "ComponentIntegrityType":"SPDM",
-  "ComponentIntegrityTypeVersion":"1.1.0",
-  "ComponentIntegrityEnabled":true,
-  "TargetComponentURI":"/redfish/v1/Chassis/ERoT-GPU1",
-  "Location":{
-    "PartLocation":{
-      "LocationType":"Embedded"
+  "IdentityAuthentication": {
+    "ResponderAuthentication": {
+      "ComponentCertificate": {
+        "@odata.id": "/redfish/v1/Chassis/ERoT-GPU1/Certificates/0"
+      },
+      "VerificationStatus": "Success"
     }
   },
-  "Links":{
-    "ComponentsProtected":[
+  "Links": {
+    "ComponentsProtected": [
       {
-        "@odata.id":"/redfish/v1/ComputerSystems/System-1/Processors/GPU1"
+        "@odata.id": "/redfish/v1/ComputerSystems/System-1/Processors/GPU1"
       }
     ]
   }

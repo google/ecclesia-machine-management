@@ -3,11 +3,6 @@
   "@odata.type":"#ComponentIntegrity.v1_0_0.ComponentIntegrity",
   "ChassisType":"RackMount",
   "Id":"ComponentIntegrity-ERoT-GPU2",
-  "Links":{
-    "ContainedBy":{
-      "@odata.id":"/redfish/v1/Chassis/root"
-    }
-  },
   "ComponentIntegrityType":"SPDM",
   "ComponentIntegrityTypeVersion":"1.1.0",
   "ComponentIntegrityEnabled":true,
@@ -15,6 +10,14 @@
   "Location":{
     "PartLocation":{
       "LocationType":"Embedded"
+    }
+  },
+    "IdentityAuthentication": {
+    "ResponderAuthentication": {
+      "ComponentCertificate": {
+        "@odata.id": "/redfish/v1/Chassis/ERoT-GPU2/Certificates/0"
+      },
+      "VerificationStatus": "Success"
     }
   },
   "Links":{

@@ -13,5 +13,8 @@
     "ContainedBy": {
       "@odata.id": "/redfish/v1/Chassis/root"
     }
+  },
+  "Certificates": {
+    "@odata.id": "/redfish/v1/Chassis/ERoT-GPU2/Certificates"
   }
 }

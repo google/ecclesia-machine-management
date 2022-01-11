@@ -31,6 +31,8 @@ inline constexpr char kStateAbsent[] = "Absent";
 inline constexpr char kStateUnavailableOffline[] = "UnavailableOffline";
 inline constexpr char kEntryTypeOem[] = "Oem";
 inline constexpr char kOemRecordFormatBmc[] = "BMC Device Entry";
+inline constexpr char kCertificateTypePEM[] = "PEM";
+inline constexpr char kCertificateTypePEMchain[] = "PEMchain";
 }  // namespace libredfish
 
 namespace ecclesia {

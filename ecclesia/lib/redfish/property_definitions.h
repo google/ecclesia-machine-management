@@ -129,6 +129,9 @@ inline constexpr char kRfPropertyFirmwareInventory[] = "FirmwareInventory";
 inline constexpr char kRfPropertyAdditionalDataUri[] = "AdditionalDataURI";
 inline constexpr char kRfPropertyAbsent[] = "Absent";
 
+inline constexpr char kRfPropertyCertificates[] = "Certificates";
+
+DEFINE_REDFISH_RESOURCE(ResourceCertificate, "Certificate");
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
 DEFINE_REDFISH_RESOURCE(ResourceChassis, "Chassis");
 DEFINE_REDFISH_RESOURCE(ResourceComponentIntegrity, "ComponentIntegrity");
@@ -244,6 +247,12 @@ DEFINE_REDFISH_PROPERTY(PropertyUserName, std::string, "UserName");
 DEFINE_REDFISH_PROPERTY(PropertyPassword, std::string, "Password");
 DEFINE_REDFISH_PROPERTY(PropertyTargetComponentURI, std::string,
                         "TargetComponentURI");
+
+DEFINE_REDFISH_PROPERTY(PropertyCertificateString, std::string,
+                        "CertificateString");
+DEFINE_REDFISH_PROPERTY(PropertyCertificateType, std::string,
+                        "CertificateType");
+DEFINE_REDFISH_PROPERTY(PropertySlotId, int, "SlotId");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
