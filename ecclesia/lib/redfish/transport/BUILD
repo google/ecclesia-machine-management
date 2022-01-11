@@ -234,3 +234,32 @@ cc_test(
         "@com_json//:json",
     ],
 )
+
+cc_library(
+    name = "struct_proto_conversion",
+    srcs = ["struct_proto_conversion.cc"],
+    hdrs = ["struct_proto_conversion.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_protobuf//:protobuf",
+        "@com_json//:json",
+    ],
+)
+
+cc_test(
+    name = "struct_proto_conversion_test",
+    srcs = ["struct_proto_conversion_test.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":struct_proto_conversion",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/testing:proto",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_protobuf//:protobuf",
+        "@com_json//:json",
+    ],
+)
