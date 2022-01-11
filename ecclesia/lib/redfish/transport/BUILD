@@ -141,6 +141,27 @@ cc_test(
 )
 
 cc_library(
+    name = "cache",
+    srcs = ["cache.cc"],
+    hdrs = ["cache.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":interface",
+        "//ecclesia/lib/http:codes",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/time:clock",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/meta:type_traits",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
+        "@com_json//:json",
+    ],
+)
+
+cc_library(
     name = "http",
     srcs = ["http.cc"],
     hdrs = ["http.h"],
@@ -195,11 +216,15 @@ cc_library(
     hdrs = ["http_redfish_intf.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":cache",
         ":interface",
         "//ecclesia/lib/http:codes",
+        "//ecclesia/lib/logging",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:json_ptr",
+        "//ecclesia/lib/time:clock",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -228,6 +253,7 @@ cc_test(
         "//ecclesia/lib/http:curl_client",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "//ecclesia/lib/time:clock_fake",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest_main",

@@ -44,14 +44,14 @@ TEST(PatchableMockupServer, CanProxy) {
   auto redfish_intf = server.RedfishClientInterface();
 
   auto chassis_obj =
-      redfish_intf->GetUri("/redfish/v1/Chassis/chassis").AsObject();
+      redfish_intf->UncachedGetUri("/redfish/v1/Chassis/chassis").AsObject();
   ASSERT_TRUE(chassis_obj);
   EXPECT_THAT(chassis_obj->GetUriString(), Eq("/redfish/v1/Chassis/chassis"));
   EXPECT_THAT(chassis_obj->GetNodeValue<libredfish::PropertyName>(),
               Eq("Indus Chassis"));
 
   auto system_obj =
-      redfish_intf->GetUri("/redfish/v1/Systems/system").AsObject();
+      redfish_intf->UncachedGetUri("/redfish/v1/Systems/system").AsObject();
   ASSERT_TRUE(system_obj);
   EXPECT_THAT(system_obj->GetNodeValue<libredfish::PropertyName>(),
               Eq("Indus"));
@@ -70,14 +70,14 @@ TEST(PatchableMockupServer, CanPatchDirect) {
 
   // Chassis should be patched.
   auto chassis_obj =
-      redfish_intf->GetUri("/redfish/v1/Chassis/chassis").AsObject();
+      redfish_intf->UncachedGetUri("/redfish/v1/Chassis/chassis").AsObject();
   ASSERT_TRUE(chassis_obj);
   EXPECT_THAT(chassis_obj->GetNodeValue<libredfish::PropertyName>(),
               Eq("My Patched Name"));
 
   // Systems should be untouched.
   auto system_obj =
-      redfish_intf->GetUri("/redfish/v1/Systems/system").AsObject();
+      redfish_intf->UncachedGetUri("/redfish/v1/Systems/system").AsObject();
   ASSERT_TRUE(system_obj);
   EXPECT_THAT(system_obj->GetNodeValue<libredfish::PropertyName>(),
               Eq("Indus"));
@@ -95,7 +95,8 @@ TEST(PatchableMockupServer, CanPatchViaCrawl) {
   auto redfish_intf = server.RedfishClientInterface();
 
   // Chassis should be patched, access the URI indirectly through Collection.
-  auto chassis_itr = redfish_intf->GetUri("/redfish/v1/Chassis").AsIterable();
+  auto chassis_itr =
+      redfish_intf->UncachedGetUri("/redfish/v1/Chassis").AsIterable();
   ASSERT_TRUE(chassis_itr);
 
   bool chassis_found = false;

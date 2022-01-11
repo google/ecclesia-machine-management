@@ -80,6 +80,7 @@ cc_test(
         "//ecclesia/lib/http:curl_client",
         "//ecclesia/lib/network:testing",
         "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:http",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
         "//ecclesia/lib/redfish/transport:interface",

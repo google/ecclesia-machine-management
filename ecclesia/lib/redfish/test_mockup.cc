@@ -46,6 +46,7 @@
 #include "ecclesia/lib/logging/posix.h"
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -259,9 +260,10 @@ std::unique_ptr<RedfishInterface> TestingMockupServer::RedfishClientInterface(
       },
       connection_config_);
 
+  auto cache = std::make_unique<ecclesia::NullCache>(transport.get());
   auto intf = libredfish::NewHttpInterface(
-      std::move(transport), libredfish::RedfishInterface::kTrusted,
-      service_root);
+      std::move(transport), std::move(cache),
+      libredfish::RedfishInterface::kTrusted, service_root);
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
 }
@@ -289,8 +291,10 @@ TestingMockupServer::RedfishClientSessionAuthInterface(
     return nullptr;
   }
 
+  auto cache = std::make_unique<ecclesia::NullCache>(transport.get());
   auto intf = libredfish::NewHttpInterface(
-      std::move(transport), libredfish::RedfishInterface::kTrusted);
+      std::move(transport), std::move(cache),
+      libredfish::RedfishInterface::kTrusted, service_root);
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
 }
@@ -317,9 +321,10 @@ TestingMockupServer::RedfishClientTlsAuthInterface(
       },
       connection_config_);
 
+  auto cache = std::make_unique<ecclesia::NullCache>(transport.get());
   auto intf = libredfish::NewHttpInterface(
-      std::move(transport), libredfish::RedfishInterface::kTrusted,
-      service_root);
+      std::move(transport), std::move(cache),
+      libredfish::RedfishInterface::kTrusted, service_root);
   ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
   return intf;
 }

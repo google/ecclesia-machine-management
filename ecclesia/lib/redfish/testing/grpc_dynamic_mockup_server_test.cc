@@ -94,7 +94,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPostPatchAndGetRequest) {
 
   // Test Get Request
   RedfishVariant get_redfish_variant =
-      client_->GetUri("/redfish/v1/Chassis/Member1");
+      client_->UncachedGetUri("/redfish/v1/Chassis/Member1");
   EXPECT_TRUE(get_redfish_variant.status().ok())
       << post_redfish_variant.status().message();
   std::string name;
@@ -134,7 +134,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomGet) {
         return grpc::Status::OK;
       });
   RedfishVariant get_redfish_variant =
-      client_->GetUri("/redfish/v1/MyResource");
+      client_->UncachedGetUri("/redfish/v1/MyResource");
   EXPECT_TRUE(get_redfish_variant.status().ok())
       << get_redfish_variant.status().message();
   std::string name;
@@ -278,14 +278,14 @@ TEST_F(GrpcRedfishMockUpServerTest, TestGetReset) {
         called = true;
         return grpc::Status::OK;
       });
-  auto get_result = client_->GetUri("/redfish/v1");
+  auto get_result = client_->UncachedGetUri("/redfish/v1");
   EXPECT_TRUE(get_result.status().ok()) << get_result.status().message();
   EXPECT_TRUE(called);
 
   // Clear the registered handler.
   called = false;
   mockup_server_->ClearHandlers();
-  get_result = client_->GetUri("/redfish/v1");
+  get_result = client_->UncachedGetUri("/redfish/v1");
   ASSERT_TRUE(get_result.status().ok()) << get_result.status().message();
   std::string name;
   EXPECT_TRUE(get_result["Name"].GetValue(&name));

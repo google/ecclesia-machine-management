@@ -152,15 +152,16 @@ class GrpcRedfishCredentials : public grpc::MetadataCredentialsPlugin {
 
 bool GrpcDynamicImpl::IsTrusted() const { return trusted_ == kTrusted; }
 
-libredfish::RedfishVariant GrpcDynamicImpl::GetRoot(GetParams params) {
+libredfish::RedfishVariant GrpcDynamicImpl::GetRoot(
+    libredfish::GetParams params) {
   if (service_root_ == libredfish::ServiceRoot::kGoogle) {
-    return GetUri(kGoogleServiceRoot, params);
+    return CachedGetUri(kGoogleServiceRoot, params);
   }
-  return GetUri(kServiceRoot, params);
+  return CachedGetUri(kServiceRoot, params);
 }
 
-libredfish::RedfishVariant GrpcDynamicImpl::GetUri(absl::string_view uri,
-                                                   GetParams params) {
+libredfish::RedfishVariant GrpcDynamicImpl::UncachedGetUri(
+    absl::string_view uri, libredfish::GetParams params) {
   return DoRpc(
       uri, absl::nullopt, options_,
       [this, uri](grpc::ClientContext& context, const Request& request,
@@ -170,6 +171,10 @@ libredfish::RedfishVariant GrpcDynamicImpl::GetUri(absl::string_view uri,
                 new GrpcRedfishCredentials(target_.fqdn, uri.data()))));
         return stub_->Get(&context, request, response);
       });
+}
+libredfish::RedfishVariant GrpcDynamicImpl::CachedGetUri(
+    absl::string_view uri, libredfish::GetParams params) {
+  return UncachedGetUri(uri, params);
 }
 
 libredfish::RedfishVariant GrpcDynamicImpl::PostUri(

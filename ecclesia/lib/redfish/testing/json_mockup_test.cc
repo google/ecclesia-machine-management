@@ -334,37 +334,38 @@ TEST(JsonMockup, CanGetUri) {
     }
   )json");
 
-  auto root = json_intf->GetUri("").AsObject();
+  auto root = json_intf->UncachedGetUri("").AsObject();
   ASSERT_TRUE(root);
   EXPECT_THAT(root->GetNodeValue<std::string>("Name"), Eq("root"));
-  auto root_also = json_intf->GetUri("/").AsObject();
+  auto root_also = json_intf->UncachedGetUri("/").AsObject();
   ASSERT_TRUE(root);
   EXPECT_THAT(root->GetNodeValue<std::string>("Name"), Eq("root"));
 
-  auto obj = json_intf->GetUri("Obj").AsObject();
+  auto obj = json_intf->UncachedGetUri("Obj").AsObject();
   ASSERT_TRUE(obj);
   EXPECT_THAT(obj->GetNodeValue<std::string>("Name"), Eq("Obj"));
-  auto obj_also = json_intf->GetUri("/Obj").AsObject();
+  auto obj_also = json_intf->UncachedGetUri("/Obj").AsObject();
   ASSERT_TRUE(obj_also);
   EXPECT_THAT(obj_also->GetNodeValue<std::string>("Name"), Eq("Obj"));
-  auto obj_also2 = json_intf->GetUri("Obj/").AsObject();
+  auto obj_also2 = json_intf->UncachedGetUri("Obj/").AsObject();
   ASSERT_TRUE(obj_also2);
   EXPECT_THAT(obj_also2->GetNodeValue<std::string>("Name"), Eq("Obj"));
-  auto obj_also3 = json_intf->GetUri("/Obj/").AsObject();
+  auto obj_also3 = json_intf->UncachedGetUri("/Obj/").AsObject();
   ASSERT_TRUE(obj_also3);
   EXPECT_THAT(obj_also3->GetNodeValue<std::string>("Name"), Eq("Obj"));
 
-  auto obj_subobj = json_intf->GetUri("Obj/SubObj").AsObject();
+  auto obj_subobj = json_intf->UncachedGetUri("Obj/SubObj").AsObject();
   ASSERT_TRUE(obj_subobj);
   EXPECT_THAT(obj_subobj->GetNodeValue<std::string>("Name"), Eq("SubObj"));
   EXPECT_THAT(obj_subobj->GetNodeValue<int>("Val"), Eq(42));
 
   std::string str_value;
-  ASSERT_TRUE(json_intf->GetUri("Obj/SubObj/Name").GetValue(&str_value));
+  ASSERT_TRUE(
+      json_intf->UncachedGetUri("Obj/SubObj/Name").GetValue(&str_value));
   EXPECT_THAT(str_value, Eq("SubObj"));
 
   {
-    auto obj_subarray = json_intf->GetUri("Obj/SubArray").AsIterable();
+    auto obj_subarray = json_intf->UncachedGetUri("Obj/SubArray").AsIterable();
     ASSERT_TRUE(obj_subarray);
     int counter = 0;
     for (auto elem : *obj_subarray) {
@@ -374,19 +375,24 @@ TEST(JsonMockup, CanGetUri) {
       ++counter;
     }
     int int_value;
-    ASSERT_TRUE(json_intf->GetUri("Obj/SubArray/0/Val").GetValue(&int_value));
+    ASSERT_TRUE(
+        json_intf->UncachedGetUri("Obj/SubArray/0/Val").GetValue(&int_value));
     EXPECT_THAT(int_value, Eq(0));
-    ASSERT_TRUE(json_intf->GetUri("Obj/SubArray/1/Val").GetValue(&int_value));
+    ASSERT_TRUE(
+        json_intf->UncachedGetUri("Obj/SubArray/1/Val").GetValue(&int_value));
     EXPECT_THAT(int_value, Eq(1));
-    ASSERT_TRUE(json_intf->GetUri("Obj/SubArray/2/Val").GetValue(&int_value));
+    ASSERT_TRUE(
+        json_intf->UncachedGetUri("Obj/SubArray/2/Val").GetValue(&int_value));
     EXPECT_THAT(int_value, Eq(2));
-    ASSERT_FALSE(json_intf->GetUri("Obj/SubArray/-1/Val").GetValue(&int_value));
-    ASSERT_FALSE(json_intf->GetUri("Obj/SubArray/3/Val").GetValue(&int_value));
+    ASSERT_FALSE(
+        json_intf->UncachedGetUri("Obj/SubArray/-1/Val").GetValue(&int_value));
+    ASSERT_FALSE(
+        json_intf->UncachedGetUri("Obj/SubArray/3/Val").GetValue(&int_value));
   }
 
   {
     auto obj_subcollection =
-        json_intf->GetUri("Obj/SubCollection").AsIterable();
+        json_intf->UncachedGetUri("Obj/SubCollection").AsIterable();
     ASSERT_TRUE(obj_subcollection);
     int counter = 3;
     for (auto elem : *obj_subcollection) {
@@ -396,19 +402,19 @@ TEST(JsonMockup, CanGetUri) {
       ++counter;
     }
     int int_value;
-    ASSERT_TRUE(
-        json_intf->GetUri("Obj/SubCollection/0/Val").GetValue(&int_value));
+    ASSERT_TRUE(json_intf->UncachedGetUri("Obj/SubCollection/0/Val")
+                    .GetValue(&int_value));
     EXPECT_THAT(int_value, Eq(3));
-    ASSERT_TRUE(
-        json_intf->GetUri("Obj/SubCollection/1/Val").GetValue(&int_value));
+    ASSERT_TRUE(json_intf->UncachedGetUri("Obj/SubCollection/1/Val")
+                    .GetValue(&int_value));
     EXPECT_THAT(int_value, Eq(4));
-    ASSERT_TRUE(
-        json_intf->GetUri("Obj/SubCollection/2/Val").GetValue(&int_value));
+    ASSERT_TRUE(json_intf->UncachedGetUri("Obj/SubCollection/2/Val")
+                    .GetValue(&int_value));
     EXPECT_THAT(int_value, Eq(5));
-    ASSERT_FALSE(
-        json_intf->GetUri("Obj/SubCollection/-1/Val").GetValue(&int_value));
-    ASSERT_FALSE(
-        json_intf->GetUri("Obj/SubCollection/3/Val").GetValue(&int_value));
+    ASSERT_FALSE(json_intf->UncachedGetUri("Obj/SubCollection/-1/Val")
+                     .GetValue(&int_value));
+    ASSERT_FALSE(json_intf->UncachedGetUri("Obj/SubCollection/3/Val")
+                     .GetValue(&int_value));
   }
 }
 
@@ -420,7 +426,7 @@ TEST(JsonMockup, DateTime) {
   )json");
 
   absl::Time dt;
-  RedfishVariant var = json_intf->GetUri("/DateTime");
+  RedfishVariant var = json_intf->UncachedGetUri("/DateTime");
   EXPECT_TRUE(var.GetValue(&dt));
 
   absl::TimeZone utc;
@@ -444,7 +450,7 @@ TEST(JsonMockup, ForEachProperty) {
   )json");
 
   std::vector<std::pair<std::string, std::string>> all_properties;
-  json_intf->GetUri("/").AsObject()->ForEachProperty(
+  json_intf->UncachedGetUri("/").AsObject()->ForEachProperty(
       [&all_properties](absl::string_view name, RedfishVariant value) {
         all_properties.push_back(
             std::make_pair(std::string(name), value.DebugString()));
@@ -477,7 +483,7 @@ TEST(JsonMockup, ForEachPropertyStop) {
   )json");
   std::vector<std::pair<std::string, std::string>> all_properties;
   int called = 0;
-  json_intf->GetUri("/").AsObject()->ForEachProperty(
+  json_intf->UncachedGetUri("/").AsObject()->ForEachProperty(
       [&called](absl::string_view name, RedfishVariant value) {
         ++called;
         return RedfishIterReturnValue::kStop;

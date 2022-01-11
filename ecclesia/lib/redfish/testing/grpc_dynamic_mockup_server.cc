@@ -77,7 +77,7 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Get(
     return itr->second(context, request, response);
   }
   return StatusToGrpcStatus(SetGrpcResponseAndReturnStatus(
-      redfish_intf_->GetUri(request->url()), response));
+      redfish_intf_->UncachedGetUri(request->url()), response));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Post(
     grpc::ServerContext* context, const Request* request,

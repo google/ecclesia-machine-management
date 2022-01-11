@@ -7,6 +7,9 @@ licenses(["notice"])
 
 cc_library(
     name = "interface",
+    srcs = [
+        "interface.cc",
+    ],
     hdrs = [
         "interface.h",
         "property.h",
@@ -208,6 +211,7 @@ cc_library(
         "//ecclesia/lib/logging",
         "//ecclesia/lib/logging:posix",
         "//ecclesia/lib/network:testing",
+        "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:http",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
         "//ecclesia/lib/redfish/transport:interface",

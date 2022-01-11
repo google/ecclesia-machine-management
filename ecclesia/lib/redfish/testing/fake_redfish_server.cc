@@ -71,7 +71,7 @@ void FakeRedfishServer::HandleHttpGet(
   if (itr == http_get_handlers_.end()) {
     ::tensorflow::serving::net_http::SetContentType(req, "application/json");
     req->WriteResponseString(
-        redfish_intf_->GetUri(req->uri_path()).DebugString());
+        redfish_intf_->UncachedGetUri(req->uri_path()).DebugString());
     req->Reply();
     return;
   }
@@ -145,9 +145,10 @@ FakeRedfishServer::RedfishClientInterface() {
       LibCurlProxy::CreateInstance(), std::move(creds));
   auto transport = HttpRedfishTransport::MakeNetwork(
       std::move(curl_http_client), endpoint);
-
-  auto intf = libredfish::NewHttpInterface(
-      std::move(transport), libredfish::RedfishInterface::kTrusted);
+  auto cache = std::make_unique<NullCache>(transport.get());
+  auto intf =
+      libredfish::NewHttpInterface(std::move(transport), std::move(cache),
+                                   libredfish::RedfishInterface::kTrusted);
   ecclesia::Check(intf != nullptr, "can connect to the redfish proxy server");
   return intf;
 }

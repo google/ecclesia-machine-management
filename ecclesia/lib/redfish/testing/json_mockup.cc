@@ -104,6 +104,10 @@ class JsonMockupObject : public RedfishObject {
   }
   std::string DebugString() override { return json_view_.dump(/*indent=*/1); }
 
+  std::unique_ptr<RedfishObject> EnsureFreshPayload(GetParams params) override {
+    return std::unique_ptr<RedfishObject>(this);
+  }
+
   void ForEachProperty(absl::FunctionRef<RedfishIterReturnValue(
                            absl::string_view, RedfishVariant value)>
                            itr_func) override {
@@ -203,7 +207,8 @@ class JsonMockupMockup : public RedfishInterface {
   RedfishVariant GetRoot(GetParams params) override {
     return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(json_model_));
   }
-  RedfishVariant GetUri(absl::string_view uri, GetParams params) override {
+  RedfishVariant UncachedGetUri(absl::string_view uri,
+                                GetParams params) override {
     // We will implement GetUri as walking the URI from the root JSON node.
 
     auto current_json = json_model_;
@@ -239,6 +244,11 @@ class JsonMockupMockup : public RedfishInterface {
     }
     return RedfishVariant(
         std::make_unique<JsonMockupVariantImpl>(current_json));
+  }
+  RedfishVariant CachedGetUri(absl::string_view uri,
+                              GetParams params) override {
+    // There is no caching in this mockup.
+    return UncachedGetUri(uri, params);
   }
   RedfishVariant PostUri(
       absl::string_view uri,

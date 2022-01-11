@@ -20,13 +20,16 @@
 #include <memory>
 
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/time/clock.h"
 
 namespace libredfish {
 
 // Constructs a RedfishInterface backed by a Redfish Transport.
 std::unique_ptr<RedfishInterface> NewHttpInterface(
     std::unique_ptr<ecclesia::RedfishTransport> transport,
+    std::unique_ptr<ecclesia::RedfishCachedGetterInterface> cache,
     RedfishInterface::TrustedEndpoint trusted,
     ServiceRoot service_root = ServiceRoot::kRedfish);
 

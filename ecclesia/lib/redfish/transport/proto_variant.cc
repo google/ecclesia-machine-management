@@ -132,6 +132,12 @@ absl::optional<std::string> ProtoObject::GetUriString() {
   return proto_struct_.fields().at(kODataId).string_value();
 }
 
+std::unique_ptr<RedfishObject> ProtoObject::EnsureFreshPayload(
+    libredfish::GetParams params) {
+  // There is no caching, just return a copy of self as it is always fresh.
+  return absl::make_unique<ProtoObject>(proto_struct_);
+}
+
 std::string ProtoObject::DebugString() { return proto_struct_.DebugString(); }
 
 void ProtoObject::ForEachProperty(

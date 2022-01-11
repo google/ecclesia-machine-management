@@ -75,6 +75,9 @@ class ProtoObject : public libredfish::RedfishObject {
 
   absl::optional<std::string> GetUriString() override;
 
+  std::unique_ptr<libredfish::RedfishObject> EnsureFreshPayload(
+      libredfish::GetParams params) override;
+
   std::string DebugString() override;
 
   void ForEachProperty(

@@ -53,6 +53,8 @@ enum class RedfishIterReturnValue {
   kStop
 };
 
+struct GetParams {};
+
 // RedfishVariant is the standard return type for all Redfish interfaces.
 // Its purpose is to force the caller to strictly specify the expected Redfish
 // view to access the underlying Redfish payload internals.
@@ -108,7 +110,6 @@ class RedfishVariant final {
     virtual bool GetValue(absl::Time *val) const = 0;
     virtual std::string DebugString() const = 0;
   };
-
 
   // A helper class to denote a loop through an iterator.
   class IndexEach {};
@@ -194,6 +195,13 @@ class RedfishVariant final {
     if (!ptr_) return nullptr;
     return ptr_->AsIterable();
   }
+
+  // This method will only return a valid object if this RedfishVariant
+  // is a RedfishObject with an odata.id property that can be refetched with
+  // a GET. If this prerequisite is met, then this method returns a
+  // RedfishObject with data originating from the RedfishBackend and not a local
+  // clientside cache.
+  std::unique_ptr<RedfishObject> AsFreshObject() const;
 
   // Returns the status of the RedfishVariant.
   // Note that the status is independent from the Redfish Payload. See the
@@ -321,6 +329,17 @@ class RedfishObject {
   // Returns the string URI of the current RedfishObject, if available.
   virtual std::optional<std::string> GetUriString() = 0;
 
+  // Returns a fresh copy of this RedfishObject. If this RedfishObject was a
+  // cached object, this method will re-fetch this object with a GET. If this
+  // RedfishObject was already a fresh instance, a copy of object itself will be
+  // returned. This method will fail to return a valid RedfishVariant if this
+  // RedfishObject does not have a string URI.
+  virtual std::unique_ptr<RedfishObject> EnsureFreshPayload(
+      GetParams params = {}) = 0;
+
+  // Returns some implementation specific debug string. This should only be used
+  // for logging and debugging and should not be fed into any parsers which
+  // make assumptons on the underlying implementation.
   virtual std::string DebugString() = 0;
 
   // GetNodeValue is a convenience method which calls GetNode() then GetValue().
@@ -370,11 +389,6 @@ class RedfishInterface {
 
   virtual ~RedfishInterface() {}
 
-  struct GetParams {
-    // Default constructor to propagate the default member values.
-    GetParams() {}
-  };
-
   // An endpoint is trusted if all of the information coming from the endpoint
   // can be reliably assumed to be from a Google-controlled source.
   // Examples of trusted endpoints are attested BMCs and prodimage running in
@@ -389,11 +403,23 @@ class RedfishInterface {
   virtual bool IsTrusted() const = 0;
 
   // Fetches the root payload and returns it.
-  virtual RedfishVariant GetRoot(GetParams params = GetParams()) = 0;
+  virtual RedfishVariant GetRoot(GetParams params = {}) = 0;
 
-  // Fetches the given URI and returns it.
-  virtual RedfishVariant GetUri(absl::string_view uri,
-                                GetParams params = GetParams()) = 0;
+  // The following Get URIs fetches the given URIs and returns the resulting
+  // payloads. Both CachedGetUri and UncachedGetUri go through the cache
+  // implementation, so calling UncachedGetUri may result in a cache update
+  // depending on the cache implementation.
+  //
+  // When deciding whether to use one or the other, CachedGetUri is appropriate
+  // if it is acceptable for the data to be stale according to the cache policy.
+  // This typically includes information which will seldom change (e.g. resource
+  // collections, data loaded on boot, addresses of devices which cannot be
+  // hotplugged, manufacturing information, etc.) UncachedGetUri is intended for
+  // live data which can change in real time (e.g. sensor readings, counters).
+  virtual RedfishVariant CachedGetUri(absl::string_view uri,
+                                      GetParams params = {}) = 0;
+  virtual RedfishVariant UncachedGetUri(absl::string_view uri,
+                                        GetParams params = {}) = 0;
 
   // Post to the given URI and returns result.
   virtual RedfishVariant PostUri(
@@ -432,7 +458,12 @@ class NullRedfish : public RedfishInterface {
   RedfishVariant GetRoot(GetParams params) override {
     return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }
-  RedfishVariant GetUri(absl::string_view uri, GetParams params) override {
+  RedfishVariant CachedGetUri(absl::string_view uri,
+                              GetParams params) override {
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
+  }
+  RedfishVariant UncachedGetUri(absl::string_view uri,
+                                GetParams params) override {
     return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }
   RedfishVariant PostUri(

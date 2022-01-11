@@ -35,6 +35,7 @@
 #include "absl/strings/strip.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/logging/globals.h"
+#include "ecclesia/lib/logging/interfaces.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
@@ -228,7 +229,8 @@ std::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
   std::optional<std::string> upstream_uri;
   if (auto upstream_chassis_link =
           redfish_intf
-              ->GetUri(current_chassis_uri)[kRfPropertyLinks][chassis_link]
+              ->CachedGetUri(
+                  current_chassis_uri)[kRfPropertyLinks][chassis_link]
               .AsObject();
       upstream_chassis_link) {
     upstream_uri = upstream_chassis_link->GetUriString();
@@ -241,7 +243,7 @@ std::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
 
   while (upstream_uri.has_value()) {
     // Continue up the tree to the root chassis
-    auto next_chassis = redfish_intf->GetUri(*upstream_uri).AsObject();
+    auto next_chassis = redfish_intf->CachedGetUri(*upstream_uri).AsObject();
     // Upstream uri isn't valid URI
     if (!next_chassis) break;
     // If the upstream chassis exists, update current chassis and find
@@ -264,7 +266,7 @@ std::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
     }
   }
   // If the current chassis uri is valid, return it
-  if (redfish_intf->GetUri(current_chassis_uri).AsObject()) {
+  if (redfish_intf->CachedGetUri(current_chassis_uri).AsObject()) {
     return current_chassis_uri;
   }
   return std::nullopt;
@@ -340,7 +342,8 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
       continue;
     }
     visited_uris.insert(node_to_attach.uri);
-    const auto node_json = redfish_intf->GetUri(node_to_attach.uri).AsObject();
+    const auto node_json =
+        redfish_intf->CachedGetUri(node_to_attach.uri).AsObject();
     if (!node_json) {
       ecclesia::ErrorLog() << "No node found at " << node_to_attach.uri;
       continue;

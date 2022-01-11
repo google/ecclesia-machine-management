@@ -62,11 +62,13 @@ class GrpcDynamicImpl : public libredfish::RedfishInterface {
   bool IsTrusted() const override;
 
   // Fetches the root payload and returns it.
-  libredfish::RedfishVariant GetRoot(GetParams params) override;
+  libredfish::RedfishVariant GetRoot(libredfish::GetParams params) override;
 
   // Fetches the given URI and returns it.
-  libredfish::RedfishVariant GetUri(absl::string_view uri,
-                                    GetParams params) override;
+  libredfish::RedfishVariant CachedGetUri(
+      absl::string_view uri, libredfish::GetParams params) override;
+  libredfish::RedfishVariant UncachedGetUri(
+      absl::string_view uri, libredfish::GetParams params) override;
 
   // Post to the given URI and returns result.
   libredfish::RedfishVariant PostUri(

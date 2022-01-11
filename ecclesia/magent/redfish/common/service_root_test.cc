@@ -33,6 +33,7 @@
 #include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -117,11 +118,14 @@ TEST_F(ServiceRootTest, QueryServiceRoot) {
       LibCurlProxy::CreateInstance(), HttpCredential());
   auto transport = HttpRedfishTransport::MakeNetwork(
       std::move(curl_http_client), absl::StrCat("localhost:", port_));
-  auto redfish_intf = libredfish::NewHttpInterface(
-      std::move(transport), libredfish::RedfishInterface::kTrusted);
+  auto cache = std::make_unique<NullCache>(transport.get());
+  auto redfish_intf =
+      libredfish::NewHttpInterface(std::move(transport), std::move(cache),
+                                   libredfish::RedfishInterface::kTrusted);
 
   // Perform an http get request on the service root resource.
-  libredfish::RedfishVariant response = redfish_intf->GetUri(kServiceRootUri);
+  libredfish::RedfishVariant response =
+      redfish_intf->UncachedGetUri(kServiceRootUri);
 
   // Parse the raw contents and compare it to the expected service root.
   nlohmann::json actual = nlohmann::json::parse(response.DebugString(), nullptr,
@@ -140,13 +144,15 @@ TEST_F(ServiceRootTest, QueryServiceRootEquivalentUri) {
       LibCurlProxy::CreateInstance(), HttpCredential());
   auto transport = HttpRedfishTransport::MakeNetwork(
       std::move(curl_http_client), absl::StrCat("localhost:", port_));
-  auto redfish_intf = libredfish::NewHttpInterface(
-      std::move(transport), libredfish::RedfishInterface::kTrusted);
+  auto cache = std::make_unique<NullCache>(transport.get());
+  auto redfish_intf =
+      libredfish::NewHttpInterface(std::move(transport), std::move(cache),
+                                   libredfish::RedfishInterface::kTrusted);
 
   // Perform an http get request on the service root resource without the
   // trailing forward slash and expect the URI to be treated as equivalent.
   libredfish::RedfishVariant response =
-      redfish_intf->GetUri(absl::StripSuffix(kServiceRootUri, "/"));
+      redfish_intf->UncachedGetUri(absl::StripSuffix(kServiceRootUri, "/"));
 
   // Parse the raw contents and compare it to the expected service root.
   nlohmann::json actual = nlohmann::json::parse(response.DebugString(), nullptr,

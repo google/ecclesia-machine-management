@@ -92,7 +92,7 @@ TEST_F(GrpcDynamicImplTest, StatusNotOk) {
   }
   {
     SCOPED_TRACE("GetUri");
-    RedfishVariant variant = client_->GetUri("");
+    RedfishVariant variant = client_->UncachedGetUri("");
     EXPECT_THAT(variant.AsObject(), IsNull());
     EXPECT_THAT(variant.AsIterable(), IsNull());
     EXPECT_THAT(variant.status(), IsStatusCancelled());
@@ -143,7 +143,8 @@ TEST_F(GrpcDynamicImplTest, GetUriOk) {
     *response->mutable_message() = expected_response;
     return grpc::Status::OK;
   });
-  std::unique_ptr<RedfishObject> object = client_->GetUri("/hello").AsObject();
+  std::unique_ptr<RedfishObject> object =
+      client_->UncachedGetUri("/hello").AsObject();
   ASSERT_THAT(object, NotNull());
   EXPECT_THAT(object->GetNodeValue<std::string>("Hello"),
               Optional(Eq("World")));
