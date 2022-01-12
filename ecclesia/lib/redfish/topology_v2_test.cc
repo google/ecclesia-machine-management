@@ -33,6 +33,8 @@
 namespace libredfish {
 namespace {
 
+using ::testing::Contains;
+using ::testing::Not;
 using ::testing::Pointwise;
 
 void CheckAgainstTestingMockupFullDevpaths(const NodeTopology &topology) {
@@ -259,6 +261,28 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupBrokenOrCircularLink) {
 
     mockup.ClearHandlers();
   }
+}
+
+// This test makes sure the node names from the created topology match
+// expectations.
+TEST(RawInterfaceTestWithMockup, TestingNodeName) {
+  ecclesia::FakeRedfishServer mockup(
+      "topology_v2_testing/mockup.shar",
+      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+  auto raw_intf = mockup.RedfishClientInterface();
+
+  const NodeTopology constructed_topology =
+      CreateTopologyFromRedfishV2(raw_intf.get());
+
+  std::vector<std::string> node_names;
+  for (const auto &node : constructed_topology.nodes) {
+    node_names.push_back(node->name);
+  }
+
+  EXPECT_THAT(node_names, Contains("expansion_tray"));
+  EXPECT_THAT(node_names, Contains("expansion_child"));
+  EXPECT_THAT(node_names, Not(Contains("Expansion Tray ")));
+  EXPECT_THAT(node_names, Not(Contains(" Expansion Child ")));
 }
 
 }  // namespace

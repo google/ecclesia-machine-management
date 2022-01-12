@@ -86,43 +86,6 @@ class JsonMockupVariantImpl : public RedfishVariant::ImplIntf {
   nlohmann::json json_view_;
 };
 
-class JsonMockupObject : public RedfishObject {
- public:
-  explicit JsonMockupObject(nlohmann::json json_view)
-      : json_view_(std::move(json_view)) {}
-  RedfishVariant operator[](const std::string &node_name) const override {
-    auto node = json_view_.find(node_name);
-    if (node == json_view_.end())
-      return RedfishVariant(absl::NotFoundError(
-          absl::StrCat("no node '", node_name,
-                       "' in JSON: ", json_view_.dump(/*indent=*/1))));
-    return RedfishVariant(
-        std::make_unique<JsonMockupVariantImpl>(node.value()));
-  }
-  std::optional<std::string> GetUriString() override {
-    return GetNodeValue<std::string>("@odata.id");
-  }
-  std::string DebugString() override { return json_view_.dump(/*indent=*/1); }
-
-  std::unique_ptr<RedfishObject> EnsureFreshPayload(GetParams params) override {
-    return std::unique_ptr<RedfishObject>(this);
-  }
-
-  void ForEachProperty(absl::FunctionRef<RedfishIterReturnValue(
-                           absl::string_view, RedfishVariant value)>
-                           itr_func) override {
-    for (const auto &items : json_view_.items()) {
-      if (itr_func(items.key(),
-                   RedfishVariant(std::make_unique<JsonMockupVariantImpl>(
-                       items.value()))) == RedfishIterReturnValue::kStop) {
-        break;
-      }
-    }
-  }
-
-  nlohmann::json json_view_;
-};
-
 class JsonMockupIterable : public RedfishIterable {
  public:
   explicit JsonMockupIterable(nlohmann::json json_view)
@@ -278,6 +241,28 @@ class JsonMockupMockup : public RedfishInterface {
 };
 
 }  // namespace
+
+RedfishVariant JsonMockupObject::operator[](
+    const std::string &node_name) const {
+  auto node = json_view_.find(node_name);
+  if (node == json_view_.end())
+    return RedfishVariant(absl::NotFoundError(absl::StrCat(
+        "no node '", node_name, "' in JSON: ", json_view_.dump(/*indent=*/1))));
+  return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(node.value()));
+}
+
+void JsonMockupObject::ForEachProperty(
+    absl::FunctionRef<RedfishIterReturnValue(absl::string_view,
+                                             RedfishVariant value)>
+        itr_func) {
+  for (const auto &items : json_view_.items()) {
+    if (itr_func(items.key(),
+                 RedfishVariant(std::make_unique<JsonMockupVariantImpl>(
+                     items.value()))) == RedfishIterReturnValue::kStop) {
+      break;
+    }
+  }
+}
 
 std::unique_ptr<RedfishInterface> NewJsonMockupInterface(
     absl::string_view raw_json) {

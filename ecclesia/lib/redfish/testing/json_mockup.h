@@ -21,6 +21,7 @@
 
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace libredfish {
 
@@ -28,6 +29,28 @@ namespace libredfish {
 // Returns nullptr in case the interface failed to be constructed.
 std::unique_ptr<RedfishInterface> NewJsonMockupInterface(
     absl::string_view raw_json);
+
+class JsonMockupObject : public RedfishObject {
+ public:
+  explicit JsonMockupObject(nlohmann::json json_view)
+      : json_view_(std::move(json_view)) {}
+  RedfishVariant operator[](const std::string &node_name) const override;
+
+  std::optional<std::string> GetUriString() override {
+    return GetNodeValue<std::string>("@odata.id");
+  }
+  std::string DebugString() override { return json_view_.dump(/*indent=*/1); }
+
+  std::unique_ptr<RedfishObject> EnsureFreshPayload(GetParams params) override {
+    return std::unique_ptr<RedfishObject>(this);
+  }
+
+  void ForEachProperty(absl::FunctionRef<RedfishIterReturnValue(
+                           absl::string_view, RedfishVariant value)>
+                           itr_func) override;
+
+  nlohmann::json json_view_;
+};
 
 }  // namespace libredfish
 

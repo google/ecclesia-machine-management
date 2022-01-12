@@ -66,6 +66,15 @@ inline bool AssemblyIsEnabled(libredfish::RedfishObject *assembly_obj) {
   return *state == "Enabled";
 }
 
+// This helper function returns the resource type as a string by parsing the
+// "@odata.type" field.
+std::optional<std::string> GetResourceType(const RedfishObject *node);
+
+// A helper function to get "converted" resource name. The name is generally
+// converted from the "Name" property like " ABc XYz "->"abc_xyz". For certain
+// types of resources the name is obtained from other context of the resource.
+std::optional<std::string> GetConvertedResourceName(const RedfishObject *node);
+
 }  // namespace libredfish
 
 #endif

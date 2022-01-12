@@ -225,11 +225,33 @@ cc_library(
 
 cc_library(
     name = "utils",
+    srcs = ["utils.cc"],
     hdrs = ["utils.h"],
     visibility = ["//visibility:public"],
     deps = [
         ":interface",
         ":property_definitions",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "utils_test",
+    srcs = ["utils_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/topology_v2_testing:mockup.shar",
+    ],
+    deps = [
+        ":interface",
+        ":property_definitions",
+        ":test_mockup",
+        ":utils",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "//ecclesia/lib/redfish/testing:json_mockup",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+        "@com_json//:json",
     ],
 )
 
@@ -281,6 +303,7 @@ cc_library(
         ":topology_config_cc_proto",
         ":topology_configs",
         ":types",
+        ":utils",
         "//ecclesia/lib/file:cc_embed_interface",
         "//ecclesia/lib/logging",
         "@com_google_absl//absl/container:flat_hash_map",

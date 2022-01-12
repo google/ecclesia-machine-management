@@ -16,7 +16,6 @@
 
 #include "ecclesia/lib/redfish/topology_v2.h"
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <queue>
@@ -35,7 +34,6 @@
 #include "absl/strings/strip.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/interfaces.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
@@ -44,6 +42,7 @@
 #include "ecclesia/lib/redfish/topology_config.pb.h"
 #include "ecclesia/lib/redfish/topology_configs.h"
 #include "ecclesia/lib/redfish/types.h"
+#include "ecclesia/lib/redfish/utils.h"
 
 namespace libredfish {
 namespace {
@@ -367,7 +366,12 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
       auto node = std::make_unique<Node>();
       node->type = kBoard;
       node->local_devpath = std::string(kRootDevpath);
-      node->name = node_json->GetNodeValue<PropertyName>().value_or("root");
+      auto name = GetConvertedResourceName(node_json.get());
+      if (name.has_value()) {
+        node->name = *std::move(name);
+      } else {
+        node->name = "root";
+      }
       node->associated_uris.push_back(node_to_attach.uri);
 
       current_node_ptr = node.get();
@@ -408,7 +412,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
       }
 
       auto node = std::make_unique<Node>();
-      auto name = node_json->GetNodeValue<PropertyName>();
+      auto name = GetConvertedResourceName(node_json.get());
       if (!name.has_value()) continue;
       node->name = *std::move(name);
       node->associated_uris.push_back(node_to_attach.uri);
