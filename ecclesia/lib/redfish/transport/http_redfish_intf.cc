@@ -225,8 +225,8 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
  public:
   explicit HttpIntfArrayIterableImpl(RedfishInterface *intf,
                                      ecclesia::RedfishTransport::Result result,
-                                     CacheState cache_state_)
-      : intf_(intf), result_(std::move(result)) {}
+                                     CacheState cache_state)
+      : intf_(intf), result_(std::move(result)), cache_state_(cache_state) {}
   HttpIntfArrayIterableImpl(const HttpIntfArrayIterableImpl &) = delete;
   HttpIntfObjectImpl &operator=(const HttpIntfArrayIterableImpl &) = delete;
 
