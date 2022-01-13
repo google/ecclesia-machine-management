@@ -35,6 +35,7 @@
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/http/codes.h"
+#include "ecclesia/lib/logging/logging.h"
 
 namespace libredfish {
 
@@ -376,14 +377,15 @@ class RedfishInterface {
   using ValueVariant =
       std::variant<int, bool, std::string, const char *, double>;
 
-  static constexpr inline absl::string_view ServiceRootToUri(
-      ServiceRoot service_root) {
+  static inline absl::string_view ServiceRootToUri(ServiceRoot service_root) {
     switch (service_root) {
       case (ServiceRoot::kRedfish):
         return kServiceRoot;
       case (ServiceRoot::kGoogle):
         return kGoogleServiceRoot;
     }
+    // We use assert here to avoid g3 dependencies.
+    ecclesia::FatalLog() << "Unexpected value for Service Root";
   }
 
   virtual ~RedfishInterface() {}

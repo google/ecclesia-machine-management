@@ -18,6 +18,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/http:codes",
+        "//ecclesia/lib/logging",
         "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
