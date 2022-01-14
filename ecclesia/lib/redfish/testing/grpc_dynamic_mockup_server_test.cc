@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include "google/protobuf/struct.pb.h"
 #include "gmock/gmock.h"
@@ -27,11 +28,13 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
+#include "ecclesia/lib/redfish/transport/grpc.h"
 #include "ecclesia/lib/redfish/transport/grpc_dynamic_impl.h"
 #include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
 #include "ecclesia/lib/status/rpc.h"
@@ -48,8 +51,6 @@ namespace ecclesia {
 namespace {
 
 using ::google::protobuf::Struct;
-using ::libredfish::RedfishInterface;
-using ::libredfish::RedfishVariant;
 using ::redfish::v1::Request;
 using ::redfish::v1::Response;
 using ::testing::Eq;
@@ -63,16 +64,16 @@ class GrpcRedfishMockUpServerTest : public Test {
     int port = FindUnusedPortOrDie();
     mockup_server_ = absl::make_unique<GrpcDynamicMockupServer>(
         "barebones_session_auth/mockup.shar", "[::1]", port);
-    client_ = absl::make_unique<GrpcDynamicImpl>(
-        GrpcDynamicImpl::Target{.fqdn = "[::1]", .port = port},
-        RedfishInterface::TrustedEndpoint::kUntrusted, options);
+    GrpcRedfishTransport::Params params;
+    client_ = absl::make_unique<GrpcRedfishTransport>(
+        absl::StrCat("[::1]:", port), params);
     std::shared_ptr<grpc::Channel> channel = CreateChannel(
         absl::StrCat("[::1]:", port), grpc::InsecureChannelCredentials());
     stub_ = ::redfish::v1::RedfishV1::NewStub(channel);
   }
 
   std::unique_ptr<GrpcDynamicMockupServer> mockup_server_;
-  std::unique_ptr<RedfishInterface> client_;
+  std::unique_ptr<GrpcRedfishTransport> client_;
   std::unique_ptr<::redfish::v1::RedfishV1::Stub> stub_;
 };
 
@@ -80,25 +81,29 @@ class GrpcRedfishMockUpServerTest : public Test {
 // resource has been Posted. And The Get Request can verify that the
 // resource has been Patched.
 TEST_F(GrpcRedfishMockUpServerTest, TestPostPatchAndGetRequest) {
-  RedfishVariant post_redfish_variant = client_->PostUri(
-      "/redfish/v1/Chassis", {{"ChassisType", "RackMount"}, {"Name", "MyChassis"}});
-  EXPECT_TRUE(post_redfish_variant.status().ok())
-      << post_redfish_variant.status().message();
+  // Test Post request
+  std::string_view data_post = R"json({
+    "ChassisType": "RackMount",
+    "Name": "MyChassis"
+  })json";
+  absl::StatusOr<RedfishTransport::Result> result_post =
+      client_->Post("/redfish/v1/Chassis", data_post);
+  ASSERT_TRUE(result_post.status().ok()) << result_post.status().message();
 
   // Test Patch request
-  EXPECT_TRUE(
-      client_->PatchUri("/redfish/v1/Chassis/Member1", {{"Name", "MyNewName"}})
-          .status()
-          .ok())
-      << post_redfish_variant.status().message();
+  std::string_view data_patch = R"json({
+    "Name": "MyNewName"
+  })json";
+  absl::StatusOr<RedfishTransport::Result> result_patch =
+      client_->Patch("/redfish/v1/Chassis/Member1", data_patch);
+  ASSERT_TRUE(result_patch.status().ok()) << result_patch.status().message();
 
   // Test Get Request
-  RedfishVariant get_redfish_variant =
-      client_->UncachedGetUri("/redfish/v1/Chassis/Member1");
-  EXPECT_TRUE(get_redfish_variant.status().ok())
-      << post_redfish_variant.status().message();
+  absl::StatusOr<RedfishTransport::Result> result_get =
+      client_->Get("/redfish/v1/Chassis/Member1");
+  ASSERT_TRUE(result_get.status().ok()) << result_get.status().message();
   std::string name;
-  get_redfish_variant["Name"].GetValue(&name);
+  name = (result_get->body)["Name"];
   EXPECT_EQ(name, "MyNewName");
 }
 
@@ -128,17 +133,14 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomGet) {
   mockup_server_->AddHttpGetHandler(
       "/redfish/v1/MyResource",
       [&kResponse](grpc::ServerContext *context,
-                   const ::redfish::v1::Request *request,
-                   Response *response) {
+                   const ::redfish::v1::Request *request, Response *response) {
         *response->mutable_message() = kResponse;
         return grpc::Status::OK;
       });
-  RedfishVariant get_redfish_variant =
-      client_->UncachedGetUri("/redfish/v1/MyResource");
-  EXPECT_TRUE(get_redfish_variant.status().ok())
-      << get_redfish_variant.status().message();
-  std::string name;
-  get_redfish_variant["Name"].GetValue(&name);
+  absl::StatusOr<RedfishTransport::Result> result_get =
+      client_->Get("/redfish/v1/MyResource");
+  ASSERT_TRUE(result_get.status().ok()) << result_get.status().message();
+  std::string name = (result_get->body)["Name"];
   EXPECT_THAT(name, Eq("MyResource"));
 }
 
@@ -172,13 +174,15 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPost) {
         *response->mutable_message() = kResponse;
         return grpc::Status::OK;
       });
-  RedfishVariant get_redfish_variant =
-      client_->PostUri("/redfish/v1/MyResource", {{"num", 1}, {"str", "hi"}});
-  EXPECT_TRUE(get_redfish_variant.status().ok())
-      << get_redfish_variant.status().message();
+  std::string_view data_post = R"json({
+    "num": 1,
+    "str": "hi"
+  })json";
+  absl::StatusOr<RedfishTransport::Result> result_post =
+      client_->Post("/redfish/v1/MyResource", data_post);
+  ASSERT_TRUE(result_post.status().ok()) << result_post.status().message();
   ASSERT_TRUE(called);
-  std::string name;
-  get_redfish_variant["Result"].GetValue(&name);
+  std::string name = (result_post->body)["Result"];
   EXPECT_THAT(name, Eq("OK"));
 }
 
@@ -212,13 +216,15 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPatch) {
         *response->mutable_message() = kResponse;
         return grpc::Status::OK;
       });
-  RedfishVariant get_redfish_variant =
-      client_->PatchUri("/redfish/v1/MyResource", {{"num", 1}, {"str", "hi"}});
-  EXPECT_TRUE(get_redfish_variant.status().ok())
-      << get_redfish_variant.status().message();
-  ASSERT_TRUE(called);
-  std::string name;
-  get_redfish_variant["Result"].GetValue(&name);
+  std::string_view data_patch = R"json({
+    "num": 1,
+    "str": "hi"
+  })json";
+  absl::StatusOr<RedfishTransport::Result> result_patch =
+      client_->Patch("/redfish/v1/MyResource", data_patch);
+  ASSERT_TRUE(result_patch.status().ok()) << result_patch.status().message();
+  EXPECT_TRUE(called);
+  std::string name = (result_patch->body)["Result"];
   EXPECT_THAT(name, Eq("OK"));
 }
 
@@ -232,17 +238,20 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPostReset) {
         called = true;
         return grpc::Status::OK;
       });
-  auto post_result = client_->PostUri("/redfish/v1/Chassis",
-                                      {{"Id", "id"}, {"Name", "MyChassis"}});
-  EXPECT_TRUE(post_result.status().ok()) << post_result.status().message();
+  std::string_view data_post = R"json({
+    "Id": "id",
+    "Name": "MyChassis"
+  })json";
+  absl::StatusOr<RedfishTransport::Result> result_post =
+      client_->Post("/redfish/v1/Chassis", data_post);
+  ASSERT_TRUE(result_post.status().ok()) << result_post.status().message();
   EXPECT_TRUE(called);
 
   // Clear the registered handler.
   called = false;
   mockup_server_->ClearHandlers();
-  post_result = client_->PostUri("/redfish/v1/Chassis",
-                                 {{"Id", "id"}, {"Name", "MyChassis"}});
-  EXPECT_TRUE(post_result.status().ok()) << post_result.status().message();
+  result_post = client_->Post("/redfish/v1/Chassis", data_post);
+  ASSERT_TRUE(result_post.status().ok()) << result_post.status().message();
   EXPECT_FALSE(called);
 }
 
@@ -256,15 +265,19 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPatchReset) {
         called = true;
         return grpc::Status::OK;
       });
-  auto patch_result = client_->PatchUri("/redfish/v1", {{"Name", "Test Name"}});
-  EXPECT_TRUE(patch_result.status().ok()) << patch_result.status().message();
+  std::string_view data = R"json({
+    "Name": "Test Name"
+  })json";
+  absl::StatusOr<RedfishTransport::Result> result_patch =
+      client_->Patch("/redfish/v1", data);
+  ASSERT_TRUE(result_patch.status().ok()) << result_patch.status().message();
   EXPECT_TRUE(called);
 
   // Clear the registered handler.
   called = false;
   mockup_server_->ClearHandlers();
-  patch_result = client_->PatchUri("/redfish/v1", {{"Name", "Test Name"}});
-  EXPECT_TRUE(patch_result.status().ok()) << patch_result.status().message();
+  result_patch = client_->Patch("/redfish/v1", data);
+  ASSERT_TRUE(result_patch.status().ok()) << result_patch.status().message();
   EXPECT_FALSE(called);
 }
 
@@ -278,19 +291,49 @@ TEST_F(GrpcRedfishMockUpServerTest, TestGetReset) {
         called = true;
         return grpc::Status::OK;
       });
-  auto get_result = client_->UncachedGetUri("/redfish/v1");
-  EXPECT_TRUE(get_result.status().ok()) << get_result.status().message();
+  absl::StatusOr<RedfishTransport::Result> result_get =
+      client_->Get("/redfish/v1");
+  ASSERT_TRUE(result_get.status().ok()) << result_get.status().message();
   EXPECT_TRUE(called);
 
   // Clear the registered handler.
   called = false;
   mockup_server_->ClearHandlers();
-  get_result = client_->UncachedGetUri("/redfish/v1");
-  ASSERT_TRUE(get_result.status().ok()) << get_result.status().message();
-  std::string name;
-  EXPECT_TRUE(get_result["Name"].GetValue(&name));
+  result_get = client_->Get("/redfish/v1");
+  ASSERT_TRUE(result_get.status().ok()) << result_get.status().message();
+  std::string name = (result_get->body)["Name"];
   EXPECT_THAT(name, Eq("Root Service"));
   EXPECT_FALSE(called);
+}
+
+TEST(GrpcRedfishMockUpServerUdsTest, TestUds) {
+  absl::flat_hash_map<std::string, std::string> headers;
+  std::string mockup_uds =
+      absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket");
+  GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
+                                        mockup_uds);
+  GrpcRedfishTransport transport(absl::StrCat("unix://", mockup_uds), {});
+  std::string_view expexted_str = R"json({
+    "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+    "@odata.id": "/redfish/v1",
+    "@odata.type": "#ServiceRoot.v1_5_0.ServiceRoot",
+    "Chassis": {
+        "@odata.id": "/redfish/v1/Chassis"
+    },
+    "Id": "RootService",
+    "Links": {
+        "Sessions": {
+            "@odata.id": "/redfish/v1/SessionService/Sessions"
+        }
+    },
+    "Name": "Root Service",
+    "RedfishVersion": "1.6.1"
+  })json";
+  nlohmann::json expected = nlohmann::json::parse(expexted_str, nullptr, false);
+  absl::StatusOr<GrpcRedfishTransport::Result> res_get =
+      transport.Get("/redfish/v1");
+  ASSERT_THAT(res_get, IsOk());
+  EXPECT_THAT(res_get->body, Eq(expected));
 }
 
 }  // namespace

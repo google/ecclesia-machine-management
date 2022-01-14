@@ -81,6 +81,12 @@ class GrpcDynamicMockupServer {
                           int port,
                           std::shared_ptr<grpc::ServerCredentials> credentials);
 
+  GrpcDynamicMockupServer(absl::string_view mockup_shar,
+                          absl::string_view uds_path);
+  GrpcDynamicMockupServer(absl::string_view mockup_shar,
+                          absl::string_view uds_path,
+                          std::shared_ptr<grpc::ServerCredentials> credentials);
+
   ~GrpcDynamicMockupServer() = default;
 
   // Register a custom handler to respond to a given REST request for a URI.

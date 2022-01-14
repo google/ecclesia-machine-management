@@ -176,6 +176,25 @@ GrpcDynamicMockupServer::GrpcDynamicMockupServer(
   server_ = builder.BuildAndStart();
 }
 
+GrpcDynamicMockupServer::GrpcDynamicMockupServer(absl::string_view mockup_shar,
+                                                 absl::string_view uds_path)
+    : GrpcDynamicMockupServer(mockup_shar, uds_path,
+                              grpc::experimental::LocalServerCredentials(UDS)) {
+}
+
+GrpcDynamicMockupServer::GrpcDynamicMockupServer(
+    absl::string_view mockup_shar, absl::string_view uds_path,
+    std::shared_ptr<grpc::ServerCredentials> credentials)
+    : mockup_server_(mockup_shar),
+      redfish_v1_impl_(absl::make_unique<RedfishV1Impl>(
+          mockup_server_.RedfishClientInterface())) {
+  std::string server_address = absl::StrCat("unix://", uds_path);
+  grpc::ServerBuilder builder;
+  builder.AddListeningPort(server_address, std::move(credentials));
+  builder.RegisterService(redfish_v1_impl_.get());
+  server_ = builder.BuildAndStart();
+}
+
 void GrpcDynamicMockupServer::ClearHandlers() {
   redfish_v1_impl_->ClearHandlers();
 }

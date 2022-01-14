@@ -121,11 +121,13 @@ cc_test(
     ],
     deps = [
         ":grpc_dynamic_mockup_server",
+        "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/network:testing",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
         "//ecclesia/lib/redfish/proto:redfish_v1_grpc_proto",
+        "//ecclesia/lib/redfish/transport:grpc",
         "//ecclesia/lib/redfish/transport:grpc_dynamic",
         "//ecclesia/lib/redfish/transport:grpc_dynamic_options",
         "//ecclesia/lib/status:rpc",
