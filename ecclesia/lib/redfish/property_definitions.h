@@ -141,6 +141,7 @@ DEFINE_REDFISH_RESOURCE(ResourceDrive, "Drive");
 DEFINE_REDFISH_RESOURCE(ResourceProcessor, "Processor");
 DEFINE_REDFISH_RESOURCE(ResourceEthernetInterface, "EthernetInterface");
 DEFINE_REDFISH_RESOURCE(ResourceTemperature, "Temperature");
+DEFINE_REDFISH_RESOURCE(ResourceThermal, "Thermal");
 DEFINE_REDFISH_RESOURCE(ResourceVoltage, "Voltage");
 DEFINE_REDFISH_RESOURCE(ResourceFan, "Fan");
 DEFINE_REDFISH_RESOURCE(ResourceSensor, "Sensor");

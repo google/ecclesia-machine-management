@@ -119,6 +119,19 @@ void Sysmodel::QueryAllResourceInternal(
 // Thermal:
 // "/redfish/v1/Chassis/{id}/Thermal"
 void Sysmodel::QueryAllResourceInternal(
+    Token<ResourceThermal>,
+    absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+        result_callback) {
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertyChassis].Each()[kRfPropertyThermal].Do(
+      [&](auto &thermal_obj) {
+        return result_callback(std::move(thermal_obj));
+      });
+}
+
+// Temperatures:
+// "/redfish/v1/Chassis/{id}/Thermal/Temperatures"
+void Sysmodel::QueryAllResourceInternal(
     Token<ResourceTemperature>,
     absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
         result_callback) {
@@ -143,7 +156,7 @@ void Sysmodel::QueryAllResourceInternal(
 }
 
 // Fan:
-// "/redfish/v1/Chassis/{id}/Thermal"
+// "/redfish/v1/Chassis/{id}/Thermal/Fans"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceFan>,
     absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
