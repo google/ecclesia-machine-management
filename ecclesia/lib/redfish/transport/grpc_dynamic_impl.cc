@@ -31,6 +31,7 @@
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "absl/types/variant.h"
+#include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
@@ -64,6 +65,10 @@ RedfishVariant GetRedfishVariant(absl::Status status, Response response) {
   }
   Value value;
   value.set_allocated_struct_value(new Struct(response.message()));
+  if (response.code() != 0) {
+    return RedfishVariant(absl::make_unique<ProtoVariantImpl>(value),
+                          ecclesia::HttpResponseCodeFromInt(response.code()));
+  }
   return RedfishVariant(absl::make_unique<ProtoVariantImpl>(value));
 }
 

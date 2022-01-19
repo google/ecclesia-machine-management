@@ -28,6 +28,7 @@ message Request {
 
 message Response {
   google.protobuf.Struct message = 1;
+  uint32 code = 2;
 }
 
 // The dynamic Redfish service definition.

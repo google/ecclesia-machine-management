@@ -54,8 +54,7 @@ absl::Status SetGrpcResponseAndReturnStatus(libredfish::RedfishVariant variant,
   if (!variant.httpcode().has_value()) {
     return absl::InternalError("The response doesn't have HTTP code.");
   }
-  status = absl::Status(HttpResponseCodeToCanonical(*variant.httpcode()),
-                        HttpResponseCodeToReasonPhrase(*variant.httpcode()));
+  response->set_code(variant.httpcode().value());
   if (variant.AsObject() != nullptr) {
     if (absl::Status status = AsAbslStatus(google::protobuf::util::JsonStringToMessage(
             variant.DebugString(), response->mutable_message()));

@@ -100,6 +100,7 @@ cc_library(
     deps = [
         ":grpc_dynamic_options",
         ":proto_variant",
+        "//ecclesia/lib/http:codes",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
@@ -125,6 +126,7 @@ cc_test(
         ":grpc_dynamic",
         ":grpc_dynamic_fake_server",
         ":grpc_dynamic_options",
+        "//ecclesia/lib/http:codes",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
         "//ecclesia/lib/testing:status",

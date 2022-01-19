@@ -54,6 +54,7 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
 
   RedfishTransport::Result ret_result;
   ret_result.body = StructToJson(response.message());
+  ret_result.code = response.code();
   return ret_result;
 }
 }  // namespace

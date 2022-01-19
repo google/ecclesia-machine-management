@@ -31,6 +31,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/transport/grpc_dynamic_fake_server.h"
@@ -189,6 +190,32 @@ TEST_F(GrpcDynamicImplTest, PostUriAndPatchUriOk) {
             payloads.begin(), payloads.end()));
     EXPECT_TRUE(variant.status().ok()) << variant.status().message();
   }
+}
+
+TEST_F(GrpcDynamicImplTest, HttpResponseCodeOk) {
+  constexpr HttpResponseCode expected_code =
+      HttpResponseCode::HTTP_CODE_NO_CONTENT;
+  server_.SetCallback(
+      [](grpc::ServerContext*, const Request*, Response* response) {
+        response->set_code(expected_code);
+        return grpc::Status::OK;
+      });
+  libredfish::RedfishVariant variant = client_->UncachedGetUri("/magic");
+  EXPECT_EQ(variant.httpcode(), expected_code);
+  EXPECT_TRUE(variant.status().ok());
+}
+
+TEST_F(GrpcDynamicImplTest, HttpResponseCodeError) {
+  constexpr HttpResponseCode expected_code =
+      HttpResponseCode::HTTP_CODE_NOT_FOUND;
+  server_.SetCallback(
+      [](grpc::ServerContext*, const Request*, Response* response) {
+        response->set_code(expected_code);
+        return grpc::Status::OK;
+      });
+  libredfish::RedfishVariant variant = client_->UncachedGetUri("/magic");
+  EXPECT_EQ(variant.httpcode(), expected_code);
+  EXPECT_FALSE(variant.status().ok());
 }
 
 using GrpcDynamicImplDeathTest = GrpcDynamicImplTest;

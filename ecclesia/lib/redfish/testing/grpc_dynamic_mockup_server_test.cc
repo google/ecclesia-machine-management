@@ -29,6 +29,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -89,6 +90,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPostPatchAndGetRequest) {
   absl::StatusOr<RedfishTransport::Result> result_post =
       client_->Post("/redfish/v1/Chassis", data_post);
   ASSERT_TRUE(result_post.status().ok()) << result_post.status().message();
+  EXPECT_EQ(result_post->code,
+            ecclesia::HttpResponseCode::HTTP_CODE_NO_CONTENT);
 
   // Test Patch request
   std::string_view data_patch = R"json({
@@ -97,6 +100,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPostPatchAndGetRequest) {
   absl::StatusOr<RedfishTransport::Result> result_patch =
       client_->Patch("/redfish/v1/Chassis/Member1", data_patch);
   ASSERT_TRUE(result_patch.status().ok()) << result_patch.status().message();
+  EXPECT_EQ(result_patch->code,
+            ecclesia::HttpResponseCode::HTTP_CODE_NO_CONTENT);
 
   // Test Get Request
   absl::StatusOr<RedfishTransport::Result> result_get =
@@ -105,6 +110,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPostPatchAndGetRequest) {
   std::string name;
   name = (result_get->body)["Name"];
   EXPECT_EQ(name, "MyNewName");
+  EXPECT_EQ(result_get->code,
+            ecclesia::HttpResponseCode::HTTP_CODE_REQUEST_OK);
 }
 
 TEST_F(GrpcRedfishMockUpServerTest, TestPutRequests) {
