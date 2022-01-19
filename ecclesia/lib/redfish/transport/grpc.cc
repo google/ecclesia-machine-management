@@ -60,7 +60,7 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
 }  // namespace
 
 GrpcRedfishTransport::GrpcRedfishTransport(std::string endpoint, Params params,
-                                           libredfish::ServiceRoot service_root)
+                                           ServiceRootUri service_root)
     : client_(redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
           std::move(endpoint), grpc::InsecureChannelCredentials()))),
       params_(std::move(params)),
@@ -70,7 +70,7 @@ GrpcRedfishTransport::GrpcRedfishTransport(std::string endpoint)
     : client_(redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
           std::move(endpoint), grpc::InsecureChannelCredentials()))),
       params_({}),
-      service_root_(std::move(libredfish::ServiceRoot::kRedfish)) {}
+      service_root_(std::move(ServiceRootUri::kRedfish)) {}
 
 void GrpcRedfishTransport::UpdateToNetworkEndpoint(
     absl::string_view tcp_endpoint) {
@@ -88,7 +88,7 @@ void GrpcRedfishTransport::UpdateToUdsEndpoint(
 }
 
 absl::string_view GrpcRedfishTransport::GetRootUri() {
-  return libredfish::RedfishInterface::ServiceRootToUri(service_root_);
+  return RedfishInterface::ServiceRootToUri(service_root_);
 }
 
 absl::StatusOr<RedfishTransport::Result> GrpcRedfishTransport::Get(

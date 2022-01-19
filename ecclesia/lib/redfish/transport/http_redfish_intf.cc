@@ -48,7 +48,7 @@
 #include "ecclesia/lib/time/clock.h"
 #include "single_include/nlohmann/json.hpp"
 
-namespace libredfish {
+namespace ecclesia {
 namespace {
 
 // Represents whether the data in a RedfishVariant originated from a backend
@@ -267,14 +267,14 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
 
   size_t Size() override {
     // Return size based on Members@odata.count.
-    auto itr = result_.body.find(libredfish::PropertyMembersCount::Name);
+    auto itr = result_.body.find(PropertyMembersCount::Name);
     if (itr == result_.body.end() || !itr.value().is_number()) return 0;
     return itr.value().get<size_t>();
   }
 
   bool Empty() override {
     // Determine emptiness by checking Members@odata.count.
-    auto itr = result_.body.find(libredfish::PropertyMembersCount::Name);
+    auto itr = result_.body.find(PropertyMembersCount::Name);
     if (itr == result_.body.end() || !itr.value().is_number()) return true;
     return itr.value().get<size_t>() == 0;
   }
@@ -282,7 +282,7 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
   RedfishVariant operator[](int index) const override {
     // Check the bounds based on the array in the Members property and access
     // the Members array directly.
-    auto itr = result_.body.find(libredfish::PropertyMembers::Name);
+    auto itr = result_.body.find(PropertyMembers::Name);
     if (itr == result_.body.end() || !itr.value().is_array() ||
         itr.value().size() <= index) {
       return RedfishVariant(absl::NotFoundError(
@@ -310,8 +310,8 @@ std::unique_ptr<RedfishIterable> HttpIntfVariantImpl::AsIterable() const {
   }
   // Check if the object is a Redfish collection.
   if (result_.body.is_object() &&
-      result_.body.contains(libredfish::PropertyMembers::Name) &&
-      result_.body.contains(libredfish::PropertyMembersCount::Name)) {
+      result_.body.contains(PropertyMembers::Name) &&
+      result_.body.contains(PropertyMembersCount::Name)) {
     return std::make_unique<HttpIntfCollectionIterableImpl>(intf_, result_,
                                                             cache_state_);
   }
@@ -324,7 +324,7 @@ class HttpRedfishInterface : public RedfishInterface {
       std::unique_ptr<ecclesia::RedfishTransport> transport,
       std::unique_ptr<ecclesia::RedfishCachedGetterInterface> cache,
       RedfishInterface::TrustedEndpoint trusted,
-      ServiceRoot service_root = ServiceRoot::kRedfish)
+      ServiceRootUri service_root = ServiceRootUri::kRedfish)
       : transport_(std::move(transport)),
         trusted_(trusted),
         cache_(std::move(cache)),
@@ -350,7 +350,7 @@ class HttpRedfishInterface : public RedfishInterface {
   }
 
   RedfishVariant GetRoot(GetParams params) override {
-    if (service_root_ == ServiceRoot::kGoogle) {
+    if (service_root_ == ServiceRootUri::kGoogle) {
       return CachedGetUri(kGoogleServiceRoot, params);
     }
 
@@ -445,7 +445,7 @@ class HttpRedfishInterface : public RedfishInterface {
 RedfishInterface::TrustedEndpoint trusted_ ABSL_GUARDED_BY(transport_mutex_);
   std::unique_ptr<ecclesia::RedfishCachedGetterInterface> cache_
       ABSL_GUARDED_BY(transport_mutex_);
-  const ServiceRoot service_root_;
+  const ServiceRootUri service_root_;
 };
 
 }  // namespace
@@ -453,9 +453,9 @@ RedfishInterface::TrustedEndpoint trusted_ ABSL_GUARDED_BY(transport_mutex_);
 std::unique_ptr<RedfishInterface> NewHttpInterface(
     std::unique_ptr<ecclesia::RedfishTransport> transport,
     std::unique_ptr<ecclesia::RedfishCachedGetterInterface> cache,
-    RedfishInterface::TrustedEndpoint trusted, ServiceRoot service_root) {
+    RedfishInterface::TrustedEndpoint trusted, ServiceRootUri service_root) {
   return std::make_unique<HttpRedfishInterface>(
       std::move(transport), std::move(cache), trusted, service_root);
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia

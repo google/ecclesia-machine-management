@@ -44,7 +44,7 @@
 #include "ecclesia/lib/redfish/types.h"
 #include "ecclesia/lib/redfish/utils.h"
 
-namespace libredfish {
+namespace ecclesia {
 namespace {
 
 constexpr absl::string_view kDefaultTopologyConfigName =
@@ -67,7 +67,7 @@ std::optional<TopologyConfig> LoadTopologyConfigFromConfigName(
 // callback_function on each
 void FindAllCablesHelper(RedfishInterface *redfish_intf,
                          const TopologyConfig::CableLinkages &cable_linkages,
-                         absl::FunctionRef<libredfish::RedfishIterReturnValue(
+                         absl::FunctionRef<RedfishIterReturnValue(
                              std::unique_ptr<RedfishObject> &cable_json,
                              const std::string &upstream_uri)>
                              callback_function) {
@@ -97,7 +97,7 @@ void FindAllCablesHelper(RedfishInterface *redfish_intf,
                 .AsObject();
         if (!cable_location) return RedfishIterReturnValue::kContinue;
 
-        libredfish::RedfishIterReturnValue retval =
+        RedfishIterReturnValue retval =
             callback_function(cable_json, *upstream_uri);
         return retval;
       });
@@ -465,4 +465,4 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
   return topology;
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia

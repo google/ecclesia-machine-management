@@ -23,35 +23,30 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 std::vector<SmartReading> ReadSmartData(const RedfishObject &obj) {
   std::vector<SmartReading> readings = {
       {"critical_warning",
-       obj.GetNodeValue<libredfish::OemGooglePropertyCriticalWarning>()},
+       obj.GetNodeValue<OemGooglePropertyCriticalWarning>()},
       {"composite_temperature_kelvins",
-       obj.GetNodeValue<
-           libredfish::OemGooglePropertyCompositeTemperatureKelvins>()},
-      {"available_spare",
-       obj.GetNodeValue<libredfish::OemGooglePropertyAvailableSpare>()},
+       obj.GetNodeValue<OemGooglePropertyCompositeTemperatureKelvins>()},
+      {"available_spare", obj.GetNodeValue<OemGooglePropertyAvailableSpare>()},
       {"available_spare_threshold",
-       obj.GetNodeValue<
-           libredfish::OemGooglePropertyAvailableSpareThreshold>()},
+       obj.GetNodeValue<OemGooglePropertyAvailableSpareThreshold>()},
       {"critical_comp_time",
-       obj.GetNodeValue<
-           libredfish::OemGooglePropertyCriticalTemperatureTimeMinute>()}};
+       obj.GetNodeValue<OemGooglePropertyCriticalTemperatureTimeMinute>()}};
   return readings;
 }
 
 std::optional<std::vector<SmartReading>> ReadSmartDataFromStorageController(
     const RedfishObject &obj) {
   auto smart_attributes_obj =
-      obj[libredfish::kRfPropertyOem][libredfish::kRfOemPropertyGoogle]
-         [libredfish::kRfOemPropertySmartAttributes]
-             .AsObject();
+      obj[kRfPropertyOem][kRfOemPropertyGoogle][kRfOemPropertySmartAttributes]
+          .AsObject();
   if (!smart_attributes_obj) return std::nullopt;
 
   return ReadSmartData(*smart_attributes_obj);
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia

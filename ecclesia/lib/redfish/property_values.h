@@ -17,7 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_PROPERTY_VALUES_H_
 #define ECCLESIA_LIB_REDFISH_PROPERTY_VALUES_H_
 
-namespace libredfish {
+namespace ecclesia {
 inline constexpr char kReadingTypePower[] = "Power";
 inline constexpr char kReadingTypeRotational[] = "Rotational";
 inline constexpr char kReadingTypeTemperature[] = "Temperature";
@@ -33,7 +33,7 @@ inline constexpr char kEntryTypeOem[] = "Oem";
 inline constexpr char kOemRecordFormatBmc[] = "BMC Device Entry";
 inline constexpr char kCertificateTypePEM[] = "PEM";
 inline constexpr char kCertificateTypePEMchain[] = "PEMchain";
-}  // namespace libredfish
+}  // namespace ecclesia
 
 namespace ecclesia {
 

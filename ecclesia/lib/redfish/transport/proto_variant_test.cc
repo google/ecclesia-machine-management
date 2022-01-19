@@ -40,10 +40,6 @@ namespace {
 using ::google::protobuf::ListValue;
 using ::google::protobuf::Struct;
 using ::google::protobuf::Value;
-using ::libredfish::RedfishIterable;
-using ::libredfish::RedfishIterReturnValue;
-using ::libredfish::RedfishObject;
-using ::libredfish::RedfishVariant;
 using ::testing::Eq;
 using ::testing::IsNull;
 using ::testing::NotNull;

@@ -37,10 +37,6 @@ using ::google::protobuf::ListValue;
 using ::google::protobuf::NULL_VALUE;
 using ::google::protobuf::Struct;
 using ::google::protobuf::Value;
-using ::libredfish::RedfishIterable;
-using ::libredfish::RedfishIterReturnValue;
-using ::libredfish::RedfishObject;
-using ::libredfish::RedfishVariant;
 constexpr absl::string_view kODataId = "@odata.id";
 }  // namespace
 
@@ -133,7 +129,7 @@ absl::optional<std::string> ProtoObject::GetUriString() {
 }
 
 std::unique_ptr<RedfishObject> ProtoObject::EnsureFreshPayload(
-    libredfish::GetParams params) {
+    GetParams params) {
   // There is no caching, just return a copy of self as it is always fresh.
   return absl::make_unique<ProtoObject>(proto_struct_);
 }
@@ -142,7 +138,7 @@ std::string ProtoObject::DebugString() { return proto_struct_.DebugString(); }
 
 void ProtoObject::ForEachProperty(
     absl::FunctionRef<RedfishIterReturnValue(absl::string_view key,
-                                             libredfish::RedfishVariant value)>
+                                             RedfishVariant value)>
         itr_func) {
   for (const auto &kv : proto_struct_.fields()) {
     if (itr_func(kv.first, RedfishVariant(absl::make_unique<ProtoVariantImpl>(

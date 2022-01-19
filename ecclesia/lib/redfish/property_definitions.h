@@ -27,7 +27,7 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/property.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 // String definitions of property fields to search programmatically. These
 // are separate from the PropertyDefinitions for now as we cannot define the
@@ -279,6 +279,6 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyCriticalWarning, int,
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyTopologyRepresentation, std::string,
                         "TopologyRepresentation");
 DEFINE_REDFISH_PROPERTY(OemPropertyRootOfTrust, std::string, "RootOfTrust");
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_PROPERTY_DEFINITIONS_H_

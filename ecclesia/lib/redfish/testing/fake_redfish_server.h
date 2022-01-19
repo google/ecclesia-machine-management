@@ -73,7 +73,7 @@ class FakeRedfishServer {
       ::tensorflow::serving::net_http::ServerRequestInterface *req)>;
 
   // Returns a new RedfishInterface connected to the proxy server.
-  std::unique_ptr<libredfish::RedfishInterface> RedfishClientInterface();
+  std::unique_ptr<RedfishInterface> RedfishClientInterface();
 
   // Clear all registered handlers.
   void ClearHandlers() ABSL_LOCKS_EXCLUDED(patch_lock_);
@@ -129,9 +129,9 @@ class FakeRedfishServer {
   std::unique_ptr<::tensorflow::serving::net_http::HTTPServerInterface>
       proxy_server_;
   // The mockup server
-  libredfish::TestingMockupServer mockup_server_;
+  TestingMockupServer mockup_server_;
   // Interface to the mockup server, used by the proxy server
-  std::unique_ptr<libredfish::RedfishInterface> redfish_intf_;
+  std::unique_ptr<RedfishInterface> redfish_intf_;
 };
 
 }  // namespace ecclesia

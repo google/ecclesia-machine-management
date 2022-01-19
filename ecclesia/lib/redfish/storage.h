@@ -23,7 +23,7 @@
 
 #include "ecclesia/lib/redfish/interface.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 struct SmartReading {
   std::string name;                 // The key to be reported in the response
@@ -46,6 +46,6 @@ std::vector<SmartReading> ReadSmartData(const RedfishObject &obj);
 std::optional<std::vector<SmartReading>> ReadSmartDataFromStorageController(
     const RedfishObject &obj);
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_STORAGE_H_

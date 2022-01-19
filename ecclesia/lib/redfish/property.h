@@ -17,7 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_PROPERTY_H_
 #define ECCLESIA_LIB_REDFISH_PROPERTY_H_
 
-namespace libredfish {
+namespace ecclesia {
 
 template <typename PropertyDefinitionSubtypeT, typename PropertyType>
 struct PropertyDefinition;
@@ -47,6 +47,6 @@ struct PropertyDefinition {
   struct classname {                                      \
     static constexpr char Name[] = resource_name;         \
   }
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_PROPERTY_H_

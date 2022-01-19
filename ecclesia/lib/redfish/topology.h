@@ -21,7 +21,7 @@
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/topology_config.pb.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 NodeTopology CreateTopologyFromRedfish(
     RedfishInterface *redfish_intf,
@@ -34,6 +34,6 @@ NodeTopology CreateTopologyFromRedfish(
 bool NodeTopologiesHaveTheSameNodes(const NodeTopology &n1,
                                     const NodeTopology &n2);
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TOPOLOGY_H_

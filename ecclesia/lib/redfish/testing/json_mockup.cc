@@ -38,7 +38,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "single_include/nlohmann/json.hpp"
 
-namespace libredfish {
+namespace ecclesia {
 namespace {
 
 class JsonMockupVariantImpl : public RedfishVariant::ImplIntf {
@@ -269,4 +269,4 @@ std::unique_ptr<RedfishInterface> NewJsonMockupInterface(
   return std::make_unique<JsonMockupMockup>(raw_json);
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia

@@ -40,9 +40,8 @@ class GrpcRedfishTransport : public RedfishTransport {
   // Creates an GrpcRedfishTransport using a specified endpoint.
   // Params:
   //   endpoint: e.g. "dns:///localhost:80", "unix:///var/run/my.socket"
-  GrpcRedfishTransport(
-      std::string endpoint, Params params,
-      libredfish::ServiceRoot service_root = libredfish::ServiceRoot::kRedfish);
+  GrpcRedfishTransport(std::string endpoint, Params params,
+                       ServiceRootUri service_root = ServiceRootUri::kRedfish);
 
   GrpcRedfishTransport(std::string endpoint);
 
@@ -74,7 +73,7 @@ class GrpcRedfishTransport : public RedfishTransport {
       ABSL_GUARDED_BY(mutex_);
   Params params_;
   // The service root for RedfishInterface.
-  const libredfish::ServiceRoot service_root_;
+  const ServiceRootUri service_root_;
 };
 }  // namespace ecclesia
 

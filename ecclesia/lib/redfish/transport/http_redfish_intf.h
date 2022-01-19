@@ -24,15 +24,15 @@
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 // Constructs a RedfishInterface backed by a Redfish Transport.
 std::unique_ptr<RedfishInterface> NewHttpInterface(
     std::unique_ptr<ecclesia::RedfishTransport> transport,
     std::unique_ptr<ecclesia::RedfishCachedGetterInterface> cache,
     RedfishInterface::TrustedEndpoint trusted,
-    ServiceRoot service_root = ServiceRoot::kRedfish);
+    ServiceRootUri service_root = ServiceRootUri::kRedfish);
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TRANSPORT_HTTP_REDFISH_INTF_H_

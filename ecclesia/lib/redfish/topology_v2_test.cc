@@ -30,7 +30,7 @@
 #include "ecclesia/lib/redfish/testing/node_topology_testing.h"
 #include "ecclesia/lib/redfish/types.h"
 
-namespace libredfish {
+namespace ecclesia {
 namespace {
 
 using ::testing::Contains;
@@ -286,4 +286,4 @@ TEST(RawInterfaceTestWithMockup, TestingNodeName) {
 }
 
 }  // namespace
-}  // namespace libredfish
+}  // namespace ecclesia

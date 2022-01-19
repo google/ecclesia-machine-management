@@ -20,7 +20,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 // Function to create NodeTopology based on go/redfish-devpath2 design
 //
@@ -28,6 +28,6 @@ namespace libredfish {
 // nodes and assign devpaths based on the Location.PartLocation attribute
 NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf);
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TOPOLOGY_V2_H_

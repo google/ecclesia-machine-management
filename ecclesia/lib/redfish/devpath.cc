@@ -30,7 +30,7 @@
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 std::optional<std::string> GetDevpathForUri(const NodeTopology &topology,
                                             absl::string_view uri) {
@@ -80,4 +80,4 @@ std::optional<std::string> GetSensorDevpathFromNodeTopology(
   return std::nullopt;
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia

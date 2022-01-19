@@ -23,7 +23,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 // The following function overrides of QueryAllResources implement the search
 // algorithms for the specific Redfish Resources in the URIs defined in the
@@ -288,4 +288,4 @@ void Sysmodel::QueryAllResourceInternal(
       [&](auto &obj) { return result_callback(std::move(obj)); });
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia

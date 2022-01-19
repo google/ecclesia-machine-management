@@ -28,7 +28,7 @@
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/types.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 // Matcher that compares a Node against a name, devpath and type.
 MATCHER_P3(RedfishNodeIdIs, name, devpath, type, "") {
@@ -53,6 +53,6 @@ void PrintTo(const Node &node, std::ostream *os);
 
 void PrintTo(const std::unique_ptr<Node> &node, std::ostream *os);
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_NODE_TOPOLOGY_TESTING_H_

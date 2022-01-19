@@ -23,7 +23,7 @@
 
 #include "absl/strings/string_view.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 // This data class contains a value and its corresponding devpath.
 template <typename T>
@@ -46,6 +46,6 @@ inline std::ostream &operator<<(std::ostream &os, const Result<T> &result) {
             << suffix;
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_RESULT_H_

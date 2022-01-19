@@ -16,7 +16,7 @@
 
 #include "ecclesia/lib/redfish/interface.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 std::unique_ptr<RedfishObject> RedfishVariant::AsFreshObject() const {
   if (!ptr_) return nullptr;
@@ -25,4 +25,4 @@ std::unique_ptr<RedfishObject> RedfishVariant::AsFreshObject() const {
   return obj->EnsureFreshPayload();
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia

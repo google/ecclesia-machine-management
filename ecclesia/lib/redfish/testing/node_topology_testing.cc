@@ -24,7 +24,7 @@
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/types.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 std::string ToString(NodeType type) {
   switch (type) {
@@ -52,4 +52,4 @@ void PrintTo(const std::unique_ptr<Node> &node, std::ostream *os) {
   }
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia

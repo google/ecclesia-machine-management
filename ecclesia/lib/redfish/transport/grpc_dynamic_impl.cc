@@ -50,8 +50,6 @@ namespace {
 
 using ::google::protobuf::Struct;
 using ::google::protobuf::Value;
-using ::libredfish::RedfishInterface;
-using ::libredfish::RedfishVariant;
 using ::redfish::v1::RedfishV1;
 using ::redfish::v1::Request;
 using ::redfish::v1::Response;
@@ -73,9 +71,9 @@ RedfishVariant GetRedfishVariant(absl::Status status, Response response) {
 }
 
 template <typename Rpc>
-libredfish::RedfishVariant DoRpc(
-    absl::string_view uri, absl::optional<google::protobuf::Struct> message,
-    const GrpcDynamicImplOptions& options, Rpc rpc) {
+RedfishVariant DoRpc(absl::string_view uri,
+                     absl::optional<google::protobuf::Struct> message,
+                     const GrpcDynamicImplOptions& options, Rpc rpc) {
   Request request;
   request.set_url(std::string(uri));
   if (message.has_value()) {
@@ -157,16 +155,15 @@ class GrpcRedfishCredentials : public grpc::MetadataCredentialsPlugin {
 
 bool GrpcDynamicImpl::IsTrusted() const { return trusted_ == kTrusted; }
 
-libredfish::RedfishVariant GrpcDynamicImpl::GetRoot(
-    libredfish::GetParams params) {
-  if (service_root_ == libredfish::ServiceRoot::kGoogle) {
+RedfishVariant GrpcDynamicImpl::GetRoot(GetParams params) {
+  if (service_root_ == ServiceRootUri::kGoogle) {
     return CachedGetUri(kGoogleServiceRoot, params);
   }
   return CachedGetUri(kServiceRoot, params);
 }
 
-libredfish::RedfishVariant GrpcDynamicImpl::UncachedGetUri(
-    absl::string_view uri, libredfish::GetParams params) {
+RedfishVariant GrpcDynamicImpl::UncachedGetUri(absl::string_view uri,
+                                               GetParams params) {
   return DoRpc(
       uri, absl::nullopt, options_,
       [this, uri](grpc::ClientContext& context, const Request& request,
@@ -177,12 +174,12 @@ libredfish::RedfishVariant GrpcDynamicImpl::UncachedGetUri(
         return stub_->Get(&context, request, response);
       });
 }
-libredfish::RedfishVariant GrpcDynamicImpl::CachedGetUri(
-    absl::string_view uri, libredfish::GetParams params) {
+RedfishVariant GrpcDynamicImpl::CachedGetUri(absl::string_view uri,
+                                             GetParams params) {
   return UncachedGetUri(uri, params);
 }
 
-libredfish::RedfishVariant GrpcDynamicImpl::PostUri(
+RedfishVariant GrpcDynamicImpl::PostUri(
     absl::string_view uri,
     absl::Span<const std::pair<std::string, ValueVariant>> kv_span) {
   return DoRpc(
@@ -196,7 +193,7 @@ libredfish::RedfishVariant GrpcDynamicImpl::PostUri(
       });
 }
 
-libredfish::RedfishVariant GrpcDynamicImpl::PatchUri(
+RedfishVariant GrpcDynamicImpl::PatchUri(
     absl::string_view uri,
     absl::Span<const std::pair<std::string, ValueVariant>> kv_span) {
   return DoRpc(
@@ -219,6 +216,6 @@ GrpcDynamicImpl::GrpcDynamicImpl(const Target& target,
           grpc::CreateChannel(absl::StrCat(target_.fqdn, ":", target_.port),
                               options_.GetChannelCredentials()))),
       trusted_(trusted),
-      service_root_(libredfish::ServiceRoot::kRedfish) {}
+      service_root_(ServiceRootUri::kRedfish) {}
 
 }  // namespace ecclesia

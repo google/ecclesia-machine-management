@@ -37,9 +37,9 @@
 #include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/logging/logging.h"
 
-namespace libredfish {
+namespace ecclesia {
 
-enum class ServiceRoot { kRedfish, kGoogle };
+enum class ServiceRootUri { kRedfish, kGoogle };
 
 // Forward declare the typed view classes
 class RedfishIterable;
@@ -377,11 +377,12 @@ class RedfishInterface {
   using ValueVariant =
       std::variant<int, bool, std::string, const char *, double>;
 
-  static inline absl::string_view ServiceRootToUri(ServiceRoot service_root) {
+  static inline absl::string_view ServiceRootToUri(
+      ServiceRootUri service_root) {
     switch (service_root) {
-      case (ServiceRoot::kRedfish):
+      case (ServiceRootUri::kRedfish):
         return kServiceRoot;
-      case (ServiceRoot::kGoogle):
+      case (ServiceRootUri::kGoogle):
         return kGoogleServiceRoot;
     }
     // We use assert here to avoid g3 dependencies.
@@ -559,6 +560,6 @@ RedfishIterReturnValue RedfishVariant::IndexHelper::Do(
       index);
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_INTERFACE_H_

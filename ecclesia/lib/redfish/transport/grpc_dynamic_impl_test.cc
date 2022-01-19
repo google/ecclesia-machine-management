@@ -44,9 +44,6 @@ namespace {
 
 using ::google::protobuf::Struct;
 using ::google::protobuf::Value;
-using ::libredfish::RedfishInterface;
-using ::libredfish::RedfishObject;
-using ::libredfish::RedfishVariant;
 using ::redfish::v1::Request;
 using ::redfish::v1::Response;
 using ::testing::Eq;
@@ -176,7 +173,7 @@ TEST_F(GrpcDynamicImplTest, PostUriAndPatchUriOk) {
   });
   {
     SCOPED_TRACE("PostUri");
-    libredfish::RedfishVariant variant = client_->PostUri(
+    RedfishVariant variant = client_->PostUri(
         "/magic",
         std::vector<std::pair<std::string, RedfishInterface::ValueVariant>>(
             payloads.begin(), payloads.end()));
@@ -184,7 +181,7 @@ TEST_F(GrpcDynamicImplTest, PostUriAndPatchUriOk) {
   }
   {
     SCOPED_TRACE("PatchUri");
-    libredfish::RedfishVariant variant = client_->PatchUri(
+    RedfishVariant variant = client_->PatchUri(
         "/magic",
         std::vector<std::pair<std::string, RedfishInterface::ValueVariant>>(
             payloads.begin(), payloads.end()));
@@ -200,7 +197,7 @@ TEST_F(GrpcDynamicImplTest, HttpResponseCodeOk) {
         response->set_code(expected_code);
         return grpc::Status::OK;
       });
-  libredfish::RedfishVariant variant = client_->UncachedGetUri("/magic");
+  RedfishVariant variant = client_->UncachedGetUri("/magic");
   EXPECT_EQ(variant.httpcode(), expected_code);
   EXPECT_TRUE(variant.status().ok());
 }
@@ -213,7 +210,7 @@ TEST_F(GrpcDynamicImplTest, HttpResponseCodeError) {
         response->set_code(expected_code);
         return grpc::Status::OK;
       });
-  libredfish::RedfishVariant variant = client_->UncachedGetUri("/magic");
+  RedfishVariant variant = client_->UncachedGetUri("/magic");
   EXPECT_EQ(variant.httpcode(), expected_code);
   EXPECT_FALSE(variant.status().ok());
 }

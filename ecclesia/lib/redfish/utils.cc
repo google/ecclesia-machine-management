@@ -28,7 +28,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 std::optional<std::string> GetResourceType(const RedfishObject *node) {
   const auto odata_type = node->GetNodeValue<PropertyOdataType>();
@@ -74,4 +74,4 @@ std::optional<std::string> GetConvertedResourceName(const RedfishObject *node) {
   return std::nullopt;
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia

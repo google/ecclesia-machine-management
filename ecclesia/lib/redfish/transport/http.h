@@ -41,14 +41,14 @@ class HttpRedfishTransport : public RedfishTransport {
   //   tcp_endpoint: e.g. "localhost:80", "https://10.0.0.1", "[::1]:8000"
   static std::unique_ptr<HttpRedfishTransport> MakeNetwork(
       std::unique_ptr<HttpClient> client, std::string tcp_endpoint,
-      libredfish::ServiceRoot service_root = libredfish::ServiceRoot::kRedfish);
+      ServiceRootUri service_root = ServiceRootUri::kRedfish);
   // Creates an HttpRedfishTransport using a unix domain socket endpoint.
   // Params:
   //   client: HttpClient instance
   //   unix_domain_socket: e.g. "/var/run/my.socket"
   static std::unique_ptr<HttpRedfishTransport> MakeUds(
       std::unique_ptr<HttpClient> client, std::string unix_domain_socket,
-      libredfish::ServiceRoot service_root = libredfish::ServiceRoot::kRedfish);
+      ServiceRootUri service_root = ServiceRootUri::kRedfish);
   // Performs the Redfish Session Login Authorization procedure, as documented
   // in the Redfish Spec (DSP0266 Redfish Specification v1.14.0 Section 13.3.4:
   // Redfish session login authentication).
@@ -116,7 +116,7 @@ class HttpRedfishTransport : public RedfishTransport {
   // internal target structs in the public interface.
   HttpRedfishTransport(std::unique_ptr<HttpClient> client,
                        std::variant<TcpTarget, UdsTarget> target,
-                       libredfish::ServiceRoot service_root);
+                       ServiceRootUri service_root);
 
   // Helper function for creating a HTTP request, overloaded on the target type.
   std::unique_ptr<HttpClient::HttpRequest> MakeRequest(TcpTarget target,
@@ -141,7 +141,7 @@ class HttpRedfishTransport : public RedfishTransport {
   // The session URI that stores our session state.
   std::string session_auth_uri_ ABSL_GUARDED_BY(mutex_);
   // The service root for RedfishInterface.
-  const libredfish::ServiceRoot service_root_;
+  const ServiceRootUri service_root_;
 };
 
 }  // namespace ecclesia

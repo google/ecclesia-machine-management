@@ -353,7 +353,7 @@ cc_proto_library(
 
 cc_data_library(
     name = "topology_configs",
-    cc_namespace = "libredfish",
+    cc_namespace = "ecclesia",
     data = glob(["topology_configs/*.textpb"]),
     var_name = "kTopologyConfig",
 )

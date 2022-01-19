@@ -24,7 +24,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "ecclesia/lib/redfish/types.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 // Node represents a single devpath from the Redfish backend and its associated
 // system data. There is a one-to-one mapping between Redfish Assembly
@@ -60,6 +60,6 @@ struct NodeTopology {
   absl::flat_hash_map<Node *, std::vector<Node *>> node_to_children;
 };
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_NODE_TOPOLOGY_H_

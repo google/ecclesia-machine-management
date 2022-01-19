@@ -119,13 +119,11 @@ TEST_F(ServiceRootTest, QueryServiceRoot) {
   auto transport = HttpRedfishTransport::MakeNetwork(
       std::move(curl_http_client), absl::StrCat("localhost:", port_));
   auto cache = std::make_unique<NullCache>(transport.get());
-  auto redfish_intf =
-      libredfish::NewHttpInterface(std::move(transport), std::move(cache),
-                                   libredfish::RedfishInterface::kTrusted);
+  auto redfish_intf = NewHttpInterface(std::move(transport), std::move(cache),
+                                       RedfishInterface::kTrusted);
 
   // Perform an http get request on the service root resource.
-  libredfish::RedfishVariant response =
-      redfish_intf->UncachedGetUri(kServiceRootUri);
+  RedfishVariant response = redfish_intf->UncachedGetUri(kServiceRootUri);
 
   // Parse the raw contents and compare it to the expected service root.
   nlohmann::json actual = nlohmann::json::parse(response.DebugString(), nullptr,
@@ -145,13 +143,12 @@ TEST_F(ServiceRootTest, QueryServiceRootEquivalentUri) {
   auto transport = HttpRedfishTransport::MakeNetwork(
       std::move(curl_http_client), absl::StrCat("localhost:", port_));
   auto cache = std::make_unique<NullCache>(transport.get());
-  auto redfish_intf =
-      libredfish::NewHttpInterface(std::move(transport), std::move(cache),
-                                   libredfish::RedfishInterface::kTrusted);
+  auto redfish_intf = NewHttpInterface(std::move(transport), std::move(cache),
+                                       RedfishInterface::kTrusted);
 
   // Perform an http get request on the service root resource without the
   // trailing forward slash and expect the URI to be treated as equivalent.
-  libredfish::RedfishVariant response =
+  RedfishVariant response =
       redfish_intf->UncachedGetUri(absl::StripSuffix(kServiceRootUri, "/"));
 
   // Parse the raw contents and compare it to the expected service root.

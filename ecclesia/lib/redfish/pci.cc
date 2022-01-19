@@ -24,25 +24,23 @@
 #include "ecclesia/lib/redfish/numbers.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 std::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
     const RedfishObject &pci_location_obj) {
   auto maybe_domain =
-      RedfishStrTo32Base<libredfish::OemGooglePropertyDomain>(pci_location_obj);
+      RedfishStrTo32Base<OemGooglePropertyDomain>(pci_location_obj);
   if (!maybe_domain.has_value()) return std::nullopt;
 
-  auto maybe_bus =
-      RedfishStrTo32Base<libredfish::OemGooglePropertyBus>(pci_location_obj);
+  auto maybe_bus = RedfishStrTo32Base<OemGooglePropertyBus>(pci_location_obj);
   if (!maybe_bus.has_value()) return std::nullopt;
 
   auto maybe_device =
-      RedfishStrTo32Base<libredfish::OemGooglePropertyDevice>(pci_location_obj);
+      RedfishStrTo32Base<OemGooglePropertyDevice>(pci_location_obj);
   if (!maybe_device.has_value()) return std::nullopt;
 
   auto maybe_function =
-      RedfishStrTo32Base<libredfish::OemGooglePropertyFunction>(
-          pci_location_obj);
+      RedfishStrTo32Base<OemGooglePropertyFunction>(pci_location_obj);
   if (!maybe_function.has_value()) return std::nullopt;
 
   return ecclesia::PciDbdfLocation::TryMake(*maybe_domain, *maybe_bus,
@@ -52,20 +50,19 @@ std::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
 std::optional<ecclesia::PciFullSignature> ReadPciFullSignature(
     const RedfishObject &pcie_function_obj) {
   auto maybe_vendor_id =
-      RedfishStrTo32Base<libredfish::PropertyVendorId>(pcie_function_obj);
+      RedfishStrTo32Base<PropertyVendorId>(pcie_function_obj);
   if (!maybe_vendor_id.has_value()) return std::nullopt;
 
   auto maybe_device_id =
-      RedfishStrTo32Base<libredfish::PropertyDeviceId>(pcie_function_obj);
+      RedfishStrTo32Base<PropertyDeviceId>(pcie_function_obj);
   if (!maybe_device_id.has_value()) return std::nullopt;
 
   auto maybe_subsystem_id =
-      RedfishStrTo32Base<libredfish::PropertySubsystemId>(pcie_function_obj);
+      RedfishStrTo32Base<PropertySubsystemId>(pcie_function_obj);
   if (!maybe_subsystem_id.has_value()) return std::nullopt;
 
   auto maybe_subsystem_vendor_id =
-      RedfishStrTo32Base<libredfish::PropertySubsystemVendorId>(
-          pcie_function_obj);
+      RedfishStrTo32Base<PropertySubsystemVendorId>(pcie_function_obj);
   if (!maybe_subsystem_vendor_id.has_value()) return std::nullopt;
 
   return ecclesia::PciFullSignature::TryMake(*maybe_vendor_id, *maybe_device_id,
@@ -73,4 +70,4 @@ std::optional<ecclesia::PciFullSignature> ReadPciFullSignature(
                                              *maybe_subsystem_id);
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia

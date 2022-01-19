@@ -39,7 +39,7 @@
 #include "ecclesia/lib/time/clock_fake.h"
 #include "single_include/nlohmann/json.hpp"
 
-namespace libredfish {
+namespace ecclesia {
 namespace {
 
 using ::testing::ElementsAre;
@@ -97,7 +97,7 @@ TEST_F(HttpRedfishInterfaceTest, GetRoot) {
 }
 
 TEST_F(HttpRedfishInterfaceTest, CrawlToChassisCollection) {
-  auto chassis_collection = intf_->GetRoot()[libredfish::kRfPropertyChassis];
+  auto chassis_collection = intf_->GetRoot()[kRfPropertyChassis];
   EXPECT_THAT(nlohmann::json::parse(chassis_collection.DebugString(), nullptr,
                                     /*allow_exceptions=*/false),
               Eq(nlohmann::json::parse(R"json({
@@ -115,7 +115,7 @@ TEST_F(HttpRedfishInterfaceTest, CrawlToChassisCollection) {
 }
 
 TEST_F(HttpRedfishInterfaceTest, CrawlToChassis) {
-  auto chassis_collection = intf_->GetRoot()[libredfish::kRfPropertyChassis][0];
+  auto chassis_collection = intf_->GetRoot()[kRfPropertyChassis][0];
   EXPECT_THAT(nlohmann::json::parse(chassis_collection.DebugString(), nullptr,
                                     /*allow_exceptions=*/false),
               Eq(nlohmann::json::parse(R"json({
@@ -162,11 +162,11 @@ TEST_F(HttpRedfishInterfaceTest, GetUriFragmentObject) {
 
 TEST_F(HttpRedfishInterfaceTest, EachTest) {
   std::vector<std::string> names;
-  intf_->GetRoot()[libredfish::kRfPropertyChassis].Each().Do(
-      [&names](std::unique_ptr<libredfish::RedfishObject> &obj) {
-        auto name = obj->GetNodeValue<libredfish::PropertyName>();
+  intf_->GetRoot()[kRfPropertyChassis].Each().Do(
+      [&names](std::unique_ptr<RedfishObject> &obj) {
+        auto name = obj->GetNodeValue<PropertyName>();
         if (name.has_value()) names.push_back(*std::move(name));
-        return libredfish::RedfishIterReturnValue::kContinue;
+        return RedfishIterReturnValue::kContinue;
       });
   EXPECT_THAT(names, ElementsAre("chassis"));
 }
@@ -464,4 +464,4 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadFailsWithNoOdataId) {
 }
 
 }  // namespace
-}  // namespace libredfish
+}  // namespace ecclesia

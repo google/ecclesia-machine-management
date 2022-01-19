@@ -24,7 +24,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 // This helper class uses a provided redfish_intf to find resources in the
 // Redfish system model.
@@ -142,6 +142,6 @@ class Sysmodel {
   RedfishInterface *redfish_intf_;
 };
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_SYSMODEL_H_

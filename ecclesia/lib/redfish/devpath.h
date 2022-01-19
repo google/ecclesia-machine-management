@@ -24,7 +24,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 // Function to find devpath for an arbitrary URI by searching through
 // NodeTopology
@@ -45,6 +45,6 @@ std::optional<std::string> GetDevpathForUri(const NodeTopology& topology,
 std::optional<std::string> GetSensorDevpathFromNodeTopology(
     RedfishObject* obj, const NodeTopology& topology);
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_DEVPATH_H_

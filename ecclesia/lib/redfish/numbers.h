@@ -25,7 +25,7 @@
 #include "absl/strings/numbers.h"
 #include "ecclesia/lib/redfish/interface.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 // Read string field from a redfish object and convert it to int32_t
 // the format in the string is not limited.
@@ -42,6 +42,6 @@ inline std::optional<int32_t> RedfishStrTo32Base(const RedfishObject &obj) {
   return number;
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_NUMBERS_H_

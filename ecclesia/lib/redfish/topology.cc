@@ -40,7 +40,7 @@
 #include "ecclesia/lib/redfish/types.h"
 #include "ecclesia/lib/redfish/utils.h"
 
-namespace libredfish {
+namespace ecclesia {
 namespace {
 
 constexpr char kDevpathConnectorSuffix[] = "connector:";
@@ -565,4 +565,4 @@ bool NodeTopologiesHaveTheSameNodes(const NodeTopology &n1,
   return true;
 }
 
-}  // namespace libredfish
+}  // namespace ecclesia

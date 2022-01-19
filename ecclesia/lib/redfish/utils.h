@@ -24,7 +24,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 // Given a Redfish node that contains a Status, return true if the status is
 // “Enabled”; return false otherwise.
@@ -46,21 +46,21 @@ namespace libredfish {
 //     "ReadingCelsius": 40,
 //     "UpperThresholdCritical": 85
 // }
-inline bool ComponentIsEnabled(libredfish::RedfishObject *node_obj) {
-  auto status = (*node_obj)[libredfish::kRfPropertyStatus].AsObject();
+inline bool ComponentIsEnabled(RedfishObject *node_obj) {
+  auto status = (*node_obj)[kRfPropertyStatus].AsObject();
   if (!status) return false;
-  auto state = status->GetNodeValue<libredfish::PropertyState>();
+  auto state = status->GetNodeValue<PropertyState>();
   if (!state) return false;
   return *state == "Enabled";
 }
 
-inline bool AssemblyIsEnabled(libredfish::RedfishObject *assembly_obj) {
+inline bool AssemblyIsEnabled(RedfishObject *assembly_obj) {
   if (!assembly_obj) return false;
-  auto status = (*assembly_obj)[libredfish::kRfPropertyStatus].AsObject();
+  auto status = (*assembly_obj)[kRfPropertyStatus].AsObject();
   // If assembly doesn't report status, treat it as enabled.
   if (!status) return true;
 
-  auto state = status->GetNodeValue<libredfish::PropertyState>();
+  auto state = status->GetNodeValue<PropertyState>();
   if (!state) return false;
 
   return *state == "Enabled";
@@ -75,6 +75,6 @@ std::optional<std::string> GetResourceType(const RedfishObject *node);
 // types of resources the name is obtained from other context of the resource.
 std::optional<std::string> GetConvertedResourceName(const RedfishObject *node);
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif

@@ -35,7 +35,7 @@ namespace ecclesia {
 // The gRPC based implementation. The gRPC Redfish Service is based on Struct, a
 // dynamically typed proto object.
 // GrpcDynamicImpl is thread-safe.
-class GrpcDynamicImpl : public libredfish::RedfishInterface {
+class GrpcDynamicImpl : public RedfishInterface {
  public:
   struct Target {
     std::string fqdn = "[::1]";
@@ -62,40 +62,39 @@ class GrpcDynamicImpl : public libredfish::RedfishInterface {
   bool IsTrusted() const override;
 
   // Fetches the root payload and returns it.
-  libredfish::RedfishVariant GetRoot(libredfish::GetParams params) override;
+  RedfishVariant GetRoot(GetParams params) override;
 
   // Fetches the given URI and returns it.
-  libredfish::RedfishVariant CachedGetUri(
-      absl::string_view uri, libredfish::GetParams params) override;
-  libredfish::RedfishVariant UncachedGetUri(
-      absl::string_view uri, libredfish::GetParams params) override;
+  RedfishVariant CachedGetUri(absl::string_view uri, GetParams params) override;
+  RedfishVariant UncachedGetUri(absl::string_view uri,
+                                GetParams params) override;
 
   // Post to the given URI and returns result.
-  libredfish::RedfishVariant PostUri(
+  RedfishVariant PostUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override;
 
   // Post to the given URI and returns result.
   // Note: program calling this function will always crash.
   ABSL_DEPRECATED("Use the kv_span version instead")
-  libredfish::RedfishVariant PostUri(absl::string_view uri,
-                                     absl::string_view data) override {
+  RedfishVariant PostUri(absl::string_view uri,
+                         absl::string_view data) override {
     Check(false, "Use the kv_span version instead");
-    return libredfish::RedfishVariant(absl::UnimplementedError(
+    return RedfishVariant(absl::UnimplementedError(
         "Not implemented: use the kv_span version of PostUri instead."));
   }
 
   // Patch the given URI and returns result.
-  libredfish::RedfishVariant PatchUri(
+  RedfishVariant PatchUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override;
 
   // Note: program calling this function will always crash.
   ABSL_DEPRECATED("Use the kv_span version instead")
-  libredfish::RedfishVariant PatchUri(absl::string_view uri,
-                                      absl::string_view data) override {
+  RedfishVariant PatchUri(absl::string_view uri,
+                          absl::string_view data) override {
     Check(false, "Use the kv_span version instead");
-    return libredfish::RedfishVariant(absl::UnimplementedError(
+    return RedfishVariant(absl::UnimplementedError(
         "Not implemented: use the kv_span version of PostUri instead."));
   }
 
@@ -105,7 +104,7 @@ class GrpcDynamicImpl : public libredfish::RedfishInterface {
   // The stub is thread-safe and should be reused re-used for concurrent RPCs.
   std::unique_ptr<::redfish::v1::RedfishV1::Stub> stub_;
   TrustedEndpoint trusted_;
-  libredfish::ServiceRoot service_root_;
+  ServiceRootUri service_root_;
 };
 
 }  // namespace ecclesia

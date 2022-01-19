@@ -20,7 +20,7 @@
 
 syntax = "proto3";
 
-package libredfish;
+package ecclesia;
 
 enum RedfishNodeTopologyRepresentation {
   REDFISH_TOPOLOGY_UNSPECIFIED = 0;

@@ -30,7 +30,7 @@
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/redfish/interface.h"
 
-namespace libredfish {
+namespace ecclesia {
 
 // TestingMockupServer spins up a Redfish Mockup Server on localhost and allows
 // raw Redfish interfaces to be connected to it.
@@ -67,31 +67,31 @@ class TestingMockupServer {
   //   mockup_sar = "indus_hmb_cn_mockup.shar"
   explicit TestingMockupServer(
       absl::string_view mockup_shar,
-      ServiceRoot service_root = ServiceRoot::kRedfish);
+      ServiceRootUri service_root = ServiceRootUri::kRedfish);
   TestingMockupServer(absl::string_view mockup_shar, absl::string_view uds_path,
-                      ServiceRoot service_root = ServiceRoot::kRedfish);
+                      ServiceRootUri service_root = ServiceRootUri::kRedfish);
   // Creates an mTLS enabled mockup server
   TestingMockupServer(absl::string_view mockup_shar,
                       const ServerTlsConfig &server_config,
                       const ClientTlsConfig &client_config,
-                      ServiceRoot service_root = ServiceRoot::kRedfish);
+                      ServiceRootUri service_root = ServiceRootUri::kRedfish);
   ~TestingMockupServer();
 
   // Returns a new RedfishInterface connected to the mockup server.
   std::unique_ptr<RedfishInterface> RedfishClientInterface(
       std::unique_ptr<ecclesia::HttpClient> client = nullptr,
-      ServiceRoot service_root = ServiceRoot::kRedfish);
+      ServiceRootUri service_root = ServiceRootUri::kRedfish);
 
   // Returns a new RedfishInterface connected to the mockup server.
   // Auth type is REDFISH_AUTH_SESSION
   std::unique_ptr<RedfishInterface> RedfishClientSessionAuthInterface(
       std::unique_ptr<ecclesia::HttpClient> client = nullptr,
-      ServiceRoot service_root = ServiceRoot::kRedfish);
+      ServiceRootUri service_root = ServiceRootUri::kRedfish);
 
   // Returns a new RedfishInterface connected to the mockup server.
   // Auth type is REDFISH_AUTH_TLS
   std::unique_ptr<RedfishInterface> RedfishClientTlsAuthInterface(
-      ServiceRoot service_root = ServiceRoot::kRedfish);
+      ServiceRootUri service_root = ServiceRootUri::kRedfish);
 
   // The hostname and port the server will be listening on.
   struct ConfigNetwork {
@@ -118,6 +118,6 @@ class TestingMockupServer {
   std::optional<ClientTlsConfig> client_tls_config_;
 };
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TEST_MOCKUP_H_

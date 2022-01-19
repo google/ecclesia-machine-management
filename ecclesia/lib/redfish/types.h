@@ -17,10 +17,10 @@
 #ifndef ECCLESIA_LIB_REDFISH_TYPES_H_
 #define ECCLESIA_LIB_REDFISH_TYPES_H_
 
-namespace libredfish {
+namespace ecclesia {
 
 enum NodeType { kBoard, kConnector, kDevice, kCable };
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TYPES_H_

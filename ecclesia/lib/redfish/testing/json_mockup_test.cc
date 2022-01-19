@@ -31,7 +31,7 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/interface.h"
 
-namespace libredfish {
+namespace ecclesia {
 namespace {
 
 using ::testing::Eq;
@@ -492,4 +492,4 @@ TEST(JsonMockup, ForEachPropertyStop) {
 }
 
 }  // namespace
-}  // namespace libredfish
+}  // namespace ecclesia

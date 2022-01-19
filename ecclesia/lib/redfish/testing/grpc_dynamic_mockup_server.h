@@ -106,7 +106,7 @@ class GrpcDynamicMockupServer {
   // The gRPC server
   std::unique_ptr<grpc::Server> server_;
   // The proxy HttpServer serves Redfish mockup data
-  libredfish::TestingMockupServer mockup_server_;
+  TestingMockupServer mockup_server_;
 
   // Private implementation of the Redfish GRPC service, with helper methods
   // defined for overwriting the REST operations with custom handlers.
@@ -114,8 +114,7 @@ class GrpcDynamicMockupServer {
   // this implementation will forward the REST request to the Redfish mockup.
   class RedfishV1Impl final : public ::redfish::v1::RedfishV1::Service {
    public:
-    explicit RedfishV1Impl(
-        std::unique_ptr<libredfish::RedfishInterface> redfish_intf)
+    explicit RedfishV1Impl(std::unique_ptr<RedfishInterface> redfish_intf)
         : redfish_intf_(std::move(redfish_intf)) {}
 
     grpc::Status Get(grpc::ServerContext* context,
@@ -146,7 +145,7 @@ class GrpcDynamicMockupServer {
 
    private:
     // Interface to the mockup server, used by the proxy server
-    std::unique_ptr<libredfish::RedfishInterface> redfish_intf_;
+    std::unique_ptr<RedfishInterface> redfish_intf_;
 
     // Store of all patches
     absl::Mutex patch_lock_;

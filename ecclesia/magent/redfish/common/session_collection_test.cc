@@ -116,13 +116,11 @@ TEST_F(SessionCollectionTest, QuerySessionCollection) {
   auto transport = HttpRedfishTransport::MakeNetwork(
       std::move(curl_http_client), absl::StrCat("localhost:", port_));
   auto cache = std::make_unique<NullCache>(transport.get());
-  auto redfish_intf =
-      libredfish::NewHttpInterface(std::move(transport), std::move(cache),
-                                   libredfish::RedfishInterface::kTrusted);
+  auto redfish_intf = NewHttpInterface(std::move(transport), std::move(cache),
+                                       RedfishInterface::kTrusted);
 
   // Perform an http get request on the session collection resource.
-  libredfish::RedfishVariant response =
-      redfish_intf->UncachedGetUri(kSessionsUri);
+  RedfishVariant response = redfish_intf->UncachedGetUri(kSessionsUri);
 
   // Parse the raw contents and compare it to the expected session collection.
   nlohmann::json actual =

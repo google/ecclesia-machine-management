@@ -29,7 +29,7 @@
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/testing/json_mockup.h"
 
-namespace libredfish {
+namespace ecclesia {
 namespace {
 
 TEST(GetDevpathForUri, DevpathAvailable) {
@@ -212,4 +212,4 @@ TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemSensorChassisDevpaths) {
 }
 
 }  // namespace
-}  // namespace libredfish
+}  // namespace ecclesia

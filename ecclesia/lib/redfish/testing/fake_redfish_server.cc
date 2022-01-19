@@ -135,8 +135,7 @@ void FakeRedfishServer::AddHttpDeleteHandler(std::string uri,
   http_delete_handlers_[uri] = std::move(handler);
 }
 
-std::unique_ptr<libredfish::RedfishInterface>
-FakeRedfishServer::RedfishClientInterface() {
+std::unique_ptr<RedfishInterface> FakeRedfishServer::RedfishClientInterface() {
   std::string endpoint =
       absl::StrCat("http://localhost:", proxy_server_->listen_port());
 
@@ -146,9 +145,8 @@ FakeRedfishServer::RedfishClientInterface() {
   auto transport = HttpRedfishTransport::MakeNetwork(
       std::move(curl_http_client), endpoint);
   auto cache = std::make_unique<NullCache>(transport.get());
-  auto intf =
-      libredfish::NewHttpInterface(std::move(transport), std::move(cache),
-                                   libredfish::RedfishInterface::kTrusted);
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
   ecclesia::Check(intf != nullptr, "can connect to the redfish proxy server");
   return intf;
 }

@@ -68,11 +68,11 @@ absl::StatusOr<RedfishTransport::Result> RestHelper(
 // 2. via SessionService.Sessions
 absl::StatusOr<std::string> GetSessionServicePostTarget(nlohmann::json root) {
   // Try reading Links.Session
-  auto links_itr = root.find(libredfish::kRfPropertyLinks);
+  auto links_itr = root.find(kRfPropertyLinks);
   if (links_itr != root.end()) {
-    auto session_itr = links_itr->find(libredfish::kRfPropertySessions);
+    auto session_itr = links_itr->find(kRfPropertySessions);
     if (session_itr != links_itr->end()) {
-      auto odata_id = session_itr->find(libredfish::PropertyOdataId::Name);
+      auto odata_id = session_itr->find(PropertyOdataId::Name);
       if (odata_id != session_itr->end() && odata_id->is_string()) {
         return odata_id->get<std::string>();
       }
@@ -80,12 +80,12 @@ absl::StatusOr<std::string> GetSessionServicePostTarget(nlohmann::json root) {
   }
 
   // Try reading SessionService Collection.
-  auto service_itr = root.find(libredfish::kRfPropertySessionService);
+  auto service_itr = root.find(kRfPropertySessionService);
   if (service_itr != root.end()) {
-    auto odata_id = service_itr->find(libredfish::PropertyOdataId::Name);
+    auto odata_id = service_itr->find(PropertyOdataId::Name);
     if (odata_id != service_itr->end() && odata_id->is_string()) {
       return absl::StrCat(odata_id->get<std::string>(), "/",
-                          libredfish::kRfPropertySessions);
+                          kRfPropertySessions);
     }
   }
 
@@ -125,8 +125,8 @@ absl::Status HttpRedfishTransport::LockedDoSessionAuth() {
                             GetSessionServicePostTarget(root.body));
 
   nlohmann::json session_post_payload;
-  session_post_payload[libredfish::PropertyUserName::Name] = session_username_;
-  session_post_payload[libredfish::PropertyPassword::Name] = session_password_;
+  session_post_payload[PropertyUserName::Name] = session_username_;
+  session_post_payload[PropertyPassword::Name] = session_password_;
   absl::StatusOr<Result> session_post =
       LockedPost(post_uri, session_post_payload.dump());
   if (!session_post.ok()) {
@@ -172,22 +172,21 @@ std::unique_ptr<HttpClient::HttpRequest> HttpRedfishTransport::MakeRequest(
 
 HttpRedfishTransport::HttpRedfishTransport(
     std::unique_ptr<HttpClient> client,
-    std::variant<TcpTarget, UdsTarget> target,
-    libredfish::ServiceRoot service_root)
+    std::variant<TcpTarget, UdsTarget> target, ServiceRootUri service_root)
     : client_(std::move(client)),
       target_(std::move(target)),
       service_root_(service_root) {}
 
 std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeNetwork(
     std::unique_ptr<HttpClient> client, std::string endpoint,
-    libredfish::ServiceRoot service_root) {
+    ServiceRootUri service_root) {
   return absl::WrapUnique(new HttpRedfishTransport(
       std::move(client), TcpTarget{std::move(endpoint)}, service_root));
 }
 
 std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeUds(
     std::unique_ptr<HttpClient> client, std::string unix_domain_socket,
-    libredfish::ServiceRoot service_root) {
+    ServiceRootUri service_root) {
   return absl::WrapUnique(new HttpRedfishTransport(
       std::move(client), UdsTarget{std::string(unix_domain_socket)},
       service_root));
@@ -210,7 +209,7 @@ void HttpRedfishTransport::UpdateToUdsEndpoint(
 }
 
 absl::string_view HttpRedfishTransport::GetRootUri() {
-  return libredfish::RedfishInterface::ServiceRootToUri(service_root_);
+  return RedfishInterface::ServiceRootToUri(service_root_);
 }
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Get(

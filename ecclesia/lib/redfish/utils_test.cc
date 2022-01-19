@@ -31,7 +31,7 @@
 #include "ecclesia/lib/redfish/testing/json_mockup.h"
 #include "single_include/nlohmann/json.hpp"
 
-namespace libredfish {
+namespace ecclesia {
 namespace {
 
 constexpr absl::string_view kMemoryResource = R"json({
@@ -146,4 +146,4 @@ TEST(GetConvertedResourceName, CorrectMemoryResourceName) {
 }
 
 }  // namespace
-}  // namespace libredfish
+}  // namespace ecclesia

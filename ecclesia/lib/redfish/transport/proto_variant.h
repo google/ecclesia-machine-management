@@ -33,7 +33,7 @@
 namespace ecclesia {
 
 // The Proto Value based RedfishVariant implementation.
-class ProtoVariantImpl : public libredfish::RedfishVariant::ImplIntf {
+class ProtoVariantImpl : public RedfishVariant::ImplIntf {
  public:
   ProtoVariantImpl();
   explicit ProtoVariantImpl(const google::protobuf::Value &value);
@@ -44,8 +44,8 @@ class ProtoVariantImpl : public libredfish::RedfishVariant::ImplIntf {
   ProtoVariantImpl(ProtoVariantImpl &&other) = default;
   ProtoVariantImpl &operator=(ProtoVariantImpl &&other) = default;
 
-  std::unique_ptr<libredfish::RedfishObject> AsObject() const override;
-  std::unique_ptr<libredfish::RedfishIterable> AsIterable() const override;
+  std::unique_ptr<RedfishObject> AsObject() const override;
+  std::unique_ptr<RedfishIterable> AsIterable() const override;
 
   bool GetValue(std::string *val) const override;
   bool GetValue(int32_t *val) const override;
@@ -60,7 +60,7 @@ class ProtoVariantImpl : public libredfish::RedfishVariant::ImplIntf {
 };
 
 // The Proto Struct based ProtoObject implementation.
-class ProtoObject : public libredfish::RedfishObject {
+class ProtoObject : public RedfishObject {
  public:
   explicit ProtoObject(google::protobuf::Struct const &proto_struct);
 
@@ -70,26 +70,24 @@ class ProtoObject : public libredfish::RedfishObject {
   ProtoObject(ProtoObject &&other) = default;
   ProtoObject &operator=(ProtoObject &&other) = default;
 
-  libredfish::RedfishVariant operator[](
-      const std::string &node_name) const override;
+  RedfishVariant operator[](const std::string &node_name) const override;
 
   absl::optional<std::string> GetUriString() override;
 
-  std::unique_ptr<libredfish::RedfishObject> EnsureFreshPayload(
-      libredfish::GetParams params) override;
+  std::unique_ptr<RedfishObject> EnsureFreshPayload(GetParams params) override;
 
   std::string DebugString() override;
 
   void ForEachProperty(
-      absl::FunctionRef<libredfish::RedfishIterReturnValue(
-          absl::string_view key, libredfish::RedfishVariant value)>) override;
+      absl::FunctionRef<RedfishIterReturnValue(absl::string_view key,
+                                               RedfishVariant value)>) override;
 
  private:
   google::protobuf::Struct proto_struct_;
 };
 
 // The Proto ListValue based ProtoIterable implementation.
-class ProtoIterable : public libredfish::RedfishIterable {
+class ProtoIterable : public RedfishIterable {
  public:
   explicit ProtoIterable(google::protobuf::ListValue const &list_value);
 
@@ -101,7 +99,7 @@ class ProtoIterable : public libredfish::RedfishIterable {
 
   size_t Size() override;
   bool Empty() override;
-  libredfish::RedfishVariant operator[](int index) const override;
+  RedfishVariant operator[](int index) const override;
 
  private:
   google::protobuf::ListValue list_value_;

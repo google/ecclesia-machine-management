@@ -48,7 +48,7 @@ namespace {
 
 using ::redfish::v1::Request;
 
-absl::Status SetGrpcResponseAndReturnStatus(libredfish::RedfishVariant variant,
+absl::Status SetGrpcResponseAndReturnStatus(RedfishVariant variant,
                                             redfish::v1::Response* response) {
   absl::Status status = absl::OkStatus();
   if (!variant.httpcode().has_value()) {

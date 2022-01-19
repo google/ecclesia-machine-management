@@ -23,7 +23,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "single_include/nlohmann/json.hpp"
 
-namespace libredfish {
+namespace ecclesia {
 
 // Constructor method for creating a JsonMockupInterface.
 // Returns nullptr in case the interface failed to be constructed.
@@ -52,6 +52,6 @@ class JsonMockupObject : public RedfishObject {
   nlohmann::json json_view_;
 };
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TESTING_JSON_MOCKUP_H_

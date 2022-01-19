@@ -32,7 +32,7 @@
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
-namespace libredfish {
+namespace ecclesia {
 namespace {
 
 using ::testing::Eq;
@@ -55,7 +55,7 @@ TEST(RedfishVariant, IndexingOk) {
               ecclesia::HttpResponseCode::HTTP_CODE_REQUEST_OK);
   auto obj = chassis.AsObject();
   ASSERT_THAT(obj, Ne(nullptr));
-  EXPECT_THAT(obj->GetNodeValue<libredfish::PropertyName>(), Eq("chassis"));
+  EXPECT_THAT(obj->GetNodeValue<PropertyName>(), Eq("chassis"));
   std::string state;
   EXPECT_TRUE(chassis[kRfPropertyStatus][kRfPropertyState].GetValue(&state));
   EXPECT_THAT(state, Eq("StandbyOffline"));
@@ -140,4 +140,4 @@ TEST(RedfishVariant, PropertyError) {
 }
 
 }  // namespace
-}  // namespace libredfish
+}  // namespace ecclesia

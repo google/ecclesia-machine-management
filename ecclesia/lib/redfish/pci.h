@@ -23,7 +23,7 @@
 #include "ecclesia/lib/io/pci/signature.h"
 #include "ecclesia/lib/redfish/interface.h"
 
-namespace libredfish {
+namespace ecclesia {
 // Given a Redifhs node that contains PciLocation, parse the domain, bus, device
 // and function field and return a ecclesia::PCiLocation.
 // An example of PciLocation redfish object:
@@ -48,6 +48,6 @@ std::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
 std::optional<ecclesia::PciFullSignature> ReadPciFullSignature(
     const RedfishObject &pcie_function_obj);
 
-}  // namespace libredfish
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_PCI_H_
