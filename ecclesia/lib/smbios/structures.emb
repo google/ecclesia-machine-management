@@ -409,6 +409,7 @@ struct MemoryDeviceStructure:
   let supports_v2_6 = length >= 0x1c
   let supports_v2_7 = length >= 0x22
   let supports_v2_8 = length >= 0x28
+  let supports_v3_2 = length >= 0x50
   2  [+2]    UInt           handle
   4  [+2]    UInt           physical_memory_array_handle
     -- Handle, r instance number, associated with the Physical Memory Array to
@@ -445,7 +446,7 @@ struct MemoryDeviceStructure:
   if supports_v2_7:
     28 [+4]  UInt           extended_size
     32 [+2]  UInt           configured_memory_clock_speed
-      -- In Mhz
+      -- In MT/s
 
   if supports_v2_8:
     34 [+2]  UInt           minimum_voltage
@@ -456,6 +457,23 @@ struct MemoryDeviceStructure:
 
     38 [+2]  UInt           configured_voltage
       -- In Millivolts
+
+  if supports_v3_2:
+    40 [+1]  UInt           memory_technology
+    41 [+2]  UInt           memory_operating_mode_capability
+    43 [+1]  UInt           firmware_version_snum
+    44 [+2]  UInt           module_manufacturer_id
+    46 [+2]  UInt           module_product_id
+    48 [+2]  UInt           memory_subsystem_controller_manufacturer_id
+    50 [+2]  UInt           memory_subsystem_controller_product_id
+    52 [+8]  UInt           non_volatile_size
+      -- In Bytes
+    60 [+8]  UInt           volatile_size
+      -- In Bytes
+    68 [+8]  UInt           cache_size
+      -- In Bytes
+    76 [+8]  UInt           logical_size
+      -- In Bytes
 
 
 struct SystemBootInformationStructure:

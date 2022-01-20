@@ -115,6 +115,25 @@ bool ExtractSmbiosStructure(uint8_t *start_address, std::size_t max_length,
   return false;
 }
 
+std::vector<TableEntry> BuildEntries(std::vector<uint8_t> &table_data) {
+  std::vector<TableEntry> entries;
+
+  // Start extracting the SMBIOS structures one by one
+  uint8_t *start_address = table_data.data();
+  const uint8_t *end_address = start_address + table_data.size() - 1;
+
+  while (start_address <= end_address) {
+    std::size_t max_length = end_address - start_address + 1;
+    SmbiosStructureInfo info;
+    if (!ExtractSmbiosStructure(start_address, max_length, &info)) {
+      ErrorLog() << "Error extracting SMBIOS structure";
+      return entries;
+    }
+    entries.emplace_back(info);
+    start_address += info.structure_size;
+  }
+  return entries;
+}
 }  // namespace
 
 SmbiosReader::SmbiosReader(std::string entry_point_path,
@@ -146,20 +165,11 @@ SmbiosReader::SmbiosReader(std::string entry_point_path,
   std::vector<uint8_t> table_data =
       GetBinaryFileContents(tables_path, structure_table_max_size);
 
-  // Start extracting the SMBIOS structures one by one
-  uint8_t *start_address = table_data.data();
-  const uint8_t *end_address = start_address + table_data.size() - 1;
+  entries_ = BuildEntries(table_data);
+}
 
-  while (start_address <= end_address) {
-    std::size_t max_length = end_address - start_address + 1;
-    SmbiosStructureInfo info;
-    if (!ExtractSmbiosStructure(start_address, max_length, &info)) {
-      ErrorLog() << "Error extracting SMBIOS structure";
-      return;
-    }
-    entries_.emplace_back(info);
-    start_address += info.structure_size;
-  }
+SmbiosReader::SmbiosReader(std::vector<uint8_t> &table_data) {
+  entries_ = BuildEntries(table_data);
 }
 
 std::unique_ptr<BiosInformation> SmbiosReader::GetBiosInformation() const {
