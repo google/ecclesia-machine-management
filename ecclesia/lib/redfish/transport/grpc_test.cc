@@ -58,6 +58,7 @@ TEST(GrpcRedfishTransport, Get) {
       transport.Get("/redfish/v1");
   ASSERT_THAT(res_get, IsOk());
   EXPECT_THAT(res_get->body, Eq(expected));
+  EXPECT_THAT(res_get->code, Eq(200));
 }
 
 TEST(GrpcRedfishTransport, PostPatchGetDelete) {
@@ -76,6 +77,7 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   })json");
   ASSERT_THAT(res_post, IsOk());
   EXPECT_THAT(res_post->body, expected_post);
+  EXPECT_THAT(res_post->code, Eq(204));
 
   absl::string_view expected_get_str = R"json({
     "@odata.context":"/redfish/v1/$metadata#ChassisCollection.ChassisCollection",
@@ -100,6 +102,7 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
       transport.Get("/redfish/v1/Chassis");
   ASSERT_THAT(res_get, IsOk());
   EXPECT_THAT(res_get->body, Eq(expected_get));
+  EXPECT_THAT(res_get->code, Eq(200));
 
   absl::string_view data_patch = R"json({
     "Name": "MyPatchChassis"
@@ -110,6 +113,7 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
       transport.Patch("/redfish/v1/Chassis/Member1", data_patch);
   ASSERT_THAT(res_patch, IsOk());
   EXPECT_THAT(res_patch->body, Eq(expected_patch));
+  EXPECT_THAT(res_patch->code, Eq(204));
 
   expected_get_str = R"json({
     "@odata.context":"/redfish/v1/$metadata#ChassisCollection.ChassisCollection",
@@ -132,6 +136,7 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   res_get = transport.Get("/redfish/v1/Chassis");
   ASSERT_THAT(res_get, IsOk());
   EXPECT_THAT(res_get->body, Eq(expected_get));
+  EXPECT_THAT(res_get->code, Eq(200));
 
   EXPECT_THAT(
       transport.Delete("/redfish/v1/Chassis/Member1", "{}"),
@@ -178,6 +183,7 @@ TEST(GrpcRedfishTransport, UpdateToNetworkEndpoint) {
       transport.Get("/redfish/v1");
   ASSERT_THAT(res_get, IsOk());
   EXPECT_THAT(res_get->body, Eq(expected));
+  EXPECT_THAT(res_get->code, Eq(200));
 }
 
 TEST(GrpcRedfishTransport, UpdateToUdsEndpoint) {
@@ -213,6 +219,68 @@ TEST(GrpcRedfishTransport, UpdateToUdsEndpoint) {
       transport.Get("/redfish/v1");
   ASSERT_THAT(res_get, IsOk());
   EXPECT_THAT(res_get->body, Eq(expected));
+  EXPECT_THAT(res_get->code, Eq(200));
+}
+
+TEST(GrpcRedfishTransport, ResourceNotFound) {
+  int port = ecclesia::FindUnusedPortOrDie();
+  GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
+                                        "[::1]", port);
+  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port));
+
+  auto result_get = transport.Get("/redfish/v1/Chassis/noexist");
+  EXPECT_THAT(result_get, IsOk());
+  nlohmann::json expected_get =
+      nlohmann::json::parse(R"json({})json", nullptr, false);
+  EXPECT_THAT(result_get->body, Eq(expected_get));
+  EXPECT_THAT(result_get->code, Eq(404));
+}
+
+TEST(GrpcRedfishTransport, NotAllowed) {
+  int port = ecclesia::FindUnusedPortOrDie();
+  GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
+                                        "[::1]", port);
+  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port));
+
+  std::string_view data_post = R"json({
+    "ChassisType": "RackMount",
+    "Name": "MyChassis"
+  })json";
+  auto result_post = transport.Post("/redfish", data_post);
+  EXPECT_THAT(result_post, IsOk());
+  nlohmann::json expected_post =
+      nlohmann::json::parse(R"json({})json", nullptr, false);
+  EXPECT_THAT(result_post->body, Eq(expected_post));
+  EXPECT_THAT(result_post->code, Eq(405));
+
+  auto result_patch = transport.Patch("/redfish", data_post);
+  EXPECT_THAT(result_patch, IsOk());
+  nlohmann::json expected_patch =
+      nlohmann::json::parse(R"json({})json", nullptr, false);
+  EXPECT_THAT(result_patch->body, Eq(expected_patch));
+  EXPECT_THAT(result_patch->code, Eq(204));
+}
+
+TEST(GrpcRedfishTransport, Timeout) {
+  int port = ecclesia::FindUnusedPortOrDie();
+  testing::internal::Notification notification;
+  GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
+                                         "[::1]", port);
+  mockup_server.AddHttpGetHandler(
+      "/redfish/v1",
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          redfish::v1::Response* response) -> grpc::Status {
+        absl::SleepFor(absl::Milliseconds(100));
+        notification.Notify();
+        return grpc::Status::OK;
+      });
+  GrpcRedfishTransport::Params params;
+  params.timeout = absl::AbsDuration(absl::Milliseconds(50));
+  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port), params);
+  EXPECT_THAT(transport.Get("/redfish/v1"),
+              internal_status::IsStatusPolyMatcher(
+                  absl::StatusCode::kDeadlineExceeded));
+  notification.WaitForNotification();
 }
 }  // namespace
 }  // namespace ecclesia
