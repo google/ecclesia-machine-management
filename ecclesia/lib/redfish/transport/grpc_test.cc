@@ -281,6 +281,7 @@ TEST(GrpcRedfishTransport, Timeout) {
               internal_status::IsStatusPolyMatcher(
                   absl::StatusCode::kDeadlineExceeded));
   notification.WaitForNotification();
+  absl::SleepFor(absl::Milliseconds(100));
 }
 }  // namespace
 }  // namespace ecclesia

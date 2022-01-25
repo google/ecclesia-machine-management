@@ -87,7 +87,7 @@ class GrpcDynamicMockupServer {
                           absl::string_view uds_path,
                           std::shared_ptr<grpc::ServerCredentials> credentials);
 
-  ~GrpcDynamicMockupServer() = default;
+  ~GrpcDynamicMockupServer();
 
   // Register a custom handler to respond to a given REST request for a URI.
   using HandlerFunc = std::function<grpc::Status(
