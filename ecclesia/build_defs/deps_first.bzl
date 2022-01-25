@@ -12,8 +12,56 @@ ecclesia_deps_second()
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-def ecclesia_deps_first():
-    """Loads common dependencies after checking to see if they're already in the environment"""
+def _format_oss_path(oss_path, package_name):
+    """Formats the oss path with the package name.
+
+    Args:
+      oss_path: The path to the build file within the
+        //ecclesia/oss directory.
+      package_name: The name of the Ecclesia external package.
+
+    Returns:
+      The formatted path.
+    """
+
+    return "@{}//ecclesia/oss:{}".format(package_name, oss_path)
+
+def _make_patch_paths(patch_dir, patch_files, package_name):
+    """Makes a list of patch paths from the directory and filenames.
+
+    Args:
+      patch_dir: The directory within //ecclesia/oss containing
+        the patches to apply.
+      patch_files: A list of strings indicating the
+        patches within the patch_dir to use.
+      package_name: The name of the Ecclesia external package.
+
+    Returns:
+      A formatted list of string paths.
+    """
+
+    return [
+        _format_oss_path("{}/{}".format(patch_dir, filename), package_name)
+        for filename in patch_files
+    ]
+
+def ecclesia_deps_first(package_name = "com_google_ecclesia"):
+    """Loads common dependencies.
+
+    Normally, users will pull in the Ecclesia package via
+
+    git_repository(
+          name = "com_google_ecclesia",
+          ...
+    )
+
+    If another name is used, it needs to be forwarded here to resolve
+    patches that need to be applied.
+
+    Args:
+      package_name: The name of the Ecclesia external package.
+    """
+
     if not native.existing_rule("com_google_googletest"):
         # Google Test. Official release 1.10.0.
         http_archive(
@@ -82,12 +130,10 @@ def ecclesia_deps_first():
     if not native.existing_rule("com_github_grpc_grpc"):
         # gRPC. Taken from HEAD to include compiler fix for gcc error. Name is required
         # by Google APIs.
+        patch_files = ["grpc.visibility.patch", "grpc.delete_ios.patch"]
         http_archive(
             name = "com_github_grpc_grpc",
-            patches = [
-                "//ecclesia/oss:grpc.patches/grpc.visibility.patch",
-                "//ecclesia/oss:grpc.patches/grpc.delete_ios.patch",
-            ],
+            patches = _make_patch_paths("grpc.patches", patch_files, package_name),
             patch_args = ["-p1"],
             sha256 = "ca12845fd97777caa2277de31b80c59f2f777bde1e86e116bd21e5e0598c48d4",
             strip_prefix = "grpc-74d0e3905e9d5a94f592813cb1f137fb60a907b8",
@@ -164,7 +210,7 @@ def ecclesia_deps_first():
     if not native.existing_rule("com_github_libevent_libevent"):
         http_archive(
             name = "com_github_libevent_libevent",
-            build_file = "@//ecclesia/oss:libevent.BUILD",
+            build_file = _format_oss_path("libevent.BUILD", package_name),
             sha256 = "8836ad722ab211de41cb82fe098911986604f6286f67d10dfb2b6787bf418f49",
             strip_prefix = "libevent-release-2.1.12-stable",
             urls = [
@@ -197,11 +243,10 @@ def ecclesia_deps_first():
 
     if not native.existing_rule("com_google_tensorflow_serving"):
         #tensorflow. Commit from June 23, 2021 making HTTP server support PATCH
+        patch_file = "tensorflow.visibility.patch"
         http_archive(
             name = "com_google_tensorflow_serving",
-            patches = [
-                "//ecclesia/oss:tensorflow.patches/tensorflow.visibility.patch",
-            ],
+            patches = _make_patch_paths("tensorflow.patches", [patch_file], package_name),
             sha256 = "9635a59a23981bb61661b94059fd10f8365b3f316212b0eb5c5c9ffb8be911b6",
             strip_prefix = "serving-6cbc4a9eb419c8078c3a4e791381cda70dd8fc78",
             urls = ["https://github.com/tensorflow/serving/archive/6cbc4a9eb419c8078c3a4e791381cda70dd8fc78.zip"],
@@ -211,7 +256,7 @@ def ecclesia_deps_first():
         # JSON for Modern C++ version 3.9.1.
         http_archive(
             name = "com_json",
-            build_file = "@//ecclesia/oss:json.BUILD",
+            build_file = _format_oss_path("json.BUILD", package_name),
             sha256 = "4cf0df69731494668bdd6460ed8cb269b68de9c19ad8c27abc24cd72605b2d5b",
             strip_prefix = "json-3.9.1",
             urls = ["https://github.com/nlohmann/json/archive/v3.9.1.tar.gz"],
@@ -229,7 +274,7 @@ def ecclesia_deps_first():
     if not native.existing_rule("ncurses"):
         http_archive(
             name = "ncurses",
-            build_file = "@//ecclesia/oss:ncurses.BUILD",
+            build_file = _format_oss_path("ncurses.BUILD", package_name),
             sha256 = "30306e0c76e0f9f1f0de987cf1c82a5c21e1ce6568b9227f7da5b71cbea86c9d",
             strip_prefix = "ncurses-6.2",
             urls = [
@@ -240,7 +285,7 @@ def ecclesia_deps_first():
     if not native.existing_rule("libedit"):
         http_archive(
             name = "libedit",
-            build_file = "@//ecclesia/oss:libedit.BUILD",
+            build_file = _format_oss_path("libedit.BUILD", package_name),
             sha256 = "dbb82cb7e116a5f8025d35ef5b4f7d4a3cdd0a3909a146a39112095a2d229071",
             strip_prefix = "libedit-20191231-3.1",
             urls = [
@@ -249,31 +294,32 @@ def ecclesia_deps_first():
         )
 
     if not native.existing_rule("ipmitool"):
+        patch_files = [
+            "ipmitool.include_ipmitool_ipmi_intf.h.patch",
+            "ipmitool.src_ipmitool.c.patch",
+            "ipmitool.include_ipmitool_helper.h.patch",
+            "ipmitool.include_ipmitool_ipmi_sel.h.patch",
+            "ipmitool.lib_ipmi_sel.c.patch",
+            "ipmitool.src_plugins_ipmi_intf.c.patch",
+            "ipmitool.src_plugins_lanplus_lanplus.c.patch",
+            "ipmitool.src_ipmiext.c.patch",
+            "ipmitool.lib_ipmi_main.c.patch",
+            "ipmitool.include_ipmitool_ipmi_sdr.h.patch",
+            "ipmitool.lib_ipmi_raw.c.patch",
+            "ipmitool.include_ipmitool_ipmi.h.patch",
+            "ipmitool.lib_ipmi_sdr.c.patch",
+            "ipmitool.include_ipmitool_ipmi_user.h.patch",
+            "ipmitool.lib_ipmi_user.c.patch",
+        ]
         http_archive(
             name = "ipmitool",
-            build_file = "@//ecclesia/oss:ipmitool.BUILD",
+            build_file = _format_oss_path("ipmitool.BUILD", package_name),
             patch_cmds = [
                 "./bootstrap",
                 "./configure CFLAGS=-fPIC CXXFLAGS=-fPIC --enable-shared=no",
                 "cp ./config.h include",
             ],
-            patches = [
-                "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_ipmi_intf.h.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.src_ipmitool.c.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_helper.h.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_ipmi_sel.h.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.lib_ipmi_sel.c.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.src_plugins_ipmi_intf.c.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.src_plugins_lanplus_lanplus.c.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.src_ipmiext.c.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.lib_ipmi_main.c.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_ipmi_sdr.h.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.lib_ipmi_raw.c.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_ipmi.h.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.lib_ipmi_sdr.c.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.include_ipmitool_ipmi_user.h.patch",
-                "//ecclesia/oss:ipmitool.patches/ipmitool.lib_ipmi_user.c.patch",
-            ],
+            patches = _make_patch_paths("ipmitool.patches", patch_files, package_name),
             sha256 = "c8549064def9c38acd8d3d9bf976952e792b714206285c9c4b9ff6c9c56a17fc",
             strip_prefix = "ipmitool-c3939dac2c060651361fc71516806f9ab8c38901",
             urls = [
@@ -284,7 +330,7 @@ def ecclesia_deps_first():
     if not native.existing_rule("curl"):
         http_archive(
             name = "curl",
-            build_file = "@//ecclesia/oss:curl.BUILD",
+            build_file = _format_oss_path("curl.BUILD", package_name),
             sha256 = "01ae0c123dee45b01bbaef94c0bc00ed2aec89cb2ee0fd598e0d302a6b5e0a98",
             strip_prefix = "curl-7.69.1",
             urls = [
@@ -296,7 +342,7 @@ def ecclesia_deps_first():
     if not native.existing_rule("jansson"):
         http_archive(
             name = "jansson",
-            build_file = "@//ecclesia/oss:jansson.BUILD",
+            build_file = _format_oss_path("jansson.BUILD", package_name),
             sha256 = "5f8dec765048efac5d919aded51b26a32a05397ea207aa769ff6b53c7027d2c9",
             strip_prefix = "jansson-2.12",
             urls = [
@@ -305,21 +351,22 @@ def ecclesia_deps_first():
         )
 
     if not native.existing_rule("redfishMockupServer"):
+        patch_files = [
+            "0001-googlify-import-and-add-ipv6-support.patch",
+            "0002-logger-level-to-critical.patch",
+            "0003-patch-dir-traversal-vulnerability.patch",
+            "0004-add-uds-support.patch",
+            "0005-support-payload-post.patch",
+            "0006-Reply-payload-and-token-headers-if-post-to-Sessions.patch",
+            "0007-Add-mTLS-support.patch",
+            "0008-Add-EventService-support.patch",
+            "0009-add-link-local-support.patch",
+            "0010-add-google-service-root-support.patch",
+        ]
         http_archive(
             name = "redfishMockupServer",
-            build_file = "@//ecclesia/oss:redfishMockupServer.BUILD",
-            patches = [
-                "//ecclesia/oss:redfishMockupServer.patches/0001-googlify-import-and-add-ipv6-support.patch",
-                "//ecclesia/oss:redfishMockupServer.patches/0002-logger-level-to-critical.patch",
-                "//ecclesia/oss:redfishMockupServer.patches/0003-patch-dir-traversal-vulnerability.patch",
-                "//ecclesia/oss:redfishMockupServer.patches/0004-add-uds-support.patch",
-                "//ecclesia/oss:redfishMockupServer.patches/0005-support-payload-post.patch",
-                "//ecclesia/oss:redfishMockupServer.patches/0006-Reply-payload-and-token-headers-if-post-to-Sessions.patch",
-                "//ecclesia/oss:redfishMockupServer.patches/0007-Add-mTLS-support.patch",
-                "//ecclesia/oss:redfishMockupServer.patches/0008-Add-EventService-support.patch",
-                "//ecclesia/oss:redfishMockupServer.patches/0009-add-link-local-support.patch",
-                "//ecclesia/oss:redfishMockupServer.patches/0010-add-google-service-root-support.patch",
-            ],
+            build_file = _format_oss_path("redfishMockupServer.BUILD", package_name),
+            patches = _make_patch_paths("redfishMockupServer.patches", patch_files, package_name),
             patch_args = ["-p1"],
             sha256 = "63a144428b0bdb0203ed302c6e9d58fba9dac5e1e399bc6a49cbb30c14b05c23",
             strip_prefix = "Redfish-Mockup-Server-04238cb8b7b8d8d8a62cac6623e2c355a6b73eb8",
@@ -327,24 +374,22 @@ def ecclesia_deps_first():
         )
 
     if not native.existing_rule("libsodium"):
+        patch_file = "libsodium.01.version_h.patch"
         http_archive(
             name = "libsodium",
-            build_file = "@//ecclesia/oss:libsodium.BUILD",
-            patches = [
-                "//ecclesia/oss:libsodium.patches/libsodium.01.version_h.patch",
-            ],
+            build_file = _format_oss_path("libsodium.BUILD", package_name),
+            patches = _make_patch_paths("libsodium.patches", [patch_file], package_name),
             sha256 = "d59323c6b712a1519a5daf710b68f5e7fde57040845ffec53850911f10a5d4f4",
             strip_prefix = "libsodium-1.0.18",
             urls = ["https://github.com/jedisct1/libsodium/archive/1.0.18.tar.gz"],
         )
 
     if not native.existing_rule("zeromq"):
+        patch_file = "zmq.01.add_platform_hpp.patch"
         http_archive(
             name = "zeromq",
-            build_file = "@//ecclesia/oss:zeromq.BUILD",
-            patches = [
-                "//ecclesia/oss:zeromq.patches/zmq.01.add_platform_hpp.patch",
-            ],
+            build_file = _format_oss_path("zeromq.BUILD", package_name),
+            patches = _make_patch_paths("zeromq.patches", [patch_file], package_name),
             sha256 = "27d1e82a099228ee85a7ddb2260f40830212402c605a4a10b5e5498a7e0e9d03",
             strip_prefix = "zeromq-4.2.1",
             urls = ["https://github.com/zeromq/libzmq/releases/download/v4.2.1/zeromq-4.2.1.tar.gz"],
@@ -353,7 +398,7 @@ def ecclesia_deps_first():
     if not native.existing_rule("cppzmq"):
         http_archive(
             name = "cppzmq",
-            build_file = "@//ecclesia/oss:cppzmq.BUILD",
+            build_file = _format_oss_path("cppzmq.BUILD", package_name),
             sha256 = "9853e0437d834cbed5d3c223bf1d755cadee70e7c964c6e42c4c6783dee5d02c",
             strip_prefix = "cppzmq-4.7.1",
             urls = ["https://github.com/zeromq/cppzmq/archive/v4.7.1.tar.gz"],
