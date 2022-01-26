@@ -285,5 +285,43 @@ TEST(RawInterfaceTestWithMockup, TestingNodeName) {
   EXPECT_THAT(node_names, Not(Contains(" Expansion Child ")));
 }
 
+TEST(RawInterfaceTestWithMockup, TestingLocationTypes) {
+  ecclesia::FakeRedfishServer mockup(
+      "topology_v2_testing/mockup.shar",
+      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+  auto raw_intf = mockup.RedfishClientInterface();
+
+  // Change the LocationType to make sure the topology can be correctly
+  // constructed as well.
+  mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis/child1", R"json(
+      {
+        "@odata.id": "/redfish/v1/Chassis/child1",
+        "@odata.type": "#Chassis.v1_14_0.Chassis",
+        "ChassisType": "RackMount",
+        "Id": "child1",
+        "Links": {
+          "ContainedBy": {
+            "@odata.id": "/redfish/v1/Chassis/root"
+          }
+        },
+        "Location": {
+          "PartLocation": {
+            "LocationType": "Bay",
+            "ServiceLabel": "C1"
+          }
+        },
+        "Name": "child1",
+        "Memory": {
+          "@odata.id": "/redfish/v1/Systems/system/Memory"
+        }
+      }
+    )json");
+
+  CheckAgainstTestingMockupFullDevpaths(
+      CreateTopologyFromRedfishV2(raw_intf.get()));
+
+  mockup.ClearHandlers();
+}
+
 }  // namespace
 }  // namespace ecclesia

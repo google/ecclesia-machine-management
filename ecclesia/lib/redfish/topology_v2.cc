@@ -307,6 +307,10 @@ struct AttachingNodes {
 constexpr absl::string_view kRootDevpath = "/phys";
 constexpr absl::string_view kLocationTypeEmbedded = "Embedded";
 constexpr absl::string_view kLocationTypeSlot = "Slot";
+constexpr absl::string_view kLocationTypeConnector = "Connector";
+constexpr absl::string_view kLocationTypeBackplane = "Backplane";
+constexpr absl::string_view kLocationTypeBay = "Bay";
+constexpr absl::string_view kLocationTypeSocket = "Socket";
 
 }  // namespace
 
@@ -421,7 +425,13 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
         node->local_devpath =
             absl::StrCat(parent_devpath, ":device:", node->name);
         node->type = kDevice;
-      } else if (location_type == kLocationTypeSlot) {
+      } else if (location_type == kLocationTypeSlot ||
+                 location_type == kLocationTypeConnector ||
+                 location_type == kLocationTypeBay ||
+                 location_type == kLocationTypeBackplane ||
+                 location_type == kLocationTypeSocket) {
+        // These location types probably mean the hardware piece is plugged into
+        // the parent board, thus model the downstream component as a plug-in.
         auto label = node_location->GetNodeValue<PropertyServiceLabel>();
         if (!label.has_value()) continue;
         node->local_devpath = absl::StrCat(parent_devpath, "/", *label);
