@@ -62,12 +62,42 @@ enum CacheState {
 
 // Helper function to convert a key-value span to a JSON object that can be
 // used as a request body.
+
+nlohmann::json ProcessValueVariant(RedfishInterface::ListValue val);
+nlohmann::json ProcessValueVariant(RedfishInterface::ObjectValue val);
+nlohmann::json ProcessValueVariant(int val) { return nlohmann::json(val); }
+nlohmann::json ProcessValueVariant(std::string val) {
+  return nlohmann::json(val);
+}
+nlohmann::json ProcessValueVariant(const char *val) {
+  return nlohmann::json(val);
+}
+nlohmann::json ProcessValueVariant(bool val) { return nlohmann::json(val); }
+nlohmann::json ProcessValueVariant(double val) { return nlohmann::json(val); }
+nlohmann::json ProcessValueVariant(RedfishInterface::ListValue val) {
+  nlohmann::json array(nlohmann::json::value_t::array);
+  for (const auto &item : val.items) {
+    std::visit([&](auto i) { array.push_back(ProcessValueVariant(i)); }, item);
+  }
+  return array;
+}
+nlohmann::json ProcessValueVariant(RedfishInterface::ObjectValue val) {
+  nlohmann::json obj(nlohmann::json::value_t::object);
+  for (const auto &i : val.items) {
+    std::visit([&](auto v) { obj[i.first] = ProcessValueVariant(v); },
+               i.second);
+  }
+  return obj;
+}
+
 nlohmann::json KvSpanToJson(
     absl::Span<const std::pair<std::string, RedfishInterface::ValueVariant>>
         kv_span) {
   nlohmann::json json(nlohmann::json::value_t::object);
   for (const auto &kv_pair : kv_span) {
-    std::visit([&](auto val) { json[kv_pair.first] = val; }, kv_pair.second);
+    std::visit(
+        [&](auto val) { json[kv_pair.first] = ProcessValueVariant(val); },
+        kv_pair.second);
   }
   return json;
 }
@@ -442,7 +472,7 @@ class HttpRedfishInterface : public RedfishInterface {
   mutable absl::Mutex transport_mutex_;
   std::unique_ptr<ecclesia::RedfishTransport> transport_
       ABSL_GUARDED_BY(transport_mutex_);
-RedfishInterface::TrustedEndpoint trusted_ ABSL_GUARDED_BY(transport_mutex_);
+  RedfishInterface::TrustedEndpoint trusted_ ABSL_GUARDED_BY(transport_mutex_);
   std::unique_ptr<ecclesia::RedfishCachedGetterInterface> cache_
       ABSL_GUARDED_BY(transport_mutex_);
   const ServiceRootUri service_root_;

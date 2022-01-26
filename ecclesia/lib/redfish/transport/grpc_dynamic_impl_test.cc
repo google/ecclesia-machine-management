@@ -36,6 +36,7 @@
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/transport/grpc_dynamic_fake_server.h"
 #include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
+#include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
 #include "grpcpp/server_context.h"
 
@@ -149,26 +150,144 @@ TEST_F(GrpcDynamicImplTest, GetUriOk) {
 }
 
 TEST_F(GrpcDynamicImplTest, PostUriAndPatchUriOk) {
-  absl::string_view const_char_start = "const_char_star";
+  constexpr char kHi[] = "hi";
+  constexpr char kBye[] = "bye";
   absl::flat_hash_map<std::string, RedfishInterface::ValueVariant> payloads = {
-      {"string", std::string("string")},
-      {"const_char_star", const_char_start.data()},
+      {"int", 1},
+      {"string", "hello"},
+      {"char", kHi},
       {"bool", true},
-      {"int", 123},
-      {"double", 1.0}};
+      {"double", 3.14},
+      {"list",
+       RedfishInterface::ListValue{
+           .items = {1, "string",
+                     RedfishInterface::ListValue{.items = {"nested", "list"}},
+                     RedfishInterface::ObjectValue{
+                         .items = {{"nested", "obj"}}}}}},
+      {"obj", RedfishInterface::ObjectValue{
+                  .items = {{"obj_int", 2},
+                            {"obj_string", "goodbye"},
+                            {"obj_char", kBye},
+                            {"obj_bool", false},
+                            {"obj_double", 6.28},
+                            {"obj_list",
+                             RedfishInterface::ListValue{
+                                 .items = {2, "string",
+                                           RedfishInterface::ListValue{
+                                               .items = {"nested", "list"}},
+                                           RedfishInterface::ObjectValue{
+                                               .items = {{"nested", "obj"}}}}}},
+                            {"obj_obj", RedfishInterface::ObjectValue{
+                                            .items = {{"nested", 3}}}}}}}};
   server_.SetCallback([&payloads](grpc::ServerContext*, const Request* request,
                                   Response* response) {
     EXPECT_EQ(request->url(), "/magic");
-    EXPECT_EQ(request->message().fields().at("string").string_value(),
-              std::get<std::string>(payloads.at("string")));
-    EXPECT_EQ(request->message().fields().at("const_char_star").string_value(),
-              std::get<const char*>(payloads.at("const_char_star")));
-    EXPECT_EQ(request->message().fields().at("bool").bool_value(),
-              std::get<bool>(payloads.at("bool")));
-    EXPECT_EQ(request->message().fields().at("int").number_value(),
-              std::get<int>(payloads.at("int")));
-    EXPECT_EQ(request->message().fields().at("double").number_value(),
-              std::get<double>(payloads.at("double")));
+    EXPECT_THAT(request->message(), EqualsProto(R"pb(
+                  fields {
+                    key: "int"
+                    value { number_value: 1 }
+                  }
+                  fields {
+                    key: "string"
+                    value { string_value: "hello" }
+                  }
+                  fields {
+                    key: "char"
+                    value { string_value: "hi" }
+                  }
+                  fields {
+                    key: "bool"
+                    value { bool_value: true }
+                  }
+                  fields {
+                    key: "double"
+                    value { number_value: 3.14 }
+                  }
+                  fields {
+                    key: "list"
+                    value {
+                      list_value {
+                        values { number_value: 1 }
+                        values { string_value: "string" }
+                        values {
+                          list_value {
+                            values { string_value: "nested" }
+                            values { string_value: "list" }
+                          }
+                        }
+                        values {
+                          struct_value {
+                            fields {
+                              key: "nested"
+                              value { string_value: "obj" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  fields {
+                    key: "obj"
+                    value {
+                      struct_value {
+                        fields {
+                          key: "obj_int"
+                          value { number_value: 2 }
+                        }
+                        fields {
+                          key: "obj_string"
+                          value { string_value: "goodbye" }
+                        }
+                        fields {
+                          key: "obj_char"
+                          value { string_value: "bye" }
+                        }
+                        fields {
+                          key: "obj_bool"
+                          value { bool_value: false }
+                        }
+                        fields {
+                          key: "obj_double"
+                          value { number_value: 6.28 }
+                        }
+                        fields {
+                          key: "obj_list"
+                          value {
+                            list_value {
+                              values { number_value: 2 }
+                              values { string_value: "string" }
+                              values {
+                                list_value {
+                                  values { string_value: "nested" }
+                                  values { string_value: "list" }
+                                }
+                              }
+                              values {
+                                struct_value {
+                                  fields {
+                                    key: "nested"
+                                    value { string_value: "obj" }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                        fields {
+                          key: "obj_obj"
+                          value {
+                            struct_value {
+                              fields {
+                                key: "nested"
+                                value: { number_value: 3 }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                )pb"));
     return grpc::Status::OK;
   });
   {

@@ -44,6 +44,7 @@ namespace {
 
 using ::testing::ElementsAre;
 using ::testing::Eq;
+using ::testing::Gt;
 using ::testing::UnorderedElementsAre;
 
 // Test harness to start a FakeRedfishServer and create a RedfishInterface
@@ -461,6 +462,176 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadFailsWithNoOdataId) {
   ASSERT_TRUE(obj);
   auto new_obj = obj->EnsureFreshPayload();
   EXPECT_FALSE(new_obj);
+}
+
+TEST_F(HttpRedfishInterfaceTest, PostHandler) {
+  bool called = false;
+  server_->AddHttpPostHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        EXPECT_THAT(read_request, Eq(nlohmann::json::parse(
+                                      R"json({
+  "int": 1,
+  "string": "hello",
+  "char": "hi",
+  "bool": true,
+  "double": 3.14,
+  "list": [
+    1,
+    "string",
+    [ "nested", "list" ],
+    { "nested": "obj" }
+  ],
+  "obj": {
+    "obj_int": 2,
+    "obj_string": "goodbye",
+    "obj_char": "bye",
+    "obj_bool": false,
+    "obj_double": 6.28,
+    "obj_list": [
+      2,
+      "string",
+      [ "nested", "list" ],
+      { "nested": "obj" }
+    ],
+    "obj_obj": {
+      "nested": 3
+    }
+  }
+})json",
+                                      /*cb=*/nullptr, /*exceptions=*/false)));
+        called = true;
+
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+
+  constexpr char kHi[] = "hi";
+  constexpr char kBye[] = "bye";
+  auto result = intf_->PostUri(
+      "/my/uri",
+      {{"int", 1},
+       {"string", "hello"},
+       {"char", kHi},
+       {"bool", true},
+       {"double", 3.14},
+       {"list",
+        RedfishInterface::ListValue{
+            .items = {1, "string",
+                      RedfishInterface::ListValue{.items = {"nested", "list"}},
+                      RedfishInterface::ObjectValue{
+                          .items = {{"nested", "obj"}}}}}},
+       {"obj",
+        RedfishInterface::ObjectValue{
+            .items = {{"obj_int", 2},
+                      {"obj_string", "goodbye"},
+                      {"obj_char", kBye},
+                      {"obj_bool", false},
+                      {"obj_double", 6.28},
+                      {"obj_list",
+                       RedfishInterface::ListValue{
+                           .items = {2, "string",
+                                     RedfishInterface::ListValue{
+                                         .items = {"nested", "list"}},
+                                     RedfishInterface::ObjectValue{
+                                         .items = {{"nested", "obj"}}}}}},
+                      {"obj_obj", RedfishInterface::ObjectValue{
+                                      .items = {{"nested", 3}}}}}}}});
+  EXPECT_TRUE(called);
+}
+
+TEST_F(HttpRedfishInterfaceTest, PatchHandler) {
+  bool called = false;
+  server_->AddHttpPatchHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        EXPECT_THAT(read_request, Eq(nlohmann::json::parse(
+                                      R"json({
+  "int": 1,
+  "string": "hello",
+  "char": "hi",
+  "bool": true,
+  "double": 3.14,
+  "list": [
+    1,
+    "string",
+    [ "nested", "list" ],
+    { "nested": "obj" }
+  ],
+  "obj": {
+    "obj_int": 2,
+    "obj_string": "goodbye",
+    "obj_char": "bye",
+    "obj_bool": false,
+    "obj_double": 6.28,
+    "obj_list": [
+      2,
+      "string",
+      [ "nested", "list" ],
+      { "nested": "obj" }
+    ],
+    "obj_obj": {
+      "nested": 3
+    }
+  }
+})json",
+                                      /*cb=*/nullptr, /*exceptions=*/false)));
+        called = true;
+
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+
+  constexpr char kHi[] = "hi";
+  constexpr char kBye[] = "bye";
+  auto result = intf_->PatchUri(
+      "/my/uri",
+      {{"int", 1},
+       {"string", "hello"},
+       {"char", kHi},
+       {"bool", true},
+       {"double", 3.14},
+       {"list",
+        RedfishInterface::ListValue{
+            .items = {1, "string",
+                      RedfishInterface::ListValue{.items = {"nested", "list"}},
+                      RedfishInterface::ObjectValue{
+                          .items = {{"nested", "obj"}}}}}},
+       {"obj",
+        RedfishInterface::ObjectValue{
+            .items = {{"obj_int", 2},
+                      {"obj_string", "goodbye"},
+                      {"obj_char", kBye},
+                      {"obj_bool", false},
+                      {"obj_double", 6.28},
+                      {"obj_list",
+                       RedfishInterface::ListValue{
+                           .items = {2, "string",
+                                     RedfishInterface::ListValue{
+                                         .items = {"nested", "list"}},
+                                     RedfishInterface::ObjectValue{
+                                         .items = {{"nested", "obj"}}}}}},
+                      {"obj_obj", RedfishInterface::ObjectValue{
+                                      .items = {{"nested", 3}}}}}}}});
+  EXPECT_TRUE(called);
 }
 
 }  // namespace

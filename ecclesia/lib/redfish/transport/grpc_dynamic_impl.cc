@@ -87,46 +87,70 @@ RedfishVariant DoRpc(absl::string_view uri,
   return GetRedfishVariant(AsAbslStatus(status), std::move(response));
 }
 
-template <class... Ts>
-struct Overloaded : Ts... {
-  using Ts::operator()...;
-};
-
-template <class... Ts>
-Overloaded(Ts...) -> Overloaded<Ts...>;
+Value ProcessValueVariant(RedfishInterface::ListValue val);
+Value ProcessValueVariant(RedfishInterface::ObjectValue val);
+Value ProcessValueVariant(int val) {
+  Value v;
+  v.set_number_value(val);
+  return v;
+}
+Value ProcessValueVariant(std::string val) {
+  Value v;
+  v.set_string_value(val);
+  return v;
+}
+Value ProcessValueVariant(const char* val) {
+  Value v;
+  v.set_string_value(val);
+  return v;
+}
+Value ProcessValueVariant(bool val) {
+  Value v;
+  v.set_bool_value(val);
+  return v;
+}
+Value ProcessValueVariant(double val) {
+  Value v;
+  v.set_number_value(val);
+  return v;
+}
+Value ProcessValueVariant(RedfishInterface::ListValue val) {
+  Value v;
+  auto* list_value = v.mutable_list_value();
+  for (const auto& item : val.items) {
+    std::visit(
+        [&](auto visit_i) {
+          *list_value->add_values() = ProcessValueVariant(visit_i);
+        },
+        item);
+  }
+  return v;
+}
+Value ProcessValueVariant(RedfishInterface::ObjectValue val) {
+  Value v;
+  auto* struct_value = v.mutable_struct_value();
+  for (const auto& i : val.items) {
+    std::visit(
+        [&](auto visit_v) {
+          struct_value->mutable_fields()->insert(
+              {i.first, ProcessValueVariant(visit_v)});
+        },
+        i.second);
+  }
+  return v;
+}
 
 Struct GetRequestMessage(
     absl::Span<const std::pair<std::string, RedfishInterface::ValueVariant>>
         kv_span) {
   Struct message;
-  for (const auto& [key, value_variant] : kv_span) {
-    message.mutable_fields()->insert(
-        {key, absl::visit(Overloaded{[](int variant) {
-                                       Value val;
-                                       val.set_number_value(variant);
-                                       return val;
-                                     },
-                                     [](double variant) {
-                                       Value val;
-                                       val.set_number_value(variant);
-                                       return val;
-                                     },
-                                     [](bool variant) {
-                                       Value val;
-                                       val.set_bool_value(variant);
-                                       return val;
-                                     },
-                                     [](const std::string& variant) {
-                                       Value val;
-                                       val.set_string_value(variant);
-                                       return val;
-                                     },
-                                     [](const char* variant) {
-                                       Value val;
-                                       val.set_string_value(variant);
-                                       return val;
-                                     }},
-                          value_variant)});
+  for (const auto& kv : kv_span) {
+    std::visit(
+        [&](auto visit_v) {
+          message.mutable_fields()->insert(
+              {kv.first, ProcessValueVariant(visit_v)});
+        },
+        kv.second);
   }
   return message;
 }

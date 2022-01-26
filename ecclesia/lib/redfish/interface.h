@@ -27,6 +27,7 @@
 #include <variant>
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
@@ -374,8 +375,19 @@ class RedfishObject {
 // RedfishInterface provides initial access points to the Redfish resource tree.
 class RedfishInterface {
  public:
-  using ValueVariant =
-      std::variant<int, bool, std::string, const char *, double>;
+  // ListValue, ObjectValue and ValueVariant provide abstractions for passing
+  // input data to mutable operations (e.g. POST, PATCH, DELETE) without
+  // exposing the underlying transport data format (e.g. JSON).
+  struct ListValue;
+  struct ObjectValue;
+  using ValueVariant = std::variant<int, bool, std::string, const char *,
+                                    double, ListValue, ObjectValue>;
+  struct ListValue {
+    std::vector<ValueVariant> items;
+  };
+  struct ObjectValue {
+    std::vector<std::pair<std::string, ValueVariant>> items;
+  };
 
   static inline absl::string_view ServiceRootToUri(
       ServiceRootUri service_root) {

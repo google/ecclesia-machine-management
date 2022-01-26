@@ -19,6 +19,7 @@ cc_library(
     deps = [
         "//ecclesia/lib/http:codes",
         "//ecclesia/lib/logging",
+        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",

@@ -129,6 +129,7 @@ cc_test(
         "//ecclesia/lib/http:codes",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
+        "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/container:flat_hash_map",
