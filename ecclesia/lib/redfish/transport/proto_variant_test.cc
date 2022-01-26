@@ -292,18 +292,31 @@ TEST(ProtoVariantTest, ForEachProperty) {
   EXPECT_THAT(
       all_properties,
       UnorderedElementsAre(
-          std::make_pair("null", "null_value: NULL_VALUE\n"),
-          std::make_pair("num", "number_value: 1\n"),
-          std::make_pair("str", "string_value: \"hi\"\n"),
-          std::make_pair("bool", "bool_value: true\n"),
           std::make_pair(
-              "struct",
-              "struct_value {\n  fields {\n    key: \"nested_str\"\n    value "
-              "{\n      string_value: \"hi\"\n    }\n  }\n}\n"),
-          std::make_pair("list",
-                         "list_value {\n  values {\n    number_value: 1\n  }\n "
-                         " values {\n    number_value: 2\n  }\n  values {\n    "
-                         "number_value: 3\n  }\n}\n")));
+              "null", ParseTextAsProtoOrDie<Value>("null_value: NULL_VALUE\n")
+                          .DebugString()),
+          std::make_pair(
+              "num",
+              ParseTextAsProtoOrDie<Value>("number_value: 1\n").DebugString()),
+          std::make_pair("str",
+                         ParseTextAsProtoOrDie<Value>("string_value: \"hi\"\n")
+                             .DebugString()),
+          std::make_pair(
+              "bool",
+              ParseTextAsProtoOrDie<Value>("bool_value: true\n").DebugString()),
+          std::make_pair("struct",
+                         ParseTextAsProtoOrDie<Value>(
+                             "struct_value {\n  fields {\n    key: "
+                             "\"nested_str\"\n    value "
+                             "{\n      string_value: \"hi\"\n    }\n  }\n}\n")
+                             .DebugString()),
+          std::make_pair(
+              "list",
+              ParseTextAsProtoOrDie<Value>(
+                  "list_value {\n  values {\n    number_value: 1\n  }\n "
+                  " values {\n    number_value: 2\n  }\n  values {\n    "
+                  "number_value: 3\n  }\n}\n")
+                  .DebugString())));
 }
 
 TEST(ProtoVariantTest, ForEachPropertyStop) {
