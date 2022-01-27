@@ -42,6 +42,8 @@ inline constexpr char kRfPropertyControllers[] = "Controllers";
 inline constexpr char kRfPropertyChassis[] = "Chassis";
 inline constexpr char kRfPropertyChassisReset[] = "#Chassis.Reset";
 inline constexpr char kRfPropertyComponentIntegrity[] = "ComponentIntegrity";
+inline constexpr char kRfPropertyComponentIntegritySPDMGetSignedMeasurements[] =
+    "#ComponentIntegrity.SPDMGetSignedMeasurements";
 inline constexpr char kRfPropertyMemory[] = "Memory";
 inline constexpr char kRfPropertyStorage[] = "Storage";
 inline constexpr char kRfPropertyDrives[] = "Drives";
@@ -130,9 +132,12 @@ inline constexpr char kRfPropertyAdditionalDataUri[] = "AdditionalDataURI";
 inline constexpr char kRfPropertyAbsent[] = "Absent";
 
 inline constexpr char kRfPropertyCertificates[] = "Certificates";
-inline constexpr char kRfPropertyIdentityAuthentication[] = "IdentityAuthentication";
-inline constexpr char kRfPropertyResponderAuthentication[] = "ResponderAuthentication";
-inline constexpr char kRfPropertyComponentCertificate[] = "ComponentCertificate";
+inline constexpr char kRfPropertyIdentityAuthentication[] =
+    "IdentityAuthentication";
+inline constexpr char kRfPropertyResponderAuthentication[] =
+    "ResponderAuthentication";
+inline constexpr char kRfPropertyComponentCertificate[] =
+    "ComponentCertificate";
 
 DEFINE_REDFISH_RESOURCE(ResourceCertificate, "Certificate");
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
@@ -257,6 +262,15 @@ DEFINE_REDFISH_PROPERTY(PropertyCertificateString, std::string,
 DEFINE_REDFISH_PROPERTY(PropertyCertificateType, std::string,
                         "CertificateType");
 DEFINE_REDFISH_PROPERTY(PropertySlotId, int, "SlotId");
+DEFINE_REDFISH_PROPERTY(PropertyNonce, std::string, "Nonce");
+DEFINE_REDFISH_PROPERTY(PropertySignedMeasurements, std::string,
+                        "SignedMeasurements");
+DEFINE_REDFISH_PROPERTY(PropertyHashingAlgorithm, std::string,
+                        "HashingAlgorithm");
+DEFINE_REDFISH_PROPERTY(PropertySigningAlgorithm, std::string,
+                        "SigningAlgorithm");
+DEFINE_REDFISH_PROPERTY(PropertyMeasurementIndices, std::vector<int64_t>,
+                        "MeasurementIndices");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");

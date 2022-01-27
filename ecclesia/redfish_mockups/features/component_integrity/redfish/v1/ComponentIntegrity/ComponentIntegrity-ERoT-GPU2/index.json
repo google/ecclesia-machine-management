@@ -26,5 +26,11 @@
         "@odata.id":"/redfish/v1/ComputerSystems/System-1/Processors/GPU2"
       }
     ]
+  },
+  "Actions": {
+    "#ComponentIntegrity.SPDMGetSignedMeasurements": {
+      "target": "/redfish/v1/ComponentIntegrity/ComponentIntegrity-ERoT-GPU2/Actions/ComponentIntegrity.SPDMGetSignedMeasurements",
+      "@Redfish.ActionInfo": "/redfish/v1/ComponentIntegrity/ComponentIntegrity-ERoT-GPU2/SPDMGetSignedMeasurementsActionInfo"
+    }
   }
 }
