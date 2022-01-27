@@ -18,7 +18,6 @@
 
 #include <memory>
 #include <string>
-#include <string_view>
 
 #include "google/protobuf/struct.pb.h"
 #include "gmock/gmock.h"
