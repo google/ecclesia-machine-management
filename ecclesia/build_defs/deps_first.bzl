@@ -116,10 +116,14 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             urls = ["https://github.com/googleapis/googleapis/archive/8d245ac97e058b541f1477b1a85d676b18e80849.tar.gz"],
         )
 
-    if not native.existing_rule("borginssl"):
+    if not native.existing_rule("boringssl"):
         # Needs to come before grpc_deps() to be respected.
+        patch_files = [
+            "01.no_array_parameter.patch",
+        ]
         http_archive(
             name = "boringssl",
+            patches = _make_patch_paths("boringssl.patches", patch_files, package_name),
             sha256 = "66e1b0675d58b35f9fe3224b26381a6d707c3293eeee359c813b4859a6446714",
             strip_prefix = "boringssl-9b7498d5aba71e545747d65dc65a4d4424477ff0",
             urls = [
