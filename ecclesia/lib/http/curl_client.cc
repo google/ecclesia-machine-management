@@ -36,7 +36,6 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
-#include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "curl/curl.h"
 #include "ecclesia/lib/http/client.h"
@@ -122,8 +121,8 @@ CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
 }
 
 CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
-                                        absl::string_view param) {
-  return ::curl_easy_setopt(curl, option, param);
+                                        const std::string &param) {
+  return ::curl_easy_setopt(curl, option, param.c_str());
 }
 
 CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,

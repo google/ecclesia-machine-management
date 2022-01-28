@@ -25,7 +25,6 @@
 
 #include "absl/base/thread_annotations.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "curl/curl.h"
 #include "ecclesia/lib/http/client.h"
@@ -61,7 +60,7 @@ class LibCurl {
                                     const char *param) = 0;
 
   virtual CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
-                                    absl::string_view param) = 0;
+                                    const std::string &param) = 0;
   virtual CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
                                     void *param) = 0;
   virtual CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
@@ -123,7 +122,7 @@ class LibCurlProxy : public LibCurl {
                             const char *param) override;
 
   CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
-                            absl::string_view param) override;
+                            const std::string &param) override;
 
   CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
                             void *param) override;
