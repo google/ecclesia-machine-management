@@ -219,6 +219,7 @@ cc_library(
     hdrs = ["grpc.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":grpc_dynamic_options",
         ":interface",
         ":struct_proto_conversion",
         "//ecclesia/lib/http:codes",

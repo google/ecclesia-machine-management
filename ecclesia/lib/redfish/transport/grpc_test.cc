@@ -35,7 +35,9 @@ TEST(GrpcRedfishTransport, Get) {
   int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port);
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port));
+  GrpcDynamicImplOptions options;
+  options.SetToInsecure();
+  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port), {}, options);
 
   absl::string_view expected_str = R"json({
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
@@ -66,7 +68,9 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port);
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port));
+  GrpcDynamicImplOptions options;
+  options.SetToInsecure();
+  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port), {}, options);
 
   nlohmann::json expected_post =
       nlohmann::json::parse(R"json({})json", nullptr, false);
@@ -147,7 +151,9 @@ TEST(GrpcRedfishTransport, GetRootUri) {
   int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port);
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port));
+  GrpcDynamicImplOptions options;
+  options.SetToInsecure();
+  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port), {}, options);
   EXPECT_EQ(transport.GetRootUri(), "/redfish/v1");
 }
 
@@ -159,7 +165,9 @@ TEST(GrpcRedfishTransport, UpdateToNetworkEndpoint) {
   int port2 = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port2);
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port1));
+  GrpcDynamicImplOptions options;
+  options.SetToInsecure();
+  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port1), {}, options);
   transport.UpdateToNetworkEndpoint(absl::StrCat("[::1]:", port2));
 
   absl::string_view expected_str = R"json({
@@ -195,7 +203,9 @@ TEST(GrpcRedfishTransport, UpdateToUdsEndpoint) {
       absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket");
   GrpcDynamicMockupServer mockup_server2("barebones_session_auth/mockup.shar",
                                          mockup_uds);
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port1));
+  GrpcDynamicImplOptions options;
+  options.SetToInsecure();
+  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port1), {}, options);
   transport.UpdateToUdsEndpoint(mockup_uds);
 
   absl::string_view expected_str = R"json({
@@ -265,7 +275,7 @@ TEST(GrpcRedfishTransport, Timeout) {
   int port = ecclesia::FindUnusedPortOrDie();
   testing::internal::Notification notification;
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
-                                         "[::1]", port);
+                                        "[::1]", port);
   mockup_server.AddHttpGetHandler(
       "/redfish/v1",
       [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
@@ -275,11 +285,17 @@ TEST(GrpcRedfishTransport, Timeout) {
         return grpc::Status::OK;
       });
   GrpcRedfishTransport::Params params;
+  GrpcDynamicImplOptions options;
   params.timeout = absl::AbsDuration(absl::Milliseconds(50));
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port), params);
-  EXPECT_THAT(transport.Get("/redfish/v1"),
-              internal_status::IsStatusPolyMatcher(
-                  absl::StatusCode::kDeadlineExceeded));
+  std::string endpoint = absl::StrCat("[::1]:", port);
+  if (auto transport = CreateGrpcRedfishTransport(endpoint,
+                                                  params, options);
+      transport.ok()) {
+    EXPECT_THAT((*transport)->Get("/redfish/v1"),
+                internal_status::IsStatusPolyMatcher(
+                    absl::StatusCode::kDeadlineExceeded));
+  }
+
   notification.WaitForNotification();
   absl::SleepFor(absl::Milliseconds(100));
 }

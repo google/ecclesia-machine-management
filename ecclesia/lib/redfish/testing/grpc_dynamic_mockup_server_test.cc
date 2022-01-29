@@ -64,9 +64,8 @@ class GrpcRedfishMockUpServerTest : public Test {
     int port = FindUnusedPortOrDie();
     mockup_server_ = absl::make_unique<GrpcDynamicMockupServer>(
         "barebones_session_auth/mockup.shar", "[::1]", port);
-    GrpcRedfishTransport::Params params;
     client_ = absl::make_unique<GrpcRedfishTransport>(
-        absl::StrCat("[::1]:", port), params);
+        absl::StrCat("[::1]:", port));
     std::shared_ptr<grpc::Channel> channel = CreateChannel(
         absl::StrCat("[::1]:", port), grpc::InsecureChannelCredentials());
     stub_ = ::redfish::v1::RedfishV1::NewStub(channel);
@@ -318,7 +317,7 @@ TEST(GrpcRedfishMockUpServerUdsTest, TestUds) {
       absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket");
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         mockup_uds);
-  GrpcRedfishTransport transport(absl::StrCat("unix://", mockup_uds), {});
+  GrpcRedfishTransport transport(absl::StrCat("unix://", mockup_uds));
   std::string_view expexted_str = R"json({
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
     "@odata.id": "/redfish/v1",

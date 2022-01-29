@@ -23,6 +23,7 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
+#include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
 
@@ -32,7 +33,7 @@ class GrpcRedfishTransport : public RedfishTransport {
  public:
   struct Params {
     // Clock used for all operations.
-    Clock *clock = Clock::RealClock();
+    Clock* clock = Clock::RealClock();
     // Timeout used for all operations.
     absl::Duration timeout = absl::Seconds(5);
   };
@@ -40,10 +41,10 @@ class GrpcRedfishTransport : public RedfishTransport {
   // Creates an GrpcRedfishTransport using a specified endpoint.
   // Params:
   //   endpoint: e.g. "dns:///localhost:80", "unix:///var/run/my.socket"
-  GrpcRedfishTransport(std::string endpoint, Params params,
+  GrpcRedfishTransport(std::string_view endpoint, const Params& params,
+                       const GrpcDynamicImplOptions& options,
                        ServiceRootUri service_root = ServiceRootUri::kRedfish);
-
-  GrpcRedfishTransport(std::string endpoint);
+  GrpcRedfishTransport(std::string_view endpoint);
 
   ~GrpcRedfishTransport() override {}
 
@@ -74,7 +75,15 @@ class GrpcRedfishTransport : public RedfishTransport {
   Params params_;
   // The service root for RedfishInterface.
   const ServiceRootUri service_root_;
+  std::string fqdn_;
 };
+
+absl::StatusOr<std::unique_ptr<GrpcRedfishTransport>>
+CreateGrpcRedfishTransport(
+    std::string_view endpoint, const GrpcRedfishTransport::Params& params,
+    const GrpcDynamicImplOptions& options,
+    ServiceRootUri service_root = ServiceRootUri::kRedfish);
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TRANSPORT_GRPC_H_
