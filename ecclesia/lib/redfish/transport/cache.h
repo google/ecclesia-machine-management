@@ -27,7 +27,6 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/http/codes.h"
-#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
 #include "single_include/nlohmann/json.hpp"

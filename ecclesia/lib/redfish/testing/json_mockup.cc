@@ -167,6 +167,13 @@ class JsonMockupMockup : public RedfishInterface {
     // in case someone is expecting some particular behaviour.
     ecclesia::FatalLog() << "Tried to update the endpoint of a JsonMockup";
   }
+  void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
+                       std::unique_ptr<RedfishCachedGetterInterface> new_cache,
+                       TrustedEndpoint trusted) override {
+    // There's no reason why this cannot be a no-op, but for now just terminate
+    // in case someone is expecting some particular behaviour.
+    ecclesia::FatalLog() << "Tried to update the endpoint of a JsonMockup";
+  }
   RedfishVariant GetRoot(GetParams params) override {
     return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(json_model_));
   }

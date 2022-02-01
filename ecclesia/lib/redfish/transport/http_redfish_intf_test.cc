@@ -75,6 +75,92 @@ class HttpRedfishInterfaceTest : public ::testing::Test {
   std::unique_ptr<RedfishInterface> intf_;
 };
 
+TEST_F(HttpRedfishInterfaceTest, UpdateTransport) {
+  // Spin up a second server as a second endpoint to connect to.
+  auto server2 = std::make_unique<ecclesia::FakeRedfishServer>(
+      "barebones_session_auth/mockup.shar",
+      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+  auto config = server2->GetConfig();
+  ecclesia::HttpCredential creds;
+  auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
+      ecclesia::LibCurlProxy::CreateInstance(), creds);
+  auto new_transport = ecclesia::HttpRedfishTransport::MakeNetwork(
+      std::move(curl_http_client),
+      absl::StrFormat("%s:%d", config.hostname, config.port));
+  auto new_cache = std::make_unique<ecclesia::TimeBasedCache>(
+      new_transport.get(), &clock_, absl::Seconds(5));
+
+  // Set up handlers on the second server to return a different payload.
+  constexpr absl::string_view kSecondServerResponse = R"json({
+  "@odata.id": "/redfish/v1/Chassis/chassis",
+  "Id": "1",
+  "Name": "MyTestResource",
+  "Description": "My Test Resource"
+})json";
+  int called_count = 0;
+  server2->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called_count++;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(kSecondServerResponse);
+        req->Reply();
+      });
+
+  // First GET should fetch from the original server.
+  EXPECT_TRUE(intf_->IsTrusted());
+  EXPECT_THAT(
+      nlohmann::json::parse(
+          intf_->CachedGetUri("/redfish/v1/Chassis/chassis").DebugString(),
+          nullptr,
+          /*allow_exceptions=*/false),
+      Eq(nlohmann::json::parse(R"json({
+    "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
+    "@odata.id": "/redfish/v1/Chassis/chassis",
+    "@odata.type": "#Chassis.v1_10_0.Chassis",
+    "Id": "chassis",
+    "Name": "chassis",
+    "Status": {
+        "State": "StandbyOffline"
+    }
+})json")));
+
+  // Update the endpoint.
+  intf_->UpdateTransport(std::move(new_transport), std::move(new_cache),
+                         RedfishInterface::kUntrusted);
+
+  // Subsequent GET should fetch from the new server. The cache should be wiped.
+  EXPECT_FALSE(intf_->IsTrusted());
+  EXPECT_THAT(
+      nlohmann::json::parse(
+          intf_->CachedGetUri("/redfish/v1/Chassis/chassis").DebugString(),
+          nullptr,
+          /*allow_exceptions=*/false),
+      Eq(nlohmann::json::parse(kSecondServerResponse)));
+  EXPECT_THAT(called_count, Eq(1));
+
+  // New cache policy should be followed.
+  // Verify the cached copy is returned.
+  EXPECT_THAT(
+      nlohmann::json::parse(
+          intf_->CachedGetUri("/redfish/v1/Chassis/chassis").DebugString(),
+          nullptr,
+          /*allow_exceptions=*/false),
+      Eq(nlohmann::json::parse(kSecondServerResponse)));
+  EXPECT_THAT(called_count, Eq(1));
+
+  // Verify after advancing time, a fresh copy is returned.
+  clock_.AdvanceTime(absl::Seconds(5));
+  EXPECT_THAT(
+      nlohmann::json::parse(
+          intf_->CachedGetUri("/redfish/v1/Chassis/chassis").DebugString(),
+          nullptr,
+          /*allow_exceptions=*/false),
+      Eq(nlohmann::json::parse(kSecondServerResponse)));
+  EXPECT_THAT(called_count, Eq(2));
+}
+
 TEST_F(HttpRedfishInterfaceTest, GetRoot) {
   auto root = intf_->GetRoot();
   EXPECT_THAT(nlohmann::json::parse(root.DebugString(), nullptr,

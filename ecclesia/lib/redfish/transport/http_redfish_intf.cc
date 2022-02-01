@@ -379,6 +379,15 @@ class HttpRedfishInterface : public RedfishInterface {
     }
   }
 
+  void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
+                       std::unique_ptr<RedfishCachedGetterInterface> new_cache,
+                       TrustedEndpoint trusted) {
+    absl::WriterMutexLock mu(&transport_mutex_);
+    transport_ = std::move(new_transport);
+    cache_ = std::move(new_cache);
+    trusted_ = trusted;
+  }
+
   RedfishVariant GetRoot(GetParams params) override {
     if (service_root_ == ServiceRootUri::kGoogle) {
       return CachedGetUri(kGoogleServiceRoot, params);

@@ -99,7 +99,9 @@ cc_library(
     hdrs = ["grpc_dynamic_impl.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":cache",
         ":grpc_dynamic_options",
+        ":interface",
         ":proto_variant",
         "//ecclesia/lib/http:codes",
         "//ecclesia/lib/logging",
@@ -152,7 +154,6 @@ cc_library(
     deps = [
         ":interface",
         "//ecclesia/lib/http:codes",
-        "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/time:clock",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",

@@ -79,6 +79,13 @@ TEST_F(GrpcDynamicImplTest, UpdateEndpoint) {
       "Create a new instance instead");
 }
 
+TEST_F(GrpcDynamicImplTest, UpdateTransport) {
+  EXPECT_DEATH(
+      client_->UpdateTransport(nullptr, nullptr,
+                               RedfishInterface::TrustedEndpoint::kTrusted),
+      "Create a new instance instead");
+}
+
 TEST_F(GrpcDynamicImplTest, StatusNotOk) {
   server_.SetCallback([](grpc::ServerContext*, const Request* request,
                          Response*) { return grpc::Status::CANCELLED; });

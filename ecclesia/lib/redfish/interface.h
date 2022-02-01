@@ -37,6 +37,8 @@
 #include "absl/types/span.h"
 #include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/logging/logging.h"
+#include "ecclesia/lib/redfish/transport/cache.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 
 namespace ecclesia {
 
@@ -412,6 +414,10 @@ class RedfishInterface {
   // Updates the endpoint for sending Redfish requests.
   virtual void UpdateEndpoint(absl::string_view endpoint,
                               TrustedEndpoint trusted) = 0;
+  virtual void UpdateTransport(
+      std::unique_ptr<RedfishTransport> new_transport,
+      std::unique_ptr<RedfishCachedGetterInterface> new_cache,
+      TrustedEndpoint trusted) = 0;
 
   // Returns whether the endpoint is trusted.
   virtual bool IsTrusted() const = 0;
@@ -466,6 +472,9 @@ class NullRedfish : public RedfishInterface {
   // than a more concrete interface failing to connect to a provided endpoint.
   void UpdateEndpoint(absl::string_view endpoint,
                       TrustedEndpoint trusted) override {}
+  void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
+                       std::unique_ptr<RedfishCachedGetterInterface> new_cache,
+                       TrustedEndpoint trusted) override {}
   // The null endpoint is trusted as it doesn't provide any system information,
   // so there is nothing it could lie about.
   bool IsTrusted() const override { return true; }
