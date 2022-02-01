@@ -20,6 +20,7 @@
 #include <string>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "single_include/nlohmann/json.hpp"
@@ -60,6 +61,27 @@ class RedfishTransport {
                                        absl::string_view data) = 0;
   virtual absl::StatusOr<Result> Delete(absl::string_view path,
                                         absl::string_view data) = 0;
+};
+
+// NullTransport provides a placeholder implementation which gracefully fails
+// all of its methods.
+class NullTransport : public RedfishTransport {
+  void UpdateToNetworkEndpoint(absl::string_view endpoint) override {}
+  void UpdateToUdsEndpoint(absl::string_view unix_domain_socket) override {}
+  absl::string_view GetRootUri() override { return ""; }
+  absl::StatusOr<Result> Get(absl::string_view path) {
+    return absl::InternalError("NullTransport");
+  }
+  absl::StatusOr<Result> Post(absl::string_view path, absl::string_view data) {
+    return absl::InternalError("NullTransport");
+  }
+  absl::StatusOr<Result> Patch(absl::string_view path, absl::string_view data) {
+    return absl::InternalError("NullTransport");
+  }
+  absl::StatusOr<Result> Delete(absl::string_view path,
+                                absl::string_view data) {
+    return absl::InternalError("NullTransport");
+  }
 };
 
 }  // namespace ecclesia
