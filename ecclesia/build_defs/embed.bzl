@@ -38,22 +38,32 @@ def cc_data_library(
     )
 
     # Run the cc_embed tool to generate a header and code file embedding all the data
-    # files. Note that we strip three prefixes from the file paths: first the BINDIR and
+    # files. Note that we strip four prefixes from the file paths: first the BINDIR and
     # GENDIR which ensures that every file is represented with its path relative to the
-    # workspace root, and second the package name to change the path to being relative
-    # to the local package instead of the global workspace path. This stripping is
-    # redundant in cases where we specify --flatten but for simplicity we just always
-    # pass in the stripping args.
+    # workspace root, then the repository name to cover the case where this project is
+    # being built as an external dependency, and finally the package name to change the
+    # path to being relative to the local package instead of the global workspace path.
+    # This stripping is redundant in cases where we specify --flatten but for simplicity
+    # we just always pass in the stripping args.
     flatten_arg = "--flatten" if flatten else ""
+    external_prefix = "external/{}".format(native.repository_name().lstrip("@"))
     native.genrule(
         name = name + "__generator",
         srcs = [":" + name + "__data_filegroup"],
         outs = [name + ".cc", name + ".h"],
         cmd = ("$(location //ecclesia/lib/file:cc_embed) " +
                "--output_name=%s --output_dir=\"$(@D)\" --namespace=%s --variable_name=%s " +
-               "--strip_prefixes=$(BINDIR),$(GENDIR),%s %s " +
+               "--strip_prefixes=$(BINDIR),$(GENDIR),%s,%s %s " +
                "$(locations :%s__data_filegroup)") %
-              (name, cc_namespace, var_name, native.package_name(), flatten_arg, name),
+              (
+                  name,
+                  cc_namespace,
+                  var_name,
+                  external_prefix,
+                  native.package_name(),
+                  flatten_arg,
+                  name,
+              ),
         exec_tools = ["//ecclesia/lib/file:cc_embed"],
     )
 
