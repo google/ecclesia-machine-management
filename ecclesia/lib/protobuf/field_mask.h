@@ -44,11 +44,6 @@ namespace ecclesia_field_mask_util {
 
 // For documentation on these functions see FieldMaskUtil.
 void FromString(absl::string_view str, google::protobuf::FieldMask *out);
-void Intersect(const google::protobuf::FieldMask &mask1,
-               const google::protobuf::FieldMask &mask2,
-               google::protobuf::FieldMask *out);
-bool TrimMessage(const google::protobuf::FieldMask &mask,
-                 google::protobuf::Message *message);
 bool GetFieldDescriptors(
     const google::protobuf::Descriptor *descriptor, absl::string_view path,
     std::vector<const google::protobuf::FieldDescriptor *> *field_descriptors);
@@ -56,6 +51,13 @@ template <typename T>
 bool IsValidPath(absl::string_view path) {
   return GetFieldDescriptors(T::descriptor(), path, nullptr);
 }
+void ToCanonicalForm(const google::protobuf::FieldMask &mask,
+                     google::protobuf::FieldMask *out);
+void Intersect(const google::protobuf::FieldMask &mask1,
+               const google::protobuf::FieldMask &mask2,
+               google::protobuf::FieldMask *out);
+bool TrimMessage(const google::protobuf::FieldMask &mask,
+                 google::protobuf::Message *message);
 
 }  // namespace ecclesia_field_mask_util
 }  // namespace ecclesia

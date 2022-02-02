@@ -46,6 +46,16 @@ void FromString(absl::string_view str, google::protobuf::FieldMask *out) {
   google::protobuf::util::FieldMaskUtil::FromString(
       StringViewType(str.data(), str.size()), out);
 }
+bool GetFieldDescriptors(
+    const google::protobuf::Descriptor *descriptor, absl::string_view path,
+    std::vector<const google::protobuf::FieldDescriptor *> *field_descriptors) {
+  return google::protobuf::util::FieldMaskUtil::GetFieldDescriptors(
+      descriptor, StringViewType(path.data(), path.size()), field_descriptors);
+}
+void ToCanonicalForm(const google::protobuf::FieldMask &mask,
+                     google::protobuf::FieldMask *out) {
+  google::protobuf::util::FieldMaskUtil::ToCanonicalForm(mask, out);
+}
 void Intersect(const google::protobuf::FieldMask &mask1,
                const google::protobuf::FieldMask &mask2,
                google::protobuf::FieldMask *out) {
@@ -54,12 +64,6 @@ void Intersect(const google::protobuf::FieldMask &mask1,
 bool TrimMessage(const google::protobuf::FieldMask &mask,
                  google::protobuf::Message *message) {
   return google::protobuf::util::FieldMaskUtil::TrimMessage(mask, message);
-}
-bool GetFieldDescriptors(
-    const google::protobuf::Descriptor *descriptor, absl::string_view path,
-    std::vector<const google::protobuf::FieldDescriptor *> *field_descriptors) {
-  return google::protobuf::util::FieldMaskUtil::GetFieldDescriptors(
-      descriptor, StringViewType(path.data(), path.size()), field_descriptors);
 }
 
 }  // namespace ecclesia_field_mask_util
