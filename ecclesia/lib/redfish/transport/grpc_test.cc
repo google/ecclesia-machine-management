@@ -37,8 +37,9 @@ TEST(GrpcRedfishTransport, Get) {
                                         "[::1]", port);
   GrpcDynamicImplOptions options;
   options.SetToInsecure();
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port), {}, options);
-
+  auto transport =
+      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {}, options);
+  ASSERT_THAT(transport, IsOk());
   absl::string_view expected_str = R"json({
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
     "@odata.id": "/redfish/v1",
@@ -56,8 +57,8 @@ TEST(GrpcRedfishTransport, Get) {
     "RedfishVersion": "1.6.1"
   })json";
   nlohmann::json expected = nlohmann::json::parse(expected_str, nullptr, false);
-  absl::StatusOr<GrpcRedfishTransport::Result> res_get =
-      transport.Get("/redfish/v1");
+  absl::StatusOr<RedfishTransport::Result> res_get =
+      (*transport)->Get("/redfish/v1");
   ASSERT_THAT(res_get, IsOk());
   EXPECT_THAT(res_get->body, Eq(expected));
   EXPECT_THAT(res_get->code, Eq(200));
@@ -70,12 +71,13 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
                                         "[::1]", port);
   GrpcDynamicImplOptions options;
   options.SetToInsecure();
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port), {}, options);
-
+  auto transport =
+      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {}, options);
+  ASSERT_THAT(transport, IsOk());
   nlohmann::json expected_post =
       nlohmann::json::parse(R"json({})json", nullptr, false);
-  absl::StatusOr<GrpcRedfishTransport::Result> res_post =
-      transport.Post("/redfish/v1/Chassis", R"json({
+  absl::StatusOr<RedfishTransport::Result> res_post =
+      (*transport)->Post("/redfish/v1/Chassis", R"json({
     "ChassisType": "RackMount",
     "Name": "MyChassis"
   })json");
@@ -102,8 +104,8 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   })json";
   nlohmann::json expected_get =
       nlohmann::json::parse(expected_get_str, nullptr, false);
-  absl::StatusOr<GrpcRedfishTransport::Result> res_get =
-      transport.Get("/redfish/v1/Chassis");
+  absl::StatusOr<RedfishTransport::Result> res_get =
+      (*transport)->Get("/redfish/v1/Chassis");
   ASSERT_THAT(res_get, IsOk());
   EXPECT_THAT(res_get->body, Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
@@ -113,8 +115,8 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   })json";
   nlohmann::json expected_patch =
       nlohmann::json::parse(R"json({})json", nullptr, false);
-  absl::StatusOr<GrpcRedfishTransport::Result> res_patch =
-      transport.Patch("/redfish/v1/Chassis/Member1", data_patch);
+  absl::StatusOr<RedfishTransport::Result> res_patch =
+      (*transport)->Patch("/redfish/v1/Chassis/Member1", data_patch);
   ASSERT_THAT(res_patch, IsOk());
   EXPECT_THAT(res_patch->body, Eq(expected_patch));
   EXPECT_THAT(res_patch->code, Eq(204));
@@ -137,13 +139,13 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
     "Members@odata.count":2.0,"Name":"Chassis Collection"
   })json";
   expected_get = nlohmann::json::parse(expected_get_str, nullptr, false);
-  res_get = transport.Get("/redfish/v1/Chassis");
+  res_get = (*transport)->Get("/redfish/v1/Chassis");
   ASSERT_THAT(res_get, IsOk());
   EXPECT_THAT(res_get->body, Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
 
   EXPECT_THAT(
-      transport.Delete("/redfish/v1/Chassis/Member1", "{}"),
+      (*transport)->Delete("/redfish/v1/Chassis/Member1", "{}"),
       internal_status::IsStatusPolyMatcher(absl::StatusCode::kUnimplemented));
 }
 
@@ -153,8 +155,10 @@ TEST(GrpcRedfishTransport, GetRootUri) {
                                         "[::1]", port);
   GrpcDynamicImplOptions options;
   options.SetToInsecure();
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port), {}, options);
-  EXPECT_EQ(transport.GetRootUri(), "/redfish/v1");
+  auto transport =
+      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {}, options);
+  ASSERT_THAT(transport, IsOk());
+  EXPECT_EQ((*transport)->GetRootUri(), "/redfish/v1");
 }
 
 TEST(GrpcRedfishTransport, UpdateToNetworkEndpoint) {
@@ -167,8 +171,10 @@ TEST(GrpcRedfishTransport, UpdateToNetworkEndpoint) {
                                         "[::1]", port2);
   GrpcDynamicImplOptions options;
   options.SetToInsecure();
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port1), {}, options);
-  transport.UpdateToNetworkEndpoint(absl::StrCat("[::1]:", port2));
+  options.SetToInsecure();
+  auto transport =
+      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port1), {}, options);
+  (*transport)->UpdateToNetworkEndpoint(absl::StrCat("[::1]:", port2));
 
   absl::string_view expected_str = R"json({
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
@@ -187,8 +193,8 @@ TEST(GrpcRedfishTransport, UpdateToNetworkEndpoint) {
     "RedfishVersion": "1.6.1"
   })json";
   nlohmann::json expected = nlohmann::json::parse(expected_str, nullptr, false);
-  absl::StatusOr<GrpcRedfishTransport::Result> res_get =
-      transport.Get("/redfish/v1");
+  absl::StatusOr<RedfishTransport::Result> res_get =
+      (*transport)->Get("/redfish/v1");
   ASSERT_THAT(res_get, IsOk());
   EXPECT_THAT(res_get->body, Eq(expected));
   EXPECT_THAT(res_get->code, Eq(200));
@@ -205,8 +211,10 @@ TEST(GrpcRedfishTransport, UpdateToUdsEndpoint) {
                                          mockup_uds);
   GrpcDynamicImplOptions options;
   options.SetToInsecure();
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port1), {}, options);
-  transport.UpdateToUdsEndpoint(mockup_uds);
+  auto transport =
+      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port1), {}, options);
+  ASSERT_THAT(transport, IsOk());
+  (*transport)->UpdateToUdsEndpoint(mockup_uds);
 
   absl::string_view expected_str = R"json({
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
@@ -225,8 +233,8 @@ TEST(GrpcRedfishTransport, UpdateToUdsEndpoint) {
     "RedfishVersion": "1.6.1"
   })json";
   nlohmann::json expected = nlohmann::json::parse(expected_str, nullptr, false);
-  absl::StatusOr<GrpcRedfishTransport::Result> res_get =
-      transport.Get("/redfish/v1");
+  absl::StatusOr<RedfishTransport::Result> res_get =
+      (*transport)->Get("/redfish/v1");
   ASSERT_THAT(res_get, IsOk());
   EXPECT_THAT(res_get->body, Eq(expected));
   EXPECT_THAT(res_get->code, Eq(200));
@@ -236,9 +244,13 @@ TEST(GrpcRedfishTransport, ResourceNotFound) {
   int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port);
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port));
+  GrpcDynamicImplOptions options;
+  options.SetToInsecure();
+  auto transport =
+      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {}, options);
+  ASSERT_THAT(transport, IsOk());
 
-  auto result_get = transport.Get("/redfish/v1/Chassis/noexist");
+  auto result_get = (*transport)->Get("/redfish/v1/Chassis/noexist");
   EXPECT_THAT(result_get, IsOk());
   nlohmann::json expected_get =
       nlohmann::json::parse(R"json({})json", nullptr, false);
@@ -250,20 +262,24 @@ TEST(GrpcRedfishTransport, NotAllowed) {
   int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port);
-  GrpcRedfishTransport transport(absl::StrCat("[::1]:", port));
+  GrpcDynamicImplOptions options;
+  options.SetToInsecure();
+  auto transport =
+      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {}, options);
+  ASSERT_THAT(transport, IsOk());
 
   std::string_view data_post = R"json({
     "ChassisType": "RackMount",
     "Name": "MyChassis"
   })json";
-  auto result_post = transport.Post("/redfish", data_post);
+  auto result_post = (*transport)->Post("/redfish", data_post);
   EXPECT_THAT(result_post, IsOk());
   nlohmann::json expected_post =
       nlohmann::json::parse(R"json({})json", nullptr, false);
   EXPECT_THAT(result_post->body, Eq(expected_post));
   EXPECT_THAT(result_post->code, Eq(405));
 
-  auto result_patch = transport.Patch("/redfish", data_post);
+  auto result_patch = (*transport)->Patch("/redfish", data_post);
   EXPECT_THAT(result_patch, IsOk());
   nlohmann::json expected_patch =
       nlohmann::json::parse(R"json({})json", nullptr, false);
@@ -284,12 +300,11 @@ TEST(GrpcRedfishTransport, Timeout) {
         notification.Notify();
         return grpc::Status::OK;
       });
-  GrpcRedfishTransport::Params params;
+  GrpcTransportParams params;
   GrpcDynamicImplOptions options;
   params.timeout = absl::AbsDuration(absl::Milliseconds(50));
   std::string endpoint = absl::StrCat("[::1]:", port);
-  if (auto transport = CreateGrpcRedfishTransport(endpoint,
-                                                  params, options);
+  if (auto transport = CreateGrpcRedfishTransport(endpoint, params, options);
       transport.ok()) {
     EXPECT_THAT((*transport)->Get("/redfish/v1"),
                 internal_status::IsStatusPolyMatcher(

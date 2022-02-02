@@ -29,58 +29,16 @@
 
 namespace ecclesia {
 
-class GrpcRedfishTransport : public RedfishTransport {
- public:
-  struct Params {
-    // Clock used for all operations.
-    Clock* clock = Clock::RealClock();
-    // Timeout used for all operations.
-    absl::Duration timeout = absl::Seconds(5);
-  };
-
-  // Creates an GrpcRedfishTransport using a specified endpoint.
-  // Params:
-  //   endpoint: e.g. "dns:///localhost:80", "unix:///var/run/my.socket"
-  GrpcRedfishTransport(std::string_view endpoint, const Params& params,
-                       const GrpcDynamicImplOptions& options,
-                       ServiceRootUri service_root = ServiceRootUri::kRedfish);
-  GrpcRedfishTransport(std::string_view endpoint);
-
-  ~GrpcRedfishTransport() override {}
-
-  // Updates the current GrpcRedfishTransport instance to a new endpoint.
-  // It is valid to switch from a TCP endpoint to a UDS endpoint and vice-versa.
-  void UpdateToNetworkEndpoint(absl::string_view tcp_endpoint)
-      ABSL_LOCKS_EXCLUDED(mutex_) override;
-  void UpdateToUdsEndpoint(absl::string_view unix_domain_socket)
-      ABSL_LOCKS_EXCLUDED(mutex_) override;
-
-  // Returns the path of the root URI for the Redfish service this transport is
-  // connected to.
-  absl::string_view GetRootUri() override;
-
-  absl::StatusOr<Result> Get(absl::string_view path)
-      ABSL_LOCKS_EXCLUDED(mutex_) override;
-  absl::StatusOr<Result> Post(absl::string_view path, absl::string_view data)
-      ABSL_LOCKS_EXCLUDED(mutex_) override;
-  absl::StatusOr<Result> Patch(absl::string_view path, absl::string_view data)
-      ABSL_LOCKS_EXCLUDED(mutex_) override;
-  absl::StatusOr<Result> Delete(absl::string_view path, absl::string_view data)
-      ABSL_LOCKS_EXCLUDED(mutex_) override;
-
- private:
-  absl::Mutex mutex_;
-  std::unique_ptr<::redfish::v1::RedfishV1::Stub> client_
-      ABSL_GUARDED_BY(mutex_);
-  Params params_;
-  // The service root for RedfishInterface.
-  const ServiceRootUri service_root_;
-  std::string fqdn_;
+struct GrpcTransportParams {
+  // Clock used for all operations.
+  Clock* clock = Clock::RealClock();
+  // Timeout used for all operations.
+  absl::Duration timeout = absl::Seconds(5);
 };
 
-absl::StatusOr<std::unique_ptr<GrpcRedfishTransport>>
+absl::StatusOr<std::unique_ptr<RedfishTransport>>
 CreateGrpcRedfishTransport(
-    std::string_view endpoint, const GrpcRedfishTransport::Params& params,
+    std::string_view endpoint, const GrpcTransportParams& params,
     const GrpcDynamicImplOptions& options,
     ServiceRootUri service_root = ServiceRootUri::kRedfish);
 

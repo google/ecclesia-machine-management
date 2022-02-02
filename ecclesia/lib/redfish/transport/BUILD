@@ -225,6 +225,7 @@ cc_library(
         ":interface",
         ":struct_proto_conversion",
         "//ecclesia/lib/http:codes",
+        "//ecclesia/lib/logging",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/proto:redfish_v1_grpc_proto",
         "//ecclesia/lib/status:macros",

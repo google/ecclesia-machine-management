@@ -64,15 +64,18 @@ class GrpcRedfishMockUpServerTest : public Test {
     int port = FindUnusedPortOrDie();
     mockup_server_ = absl::make_unique<GrpcDynamicMockupServer>(
         "barebones_session_auth/mockup.shar", "[::1]", port);
-    client_ = absl::make_unique<GrpcRedfishTransport>(
-        absl::StrCat("[::1]:", port));
+    auto transport =
+        CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {}, options);
+    if (transport.ok()) {
+      client_ = std::move(*transport);
+    }
     std::shared_ptr<grpc::Channel> channel = CreateChannel(
         absl::StrCat("[::1]:", port), grpc::InsecureChannelCredentials());
     stub_ = ::redfish::v1::RedfishV1::NewStub(channel);
   }
 
   std::unique_ptr<GrpcDynamicMockupServer> mockup_server_;
-  std::unique_ptr<GrpcRedfishTransport> client_;
+  std::unique_ptr<RedfishTransport> client_;
   std::unique_ptr<::redfish::v1::RedfishV1::Stub> stub_;
 };
 
@@ -108,8 +111,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPostPatchAndGetRequest) {
   std::string name;
   name = (result_get->body)["Name"];
   EXPECT_EQ(name, "MyNewName");
-  EXPECT_EQ(result_get->code,
-            ecclesia::HttpResponseCode::HTTP_CODE_REQUEST_OK);
+  EXPECT_EQ(result_get->code, ecclesia::HttpResponseCode::HTTP_CODE_REQUEST_OK);
 }
 
 TEST_F(GrpcRedfishMockUpServerTest, TestPutRequests) {
@@ -317,7 +319,11 @@ TEST(GrpcRedfishMockUpServerUdsTest, TestUds) {
       absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket");
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         mockup_uds);
-  GrpcRedfishTransport transport(absl::StrCat("unix://", mockup_uds));
+  GrpcDynamicImplOptions options;
+  options.SetToInsecure();
+  auto transport = CreateGrpcRedfishTransport(absl::StrCat("unix:", mockup_uds),
+                                              {}, options);
+  ASSERT_THAT(transport, IsOk());
   std::string_view expexted_str = R"json({
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
     "@odata.id": "/redfish/v1",
@@ -335,8 +341,8 @@ TEST(GrpcRedfishMockUpServerUdsTest, TestUds) {
     "RedfishVersion": "1.6.1"
   })json";
   nlohmann::json expected = nlohmann::json::parse(expexted_str, nullptr, false);
-  absl::StatusOr<GrpcRedfishTransport::Result> res_get =
-      transport.Get("/redfish/v1");
+  absl::StatusOr<RedfishTransport::Result> res_get =
+      (*transport)->Get("/redfish/v1");
   ASSERT_THAT(res_get, IsOk());
   EXPECT_THAT(res_get->body, Eq(expected));
 }

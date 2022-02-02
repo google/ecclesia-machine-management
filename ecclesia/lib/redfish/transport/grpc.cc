@@ -26,6 +26,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/http/codes.h"
+#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
@@ -47,7 +48,7 @@ constexpr absl::string_view kResourceKey = "redfish-resource";
 template <typename RpcFunc>
 absl::StatusOr<RedfishTransport::Result> DoRpc(
     absl::string_view path, std::optional<google::protobuf::Struct> message,
-    GrpcRedfishTransport::Params params, RpcFunc rpc) {
+    GrpcTransportParams params, RpcFunc rpc) {
   redfish::v1::Request request;
   request.set_url(std::string(path));
   if (message.has_value()) {
@@ -74,9 +75,6 @@ absl::string_view EndpointToFqdn(absl::string_view endpoint) {
     return endpoint;
   }
   size_t pos = endpoint.find_last_of(':');
-  if (pos == endpoint.npos) {
-    FatalLog() << "No port in dns endpoint";
-  }
   return endpoint.substr(0, pos);
 }
 
@@ -101,27 +99,136 @@ class GrpcRedfishCredentials : public grpc::MetadataCredentialsPlugin {
   std::string resource_;
 };
 
+class GrpcRedfishTransport : public RedfishTransport {
+ public:
+  // Creates an GrpcRedfishTransport using a specified endpoint.
+  // Params:
+  //   endpoint: e.g. "dns:///localhost:80", "unix:///var/run/my.socket"
+  GrpcRedfishTransport(std::string_view endpoint,
+                       const GrpcTransportParams& params,
+                       const GrpcDynamicImplOptions& options,
+                       ServiceRootUri service_root)
+      : client_(redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
+            std::string(endpoint), options.GetChannelCredentials()))),
+        params_(std::move(params)),
+        service_root_(std::move(service_root)),
+        fqdn_(EndpointToFqdn(endpoint)) {}
+  GrpcRedfishTransport(std::string_view endpoint)
+      : client_(redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
+            std::string(endpoint), grpc::InsecureChannelCredentials()))),
+        params_({}),
+        service_root_(std::move(ServiceRootUri::kRedfish)),
+        fqdn_(EndpointToFqdn(endpoint)) {}
+
+  ~GrpcRedfishTransport() override {}
+
+  // Updates the current GrpcRedfishTransport instance to a new endpoint.
+  // It is valid to switch from a TCP endpoint to a UDS endpoint and vice-versa.
+  void UpdateToNetworkEndpoint(absl::string_view tcp_endpoint)
+      ABSL_LOCKS_EXCLUDED(mutex_) override {
+    absl::WriterMutexLock mu(&mutex_);
+    client_ = redfish::v1::RedfishV1::NewStub(
+        grpc::CreateChannel(absl::StrCat("dns:///", tcp_endpoint),
+                            grpc::InsecureChannelCredentials()));
+    fqdn_ = std::string(EndpointToFqdn(tcp_endpoint));
+  }
+  void UpdateToUdsEndpoint(absl::string_view unix_domain_socket)
+      ABSL_LOCKS_EXCLUDED(mutex_) override {
+    absl::WriterMutexLock mu(&mutex_);
+    std::string s_uds_endpoint = absl::StrCat("unix://", unix_domain_socket);
+    client_ = redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
+        s_uds_endpoint, grpc::experimental::LocalCredentials(UDS)));
+
+    fqdn_ = std::string(EndpointToFqdn(s_uds_endpoint));
+  }
+
+  // Returns the path of the root URI for the Redfish service this transport is
+  // connected to.
+  absl::string_view GetRootUri() override {
+    return RedfishInterface::ServiceRootToUri(service_root_);
+  }
+
+  absl::StatusOr<Result> Get(absl::string_view path)
+      ABSL_LOCKS_EXCLUDED(mutex_) override {
+    return DoRpc(
+        path, std::nullopt, params_,
+        [this, path](grpc::ClientContext& context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response) -> grpc::Status {
+          absl::ReaderMutexLock mu(&mutex_);
+          context.set_credentials(grpc::MetadataCredentialsFromPlugin(
+              std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                  std::make_unique<GrpcRedfishCredentials>(fqdn_, path))));
+          return client_->Get(&context, request, response);
+        });
+  }
+  absl::StatusOr<Result> Post(absl::string_view path, absl::string_view data)
+      ABSL_LOCKS_EXCLUDED(mutex_) override {
+    ::google::protobuf::Struct request_body;
+    ECCLESIA_RETURN_IF_ERROR(AsAbslStatus(google::protobuf::util::JsonStringToMessage(
+        std::string(data), &request_body, google::protobuf::util::JsonParseOptions())));
+    return DoRpc(
+        path, std::move(request_body), params_,
+        [this, path](grpc::ClientContext& context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response) -> grpc::Status {
+          absl::ReaderMutexLock mu(&mutex_);
+          context.set_credentials(grpc::MetadataCredentialsFromPlugin(
+              std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                  std::make_unique<GrpcRedfishCredentials>(fqdn_, path))));
+          return client_->Post(&context, request, response);
+        });
+  }
+  absl::StatusOr<Result> Patch(absl::string_view path, absl::string_view data)
+      ABSL_LOCKS_EXCLUDED(mutex_) override {
+    ::google::protobuf::Struct request_body;
+    ECCLESIA_RETURN_IF_ERROR(AsAbslStatus(google::protobuf::util::JsonStringToMessage(
+        std::string(data), &request_body, google::protobuf::util::JsonParseOptions())));
+    return DoRpc(
+        path, std::move(request_body), params_,
+        [this, path](grpc::ClientContext& context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response) -> grpc::Status {
+          absl::ReaderMutexLock mu(&mutex_);
+          context.set_credentials(grpc::MetadataCredentialsFromPlugin(
+              std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                  std::make_unique<GrpcRedfishCredentials>(fqdn_, path))));
+          return client_->Patch(&context, request, response);
+        });
+  }
+  absl::StatusOr<Result> Delete(absl::string_view path, absl::string_view data)
+      ABSL_LOCKS_EXCLUDED(mutex_) override {
+    ::google::protobuf::Struct request_body;
+    ECCLESIA_RETURN_IF_ERROR(AsAbslStatus(google::protobuf::util::JsonStringToMessage(
+        std::string(data), &request_body, google::protobuf::util::JsonParseOptions())));
+    return DoRpc(
+        path, std::move(request_body), params_,
+        [this, path](grpc::ClientContext& context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response) -> grpc::Status {
+          absl::ReaderMutexLock mu(&mutex_);
+          context.set_credentials(grpc::MetadataCredentialsFromPlugin(
+              std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                  std::make_unique<GrpcRedfishCredentials>(fqdn_, path))));
+          return client_->Delete(&context, request, response);
+        });
+  }
+
+ private:
+  absl::Mutex mutex_;
+  std::unique_ptr<::redfish::v1::RedfishV1::Stub> client_
+      ABSL_GUARDED_BY(mutex_);
+  GrpcTransportParams params_;
+  // The service root for RedfishInterface.
+  const ServiceRootUri service_root_;
+  std::string fqdn_;
+};
+
 }  // namespace
 
-GrpcRedfishTransport::GrpcRedfishTransport(
-    std::string_view endpoint, const Params& params,
-    const GrpcDynamicImplOptions& options, ServiceRootUri service_root)
-    : client_(redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
-          std::string(endpoint), options.GetChannelCredentials()))),
-      params_(std::move(params)),
-      service_root_(std::move(service_root)),
-      fqdn_(EndpointToFqdn(endpoint)) {}
-
-GrpcRedfishTransport::GrpcRedfishTransport(std::string_view endpoint)
-    : client_(redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
-          std::string(endpoint), grpc::InsecureChannelCredentials()))),
-      params_({}),
-      service_root_(std::move(ServiceRootUri::kRedfish)),
-      fqdn_(EndpointToFqdn(endpoint)) {}
-
-absl::StatusOr<std::unique_ptr<GrpcRedfishTransport>>
+absl::StatusOr<std::unique_ptr<RedfishTransport>>
 CreateGrpcRedfishTransport(absl::string_view endpoint,
-                           const GrpcRedfishTransport::Params& params,
+                           const GrpcTransportParams& params,
                            const GrpcDynamicImplOptions& options,
                            ServiceRootUri service_root) {
   if (absl::StartsWith(endpoint, "unix:")) {
@@ -146,94 +253,6 @@ CreateGrpcRedfishTransport(absl::string_view endpoint,
     return std::make_unique<GrpcRedfishTransport>(std::string(endpoint), params,
                                                   options, service_root);
   }
-}
-
-void GrpcRedfishTransport::UpdateToNetworkEndpoint(
-    absl::string_view tcp_endpoint) {
-  absl::WriterMutexLock mu(&mutex_);
-  client_ = redfish::v1::RedfishV1::NewStub(
-      grpc::CreateChannel(absl::StrCat("dns:///", tcp_endpoint),
-                          grpc::InsecureChannelCredentials()));
-  fqdn_ = std::string(EndpointToFqdn(tcp_endpoint));
-}
-
-void GrpcRedfishTransport::UpdateToUdsEndpoint(
-    absl::string_view unix_domain_socket) {
-  absl::WriterMutexLock mu(&mutex_);
-  std::string s_uds_endpoint = absl::StrCat("unix://", unix_domain_socket);
-  client_ = redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
-      s_uds_endpoint, grpc::experimental::LocalCredentials(UDS)));
-
-  fqdn_ = std::string(EndpointToFqdn(s_uds_endpoint));
-}
-
-absl::string_view GrpcRedfishTransport::GetRootUri() {
-  return RedfishInterface::ServiceRootToUri(service_root_);
-}
-
-absl::StatusOr<RedfishTransport::Result> GrpcRedfishTransport::Get(
-    absl::string_view path) {
-  return DoRpc(path, std::nullopt, params_,
-               [this, path](grpc::ClientContext& context,
-                            const redfish::v1::Request& request,
-                            ::redfish::v1::Response* response) -> grpc::Status {
-                 absl::ReaderMutexLock mu(&mutex_);
-                 context.set_credentials(grpc::MetadataCredentialsFromPlugin(
-                     std::unique_ptr<grpc::MetadataCredentialsPlugin>(
-                         new GrpcRedfishCredentials(fqdn_, path))));
-                 return client_->Get(&context, request, response);
-               });
-}
-
-absl::StatusOr<RedfishTransport::Result> GrpcRedfishTransport::Post(
-    absl::string_view path, absl::string_view data) {
-  ::google::protobuf::Struct request_body;
-  ECCLESIA_RETURN_IF_ERROR(AsAbslStatus(google::protobuf::util::JsonStringToMessage(
-      std::string(data), &request_body, google::protobuf::util::JsonParseOptions())));
-  return DoRpc(path, std::move(request_body), params_,
-               [this, path](grpc::ClientContext& context,
-                            const redfish::v1::Request& request,
-                            ::redfish::v1::Response* response) -> grpc::Status {
-                 absl::ReaderMutexLock mu(&mutex_);
-                 context.set_credentials(grpc::MetadataCredentialsFromPlugin(
-                     std::unique_ptr<grpc::MetadataCredentialsPlugin>(
-                         new GrpcRedfishCredentials(fqdn_, path))));
-                 return client_->Post(&context, request, response);
-               });
-}
-
-absl::StatusOr<RedfishTransport::Result> GrpcRedfishTransport::Patch(
-    absl::string_view path, absl::string_view data) {
-  ::google::protobuf::Struct request_body;
-  ECCLESIA_RETURN_IF_ERROR(AsAbslStatus(google::protobuf::util::JsonStringToMessage(
-      std::string(data), &request_body, google::protobuf::util::JsonParseOptions())));
-  return DoRpc(path, std::move(request_body), params_,
-               [this, path](grpc::ClientContext& context,
-                            const redfish::v1::Request& request,
-                            ::redfish::v1::Response* response) -> grpc::Status {
-                 absl::ReaderMutexLock mu(&mutex_);
-                 context.set_credentials(grpc::MetadataCredentialsFromPlugin(
-                     std::unique_ptr<grpc::MetadataCredentialsPlugin>(
-                         new GrpcRedfishCredentials(fqdn_, path))));
-                 return client_->Patch(&context, request, response);
-               });
-}
-
-absl::StatusOr<RedfishTransport::Result> GrpcRedfishTransport::Delete(
-    absl::string_view path, absl::string_view data) {
-  ::google::protobuf::Struct request_body;
-  ECCLESIA_RETURN_IF_ERROR(AsAbslStatus(google::protobuf::util::JsonStringToMessage(
-      std::string(data), &request_body, google::protobuf::util::JsonParseOptions())));
-  return DoRpc(path, std::move(request_body), params_,
-               [this, path](grpc::ClientContext& context,
-                            const redfish::v1::Request& request,
-                            ::redfish::v1::Response* response) -> grpc::Status {
-                 absl::ReaderMutexLock mu(&mutex_);
-                 context.set_credentials(grpc::MetadataCredentialsFromPlugin(
-                     std::unique_ptr<grpc::MetadataCredentialsPlugin>(
-                         new GrpcRedfishCredentials(fqdn_, path))));
-                 return client_->Delete(&context, request, response);
-               });
 }
 
 }  // namespace ecclesia
