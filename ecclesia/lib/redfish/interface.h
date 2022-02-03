@@ -411,9 +411,7 @@ class RedfishInterface {
   // caretaker mode.
   enum TrustedEndpoint { kTrusted, kUntrusted };
 
-  // Updates the endpoint for sending Redfish requests.
-  virtual void UpdateEndpoint(absl::string_view endpoint,
-                              TrustedEndpoint trusted) = 0;
+  // Updates the transport for sending Redfish requests.
   virtual void UpdateTransport(
       std::unique_ptr<RedfishTransport> new_transport,
       std::unique_ptr<RedfishCachedGetterInterface> new_cache,
@@ -467,11 +465,8 @@ class RedfishInterface {
 // Concrete implementation to provide a null placeholder interface which returns
 // no data on all requests.
 class NullRedfish : public RedfishInterface {
-  // The endpoint cannot be updated, even to a valid endpoint. Note that this
-  // assumes that you've ended up with a NullRedfish instance for reasons other
-  // than a more concrete interface failing to connect to a provided endpoint.
-  void UpdateEndpoint(absl::string_view endpoint,
-                      TrustedEndpoint trusted) override {}
+  // The transport cannot be updated in the null implementation. The transport
+  // will never magically start working.
   void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
                        std::unique_ptr<RedfishCachedGetterInterface> new_cache,
                        TrustedEndpoint trusted) override {}

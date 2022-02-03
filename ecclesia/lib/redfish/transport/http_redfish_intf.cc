@@ -365,20 +365,6 @@ class HttpRedfishInterface : public RedfishInterface {
     return trusted_ == kTrusted;
   }
 
-  void UpdateEndpoint(absl::string_view endpoint,
-                      TrustedEndpoint trusted) override {
-    absl::WriterMutexLock mu(&transport_mutex_);
-    trusted_ = trusted;
-    absl::string_view stripped_endpoint =
-        absl::StripPrefix(endpoint, "unix://");
-    if (stripped_endpoint.length() != endpoint.length()) {
-      // If we successfully stripped off the unix prefix, then we have a UDS.
-      transport_->UpdateToUdsEndpoint(stripped_endpoint);
-    } else {
-      transport_->UpdateToNetworkEndpoint(endpoint);
-    }
-  }
-
   void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
                        std::unique_ptr<RedfishCachedGetterInterface> new_cache,
                        TrustedEndpoint trusted) {

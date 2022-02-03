@@ -56,10 +56,6 @@ class GrpcDynamicImpl : public RedfishInterface {
   ABSL_DEPRECATED(
       "Create a new instance instead rather than update the endpoint")
   // Note: program calling this function will always crash.
-  void UpdateEndpoint(absl::string_view host_port,
-                      TrustedEndpoint trusted) override {
-    Check(false, "Create a new instance instead");
-  }
   void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
                        std::unique_ptr<RedfishCachedGetterInterface> new_cache,
                        TrustedEndpoint trusted) override {
