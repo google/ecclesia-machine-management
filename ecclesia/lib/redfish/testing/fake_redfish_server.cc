@@ -142,8 +142,8 @@ std::unique_ptr<RedfishInterface> FakeRedfishServer::RedfishClientInterface() {
   HttpCredential creds;
   auto curl_http_client = std::make_unique<CurlHttpClient>(
       LibCurlProxy::CreateInstance(), std::move(creds));
-  auto transport = HttpRedfishTransport::MakeNetwork(
-      std::move(curl_http_client), endpoint);
+  auto transport =
+      HttpRedfishTransport::MakeNetwork(std::move(curl_http_client), endpoint);
   auto cache = std::make_unique<NullCache>(transport.get());
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
@@ -152,9 +152,10 @@ std::unique_ptr<RedfishInterface> FakeRedfishServer::RedfishClientInterface() {
 }
 
 FakeRedfishServer::FakeRedfishServer(absl::string_view mockup_shar,
-                                     absl::string_view mockup_uds_path)
+                                     absl::string_view mockup_uds_path,
+                                     ServiceRootUri service_root)
     : proxy_server_(ecclesia::CreateServer(0)),
-      mockup_server_(mockup_shar, mockup_uds_path),
+      mockup_server_(mockup_shar, mockup_uds_path, service_root),
       redfish_intf_(mockup_server_.RedfishClientInterface()) {
   auto handler =
       [this](::tensorflow::serving::net_http::ServerRequestInterface *req) {
