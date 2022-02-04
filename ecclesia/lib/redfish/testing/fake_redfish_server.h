@@ -26,6 +26,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
@@ -68,6 +69,13 @@ class FakeRedfishServer {
   FakeRedfishServer(absl::string_view mockup_shar,
                     absl::string_view mockup_uds_path,
                     ServiceRootUri service_root = ServiceRootUri::kRedfish);
+  explicit FakeRedfishServer(
+      absl::string_view mockup_shar,
+      ServiceRootUri service_root = ServiceRootUri::kRedfish)
+      : FakeRedfishServer(
+            mockup_shar,
+            absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket"),
+            service_root) {}
   ~FakeRedfishServer();
 
   using HandlerFunc = std::function<void(

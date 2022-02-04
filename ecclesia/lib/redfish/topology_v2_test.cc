@@ -68,9 +68,7 @@ TEST(RawInterfaceTestWithMockup, TestingMockupNodesArePopulated) {
 }
 
 TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
-  ecclesia::FakeRedfishServer mockup(
-      "topology_v2_testing/mockup.shar",
-      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   {
@@ -194,9 +192,7 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
 }
 
 TEST(RawInterfaceTestWithPatchedMockup, TestingMockupBrokenOrCircularLink) {
-  ecclesia::FakeRedfishServer mockup(
-      "topology_v2_testing/mockup.shar",
-      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   {
@@ -266,9 +262,7 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupBrokenOrCircularLink) {
 // This test makes sure the node names from the created topology match
 // expectations.
 TEST(RawInterfaceTestWithMockup, TestingNodeName) {
-  ecclesia::FakeRedfishServer mockup(
-      "topology_v2_testing/mockup.shar",
-      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   const NodeTopology constructed_topology =
@@ -286,9 +280,7 @@ TEST(RawInterfaceTestWithMockup, TestingNodeName) {
 }
 
 TEST(RawInterfaceTestWithMockup, TestingLocationTypes) {
-  ecclesia::FakeRedfishServer mockup(
-      "topology_v2_testing/mockup.shar",
-      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   // Change the LocationType to make sure the topology can be correctly

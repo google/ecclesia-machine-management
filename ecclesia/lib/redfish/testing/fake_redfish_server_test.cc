@@ -37,9 +37,7 @@ constexpr int kNumWorkerThreads = 1;
 using ::testing::Eq;
 
 TEST(PatchableMockupServer, CanProxy) {
-  FakeRedfishServer server(
-      "indus_hmb_cn/mockup.shar",
-      absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket"));
+  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
 
   auto redfish_intf = server.RedfishClientInterface();
 
@@ -56,9 +54,7 @@ TEST(PatchableMockupServer, CanProxy) {
 }
 
 TEST(PatchableMockupServer, CanPatchDirect) {
-  FakeRedfishServer server(
-      "indus_hmb_cn/mockup.shar",
-      absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket"));
+  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
 
   constexpr char kMyPatch[] = R"json({ "Name": "My Patched Name" })json";
   server.AddHttpGetHandlerWithData("/redfish/v1/Chassis/chassis",
@@ -80,9 +76,7 @@ TEST(PatchableMockupServer, CanPatchDirect) {
 }
 
 TEST(PatchableMockupServer, CanPatchViaCrawl) {
-  FakeRedfishServer server(
-      "indus_hmb_cn/mockup.shar",
-      absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket"));
+  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
 
   constexpr char kMyPatch[] = R"json({ "Name": "My Patched Name" })json";
   server.AddHttpGetHandlerWithData("/redfish/v1/Chassis/chassis",

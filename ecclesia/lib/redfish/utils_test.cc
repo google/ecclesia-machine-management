@@ -75,9 +75,7 @@ constexpr absl::string_view kMemoryResource = R"json({
 })json";
 
 TEST(GetResourceType, CorrectReturnResourceType) {
-  ecclesia::FakeRedfishServer mockup(
-      "topology_v2_testing/mockup.shar",
-      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   auto redfish_obj =
@@ -108,9 +106,7 @@ TEST(GetResourceType, CorrectReturnResourceType) {
 }
 
 TEST(GetConvertedResourceName, ConvertedNameFromNameProperty) {
-  ecclesia::FakeRedfishServer mockup(
-      "topology_v2_testing/mockup.shar",
-      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   auto redfish_obj =

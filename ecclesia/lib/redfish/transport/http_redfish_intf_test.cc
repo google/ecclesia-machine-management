@@ -53,8 +53,7 @@ class HttpRedfishInterfaceTest : public ::testing::Test {
  protected:
   HttpRedfishInterfaceTest() {
     server_ = std::make_unique<ecclesia::FakeRedfishServer>(
-        "barebones_session_auth/mockup.shar",
-        absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+        "barebones_session_auth/mockup.shar");
     auto config = server_->GetConfig();
     ecclesia::HttpCredential creds;
     auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
@@ -78,8 +77,7 @@ class HttpRedfishInterfaceTest : public ::testing::Test {
 TEST_F(HttpRedfishInterfaceTest, UpdateTransport) {
   // Spin up a second server as a second endpoint to connect to.
   auto server2 = std::make_unique<ecclesia::FakeRedfishServer>(
-      "barebones_session_auth/mockup.shar",
-      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+      "barebones_session_auth/mockup.shar");
   auto config = server2->GetConfig();
   ecclesia::HttpCredential creds;
   auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(

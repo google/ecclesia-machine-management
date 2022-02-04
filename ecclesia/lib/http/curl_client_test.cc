@@ -71,8 +71,7 @@ TEST(CurlHttpClient, TestDefaultConfig) {
 class CurlHttpClientTest : public ::testing::Test {
  protected:
   CurlHttpClientTest()
-      : server_("barebones_session_auth/mockup.shar",
-                absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket")),
+      : server_("barebones_session_auth/mockup.shar"),
         endpoint_(absl::StrFormat("%s:%d", server_.GetConfig().hostname,
                                   server_.GetConfig().port)),
         curl_http_client_(LibCurlProxy::CreateInstance(), HttpCredential()) {}

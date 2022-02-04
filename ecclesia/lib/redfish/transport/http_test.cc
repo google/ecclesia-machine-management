@@ -49,8 +49,7 @@ class HttpRedfishTransportTest : public ::testing::Test {
  protected:
   HttpRedfishTransportTest() {
     server_ = std::make_unique<FakeRedfishServer>(
-        "barebones_session_auth/mockup.shar",
-        absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket"));
+        "barebones_session_auth/mockup.shar");
     auto config = server_->GetConfig();
     HttpCredential creds;
     auto curl_http_client =

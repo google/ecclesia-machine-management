@@ -35,18 +35,15 @@
 namespace ecclesia {
 namespace {
 
+using ::ecclesia::IsStatusFailedPrecondition;
 using ::testing::Eq;
 using ::testing::Ne;
-using ::ecclesia::IsOk;
-using ::ecclesia::IsStatusFailedPrecondition;
 
 using ::tensorflow::serving::net_http::HTTPStatusCode;
 using ::tensorflow::serving::net_http::ServerRequestInterface;
 
 TEST(RedfishVariant, IndexingOk) {
-  ecclesia::FakeRedfishServer mockup(
-      "barebones_session_auth/mockup.shar",
-      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+  ecclesia::FakeRedfishServer mockup("barebones_session_auth/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   auto chassis = raw_intf->GetRoot()[kRfPropertyChassis][0];
@@ -62,9 +59,7 @@ TEST(RedfishVariant, IndexingOk) {
 }
 
 TEST(RedfishVariant, IndexingError) {
-  ecclesia::FakeRedfishServer mockup(
-      "barebones_session_auth/mockup.shar",
-      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+  ecclesia::FakeRedfishServer mockup("barebones_session_auth/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   mockup.AddHttpGetHandler("/redfish/v1/Chassis/chassis",
@@ -101,9 +96,7 @@ TEST(RedfishVariant, IndexingError) {
 }
 
 TEST(RedfishVariant, PropertyError) {
-  ecclesia::FakeRedfishServer mockup(
-      "barebones_session_auth/mockup.shar",
-      absl::StrCat(ecclesia::GetTestTempUdsDirectory(), "/mockup.socket"));
+  ecclesia::FakeRedfishServer mockup("barebones_session_auth/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   mockup.AddHttpGetHandler("/redfish/v1/Chassis",

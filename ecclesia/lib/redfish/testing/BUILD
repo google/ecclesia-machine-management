@@ -49,6 +49,7 @@ cc_library(
     hdrs = ["fake_redfish_server.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/http:client",
         "//ecclesia/lib/http:cred_cc_proto",
         "//ecclesia/lib/http:curl_client",
