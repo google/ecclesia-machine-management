@@ -43,11 +43,6 @@ class RedfishTransport {
 
   virtual ~RedfishTransport() = default;
 
-  // Updates the endpoint for this transport implementation to a network addr.
-  virtual void UpdateToNetworkEndpoint(absl::string_view endpoint) = 0;
-  // Updates the endpoint for this transport implementation to a unix socket.
-  virtual void UpdateToUdsEndpoint(absl::string_view unix_domain_socket) = 0;
-
   // Fetches the root uri and returns it.
   virtual absl::string_view GetRootUri() = 0;
 
@@ -66,8 +61,6 @@ class RedfishTransport {
 // NullTransport provides a placeholder implementation which gracefully fails
 // all of its methods.
 class NullTransport : public RedfishTransport {
-  void UpdateToNetworkEndpoint(absl::string_view endpoint) override {}
-  void UpdateToUdsEndpoint(absl::string_view unix_domain_socket) override {}
   absl::string_view GetRootUri() override { return ""; }
   absl::StatusOr<Result> Get(absl::string_view path) {
     return absl::InternalError("NullTransport");

@@ -122,26 +122,6 @@ class GrpcRedfishTransport : public RedfishTransport {
 
   ~GrpcRedfishTransport() override {}
 
-  // Updates the current GrpcRedfishTransport instance to a new endpoint.
-  // It is valid to switch from a TCP endpoint to a UDS endpoint and vice-versa.
-  void UpdateToNetworkEndpoint(absl::string_view tcp_endpoint)
-      ABSL_LOCKS_EXCLUDED(mutex_) override {
-    absl::WriterMutexLock mu(&mutex_);
-    client_ = redfish::v1::RedfishV1::NewStub(
-        grpc::CreateChannel(absl::StrCat("dns:///", tcp_endpoint),
-                            grpc::InsecureChannelCredentials()));
-    fqdn_ = std::string(EndpointToFqdn(tcp_endpoint));
-  }
-  void UpdateToUdsEndpoint(absl::string_view unix_domain_socket)
-      ABSL_LOCKS_EXCLUDED(mutex_) override {
-    absl::WriterMutexLock mu(&mutex_);
-    std::string s_uds_endpoint = absl::StrCat("unix://", unix_domain_socket);
-    client_ = redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
-        s_uds_endpoint, grpc::experimental::LocalCredentials(UDS)));
-
-    fqdn_ = std::string(EndpointToFqdn(s_uds_endpoint));
-  }
-
   // Returns the path of the root URI for the Redfish service this transport is
   // connected to.
   absl::string_view GetRootUri() override {

@@ -192,22 +192,6 @@ std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeUds(
       service_root));
 }
 
-void HttpRedfishTransport::UpdateToNetworkEndpoint(
-    absl::string_view tcp_endpoint) {
-  absl::WriterMutexLock mu(&mutex_);
-  EndCurrentSession();
-  target_ = TcpTarget{std::string(tcp_endpoint)};
-  LockedDoSessionAuth().IgnoreError();
-}
-
-void HttpRedfishTransport::UpdateToUdsEndpoint(
-    absl::string_view unix_domain_socket) {
-  absl::WriterMutexLock mu(&mutex_);
-  EndCurrentSession();
-  target_ = UdsTarget{std::string(unix_domain_socket)};
-  LockedDoSessionAuth().IgnoreError();
-}
-
 absl::string_view HttpRedfishTransport::GetRootUri() {
   return RedfishInterface::ServiceRootToUri(service_root_);
 }

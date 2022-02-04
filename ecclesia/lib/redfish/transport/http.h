@@ -61,16 +61,6 @@ class HttpRedfishTransport : public RedfishTransport {
   // Destructor needs to close any open sessions if applicable.
   ~HttpRedfishTransport() ABSL_LOCKS_EXCLUDED(mutex_) override;
 
-  // Updates the current HttpRedfishTransport instance to a new endpoint.
-  // It is valid to switch from a TCP endpoint to a UDS endpoint and vice-versa.
-  // If Session Auth credentials were provided, the same credentials will be
-  // used for establishing a new session on the new endpoint. An existing
-  // connection will first be logged off (via HTTP DELETE).
-  void UpdateToNetworkEndpoint(absl::string_view tcp_endpoint)
-      ABSL_LOCKS_EXCLUDED(mutex_) override;
-  void UpdateToUdsEndpoint(absl::string_view unix_domain_socket)
-      ABSL_LOCKS_EXCLUDED(mutex_) override;
-
   // Returns the path of the root URI for the Redfish service this transport is
   // connected to.
   absl::string_view GetRootUri() override;
