@@ -192,9 +192,11 @@ RedfishVariant GrpcDynamicImpl::UncachedGetUri(absl::string_view uri,
       uri, absl::nullopt, options_,
       [this, uri](grpc::ClientContext& context, const Request& request,
                   Response* response) -> grpc::Status {
-        context.set_credentials(grpc::MetadataCredentialsFromPlugin(
-            std::unique_ptr<grpc::MetadataCredentialsPlugin>(
-                new GrpcRedfishCredentials(target_.fqdn, uri.data()))));
+        context.set_credentials(
+            grpc::experimental::MetadataCredentialsFromPlugin(
+                std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                    new GrpcRedfishCredentials(target_.fqdn, uri.data())),
+                GRPC_SECURITY_NONE));
         return stub_->Get(&context, request, response);
       });
 }
@@ -210,9 +212,11 @@ RedfishVariant GrpcDynamicImpl::PostUri(
       uri, GetRequestMessage(kv_span), options_,
       [this, uri](grpc::ClientContext& context, const Request& request,
                   Response* response) -> grpc::Status {
-        context.set_credentials(grpc::MetadataCredentialsFromPlugin(
-            std::unique_ptr<grpc::MetadataCredentialsPlugin>(
-                new GrpcRedfishCredentials(target_.fqdn, uri.data()))));
+        context.set_credentials(
+            grpc::experimental::MetadataCredentialsFromPlugin(
+                std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                    new GrpcRedfishCredentials(target_.fqdn, uri.data())),
+                GRPC_SECURITY_NONE));
         return stub_->Post(&context, request, response);
       });
 }
@@ -224,9 +228,11 @@ RedfishVariant GrpcDynamicImpl::PatchUri(
       uri, GetRequestMessage(kv_span), options_,
       [this, uri](grpc::ClientContext& context, const Request& request,
                   Response* response) -> grpc::Status {
-        context.set_credentials(grpc::MetadataCredentialsFromPlugin(
-            std::unique_ptr<grpc::MetadataCredentialsPlugin>(
-                new GrpcRedfishCredentials(target_.fqdn, uri.data()))));
+        context.set_credentials(
+            grpc::experimental::MetadataCredentialsFromPlugin(
+                std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                    new GrpcRedfishCredentials(target_.fqdn, uri.data())),
+                GRPC_SECURITY_NONE));
         return stub_->Patch(&context, request, response);
       });
 }

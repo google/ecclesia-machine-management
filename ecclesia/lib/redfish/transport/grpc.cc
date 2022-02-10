@@ -136,9 +136,11 @@ class GrpcRedfishTransport : public RedfishTransport {
                      const redfish::v1::Request& request,
                      ::redfish::v1::Response* response) -> grpc::Status {
           absl::ReaderMutexLock mu(&mutex_);
-          context.set_credentials(grpc::MetadataCredentialsFromPlugin(
-              std::unique_ptr<grpc::MetadataCredentialsPlugin>(
-                  std::make_unique<GrpcRedfishCredentials>(fqdn_, path))));
+          context.set_credentials(
+              grpc::experimental::MetadataCredentialsFromPlugin(
+                  std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                      std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
+                  GRPC_SECURITY_NONE));
           return client_->Get(&context, request, response);
         });
   }
@@ -153,9 +155,11 @@ class GrpcRedfishTransport : public RedfishTransport {
                      const redfish::v1::Request& request,
                      ::redfish::v1::Response* response) -> grpc::Status {
           absl::ReaderMutexLock mu(&mutex_);
-          context.set_credentials(grpc::MetadataCredentialsFromPlugin(
-              std::unique_ptr<grpc::MetadataCredentialsPlugin>(
-                  std::make_unique<GrpcRedfishCredentials>(fqdn_, path))));
+          context.set_credentials(
+              grpc::experimental::MetadataCredentialsFromPlugin(
+                  std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                      std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
+                  GRPC_SECURITY_NONE));
           return client_->Post(&context, request, response);
         });
   }
@@ -170,9 +174,11 @@ class GrpcRedfishTransport : public RedfishTransport {
                      const redfish::v1::Request& request,
                      ::redfish::v1::Response* response) -> grpc::Status {
           absl::ReaderMutexLock mu(&mutex_);
-          context.set_credentials(grpc::MetadataCredentialsFromPlugin(
-              std::unique_ptr<grpc::MetadataCredentialsPlugin>(
-                  std::make_unique<GrpcRedfishCredentials>(fqdn_, path))));
+          context.set_credentials(
+              grpc::experimental::MetadataCredentialsFromPlugin(
+                  std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                      std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
+                  GRPC_SECURITY_NONE));
           return client_->Patch(&context, request, response);
         });
   }
@@ -187,9 +193,11 @@ class GrpcRedfishTransport : public RedfishTransport {
                      const redfish::v1::Request& request,
                      ::redfish::v1::Response* response) -> grpc::Status {
           absl::ReaderMutexLock mu(&mutex_);
-          context.set_credentials(grpc::MetadataCredentialsFromPlugin(
-              std::unique_ptr<grpc::MetadataCredentialsPlugin>(
-                  std::make_unique<GrpcRedfishCredentials>(fqdn_, path))));
+          context.set_credentials(
+              grpc::experimental::MetadataCredentialsFromPlugin(
+                  std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                      std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
+                  GRPC_SECURITY_NONE));
           return client_->Delete(&context, request, response);
         });
   }
@@ -206,11 +214,9 @@ class GrpcRedfishTransport : public RedfishTransport {
 
 }  // namespace
 
-absl::StatusOr<std::unique_ptr<RedfishTransport>>
-CreateGrpcRedfishTransport(absl::string_view endpoint,
-                           const GrpcTransportParams& params,
-                           const GrpcDynamicImplOptions& options,
-                           ServiceRootUri service_root) {
+absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
+    absl::string_view endpoint, const GrpcTransportParams& params,
+    const GrpcDynamicImplOptions& options, ServiceRootUri service_root) {
   if (absl::StartsWith(endpoint, "unix:")) {
     size_t pos = endpoint.find_last_of(':');
     if (pos == 4) {
