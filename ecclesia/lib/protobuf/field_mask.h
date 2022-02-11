@@ -56,6 +56,16 @@ void ToCanonicalForm(const google::protobuf::FieldMask &mask,
 void Intersect(const google::protobuf::FieldMask &mask1,
                const google::protobuf::FieldMask &mask2,
                google::protobuf::FieldMask *out);
+void Subtract(const google::protobuf::Descriptor *descriptor,
+              const google::protobuf::FieldMask &mask1,
+              const google::protobuf::FieldMask &mask2,
+              google::protobuf::FieldMask *out);
+template <typename T>
+void Subtract(const google::protobuf::FieldMask &mask1,
+              const google::protobuf::FieldMask &mask2,
+              google::protobuf::FieldMask *out) {
+  Subtract(T::descriptor(), mask1, mask2, out);
+}
 bool TrimMessage(const google::protobuf::FieldMask &mask,
                  google::protobuf::Message *message);
 

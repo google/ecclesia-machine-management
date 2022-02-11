@@ -61,6 +61,12 @@ void Intersect(const google::protobuf::FieldMask &mask1,
                google::protobuf::FieldMask *out) {
   google::protobuf::util::FieldMaskUtil::Intersect(mask1, mask2, out);
 }
+void Subtract(const google::protobuf::Descriptor *descriptor,
+              const google::protobuf::FieldMask &mask1,
+              const google::protobuf::FieldMask &mask2,
+              google::protobuf::FieldMask *out) {
+  google::protobuf::util::FieldMaskUtil::Subtract(descriptor, mask1, mask2, out);
+}
 bool TrimMessage(const google::protobuf::FieldMask &mask,
                  google::protobuf::Message *message) {
   return google::protobuf::util::FieldMaskUtil::TrimMessage(mask, message);
