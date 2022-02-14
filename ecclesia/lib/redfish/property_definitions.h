@@ -52,6 +52,7 @@ inline constexpr char kRfPropertyResetType[] = "ResetType";
 inline constexpr char kRfPropertyProtocolOem[] = "OEM";
 inline constexpr char kRfPropertyOem[] = "Oem";
 inline constexpr char kRfPropertyLifeTime[] = "LifeTime";
+inline constexpr char kRfPropertyCurrentPeriod[] = "CurrentPeriod";
 inline constexpr char kRfPropertyCacheMetricsTotal[] = "CacheMetricsTotal";
 inline constexpr char kRfPropertyProcessors[] = "Processors";
 inline constexpr char kRfPropertyMetrics[] = "Metrics";
