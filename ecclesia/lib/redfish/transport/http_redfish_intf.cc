@@ -116,14 +116,24 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
     return true;
   }
   bool GetValue(int32_t *val) const override {
-    if (!result_.body.is_number_integer()) return false;
-    *val = result_.body.get<int32_t>();
-    return true;
+    if (result_.body.is_number_integer()) {
+      *val = result_.body.get<int32_t>();
+      return true;
+    } else if (result_.body.is_number()) {
+        *val = std::round(result_.body.get<double>());
+        return true;
+    }
+    return false;
   }
   bool GetValue(int64_t *val) const override {
-    if (!result_.body.is_number_integer()) return false;
-    *val = result_.body.get<int64_t>();
-    return true;
+    if (result_.body.is_number_integer()) {
+      *val = result_.body.get<int64_t>();
+      return true;
+    } else if (result_.body.is_number()) {
+        *val = std::round(result_.body.get<double>());
+        return true;
+    }
+    return false;
   }
   bool GetValue(double *val) const override {
     if (!result_.body.is_number()) return false;
