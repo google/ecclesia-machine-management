@@ -72,10 +72,9 @@ class GrpcDynamicImplTest : public Test {
 TEST_F(GrpcDynamicImplTest, IsTrusted) { EXPECT_FALSE(client_->IsTrusted()); }
 
 TEST_F(GrpcDynamicImplTest, UpdateTransport) {
-  EXPECT_DEATH(
-      client_->UpdateTransport(nullptr, nullptr,
-                               RedfishInterface::TrustedEndpoint::kTrusted),
-      "Create a new instance instead");
+  EXPECT_DEATH(client_->UpdateTransport(
+                   nullptr, RedfishInterface::TrustedEndpoint::kTrusted),
+               "Create a new instance instead");
 }
 
 TEST_F(GrpcDynamicImplTest, StatusNotOk) {

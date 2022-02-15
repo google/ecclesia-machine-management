@@ -162,7 +162,6 @@ class JsonMockupMockup : public RedfishInterface {
   }
   bool IsTrusted() const override { return true; }
   void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
-                       std::unique_ptr<RedfishCachedGetterInterface> new_cache,
                        TrustedEndpoint trusted) override {
     // There's no reason why this cannot be a no-op, but for now just terminate
     // in case someone is expecting some particular behaviour.

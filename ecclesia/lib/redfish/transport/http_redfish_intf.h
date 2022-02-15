@@ -17,14 +17,20 @@
 #ifndef ECCLESIA_LIB_REDFISH_TRANSPORT_HTTP_REDFISH_INTF_H_
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_HTTP_REDFISH_INTF_H_
 
+#include <functional>
 #include <memory>
 
+#include "absl/base/attributes.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
+
+using RedfishTransportCacheFactory =
+    std::function<std::unique_ptr<ecclesia::RedfishCachedGetterInterface>(
+        ecclesia::RedfishTransport*)>;
 
 // Constructs a RedfishInterface backed by a Redfish Transport.
 std::unique_ptr<RedfishInterface> NewHttpInterface(
@@ -33,6 +39,13 @@ std::unique_ptr<RedfishInterface> NewHttpInterface(
     RedfishInterface::TrustedEndpoint trusted,
     ServiceRootUri service_root = ServiceRootUri::kRedfish);
 
+// Constructs a RedfishInterface backed by a Redfish Transport with a cache
+// factory. Is useful for the use-case when transport can be changed runtime
+std::unique_ptr<RedfishInterface> NewHttpInterface(
+    std::unique_ptr<ecclesia::RedfishTransport> transport,
+    RedfishTransportCacheFactory cache_factory,
+    RedfishInterface::TrustedEndpoint trusted,
+    ServiceRootUri service_root = ServiceRootUri::kRedfish);
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TRANSPORT_HTTP_REDFISH_INTF_H_

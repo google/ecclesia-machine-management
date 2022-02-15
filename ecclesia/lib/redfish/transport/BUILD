@@ -7,11 +7,23 @@ cc_library(
     hdrs = ["interface.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//ecclesia/lib/logging",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_json//:json",
+    ],
+)
+
+cc_library(
+    name = "mocked_interface",
+    testonly = True,
+    hdrs = ["mocked_interface.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":interface",
+        "@com_google_googletest//:gtest",
     ],
 )
 
@@ -304,8 +316,10 @@ cc_test(
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/time:clock_fake",
+        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/time",
         "@com_google_googletest//:gtest_main",
         "@com_json//:json",
     ],

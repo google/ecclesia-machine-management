@@ -384,6 +384,7 @@ class RedfishInterface {
   struct ObjectValue;
   using ValueVariant = std::variant<int, bool, std::string, const char *,
                                     double, ListValue, ObjectValue>;
+
   struct ListValue {
     std::vector<ValueVariant> items;
   };
@@ -412,9 +413,10 @@ class RedfishInterface {
   enum TrustedEndpoint { kTrusted, kUntrusted };
 
   // Updates the transport for sending Redfish requests.
+  // API is deprected and the recommended way is to recreate the transport
+  ABSL_DEPRECATED("Create a new instance instead")
   virtual void UpdateTransport(
       std::unique_ptr<RedfishTransport> new_transport,
-      std::unique_ptr<RedfishCachedGetterInterface> new_cache,
       TrustedEndpoint trusted) = 0;
 
   // Returns whether the endpoint is trusted.
@@ -468,7 +470,6 @@ class NullRedfish : public RedfishInterface {
   // The transport cannot be updated in the null implementation. The transport
   // will never magically start working.
   void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
-                       std::unique_ptr<RedfishCachedGetterInterface> new_cache,
                        TrustedEndpoint trusted) override {}
   // The null endpoint is trusted as it doesn't provide any system information,
   // so there is nothing it could lie about.

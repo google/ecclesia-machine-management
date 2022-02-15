@@ -24,9 +24,11 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"
@@ -61,14 +63,16 @@ class HttpRedfishInterfaceTest : public ::testing::Test {
     auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
         std::move(curl_http_client),
         absl::StrFormat("%s:%d", config.hostname, config.port));
+    auto cache_factory = [this](RedfishTransport *transport) {
+      return std::make_unique<ecclesia::TimeBasedCache>(transport, &clock_,
+                                                        absl::Minutes(1));
+    };
     auto cache = std::make_unique<ecclesia::TimeBasedCache>(
         transport.get(), &clock_, absl::Minutes(1));
-    cache_ = cache.get();
-    intf_ = NewHttpInterface(std::move(transport), std::move(cache),
+    intf_ = NewHttpInterface(std::move(transport), cache_factory,
                              RedfishInterface::kTrusted);
   }
 
-  ecclesia::RedfishCachedGetterInterface *cache_;
   ecclesia::FakeClock clock_;
   std::unique_ptr<ecclesia::FakeRedfishServer> server_;
   std::unique_ptr<RedfishInterface> intf_;
@@ -79,14 +83,6 @@ TEST_F(HttpRedfishInterfaceTest, UpdateTransport) {
   auto server2 = std::make_unique<ecclesia::FakeRedfishServer>(
       "barebones_session_auth/mockup.shar");
   auto config = server2->GetConfig();
-  ecclesia::HttpCredential creds;
-  auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
-      ecclesia::LibCurlProxy::CreateInstance(), creds);
-  auto new_transport = ecclesia::HttpRedfishTransport::MakeNetwork(
-      std::move(curl_http_client),
-      absl::StrFormat("%s:%d", config.hostname, config.port));
-  auto new_cache = std::make_unique<ecclesia::TimeBasedCache>(
-      new_transport.get(), &clock_, absl::Seconds(5));
 
   // Set up handlers on the second server to return a different payload.
   constexpr absl::string_view kSecondServerResponse = R"json({
@@ -125,9 +121,16 @@ TEST_F(HttpRedfishInterfaceTest, UpdateTransport) {
 })json")));
 
   // Update the endpoint.
-  intf_->UpdateTransport(std::move(new_transport), std::move(new_cache),
-                         RedfishInterface::kUntrusted);
-
+  {
+    ecclesia::HttpCredential creds;
+    auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
+        ecclesia::LibCurlProxy::CreateInstance(), creds);
+    auto new_transport = ecclesia::HttpRedfishTransport::MakeNetwork(
+        std::move(curl_http_client),
+        absl::StrFormat("%s:%d", config.hostname, config.port));
+    intf_->UpdateTransport(std::move(new_transport),
+                           RedfishInterface::kUntrusted);
+  }
   // Subsequent GET should fetch from the new server. The cache should be wiped.
   EXPECT_FALSE(intf_->IsTrusted());
   EXPECT_THAT(
@@ -138,8 +141,7 @@ TEST_F(HttpRedfishInterfaceTest, UpdateTransport) {
       Eq(nlohmann::json::parse(kSecondServerResponse)));
   EXPECT_THAT(called_count, Eq(1));
 
-  // New cache policy should be followed.
-  // Verify the cached copy is returned.
+  // Cache policy should be followed. Verify the cached copy is returned.
   EXPECT_THAT(
       nlohmann::json::parse(
           intf_->CachedGetUri("/redfish/v1/Chassis/chassis").DebugString(),
@@ -149,7 +151,7 @@ TEST_F(HttpRedfishInterfaceTest, UpdateTransport) {
   EXPECT_THAT(called_count, Eq(1));
 
   // Verify after advancing time, a fresh copy is returned.
-  clock_.AdvanceTime(absl::Seconds(5));
+  clock_.AdvanceTime(absl::Minutes(2));
   EXPECT_THAT(
       nlohmann::json::parse(
           intf_->CachedGetUri("/redfish/v1/Chassis/chassis").DebugString(),

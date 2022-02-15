@@ -368,6 +368,17 @@ class HttpRedfishInterface : public RedfishInterface {
       : transport_(std::move(transport)),
         trusted_(trusted),
         cache_(std::move(cache)),
+        cache_factory_(nullptr),
+        service_root_(service_root) {}
+
+  HttpRedfishInterface(std::unique_ptr<ecclesia::RedfishTransport> transport,
+                       RedfishTransportCacheFactory cache_factory,
+                       RedfishInterface::TrustedEndpoint trusted,
+                       ServiceRootUri service_root = ServiceRootUri::kRedfish)
+      : transport_(std::move(transport)),
+        trusted_(trusted),
+        cache_(cache_factory(transport_.get())),
+        cache_factory_(std::move(cache_factory)),
         service_root_(service_root) {}
 
   bool IsTrusted() const override {
@@ -376,12 +387,15 @@ class HttpRedfishInterface : public RedfishInterface {
   }
 
   void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
-                       std::unique_ptr<RedfishCachedGetterInterface> new_cache,
                        TrustedEndpoint trusted) {
     absl::WriterMutexLock mu(&transport_mutex_);
-    transport_ = std::move(new_transport);
-    cache_ = std::move(new_cache);
+    if (cache_factory_ == nullptr) {
+      ecclesia::FatalLog()
+          << "Tried to update the endpoint without CacheFactory set";
+    }
     trusted_ = trusted;
+    transport_ = std::move(new_transport);
+    cache_ = cache_factory_(transport_.get());
   }
 
   RedfishVariant GetRoot(GetParams params) override {
@@ -480,6 +494,7 @@ class HttpRedfishInterface : public RedfishInterface {
   RedfishInterface::TrustedEndpoint trusted_ ABSL_GUARDED_BY(transport_mutex_);
   std::unique_ptr<ecclesia::RedfishCachedGetterInterface> cache_
       ABSL_GUARDED_BY(transport_mutex_);
+  RedfishTransportCacheFactory cache_factory_ ABSL_GUARDED_BY(transport_mutex_);
   const ServiceRootUri service_root_;
 };
 
@@ -491,6 +506,14 @@ std::unique_ptr<RedfishInterface> NewHttpInterface(
     RedfishInterface::TrustedEndpoint trusted, ServiceRootUri service_root) {
   return std::make_unique<HttpRedfishInterface>(
       std::move(transport), std::move(cache), trusted, service_root);
+}
+
+std::unique_ptr<RedfishInterface> NewHttpInterface(
+    std::unique_ptr<ecclesia::RedfishTransport> transport,
+    RedfishTransportCacheFactory cache_factory,
+    RedfishInterface::TrustedEndpoint trusted, ServiceRootUri service_root) {
+  return std::make_unique<HttpRedfishInterface>(
+      std::move(transport), std::move(cache_factory), trusted, service_root);
 }
 
 }  // namespace ecclesia
