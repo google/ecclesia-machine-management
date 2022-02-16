@@ -409,21 +409,24 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
         )
 
     if not native.existing_rule("com_google_riegeli"):
-        # Riegeli. Uses the latest commit as of Mar 17, 2021.
+        # Riegeli. Uses the latest commit as of Feb 16, 2022.
         http_archive(
             name = "com_google_riegeli",
-            sha256 = "8f28ca19b1ebe96df6c1d76ecadf1aa4e7fcf151c0492e91b7401a47ce2add62",
-            strip_prefix = "riegeli-9c3f3203ad04a45fe8743bb71cd0cd98c76e394d",
-            url = "https://github.com/google/riegeli/archive/9c3f3203ad04a45fe8743bb71cd0cd98c76e394d.tar.gz",
+            sha256 = "a54dafa634db87723db106bc44ef365b1b442d8862aafbeb5f1d2e922049e587",
+            strip_prefix = "riegeli-934428f44a6d120cb6c065315c788aa3a1be6b66",
+            url = "https://github.com/google/riegeli/archive/934428f44a6d120cb6c065315c788aa3a1be6b66.tar.gz",
         )
 
     if not native.existing_rule("org_brotli"):
         # Additional projects needed by riegeli.
+        patch_files = ["brotli.patch"]
         http_archive(
             name = "org_brotli",
-            sha256 = "6e69be238ff61cef589a3fa88da11b649c7ff7a5932cb12d1e6251c8c2e17a2f",
-            strip_prefix = "brotli-1.0.7",
-            urls = ["https://github.com/google/brotli/archive/v1.0.7.zip"],
+            patch_args = ["-p1"],
+            patches = _make_patch_paths("brotli.patches", patch_files, package_name),
+            sha256 = "fec5a1d26f3dd102c542548aaa704f655fecec3622a24ec6e97768dcb3c235ff",
+            strip_prefix = "brotli-68f1b90ad0d204907beb58304d0bd06391001a4d",
+            urls = ["https://github.com/google/brotli/archive/68f1b90ad0d204907beb58304d0bd06391001a4d.zip"],
         )
 
     if not native.existing_rule("net_zstd"):
