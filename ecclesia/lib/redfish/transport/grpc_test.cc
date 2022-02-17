@@ -24,6 +24,7 @@
 #include "ecclesia/lib/redfish/testing/grpc_dynamic_mockup_server.h"
 #include "ecclesia/lib/status/rpc.h"
 #include "ecclesia/lib/testing/status.h"
+#include "ecclesia/lib/time/clock_fake.h"
 
 namespace ecclesia {
 namespace {
@@ -210,30 +211,26 @@ TEST(GrpcRedfishTransport, NotAllowed) {
 
 TEST(GrpcRedfishTransport, Timeout) {
   int port = ecclesia::FindUnusedPortOrDie();
+  GrpcTransportParams params;
+  GrpcDynamicImplOptions options;
+  FakeClock clock;
+
+  // Using a fake clock that point the time to negative, making the context
+  // deadline always in the past
+  params.timeout = absl::AbsDuration(absl::Milliseconds(50));
+  params.clock = &clock;
+
+  std::string endpoint = absl::StrCat("[::1]:", port);
   testing::internal::Notification notification;
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port);
-  mockup_server.AddHttpGetHandler(
-      "/redfish/v1",
-      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
-          redfish::v1::Response* response) -> grpc::Status {
-        absl::SleepFor(absl::Milliseconds(100));
-        notification.Notify();
-        return grpc::Status::OK;
-      });
-  GrpcTransportParams params;
-  GrpcDynamicImplOptions options;
-  params.timeout = absl::AbsDuration(absl::Milliseconds(50));
-  std::string endpoint = absl::StrCat("[::1]:", port);
+
   if (auto transport = CreateGrpcRedfishTransport(endpoint, params, options);
       transport.ok()) {
     EXPECT_THAT((*transport)->Get("/redfish/v1"),
                 internal_status::IsStatusPolyMatcher(
                     absl::StatusCode::kDeadlineExceeded));
   }
-
-  notification.WaitForNotification();
-  absl::SleepFor(absl::Milliseconds(100));
 }
 }  // namespace
 }  // namespace ecclesia

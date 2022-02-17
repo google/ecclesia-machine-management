@@ -268,6 +268,7 @@ cc_test(
         "//ecclesia/lib/redfish/testing:grpc_dynamic_mockup_server",
         "//ecclesia/lib/status:rpc",
         "//ecclesia/lib/testing:status",
+        "//ecclesia/lib/time:clock_fake",
         "@com_google_googletest//:gtest_main",
     ],
 )
