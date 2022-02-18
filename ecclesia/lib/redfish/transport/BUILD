@@ -354,3 +354,20 @@ cc_test(
         "@com_json//:json",
     ],
 )
+
+cc_library(
+    name = "x509_certificate",
+    srcs = ["x509_certificate.cc"],
+    hdrs = ["x509_certificate.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//ecclesia/lib/status:macros",
+        "@boringssl//:crypto",
+        "@com_google_absl//absl/base",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/types:optional",
+    ],
+)
