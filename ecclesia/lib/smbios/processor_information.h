@@ -101,6 +101,10 @@ class ProcessorInformation {
 
   std::optional<CpuSignature> GetSignature() const;
 
+  std::string GetManufacturer() const;
+
+  uint64_t GetProcessorId() const;
+
  private:
   CpuSignature GetSignaturex86() const;
   CpuSignature GetSignatureAmd() const;

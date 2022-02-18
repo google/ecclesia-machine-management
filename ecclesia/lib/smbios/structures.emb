@@ -171,6 +171,15 @@ bits ProcessorIdx86:
   28 [+4]  UInt  reserved
 
 
+# MIDR_EL1, Main ID Register
+bits ProcessorIdArm:
+  0  [+4]   UInt  revision
+  4  [+12]  UInt  part_number
+  16 [+4]   UInt  architecture
+  20 [+4]   UInt  variant
+  24 [+8]   UInt  implementer
+
+
 struct ProcessorInformationStructure:
   0  [+1]    StructureType   structure_type
     [requires: this == StructureType.PROCESSOR_INFORMATION]
@@ -189,7 +198,9 @@ struct ProcessorInformationStructure:
   6  [+1]    UInt            processor_family
   7  [+1]    UInt            manufacturer_snum
   8  [+8]    UInt:8[]        processor_id
+  8  [+8]    UInt            processor_id_uint64
   8  [+4]    ProcessorIdx86  processor_id_x86
+  8  [+4]    ProcessorIdArm  processor_id_arm
   16 [+1]    UInt            version
   17 [+1]    UInt            voltage
   18 [+2]    UInt            external_clk_freq_mhz

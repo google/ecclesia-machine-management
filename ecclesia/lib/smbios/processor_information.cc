@@ -83,6 +83,14 @@ std::optional<CpuSignature> ProcessorInformation::GetSignature() const {
   return std::nullopt;
 }
 
+std::string ProcessorInformation::GetManufacturer() const {
+  return std::string(GetString(GetMessageView().manufacturer_snum().Read()));
+}
+
+uint64_t ProcessorInformation::GetProcessorId() const {
+  return GetMessageView().processor_id_uint64().Read();
+}
+
 bool ProcessorInformation::IsIntelProcessor() const {
   return absl::StrContains(
       GetString(GetMessageView().manufacturer_snum().Read()), "Intel");
