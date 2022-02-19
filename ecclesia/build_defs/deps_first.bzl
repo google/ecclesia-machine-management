@@ -148,9 +148,9 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
         # Skylib libraries.
         http_archive(
             name = "bazel_skylib",
-            sha256 = "ea5dc9a1d51b861d27608ad3bd6c177bc88d54e946cb883e9163e53c607a9b4c",
-            strip_prefix = "bazel-skylib-2b38b2f8bd4b8603d610cfc651fcbb299498147f",
-            urls = ["https://github.com/bazelbuild/bazel-skylib/archive/2b38b2f8bd4b8603d610cfc651fcbb299498147f.tar.gz"],
+            sha256 = "61352d78e4a89405853b939853cf76d7c323f90e5507f25a22fa523acb71ea14",
+            strip_prefix = "bazel-skylib-1.2.0",
+            urls = ["https://github.com/bazelbuild/bazel-skylib/archive/refs/tags/1.2.0.tar.gz"],
         )
 
     if not native.existing_rule("rules_python"):
