@@ -293,6 +293,8 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyCriticalWarning, int,
                         "CriticalWarning");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyTopologyRepresentation, std::string,
                         "TopologyRepresentation");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyTcgOpalAdditionalDataStoreRawData,
+                        std::string, "TcgOpalAdditionalDataStoreRawData");
 DEFINE_REDFISH_PROPERTY(OemPropertyRootOfTrust, std::string, "RootOfTrust");
 }  // namespace ecclesia
 
