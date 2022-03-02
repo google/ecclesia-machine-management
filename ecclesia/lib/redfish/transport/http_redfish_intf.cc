@@ -120,8 +120,15 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
       *val = result_.body.get<int32_t>();
       return true;
     } else if (result_.body.is_number()) {
-        *val = std::round(result_.body.get<double>());
-        return true;
+      double trans_tmp = std::round(result_.body.get<double>());
+      if (trans_tmp >
+              static_cast<double>(std::numeric_limits<int32_t>::max()) ||
+          trans_tmp <
+              static_cast<double>(std::numeric_limits<int32_t>::min())) {
+        return false;
+      }
+      *val = trans_tmp;
+      return true;
     }
     return false;
   }
@@ -130,8 +137,15 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
       *val = result_.body.get<int64_t>();
       return true;
     } else if (result_.body.is_number()) {
-        *val = std::round(result_.body.get<double>());
-        return true;
+      double trans_tmp = std::round(result_.body.get<double>());
+      if (trans_tmp >
+              static_cast<double>(std::numeric_limits<int64_t>::max()) ||
+          trans_tmp <
+              static_cast<double>(std::numeric_limits<int64_t>::min())) {
+        return false;
+      }
+      *val = trans_tmp;
+      return true;
     }
     return false;
   }
