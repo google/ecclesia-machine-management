@@ -371,3 +371,19 @@ cc_library(
         "@com_google_absl//absl/types:optional",
     ],
 )
+
+cc_library(
+    name = "grpc_certificate_verifier",
+    srcs = ["grpc_certificate_verifier.cc"],
+    hdrs = ["grpc_certificate_verifier.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":x509_certificate",
+        "//ecclesia/lib/status:rpc",
+        "@boringssl//:crypto",
+        "@com_github_grpc_grpc//:grpc++_public_hdrs",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
