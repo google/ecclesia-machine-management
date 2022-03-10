@@ -60,6 +60,7 @@ inline constexpr char kRfPropertyEnvironmentMetrics[] = "EnvironmentMetrics";
 inline constexpr char kRfPropertySessions[] = "Sessions";
 inline constexpr char kRfPropertySessionService[] = "SessionService";
 inline constexpr char kRfPropertySystems[] = "Systems";
+inline constexpr char kRfPropertySystemReset[] = "#ComputerSystem.Reset";
 inline constexpr char kRfPropertyManagers[] = "Managers";
 inline constexpr char kRfPropertyEthernetInterfaces[] = "EthernetInterfaces";
 inline constexpr char kRfPropertyThermal[] = "Thermal";
