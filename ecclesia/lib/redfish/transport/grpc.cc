@@ -74,8 +74,13 @@ absl::string_view EndpointToFqdn(absl::string_view endpoint) {
   if (absl::StrContains(endpoint, "unix:")) {
     return endpoint;
   }
-  size_t pos = endpoint.find_last_of(':');
-  return endpoint.substr(0, pos);
+  if (absl::StrContains(endpoint, "dns:/")) {
+    size_t port_pos = endpoint.find_last_of(':');
+    size_t slash_pos = endpoint.find_last_of('/');
+    return endpoint.substr(slash_pos + 1, port_pos - slash_pos - 1);
+  }
+  size_t port_pos = endpoint.find_last_of(':');
+  return endpoint.substr(0, port_pos);
 }
 
 class GrpcRedfishCredentials : public grpc::MetadataCredentialsPlugin {
@@ -113,6 +118,21 @@ class GrpcRedfishTransport : public RedfishTransport {
         params_(std::move(params)),
         service_root_(std::move(service_root)),
         fqdn_(EndpointToFqdn(endpoint)) {}
+
+  // Creates an GrpcRedfishTransport using a specified endpoint and customized
+  // credentials.
+  // Params:
+  //   endpoint: e.g. "dns:///localhost:80", "unix:///var/run/my.socket"
+  GrpcRedfishTransport(std::string_view endpoint,
+                       const GrpcTransportParams& params,
+                       const std::shared_ptr<grpc::ChannelCredentials>& creds,
+                       ServiceRootUri service_root)
+      : client_(redfish::v1::RedfishV1::NewStub(
+            grpc::CreateChannel(std::string(endpoint), creds))),
+        params_(std::move(params)),
+        service_root_(std::move(service_root)),
+        fqdn_(EndpointToFqdn(endpoint)) {}
+
   GrpcRedfishTransport(std::string_view endpoint)
       : client_(redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
             std::string(endpoint), grpc::InsecureChannelCredentials()))),
@@ -212,33 +232,46 @@ class GrpcRedfishTransport : public RedfishTransport {
   std::string fqdn_;
 };
 
-}  // namespace
-
-absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
-    absl::string_view endpoint, const GrpcTransportParams& params,
-    const GrpcDynamicImplOptions& options, ServiceRootUri service_root) {
+absl::Status ValidateEndpoint(absl::string_view endpoint) {
   if (absl::StartsWith(endpoint, "unix:")) {
     size_t pos = endpoint.find_last_of(':');
-    if (pos == 4) {
-      return std::make_unique<GrpcRedfishTransport>(
-          std::string(endpoint), params, options, service_root);
+    if (pos != 4) {
+      return absl::InvalidArgumentError(
+          absl::StrCat("bad endpoint: ", endpoint, " ;no colons inside a uds"));
     }
-    return absl::InvalidArgumentError(
-        absl::StrCat("bad endpoint: ", endpoint, " ;no colons inside a uds"));
   } else {
     size_t pos = endpoint.find_last_of(':');
-    if (pos == endpoint.npos)
+    if (pos == endpoint.npos || pos + 1 == endpoint.size()) {
       return absl::InvalidArgumentError(
           absl::StrCat("bad endpoint: ", endpoint, " ;missing port in a dns"));
+    }
     for (size_t i = pos + 1; i < endpoint.size(); ++i) {
       if (!std::isdigit(endpoint[i])) {
         return absl::InvalidArgumentError(absl::StrCat(
             "bad endpoint: ", endpoint, " ;port should be an integer"));
       }
     }
-    return std::make_unique<GrpcRedfishTransport>(std::string(endpoint), params,
-                                                  options, service_root);
   }
+  return absl::OkStatus();
+}
+
+}  // namespace
+
+absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
+    absl::string_view endpoint, const GrpcTransportParams& params,
+    const GrpcDynamicImplOptions& options, ServiceRootUri service_root) {
+  ECCLESIA_RETURN_IF_ERROR(ValidateEndpoint(endpoint));
+  return std::make_unique<GrpcRedfishTransport>(std::string(endpoint), params,
+                                                options, service_root);
+}
+
+absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
+    absl::string_view endpoint, const GrpcTransportParams& params,
+    const std::shared_ptr<grpc::ChannelCredentials>& creds,
+    ServiceRootUri service_root) {
+  ECCLESIA_RETURN_IF_ERROR(ValidateEndpoint(endpoint));
+  return std::make_unique<GrpcRedfishTransport>(std::string(endpoint), params,
+                                                creds, service_root);
 }
 
 }  // namespace ecclesia

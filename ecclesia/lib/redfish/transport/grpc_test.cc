@@ -232,5 +232,17 @@ TEST(GrpcRedfishTransport, Timeout) {
                     absl::StatusCode::kDeadlineExceeded));
   }
 }
+
+TEST(GrpcRedfishTransport, EndpointFqdn) {
+  GrpcDynamicImplOptions options;
+  auto transport = CreateGrpcRedfishTransport("/:", {}, options);
+  EXPECT_THAT(transport, IsStatusInvalidArgument());
+
+  transport = CreateGrpcRedfishTransport("dns:/:", {}, options);
+  EXPECT_THAT(transport, IsStatusInvalidArgument());
+
+  transport = CreateGrpcRedfishTransport("dns:/:80", {}, options);
+  EXPECT_THAT(transport, IsOk());
+}
 }  // namespace
 }  // namespace ecclesia

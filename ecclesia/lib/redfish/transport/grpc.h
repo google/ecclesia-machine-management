@@ -42,6 +42,13 @@ CreateGrpcRedfishTransport(
     const GrpcDynamicImplOptions& options,
     ServiceRootUri service_root = ServiceRootUri::kRedfish);
 
+absl::StatusOr<std::unique_ptr<RedfishTransport>>
+CreateGrpcRedfishTransport(
+    std::string_view endpoint, const GrpcTransportParams& params,
+    const std::shared_ptr<grpc::ChannelCredentials>& creds,
+    ServiceRootUri service_root = ServiceRootUri::kRedfish);
+
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TRANSPORT_GRPC_H_
