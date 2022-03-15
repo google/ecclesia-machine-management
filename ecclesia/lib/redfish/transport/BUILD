@@ -262,6 +262,7 @@ cc_test(
     ],
     deps = [
         ":grpc",
+        ":grpc_dynamic_options",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/network:testing",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",

@@ -28,6 +28,9 @@
 
 namespace ecclesia {
 
+// A class that generates gRPC ChannelCredentials for Redfish clients.
+// This class takes static buffer to certificates or keys.
+// Note: use GrpcTransportOptions if you need dynamic certificate loading.
 class GrpcDynamicImplOptions {
  public:
   enum class AuthType {
@@ -38,38 +41,79 @@ class GrpcDynamicImplOptions {
   };
 
   GrpcDynamicImplOptions()
-      : auth_type_(AuthType::kInsecure),
-        timeout_(absl::Seconds(3)) {}
+      : auth_type_(AuthType::kInsecure), timeout_(absl::Seconds(3)) {}
+
+  virtual ~GrpcDynamicImplOptions() = default;
 
   // Authentication options.
-  // Use gRPC InsecureCredentials.
+  // Uses gRPC InsecureCredentials, via static credentials buffer.
   void SetToInsecure();
-  // Use gRPC TlsCredentials.
-  void SetToTls(absl::string_view root_certs, absl::string_view key,
-                absl::string_view cert);
-  // Use gRPC TlsCredentials, but skip hostname check.
-  void SetToTlsSkipHostname(
-      absl::string_view root_certs, absl::string_view key,
-      absl::string_view cert,
+  // Uses gRPC TlsCredentials, via static credentials buffer.
+  virtual void SetToTls(absl::string_view root_certs_buffer,
+                        absl::string_view key_buffer,
+                        absl::string_view cert_buffer);
+  // Uses gRPC TlsCredentials, but skip hostname check, via static credentials
+  // buffer.
+  virtual void SetToTlsSkipHostname(
+      absl::string_view root_certs_buffer, absl::string_view key_buffer,
+      absl::string_view cert_buffer,
       std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier);
-  // Use gRPC TlsCredentials, but don't verify server at all.
-  void SetToTlsNotVerifyServer(
-      absl::string_view key, absl::string_view cert,
+  // Uses gRPC TlsCredentials, but don't verify server at all, via static
+  // credentials buffer.
+  virtual void SetToTlsNotVerifyServer(
+      absl::string_view key_buffer, absl::string_view cert_buffer,
       std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier);
 
   void SetTimeout(absl::Duration timeout) { timeout_ = timeout; }
 
   absl::Duration GetTimeout() const { return timeout_; }
 
-  // Get gRPC channel credentials according to authentication options.
+  // Gets gRPC channel credentials according to authentication options.
   std::shared_ptr<grpc::ChannelCredentials> GetChannelCredentials() const;
 
  protected:
+  virtual std::shared_ptr<grpc::experimental::CertificateProviderInterface>
+  GetCertificateProvider() const;
+
   AuthType auth_type_;
   std::string root_certs_;
   grpc::experimental::IdentityKeyCertPair key_cert_;
   std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier_;
   absl::Duration timeout_;
+};
+
+// A class that generates gRPC ChannelCredentials for Redfish clients.
+// This class takes file paths to certificates or keys, and specify gRPC backend
+// to reload credentials if changed.
+class GrpcTransportOptions : public GrpcDynamicImplOptions {
+ public:
+  GrpcTransportOptions() = default;
+  ~GrpcTransportOptions() override = default;
+
+  // Uses gRPC TlsCredentials.
+  void SetToTls(absl::string_view root_certs_path, absl::string_view key_path,
+                absl::string_view cert_path) override;
+  // Uses gRPC TlsCredentials, but skip hostname check, via static credentials
+  // buffer.
+  void SetToTlsSkipHostname(
+      absl::string_view root_certs_path, absl::string_view key_path,
+      absl::string_view cert_path,
+      std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier)
+      override;
+  // Uses gRPC TlsCredentials, but don't verify server at all, via static
+  // credentials buffer.
+  void SetToTlsNotVerifyServer(
+      absl::string_view key_path, absl::string_view cert_path,
+      std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier)
+      override;
+
+ private:
+  std::shared_ptr<grpc::experimental::CertificateProviderInterface>
+  GetCertificateProvider() const override;
+
+  std::string root_certs_path_;
+  std::string key_path_;
+  std::string cert_path_;
 };
 
 }  // namespace ecclesia

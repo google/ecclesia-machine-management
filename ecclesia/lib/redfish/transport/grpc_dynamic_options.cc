@@ -57,36 +57,39 @@ UEYO7y3ijBKwLs0lm6rCzCjwacWb/tFIJK4FNTg7iTWs2t94HWopoZqp0mouAERe
 qOFbsHcmv8mSUfig0AaTorZQpS8htNtcsCl5HhNgAyCQh+QzvBvesrEz5Cw=
 -----END CERTIFICATE-----
 )";
+
+constexpr unsigned int kRefreshIntervalSec = 0;
 }  // namespace
 
 void GrpcDynamicImplOptions::SetToInsecure() {
   auth_type_ = AuthType::kInsecure;
 }
-void GrpcDynamicImplOptions::SetToTls(absl::string_view root_certs,
-                                      absl::string_view key,
-                                      absl::string_view cert) {
+void GrpcDynamicImplOptions::SetToTls(absl::string_view root_certs_buffer,
+                                      absl::string_view key_buffer,
+                                      absl::string_view cert_buffer) {
   auth_type_ = AuthType::kTlsVerifyServer;
-  root_certs_ = root_certs;
-  key_cert_ = {.private_key = std::string(key),
-               .certificate_chain = std::string(cert)};
+  root_certs_ = root_certs_buffer;
+  key_cert_ = {.private_key = std::string(key_buffer),
+               .certificate_chain = std::string(cert_buffer)};
 }
 
 void GrpcDynamicImplOptions::SetToTlsSkipHostname(
-    absl::string_view root_certs, absl::string_view key, absl::string_view cert,
+    absl::string_view root_certs_buffer, absl::string_view key_buffer,
+    absl::string_view cert_buffer,
     std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier) {
   auth_type_ = AuthType::kTlsVerifyServerSkipHostname;
-  root_certs_ = root_certs;
-  key_cert_ = {.private_key = std::string(key),
-               .certificate_chain = std::string(cert)};
+  root_certs_ = root_certs_buffer;
+  key_cert_ = {.private_key = std::string(key_buffer),
+               .certificate_chain = std::string(cert_buffer)};
   cert_verifier_ = std::move(cert_verifier);
 }
 
 void GrpcDynamicImplOptions::SetToTlsNotVerifyServer(
-    absl::string_view key, absl::string_view cert,
+    absl::string_view key_buffer, absl::string_view cert_buffer,
     std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier) {
   auth_type_ = AuthType::kTlsNotVerifyServer;
-  key_cert_ = {.private_key = std::string(key),
-               .certificate_chain = std::string(cert)};
+  key_cert_ = {.private_key = std::string(key_buffer),
+               .certificate_chain = std::string(cert_buffer)};
   cert_verifier_ = std::move(cert_verifier);
 }
 
@@ -97,10 +100,7 @@ GrpcDynamicImplOptions::GetChannelCredentials() const {
       grpc::experimental::TlsChannelCredentialsOptions tls_options;
       tls_options.watch_identity_key_cert_pairs();
       tls_options.watch_root_certs();
-      tls_options.set_certificate_provider(
-          std::make_shared<grpc::experimental::StaticDataCertificateProvider>(
-              root_certs_,
-              std::vector<grpc::experimental::IdentityKeyCertPair>{key_cert_}));
+      tls_options.set_certificate_provider(GetCertificateProvider());
       tls_options.set_verify_server_certs(true);
       return grpc::experimental::TlsCredentials(tls_options);
     }
@@ -108,10 +108,7 @@ GrpcDynamicImplOptions::GetChannelCredentials() const {
       grpc::experimental::TlsChannelCredentialsOptions tls_options;
       tls_options.watch_identity_key_cert_pairs();
       tls_options.watch_root_certs();
-      tls_options.set_certificate_provider(
-          std::make_shared<grpc::experimental::StaticDataCertificateProvider>(
-              root_certs_,
-              std::vector<grpc::experimental::IdentityKeyCertPair>{key_cert_}));
+      tls_options.set_certificate_provider(GetCertificateProvider());
       tls_options.set_certificate_verifier(cert_verifier_);
       tls_options.set_verify_server_certs(true);
       tls_options.set_check_call_host(false);
@@ -121,11 +118,7 @@ GrpcDynamicImplOptions::GetChannelCredentials() const {
       grpc::experimental::TlsChannelCredentialsOptions tls_options;
       tls_options.watch_identity_key_cert_pairs();
       tls_options.watch_root_certs();
-      tls_options.set_certificate_provider(
-          std::make_shared<grpc::experimental::StaticDataCertificateProvider>(
-              kUnusedFakeRootCert,
-              std::vector<grpc::experimental::IdentityKeyCertPair>{key_cert_}));
-
+      tls_options.set_certificate_provider(GetCertificateProvider());
       tls_options.set_certificate_verifier(cert_verifier_);
       tls_options.set_verify_server_certs(false);
       tls_options.set_check_call_host(false);
@@ -139,4 +132,87 @@ GrpcDynamicImplOptions::GetChannelCredentials() const {
   return grpc::InsecureChannelCredentials();
 }
 
+std::shared_ptr<grpc::experimental::CertificateProviderInterface>
+GrpcDynamicImplOptions::GetCertificateProvider() const {
+  switch (auth_type_) {
+    case AuthType::kTlsVerifyServer: {
+      return std::make_shared<
+          grpc::experimental::StaticDataCertificateProvider>(
+          root_certs_,
+          std::vector<grpc::experimental::IdentityKeyCertPair>{key_cert_});
+    }
+    case AuthType::kTlsVerifyServerSkipHostname: {
+      return std::make_shared<
+          grpc::experimental::StaticDataCertificateProvider>(
+          root_certs_,
+          std::vector<grpc::experimental::IdentityKeyCertPair>{key_cert_});
+    }
+    case AuthType::kTlsNotVerifyServer: {
+      return std::make_shared<
+          grpc::experimental::StaticDataCertificateProvider>(
+          kUnusedFakeRootCert,
+          std::vector<grpc::experimental::IdentityKeyCertPair>{key_cert_});
+    }
+    case AuthType::kInsecure:
+      return nullptr;
+      // No default. We own the AuthType enum.
+  }
+  Check(false, absl::StrCat("Unexpected value for AuthType: ", auth_type_));
+  return nullptr;
+}
+
+void GrpcTransportOptions::SetToTls(absl::string_view root_certs_path,
+                                    absl::string_view key_path,
+                                    absl::string_view cert_path) {
+  auth_type_ = AuthType::kTlsVerifyServer;
+  root_certs_path_ = root_certs_path;
+  key_path_ = key_path;
+  cert_path_ = cert_path;
+}
+
+void GrpcTransportOptions::SetToTlsSkipHostname(
+    absl::string_view root_certs_path, absl::string_view key_path,
+    absl::string_view cert_path,
+    std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier) {
+  auth_type_ = AuthType::kTlsVerifyServerSkipHostname;
+  root_certs_path_ = root_certs_path;
+  key_path_ = key_path;
+  cert_path_ = cert_path;
+  cert_verifier_ = std::move(cert_verifier);
+}
+
+void GrpcTransportOptions::SetToTlsNotVerifyServer(
+    absl::string_view key_path, absl::string_view cert_path,
+    std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier) {
+  auth_type_ = AuthType::kTlsNotVerifyServer;
+  key_path_ = key_path;
+  cert_path_ = cert_path;
+  cert_verifier_ = std::move(cert_verifier);
+}
+
+std::shared_ptr<grpc::experimental::CertificateProviderInterface>
+GrpcTransportOptions::GetCertificateProvider() const {
+  switch (auth_type_) {
+    case AuthType::kTlsVerifyServer: {
+      return std::make_shared<
+          grpc::experimental::FileWatcherCertificateProvider>(
+          key_path_, cert_path_, root_certs_path_, kRefreshIntervalSec);
+    }
+    case AuthType::kTlsVerifyServerSkipHostname: {
+      return std::make_shared<
+          grpc::experimental::FileWatcherCertificateProvider>(
+          key_path_, cert_path_, root_certs_path_, kRefreshIntervalSec);
+    }
+    case AuthType::kTlsNotVerifyServer: {
+      return std::make_shared<
+          grpc::experimental::FileWatcherCertificateProvider>(
+          key_path_, cert_path_, kRefreshIntervalSec);
+    }
+    case AuthType::kInsecure:
+      return nullptr;
+      // No default. We own the AuthType enum.
+  }
+  Check(false, absl::StrCat("Unexpected value for AuthType: ", auth_type_));
+  return nullptr;
+}
 }  // namespace ecclesia

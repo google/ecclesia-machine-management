@@ -22,6 +22,7 @@
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/testing/grpc_dynamic_mockup_server.h"
+#include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
 #include "ecclesia/lib/status/rpc.h"
 #include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/time/clock_fake.h"
@@ -38,8 +39,8 @@ TEST(GrpcRedfishTransport, Get) {
                                         "[::1]", port);
   GrpcDynamicImplOptions options;
   options.SetToInsecure();
-  auto transport =
-      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {}, options);
+  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
+                                              options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
   absl::string_view expected_str = R"json({
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
@@ -72,8 +73,8 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
                                         "[::1]", port);
   GrpcDynamicImplOptions options;
   options.SetToInsecure();
-  auto transport =
-      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {}, options);
+  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
+                                              options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
   nlohmann::json expected_post =
       nlohmann::json::parse(R"json({})json", nullptr, false);
@@ -156,8 +157,8 @@ TEST(GrpcRedfishTransport, GetRootUri) {
                                         "[::1]", port);
   GrpcDynamicImplOptions options;
   options.SetToInsecure();
-  auto transport =
-      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {}, options);
+  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
+                                              options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
   EXPECT_EQ((*transport)->GetRootUri(), "/redfish/v1");
 }
@@ -168,8 +169,8 @@ TEST(GrpcRedfishTransport, ResourceNotFound) {
                                         "[::1]", port);
   GrpcDynamicImplOptions options;
   options.SetToInsecure();
-  auto transport =
-      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {}, options);
+  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
+                                              options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
 
   auto result_get = (*transport)->Get("/redfish/v1/Chassis/noexist");
@@ -186,8 +187,8 @@ TEST(GrpcRedfishTransport, NotAllowed) {
                                         "[::1]", port);
   GrpcDynamicImplOptions options;
   options.SetToInsecure();
-  auto transport =
-      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {}, options);
+  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
+                                              options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
 
   std::string_view data_post = R"json({
@@ -225,7 +226,8 @@ TEST(GrpcRedfishTransport, Timeout) {
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port);
 
-  if (auto transport = CreateGrpcRedfishTransport(endpoint, params, options);
+  if (auto transport = CreateGrpcRedfishTransport(
+          endpoint, params, options.GetChannelCredentials());
       transport.ok()) {
     EXPECT_THAT((*transport)->Get("/redfish/v1"),
                 internal_status::IsStatusPolyMatcher(
@@ -235,13 +237,16 @@ TEST(GrpcRedfishTransport, Timeout) {
 
 TEST(GrpcRedfishTransport, EndpointFqdn) {
   GrpcDynamicImplOptions options;
-  auto transport = CreateGrpcRedfishTransport("/:", {}, options);
+  auto transport =
+      CreateGrpcRedfishTransport("/:", {}, options.GetChannelCredentials());
   EXPECT_THAT(transport, IsStatusInvalidArgument());
 
-  transport = CreateGrpcRedfishTransport("dns:/:", {}, options);
+  transport =
+      CreateGrpcRedfishTransport("dns:/:", {}, options.GetChannelCredentials());
   EXPECT_THAT(transport, IsStatusInvalidArgument());
 
-  transport = CreateGrpcRedfishTransport("dns:/:80", {}, options);
+  transport = CreateGrpcRedfishTransport("dns:/:80", {},
+                                         options.GetChannelCredentials());
   EXPECT_THAT(transport, IsOk());
 }
 }  // namespace

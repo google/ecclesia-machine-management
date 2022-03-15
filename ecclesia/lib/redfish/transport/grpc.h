@@ -23,9 +23,9 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
-#include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
+#include "grpcpp/security/credentials.h"
 
 namespace ecclesia {
 
@@ -35,12 +35,6 @@ struct GrpcTransportParams {
   // Timeout used for all operations.
   absl::Duration timeout = absl::Seconds(5);
 };
-
-absl::StatusOr<std::unique_ptr<RedfishTransport>>
-CreateGrpcRedfishTransport(
-    std::string_view endpoint, const GrpcTransportParams& params,
-    const GrpcDynamicImplOptions& options,
-    ServiceRootUri service_root = ServiceRootUri::kRedfish);
 
 absl::StatusOr<std::unique_ptr<RedfishTransport>>
 CreateGrpcRedfishTransport(

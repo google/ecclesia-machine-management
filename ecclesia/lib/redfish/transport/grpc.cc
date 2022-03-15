@@ -29,7 +29,6 @@
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
-#include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
 #include "ecclesia/lib/redfish/transport/struct_proto_conversion.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/status/rpc.h"
@@ -106,19 +105,6 @@ class GrpcRedfishCredentials : public grpc::MetadataCredentialsPlugin {
 
 class GrpcRedfishTransport : public RedfishTransport {
  public:
-  // Creates an GrpcRedfishTransport using a specified endpoint.
-  // Params:
-  //   endpoint: e.g. "dns:///localhost:80", "unix:///var/run/my.socket"
-  GrpcRedfishTransport(std::string_view endpoint,
-                       const GrpcTransportParams& params,
-                       const GrpcDynamicImplOptions& options,
-                       ServiceRootUri service_root)
-      : client_(redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
-            std::string(endpoint), options.GetChannelCredentials()))),
-        params_(std::move(params)),
-        service_root_(std::move(service_root)),
-        fqdn_(EndpointToFqdn(endpoint)) {}
-
   // Creates an GrpcRedfishTransport using a specified endpoint and customized
   // credentials.
   // Params:
@@ -256,14 +242,6 @@ absl::Status ValidateEndpoint(absl::string_view endpoint) {
 }
 
 }  // namespace
-
-absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
-    absl::string_view endpoint, const GrpcTransportParams& params,
-    const GrpcDynamicImplOptions& options, ServiceRootUri service_root) {
-  ECCLESIA_RETURN_IF_ERROR(ValidateEndpoint(endpoint));
-  return std::make_unique<GrpcRedfishTransport>(std::string(endpoint), params,
-                                                options, service_root);
-}
 
 absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
     absl::string_view endpoint, const GrpcTransportParams& params,
