@@ -95,7 +95,7 @@ absl::StatusOr<std::string> GetSessionServicePostTarget(nlohmann::json root) {
 }  // namespace
 
 HttpRedfishTransport::~HttpRedfishTransport() {
-  absl::ReaderMutexLock mu(&mutex_);
+  absl::MutexLock mu(&mutex_);
   EndCurrentSession();
 }
 
@@ -109,7 +109,7 @@ void HttpRedfishTransport::EndCurrentSession() {
 
 absl::Status HttpRedfishTransport::DoSessionAuth(std::string username,
                                                  std::string password) {
-  absl::WriterMutexLock mu(&mutex_);
+  absl::MutexLock mu(&mutex_);
   EndCurrentSession();
   session_username_ = std::move(username);
   session_password_ = std::move(password);
@@ -198,7 +198,7 @@ absl::string_view HttpRedfishTransport::GetRootUri() {
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Get(
     absl::string_view path) {
-  absl::ReaderMutexLock mu(&mutex_);
+  absl::MutexLock mu(&mutex_);
   return LockedGet(path);
 }
 
@@ -212,7 +212,7 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedGet(
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Post(
     absl::string_view path, absl::string_view data) {
-  absl::ReaderMutexLock mu(&mutex_);
+  absl::MutexLock mu(&mutex_);
   return LockedPost(path, data);
 }
 
@@ -227,7 +227,7 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedPost(
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Patch(
     absl::string_view path, absl::string_view data) {
-  absl::ReaderMutexLock mu(&mutex_);
+  absl::MutexLock mu(&mutex_);
   return LockedPatch(path, data);
 }
 
@@ -242,7 +242,7 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedPatch(
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Delete(
     absl::string_view path, absl::string_view data) {
-  absl::ReaderMutexLock mu(&mutex_);
+  absl::MutexLock mu(&mutex_);
   return LockedDelete(path, data);
 }
 

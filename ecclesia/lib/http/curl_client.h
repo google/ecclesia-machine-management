@@ -167,6 +167,8 @@ class LibCurlProxy : public LibCurl {
                                              void *)) override;
 };
 
+// The cURL client is NOT threadsafe as the underlying curl operations modify
+// internal connection state in the curl handle.
 class CurlHttpClient : public HttpClient {
  public:
   struct Config {

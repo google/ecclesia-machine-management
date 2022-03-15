@@ -28,6 +28,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/http/client.h"
@@ -36,8 +37,10 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
+#include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/thread/thread.h"
 #include "ecclesia/lib/time/clock_fake.h"
 #include "single_include/nlohmann/json.hpp"
 
@@ -48,6 +51,68 @@ using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::Gt;
 using ::testing::UnorderedElementsAre;
+
+TEST(HttpRedfishInterfaceMultithreadedTest, NoMultithreadedIssuesOnGet) {
+  // Number of threads to test with.
+  static constexpr int kThreads = 5;
+  // Number of requests made by each thread.
+  static constexpr int kRequestsPerThread = 20;
+
+  // Create the RedfishInterface. Do not use caching in order to exercise the
+  // full HTTP stack.
+  CurlHttpClient client(LibCurlProxy::CreateInstance(), HttpCredential());
+  auto server =
+      std::make_unique<FakeRedfishServer>("barebones_session_auth/mockup.shar");
+  std::vector<std::unique_ptr<ThreadInterface>> threads;
+  auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
+      ecclesia::LibCurlProxy::CreateInstance(), ecclesia::HttpCredential());
+  auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
+      std::move(curl_http_client),
+      absl::StrFormat("%s:%d", server->GetConfig().hostname,
+                      server->GetConfig().port));
+  auto cache = std::make_unique<ecclesia::NullCache>(transport.get());
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+
+  // Create the work for each thread.
+  auto my_getter_func = [&intf]() {
+    for (int req = 0; req < kRequestsPerThread; ++req) {
+      auto result = intf->GetRoot();
+      ASSERT_TRUE(result.status().ok()) << result.status().message();
+      EXPECT_THAT(result.httpcode(), Eq(200));
+      nlohmann::json expected =
+          nlohmann::json::parse(R"json({
+  "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+  "@odata.id": "/redfish/v1",
+  "@odata.type": "#ServiceRoot.v1_5_0.ServiceRoot",
+  "Chassis": {
+  "@odata.id": "/redfish/v1/Chassis"
+  },
+  "Id": "RootService",
+  "Links": {
+  "Sessions": {
+    "@odata.id": "/redfish/v1/SessionService/Sessions"
+  }
+  },
+  "Name": "Root Service",
+  "RedfishVersion": "1.6.1"
+})json",
+                                nullptr, /*allow_exceptions=*/false);
+      EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr,
+                                        /*allow_exceptions=*/false),
+                  Eq(expected));
+    }
+  };
+
+  // Create a bunch of threads and make them do the same work.
+  auto thread_factory = GetDefaultThreadFactory();
+  for (int i = 0; i < kThreads; ++i) {
+    threads.push_back(thread_factory->New(my_getter_func));
+  }
+  for (auto &t : threads) {
+    t->Join();
+  }
+}
 
 // Test harness to start a FakeRedfishServer and create a RedfishInterface
 // for testing.
