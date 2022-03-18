@@ -76,7 +76,7 @@ absl::StatusOr<bssl::UniquePtr<GENERAL_NAMES>> GetSubjectAltNameExtension(
   }
   if (extension == nullptr) {
     return absl::InternalError(
-        absl::StrCat("Failed to get extension %s: %s.",
+        absl::StrFormat("Failed to get extension %s: %s.",
                      GetNidShortName(NID_subject_alt_name), GetOpenSslError()));
   }
   if (out_critical != 0 && out_critical != 1) {
