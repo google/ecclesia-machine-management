@@ -882,7 +882,7 @@ class IpmitoolImpl : public IpmiInterface {
     uint8_t kgkey[IPMI_KG_BUFFER_SIZE] = {0};
 
     // The following values are all defaults taken from the implementation in
-    // google3/v1_8_18_c3939da/lib/ipmi_main.c.
+    // google3/lib/ipmi_main.c.
     ipmitool_intf_.SessionSetKgkey(intf, kgkey);
     ipmitool_intf_.SessionSetPrivlvl(intf, IPMI_SESSION_PRIV_ADMIN);
     ipmitool_intf_.SessionSetLookupbit(intf, kIpmiDefaultLookupBit);
