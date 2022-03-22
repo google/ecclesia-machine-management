@@ -131,7 +131,7 @@ cc_test(
         "//ecclesia/lib/redfish/proto:redfish_v1_grpc_proto",
         "//ecclesia/lib/redfish/transport:grpc",
         "//ecclesia/lib/redfish/transport:grpc_dynamic",
-        "//ecclesia/lib/redfish/transport:grpc_dynamic_options",
+        "//ecclesia/lib/redfish/transport:grpc_tls_options",
         "//ecclesia/lib/status:rpc",
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",

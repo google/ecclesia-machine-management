@@ -29,7 +29,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
-#include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
+#include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 
 namespace ecclesia {
@@ -45,7 +45,7 @@ class GrpcDynamicImpl : public RedfishInterface {
   };
 
   GrpcDynamicImpl(const Target& target, TrustedEndpoint trusted,
-                  const GrpcDynamicImplOptions& options);
+                  const StaticBufferBasedTlsOptions& options);
 
   // Not copyable or movable
   GrpcDynamicImpl(GrpcDynamicImpl&& other) = delete;
@@ -102,7 +102,7 @@ class GrpcDynamicImpl : public RedfishInterface {
   }
 
  private:
-  GrpcDynamicImplOptions options_;
+  StaticBufferBasedTlsOptions options_;
   Target target_;
   // The stub is thread-safe and should be reused re-used for concurrent RPCs.
   std::unique_ptr<::redfish::v1::RedfishV1::Stub> stub_;

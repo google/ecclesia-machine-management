@@ -36,7 +36,7 @@
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/transport/grpc.h"
 #include "ecclesia/lib/redfish/transport/grpc_dynamic_impl.h"
-#include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
+#include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 #include "ecclesia/lib/status/rpc.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
@@ -59,7 +59,7 @@ using ::testing::Test;
 class GrpcRedfishMockUpServerTest : public Test {
  protected:
   GrpcRedfishMockUpServerTest() {
-    GrpcDynamicImplOptions options;
+    StaticBufferBasedTlsOptions options;
     options.SetToInsecure();
     int port = FindUnusedPortOrDie();
     mockup_server_ = absl::make_unique<GrpcDynamicMockupServer>(
@@ -319,7 +319,7 @@ TEST(GrpcRedfishMockUpServerUdsTest, TestUds) {
       absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket");
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         mockup_uds);
-  GrpcDynamicImplOptions options;
+  StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
   auto transport = CreateGrpcRedfishTransport(
       absl::StrCat("unix:", mockup_uds), {}, options.GetChannelCredentials());

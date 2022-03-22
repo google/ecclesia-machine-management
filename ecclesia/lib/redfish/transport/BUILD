@@ -93,9 +93,9 @@ cc_test(
 )
 
 cc_library(
-    name = "grpc_dynamic_options",
-    srcs = ["grpc_dynamic_options.cc"],
-    hdrs = ["grpc_dynamic_options.h"],
+    name = "grpc_tls_options",
+    srcs = ["grpc_tls_options.cc"],
+    hdrs = ["grpc_tls_options.h"],
     visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/logging",
@@ -112,7 +112,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":cache",
-        ":grpc_dynamic_options",
+        ":grpc_tls_options",
         ":interface",
         ":proto_variant",
         "//ecclesia/lib/http:codes",
@@ -140,7 +140,7 @@ cc_test(
     deps = [
         ":grpc_dynamic",
         ":grpc_dynamic_fake_server",
-        ":grpc_dynamic_options",
+        ":grpc_tls_options",
         "//ecclesia/lib/http:codes",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
@@ -233,7 +233,7 @@ cc_library(
     hdrs = ["grpc.h"],
     visibility = ["//visibility:public"],
     deps = [
-        ":grpc_dynamic_options",
+        ":grpc_tls_options",
         ":interface",
         ":struct_proto_conversion",
         "//ecclesia/lib/http:codes",
@@ -262,7 +262,7 @@ cc_test(
     ],
     deps = [
         ":grpc",
-        ":grpc_dynamic_options",
+        ":grpc_tls_options",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/network:testing",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",

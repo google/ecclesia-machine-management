@@ -22,7 +22,7 @@
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/testing/grpc_dynamic_mockup_server.h"
-#include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
+#include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 #include "ecclesia/lib/status/rpc.h"
 #include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/time/clock_fake.h"
@@ -37,7 +37,7 @@ TEST(GrpcRedfishTransport, Get) {
   int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port);
-  GrpcDynamicImplOptions options;
+  StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
   auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
                                               options.GetChannelCredentials());
@@ -71,7 +71,7 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port);
-  GrpcDynamicImplOptions options;
+  StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
   auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
                                               options.GetChannelCredentials());
@@ -155,7 +155,7 @@ TEST(GrpcRedfishTransport, GetRootUri) {
   int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port);
-  GrpcDynamicImplOptions options;
+  StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
   auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
                                               options.GetChannelCredentials());
@@ -167,7 +167,7 @@ TEST(GrpcRedfishTransport, ResourceNotFound) {
   int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port);
-  GrpcDynamicImplOptions options;
+  StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
   auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
                                               options.GetChannelCredentials());
@@ -185,7 +185,7 @@ TEST(GrpcRedfishTransport, NotAllowed) {
   int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "[::1]", port);
-  GrpcDynamicImplOptions options;
+  StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
   auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
                                               options.GetChannelCredentials());
@@ -213,7 +213,7 @@ TEST(GrpcRedfishTransport, NotAllowed) {
 TEST(GrpcRedfishTransport, Timeout) {
   int port = ecclesia::FindUnusedPortOrDie();
   GrpcTransportParams params;
-  GrpcDynamicImplOptions options;
+  StaticBufferBasedTlsOptions options;
   FakeClock clock;
 
   // Using a fake clock that point the time to negative, making the context
@@ -236,7 +236,7 @@ TEST(GrpcRedfishTransport, Timeout) {
 }
 
 TEST(GrpcRedfishTransport, EndpointFqdn) {
-  GrpcDynamicImplOptions options;
+  StaticBufferBasedTlsOptions options;
   auto transport =
       CreateGrpcRedfishTransport("/:", {}, options.GetChannelCredentials());
   EXPECT_THAT(transport, IsStatusInvalidArgument());

@@ -35,7 +35,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/transport/grpc_dynamic_fake_server.h"
-#include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
+#include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
 #include "grpcpp/server_context.h"
@@ -56,7 +56,7 @@ using ::testing::Test;
 class GrpcDynamicImplTest : public Test {
  public:
   GrpcDynamicImplTest() {
-    GrpcDynamicImplOptions options;
+    StaticBufferBasedTlsOptions options;
     options.SetToInsecure();
     options.SetTimeout(absl::Seconds(5));
     client_ = absl::make_unique<GrpcDynamicImpl>(

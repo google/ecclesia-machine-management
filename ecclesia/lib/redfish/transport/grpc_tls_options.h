@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_REDFISH_TRANSPORT_GRPC_DYNAMIC_OPTIONS_H_
-#define ECCLESIA_LIB_REDFISH_TRANSPORT_GRPC_DYNAMIC_OPTIONS_H_
+#ifndef ECCLESIA_LIB_REDFISH_TRANSPORT_GRPC_TLS_OPTIONS_H_
+#define ECCLESIA_LIB_REDFISH_TRANSPORT_GRPC_TLS_OPTIONS_H_
 
 #include <memory>
 #include <string>
@@ -31,7 +31,7 @@ namespace ecclesia {
 // A class that generates gRPC ChannelCredentials for Redfish clients.
 // This class takes static buffer to certificates or keys.
 // Note: use GrpcTransportOptions if you need dynamic certificate loading.
-class GrpcDynamicImplOptions {
+class StaticBufferBasedTlsOptions {
  public:
   enum class AuthType {
     kInsecure,
@@ -40,10 +40,10 @@ class GrpcDynamicImplOptions {
     kTlsNotVerifyServer
   };
 
-  GrpcDynamicImplOptions()
+  StaticBufferBasedTlsOptions()
       : auth_type_(AuthType::kInsecure), timeout_(absl::Seconds(3)) {}
 
-  virtual ~GrpcDynamicImplOptions() = default;
+  virtual ~StaticBufferBasedTlsOptions() = default;
 
   // Authentication options.
   // Uses gRPC InsecureCredentials, via static credentials buffer.
@@ -85,10 +85,10 @@ class GrpcDynamicImplOptions {
 // A class that generates gRPC ChannelCredentials for Redfish clients.
 // This class takes file paths to certificates or keys, and specify gRPC backend
 // to reload credentials if changed.
-class GrpcTransportOptions : public GrpcDynamicImplOptions {
+class FileWatcherBasedOptions : public StaticBufferBasedTlsOptions {
  public:
-  GrpcTransportOptions() = default;
-  ~GrpcTransportOptions() override = default;
+  FileWatcherBasedOptions() = default;
+  ~FileWatcherBasedOptions() override = default;
 
   // Uses gRPC TlsCredentials.
   void SetToTls(absl::string_view root_certs_path, absl::string_view key_path,
@@ -118,4 +118,4 @@ class GrpcTransportOptions : public GrpcDynamicImplOptions {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_REDFISH_TRANSPORT_GRPC_DYNAMIC_OPTIONS_H_
+#endif  // ECCLESIA_LIB_REDFISH_TRANSPORT_GRPC_TLS_OPTIONS_H_

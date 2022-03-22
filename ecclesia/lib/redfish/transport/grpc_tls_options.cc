@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
+#include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 
 #include <memory>
 #include <string>
@@ -61,10 +61,10 @@ qOFbsHcmv8mSUfig0AaTorZQpS8htNtcsCl5HhNgAyCQh+QzvBvesrEz5Cw=
 constexpr unsigned int kRefreshIntervalSec = 0;
 }  // namespace
 
-void GrpcDynamicImplOptions::SetToInsecure() {
+void StaticBufferBasedTlsOptions::SetToInsecure() {
   auth_type_ = AuthType::kInsecure;
 }
-void GrpcDynamicImplOptions::SetToTls(absl::string_view root_certs_buffer,
+void StaticBufferBasedTlsOptions::SetToTls(absl::string_view root_certs_buffer,
                                       absl::string_view key_buffer,
                                       absl::string_view cert_buffer) {
   auth_type_ = AuthType::kTlsVerifyServer;
@@ -73,7 +73,7 @@ void GrpcDynamicImplOptions::SetToTls(absl::string_view root_certs_buffer,
                .certificate_chain = std::string(cert_buffer)};
 }
 
-void GrpcDynamicImplOptions::SetToTlsSkipHostname(
+void StaticBufferBasedTlsOptions::SetToTlsSkipHostname(
     absl::string_view root_certs_buffer, absl::string_view key_buffer,
     absl::string_view cert_buffer,
     std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier) {
@@ -84,7 +84,7 @@ void GrpcDynamicImplOptions::SetToTlsSkipHostname(
   cert_verifier_ = std::move(cert_verifier);
 }
 
-void GrpcDynamicImplOptions::SetToTlsNotVerifyServer(
+void StaticBufferBasedTlsOptions::SetToTlsNotVerifyServer(
     absl::string_view key_buffer, absl::string_view cert_buffer,
     std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier) {
   auth_type_ = AuthType::kTlsNotVerifyServer;
@@ -94,7 +94,7 @@ void GrpcDynamicImplOptions::SetToTlsNotVerifyServer(
 }
 
 std::shared_ptr<grpc::ChannelCredentials>
-GrpcDynamicImplOptions::GetChannelCredentials() const {
+StaticBufferBasedTlsOptions::GetChannelCredentials() const {
   switch (auth_type_) {
     case AuthType::kTlsVerifyServer: {
       grpc::experimental::TlsChannelCredentialsOptions tls_options;
@@ -133,7 +133,7 @@ GrpcDynamicImplOptions::GetChannelCredentials() const {
 }
 
 std::shared_ptr<grpc::experimental::CertificateProviderInterface>
-GrpcDynamicImplOptions::GetCertificateProvider() const {
+StaticBufferBasedTlsOptions::GetCertificateProvider() const {
   switch (auth_type_) {
     case AuthType::kTlsVerifyServer: {
       return std::make_shared<
@@ -161,7 +161,7 @@ GrpcDynamicImplOptions::GetCertificateProvider() const {
   return nullptr;
 }
 
-void GrpcTransportOptions::SetToTls(absl::string_view root_certs_path,
+void FileWatcherBasedOptions::SetToTls(absl::string_view root_certs_path,
                                     absl::string_view key_path,
                                     absl::string_view cert_path) {
   auth_type_ = AuthType::kTlsVerifyServer;
@@ -170,7 +170,7 @@ void GrpcTransportOptions::SetToTls(absl::string_view root_certs_path,
   cert_path_ = cert_path;
 }
 
-void GrpcTransportOptions::SetToTlsSkipHostname(
+void FileWatcherBasedOptions::SetToTlsSkipHostname(
     absl::string_view root_certs_path, absl::string_view key_path,
     absl::string_view cert_path,
     std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier) {
@@ -181,7 +181,7 @@ void GrpcTransportOptions::SetToTlsSkipHostname(
   cert_verifier_ = std::move(cert_verifier);
 }
 
-void GrpcTransportOptions::SetToTlsNotVerifyServer(
+void FileWatcherBasedOptions::SetToTlsNotVerifyServer(
     absl::string_view key_path, absl::string_view cert_path,
     std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier) {
   auth_type_ = AuthType::kTlsNotVerifyServer;
@@ -191,7 +191,7 @@ void GrpcTransportOptions::SetToTlsNotVerifyServer(
 }
 
 std::shared_ptr<grpc::experimental::CertificateProviderInterface>
-GrpcTransportOptions::GetCertificateProvider() const {
+FileWatcherBasedOptions::GetCertificateProvider() const {
   switch (auth_type_) {
     case AuthType::kTlsVerifyServer: {
       return std::make_shared<

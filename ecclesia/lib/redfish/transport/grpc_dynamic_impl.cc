@@ -35,7 +35,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
-#include "ecclesia/lib/redfish/transport/grpc_dynamic_options.h"
+#include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 #include "ecclesia/lib/redfish/transport/proto_variant.h"
 #include "ecclesia/lib/status/rpc.h"
 #include "grpcpp/client_context.h"
@@ -73,7 +73,7 @@ RedfishVariant GetRedfishVariant(absl::Status status, Response response) {
 template <typename Rpc>
 RedfishVariant DoRpc(absl::string_view uri,
                      absl::optional<google::protobuf::Struct> message,
-                     const GrpcDynamicImplOptions& options, Rpc rpc) {
+                     const StaticBufferBasedTlsOptions& options, Rpc rpc) {
   Request request;
   request.set_url(std::string(uri));
   if (message.has_value()) {
@@ -239,7 +239,7 @@ RedfishVariant GrpcDynamicImpl::PatchUri(
 
 GrpcDynamicImpl::GrpcDynamicImpl(const Target& target,
                                  RedfishInterface::TrustedEndpoint trusted,
-                                 const GrpcDynamicImplOptions& options)
+                                 const StaticBufferBasedTlsOptions& options)
     : options_(options),
       target_(target),
       stub_(RedfishV1::NewStub(
