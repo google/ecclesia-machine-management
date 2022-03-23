@@ -176,6 +176,11 @@ DEFINE_REDFISH_PROPERTY(PropertyMembersCount, std::string,
 DEFINE_REDFISH_PROPERTY(PropertyCapacityMiB, int, "CapacityMiB");
 DEFINE_REDFISH_PROPERTY(PropertyLogicalSizeMiB, int, "LogicalSizeMiB");
 DEFINE_REDFISH_PROPERTY(PropertyManufacturer, std::string, "Manufacturer");
+DEFINE_REDFISH_PROPERTY(PropertyEncryptionStatus, std::string,
+                        "EncryptionStatus");
+DEFINE_REDFISH_PROPERTY(PropertyPredictedMediaLifeLeftPercent, int,
+                        "PredictedMediaLifeLeftPercent");
+
 DEFINE_REDFISH_PROPERTY(PropertyVendor, std::string, "Vendor");
 DEFINE_REDFISH_PROPERTY(PropertyMemoryDeviceType, std::string,
                         "MemoryDeviceType");

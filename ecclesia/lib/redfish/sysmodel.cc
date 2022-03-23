@@ -78,6 +78,7 @@ void Sysmodel::QueryAllResourceInternal(
 
 // Drive:
 // "/redfish/v1/Systems/{id}/Storage/{id}/Drives/{id}"
+// "/redfish/v1/Chassis/{ChassisId}/Drives/{DriveId}"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceDrive>,
     absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
@@ -90,6 +91,9 @@ void Sysmodel::QueryAllResourceInternal(
       .Do([&](auto &drive_obj) {
         return result_callback(std::move(drive_obj));
       });
+
+  root[kRfPropertyChassis].Each()[kRfPropertyDrives].Each().Do(
+      [&](auto &drive_obj) { return result_callback(std::move(drive_obj)); });
 }
 
 // Processor:
