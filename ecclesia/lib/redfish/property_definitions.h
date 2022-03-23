@@ -273,6 +273,8 @@ DEFINE_REDFISH_PROPERTY(PropertySigningAlgorithm, std::string,
                         "SigningAlgorithm");
 DEFINE_REDFISH_PROPERTY(PropertyMeasurementIndices, std::vector<int64_t>,
                         "MeasurementIndices");
+DEFINE_REDFISH_PROPERTY(PropertyModel, std::string, "Model");
+DEFINE_REDFISH_PROPERTY(PropertyProcessorType, std::string, "ProcessorType");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
