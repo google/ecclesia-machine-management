@@ -106,59 +106,6 @@ cc_library(
 )
 
 cc_library(
-    name = "grpc_dynamic",
-    srcs = ["grpc_dynamic_impl.cc"],
-    hdrs = ["grpc_dynamic_impl.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cache",
-        ":grpc_tls_options",
-        ":interface",
-        ":proto_variant",
-        "//ecclesia/lib/http:codes",
-        "//ecclesia/lib/logging",
-        "//ecclesia/lib/redfish:interface",
-        "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
-        "//ecclesia/lib/redfish/proto:redfish_v1_grpc_proto",
-        "//ecclesia/lib/status:rpc",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/base:core_headers",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:optional",
-        "@com_google_absl//absl/types:span",
-        "@com_google_absl//absl/types:variant",
-        "@com_google_protobuf//:protobuf",
-    ],
-)
-
-cc_test(
-    name = "grpc_dynamic_test",
-    srcs = ["grpc_dynamic_impl_test.cc"],
-    deps = [
-        ":grpc_dynamic",
-        ":grpc_dynamic_fake_server",
-        ":grpc_tls_options",
-        "//ecclesia/lib/http:codes",
-        "//ecclesia/lib/redfish:interface",
-        "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
-        "//ecclesia/lib/testing:proto",
-        "//ecclesia/lib/testing:status",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:span",
-        "@com_google_googletest//:gtest_main",
-        "@com_google_protobuf//:protobuf",
-    ],
-)
-
-cc_library(
     name = "cache",
     srcs = ["cache.cc"],
     hdrs = ["cache.h"],

@@ -35,7 +35,6 @@
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/transport/grpc.h"
-#include "ecclesia/lib/redfish/transport/grpc_dynamic_impl.h"
 #include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 #include "ecclesia/lib/status/rpc.h"
 #include "ecclesia/lib/testing/proto.h"
