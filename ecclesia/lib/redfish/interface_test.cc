@@ -132,5 +132,11 @@ TEST(RedfishVariant, PropertyError) {
   EXPECT_THAT(failed_index.AsIterable(), Eq(nullptr));
 }
 
+TEST(RedfishVariant, RedfishQueryParamExpand) {
+  RedfishQueryParamExpand expand(
+      {.type = RedfishQueryParamExpand::ExpandType::kAll, .levels = 2});
+  EXPECT_EQ(expand.ToString(), "$expand=*($levels=2)");
+}
+
 }  // namespace
 }  // namespace ecclesia

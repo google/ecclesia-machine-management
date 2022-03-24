@@ -24,6 +24,8 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/flags/declare.h"
+#include "absl/flags/flag.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
@@ -43,6 +45,8 @@
 #include "ecclesia/lib/thread/thread.h"
 #include "ecclesia/lib/time/clock_fake.h"
 #include "single_include/nlohmann/json.hpp"
+
+ABSL_DECLARE_FLAG(bool, ecclesia_enable_expanded_iterations);
 
 namespace ecclesia {
 namespace {
@@ -400,6 +404,80 @@ TEST_F(HttpRedfishInterfaceTest, CachedGet) {
   }
 }
 
+TEST_F(HttpRedfishInterfaceTest, AsIterableWithExpands) {
+  int called_expanded_count = 0;
+  absl::SetFlag(&FLAGS_ecclesia_enable_expanded_iterations, true);
+  server_->AddHttpGetHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(
+            R"json({
+          "@odata.id": "/my/uri",
+          "Members":[ { "@odata.id":"/my/uri/member1" } ],
+          "Members@odata.count":1,"Name":"Chassis Collection"})json");
+        req->Reply();
+      });
+  server_->AddHttpGetHandler(
+      "/my/uri?$expand=*($levels=1)",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called_expanded_count++;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(
+            R"json({
+              "@odata.id": "/my/uri",
+              "Members":[ {"@odata.id":"/my/uri/member1" "Name": "chassis"} ],
+              "Members@odata.count":1,"Name":"Chassis Collection"})json");
+        req->Reply();
+      });
+
+  auto redfish_object = intf_->CachedGetUri("/my/uri");
+  redfish_object.AsIterable();
+  EXPECT_EQ(called_expanded_count, 1);
+  // Invalidate cache and try reading members directly
+  clock_.AdvanceTime(absl::Seconds(1) + absl::Minutes(1));
+  redfish_object["Members"].AsIterable();
+  EXPECT_EQ(called_expanded_count, 2);
+}
+
+TEST_F(HttpRedfishInterfaceTest, AsIterableWithNoExpands) {
+  int called_expanded_count = 0;
+  absl::SetFlag(&FLAGS_ecclesia_enable_expanded_iterations, true);
+  server_->AddHttpGetHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(
+            R"json({
+              "@odata.id": "/my/uri",
+              "NonMembersArray": [ { "@odata.id":"/my/uri/non_member1" } ]
+              "Members":[ { "@odata.id":"/my/uri/member1" } ],
+              "Members@odata.count":1,"Name":"Chassis Collection"})json");
+        req->Reply();
+      });
+  // Is expected to never be called
+  server_->AddHttpGetHandler(
+      "/my/uri?$expand=*($levels=1)",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called_expanded_count++;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(R"json({})json");
+        req->Reply();
+      });
+
+  auto redfish_object = intf_->CachedGetUri("/my/uri");
+
+  redfish_object.AsIterable(RedfishVariant::IterableMode::kDisableExpand);
+  EXPECT_EQ(called_expanded_count, 0);
+  // Try getting an iterable from non Members
+  redfish_object["NonMembersArray"].AsIterable();
+  EXPECT_EQ(called_expanded_count, 0);
+}
+
 TEST_F(HttpRedfishInterfaceTest, CachedGetWithOperator) {
   int parent_called_count = 0;
   int child_called_count = 0;
@@ -470,6 +548,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetWithOperator) {
   EXPECT_THAT(nlohmann::json::parse(child3.DebugString(), nullptr, false),
               Eq(json_child));
 }
+
 TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGet) {
   int called_count = 0;
   auto result_json = nlohmann::json::parse(R"json({

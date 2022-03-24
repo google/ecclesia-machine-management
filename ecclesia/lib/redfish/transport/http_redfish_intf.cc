@@ -28,10 +28,13 @@
 
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/flags/flag.h"
 #include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/strip.h"
@@ -48,6 +51,11 @@
 #include "ecclesia/lib/time/clock.h"
 #include "single_include/nlohmann/json.hpp"
 
+// TODO (b/223426511) change to true when expand support is implemented on BMC
+// and then removed afer rollout is done
+ABSL_FLAG(bool, ecclesia_enable_expanded_iterations, false,
+          "Enable RedFish expands for mmanager iterations.");
+
 namespace ecclesia {
 namespace {
 
@@ -58,6 +66,20 @@ enum CacheState {
   kIsFresh = 0,
   // The data originated from a cached copy.
   kIsCached = 1
+};
+
+//
+// Struct tracks the origin of the HttpIntfVariantImpl.
+// For instance for the object
+// GetCached("/redfish/v1/Systems/system/Storage/1")["Drives"][0] the extended
+// path will be:
+//   {
+//     .uri="/redfish/v1/Systems/system/Storage/1",
+//     .properties={"Drives", 0}
+//   }
+struct RedfishExtendedPath {
+  std::string uri;
+  std::vector<std::variant<std::string, size_t>> properties;
 };
 
 // Helper function to convert a key-value span to a JSON object that can be
@@ -104,12 +126,17 @@ nlohmann::json KvSpanToJson(
 
 class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
  public:
-  HttpIntfVariantImpl(RedfishInterface *intf,
+  HttpIntfVariantImpl(RedfishInterface *intf, RedfishExtendedPath path,
                       ecclesia::RedfishTransport::Result result,
                       CacheState cache_state)
-      : intf_(intf), result_(std::move(result)), cache_state_(cache_state) {}
+      : intf_(intf),
+        path_(std::move(path)),
+        result_(std::move(result)),
+        cache_state_(cache_state) {}
   std::unique_ptr<RedfishObject> AsObject() const override;
-  std::unique_ptr<RedfishIterable> AsIterable() const override;
+  std::unique_ptr<RedfishIterable> AsIterable(
+      RedfishVariant::IterableMode mode) const override;
+
   bool GetValue(std::string *val) const override {
     if (!result_.body.is_string()) return false;
     *val = result_.body.get<std::string>();
@@ -170,6 +197,7 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
 
  private:
   RedfishInterface *intf_;
+  RedfishExtendedPath path_;
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
 };
@@ -185,18 +213,26 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
 // performed.
 RedfishVariant ResolveReference(int reuse_code, nlohmann::json json,
                                 RedfishInterface *intf,
-                                CacheState cache_state) {
-  if (json.is_object() && json.size() == 1) {
-    // Check if this is a reference.
-    auto odata = json.find(PropertyOdataId::Name);
-    if (odata != json.end() && odata.value().is_string()) {
-      // It is a reference, call GET on it
-      return intf->CachedGetUri(odata.value().get<std::string>());
+                                RedfishExtendedPath path,
+                                CacheState cache_state,
+                                absl::string_view source,
+                                GetParams params = {}) {
+  std::string reference;
+  if (json.is_object()) {
+    if (auto odata = json.find(PropertyOdataId::Name);
+        // Object can be re-read by URI. Store it.
+        odata != json.end() && odata.value().is_string()) {
+      reference = odata.value().get<std::string>();
+      path = RedfishExtendedPath{reference, {}};
     }
+  }
+  if (json.size() == 1 && !reference.empty()) {
+    // It is a reference, call GET on it
+    return intf->CachedGetUri(reference, params);
   }
   // Return the object as-is.
   return RedfishVariant(
-      std::make_unique<HttpIntfVariantImpl>(intf,
+      std::make_unique<HttpIntfVariantImpl>(intf, std::move(path),
                                             ecclesia::RedfishTransport::Result{
                                                 .code = reuse_code,
                                                 .body = std::move(json),
@@ -207,18 +243,23 @@ RedfishVariant ResolveReference(int reuse_code, nlohmann::json json,
 
 class HttpIntfObjectImpl : public RedfishObject {
  public:
-  explicit HttpIntfObjectImpl(RedfishInterface *intf,
+  explicit HttpIntfObjectImpl(RedfishInterface *intf, RedfishExtendedPath path,
                               ecclesia::RedfishTransport::Result result,
                               CacheState cache_state)
-      : intf_(intf), result_(std::move(result)), cache_state_(cache_state) {}
+      : intf_(intf),
+        path_(std::move(path)),
+        result_(std::move(result)),
+        cache_state_(cache_state) {}
   HttpIntfObjectImpl(const HttpIntfObjectImpl &) = delete;
   HttpIntfObjectImpl &operator=(const HttpIntfObjectImpl &) = delete;
 
   RedfishVariant operator[](const std::string &node_name) const override {
+    RedfishExtendedPath new_path = path_;
+    new_path.properties.push_back(node_name);
     auto itr = result_.body.find(node_name);
     if (itr == result_.body.end()) {
       return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
-                                intf_,
+                                intf_, std::move(new_path),
                                 ecclesia::RedfishTransport::Result{
                                     .code = result_.code,
                                     .body = nlohmann::json::value_t::discarded,
@@ -226,19 +267,21 @@ class HttpIntfObjectImpl : public RedfishObject {
                                 cache_state_),
                             ecclesia::HttpResponseCodeFromInt(result_.code));
     }
-
-    return ResolveReference(result_.code, itr.value(), intf_, cache_state_);
+    return ResolveReference(result_.code, itr.value(), intf_,
+                            std::move(new_path), cache_state_,
+                            "HttpIntfObjectImpl");
   }
-  std::optional<std::string> GetUriString() override {
+  std::optional<std::string> GetUriString() const override {
     auto itr = result_.body.find(PropertyOdataId::Name);
     if (itr == result_.body.end()) return std::nullopt;
-    return itr.value();
+    return std::string(itr.value());
   }
   std::string DebugString() override { return result_.body.dump(); }
 
   std::unique_ptr<RedfishObject> EnsureFreshPayload(GetParams params) {
     if (cache_state_ == kIsFresh) {
-      return std::make_unique<HttpIntfObjectImpl>(intf_, result_, cache_state_);
+      return std::make_unique<HttpIntfObjectImpl>(intf_, path_, result_,
+                                                  cache_state_);
     }
     if (auto uri = GetUriString(); uri.has_value()) {
       return intf_->UncachedGetUri(*uri).AsObject();
@@ -250,10 +293,12 @@ class HttpIntfObjectImpl : public RedfishObject {
                            absl::string_view, RedfishVariant value)>
                            itr_func) {
     for (const auto &items : result_.body.items()) {
+      RedfishExtendedPath path = path_;
+      path.properties.push_back(items.key());
       if (itr_func(items.key(),
                    RedfishVariant(
                        std::make_unique<HttpIntfVariantImpl>(
-                           intf_,
+                           intf_, std::move(path),
                            ecclesia::RedfishTransport::Result{
                                .code = result_.code,
                                .body = items.value(),
@@ -268,6 +313,7 @@ class HttpIntfObjectImpl : public RedfishObject {
 
  private:
   RedfishInterface *intf_;
+  RedfishExtendedPath path_;
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
 };
@@ -278,9 +324,14 @@ class HttpIntfObjectImpl : public RedfishObject {
 class HttpIntfArrayIterableImpl : public RedfishIterable {
  public:
   explicit HttpIntfArrayIterableImpl(RedfishInterface *intf,
+                                     RedfishExtendedPath path,
                                      ecclesia::RedfishTransport::Result result,
                                      CacheState cache_state)
-      : intf_(intf), result_(std::move(result)), cache_state_(cache_state) {}
+      : intf_(intf),
+        path_(std::move(path)),
+        result_(std::move(result)),
+        cache_state_(cache_state) {}
+
   HttpIntfArrayIterableImpl(const HttpIntfArrayIterableImpl &) = delete;
   HttpIntfObjectImpl &operator=(const HttpIntfArrayIterableImpl &) = delete;
 
@@ -294,12 +345,16 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
           absl::StrFormat("Index %d out of range for json array", index)));
     }
     auto retval = result_.body[index];
+    RedfishExtendedPath new_path = path_;
+    new_path.properties.push_back(index);
     return ResolveReference(result_.code, result_.body[index], intf_,
-                            cache_state_);
+                            std::move(new_path), cache_state_,
+                            "HttpIntfArrayIterableImpl");
   }
 
  private:
   RedfishInterface *intf_;
+  RedfishExtendedPath path_;
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
 };
@@ -311,9 +366,12 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
 class HttpIntfCollectionIterableImpl : public RedfishIterable {
  public:
   explicit HttpIntfCollectionIterableImpl(
-      RedfishInterface *intf, ecclesia::RedfishTransport::Result result,
-      CacheState cache_state)
-      : intf_(intf), result_(std::move(result)), cache_state_(cache_state) {}
+      RedfishInterface *intf, RedfishExtendedPath path,
+      ecclesia::RedfishTransport::Result result, CacheState cache_state)
+      : intf_(intf),
+        path_(std::move(path)),
+        result_(std::move(result)),
+        cache_state_(cache_state) {}
   HttpIntfCollectionIterableImpl(const HttpIntfCollectionIterableImpl &) =
       delete;
   HttpIntfObjectImpl &operator=(const HttpIntfCollectionIterableImpl &) =
@@ -342,32 +400,63 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
       return RedfishVariant(absl::NotFoundError(
           absl::StrFormat("Index %d not found for json collection", index)));
     }
+    RedfishExtendedPath new_path = path_;
+    new_path.properties.push_back(index);
     return ResolveReference(result_.code, itr.value()[index], intf_,
-                            cache_state_);
+                            std::move(new_path), cache_state_,
+                            "HttpIntfCollectionIterableImpl");
   }
 
  private:
   RedfishInterface *intf_;
+  RedfishExtendedPath path_;
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
 };
 
 std::unique_ptr<RedfishObject> HttpIntfVariantImpl::AsObject() const {
   if (!result_.body.is_object()) return nullptr;
-  return std::make_unique<HttpIntfObjectImpl>(intf_, result_, cache_state_);
+  return std::make_unique<HttpIntfObjectImpl>(intf_, path_, result_,
+                                              cache_state_);
 }
 
-std::unique_ptr<RedfishIterable> HttpIntfVariantImpl::AsIterable() const {
+std::unique_ptr<RedfishIterable> HttpIntfVariantImpl::AsIterable(
+    RedfishVariant::IterableMode mode) const {
+  // We do expand the iterable in two cases:
+  // 1. This is an object that contains "Members" field, aka collection_iterable
+  // 2. This is a sub object requested using obj["Members"] syntax
+  bool is_collection_iterable =
+      result_.body.is_object() &&
+      result_.body.contains(PropertyMembers::Name) &&
+      result_.body.contains(PropertyMembersCount::Name);
+  bool is_members_array =
+      result_.body.is_array() && path_.properties.size() == 1 &&
+      std::holds_alternative<std::string>(path_.properties[0]) &&
+      std::get<std::string>(path_.properties[0]) == PropertyMembers::Name;
+  if (mode == RedfishVariant::IterableMode::kAllowExpand &&
+      absl::GetFlag(FLAGS_ecclesia_enable_expanded_iterations) &&
+      (is_members_array || is_collection_iterable)) {
+    RedfishVariant expanded_variant = intf_->CachedGetUri(
+        path_.uri, GetParams{.query_params = {RedfishQueryParamExpand(
+                                 {.type = RedfishQueryParamExpand::kAll})}});
+    // Ignore the result if there is a failure or result code changed
+    if (expanded_variant.status().ok() &&
+        expanded_variant.httpcode() == result_.code) {
+      if (is_members_array) {
+        expanded_variant = expanded_variant[PropertyMembers::Name];
+      }
+      return expanded_variant.AsIterable(
+          RedfishVariant::IterableMode::kDisableExpand);
+    }
+  }
   if (result_.body.is_array()) {
-    return std::make_unique<HttpIntfArrayIterableImpl>(intf_, result_,
+    return std::make_unique<HttpIntfArrayIterableImpl>(intf_, path_, result_,
                                                        cache_state_);
   }
   // Check if the object is a Redfish collection.
-  if (result_.body.is_object() &&
-      result_.body.contains(PropertyMembers::Name) &&
-      result_.body.contains(PropertyMembersCount::Name)) {
-    return std::make_unique<HttpIntfCollectionIterableImpl>(intf_, result_,
-                                                            cache_state_);
+  if (is_collection_iterable) {
+    return std::make_unique<HttpIntfCollectionIterableImpl>(
+        intf_, path_, result_, cache_state_);
   }
   return nullptr;
 }
@@ -414,10 +503,10 @@ class HttpRedfishInterface : public RedfishInterface {
 
   RedfishVariant GetRoot(GetParams params) override {
     if (service_root_ == ServiceRootUri::kGoogle) {
-      return CachedGetUri(kGoogleServiceRoot, params);
+      return CachedGetUri(kGoogleServiceRoot, std::move(params));
     }
 
-    return CachedGetUri(kServiceRoot, params);
+    return CachedGetUri(kServiceRoot, std::move(params));
   }
 
   // GetUri fetches the given URI and resolves any JSON pointers. Note that
@@ -427,14 +516,17 @@ class HttpRedfishInterface : public RedfishInterface {
   RedfishVariant CachedGetUri(absl::string_view uri,
                               GetParams params) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
-    auto get_result = cache_->CachedGet(uri);
-    return GetUriHelper(uri, params, get_result);
+    std::string full_redfish_path = GetUriWithQueryParameters(uri, params);
+    RedfishCachedGetterInterface::GetResult result =
+        cache_->CachedGet(full_redfish_path);
+    return GetUriHelper(uri, std::move(params), std::move(result));
   }
+
   RedfishVariant UncachedGetUri(absl::string_view uri,
                                 GetParams params) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
     auto get_result = cache_->UncachedGet(uri);
-    return GetUriHelper(uri, params, get_result);
+    return GetUriHelper(uri, std::move(params), std::move(get_result));
   }
 
   RedfishVariant PostUri(
@@ -451,7 +543,8 @@ class HttpRedfishInterface : public RedfishInterface {
     if (!result.ok()) return RedfishVariant(result.status());
     int code = result->code;
     return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
-                              this, *std::move(result), kIsFresh),
+                              this, RedfishExtendedPath{std::string(uri)},
+                              std::move(*result), kIsFresh),
                           ecclesia::HttpResponseCodeFromInt(code));
   }
 
@@ -469,14 +562,31 @@ class HttpRedfishInterface : public RedfishInterface {
     if (!result.ok()) return RedfishVariant(result.status());
     int code = result->code;
     return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
-                              this, *std::move(result), kIsFresh),
+                              this, RedfishExtendedPath{std::string(uri)},
+                              std::move(*result), kIsFresh),
                           ecclesia::HttpResponseCodeFromInt(code));
   }
 
  private:
+  // extends uri with query parameters if needed
+  std::string GetUriWithQueryParameters(absl::string_view uri,
+                                        const GetParams &params) {
+    if (params.query_params.empty()) {
+      return std::string(uri);
+    }
+    std::string query_args = absl::StrJoin(
+        params.query_params.begin(), params.query_params.end(), "&",
+        [](std::string *output,
+           const std::variant<ecclesia::RedfishQueryParamExpand> &query_arg) {
+          std::visit([output](auto arg) { output->append(arg.ToString()); },
+                     query_arg);
+        });
+    return absl::StrCat(uri, "?", query_args);
+  }
+
   // Helper function to resolve JSON pointers after doing a GET.
   RedfishVariant GetUriHelper(
-      absl::string_view uri, GetParams params,
+      absl::string_view uri, const GetParams &params,
       ecclesia::RedfishCachedGetterInterface::GetResult get_res) {
     if (!get_res.result.ok()) return RedfishVariant(get_res.result.status());
 
@@ -487,19 +597,23 @@ class HttpRedfishInterface : public RedfishInterface {
     if (json_ptrs.size() < 2) {
       // No pointers, return the payload as-is.
       int code = get_res.result->code;
-      return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
-                                this, *std::move(get_res.result),
-                                get_res.is_fresh ? kIsFresh : kIsCached),
-                            ecclesia::HttpResponseCodeFromInt(code));
+      return RedfishVariant(
+          std::make_unique<HttpIntfVariantImpl>(
+              this, RedfishExtendedPath{.uri = std::string(uri)},
+              *std::move(get_res.result),
+              get_res.is_fresh ? kIsFresh : kIsCached),
+          ecclesia::HttpResponseCodeFromInt(code));
     }
     nlohmann::json resolved_ptr =
         ecclesia::HandleJsonPtr(get_res.result->body, json_ptrs[1]);
     get_res.result->body = std::move(resolved_ptr);
     int code = get_res.result->code;
-    return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
-                              this, *std::move(get_res.result),
-                              get_res.is_fresh ? kIsFresh : kIsCached),
-                          ecclesia::HttpResponseCodeFromInt(code));
+    return RedfishVariant(
+        std::make_unique<HttpIntfVariantImpl>(
+            this, RedfishExtendedPath{.uri = std::string(uri)},
+            *std::move(get_res.result),
+            get_res.is_fresh ? kIsFresh : kIsCached),
+        ecclesia::HttpResponseCodeFromInt(code));
   }
 
   mutable absl::Mutex transport_mutex_;

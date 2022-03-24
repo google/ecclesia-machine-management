@@ -53,6 +53,26 @@ TEST(PatchableMockupServer, CanProxy) {
   EXPECT_THAT(system_obj->GetNodeValue<PropertyName>(), Eq("Indus"));
 }
 
+TEST(PatchableMockupServer, CanGetExpand) {
+  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
+
+  auto redfish_intf = server.RedfishClientInterface();
+
+  auto chassis_obj =
+      redfish_intf
+          ->UncachedGetUri(
+              "/redfish/v1/Chassis/chassis?$expand=.(level=1)&$filter=&")
+          .AsObject();
+  ASSERT_TRUE(chassis_obj);
+  EXPECT_THAT(chassis_obj->GetUriString(), Eq("/redfish/v1/Chassis/chassis"));
+  EXPECT_THAT(chassis_obj->GetNodeValue<PropertyName>(), Eq("Indus Chassis"));
+
+  auto system_obj =
+      redfish_intf->UncachedGetUri("/redfish/v1/Systems/system").AsObject();
+  ASSERT_TRUE(system_obj);
+  EXPECT_THAT(system_obj->GetNodeValue<PropertyName>(), Eq("Indus"));
+}
+
 TEST(PatchableMockupServer, CanPatchDirect) {
   FakeRedfishServer server("indus_hmb_cn/mockup.shar");
 

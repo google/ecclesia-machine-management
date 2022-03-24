@@ -18,6 +18,26 @@
 
 namespace ecclesia {
 
+RedfishQueryParamExpand::RedfishQueryParamExpand(
+    RedfishQueryParamExpand::Params params)
+    : type_(params.type), levels_(params.levels) {}
+
+std::string RedfishQueryParamExpand::ToString() const {
+  std::string expand_type;
+  switch (type_) {
+    case ExpandType::kAll:
+      expand_type = "*";
+      break;
+    case ExpandType::kNoResources:
+      expand_type = ".";
+      break;
+    case ExpandType::kResourcesOnly:
+      expand_type = "~";
+      break;
+  }
+  return absl::StrCat("$expand=", expand_type, "($levels=", levels_, ")");
+}
+
 std::unique_ptr<RedfishObject> RedfishVariant::AsFreshObject() const {
   if (!ptr_) return nullptr;
   std::unique_ptr<RedfishObject> obj = ptr_->AsObject();

@@ -30,6 +30,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
@@ -56,7 +57,39 @@ enum class RedfishIterReturnValue {
   kStop
 };
 
-struct GetParams {};
+// Classes below provide an interface to supply query parameters to mmanager
+// redfish clients.
+class GetParamQueryInterface {
+ public:
+  virtual ~GetParamQueryInterface() = default;
+  // Method to convert query parameter to the part of URI
+  virtual std::string ToString() const = 0;
+};
+
+// Defines Expand parameter
+// See RedFish spec 7.3.1. Use of the $expand query parameter
+class RedfishQueryParamExpand : public GetParamQueryInterface {
+ public:
+  enum ExpandType { kAll, kNoResources, kResourcesOnly };
+
+  struct Params {
+    ExpandType type = ExpandType::kResourcesOnly;
+    int levels = 1;
+  };
+
+  RedfishQueryParamExpand(Params params);
+  std::string ToString() const override;
+
+ private:
+  ExpandType type_;
+  int levels_;
+};
+
+// Struct to be used as a parameter to RedfishInterface implementations
+struct GetParams {
+  // Query params will be extended with Filter and Select params
+  std::vector<std::variant<RedfishQueryParamExpand>> query_params;
+};
 
 // RedfishVariant is the standard return type for all Redfish interfaces.
 // Its purpose is to force the caller to strictly specify the expected Redfish
@@ -98,13 +131,19 @@ struct GetParams {};
 // down into child fields of a payload).
 class RedfishVariant final {
  public:
+  // Defines the mode used for iterable creation.
+  // Setting it to kAllowExpand allows ImplIntf to re-read original RedFish
+  // object with expand query parameters, if available
+  enum class IterableMode { kAllowExpand, kDisableExpand };
   // ImplIntf is provided as the interface for subclasses to be implemented with
   // the PImpl idiom.
+
   class ImplIntf {
    public:
     virtual ~ImplIntf() {}
     virtual std::unique_ptr<RedfishObject> AsObject() const = 0;
-    virtual std::unique_ptr<RedfishIterable> AsIterable() const = 0;
+    virtual std::unique_ptr<RedfishIterable> AsIterable(
+        IterableMode mode) const = 0;
     virtual bool GetValue(std::string *val) const = 0;
     virtual bool GetValue(int32_t *val) const = 0;
     virtual bool GetValue(int64_t *val) const = 0;
@@ -194,9 +233,10 @@ class RedfishVariant final {
     if (!ptr_) return nullptr;
     return ptr_->AsObject();
   }
-  std::unique_ptr<RedfishIterable> AsIterable() const {
+  std::unique_ptr<RedfishIterable> AsIterable(
+      IterableMode mode = IterableMode::kAllowExpand) const {
     if (!ptr_) return nullptr;
-    return ptr_->AsIterable();
+    return ptr_->AsIterable(mode);
   }
 
   // This method will only return a valid object if this RedfishVariant
@@ -330,7 +370,7 @@ class RedfishObject {
   // to retrieve the payload corresponding to that "@odata.id".
   virtual RedfishVariant operator[](const std::string &node_name) const = 0;
   // Returns the string URI of the current RedfishObject, if available.
-  virtual std::optional<std::string> GetUriString() = 0;
+  virtual std::optional<std::string> GetUriString() const = 0;
 
   // Returns a fresh copy of this RedfishObject. If this RedfishObject was a
   // cached object, this method will re-fetch this object with a GET. If this
@@ -415,9 +455,8 @@ class RedfishInterface {
   // Updates the transport for sending Redfish requests.
   // API is deprected and the recommended way is to recreate the transport
   ABSL_DEPRECATED("Create a new instance instead")
-  virtual void UpdateTransport(
-      std::unique_ptr<RedfishTransport> new_transport,
-      TrustedEndpoint trusted) = 0;
+  virtual void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
+                               TrustedEndpoint trusted) = 0;
 
   // Returns whether the endpoint is trusted.
   virtual bool IsTrusted() const = 0;

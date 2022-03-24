@@ -46,7 +46,8 @@ class JsonMockupVariantImpl : public RedfishVariant::ImplIntf {
   explicit JsonMockupVariantImpl(nlohmann::json json_view)
       : json_view_(std::move(json_view)) {}
   std::unique_ptr<RedfishObject> AsObject() const override;
-  std::unique_ptr<RedfishIterable> AsIterable() const override;
+  std::unique_ptr<RedfishIterable> AsIterable(
+      RedfishVariant::IterableMode mode) const override;
   std::string DebugString() const override;
 
   bool GetValue(std::string *val) const override {
@@ -134,7 +135,8 @@ std::unique_ptr<RedfishObject> JsonMockupVariantImpl::AsObject() const {
   return nullptr;
 }
 
-std::unique_ptr<RedfishIterable> JsonMockupVariantImpl::AsIterable() const {
+std::unique_ptr<RedfishIterable> JsonMockupVariantImpl::AsIterable(
+    RedfishVariant::IterableMode mode) const {
   // Verify that we are actually iterable, either as an array or a Collection
   if (json_view_.is_array()) {
     return std::make_unique<JsonMockupIterable>(json_view_);

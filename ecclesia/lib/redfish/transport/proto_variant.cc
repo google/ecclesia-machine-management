@@ -50,7 +50,8 @@ std::unique_ptr<RedfishObject> ProtoVariantImpl::AsObject() const {
   return absl::make_unique<ProtoObject>(value_.struct_value());
 }
 
-std::unique_ptr<RedfishIterable> ProtoVariantImpl::AsIterable() const {
+std::unique_ptr<RedfishIterable> ProtoVariantImpl::AsIterable(
+    RedfishVariant::IterableMode mode) const {
   if (!value_.has_list_value()) {
     return nullptr;
   }
@@ -120,7 +121,7 @@ RedfishVariant ProtoObject::operator[](const std::string &node_name) const {
       proto_struct_.fields().at(node_name)));
 }
 
-absl::optional<std::string> ProtoObject::GetUriString() {
+absl::optional<std::string> ProtoObject::GetUriString() const {
   if (!proto_struct_.fields().contains(kODataId) ||
       !proto_struct_.fields().at(kODataId).has_string_value()) {
     return absl::nullopt;

@@ -45,7 +45,8 @@ class ProtoVariantImpl : public RedfishVariant::ImplIntf {
   ProtoVariantImpl &operator=(ProtoVariantImpl &&other) = default;
 
   std::unique_ptr<RedfishObject> AsObject() const override;
-  std::unique_ptr<RedfishIterable> AsIterable() const override;
+  std::unique_ptr<RedfishIterable> AsIterable(
+      RedfishVariant::IterableMode mode) const override;
 
   bool GetValue(std::string *val) const override;
   bool GetValue(int32_t *val) const override;
@@ -72,7 +73,7 @@ class ProtoObject : public RedfishObject {
 
   RedfishVariant operator[](const std::string &node_name) const override;
 
-  absl::optional<std::string> GetUriString() override;
+  absl::optional<std::string> GetUriString() const override;
 
   std::unique_ptr<RedfishObject> EnsureFreshPayload(GetParams params) override;
 
