@@ -211,5 +211,68 @@ TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemSensorChassisDevpaths) {
   ASSERT_FALSE(devpath.has_value());
 }
 
+TEST(GetManagerDevpathFromNodeTopology, DevpathByManagerInChassisLink) {
+  auto intf = NewJsonMockupInterface(R"json(
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc",
+      "@odata.type": "#Manager.v1_14_0.Manager",
+      "Links": {
+        "ManagerInChassis": {
+          "@odata.id": "/redfish/v1/Chassis/child0"
+        }
+      },
+      "Name": "OpenBmc Manager"
+    }
+  )json");
+
+  auto json = intf->GetRoot().AsObject();
+  ASSERT_NE(json, nullptr);
+
+  NodeTopology topology;
+  absl::string_view uri = "/redfish/v1/Chassis/child0",
+                    test_devpath = "/phys/test";
+  {
+    auto node = std::make_unique<Node>();
+    node->local_devpath = test_devpath;
+    topology.uri_to_associated_node_map[uri].push_back(node.get());
+    topology.nodes.push_back(std::move(node));
+  }
+
+  auto devpath = GetManagerDevpathFromNodeTopology(json.get(), topology);
+  ASSERT_NE(devpath, std::nullopt);
+
+  // The devpath comes is derived from the chassis being managed, plus
+  //":device:" concatenated by "OpenBmc Manager" converted to "openbmc_manager".
+  ASSERT_EQ(devpath.value(), "/phys/test:device:openbmc_manager");
+}
+
+TEST(GetManagerDevpathFromNodeTopology, DevpathByFallbackPath) {
+  auto intf = NewJsonMockupInterface(R"json(
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc",
+      "@odata.type": "#Manager.v1_14_0.Manager",
+      "Name": "OpenBmc Manager"
+    }
+  )json");
+
+  auto json = intf->GetRoot().AsObject();
+  ASSERT_NE(json, nullptr);
+  NodeTopology topology;
+  absl::string_view uri = "/redfish/v1/Managers/bmc",
+                    test_devpath = "/phys/test_bmc";
+  {
+    auto node = std::make_unique<Node>();
+    node->local_devpath = test_devpath;
+    topology.uri_to_associated_node_map[uri].push_back(node.get());
+    topology.nodes.push_back(std::move(node));
+  }
+    auto devpath = GetManagerDevpathFromNodeTopology(json.get(), topology);
+  ASSERT_NE(devpath, std::nullopt);
+
+  // The fallback will attempt to find a devpath directly associated with the
+  // BMC's URI. If found, the devpath will be used.
+  ASSERT_EQ(devpath.value(), "/phys/test_bmc");
+}
+
 }  // namespace
 }  // namespace ecclesia

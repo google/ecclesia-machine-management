@@ -337,6 +337,7 @@ cc_library(
     deps = [
         ":interface",
         ":node_topology",
+        "//ecclesia/lib/redfish:utils",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
     ],

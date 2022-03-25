@@ -29,6 +29,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
+#include "ecclesia/lib/redfish/utils.h"
 
 namespace ecclesia {
 
@@ -77,6 +78,35 @@ std::optional<std::string> GetSensorDevpathFromNodeTopology(
       }
     }
   }
+  return std::nullopt;
+}
+
+std::optional<std::string> GetManagerDevpathFromNodeTopology(
+    RedfishObject* obj, const NodeTopology& topology) {
+  auto manager_in_chassis =
+      (*obj)[kRfPropertyLinks][kRfPropertyManagerInChassis].AsObject();
+  if (manager_in_chassis != nullptr) {
+    auto manager_odata_id = manager_in_chassis->GetNodeValue<PropertyOdataId>();
+    if (manager_odata_id.has_value()) {
+      auto devpath = GetDevpathForUri(topology, *manager_odata_id);
+      if (devpath.has_value()) {
+        auto name = GetConvertedResourceName(obj);
+        if (name.has_value()) {
+          return absl::StrCat(*devpath, ":device:", *name);
+        }
+      }
+    }
+  }
+
+  // Fallback to providing devpath using the non-Manager devpath method
+  auto manager_uri = obj->GetUriString();
+  if (manager_uri.has_value()) {
+    auto manager_devpath = GetDevpathForUri(topology, *manager_uri);
+    if (manager_devpath.has_value()) {
+      return *manager_devpath;
+    }
+  }
+
   return std::nullopt;
 }
 
