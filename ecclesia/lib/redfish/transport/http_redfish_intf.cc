@@ -79,7 +79,7 @@ enum CacheState {
 //   }
 struct RedfishExtendedPath {
   std::string uri;
-  std::vector<std::variant<std::string, size_t>> properties;
+  std::vector<std::variant<std::string, int>> properties;
 };
 
 // Helper function to convert a key-value span to a JSON object that can be
