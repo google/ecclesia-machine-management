@@ -55,6 +55,7 @@ inline constexpr char kRfPropertyLifeTime[] = "LifeTime";
 inline constexpr char kRfPropertyCurrentPeriod[] = "CurrentPeriod";
 inline constexpr char kRfPropertyCacheMetricsTotal[] = "CacheMetricsTotal";
 inline constexpr char kRfPropertyProcessors[] = "Processors";
+inline constexpr char kRfPropertySubProcessors[] = "SubProcessors";
 inline constexpr char kRfPropertyMetrics[] = "Metrics";
 inline constexpr char kRfPropertyEnvironmentMetrics[] = "EnvironmentMetrics";
 inline constexpr char kRfPropertySessions[] = "Sessions";
@@ -172,8 +173,7 @@ DEFINE_REDFISH_RESOURCE(OemResourceRootOfTrust, "RootOfTrust");
 DEFINE_REDFISH_PROPERTY(PropertyOdataId, std::string, "@odata.id");
 DEFINE_REDFISH_PROPERTY(PropertyOdataType, std::string, "@odata.type");
 DEFINE_REDFISH_PROPERTY(PropertyMembers, std::string, "Members");
-DEFINE_REDFISH_PROPERTY(PropertyMembersCount, std::string,
-                        "Members@odata.count");
+DEFINE_REDFISH_PROPERTY(PropertyMembersCount, int, "Members@odata.count");
 DEFINE_REDFISH_PROPERTY(PropertyCapacityMiB, int, "CapacityMiB");
 DEFINE_REDFISH_PROPERTY(PropertyLogicalSizeMiB, int, "LogicalSizeMiB");
 DEFINE_REDFISH_PROPERTY(PropertyManufacturer, std::string, "Manufacturer");
