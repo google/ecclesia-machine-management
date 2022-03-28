@@ -48,6 +48,8 @@ namespace {
 
 using ::redfish::v1::Request;
 
+constexpr char kResourceKey[] = "redfish-resource";
+
 absl::Status SetGrpcResponseAndReturnStatus(RedfishVariant variant,
                                             redfish::v1::Response* response) {
   absl::Status status = absl::OkStatus();
@@ -65,11 +67,30 @@ absl::Status SetGrpcResponseAndReturnStatus(RedfishVariant variant,
   return status;
 }
 
+grpc::Status CheckRequestResourceAndMetadataResource(
+    const grpc::ServerContext& context, const Request& request) {
+  if (auto it = context.client_metadata().find(kResourceKey);
+      it == context.client_metadata().end()) {
+    return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION,
+                        "missing resource URL in client metadata!");
+  } else if (it->second != request.url()) {
+    return grpc::Status(
+        grpc::StatusCode::FAILED_PRECONDITION,
+        "Resource URL in client metadata and request shall be the same!");
+  }
+  return grpc::Status::OK;
+}
+
 }  // namespace
 
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Get(
     grpc::ServerContext* context, const Request* request,
     redfish::v1::Response* response) {
+  if (grpc::Status status =
+          CheckRequestResourceAndMetadataResource(*context, *request);
+      !status.ok()) {
+    return status;
+  }
   absl::MutexLock mu(&patch_lock_);
   if (auto itr = rest_get_handlers_.find(request->url());
       itr != rest_get_handlers_.end()) {
@@ -81,6 +102,11 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Get(
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Post(
     grpc::ServerContext* context, const Request* request,
     redfish::v1::Response* response) {
+  if (grpc::Status status =
+          CheckRequestResourceAndMetadataResource(*context, *request);
+      !status.ok()) {
+    return status;
+  }
   absl::MutexLock mu(&patch_lock_);
   if (auto itr = rest_post_handlers_.find(request->url());
       itr != rest_post_handlers_.end()) {
@@ -99,6 +125,11 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Post(
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Patch(
     grpc::ServerContext* context, const Request* request,
     redfish::v1::Response* response) {
+  if (grpc::Status status =
+          CheckRequestResourceAndMetadataResource(*context, *request);
+      !status.ok()) {
+    return status;
+  }
   absl::MutexLock mu(&patch_lock_);
   if (auto itr = rest_patch_handlers_.find(request->url());
       itr != rest_patch_handlers_.end()) {
@@ -117,12 +148,22 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Patch(
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Put(
     grpc::ServerContext* context, const Request* request,
     redfish::v1::Response* response) {
+  if (grpc::Status status =
+          CheckRequestResourceAndMetadataResource(*context, *request);
+      !status.ok()) {
+    return status;
+  }
   return StatusToGrpcStatus(
       absl::UnimplementedError("Put RPC is not implemented yet."));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Delete(
     grpc::ServerContext* context, const Request* request,
     redfish::v1::Response* response) {
+  if (grpc::Status status =
+          CheckRequestResourceAndMetadataResource(*context, *request);
+      !status.ok()) {
+    return status;
+  }
   // DELETE.
   return StatusToGrpcStatus(
       absl::UnimplementedError("Delete RPC is not implemented yet."));
@@ -194,9 +235,7 @@ GrpcDynamicMockupServer::GrpcDynamicMockupServer(
   server_ = builder.BuildAndStart();
 }
 
-GrpcDynamicMockupServer::~GrpcDynamicMockupServer() {
-  ClearHandlers();
-}
+GrpcDynamicMockupServer::~GrpcDynamicMockupServer() { ClearHandlers(); }
 
 void GrpcDynamicMockupServer::ClearHandlers() {
   redfish_v1_impl_->ClearHandlers();

@@ -55,6 +55,23 @@ using ::redfish::v1::Response;
 using ::testing::Eq;
 using ::testing::Test;
 
+class GrpcRedfishCredentialsInTest : public grpc::MetadataCredentialsPlugin {
+ public:
+  explicit GrpcRedfishCredentialsInTest(absl::string_view resource)
+      : resource_(resource) {}
+  // Sends out the Redfish resource as part of gRPC credentials.
+  grpc::Status GetMetadata(
+      grpc::string_ref /*service_url*/, grpc::string_ref /*method_name*/,
+      const grpc::AuthContext & /*channel_auth_context*/,
+      std::multimap<grpc::string, grpc::string> *metadata) override {
+    metadata->insert(std::make_pair("redfish-resource", resource_));
+    return grpc::Status::OK;
+  }
+
+ private:
+  std::string resource_;
+};
+
 class GrpcRedfishMockUpServerTest : public Test {
  protected:
   GrpcRedfishMockUpServerTest() {
@@ -116,7 +133,12 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPostPatchAndGetRequest) {
 TEST_F(GrpcRedfishMockUpServerTest, TestPutRequests) {
   grpc::ClientContext context;
   Request request;
+  request.set_url("/redfish/v1");
   Response response;
+  context.set_credentials(grpc::experimental::MetadataCredentialsFromPlugin(
+      std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+          std::make_unique<GrpcRedfishCredentialsInTest>("/redfish/v1")),
+      GRPC_SECURITY_NONE));
   EXPECT_THAT(AsAbslStatus(stub_->Put(&context, request, &response)),
               IsStatusUnimplemented());
 }
@@ -124,7 +146,12 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPutRequests) {
 TEST_F(GrpcRedfishMockUpServerTest, TestDeleteRequests) {
   grpc::ClientContext context;
   Request request;
+  request.set_url("/redfish/v1");
   Response response;
+  context.set_credentials(grpc::experimental::MetadataCredentialsFromPlugin(
+      std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+          std::make_unique<GrpcRedfishCredentialsInTest>("/redfish/v1")),
+      GRPC_SECURITY_NONE));
   EXPECT_THAT(AsAbslStatus(stub_->Delete(&context, request, &response)),
               IsStatusUnimplemented());
 }
@@ -344,6 +371,90 @@ TEST(GrpcRedfishMockUpServerUdsTest, TestUds) {
       (*transport)->Get("/redfish/v1");
   ASSERT_THAT(res_get, IsOk());
   EXPECT_THAT(res_get->body, Eq(expected));
+}
+
+TEST_F(GrpcRedfishMockUpServerTest, MissAuthMetadataReturnsFailure) {
+  redfish::v1::Request request;
+  request.set_url("/redfish/v1");
+  redfish::v1::Response response;
+  grpc::ClientContext context;
+  EXPECT_THAT(AsAbslStatus(stub_->Get(&context, request, &response)),
+              IsStatusFailedPrecondition());
+}
+
+TEST_F(GrpcRedfishMockUpServerTest,
+       AuthMetadataResourceAndRequestResourceMismatchReturnsFailure) {
+  redfish::v1::Request request;
+  request.set_url("/redfish/v1");
+  redfish::v1::Response response;
+  {
+    grpc::ClientContext context;
+    context.set_credentials(grpc::experimental::MetadataCredentialsFromPlugin(
+        std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+            std::make_unique<GrpcRedfishCredentialsInTest>("/redfish/v2")),
+        GRPC_SECURITY_NONE));
+    EXPECT_THAT(AsAbslStatus(stub_->Get(&context, request, &response)),
+                IsStatusFailedPrecondition());
+  }
+  {
+    grpc::ClientContext context;
+    context.set_credentials(grpc::experimental::MetadataCredentialsFromPlugin(
+        std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+            std::make_unique<GrpcRedfishCredentialsInTest>("/redfish/v2")),
+        GRPC_SECURITY_NONE));
+    EXPECT_THAT(AsAbslStatus(stub_->Patch(&context, request, &response)),
+                IsStatusFailedPrecondition());
+  }
+  {
+    grpc::ClientContext context;
+    context.set_credentials(grpc::experimental::MetadataCredentialsFromPlugin(
+        std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+            std::make_unique<GrpcRedfishCredentialsInTest>("/redfish/v2")),
+        GRPC_SECURITY_NONE));
+    EXPECT_THAT(AsAbslStatus(stub_->Delete(&context, request, &response)),
+                IsStatusFailedPrecondition());
+  }
+  {
+    grpc::ClientContext context;
+    context.set_credentials(grpc::experimental::MetadataCredentialsFromPlugin(
+        std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+            std::make_unique<GrpcRedfishCredentialsInTest>("/redfish/v2")),
+        GRPC_SECURITY_NONE));
+    EXPECT_THAT(AsAbslStatus(stub_->Put(&context, request, &response)),
+                IsStatusFailedPrecondition());
+  }
+  {
+    grpc::ClientContext context;
+    context.set_credentials(grpc::experimental::MetadataCredentialsFromPlugin(
+        std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+            std::make_unique<GrpcRedfishCredentialsInTest>("/redfish/v2")),
+        GRPC_SECURITY_NONE));
+    EXPECT_THAT(AsAbslStatus(stub_->Post(&context, request, &response)),
+                IsStatusFailedPrecondition());
+  }
+}
+
+TEST_F(GrpcRedfishMockUpServerTest,
+       AuthMetadataResourceAndRequestResourceMatchReturnsOk) {
+  bool called = false;
+  // Register the handler.
+  mockup_server_->AddHttpGetHandler(
+      "/redfish/v1",
+      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
+          Response *response) {
+        called = true;
+        return grpc::Status::OK;
+      });
+  redfish::v1::Request request;
+  request.set_url("/redfish/v1");
+  redfish::v1::Response response;
+  grpc::ClientContext context;
+  context.set_credentials(grpc::experimental::MetadataCredentialsFromPlugin(
+      std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+          std::make_unique<GrpcRedfishCredentialsInTest>("/redfish/v1")),
+      GRPC_SECURITY_NONE));
+  EXPECT_THAT(AsAbslStatus(stub_->Get(&context, request, &response)), IsOk());
+  EXPECT_TRUE(called);
 }
 
 }  // namespace
