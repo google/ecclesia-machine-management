@@ -93,15 +93,13 @@ class FileWatcherBasedOptions : public StaticBufferBasedTlsOptions {
   // Uses gRPC TlsCredentials.
   void SetToTls(absl::string_view root_certs_path, absl::string_view key_path,
                 absl::string_view cert_path) override;
-  // Uses gRPC TlsCredentials, but skip hostname check, via static credentials
-  // buffer.
+  // Uses gRPC TlsCredentials, but skip hostname check, via FileWatcher
   void SetToTlsSkipHostname(
       absl::string_view root_certs_path, absl::string_view key_path,
       absl::string_view cert_path,
       std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier)
       override;
-  // Uses gRPC TlsCredentials, but don't verify server at all, via static
-  // credentials buffer.
+  // Uses gRPC TlsCredentials, but don't verify server at all, via FileWatcher
   void SetToTlsNotVerifyServer(
       absl::string_view key_path, absl::string_view cert_path,
       std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier)
