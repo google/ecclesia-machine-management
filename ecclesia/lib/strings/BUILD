@@ -38,6 +38,23 @@ cc_library(
     deps = ["@com_google_absl//absl/strings"],
 )
 
+cc_library(
+    name = "case",
+    srcs = ["case.cc"],
+    hdrs = ["case.h"],
+    visibility = ["//visibility:public"],
+    deps = ["@com_google_absl//absl/strings"],
+)
+
+cc_test(
+    name = "case_test",
+    srcs = ["case_test.cc"],
+    deps = [
+        ":case",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_test(
     name = "natural_sort_test",
     size = "small",
