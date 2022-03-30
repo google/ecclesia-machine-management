@@ -167,6 +167,12 @@ DEFINE_REDFISH_RESOURCE(ResourceSoftwareInventory, "SoftwareInventory");
 DEFINE_REDFISH_RESOURCE(ResourceAssemblyEntry, "/Assembly#/");
 DEFINE_REDFISH_RESOURCE(ResourceManager, "Manager");
 
+// Physical LPU is an abstraction resource concept based on thread-granularity
+// SubProcessor resource. It uses the same Processor resource schema. But the
+// Redfish path of thread-granularity SubProcessor resource is different from a
+// regular Processor resource.
+DEFINE_REDFISH_RESOURCE(AbstractionPhysicalLpu, "PhysicalLpu");
+
 // OEM Google resources
 DEFINE_REDFISH_RESOURCE(OemResourceRootOfTrust, "RootOfTrust");
 

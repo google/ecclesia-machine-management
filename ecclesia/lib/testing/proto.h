@@ -344,6 +344,25 @@ auto UnorderedElementsAreProtos(Args... args) {
   return ::testing::UnorderedElementsAre(EqualsProto(args)...);
 }
 
+template <typename Proto>
+using EqualsProtoMatcher = decltype(EqualsProto(std::declval<Proto>()));
+
+// A helper function to check a container of protos. This is similar to the
+// above UnorderedElementsAreProtos except that this function takes a container
+// of protos rather than multiple protos as arguments.
+template <typename ProtoContainer>
+decltype(::testing::UnorderedElementsAreArray(
+    std::declval<std::vector<
+        EqualsProtoMatcher<typename ProtoContainer::value_type>>>()))
+UnorderedElementsAreArrayOfProtos(const ProtoContainer &protos) {
+  std::vector<EqualsProtoMatcher<typename ProtoContainer::value_type>> matchers;
+  matchers.reserve(protos.size());
+  for (const auto &proto : protos) {
+    matchers.push_back(EqualsProto(proto));
+  }
+  return ::testing::UnorderedElementsAreArray(matchers);
+}
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_TESTING_PROTO_H_

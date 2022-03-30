@@ -109,6 +109,23 @@ void Sysmodel::QueryAllResourceInternal(
       });
 }
 
+// Physical LPU (thread-granularity processor resource):
+// "/redfish/v1/Systems/{id}/Processors/{id}/SubProcessors/{id}/SubProcessors/{id}"
+void Sysmodel::QueryAllResourceInternal(
+    Token<AbstractionPhysicalLpu>,
+    absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+        result_callback) {
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertySystems]
+      .Each()[kRfPropertyProcessors]     // CPU processors collection
+      .Each()[kRfPropertySubProcessors]  // core subprocessors collection
+      .Each()[kRfPropertySubProcessors]  // thread subprocessors collection
+      .Each()
+      .Do([&](auto &phs_lpu_obj) {
+        return result_callback(std::move(phs_lpu_obj));
+      });
+}
+
 // EthernetInterface:
 // "/redfish/v1/Systems/{id}/EthernetInterfaces/{id}"
 void Sysmodel::QueryAllResourceInternal(

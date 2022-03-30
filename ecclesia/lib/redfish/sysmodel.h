@@ -87,6 +87,10 @@ class Sysmodel {
       absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
           result_callback);
   void QueryAllResourceInternal(
+      Token<AbstractionPhysicalLpu>,
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
+  void QueryAllResourceInternal(
       Token<ResourceThermal>,
       absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
           result_callback);
