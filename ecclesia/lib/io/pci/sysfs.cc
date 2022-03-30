@@ -54,11 +54,10 @@ namespace {
 constexpr char kSysPciRoot[] = "/sys/bus/pci/devices";
 constexpr size_t kMaxSysFileSize = 4096;
 
-static LazyRE2 kResourceLineRegex = {
+LazyRE2 kResourceLineRegex = {
     R"((0x[[:xdigit:]]{16}) (0x[[:xdigit:]]{16}) (0x[[:xdigit:]]{16}))"};
 
-static LazyRE2 kPciBusEntryRegex = {
-    R"(pci([[:xdigit:]]{4}):([[:xdigit:]]{2}))"};
+LazyRE2 kPciBusEntryRegex = {R"(pci([[:xdigit:]]{4}):([[:xdigit:]]{2}))"};
 
 // A helper function to get the PCIe link speed and width directly from the
 // sysfs nodes under the PCIe device directory. The entry_name_width and

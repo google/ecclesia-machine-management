@@ -68,7 +68,7 @@ absl::Status MakeDirectories(absl::string_view dirname) {
   std::stack<std::string> missing_dirs;
 
   // Keep walking up the tree until we hit the root.
-  while (dirname != "/" && dirname != "") {
+  while (dirname != "/" && !dirname.empty()) {
     std::string path(dirname);
     if (access(path.c_str(), F_OK) == 0) {
       break;

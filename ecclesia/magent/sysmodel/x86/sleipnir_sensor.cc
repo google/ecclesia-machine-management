@@ -29,9 +29,9 @@
 namespace ecclesia {
 namespace {
 
-static LazyRE2 kFanRegex = {"^Fan\\d+_\\d+_RPM"};
-static LazyRE2 kKLRegex = {"^KL\\d+"};
-static LazyRE2 knvmeRegex = {"^nvme\\d+"};
+LazyRE2 kFanRegex = {"^Fan\\d+_\\d+_RPM"};
+LazyRE2 kKLRegex = {"^KL\\d+"};
+LazyRE2 knvmeRegex = {"^nvme\\d+"};
 
 }  // namespace
 

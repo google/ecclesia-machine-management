@@ -293,10 +293,9 @@ absl::Status PersistentUsageMap::WriteToPersistentStoreUnlocked() {
 
   // Increment the failed write counter on exit. If the write is successful then
   // we'll cancel this.
-  auto increment_failed_writes =
-      absl::MakeCleanup([this]() ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
-        stats_.failed_writes += 1;
-      });
+  absl::Cleanup increment_failed_writes =
+      [this]()
+          ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) { stats_.failed_writes += 1; };
 
   // Construct and serialize the protobuf to write from the usage map.
   std::string serialized_map = SerializeAndTrimMap();

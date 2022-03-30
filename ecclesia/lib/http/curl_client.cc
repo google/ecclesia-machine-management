@@ -285,8 +285,9 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
   }
 
   struct curl_slist *request_headers = NULL;
-  auto cleanup = absl::MakeCleanup(
-      [&request_headers]() { curl_slist_free_all(request_headers); });
+  absl::Cleanup cleanup = [&request_headers]() {
+    curl_slist_free_all(request_headers);
+  };
   for (const auto &hdr : request->headers) {
     struct curl_slist *list = curl_slist_append(
         request_headers, absl::StrCat(hdr.first, ":", hdr.second).c_str());
