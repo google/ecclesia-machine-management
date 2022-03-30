@@ -219,9 +219,6 @@ static bool FruChecksumFromByteArray(const std::vector<unsigned char> &image,
   return true;
 }
 
-const uint8_t ChassisInfoArea::kFormatVersion;
-const uint8_t BoardInfoArea::kFormatVersion;
-const uint8_t ProductInfoArea::kFormatVersion;
 std::string FruField::GetDataAsString() const {
   absl::StatusOr<std::string> maybe_value;
   switch (type_) {

@@ -33,7 +33,6 @@ namespace {
 using ::testing::_;
 using ::testing::ContainerEq;
 using ::testing::DoAll;
-using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::Return;
 using ::testing::SetArgPointee;

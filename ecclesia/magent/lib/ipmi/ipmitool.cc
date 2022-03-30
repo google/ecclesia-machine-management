@@ -55,15 +55,11 @@ extern "C" {
 #include "include/ipmitool/ipmi_sdr.h"
 #include "include/ipmitool/ipmi_sol.h"
 
-extern const struct valstr completion_code_vals[];
-
 extern int read_fru_area(struct ipmi_intf *intf, struct fru_info *fru,
                          uint8_t id, uint32_t offset, uint32_t length,
                          uint8_t *frubuf);
 extern void fru_area_print_board(struct ipmi_intf *intf, struct fru_info *fru,
                                  uint8_t id, uint32_t offset);
-
-extern char *get_fru_area_str(uint8_t *data, uint32_t *offset);
 
 // These two global variables are defined in ipmitool/src/ipmitool.c or
 // ipmitool/src/ipmievd.c, we are not including either one,

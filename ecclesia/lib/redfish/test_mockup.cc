@@ -51,8 +51,6 @@
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 
-extern char **environ;
-
 namespace ecclesia {
 namespace {
 

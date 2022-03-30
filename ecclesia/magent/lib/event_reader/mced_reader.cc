@@ -30,6 +30,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "absl/strings/match.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/synchronization/notification.h"
@@ -191,7 +192,7 @@ std::optional<MachineCheck> ReadOneMce(FILE *socket_file,
   }
   absl::string_view mced_line(line_buffer);
   // Process only valid lines
-  if (mced_line.find('\n') == std::string::npos) return std::nullopt;
+  if (!absl::StrContains(mced_line, '\n')) return std::nullopt;
   return ParseLine(mced_line);
 }
 

@@ -273,7 +273,7 @@ std::optional<std::string> FindRootChassisUri(RedfishInterface *redfish_intf,
 
 std::optional<std::string> FindRootNodeUri(RedfishInterface *redfish_intf,
                                            const TopologyConfig &config) {
-  const auto finding_root = config.find_root_node();
+  const auto &finding_root = config.find_root_node();
   if (finding_root.has_chassis_link()) {
     return FindRootChassisUri(redfish_intf, config);
   }
