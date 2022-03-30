@@ -219,9 +219,6 @@ static bool FruChecksumFromByteArray(const std::vector<unsigned char> &image,
   return true;
 }
 
-const uint8_t ChassisInfoArea::kFormatVersion;
-const uint8_t BoardInfoArea::kFormatVersion;
-const uint8_t ProductInfoArea::kFormatVersion;
 std::string FruField::GetDataAsString() const {
   absl::StatusOr<std::string> maybe_value;
   switch (type_) {
@@ -962,7 +959,7 @@ bool MultiRecord::FillFromImage(const FruImageSource &fru_image,
     return false;
   }
   uint8_t type_id = header[0];
-  *end_of_list = header[1] & 0x80;
+  *end_of_list = ((header[1] & 0x80) != 0);
   uint8_t record_format_version = header[1] & 0x0F;
   uint8_t data_length = header[2];
   uint8_t record_checksum = header[3];
@@ -1067,7 +1064,7 @@ size_t MultiRecordArea::FillFromImage(const FruImageSource &fru_image,
   while (true) {
     MultiRecord record;
     if (!record.FillFromImage(fru_image, current_offset, &end_of_list)) {
-      return false;
+      return 0u;
     }
     record_list.push_back(record);
     current_offset += record.get_size();

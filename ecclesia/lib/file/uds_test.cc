@@ -45,7 +45,7 @@ struct FileOwnership {
   gid_t gid;
 };
 absl::StatusOr<FileOwnership> GetOwnership(const std::string &path) {
-  struct stat st;
+  struct stat st {};
   if (lstat(path.c_str(), &st) != 0) {
     return absl::InternalError("lstat() failed");
   }

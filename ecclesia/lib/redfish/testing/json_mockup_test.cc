@@ -484,7 +484,7 @@ TEST(JsonMockup, ForEachPropertyStop) {
   std::vector<std::pair<std::string, std::string>> all_properties;
   int called = 0;
   json_intf->UncachedGetUri("/").AsObject()->ForEachProperty(
-      [&called](absl::string_view name, RedfishVariant value) {
+      [&called](absl::string_view /*name*/, RedfishVariant /*value*/) {
         ++called;
         return RedfishIterReturnValue::kStop;
       });

@@ -285,8 +285,9 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
   }
 
   struct curl_slist *request_headers = NULL;
-  auto cleanup = absl::MakeCleanup(
-      [&request_headers]() { curl_slist_free_all(request_headers); });
+  absl::Cleanup cleanup = [&request_headers]() {
+    curl_slist_free_all(request_headers);
+  };
   for (const auto &hdr : request->headers) {
     struct curl_slist *list = curl_slist_append(
         request_headers, absl::StrCat(hdr.first, ":", hdr.second).c_str());
@@ -351,12 +352,14 @@ size_t CurlHttpClient::BodyCallback(const void *data, size_t size, size_t nmemb,
 
 ABSL_CONST_INIT absl::Mutex CurlHttpClient::shared_mutex_(absl::kConstInit);
 
-void CurlHttpClient::LockSharedMutex(CURL *handle, curl_lock_data data,
-                                     curl_lock_access laccess, void *useptr) {
+void CurlHttpClient::LockSharedMutex(CURL * /*handle*/, curl_lock_data /*data*/,
+                                     curl_lock_access /*laccess*/,
+                                     void * /*useptr*/) {
   shared_mutex_.Lock();
 }
-void CurlHttpClient::UnlockSharedMutex(CURL *handle, curl_lock_data data,
-                                       void *useptr) {
+void CurlHttpClient::UnlockSharedMutex(CURL * /*handle*/,
+                                       curl_lock_data /*data*/,
+                                       void * /*useptr*/) {
   shared_mutex_.Unlock();
 }
 

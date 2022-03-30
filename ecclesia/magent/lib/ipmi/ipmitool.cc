@@ -55,15 +55,11 @@ extern "C" {
 #include "include/ipmitool/ipmi_sdr.h"
 #include "include/ipmitool/ipmi_sol.h"
 
-extern const struct valstr completion_code_vals[];
-
 extern int read_fru_area(struct ipmi_intf *intf, struct fru_info *fru,
                          uint8_t id, uint32_t offset, uint32_t length,
                          uint8_t *frubuf);
 extern void fru_area_print_board(struct ipmi_intf *intf, struct fru_info *fru,
                                  uint8_t id, uint32_t offset);
-
-extern char *get_fru_area_str(uint8_t *data, uint32_t *offset);
 
 // These two global variables are defined in ipmitool/src/ipmitool.c or
 // ipmitool/src/ipmievd.c, we are not including either one,
@@ -683,9 +679,8 @@ class IpmitoolImpl : public IpmiInterface {
     if (response->ccode > 0) {
       if (IPMI_TIMEOUT_COMPLETION_CODE == response->ccode)
         return absl::InternalError("Timeout from IPMI");
-      else
-        return absl::InternalError(absl::StrCat(
-            "Unable to send code: ", IpmiResponseToString(response->ccode)));
+      return absl::InternalError(absl::StrCat(
+          "Unable to send code: ", IpmiResponseToString(response->ccode)));
     }
 
     return absl::OkStatus();
@@ -728,8 +723,8 @@ class IpmitoolImpl : public IpmiInterface {
   }
 
   // read Fru size and access.
-  absl::Status GetFruInfo(ipmi_intf *intf_, uint16_t fru_id, uint16_t *size,
-                          uint8_t *access) {
+  absl::Status GetFruInfo(ipmi_intf * /*intf_*/, uint16_t /*fru_id*/,
+                          uint16_t *size, uint8_t *access) {
     uint8_t buffer[4]{};
     IpmiResponse rsp;
 
@@ -905,7 +900,8 @@ class IpmitoolImpl : public IpmiInterface {
   absl::Status GrabSensorSdrInternal(struct ipmi_intf *ipmi,
                                      SensorNum sensor_num) {
     // Fake an iterator.
-    struct ipmi_sdr_iterator itr, *sdr_list_itr = nullptr;
+    struct ipmi_sdr_iterator itr {
+    }, *sdr_list_itr = nullptr;
     memset(&itr, 0x00, sizeof(itr));
 
     // Try to grab some details (could just call get_device_id ourselves, but

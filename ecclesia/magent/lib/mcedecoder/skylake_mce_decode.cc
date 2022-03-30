@@ -93,19 +93,19 @@ bool DecodeSkylakeM2MBank(int imc_id, MceAttributes *attributes) {
   uint64_t mci_status;
   if (attributes->GetAttribute(MceAttributes::kMciStatusRegister,
                                &mci_status)) {
-    if (ExtractBits(mci_status, BitRange(23))) {
+    if (ExtractBits(mci_status, BitRange(23)) != 0u) {
       unique_id = MceAttributes::kIdM2MMcBucket1Error;
     }
-    if (ExtractBits(mci_status, BitRange(21))) {
+    if (ExtractBits(mci_status, BitRange(21)) != 0u) {
       unique_id = MceAttributes::kIdM2MMcTimeoutError;
     }
-    if (ExtractBits(mci_status, BitRange(19))) {
+    if (ExtractBits(mci_status, BitRange(19)) != 0u) {
       unique_id = MceAttributes::kIdM2MMcFullWriteError;
     }
-    if (ExtractBits(mci_status, BitRange(18))) {
+    if (ExtractBits(mci_status, BitRange(18)) != 0u) {
       unique_id = MceAttributes::kIdM2MMcPartialWriteError;
     }
-    if (ExtractBits(mci_status, BitRange(16))) {
+    if (ExtractBits(mci_status, BitRange(16)) != 0u) {
       unique_id = MceAttributes::kIdM2MMcDataReadError;
     }
   }
@@ -351,29 +351,26 @@ bool DecodeSkylakeMce(DimmTranslatorInterface *dimm_translator,
 
   if (memory_unique_ids.count(unique_id)) {
     return DecodeSkylakeMemoryError(*attributes, dimm_translator, decoded_msg);
-  } else {
-    bool success_decoded = DecodeSkylakeCpuError(*attributes, decoded_msg);
-    if (!success_decoded) {
-      return false;
-    }
-    // timeout whitelist the cpu error as this is most likely not real cpu
-    // problem.
-    uint64_t bank, mci_status;
-    if (attributes->GetAttribute(MceAttributes::kMceBank, &bank) &&
-        attributes->GetAttribute(MceAttributes::kMciStatusRegister,
-                                 &mci_status)) {
-      if ((bank >= 3 && bank <= 4 &&
-           ((mci_status & 0xFFFFFFFF) == 0x00800400)) ||
-          (bank >= 9 && bank <= 11 &&
-           ((mci_status >> 16 & 0xFFFF) == 0x000C))) {
-        for (auto &cpu_error : decoded_msg->cpu_errors) {
-          cpu_error.cpu_error_bucket.whitelisted = true;
-        }
-      }
-    } else {
-      ErrorLog() << "Failed to get bank and mci_status from MceAttributes.";
-    }
-    return true;
   }
+  bool success_decoded = DecodeSkylakeCpuError(*attributes, decoded_msg);
+  if (!success_decoded) {
+    return false;
+  }
+  // timeout whitelist the cpu error as this is most likely not real cpu
+  // problem.
+  uint64_t bank, mci_status;
+  if (attributes->GetAttribute(MceAttributes::kMceBank, &bank) &&
+      attributes->GetAttribute(MceAttributes::kMciStatusRegister,
+                               &mci_status)) {
+    if ((bank >= 3 && bank <= 4 && ((mci_status & 0xFFFFFFFF) == 0x00800400)) ||
+        (bank >= 9 && bank <= 11 && ((mci_status >> 16 & 0xFFFF) == 0x000C))) {
+      for (auto &cpu_error : decoded_msg->cpu_errors) {
+        cpu_error.cpu_error_bucket.whitelisted = true;
+      }
+    }
+  } else {
+    ErrorLog() << "Failed to get bank and mci_status from MceAttributes.";
+  }
+  return true;
 }
 }  // namespace ecclesia

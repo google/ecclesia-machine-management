@@ -38,7 +38,7 @@ std::optional<ecclesia::MagentConfig::IpmiCredential> GetIpmiCredentialFromPb(
     WarningLog() << "Fail to open " << path;
     return std::nullopt;
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   google::protobuf::io::FileInputStream input(fd);
   if (!magent_config.ParseFromZeroCopyStream(&input)) {

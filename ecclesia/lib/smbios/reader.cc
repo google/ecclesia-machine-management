@@ -124,7 +124,7 @@ std::vector<TableEntry> BuildEntries(std::vector<uint8_t> &table_data) {
 
   while (start_address <= end_address) {
     std::size_t max_length = end_address - start_address + 1;
-    SmbiosStructureInfo info;
+    SmbiosStructureInfo info{};
     if (!ExtractSmbiosStructure(start_address, max_length, &info)) {
       ErrorLog() << "Error extracting SMBIOS structure";
       return entries;
@@ -261,10 +261,9 @@ absl::StatusOr<int32_t> SmbiosReader::GetBootNumberFromSystemBootInformation()
       const auto &system_boot_info = structure_view.system_boot_information();
       if (system_boot_info.boot_count().Ok()) {
         return system_boot_info.boot_count().Read();
-      } else {
-        return absl::NotFoundError(
-            "System Boot Information did not contain boot count");
       }
+      return absl::NotFoundError(
+          "System Boot Information did not contain boot count");
     }
   }
   return absl::NotFoundError("No System boot information found");

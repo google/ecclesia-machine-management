@@ -94,7 +94,7 @@ bool SetUpUnixDomainSocket(
 
   // Now that the socket directory exists, we need to check that it has the
   // correct permissions and ownership.
-  struct stat socket_dir_stat;
+  struct stat socket_dir_stat {};
   if (lstat(socket_directory.c_str(), &socket_dir_stat) != 0) {
     PosixErrorLog() << "unable to lstat() " << socket_directory;
     return false;

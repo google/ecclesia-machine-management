@@ -95,13 +95,13 @@ TEST_F(SystemEventVisitorTest, MemoryErrorCounts) {
   auto decode_message =
       [](testing::Unused) -> absl::StatusOr<MceDecodedMessage> {
     static int gldn = 5;
-    static int correctable = false;
+    static int correctable = 0;
     MceDecodedMessage output;
     output.mem_errors.push_back(MemoryError{});
     output.mem_errors[0].mem_error_bucket.gldn = gldn++;
-    output.mem_errors[0].mem_error_bucket.correctable = correctable;
+    output.mem_errors[0].mem_error_bucket.correctable = (correctable != 0);
     output.mem_errors[0].error_count = 1;
-    correctable = !correctable;
+    correctable = static_cast<int>(correctable == 0);
     return output;
   };
 
@@ -162,14 +162,14 @@ TEST_F(SystemEventVisitorTest, CpuErrorCounts) {
   // the correctible bit on successive mces.
   auto decode_message =
       [](testing::Unused) -> absl::StatusOr<MceDecodedMessage> {
-    static int correctable = false;
+    static int correctable = 0;
     static int socket = 0;
     MceDecodedMessage output;
     output.cpu_errors.push_back(CpuError{});
     output.cpu_errors[0].cpu_error_bucket.socket = socket++;
-    output.cpu_errors[0].cpu_error_bucket.correctable = correctable;
+    output.cpu_errors[0].cpu_error_bucket.correctable = (correctable != 0);
     output.cpu_errors[0].error_count = 1;
-    correctable = !correctable;
+    correctable = static_cast<int>(correctable == 0);
     return output;
   };
 

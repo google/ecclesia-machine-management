@@ -167,9 +167,8 @@ std::optional<MceDecodedMessage> MceDecoderAdapter::Decode(
   auto maybe_decoded_mce = mce_decoder_->DecodeMceMessage(raw_mce);
   if (maybe_decoded_mce.ok()) {
     return *maybe_decoded_mce;
-  } else {
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
 bool CpuErrorCountingVisitor::Visit(const SystemEventRecord &record) {

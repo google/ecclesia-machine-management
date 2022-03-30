@@ -71,7 +71,7 @@ class ODataMetadataTest : public ::testing::Test {
  protected:
   std::unique_ptr<tensorflow::serving::net_http::HTTPServerInterface> server_;
   std::unique_ptr<ODataMetadata> odata_metadata_;
-  int port_;
+  int port_{};
 
  private:
   void InitServer() {

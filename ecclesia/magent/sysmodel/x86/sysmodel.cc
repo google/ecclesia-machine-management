@@ -245,7 +245,7 @@ void SystemModel::LoadBootNumberFromElogReader(ElogReader &elog_reader) {
 std::optional<uint32_t> SystemModel::GetBootNumber() { return boot_number_; }
 
 absl::StatusOr<int64_t> SystemModel::GetSystemUptimeSeconds() const {
-  struct sysinfo sys_info;
+  struct sysinfo sys_info {};
   if (sysinfo(&sys_info) != 0) {
     return absl::InternalError("Failed to get sysinfo");
   }
@@ -253,7 +253,7 @@ absl::StatusOr<int64_t> SystemModel::GetSystemUptimeSeconds() const {
 }
 
 absl::StatusOr<uint64_t> SystemModel::GetSystemTotalMemoryBytes() const {
-  struct sysinfo sys_info;
+  struct sysinfo sys_info {};
   if (sysinfo(&sys_info) != 0) {
     return absl::InternalError("Failed to get sysinfo");
   }

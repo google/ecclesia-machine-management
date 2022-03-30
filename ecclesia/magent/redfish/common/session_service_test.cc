@@ -51,7 +51,7 @@ namespace {
 constexpr absl::string_view kFileName =
     "magent/redfish/common/test_data/session_service.json";
 
-void ReadJsonFromFile(const std::string &filename, nlohmann::json *value) {
+void ReadJsonFromFile(nlohmann::json *value) {
   std::string expected;
   ApifsFile apifs_file((std::string(GetTestDataDependencyPath(kFileName))));
   absl::StatusOr<std::string> maybe_contents = apifs_file.Read();
@@ -90,7 +90,7 @@ class SessionServiceTest : public ::testing::Test {
  protected:
   std::unique_ptr<tensorflow::serving::net_http::HTTPServerInterface> server_;
   SessionService session_service_;
-  int port_;
+  int port_{};
 
  private:
   void InitServer() {
@@ -108,7 +108,7 @@ class SessionServiceTest : public ::testing::Test {
 TEST_F(SessionServiceTest, QuerySessionService) {
   // Read the expected json object
   nlohmann::json expected;
-  ReadJsonFromFile(GetTestDataDependencyPath(kFileName), &expected);
+  ReadJsonFromFile(&expected);
 
   ASSERT_TRUE(server_->StartAcceptingRequests());
 

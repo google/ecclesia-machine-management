@@ -361,10 +361,11 @@ TEST(ProtoVariantTest, ForEachPropertyStop) {
   )pb");
   std::unique_ptr<RedfishObject> obj = absl::make_unique<ProtoObject>(payload);
   int count = 0;
-  obj->ForEachProperty([&count](absl::string_view name, RedfishVariant value) {
-    count++;
-    return RedfishIterReturnValue::kStop;
-  });
+  obj->ForEachProperty(
+      [&count](absl::string_view /*name*/, RedfishVariant /*value*/) {
+        count++;
+        return RedfishIterReturnValue::kStop;
+      });
   EXPECT_THAT(count, Eq(1));
 }
 

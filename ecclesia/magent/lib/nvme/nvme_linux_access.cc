@@ -53,9 +53,9 @@ absl::Status NvmeLinuxAccess::ExecuteAdminCommand(
                         absl::StrFormat("Couldn't open device at path %s: %s",
                                         devpath_, strerror(errno)));
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
-  struct stat nvme_stat;
+  struct stat nvme_stat {};
   int err = fstat(fd, &nvme_stat);
   if (err < 0) {
     return absl::InternalError(
@@ -69,7 +69,8 @@ absl::Status NvmeLinuxAccess::ExecuteAdminCommand(
   if (err < 0) {
     return absl::InternalError(
         absl::StrCat("ioctl failed with POSIX errno: ", errno));
-  } else if (err != 0) {
+  }
+  if (err != 0) {
     return absl::InternalError(
         absl::StrCat("ioctl failed with Generic Command Status number: ", err));
   }
@@ -83,7 +84,7 @@ absl::Status NvmeLinuxAccess::ResetSubsystem() {
     return absl::InternalError(
         absl::StrCat("Failed to open block device path: ", devpath_));
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
   const auto ret_code = ioctl(fd, NVME_IOCTL_SUBSYS_RESET);
   if (ret_code != 0) {
     return absl::InternalError(absl::StrCat(
@@ -100,7 +101,7 @@ absl::Status NvmeLinuxAccess::ResetController() {
     return absl::InternalError(
         absl::StrCat("Failed to open block device path: ", devpath_));
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
   const auto ret_code = ioctl(fd, NVME_IOCTL_RESET);
   if (ret_code != 0) {
     return absl::InternalError(absl::StrCat(

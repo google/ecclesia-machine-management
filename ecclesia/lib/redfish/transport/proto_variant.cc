@@ -51,7 +51,7 @@ std::unique_ptr<RedfishObject> ProtoVariantImpl::AsObject() const {
 }
 
 std::unique_ptr<RedfishIterable> ProtoVariantImpl::AsIterable(
-    RedfishVariant::IterableMode mode) const {
+    RedfishVariant::IterableMode /*mode*/) const {
   if (!value_.has_list_value()) {
     return nullptr;
   }
@@ -130,7 +130,7 @@ absl::optional<std::string> ProtoObject::GetUriString() const {
 }
 
 std::unique_ptr<RedfishObject> ProtoObject::EnsureFreshPayload(
-    GetParams params) {
+    GetParams /*params*/) {
   // There is no caching, just return a copy of self as it is always fresh.
   return absl::make_unique<ProtoObject>(proto_struct_);
 }

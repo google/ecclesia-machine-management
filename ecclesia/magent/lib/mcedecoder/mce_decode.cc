@@ -39,8 +39,9 @@ using AttributeBits = std::pair<MceAttributes::MceAttributeKey, BitRange>;
 
 void DecodeGenericIntelMceAttributes(const MceLogMessage &raw_msg,
                                      MceAttributes *attributes) {
-  bool mci_status_valid = ExtractBits(raw_msg.mci_status, BitRange(63));
-  attributes->SetAttribute(MceAttributes::kMciStatusValid, mci_status_valid);
+  bool mci_status_valid = ExtractBits(raw_msg.mci_status, BitRange(63)) != 0u;
+  attributes->SetAttribute(MceAttributes::kMciStatusValid,
+                           static_cast<uint64_t>(mci_status_valid));
   if (mci_status_valid) {
     static const std::vector<AttributeBits> &attribute_bit_map =
         *(new std::vector<AttributeBits>(

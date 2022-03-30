@@ -48,10 +48,9 @@ absl::StatusOr<std::string> ParseBcdPlus(
       return absl::InternalError(
           "BCD plus decoding failed! Data must be "
           "between 0h-Ch");
-    } else {
-      value.push_back(kBcdPlusTable[upper_code]);
-      value.push_back(kBcdPlusTable[lower_code]);
     }
+    value.push_back(kBcdPlusTable[upper_code]);
+    value.push_back(kBcdPlusTable[lower_code]);
   }
   return value;
 }

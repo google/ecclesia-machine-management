@@ -59,7 +59,7 @@ absl::StatusOr<IdentifyNamespace> IdentifyNamespace::Parse(
   const uint64_t lba_bytes =
       (data_size_log2 > 0) ? (1ULL << data_size_log2) : 0;
 
-  IdentifyNamespace id;
+  IdentifyNamespace id{};
   id.capacity_bytes = idns.capacity().Read() * lba_bytes;
   id.formatted_lba_size_bytes = lba_bytes;
   id.namespace_guid =
@@ -89,7 +89,7 @@ IdentifyNamespace::GetSupportedLbaFormats(absl::string_view buf) {
 }
 
 bool operator!=(const IdentifyNamespace &lhs, const IdentifyNamespace &rhs) {
-  return memcmp(&lhs, &rhs, sizeof(lhs));
+  return memcmp(&lhs, &rhs, sizeof(lhs)) != 0;
 }
 
 bool operator==(const IdentifyNamespace &lhs, const IdentifyNamespace &rhs) {

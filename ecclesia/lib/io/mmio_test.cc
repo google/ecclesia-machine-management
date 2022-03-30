@@ -68,7 +68,7 @@ class MmioAccessTest : public testing::Test {
     mmconfig_filename_ = JoinFilePaths(GetTestTempdirPath(), "mmconfig");
     int fd = open(mmconfig_filename_.c_str(), O_CREAT | O_RDWR | O_TRUNC,
                   S_IRWXU | S_IRWXG);
-    auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+    absl::Cleanup fd_closer = [fd]() { close(fd); };
 
     ASSERT_GE(fd, 0);
     lseek(fd, size_, SEEK_SET);
@@ -79,9 +79,9 @@ class MmioAccessTest : public testing::Test {
     EXPECT_TRUE(mmconfig_);
   }
 
-  int size_;
+  int size_{};
   std::string mmconfig_filename_;
-  uint8_t *mmconfig_;
+  uint8_t *mmconfig_{};
 };
 
 TEST_F(MmioAccessTest, ReadSuccess) {

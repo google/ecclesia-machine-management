@@ -46,9 +46,8 @@ uint32_t DecodeDimmSizeMB(View message_view) {
   if (size == 0 || size == kUnknownSize) return 0;
   if (size != kExtendedSizeValid) {
     return size;
-  } else {
-    return extended_size;
   }
+  return extended_size;
 }
 
 }  // namespace

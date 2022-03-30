@@ -51,8 +51,6 @@
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 
-extern char **environ;
-
 namespace ecclesia {
 namespace {
 
@@ -66,8 +64,7 @@ constexpr absl::Duration kDaemonStartSleepDuration = absl::Milliseconds(50);
 constexpr absl::Duration kDaemonAuthStartEstimation = absl::Seconds(1);
 
 // The URI scheme is ignored for unix sockets.
-std::string ConfigToEndpoint(absl::string_view scheme,
-                             const TestingMockupServer::ConfigUnix &config) {
+std::string ConfigToEndpoint(const TestingMockupServer::ConfigUnix &config) {
   return absl::StrCat("unix://", config.socket_path);
 }
 

@@ -96,8 +96,9 @@ std::optional<UsbLocation> DirectoryToUsbLocation(absl::string_view dirname) {
       return std::nullopt;
     }
     return UsbLocation(usb_bus.value(), UsbPortSequence());
-  } else if (RE2::FullMatch(dirname, "(\\d+)-(\\d+(?:\\.\\d+)*)", &bus,
-                            &port_substr)) {
+  }
+  if (RE2::FullMatch(dirname, "(\\d+)-(\\d+(?:\\.\\d+)*)", &bus,
+                     &port_substr)) {
     auto maybe_usb_bus = UsbBusLocation::TryMake(bus);
     if (!maybe_usb_bus.has_value()) {
       return std::nullopt;
@@ -171,7 +172,7 @@ SysfsUsbDevice::SysfsUsbDevice(const UsbLocation &usb_location)
 }
 
 absl::StatusOr<UsbSignature> SysfsUsbDevice::GetSignature() const {
-  UsbSignature signature;
+  UsbSignature signature{};
   ECCLESIA_RETURN_IF_ERROR(ReadUintFromSysfs(ApifsFile(api_fs_, "idVendor"),
                                              true, &signature.vendor_id));
   ECCLESIA_RETURN_IF_ERROR(ReadUintFromSysfs(ApifsFile(api_fs_, "idProduct"),

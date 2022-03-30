@@ -50,7 +50,7 @@ constexpr char kDevRoot[] = "/dev";
 
 int SmbusIoctl(IoctlInterface *ioctl_intf, int fd, uint8_t read_write,
                uint8_t command, int size, union i2c_smbus_data *data) {
-  struct i2c_smbus_ioctl_data args;
+  struct i2c_smbus_ioctl_data args {};
 
   args.read_write = read_write;
   args.command = command;
@@ -95,7 +95,7 @@ int KernelSmbusAccess::OpenI2CSlaveFile(const SmbusLocation &loc) const {
   int fd = ret;
 
   if (ioctl_->Call(fd, I2C_SLAVE, loc.address().value()) < 0) {
-    auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+    absl::Cleanup fd_closer = [fd]() { close(fd); };
     ret = -errno;
     PosixErrorLog() << "SMBus device " << loc << ": "
                     << "Unable to set slave address to 0x" << std::hex
@@ -154,7 +154,7 @@ absl::Status KernelSmbusAccess::WriteQuick(const SmbusLocation &loc,
         absl::StrFormat("Open device %s failed.", absl::FormatStreamed(loc)));
   }
 
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
   int result =
@@ -177,7 +177,7 @@ absl::Status KernelSmbusAccess::SendByte(const SmbusLocation &loc,
         absl::StrFormat("Open device %s failed.", absl::FormatStreamed(loc)));
   }
 
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
   int result =
@@ -200,7 +200,7 @@ absl::Status KernelSmbusAccess::ReceiveByte(const SmbusLocation &loc,
         absl::StrFormat("Open device %s failed.", absl::FormatStreamed(loc)));
   }
 
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
   union i2c_smbus_data i2c_data {
@@ -226,7 +226,7 @@ absl::Status KernelSmbusAccess::Write8(const SmbusLocation &loc, int command,
         absl::StrFormat("Open device %s failed.", absl::FormatStreamed(loc)));
   }
 
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
   union i2c_smbus_data i2c_data {};
@@ -249,7 +249,7 @@ absl::Status KernelSmbusAccess::Read8(const SmbusLocation &loc, int command,
         absl::StrFormat("Open device %s failed.", absl::FormatStreamed(loc)));
   }
 
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
   union i2c_smbus_data i2c_data {};
@@ -273,7 +273,7 @@ absl::Status KernelSmbusAccess::Write16(const SmbusLocation &loc, int command,
         absl::StrFormat("Open device %s failed.", absl::FormatStreamed(loc)));
   }
 
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
   union i2c_smbus_data i2c_data {};
@@ -296,7 +296,7 @@ absl::Status KernelSmbusAccess::Read16(const SmbusLocation &loc, int command,
         absl::StrFormat("Open device %s failed.", absl::FormatStreamed(loc)));
   }
 
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
   union i2c_smbus_data i2c_data {};
@@ -329,7 +329,7 @@ absl::Status KernelSmbusAccess::WriteBlockI2C(
         absl::StrFormat("Open device %s failed.", absl::FormatStreamed(loc)));
   }
 
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
 
@@ -366,7 +366,7 @@ absl::Status KernelSmbusAccess::ReadBlockI2C(const SmbusLocation &loc,
         absl::StrFormat("Open device %s failed.", absl::FormatStreamed(loc)));
   }
 
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   // Check that driver can support I2C block reads
   int ret = CheckFunctionality(fd, I2C_FUNC_SMBUS_READ_I2C_BLOCK);
@@ -396,7 +396,7 @@ bool KernelSmbusAccess::SupportBlockRead(const SmbusLocation &loc) const {
   int fd = OpenI2CSlaveFile(loc);
   if (fd < 0) return false;
 
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
   return CheckFunctionality(fd, I2C_FUNC_SMBUS_READ_I2C_BLOCK) == 0;
 }
 

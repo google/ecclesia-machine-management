@@ -109,9 +109,9 @@ void Assembly::RegisterRequestHandler(
                   tensorflow::serving::net_http::ServerRequestInterface *req) {
                 this->RequestHandler(req);
               };
-        } else {
-          return nullptr;
         }
+        return nullptr;
+       
       },
       tensorflow::serving::net_http::RequestHandlerOptions());
 }

@@ -122,7 +122,7 @@ TEST(SystemDescriptionTableTest, ReadFromFileBadLength) {
 
   ASSERT_THAT(table, IsOk());
 
-  struct stat stat_buf;
+  struct stat stat_buf {};
   EXPECT_EQ(0, stat(sys_desc_table_bad_length_path.c_str(), &stat_buf));
   EXPECT_EQ(stat_buf.st_size, table.value()->GetHeaderView().length().Read());
 }
@@ -149,7 +149,7 @@ class SraHeaderFactory {
   const SraHeaderView& header_view() const { return header_view_; }
 
  private:
-  char data_[SraHeaderView::SizeInBytes()];
+  char data_[SraHeaderView::SizeInBytes()]{};
   SraHeaderView header_view_;
 };
 
@@ -291,7 +291,7 @@ class SystemDescriptionTableReaderTest : public ::testing::Test {
   char table_data_[SystemDescriptionTableHeaderView::SizeInBytes() +
                    SraHeaderView::SizeInBytes() * ABSL_ARRAYSIZE(sra_headers_) +
                    SraTestView::SizeInBytes() *
-                       ABSL_ARRAYSIZE(sra_test_headers_)];
+                       ABSL_ARRAYSIZE(sra_test_headers_)]{};
 
   // Default values for the test table header.
   static constexpr absl::string_view kOemId = "GOOGLE";

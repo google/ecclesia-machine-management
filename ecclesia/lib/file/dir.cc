@@ -41,7 +41,7 @@ namespace {
 // this a registered filename" check.
 DataStoreDirectory::Stats GetSingleFileStats(const std::string &path) {
   DataStoreDirectory::Stats stats;
-  struct stat st;
+  struct stat st {};
   if (stat(path.c_str(), &st) == 0) {
     // We basically treat any kind of stat failure as "it doesn't exist". While
     // there are technically other ways that this could fail there's not much
@@ -68,14 +68,13 @@ absl::Status MakeDirectories(absl::string_view dirname) {
   std::stack<std::string> missing_dirs;
 
   // Keep walking up the tree until we hit the root.
-  while (dirname != "/" && dirname != "") {
+  while (dirname != "/" && !dirname.empty()) {
     std::string path(dirname);
     if (access(path.c_str(), F_OK) == 0) {
       break;
-    } else {
-      missing_dirs.push(std::move(path));
-      dirname = GetDirname(dirname);
     }
+    missing_dirs.push(std::move(path));
+    dirname = GetDirname(dirname);
   }
 
   // Try and create all of the components that are missing.
@@ -97,7 +96,7 @@ DataStoreDirectory::DataStoreDirectory(std::string path)
     : path_(std::move(path)) {}
 
 absl::StatusOr<std::string> DataStoreDirectory::UseFile(
-    absl::string_view filename, const UseFileOptions &options) {
+    absl::string_view filename, const UseFileOptions & /*options*/) {
   // Make sure the filename is actually a filename, not empty or a directory.
   if (filename.empty()) {
     return absl::InvalidArgumentError("filename must not be empty");

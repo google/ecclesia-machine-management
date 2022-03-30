@@ -48,16 +48,16 @@ class MockIoctl : public IoctlInterface {
   int Call(int fd, unsigned long request, intptr_t argi) override {
     if (request == I2C_SLAVE) {
       return Slave(fd, argi);
-    } else {
-      FatalLog() << "unsupported ioctl() call";
     }
+    FatalLog() << "unsupported ioctl() call";
   }
 
   int Call(int fd, unsigned long request, void *argp) override {
     if (request == I2C_SMBUS) {
       auto *arg = static_cast<struct i2c_smbus_ioctl_data *>(argp);
       return Smbus(fd, arg->read_write, arg->command, arg->size, arg->data);
-    } else if (request == I2C_RDWR) {
+    }
+    if (request == I2C_RDWR) {
       auto *arg = static_cast<struct i2c_rdwr_ioctl_data *>(argp);
       return I2cReadWrite(fd, arg->msgs, arg->nmsgs);
     } else if (request == I2C_FUNCS) {

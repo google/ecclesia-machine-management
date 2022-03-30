@@ -35,7 +35,7 @@ Msr::Msr(std::string path) : msr_file_(std::move(path)) {}
 bool Msr::Exists() const { return msr_file_.Exists(); }
 
 absl::StatusOr<uint64_t> Msr::Read(uint64_t reg) const {
-  std::array<char, sizeof(uint64_t)> res;
+  std::array<char, sizeof(uint64_t)> res{};
   ECCLESIA_RETURN_IF_ERROR(msr_file_.ReadRange(reg, absl::MakeSpan(res)));
   return LittleEndian::Load64(res.data());
 }

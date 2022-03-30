@@ -400,7 +400,7 @@ class SratReaderTest : public ::testing::Test {
                        (SratMemoryAffinityView::SizeInBytes() *
                         ABSL_ARRAYSIZE(memory_affinity_)) +
                        (SraHeaderView::SizeInBytes() *
-                        ABSL_ARRAYSIZE(other_sra_headers_))];
+                        ABSL_ARRAYSIZE(other_sra_headers_))]{};
 };
 
 // Retrieve all Processor Local APIC/SAPIC affinity structures from a valid

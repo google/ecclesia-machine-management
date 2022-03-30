@@ -57,7 +57,7 @@ nlohmann::json GetPcieDeviceUrlsAsJsonArray(SystemModel *system_model) {
 
 void PCIeDeviceCollection::Get(
     tensorflow::serving::net_http::ServerRequestInterface *req,
-    const ParamsType &params) {
+    const ParamsType & /*params*/) {
   nlohmann::json json;
   AddStaticFields(&json);
 

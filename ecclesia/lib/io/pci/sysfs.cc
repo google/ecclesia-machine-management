@@ -54,11 +54,10 @@ namespace {
 constexpr char kSysPciRoot[] = "/sys/bus/pci/devices";
 constexpr size_t kMaxSysFileSize = 4096;
 
-static LazyRE2 kResourceLineRegex = {
+LazyRE2 kResourceLineRegex = {
     R"((0x[[:xdigit:]]{16}) (0x[[:xdigit:]]{16}) (0x[[:xdigit:]]{16}))"};
 
-static LazyRE2 kPciBusEntryRegex = {
-    R"(pci([[:xdigit:]]{4}):([[:xdigit:]]{2}))"};
+LazyRE2 kPciBusEntryRegex = {R"(pci([[:xdigit:]]{4}):([[:xdigit:]]{2}))"};
 
 // A helper function to get the PCIe link speed and width directly from the
 // sysfs nodes under the PCIe device directory. The entry_name_width and
@@ -105,7 +104,7 @@ SysPciRegion::SysPciRegion(absl::string_view sys_pci_devices_dir,
       loc_(loc) {}
 
 absl::StatusOr<uint8_t> SysPciRegion::Read8(OffsetType offset) const {
-  std::array<char, sizeof(uint8_t)> res;
+  std::array<char, sizeof(uint8_t)> res{};
   ECCLESIA_RETURN_IF_ERROR(apifs_.ReadRange(offset, absl::MakeSpan(res)));
   return LittleEndian::Load8(res.data());
 }
@@ -117,7 +116,7 @@ absl::Status SysPciRegion::Write8(OffsetType offset, uint8_t data) {
 }
 
 absl::StatusOr<uint16_t> SysPciRegion::Read16(OffsetType offset) const {
-  std::array<char, sizeof(uint16_t)> res;
+  std::array<char, sizeof(uint16_t)> res{};
   ECCLESIA_RETURN_IF_ERROR(apifs_.ReadRange(offset, absl::MakeSpan(res)));
   return LittleEndian::Load16(res.data());
 }
@@ -129,7 +128,7 @@ absl::Status SysPciRegion::Write16(OffsetType offset, uint16_t data) {
 }
 
 absl::StatusOr<uint32_t> SysPciRegion::Read32(OffsetType offset) const {
-  std::array<char, sizeof(uint32_t)> res;
+  std::array<char, sizeof(uint32_t)> res{};
   ECCLESIA_RETURN_IF_ERROR(apifs_.ReadRange(offset, absl::MakeSpan(res)));
   return LittleEndian::Load32(res.data());
 }

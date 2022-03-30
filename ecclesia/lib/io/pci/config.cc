@@ -164,12 +164,13 @@ PciSubsystemCapability::SubsystemSignature() const {
 absl::StatusOr<PciExpressCapability::LinkCapabilities>
 PciExpressCapability::ReadLinkCapabilities() const {
   ECCLESIA_ASSIGN_OR_RETURN(uint32_t link_caps_val, Read32(kLinkCapsOffset));
-  LinkCapabilities link_caps;
+  LinkCapabilities link_caps{};
   link_caps.max_speed =
       static_cast<PcieLinkSpeed>(ExtractBits(link_caps_val, BitRange(3, 0)));
   link_caps.max_width =
       static_cast<PcieLinkWidth>(ExtractBits(link_caps_val, BitRange(9, 4)));
-  link_caps.dll_active_capable = ExtractBits(link_caps_val, BitRange(20));
+  link_caps.dll_active_capable =
+      (ExtractBits(link_caps_val, BitRange(20)) != 0u);
   return link_caps;
 }
 
@@ -177,12 +178,12 @@ absl::StatusOr<PciExpressCapability::LinkStatus>
 PciExpressCapability::ReadLinkStatus() const {
   ECCLESIA_ASSIGN_OR_RETURN(uint16_t link_status_val,
                             Read16(kLinkStatusOffset));
-  LinkStatus link_status;
+  LinkStatus link_status{};
   link_status.current_speed =
       static_cast<PcieLinkSpeed>(ExtractBits(link_status_val, BitRange(3, 0)));
   link_status.current_width =
       static_cast<PcieLinkWidth>(ExtractBits(link_status_val, BitRange(9, 4)));
-  link_status.dll_active = ExtractBits(link_status_val, BitRange(13));
+  link_status.dll_active = (ExtractBits(link_status_val, BitRange(13)) != 0u);
   return link_status;
 }
 

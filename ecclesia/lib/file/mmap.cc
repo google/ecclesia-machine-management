@@ -60,7 +60,7 @@ absl::StatusOr<MappedMemory> MappedMemory::Create(const std::string &path,
     return absl::InternalError(
         absl::StrFormat("unable to open the file: %s", path));
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   // Determine the offset and length to use for the memory mapping, rounding
   // to an appropriate page size.

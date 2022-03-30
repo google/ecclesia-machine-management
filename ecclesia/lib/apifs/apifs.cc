@@ -141,7 +141,7 @@ ApifsFile::ApifsFile(const ApifsDirectory &directory,
 bool ApifsFile::Exists() const { return PathExists(path_); }
 
 absl::StatusOr<struct stat> ApifsFile::Stat() const {
-  struct stat st;
+  struct stat st {};
   if (stat(path_.c_str(), &st) < 0) {
     return absl::InternalError(absl::StrFormat(
         "failure while stat-ing file at path: %s, errno: %d", path_, errno));
@@ -159,7 +159,7 @@ absl::StatusOr<std::string> ApifsFile::Read() const {
     return absl::InternalError(absl::StrFormat(
         "unable to open the file at path: %s, errno: %d", path_, errno));
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   std::string value;
   while (true) {
@@ -174,7 +174,8 @@ absl::StatusOr<std::string> ApifsFile::Read() const {
           "failure while reading from file at path: %s, errno: %d", path_,
           read_errno));
       break;
-    } else if (n == 0) {
+    }
+    if (n == 0) {
       break;  // Nothing left to read.
     } else {
       value.append(buffer, n);
@@ -193,7 +194,7 @@ absl::Status ApifsFile::Write(absl::string_view value) const {
     return absl::InternalError(
         absl::StrFormat("unable to open the file at path: %s", path_));
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
   const char *data = value.data();
   size_t size = value.size();
   while (size > 0) {
@@ -224,7 +225,7 @@ absl::Status ApifsFile::ReadRange(uint64_t offset,
     return absl::InternalError(absl::StrFormat(
         "Unable to open the file at path: %s, errno: %d", path_, errno));
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
   // Read data.
   size_t size = value.size();
   int rlen = pread(fd, value.data(), size, offset);
@@ -246,7 +247,7 @@ absl::Status ApifsFile::WriteRange(uint64_t offset,
     return absl::InternalError(
         absl::StrFormat("Unable to open the file at path: %s", path_));
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
   // Write data.
   size_t size = value.size();
   int wlen = pwrite(fd, value.data(), size, offset);
@@ -260,15 +261,14 @@ absl::Status ApifsFile::WriteRange(uint64_t offset,
 absl::StatusOr<std::string> ApifsFile::ReadLink() const {
   // Do an lstat of the path to determine the link size and verify the file is
   // in fact a symlink.
-  struct stat st;
+  struct stat st {};
   if (lstat(path_.c_str(), &st) < 0) {
     if (errno == ENOENT) {
       return absl::NotFoundError(
           absl::StrFormat("file not found at path: %s", path_));
-    } else {
-      return absl::InternalError(absl::StrFormat(
-          "failure while lstat-ing file at path: %s, errno: %d", path_, errno));
     }
+    return absl::InternalError(absl::StrFormat(
+        "failure while lstat-ing file at path: %s, errno: %d", path_, errno));
   }
   if (!S_ISLNK(st.st_mode)) {
     return absl::InvalidArgumentError(

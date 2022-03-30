@@ -171,7 +171,7 @@ FakeRedfishServer::FakeRedfishServer(absl::string_view mockup_shar,
       };
   proxy_server_->RegisterRequestDispatcher(
       [handler = std::move(handler)](
-          ::tensorflow::serving::net_http::ServerRequestInterface *req)
+          ::tensorflow::serving::net_http::ServerRequestInterface * /*req*/)
           -> ::tensorflow::serving::net_http::RequestHandler {
         return handler;
       },

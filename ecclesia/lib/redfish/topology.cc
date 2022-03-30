@@ -247,7 +247,7 @@ void GenerateDevpaths(std::vector<Assembly> *assemblies) {
     // first. Downstream assemblies cannot determine their devpaths without
     // their upstream connectors having a devpath.
     for (auto &assembly : *assemblies) {
-      if (processed.count(&assembly)) continue;
+      if (processed.count(&assembly) != 0u) continue;
       // If there are no upstream_odata_ids values, this Assembly is the root.
       std::string upstream_connector_sequence = kDevpathRoot;
       if (!assembly.upstream_odata_ids.empty()) {
@@ -560,7 +560,7 @@ bool NodeTopologiesHaveTheSameNodes(const NodeTopology &n1,
     n1_nodes.insert(NodeId(*node));
   }
   for (const auto &node : n2.nodes) {
-    if (!n1_nodes.count(NodeId(*node))) return false;
+    if (n1_nodes.count(NodeId(*node)) == 0u) return false;
   }
   return true;
 }

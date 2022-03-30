@@ -67,7 +67,7 @@ TEST(FakeServerTest, InsecureChannelOk) {
   expected_response.mutable_fields()->insert({"hello", value});
   std::string expected_url = "/fake";
   fake_server.SetCallback([expected_response, expected_url](
-                              grpc::ServerContext* context,
+                              grpc::ServerContext* /*context*/,
                               const Request* request, Response* response) {
     EXPECT_EQ(request->url(), expected_url);
     *response->mutable_message() = expected_response;
@@ -89,8 +89,8 @@ TEST(FakeServerTest, InsecureChannelNotOk) {
   std::unique_ptr<RedfishV1::Stub> stub = RedfishV1::NewStub(channel);
 
   fake_server.SetCallback(
-      [](grpc::ServerContext* context, const Request* request,
-         Response* response) { return grpc::Status::CANCELLED; });
+      [](grpc::ServerContext* /*context*/, const Request* /*request*/,
+         Response* /*response*/) { return grpc::Status::CANCELLED; });
   Request request;
   {
     SCOPED_TRACE("Get returns CANCELLED status");

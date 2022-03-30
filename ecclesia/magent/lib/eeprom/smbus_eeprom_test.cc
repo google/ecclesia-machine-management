@@ -70,7 +70,7 @@ TEST(SmbusEepromDeviceTest, Methods) {
   // Create test target
   Eeprom::SizeType eeprom_size = {.type = ecclesia::Eeprom::SizeType::kFixed,
                                   .size = 8 * 1024};
-  Eeprom::ModeType eeprom_mode = {.readable = 1, .writable = 1};
+  Eeprom::ModeType eeprom_mode = {.readable = true, .writable = true};
 
   ecclesia::SmbusEeprom2ByteAddr::Option motherboard_eeprom_option{
       .name = "motherboard",
@@ -122,7 +122,7 @@ TEST(SmbusEepromDeviceTest, Methods) {
 constexpr SmbusLocation kSmbusLocation = SmbusLocation::Make<37, 0x55>();
 constexpr Eeprom::SizeType kEepromSize{
     .type = ecclesia::Eeprom::SizeType::kFixed, .size = 8 * 1024};
-constexpr Eeprom::ModeType kEepromMode{.readable = 1, .writable = 1};
+constexpr Eeprom::ModeType kEepromMode{.readable = true, .writable = true};
 
 class SmbusEeprom2ByteAddrTest : public ::testing::Test {
  public:

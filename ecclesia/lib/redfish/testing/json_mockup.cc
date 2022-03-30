@@ -136,11 +136,12 @@ std::unique_ptr<RedfishObject> JsonMockupVariantImpl::AsObject() const {
 }
 
 std::unique_ptr<RedfishIterable> JsonMockupVariantImpl::AsIterable(
-    RedfishVariant::IterableMode mode) const {
+    RedfishVariant::IterableMode /*mode*/) const {
   // Verify that we are actually iterable, either as an array or a Collection
   if (json_view_.is_array()) {
     return std::make_unique<JsonMockupIterable>(json_view_);
-  } else if (json_view_.is_object()) {
+  }
+  if (json_view_.is_object()) {
     auto members = json_view_.find("Members");
     if (members == json_view_.end() || !members->is_array()) return nullptr;
     auto size = json_view_.find("Members@odata.count");
@@ -163,17 +164,17 @@ class JsonMockupMockup : public RedfishInterface {
     }
   }
   bool IsTrusted() const override { return true; }
-  void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
-                       TrustedEndpoint trusted) override {
+  void UpdateTransport(std::unique_ptr<RedfishTransport> /*new_transport*/,
+                       TrustedEndpoint /*trusted*/) override {
     // There's no reason why this cannot be a no-op, but for now just terminate
     // in case someone is expecting some particular behaviour.
     ecclesia::FatalLog() << "Tried to update the endpoint of a JsonMockup";
   }
-  RedfishVariant GetRoot(GetParams params) override {
+  RedfishVariant GetRoot(GetParams /*params*/) override {
     return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(json_model_));
   }
   RedfishVariant UncachedGetUri(absl::string_view uri,
-                                GetParams params) override {
+                                GetParams /*params*/) override {
     // We will implement GetUri as walking the URI from the root JSON node.
 
     auto current_json = json_model_;
@@ -216,24 +217,26 @@ class JsonMockupMockup : public RedfishInterface {
     return UncachedGetUri(uri, params);
   }
   RedfishVariant PostUri(
-      absl::string_view uri,
-      absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
+      absl::string_view /*uri*/,
+      absl::Span<const std::pair<std::string, ValueVariant>> /*kv_span*/)
+      override {
     return RedfishVariant(
         absl::UnimplementedError("Updates to json_mockup are not supported."));
   }
-  RedfishVariant PostUri(absl::string_view uri,
-                         absl::string_view data) override {
+  RedfishVariant PostUri(absl::string_view /*uri*/,
+                         absl::string_view /*data*/) override {
     return RedfishVariant(
         absl::UnimplementedError("Updates to json_mockup are not supported."));
   }
   RedfishVariant PatchUri(
-      absl::string_view uri,
-      absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
+      absl::string_view /*uri*/,
+      absl::Span<const std::pair<std::string, ValueVariant>> /*kv_span*/)
+      override {
     return RedfishVariant(
         absl::UnimplementedError("Updates to json_mockup are not supported."));
   }
-  RedfishVariant PatchUri(absl::string_view uri,
-                          absl::string_view data) override {
+  RedfishVariant PatchUri(absl::string_view /*uri*/,
+                          absl::string_view /*data*/) override {
     return RedfishVariant(
         absl::UnimplementedError("Updates to json_mockup are not supported."));
   }

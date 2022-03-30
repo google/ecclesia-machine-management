@@ -63,7 +63,7 @@ void OpenAndWriteFile(const std::string &path, int flags,
   if (fd == -1) {
     PosixFatalLog() << "open() failed for file " << path;
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   // Write the file. Fail if the write fails, OR if it's too short.
   int rc = write(fd, data.data(), data.size());
@@ -81,7 +81,7 @@ std::string PathContents(const std::string &path) {
   if (fd == -1) {
     FatalLog() << "open() was unable to return file descriptor: " << path;
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   // Read from the file in 4k chunks until read returns 0, or fails.
   char buffer[4096];
@@ -126,7 +126,7 @@ std::string GetTestDataDependencyPath(absl::string_view path) {
     // is the same name as the program invocation but with ".runfiles" appended.
     std::string runfiles_srcdir =
         absl::StrCat(program_invocation_name, ".runfiles");
-    struct stat st;
+    struct stat st {};
     if (stat(runfiles_srcdir.c_str(), &st) == 0) {
       return JoinFilePaths(runfiles_srcdir, kEcclesiaRoot, path);
     }
@@ -140,7 +140,7 @@ std::string GetTestDataDependencyPath(absl::string_view path) {
 
 std::string GetTestTempdirPath() {
   char *tmpdir = std::getenv("TEST_TMPDIR");
-  Check(tmpdir, "TEST_TMPDIR environment variable is defined");
+  Check(tmpdir != nullptr, "TEST_TMPDIR environment variable is defined");
   return tmpdir;
 }
 

@@ -54,7 +54,7 @@ uint8_t SanitizeLogPage::completed_overwrite_passes() const {
 }
 
 bool SanitizeLogPage::written_after_sanitize() const {
-  return !sanitize_log_.global_data_erased().Read();
+  return sanitize_log_.global_data_erased().Read() == 0u;
 }
 
 uint8_t SanitizeLogPage::sanitize_action() const {
@@ -62,7 +62,7 @@ uint8_t SanitizeLogPage::sanitize_action() const {
 }
 
 bool SanitizeLogPage::allow_unrestricted_sanitize_exit() const {
-  return sanitize_log_.cdw10().ause().Read();
+  return sanitize_log_.cdw10().ause().Read() != 0u;
 }
 
 uint8_t SanitizeLogPage::overwrite_pass_count() const {
@@ -70,11 +70,11 @@ uint8_t SanitizeLogPage::overwrite_pass_count() const {
 }
 
 bool SanitizeLogPage::overwrite_invert_pattern() const {
-  return sanitize_log_.cdw10().oipbp().Read();
+  return sanitize_log_.cdw10().oipbp().Read() != 0u;
 }
 
 bool SanitizeLogPage::no_dealloc() const {
-  return sanitize_log_.cdw10().no_dealloc().Read();
+  return sanitize_log_.cdw10().no_dealloc().Read() != 0u;
 }
 
 uint32_t SanitizeLogPage::estimate_overwrite_time() const {

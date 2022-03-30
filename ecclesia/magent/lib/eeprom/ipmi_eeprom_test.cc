@@ -33,7 +33,6 @@ namespace {
 using ::testing::_;
 using ::testing::ContainerEq;
 using ::testing::DoAll;
-using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::Return;
 using ::testing::SetArgPointee;
@@ -96,11 +95,11 @@ TEST(IpmiEeprom, ReadSuccess) {
       .WillOnce(
           DoAll(SetArgPointee<1>(sizeof(mock_data)), Return(absl::OkStatus())));
   EXPECT_CALL(ipmi, ReadFru(_, 0, _))
-      .WillOnce(
-          [&mock_data](Unused, size_t offset, absl::Span<unsigned char> data) {
-            std::copy(mock_data.begin(), mock_data.end(), data.begin());
-            return absl::OkStatus();
-          });
+      .WillOnce([&mock_data](Unused, size_t /*offset*/,
+                             absl::Span<unsigned char> data) {
+        std::copy(mock_data.begin(), mock_data.end(), data.begin());
+        return absl::OkStatus();
+      });
 
   IpmiEeprom eeprom(&ipmi, kReadMode, 3);
 
@@ -116,7 +115,7 @@ TEST(IpmiEeprom, OffsetReadSuccess) {
   EXPECT_CALL(ipmi, GetFruSize)
       .WillOnce(DoAll(SetArgPointee<1>(5), Return(absl::OkStatus())));
   EXPECT_CALL(ipmi, ReadFru(_, 0, _))
-      .WillOnce([](Unused, size_t offset, absl::Span<unsigned char> data) {
+      .WillOnce([](Unused, size_t /*offset*/, absl::Span<unsigned char> data) {
         constexpr std::array<uint8_t, 5> mock_data = {5, 4, 3, 2, 1};
         std::copy(mock_data.begin(), mock_data.end(), data.begin());
         return absl::OkStatus();
@@ -136,7 +135,7 @@ TEST(IpmiEeprom, BadOffset) {
   EXPECT_CALL(ipmi, GetFruSize)
       .WillOnce(DoAll(SetArgPointee<1>(4), Return(absl::OkStatus())));
   EXPECT_CALL(ipmi, ReadFru(_, 0, _))
-      .WillOnce([](Unused, size_t offset, absl::Span<unsigned char> data) {
+      .WillOnce([](Unused, size_t /*offset*/, absl::Span<unsigned char> data) {
         constexpr std::array<uint8_t, 4> mock_data = {4, 3, 2, 1};
         std::copy(mock_data.begin(), mock_data.end(), data.begin());
         return absl::OkStatus();
@@ -156,7 +155,7 @@ TEST(IpmiEeprom, BadLen) {
   EXPECT_CALL(ipmi, GetFruSize)
       .WillOnce(DoAll(SetArgPointee<1>(4), Return(absl::OkStatus())));
   EXPECT_CALL(ipmi, ReadFru(_, 0, _))
-      .WillOnce([](Unused, size_t offset, absl::Span<unsigned char> data) {
+      .WillOnce([](Unused, size_t /*offset*/, absl::Span<unsigned char> data) {
         constexpr std::array<uint8_t, 4> mock_data = {4, 3, 2, 1};
         std::copy(mock_data.begin(), mock_data.end(), data.begin());
         return absl::OkStatus();
@@ -176,7 +175,7 @@ TEST(IpmiEeprom, OffsetPlusLenOverflows) {
   EXPECT_CALL(ipmi, GetFruSize)
       .WillOnce(DoAll(SetArgPointee<1>(4), Return(absl::OkStatus())));
   EXPECT_CALL(ipmi, ReadFru(_, 0, _))
-      .WillOnce([](Unused, size_t offset, absl::Span<unsigned char> data) {
+      .WillOnce([](Unused, size_t /*offset*/, absl::Span<unsigned char> data) {
         constexpr std::array<uint8_t, 4> mock_data = {4, 3, 2, 1};
         std::copy(mock_data.begin(), mock_data.end(), data.begin());
         return absl::OkStatus();

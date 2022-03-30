@@ -144,7 +144,7 @@ std::optional<int> SmbusEeprom2ByteAddr::ReadBytes(
 }
 
 std::optional<int> SmbusEeprom2ByteAddr::WriteBytes(
-    size_t offset, absl::Span<const unsigned char> data) const {
+    size_t /*offset*/, absl::Span<const unsigned char> /*data*/) const {
   return std::nullopt;
 }
 

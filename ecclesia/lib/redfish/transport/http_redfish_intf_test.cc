@@ -353,7 +353,7 @@ TEST_F(HttpRedfishInterfaceTest, ForEachPropertyTestStop) {
   std::vector<std::pair<std::string, std::string>> all_properties;
   int called = 0;
   chassis.AsObject()->ForEachProperty(
-      [&called](absl::string_view name, RedfishVariant value) {
+      [&called](absl::string_view /*name*/, RedfishVariant /*value*/) {
         ++called;
         return RedfishIterReturnValue::kStop;
       });

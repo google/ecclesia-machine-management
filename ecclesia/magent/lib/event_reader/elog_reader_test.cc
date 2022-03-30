@@ -95,7 +95,7 @@ class ElogReaderTest : public ::testing::Test {
     // Now that the system event log structure is setup, validation should
     // succeed.
     assert(event_log_view.Ok());
-    SmbiosStructureInfo info;
+    SmbiosStructureInfo info{};
     info.formatted_data_start = system_event_log_entry_.data();
     info.unformed_data_start = info.formatted_data_start + smbios_struct_size;
 

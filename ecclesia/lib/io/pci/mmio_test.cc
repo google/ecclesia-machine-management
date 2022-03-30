@@ -95,8 +95,8 @@ class PciMmioRegionTest : public testing::Test {
   static constexpr int kBaseAddr = 0x80000;
 
   std::string mmconfig_filename_;
-  uint8_t *mmconfig_;
-  int size_;
+  uint8_t *mmconfig_{};
+  int size_{};
 };
 
 TEST_F(PciMmioRegionTest, ReadConfigDev0Success) {

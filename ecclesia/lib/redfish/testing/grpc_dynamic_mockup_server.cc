@@ -115,14 +115,14 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Patch(
       redfish_intf_->PatchUri(request->url(), message), response));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Put(
-    grpc::ServerContext* context, const Request* request,
-    redfish::v1::Response* response) {
+    grpc::ServerContext* /*context*/, const Request* /*request*/,
+    redfish::v1::Response* /*response*/) {
   return StatusToGrpcStatus(
       absl::UnimplementedError("Put RPC is not implemented yet."));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Delete(
-    grpc::ServerContext* context, const Request* request,
-    redfish::v1::Response* response) {
+    grpc::ServerContext* /*context*/, const Request* /*request*/,
+    redfish::v1::Response* /*response*/) {
   // DELETE.
   return StatusToGrpcStatus(
       absl::UnimplementedError("Delete RPC is not implemented yet."));

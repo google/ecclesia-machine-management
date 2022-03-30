@@ -162,7 +162,7 @@ constexpr absl::string_view kSweet16CableAssemblyName = "sweet16_cable";
 constexpr absl::string_view kCascadeLakeAssemblyName = "cascadelake";
 
 struct CpuPcieRoot {
-  uint pcie_root_bridge_num;
+  uint pcie_root_bridge_num{};
   std::string processor_id;
 };
 

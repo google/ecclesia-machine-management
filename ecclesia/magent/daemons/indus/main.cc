@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
                       .name = "motherboard",
                       .size = {.type = ecclesia::Eeprom::SizeType::kFixed,
                                .size = 8 * 1024},
-                      .mode = {.readable = 1, .writable = 0},
+                      .mode = {.readable = true, .writable = false},
                       .get_device =
                           [&]() -> std::optional<ecclesia::SmbusDevice> {
                         auto eeprom_smbus_bus =
@@ -261,7 +261,7 @@ int main(int argc, char **argv) {
             std::make_unique<ecclesia::SmbusEeprom2K>(
                 ecclesia::SmbusEeprom::Option{
                     .name = "spicy16_intp0",
-                    .mode = {.readable = 1, .writable = 0},
+                    .mode = {.readable = true, .writable = false},
                     .get_device =
                         [&]() -> std::optional<ecclesia::SmbusDevice> {
                       auto eeprom_smbus_bus =
@@ -281,7 +281,7 @@ int main(int argc, char **argv) {
             std::make_unique<ecclesia::SmbusEeprom2K>(
                 ecclesia::SmbusEeprom::Option{
                     .name = "spicy16_intp4",
-                    .mode = {.readable = 1, .writable = 0},
+                    .mode = {.readable = true, .writable = false},
                     .get_device =
                         [&]() -> std::optional<ecclesia::SmbusDevice> {
                       auto eeprom_smbus_bus =
@@ -346,8 +346,7 @@ int main(int argc, char **argv) {
   if (server != nullptr && success) {
     server->WaitForTermination();
     return EXIT_SUCCESS;
-  } else {
-    ecclesia::ErrorLog() << "Failed to start the server.";
-    return EXIT_FAILURE;
   }
+  ecclesia::ErrorLog() << "Failed to start the server.";
+  return EXIT_FAILURE;
 }

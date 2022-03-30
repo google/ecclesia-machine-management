@@ -81,7 +81,7 @@ TEST(IdentifyNamespaceOperatorEqualsTest, AllFieldsAreConsidered) {
   IdentifyNamespace d{1, 9, 3};
   EXPECT_NE(a, d);
 
-  IdentifyNamespace e;
+  IdentifyNamespace e{};
   EXPECT_NE(a, e);
 }
 

@@ -96,7 +96,7 @@ class ServiceRootTest : public ::testing::Test {
  protected:
   std::unique_ptr<HTTPServerInterface> server_;
   std::unique_ptr<ServiceRoot> service_root_;
-  int port_;
+  int port_{};
 
  private:
   void InitServer() {

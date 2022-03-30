@@ -52,8 +52,8 @@ TEST_F(PersistentUsageMapTest, CreateWithMissingFileIsEmpty) {
   // Make sure the map has no entries.
   bool has_entries = false;
   usage_map.WithEntries(
-      [&](const std::string &operation, const std::string &user,
-          const absl::Time &timestamp) { has_entries = true; });
+      [&](const std::string & /*operation*/, const std::string & /*user*/,
+          const absl::Time & /*timestamp*/) { has_entries = true; });
   EXPECT_FALSE(has_entries);
   EXPECT_THAT(usage_map.GetMostRecentTimestamp(), Eq(absl::InfinitePast()));
 }
@@ -341,8 +341,8 @@ TEST_F(PersistentUsageMapTest, LoadingRecordsDoesNotTriggerWrites) {
   // here as other tests do that, this is just for sanity.
   int num_entries = 0;
   second_map.WithEntries(
-      [&](const std::string &operation, const std::string &user,
-          const absl::Time &timestamp) { num_entries += 1; });
+      [&](const std::string & /*operation*/, const std::string & /*user*/,
+          const absl::Time & /*timestamp*/) { num_entries += 1; });
   EXPECT_THAT(num_entries, Eq(3));
   EXPECT_THAT(second_map.GetMostRecentTimestamp(),
               Eq(first_map.GetMostRecentTimestamp()));
@@ -393,7 +393,7 @@ TEST_F(PersistentUsageMapTest, WrittenFileIsEmptyWithZeroLimit) {
   int num_entries = 0;
   usage_map.WithEntries([&](const std::string &operation,
                             const std::string &user,
-                            const absl::Time &timestamp) {
+                            const absl::Time & /*timestamp*/) {
     num_entries += 1;
     EXPECT_THAT(user, Eq("user"));
     EXPECT_THAT(operation, AnyOf("rpc1", "rpc2"));
@@ -471,8 +471,8 @@ TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
   for (PersistentUsageMap *usage_map : all_maps) {
     int num_entries = 0;
     usage_map->WithEntries([&](const std::string &operation,
-                               const std::string &user,
-                               const absl::Time &timestamp) {
+                               const std::string & /*user*/,
+                               const absl::Time & /*timestamp*/) {
       num_entries += 1;
       EXPECT_THAT(operation, AnyOf("rpc1", "rpc2", "rpc3"));
     });
@@ -496,8 +496,8 @@ TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
   for (PersistentUsageMap *usage_map : {&map_74}) {
     int num_entries = 0;
     usage_map->WithEntries([&](const std::string &operation,
-                               const std::string &user,
-                               const absl::Time &timestamp) {
+                               const std::string & /*user*/,
+                               const absl::Time & /*timestamp*/) {
       num_entries += 1;
       EXPECT_THAT(operation, AnyOf("rpc1", "rpc2", "rpc3"));
     });
@@ -507,8 +507,8 @@ TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
   for (PersistentUsageMap *usage_map : {&map_73, &map_54}) {
     int num_entries = 0;
     usage_map->WithEntries([&](const std::string &operation,
-                               const std::string &user,
-                               const absl::Time &timestamp) {
+                               const std::string & /*user*/,
+                               const absl::Time & /*timestamp*/) {
       num_entries += 1;
       EXPECT_THAT(operation, AnyOf("rpc2", "rpc3"));
     });
@@ -518,8 +518,8 @@ TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
   for (PersistentUsageMap *usage_map : {&map_53, &map_28}) {
     int num_entries = 0;
     usage_map->WithEntries([&](const std::string &operation,
-                               const std::string &user,
-                               const absl::Time &timestamp) {
+                               const std::string & /*user*/,
+                               const absl::Time & /*timestamp*/) {
       num_entries += 1;
       EXPECT_THAT(operation, Eq("rpc3"));
     });
@@ -527,9 +527,9 @@ TEST_F(PersistentUsageMapTest, WrittenFileUnderPreciseSizeLimits) {
   }
   // Verify that the smallest map has no entries.
   for (PersistentUsageMap *usage_map : {&map_27}) {
-    usage_map->WithEntries([&](const std::string &operation,
-                               const std::string &user,
-                               const absl::Time &timestamp) {
+    usage_map->WithEntries([&](const std::string & /*operation*/,
+                               const std::string & /*user*/,
+                               const absl::Time & /*timestamp*/) {
       ADD_FAILURE() << "the smallest map should contain nothing";
     });
   }

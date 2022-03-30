@@ -146,7 +146,8 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
     if (result_.body.is_number_integer()) {
       *val = result_.body.get<int32_t>();
       return true;
-    } else if (result_.body.is_number()) {
+    }
+    if (result_.body.is_number()) {
       double trans_tmp = std::round(result_.body.get<double>());
       if (trans_tmp >
               static_cast<double>(std::numeric_limits<int32_t>::max()) ||
@@ -163,7 +164,8 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
     if (result_.body.is_number_integer()) {
       *val = result_.body.get<int64_t>();
       return true;
-    } else if (result_.body.is_number()) {
+    }
+    if (result_.body.is_number()) {
       double trans_tmp = std::round(result_.body.get<double>());
       if (trans_tmp >
               static_cast<double>(std::numeric_limits<int64_t>::max()) ||
@@ -214,9 +216,7 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
 RedfishVariant ResolveReference(int reuse_code, nlohmann::json json,
                                 RedfishInterface *intf,
                                 RedfishExtendedPath path,
-                                CacheState cache_state,
-                                absl::string_view source,
-                                GetParams params = {}) {
+                                CacheState cache_state, GetParams params = {}) {
   std::string reference;
   if (json.is_object()) {
     if (auto odata = json.find(PropertyOdataId::Name);
@@ -278,7 +278,7 @@ class HttpIntfObjectImpl : public RedfishObject {
   }
   std::string DebugString() override { return result_.body.dump(); }
 
-  std::unique_ptr<RedfishObject> EnsureFreshPayload(GetParams params) {
+  std::unique_ptr<RedfishObject> EnsureFreshPayload(GetParams /*params*/) {
     if (cache_state_ == kIsFresh) {
       return std::make_unique<HttpIntfObjectImpl>(intf_, path_, result_,
                                                   cache_state_);
@@ -519,14 +519,14 @@ class HttpRedfishInterface : public RedfishInterface {
     std::string full_redfish_path = GetUriWithQueryParameters(uri, params);
     RedfishCachedGetterInterface::GetResult result =
         cache_->CachedGet(full_redfish_path);
-    return GetUriHelper(uri, std::move(params), std::move(result));
+    return GetUriHelper(uri, std::move(result));
   }
 
   RedfishVariant UncachedGetUri(absl::string_view uri,
                                 GetParams params) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
     auto get_result = cache_->UncachedGet(uri);
-    return GetUriHelper(uri, std::move(params), std::move(get_result));
+    return GetUriHelper(uri, std::move(get_result));
   }
 
   RedfishVariant PostUri(
@@ -586,7 +586,7 @@ class HttpRedfishInterface : public RedfishInterface {
 
   // Helper function to resolve JSON pointers after doing a GET.
   RedfishVariant GetUriHelper(
-      absl::string_view uri, const GetParams &params,
+      absl::string_view uri,
       ecclesia::RedfishCachedGetterInterface::GetResult get_res) {
     if (!get_res.result.ok()) return RedfishVariant(get_res.result.status());
 

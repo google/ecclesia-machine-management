@@ -45,7 +45,8 @@ int NaturalSortCmp(absl::string_view lhs, absl::string_view rhs) {
 
       if (lhs_num != rhs_num) {
         return lhs_num - rhs_num;
-      } else if (lhs_seq_length != rhs_seq_length) {
+      }
+      if (lhs_seq_length != rhs_seq_length) {
         // Only case when there are leading zeroes, in which case we want the
         // one with more leading zeroes to be less (longer sequence)
         return rhs_seq_length - lhs_seq_length;

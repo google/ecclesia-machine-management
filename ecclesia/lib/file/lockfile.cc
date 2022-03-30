@@ -89,7 +89,7 @@ absl::StatusOr<LockedLockFile> LockFile::TryLock() {
 }
 
 absl::StatusOr<absl::Time> LockFile::GetModTime() {
-  struct stat st;
+  struct stat st {};
   if (stat(path_.c_str(), &st) != 0) {
     return PosixErrorToStatus(
         absl::StrFormat("unable to get stat from file: %s", path_));
@@ -127,7 +127,8 @@ absl::StatusOr<std::string> LockFile::Read() {
       if (errno == EINTR) continue;
       return PosixErrorToStatus(
           absl::StrFormat("failed to read data from: %s", path_));
-    } else if (n == 0) {
+    }
+    if (n == 0) {
       break;  // Nothing left to read.
     } else {
       value.append(buffer, n);

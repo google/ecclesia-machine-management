@@ -40,7 +40,7 @@ using ::testing::HasSubstr;
 constexpr uint8_t kFormatVersion = 1;
 
 // This is handcrafted FRU data based off of a real system.
-static uint8_t prefab_frudata[] = {
+uint8_t prefab_frudata[] = {
     0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xfe, 0x01, 0x07, 0x00,
     0xb3, 0x1e, 0x63, 0xc7, 0x67, 0x6d, 0x61, 0x6b, 0x65, 0x72, 0x00,
     0xc7, 0x67, 0x70, 0x72, 0x6f, 0x64, 0x73, 0x00, 0xcb, 0x30, 0x38,
@@ -51,7 +51,7 @@ static uint8_t prefab_frudata[] = {
 
 // This is a handcrafted problematic FRU where the board area is not terminated
 // by a 0xc1 field.
-static uint8_t no_area_termination_frudata[] = {
+uint8_t no_area_termination_frudata[] = {
     0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xfe, 0x01, 0x07, 0x19,
     0x31, 0x7e, 0x86, 0xc7, 0x67, 0x6d, 0x61, 0x6b, 0x65, 0x72, 0x00,
     0xc9, 0x4c, 0x65, 0x61, 0x66, 0x4c, 0x6f, 0x63, 0x6b, 0x00, 0xd0,
@@ -61,13 +61,13 @@ static uint8_t no_area_termination_frudata[] = {
 };
 
 // Helper functions to convert FRU time format to time_t and back.
-static const time_t kFruEpoch = 820454400;
-static time_t TimeFromFruTime(uint32_t fru_time) {
+const time_t kFruEpoch = 820454400;
+time_t TimeFromFruTime(uint32_t fru_time) {
   return (fru_time * 60) + kFruEpoch;
 }
 
 // Helper function to calculate a rolling 8-bit checksum.
-static uint8_t Rolling8Csum(const uint8_t *image, size_t len) {
+uint8_t Rolling8Csum(const uint8_t *image, size_t len) {
   uint8_t sum = 0;
   for (size_t i = 0; i < len; ++i) {
     sum += *(image + i);
@@ -76,7 +76,7 @@ static uint8_t Rolling8Csum(const uint8_t *image, size_t len) {
 }
 
 // Helper function to make a FruField from a string.
-static FruField FruFieldFromString(const std::string &str) {
+FruField FruFieldFromString(const std::string &str) {
   FruField f;
   f.SetData(str);
   f.SetType(FruField::kTypeLanguageBased);
@@ -84,8 +84,8 @@ static FruField FruFieldFromString(const std::string &str) {
 }
 
 // Helper function to make a FruField from a raw data and type
-static FruField FruFieldFromRawData(absl::Span<unsigned char> data,
-                                    const FruField::Type &type) {
+FruField FruFieldFromRawData(absl::Span<unsigned char> data,
+                             const FruField::Type &type) {
   FruField f;
   f.SetData(data);
   f.SetType(type);
@@ -93,8 +93,8 @@ static FruField FruFieldFromRawData(absl::Span<unsigned char> data,
 }
 
 // Helper to check if two field locations are equal.
-static bool CompareFruFieldLocations(const FruArea::FieldLocation &a,
-                                     const FruArea::FieldLocation &b) {
+bool CompareFruFieldLocations(const FruArea::FieldLocation &a,
+                              const FruArea::FieldLocation &b) {
   return (a.offset == b.offset) && (a.size == b.size);
 }
 
