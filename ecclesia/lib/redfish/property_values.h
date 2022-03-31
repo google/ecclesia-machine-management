@@ -33,6 +33,8 @@ inline constexpr char kEntryTypeOem[] = "Oem";
 inline constexpr char kOemRecordFormatBmc[] = "BMC Device Entry";
 inline constexpr char kCertificateTypePEM[] = "PEM";
 inline constexpr char kCertificateTypePEMchain[] = "PEMchain";
+inline constexpr char kProcessorTypeAccelerator[] = "Accelerator";
+inline constexpr char kProcessorTypeCpu[] = "CPU";
 }  // namespace ecclesia
 
 namespace ecclesia {
