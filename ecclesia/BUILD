@@ -107,3 +107,21 @@ package_group(
     name = "mmanager_functest_users",
     packages = ["//ecclesia/mmanager/testing/..."],
 )
+
+# Machine manager shared resource libraries
+#
+# The libraries which are visible to this group are intended for the very
+# limited use case where code requires dependencies on ALL resource
+# identifiers or RPC messages, and should not be utilized by clients
+# outside of mmanager.
+#
+# The default and preferred option for including resource dependencies should
+# always be directly importing only the resource messages explicitly required
+# by code, wherever possible.
+package_group(
+    name = "mmanager_resource_library_users",
+    packages = [
+        "//ecclesia/mmanager/mock/...",
+        "//ecclesia/mmanager/service/...",
+    ],
+)
