@@ -145,7 +145,7 @@ cc_library(
     name = "nvme_mock",
     testonly = True,
     hdrs = ["nvme_mock.h"],
-    visibility = ["//ecclesia:magent_library_users"],
+    visibility = ["//visibility:private"],
     deps = [
         ":nvme",
         "@com_google_absl//absl/status:statusor",

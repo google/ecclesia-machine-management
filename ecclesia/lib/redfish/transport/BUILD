@@ -31,7 +31,7 @@ cc_library(
     name = "proto_variant",
     srcs = ["proto_variant.cc"],
     hdrs = ["proto_variant.h"],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
     deps = [
         "//ecclesia/lib/redfish:interface",
         "@com_google_absl//absl/functional:function_ref",
@@ -47,7 +47,7 @@ cc_library(
 cc_test(
     name = "proto_variant_test",
     srcs = ["proto_variant_test.cc"],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
     deps = [
         ":proto_variant",
         "//ecclesia/lib/protobuf:parse",
