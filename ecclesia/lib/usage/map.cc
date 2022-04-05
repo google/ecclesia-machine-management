@@ -42,6 +42,7 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
+#include "ecclesia/lib/time/proto.h"
 #include "ecclesia/lib/usage/serialization.pb.h"
 #include "riegeli/bytes/fd_reader.h"
 #include "riegeli/bytes/fd_writer.h"
@@ -50,30 +51,6 @@
 
 namespace ecclesia {
 namespace {
-
-// Functions to convert between absl time and proto time.
-absl::Time AbslTimeFromProtoTime(google::protobuf::Timestamp timestamp) {
-  // Protobuf time is just a combo of seconds and nanoseconds so we can
-  // construct time by just taking the unix epoch and splicing in those two
-  // units.
-  return absl::UnixEpoch() + absl::Seconds(timestamp.seconds()) +
-         absl::Nanoseconds(timestamp.nanos());
-}
-google::protobuf::Timestamp AbslTimeToProtoTime(absl::Time timestamp) {
-  google::protobuf::Timestamp proto_timestamp;
-  // Converting time directly into seconds and nanoseconds it a bit tricky if we
-  // want to avoid overflow on the nanoseconds. It's a little easier if we
-  // instead convert to duration and use division and modulus operators. We can
-  // think of the time as just being a duration since the unix epoch.
-  //
-  // Note that this does not handle infinite past (or even anything pre-epoch)
-  // or infinite future. Neither of those times are used in the persistent map.
-  absl::Duration duration = timestamp - absl::UnixEpoch();
-  proto_timestamp.set_seconds(duration / absl::Seconds(1));
-  duration %= absl::Seconds(1);
-  proto_timestamp.set_nanos(duration / absl::Nanoseconds(1));
-  return proto_timestamp;
-}
 
 // Given an unsigned integer, compute the number of bytes required to encode it
 // when serialized out to protobufs. Accepts a uint64_t but all of the standard
@@ -219,7 +196,11 @@ std::string PersistentUsageMap::SerializeAndTrimMap() {
         PersistentUsageMapProto::Entry *entry = proto_map.add_entries();
         entry->set_operation(map_iter->first.operation);
         entry->set_user(map_iter->first.user);
-        *entry->mutable_timestamp() = AbslTimeToProtoTime(map_iter->second);
+        // We shouldn't get an invalid timestamp, but if we do just default to
+        // an empty proto time.
+        *entry->mutable_timestamp() =
+            AbslTimeToProtoTime(map_iter->second)
+                .value_or(google::protobuf::Timestamp());
         // Next entry in the map.
         ++map_iter;
       } else {

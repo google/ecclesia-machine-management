@@ -20,6 +20,7 @@ cc_library(
     deps = [
         ":serialization_cc_proto",
         "//ecclesia/lib/logging",
+        "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/container:flat_hash_map",
