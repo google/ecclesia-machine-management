@@ -17,7 +17,5 @@ pkg_tar(
 filegroup(
     name = "assemblies_json_files",
     srcs = glob(["assemblies/*.json"]),
-    visibility = [
-        "//ecclesia:magent_library_users",
-    ],
+    visibility = ["//visibility:private"],
 )
