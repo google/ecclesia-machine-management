@@ -143,6 +143,8 @@ inline constexpr char kRfPropertyResponderAuthentication[] =
 inline constexpr char kRfPropertyComponentCertificate[] =
     "ComponentCertificate";
 
+inline constexpr char kRfResourceTypeProcessorMetrics[] = "ProcessorMetrics";
+
 DEFINE_REDFISH_RESOURCE(ResourceCertificate, "Certificate");
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
 DEFINE_REDFISH_RESOURCE(ResourceChassis, "Chassis");
@@ -244,6 +246,8 @@ DEFINE_REDFISH_PROPERTY(PropertyProcessorIdFamily, std::string,
                         "EffectiveFamily");
 DEFINE_REDFISH_PROPERTY(PropertyProcessorIdModel, std::string,
                         "EffectiveModel");
+DEFINE_REDFISH_PROPERTY(PropertyProcessorIdMicrocode, std::string,
+                        "MicrocodeInfo");
 DEFINE_REDFISH_PROPERTY(PropertyDataSourceUri, std::string, "DataSourceUri");
 DEFINE_REDFISH_PROPERTY(PropertyRedfishActionInfo, std::string,
                         "@Redfish.ActionInfo");
@@ -291,6 +295,14 @@ DEFINE_REDFISH_PROPERTY(PropertyMeasurementIndices, std::vector<int64_t>,
                         "MeasurementIndices");
 DEFINE_REDFISH_PROPERTY(PropertyModel, std::string, "Model");
 DEFINE_REDFISH_PROPERTY(PropertyProcessorType, std::string, "ProcessorType");
+DEFINE_REDFISH_PROPERTY(PropertyCorrectableCoreErrorCount, int,
+                        "CorrectableCoreErrorCount");
+DEFINE_REDFISH_PROPERTY(PropertyUncorrectableCoreErrorCount, int,
+                        "UncorrectableCoreErrorCount");
+DEFINE_REDFISH_PROPERTY(PropertyCorrectableOtherErrorCount, int,
+                        "CorrectableOtherErrorCount");
+DEFINE_REDFISH_PROPERTY(PropertyUncorrectableOtherErrorCount, int,
+                        "UncorrectableOtherErrorCount");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");

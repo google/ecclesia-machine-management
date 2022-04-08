@@ -42,6 +42,22 @@ inline std::optional<int32_t> RedfishStrTo32Base(const RedfishObject &obj) {
   return number;
 }
 
+// Read string field from a redfish object and convert it to a specified int
+// type. The string format is assumed to be a hex string.
+template <typename PropertyT, typename IntType,
+          std::enable_if_t<
+              std::is_same_v<typename PropertyT::type, std::string>, int> = 0>
+inline std::optional<IntType> RedfishHexStrPropertyToInt(
+    const RedfishObject &obj) {
+  auto maybe_value = obj.GetNodeValue<PropertyT>();
+  IntType number;
+  if (!maybe_value.has_value() ||
+      !absl::numbers_internal::safe_strtoi_base(*maybe_value, &number, 16)) {
+    return std::nullopt;
+  }
+  return number;
+}
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_NUMBERS_H_
