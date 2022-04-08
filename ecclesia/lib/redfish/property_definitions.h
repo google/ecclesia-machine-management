@@ -266,6 +266,10 @@ DEFINE_REDFISH_PROPERTY(PropertyCorrectableECCErrorCount, int,
                         "CorrectableECCErrorCount");
 DEFINE_REDFISH_PROPERTY(PropertyUncorrectableECCErrorCount, int,
                         "UncorrectableECCErrorCount");
+DEFINE_REDFISH_PROPERTY(PropertyIndetermineCorrectableErrorCount, int,
+                        "IndeterminateCorrectableErrorCount");
+DEFINE_REDFISH_PROPERTY(PropertyIndetermineUncorrectableErrorCount, int,
+                        "IndeterminateUncorrectableErrorCount");
 DEFINE_REDFISH_PROPERTY(PropertyUserName, std::string, "UserName");
 DEFINE_REDFISH_PROPERTY(PropertyPassword, std::string, "Password");
 DEFINE_REDFISH_PROPERTY(PropertyTargetComponentURI, std::string,
