@@ -28,41 +28,6 @@ cc_library(
 )
 
 cc_library(
-    name = "proto_variant",
-    srcs = ["proto_variant.cc"],
-    hdrs = ["proto_variant.h"],
-    visibility = ["//visibility:public"],
-    deps = [
-        "//ecclesia/lib/redfish:interface",
-        "@com_google_absl//absl/functional:function_ref",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:optional",
-        "@com_google_protobuf//:protobuf",
-    ],
-)
-
-cc_test(
-    name = "proto_variant_test",
-    srcs = ["proto_variant_test.cc"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":proto_variant",
-        "//ecclesia/lib/protobuf:parse",
-        "//ecclesia/lib/redfish:interface",
-        "//ecclesia/lib/testing:status",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/time",
-        "@com_google_absl//absl/types:optional",
-        "@com_google_googletest//:gtest_main",
-        "@com_google_protobuf//:protobuf",
-    ],
-)
-
-cc_library(
     name = "grpc_dynamic_fake_server",
     testonly = True,
     srcs = ["grpc_dynamic_fake_server.cc"],
