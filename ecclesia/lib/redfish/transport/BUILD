@@ -112,6 +112,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":interface",
+        "//ecclesia/lib/complexity_tracker",
         "//ecclesia/lib/http:codes",
         "//ecclesia/lib/time:clock",
         "@com_google_absl//absl/base:core_headers",
