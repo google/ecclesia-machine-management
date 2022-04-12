@@ -34,13 +34,15 @@ using ::testing::Eq;
 
 TEST(GrpcRedfishTransport, Get) {
   absl::flat_hash_map<std::string, std::string> headers;
-  int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
-                                        "[::1]", port);
+                                        "[::1]", 0);
   StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
-  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
-                                              options.GetChannelCredentials());
+  auto port = mockup_server.Port();
+  ASSERT_TRUE(port.has_value());
+  auto transport =
+      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port),
+                                 {}, options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
   absl::string_view expected_str = R"json({
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
@@ -68,13 +70,15 @@ TEST(GrpcRedfishTransport, Get) {
 
 TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   absl::flat_hash_map<std::string, std::string> headers;
-  int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
-                                        "[::1]", port);
+                                        "[::1]", 0);
   StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
-  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
-                                              options.GetChannelCredentials());
+  auto port = mockup_server.Port();
+  ASSERT_TRUE(port.has_value());
+  auto transport =
+      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port),
+                                 {}, options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
   nlohmann::json expected_post =
       nlohmann::json::parse(R"json({})json", nullptr, false);
@@ -152,25 +156,29 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
 }
 
 TEST(GrpcRedfishTransport, GetRootUri) {
-  int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
-                                        "[::1]", port);
+                                        "[::1]", 0);
   StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
-  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
-                                              options.GetChannelCredentials());
+  auto port = mockup_server.Port();
+  ASSERT_TRUE(port.has_value());
+  auto transport =
+      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port),
+                                 {}, options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
   EXPECT_EQ((*transport)->GetRootUri(), "/redfish/v1");
 }
 
 TEST(GrpcRedfishTransport, ResourceNotFound) {
-  int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
-                                        "[::1]", port);
+                                        "[::1]", 0);
   StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
-  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
-                                              options.GetChannelCredentials());
+  auto port = mockup_server.Port();
+  ASSERT_TRUE(port.has_value());
+  auto transport =
+      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port),
+                                 {}, options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
 
   auto result_get = (*transport)->Get("/redfish/v1/Chassis/noexist");
@@ -182,13 +190,15 @@ TEST(GrpcRedfishTransport, ResourceNotFound) {
 }
 
 TEST(GrpcRedfishTransport, NotAllowed) {
-  int port = ecclesia::FindUnusedPortOrDie();
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
-                                        "[::1]", port);
+                                        "[::1]", 0);
   StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
-  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", port), {},
-                                              options.GetChannelCredentials());
+  auto port = mockup_server.Port();
+  ASSERT_TRUE(port.has_value());
+  auto transport =
+      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port),
+                                 {}, options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
 
   std::string_view data_post = R"json({

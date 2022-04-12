@@ -75,6 +75,9 @@ class GrpcDynamicMockupServer {
   // Then, provide the name of the mockup .shar file. Currently only mockups
   // defined in redfish_mockups are supported. For example:
   //   mockup_sar = "indus_hmb_cn_mockup.shar"
+  //
+  // Passing a port value of 0 will have the server try to acquire its own
+  // unused port.
   GrpcDynamicMockupServer(absl::string_view mockup_shar, absl::string_view host,
                           int port);
   GrpcDynamicMockupServer(absl::string_view mockup_shar, absl::string_view host,
@@ -88,6 +91,8 @@ class GrpcDynamicMockupServer {
                           std::shared_ptr<grpc::ServerCredentials> credentials);
 
   ~GrpcDynamicMockupServer();
+
+  std::optional<int> Port() { return port_; }
 
   // Register a custom handler to respond to a given REST request for a URI.
   using HandlerFunc = std::function<grpc::Status(
@@ -107,6 +112,8 @@ class GrpcDynamicMockupServer {
   std::unique_ptr<grpc::Server> server_;
   // The proxy HttpServer serves Redfish mockup data
   TestingMockupServer mockup_server_;
+  // If used, the TCP port acquired by the server.
+  std::optional<int> port_;
 
   // Private implementation of the Redfish GRPC service, with helper methods
   // defined for overwriting the REST operations with custom handlers.

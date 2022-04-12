@@ -170,9 +170,14 @@ GrpcDynamicMockupServer::GrpcDynamicMockupServer(
           mockup_server_.RedfishClientInterface())) {
   std::string server_address = absl::StrCat(host, ":", port);
   grpc::ServerBuilder builder;
-  builder.AddListeningPort(server_address, std::move(credentials));
+  int selected_port = 0;
+  builder.AddListeningPort(server_address, std::move(credentials),
+                           &selected_port);
   builder.RegisterService(redfish_v1_impl_.get());
   server_ = builder.BuildAndStart();
+  if (selected_port != 0) {
+    port_ = selected_port;
+  }
 }
 
 GrpcDynamicMockupServer::GrpcDynamicMockupServer(absl::string_view mockup_shar,
@@ -194,9 +199,7 @@ GrpcDynamicMockupServer::GrpcDynamicMockupServer(
   server_ = builder.BuildAndStart();
 }
 
-GrpcDynamicMockupServer::~GrpcDynamicMockupServer() {
-  ClearHandlers();
-}
+GrpcDynamicMockupServer::~GrpcDynamicMockupServer() { ClearHandlers(); }
 
 void GrpcDynamicMockupServer::ClearHandlers() {
   redfish_v1_impl_->ClearHandlers();
