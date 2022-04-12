@@ -25,13 +25,13 @@ RedfishQueryParamExpand::RedfishQueryParamExpand(
 std::string RedfishQueryParamExpand::ToString() const {
   std::string expand_type;
   switch (type_) {
-    case ExpandType::kAll:
+    case ExpandType::kBoth:
       expand_type = "*";
       break;
-    case ExpandType::kNoResources:
+    case ExpandType::kNotLinks:
       expand_type = ".";
       break;
-    case ExpandType::kResourcesOnly:
+    case ExpandType::kLinks:
       expand_type = "~";
       break;
   }

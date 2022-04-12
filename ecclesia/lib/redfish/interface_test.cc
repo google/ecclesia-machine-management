@@ -134,7 +134,7 @@ TEST(RedfishVariant, PropertyError) {
 
 TEST(RedfishVariant, RedfishQueryParamExpand) {
   RedfishQueryParamExpand expand(
-      {.type = RedfishQueryParamExpand::ExpandType::kAll, .levels = 2});
+      {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 2});
   EXPECT_EQ(expand.ToString(), "$expand=*($levels=2)");
 }
 

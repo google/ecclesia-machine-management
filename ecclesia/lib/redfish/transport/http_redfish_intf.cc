@@ -438,7 +438,7 @@ std::unique_ptr<RedfishIterable> HttpIntfVariantImpl::AsIterable(
       (is_members_array || is_collection_iterable)) {
     RedfishVariant expanded_variant = intf_->CachedGetUri(
         path_.uri, GetParams{.query_params = {RedfishQueryParamExpand(
-                                 {.type = RedfishQueryParamExpand::kAll})}});
+                                 {.type = RedfishQueryParamExpand::kBoth})}});
     // Ignore the result if there is a failure or result code changed
     if (expanded_variant.status().ok() &&
         expanded_variant.httpcode() == result_.code) {

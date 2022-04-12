@@ -70,10 +70,10 @@ class GetParamQueryInterface {
 // See RedFish spec 7.3.1. Use of the $expand query parameter
 class RedfishQueryParamExpand : public GetParamQueryInterface {
  public:
-  enum ExpandType { kAll, kNoResources, kResourcesOnly };
+  enum ExpandType { kBoth, kNotLinks, kLinks };
 
   struct Params {
-    ExpandType type = ExpandType::kResourcesOnly;
+    ExpandType type = ExpandType::kLinks;
     int levels = 1;
   };
 
