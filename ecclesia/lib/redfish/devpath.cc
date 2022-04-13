@@ -81,6 +81,34 @@ std::optional<std::string> GetSensorDevpathFromNodeTopology(
   return std::nullopt;
 }
 
+std::optional<std::string> GetSlotDevpathFromNodeTopology(
+    RedfishObject* obj, std::string parent_uri, const NodeTopology& topology) {
+  // Append the parent URL to each SLOT Service label.
+  std::vector<absl::string_view> uri_parts = absl::StrSplit(parent_uri, '/');
+  // The URI should be of the format
+  // /redfish/v1/Chassis/<chassis-id>/PCIeSlots
+  // So we can resize the parts down to /redfish/v1/Chassis/<chassis-id> which
+  // is equivalent to five parts: "", "redfish", "v1", "Chassis",
+  // "<chassis-id>"
+  if (uri_parts.size() > 5 && uri_parts[1] == kRfPropertyRedfish &&
+      uri_parts[2] == kRfPropertyV1 && uri_parts[3] == kRfPropertyChassis) {
+    uri_parts.resize(5);
+    auto parent_devpath =
+        GetDevpathForUri(topology, absl::StrJoin(uri_parts, "/"));
+    if (parent_devpath.has_value()) {
+      const auto slot_location =
+          (*obj)[kRfPropertyLocation][kRfPropertyPartLocation].AsObject();
+      if (slot_location) {
+        auto label = slot_location->GetNodeValue<PropertyServiceLabel>();
+        if (label.has_value()) {
+          return absl::StrCat(*parent_devpath, ":connector:", *label);
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 std::optional<std::string> GetManagerDevpathFromNodeTopology(
     RedfishObject* obj, const NodeTopology& topology) {
   auto manager_in_chassis =

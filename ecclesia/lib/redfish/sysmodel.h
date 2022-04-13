@@ -142,7 +142,10 @@ class Sysmodel {
       Token<ResourceComponentIntegrity>,
       absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
           result_callback);
-
+  void QueryAllResourceInternal(
+      Token<ResourcePcieSlots>,
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
   RedfishInterface *redfish_intf_;
 };
 

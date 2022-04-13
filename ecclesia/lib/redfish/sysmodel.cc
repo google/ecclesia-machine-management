@@ -309,4 +309,17 @@ void Sysmodel::QueryAllResourceInternal(
       [&](auto &obj) { return result_callback(std::move(obj)); });
 }
 
+// PCIeSlots:
+// "/redfish/v1/Chassis/{id}/PCIeSlots"
+void Sysmodel::QueryAllResourceInternal(
+    Token<ResourcePcieSlots>,
+    absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+        result_callback) {
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertyChassis].Each()[kRfPropertyPcieSlots].Do(
+      [&](std::unique_ptr<RedfishObject> &entry) {
+        return result_callback(std::move(entry));
+      });
+}
+
 }  // namespace ecclesia

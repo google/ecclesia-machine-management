@@ -48,6 +48,9 @@ std::optional<std::string> GetSensorDevpathFromNodeTopology(
 std::optional<std::string> GetManagerDevpathFromNodeTopology(
     RedfishObject* obj, const NodeTopology& topology);
 
+std::optional<std::string> GetSlotDevpathFromNodeTopology(
+    RedfishObject* obj, std::string parent_uri, const NodeTopology& topology);
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_DEVPATH_H_

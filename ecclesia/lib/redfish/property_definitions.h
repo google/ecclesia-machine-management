@@ -40,6 +40,7 @@ inline constexpr char kRfPropertyAssemblies[] = "Assemblies";
 inline constexpr char kRfPropertyAssembly[] = "Assembly";
 inline constexpr char kRfPropertyControllers[] = "Controllers";
 inline constexpr char kRfPropertyChassis[] = "Chassis";
+inline constexpr char kRfPropertyPcieSlots[] = "PCIeSlots";
 inline constexpr char kRfPropertyChassisReset[] = "#Chassis.Reset";
 inline constexpr char kRfPropertyComponentIntegrity[] = "ComponentIntegrity";
 inline constexpr char kRfPropertyComponentIntegritySPDMGetSignedMeasurements[] =
@@ -107,6 +108,7 @@ inline constexpr char kRfPropertyPhysicalLocation[] = "PhysicalLocation";
 inline constexpr char kRfPropertyPartLocation[] = "PartLocation";
 inline constexpr char kRfPropertyCables[] = "Cables";
 inline constexpr char kRfPropertyCableUpstreamResources[] = "UpstreamResources";
+inline constexpr char kRfPropertySlots[] = "Slots";
 
 inline constexpr char kRfOemPropertyAssociatedWith[] = "AssociatedWith";
 inline constexpr char kRfOemPropertyAttachedTo[] = "AttachedTo";
@@ -168,6 +170,7 @@ DEFINE_REDFISH_RESOURCE(ResourceSoftwareInventory, "SoftwareInventory");
 // Assembly resource
 DEFINE_REDFISH_RESOURCE(ResourceAssemblyEntry, "/Assembly#/");
 DEFINE_REDFISH_RESOURCE(ResourceManager, "Manager");
+DEFINE_REDFISH_RESOURCE(ResourcePcieSlots, "PCIeSlots");
 
 // Physical LPU is an abstraction resource concept based on thread-granularity
 // SubProcessor resource. It uses the same Processor resource schema. But the
