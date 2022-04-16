@@ -306,6 +306,9 @@ DEFINE_REDFISH_PROPERTY(PropertyCorrectableOtherErrorCount, int,
                         "CorrectableOtherErrorCount");
 DEFINE_REDFISH_PROPERTY(PropertyUncorrectableOtherErrorCount, int,
                         "UncorrectableOtherErrorCount");
+DEFINE_REDFISH_PROPERTY(PropertyAdditionalDataURI, std::string,
+                        "AdditionalDataURI");
+DEFINE_REDFISH_PROPERTY(PropertyCreatedTime, std::string, "Created");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
