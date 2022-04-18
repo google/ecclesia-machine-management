@@ -65,6 +65,8 @@ inline constexpr char kRfPropertySystems[] = "Systems";
 inline constexpr char kRfPropertySystemReset[] = "#ComputerSystem.Reset";
 inline constexpr char kRfPropertyManagers[] = "Managers";
 inline constexpr char kRfPropertyManagerInChassis[] = "ManagerInChassis";
+inline constexpr char kRfPropertyManagerDiagnosticData[] =
+    "ManagerDiagnosticData";
 inline constexpr char kRfPropertyEthernetInterfaces[] = "EthernetInterfaces";
 inline constexpr char kRfPropertyThermal[] = "Thermal";
 inline constexpr char kRfPropertyTemperatures[] = "Temperatures";
@@ -73,6 +75,7 @@ inline constexpr char kRfPropertyTemperaturesCount[] =
 inline constexpr char kRfPropertyParameters[] = "Parameters";
 inline constexpr char kRfPropertyPower[] = "Power";
 inline constexpr char kRfPropertyPowerWatts[] = "PowerWatts";
+inline constexpr char kRfPropertyProcessorMetrics[] = "ProcessorStatistics";
 inline constexpr char kRfPropertyVoltages[] = "Voltages";
 inline constexpr char kRfPropertyFans[] = "Fans";
 inline constexpr char kRfPropertySensors[] = "Sensors";
@@ -170,6 +173,7 @@ DEFINE_REDFISH_RESOURCE(ResourceSoftwareInventory, "SoftwareInventory");
 // Assembly resource
 DEFINE_REDFISH_RESOURCE(ResourceAssemblyEntry, "/Assembly#/");
 DEFINE_REDFISH_RESOURCE(ResourceManager, "Manager");
+DEFINE_REDFISH_RESOURCE(ResourceManagerDiagnosticData, "ManagerDiagnosticData");
 DEFINE_REDFISH_RESOURCE(ResourcePcieSlots, "PCIeSlots");
 
 // Physical LPU is an abstraction resource concept based on thread-granularity
@@ -309,6 +313,10 @@ DEFINE_REDFISH_PROPERTY(PropertyUncorrectableOtherErrorCount, int,
 DEFINE_REDFISH_PROPERTY(PropertyAdditionalDataURI, std::string,
                         "AdditionalDataURI");
 DEFINE_REDFISH_PROPERTY(PropertyCreatedTime, std::string, "Created");
+
+// ManagerDiagnosticData properties
+DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
+DEFINE_REDFISH_PROPERTY(PropertyUserPercent, double, "UserPercent");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
