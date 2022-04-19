@@ -79,6 +79,10 @@ class Sysmodel {
       absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
           result_callback);
   void QueryAllResourceInternal(
+      Token<ResourceStorageController>,
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+          result_callback);
+  void QueryAllResourceInternal(
       Token<ResourceDrive>,
       absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
           result_callback);

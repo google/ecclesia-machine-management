@@ -157,6 +157,7 @@ DEFINE_REDFISH_RESOURCE(ResourceComponentIntegrity, "ComponentIntegrity");
 DEFINE_REDFISH_RESOURCE(ResourceMemory, "Memory");
 DEFINE_REDFISH_RESOURCE(ResourceStorage, "Storage");
 DEFINE_REDFISH_RESOURCE(ResourceDrive, "Drive");
+DEFINE_REDFISH_RESOURCE(ResourceStorageController, "StorageController");
 DEFINE_REDFISH_RESOURCE(ResourceProcessor, "Processor");
 DEFINE_REDFISH_RESOURCE(ResourceEthernetInterface, "EthernetInterface");
 DEFINE_REDFISH_RESOURCE(ResourceTemperature, "Temperature");

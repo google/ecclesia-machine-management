@@ -96,6 +96,21 @@ void Sysmodel::QueryAllResourceInternal(
       [&](auto &drive_obj) { return result_callback(std::move(drive_obj)); });
 }
 
+// StorageController:
+// "/redfish/v1/Systems/{id}/Storage/{id}#/StorageControllers/{id}"
+void Sysmodel::QueryAllResourceInternal(
+    Token<ResourceStorageController>,
+    absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
+        result_callback) {
+  auto root = redfish_intf_->GetRoot();
+  root[kRfPropertySystems].Each()
+      [kRfPropertyStorage].Each()
+      [kRfPropertyStorageControllers].Each()
+      .Do([&](auto &ctrl_obj) {
+        return result_callback(std::move(ctrl_obj));
+      });
+}
+
 // Processor:
 // "/redfish/v1/Systems/{id}/Processors/{id}"
 void Sysmodel::QueryAllResourceInternal(
