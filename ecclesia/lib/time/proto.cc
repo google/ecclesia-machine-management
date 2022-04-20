@@ -16,7 +16,7 @@
 
 #include "ecclesia/lib/time/proto.h"
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "google/protobuf/timestamp.pb.h"
 #include "absl/status/status.h"
