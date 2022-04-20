@@ -380,6 +380,10 @@ class RedfishObject {
   virtual std::unique_ptr<RedfishObject> EnsureFreshPayload(
       GetParams params = {}) = 0;
 
+  // Returns the content in the body of this object as a JSON. If the body
+  // cannot be parsed as a JSON, nlohmann::json::value_t::discarded is returned.
+  virtual nlohmann::json GetContentAsJson() const = 0;
+
   // Returns some implementation specific debug string. This should only be used
   // for logging and debugging and should not be fed into any parsers which
   // make assumptons on the underlying implementation.

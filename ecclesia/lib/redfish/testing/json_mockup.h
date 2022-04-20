@@ -39,6 +39,9 @@ class JsonMockupObject : public RedfishObject {
   std::optional<std::string> GetUriString() const override {
     return GetNodeValue<std::string>("@odata.id");
   }
+
+  nlohmann::json GetContentAsJson() const override { return json_view_; }
+
   std::string DebugString() override { return json_view_.dump(/*indent=*/1); }
 
   std::unique_ptr<RedfishObject> EnsureFreshPayload(GetParams params) override {

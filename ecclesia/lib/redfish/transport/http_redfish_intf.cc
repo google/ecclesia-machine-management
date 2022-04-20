@@ -276,6 +276,9 @@ class HttpIntfObjectImpl : public RedfishObject {
     if (itr == result_.body.end()) return std::nullopt;
     return std::string(itr.value());
   }
+
+  nlohmann::json GetContentAsJson() const override { return result_.body; }
+
   std::string DebugString() override { return result_.body.dump(); }
 
   std::unique_ptr<RedfishObject> EnsureFreshPayload(GetParams params) {
