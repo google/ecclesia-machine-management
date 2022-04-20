@@ -249,7 +249,7 @@ cc_library(
     name = "struct_proto_conversion",
     srcs = ["struct_proto_conversion.cc"],
     hdrs = ["struct_proto_conversion.h"],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
     deps = [
         "@com_google_protobuf//:protobuf",
         "@com_json//:json",
@@ -259,7 +259,7 @@ cc_library(
 cc_test(
     name = "struct_proto_conversion_test",
     srcs = ["struct_proto_conversion_test.cc"],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
     deps = [
         ":struct_proto_conversion",
         "//ecclesia/lib/protobuf:parse",
