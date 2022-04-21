@@ -79,6 +79,7 @@ cc_library(
         ":interface",
         "//ecclesia/lib/complexity_tracker",
         "//ecclesia/lib/http:codes",
+        "//ecclesia/lib/logging",
         "//ecclesia/lib/time:clock",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",

@@ -31,27 +31,27 @@ class TestApiComplexityContextManagerImpl
     : public ApiComplexityContextManager::ImplInterface {
  public:
   MOCK_METHOD(absl::StatusOr<ApiComplexityContext*>, GetContext, (),
-              (const, override));
+              (override));
   MOCK_METHOD(void, ReportContextResult, (const ApiComplexityContext& context),
-              (const, override));
+              (override));
 };
 
 TEST(TestApiComplexityContextManager, TestDefaultContextManager) {
-  auto& manager = ApiComplexityContextManager::GetGlobalInstance();
+  ApiComplexityContextManager manager;
   EXPECT_THAT(manager.GetContext(), ecclesia::IsStatusInternal());
   // For default context manager it is expected that all the APIs below are
   // no-op but should not crash the binary.
   auto report_on_destroy = manager.PrepareForInboundApi("");
-  manager.RecordDownstreamCall(ApiComplexityContext::CallType::kCached);
+  manager.RecordDownstreamCall(ApiComplexityContext::CallType::kCachedRedfish);
 }
 
 TEST(TestApiComplexityContextManager, TestNoReportOnDestroy) {
-  auto& manager = ApiComplexityContextManager::GetGlobalInstance();
+  ApiComplexityContextManager manager;
   EXPECT_THAT(manager.GetContext(), ecclesia::IsStatusInternal());
   // For default context manager it is expected that all the APIs below are
   // no-op but should not crash the binary.
   manager.PrepareForInboundApi("").CancelAutoreport();
-  manager.RecordDownstreamCall(ApiComplexityContext::CallType::kCached);
+  manager.RecordDownstreamCall(ApiComplexityContext::CallType::kCachedRedfish);
   manager.ReportContextResult();
 }
 
@@ -59,11 +59,8 @@ TEST(TestApiComplexityContextManager, TestManagerOverride) {
   ApiComplexityContext context;
   auto impl = absl::make_unique<TestApiComplexityContextManagerImpl>();
   EXPECT_CALL(*impl, GetContext).WillOnce(Return(&context));
-  auto& manager = ApiComplexityContextManager::GetGlobalInstance();
-  manager.SetImplementation(std::move(impl));
+  ApiComplexityContextManager manager(std::move(impl));
   EXPECT_THAT(manager.GetContext(), ecclesia::IsOkAndHolds(&context));
-  // Implementation mocks will not be verified unless we delete it
-  manager.SetImplementation(nullptr);
 }
 
 TEST(TestApiComplexityContextManager, TestReportContextResult) {
@@ -78,12 +75,9 @@ TEST(TestApiComplexityContextManager, TestReportContextResult) {
   // ReportContextResult
   EXPECT_CALL(*impl, ReportContextResult(Ref(context_as_a_parameter))).Times(1);
 
-  auto& manager = ApiComplexityContextManager::GetGlobalInstance();
-  manager.SetImplementation(std::move(impl));
+  ApiComplexityContextManager manager(std::move(impl));
   manager.ReportContextResult();
   manager.ReportContextResult(context_as_a_parameter);
-  // Implementation mocks will not be verified unless we delete it
-  manager.SetImplementation(nullptr);
 }
 
 TEST(TestApiComplexityContextManager, ReportOnDestroy) {
@@ -94,8 +88,7 @@ TEST(TestApiComplexityContextManager, ReportOnDestroy) {
   EXPECT_CALL(*impl, GetContext).WillOnce(Return(&default_context));
   EXPECT_CALL(*impl, ReportContextResult).Times(1);
 
-  auto& manager = ApiComplexityContextManager::GetGlobalInstance();
-  manager.SetImplementation(std::move(impl));
+  ApiComplexityContextManager manager(std::move(impl));
   {
     // Get reporter on destroy
     ApiComplexityContextManager::ReportOnDestroy reporter =
@@ -104,8 +97,6 @@ TEST(TestApiComplexityContextManager, ReportOnDestroy) {
     ApiComplexityContextManager::ReportOnDestroy assigned_reported =
         std::move(reporter);
   }
-  // Implementation mocks will not be verified unless we delete it
-  manager.SetImplementation(nullptr);
 }
 
 TEST(TestApiComplexityContextManager, PrepareForInboundApi) {
@@ -115,21 +106,25 @@ TEST(TestApiComplexityContextManager, PrepareForInboundApi) {
   // using GetContext method
   EXPECT_CALL(*impl, GetContext).WillRepeatedly(Return(&context));
 
-  auto& manager = ApiComplexityContextManager::GetGlobalInstance();
-  manager.SetImplementation(std::move(impl));
+  ApiComplexityContextManager manager(std::move(impl));
 
-  manager.RecordDownstreamCall(ApiComplexityContext::CallType::kCached);
-  manager.RecordDownstreamCall(ApiComplexityContext::CallType::kCached);
-  manager.RecordDownstreamCall(ApiComplexityContext::CallType::kUncached);
-  EXPECT_EQ(context.cached_calls(), 2);
-  EXPECT_EQ(context.uncached_calls(), 1);
+  manager.RecordDownstreamCall(ApiComplexityContext::CallType::kCachedRedfish);
+  manager.RecordDownstreamCall(ApiComplexityContext::CallType::kCachedRedfish);
+  manager.RecordDownstreamCall(ApiComplexityContext::CallType::kCachedRedfish);
+  manager.RecordDownstreamCall(
+      ApiComplexityContext::CallType::kUncachedRedfish);
+  manager.RecordDownstreamCall(
+      ApiComplexityContext::CallType::kUncachedRedfish);
+  manager.RecordDownstreamCall(ApiComplexityContext::CallType::kUncachedGsys);
+  EXPECT_EQ(context.cached_redfish_calls(), 3);
+  EXPECT_EQ(context.uncached_redfish_calls(), 2);
+  EXPECT_EQ(context.uncached_gsys_calls(), 1);
 
   manager.PrepareForInboundApi("test").CancelAutoreport();
   EXPECT_EQ(context.api_name(), "test");
-  EXPECT_EQ(context.cached_calls(), 0);
-  EXPECT_EQ(context.uncached_calls(), 0);
-  // Implementation mocks will not be verified unless we delete it
-  manager.SetImplementation(nullptr);
+  EXPECT_EQ(context.cached_redfish_calls(), 0);
+  EXPECT_EQ(context.uncached_redfish_calls(), 0);
+  EXPECT_EQ(context.uncached_gsys_calls(), 0);
 }
 
 }  // namespace

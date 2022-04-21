@@ -26,7 +26,9 @@
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
+#include "ecclesia/lib/complexity_tracker/complexity_tracker.h"
 #include "ecclesia/lib/http/codes.h"
+#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
 #include "single_include/nlohmann/json.hpp"
@@ -44,24 +46,61 @@ class RedfishCachedGetterInterface {
     // was fetched from a cache.
     bool is_fresh;
   };
-  RedfishCachedGetterInterface() {}
+
+  // Manager can be nullptr when used outside of mmanager
+  RedfishCachedGetterInterface(
+      std::optional<const ApiComplexityContextManager *> manager)
+      : manager_(manager) {
+    ecclesia::Check(!manager.has_value() || (*manager) != nullptr,
+                    "Complexity manager is nullptr");
+  }
   virtual ~RedfishCachedGetterInterface() {}
+
   // Returns a result from a GET to a path. May return a cached result depending
   // on an implementation-specific cache policy. May also cause a cache to be
   // updated.
-  virtual GetResult CachedGet(absl::string_view path) = 0;
+  GetResult CachedGet(absl::string_view path) {
+    if (manager_.has_value()) {
+      (*manager_)->RecordDownstreamCall(
+          ApiComplexityContext::CallType::kCachedRedfish);
+    }
+    return CachedGetInternal(path);
+  }
+
   // Returns a result from a GET to a path. The result should be fetched
   // from a live service and GetResult.is_fresh should be set to true.
-  virtual GetResult UncachedGet(absl::string_view path) = 0;
+  GetResult UncachedGet(absl::string_view path) {
+    if (manager_.has_value()) {
+      (*manager_)->RecordDownstreamCall(
+          ApiComplexityContext::CallType::kUncachedRedfish);
+    }
+    return UncachedGetInternal(path);
+  }
+
+ protected:
+  // Methods implement the cache specific logic for CachedGet and UncachedGet
+  // public methods
+  virtual GetResult CachedGetInternal(absl::string_view path) = 0;
+  virtual GetResult UncachedGetInternal(absl::string_view path) = 0;
+
+ private:
+  std::optional<const ApiComplexityContextManager *> manager_;
 };
 
 // No cache policy; there is no cache and CachedGet is equivalent to
 // UncachedGet.
 class NullCache : public RedfishCachedGetterInterface {
  public:
-  NullCache(RedfishTransport *transport) : transport_(transport) {}
-  GetResult CachedGet(absl::string_view path) override;
-  GetResult UncachedGet(absl::string_view path) override;
+  explicit NullCache(RedfishTransport *transport)
+      : NullCache(transport, std::nullopt) {}
+
+  NullCache(RedfishTransport *transport,
+            std::optional<const ApiComplexityContextManager *> manager)
+      : RedfishCachedGetterInterface(manager), transport_(transport) {}
+
+ protected:
+  GetResult CachedGetInternal(absl::string_view path) override;
+  GetResult UncachedGetInternal(absl::string_view path) override;
 
  private:
   RedfishTransport *transport_;
@@ -71,12 +110,17 @@ class NullCache : public RedfishCachedGetterInterface {
 // last fetched within a max_age_ window.
 class TimeBasedCache : public RedfishCachedGetterInterface {
  public:
-  TimeBasedCache(RedfishTransport *transport, Clock *clock,
-                 absl::Duration max_age)
-      : transport_(transport), clock_(clock), max_age_(max_age) {}
+  TimeBasedCache(
+      RedfishTransport *transport, Clock *clock, absl::Duration max_age,
+      std::optional<const ApiComplexityContextManager *> manager = std::nullopt)
+      : RedfishCachedGetterInterface(manager),
+        transport_(transport),
+        clock_(clock),
+        max_age_(max_age) {}
 
-  GetResult CachedGet(absl::string_view path) override;
-  GetResult UncachedGet(absl::string_view path) override;
+ protected:
+  GetResult CachedGetInternal(absl::string_view path) override;
+  GetResult UncachedGetInternal(absl::string_view path) override;
 
  private:
   GetResult DoUncachedGet(absl::string_view path)

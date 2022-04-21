@@ -30,11 +30,11 @@ namespace {
 class NullApiComplexityContextManagerImpl
     : public ApiComplexityContextManager::ImplInterface {
  public:
-  absl::StatusOr<ApiComplexityContext*> GetContext() const override {
+  absl::StatusOr<ApiComplexityContext*> GetContext() override {
     return absl::InternalError(
         "Method is not implemented for NullApiComplexityContextManager");
   }
-  void ReportContextResult(const ApiComplexityContext& context) const override {
+  void ReportContextResult(const ApiComplexityContext& context) override {
   }
 };
 
@@ -42,6 +42,10 @@ class NullApiComplexityContextManagerImpl
 
 ApiComplexityContextManager::ApiComplexityContextManager()
     : impl_(absl::make_unique<NullApiComplexityContextManagerImpl>()) {}
+
+ApiComplexityContextManager::ApiComplexityContextManager(
+    std::unique_ptr<ApiComplexityContextManager::ImplInterface> impl)
+    : impl_(std::move(impl)) {}
 
 ApiComplexityContextManager::ReportOnDestroy
 ApiComplexityContextManager::PrepareForInboundApi(std::string name) const {

@@ -40,7 +40,7 @@ namespace ecclesia {
 // more details.
 class ApiComplexityContext {
  public:
-  enum class CallType { kCached, kUncached };
+  enum class CallType { kCachedRedfish, kUncachedRedfish, kUncachedGsys };
 
   // Resets context for new inbound API processing has started. Inbound API
   // handlers need to call this method in order to reset counters.
@@ -49,30 +49,39 @@ class ApiComplexityContext {
   // APIs. The result is the same ApiComplexityContext instance to be used.
   void PrepareForInboundApi(std::string name) {
     api_name_ = std::move(name);
-    uncached_calls_ = 0;
-    cached_calls_ = 0;
+    uncached_redfish_calls_ = 0;
+    cached_redfish_calls_ = 0;
+    uncached_gsys_calls_ = 0;
   }
   // Increments outbound calls counter.
   void RecordDownstreamCall(CallType call_type) {
     switch (call_type) {
-      case CallType::kCached:
-        cached_calls_++;
+      case CallType::kUncachedRedfish:
+        uncached_redfish_calls_++;
         break;
-      case CallType::kUncached:
-        uncached_calls_++;
+      case CallType::kCachedRedfish:
+        cached_redfish_calls_++;
+        break;
+      case CallType::kUncachedGsys:
+        uncached_gsys_calls_++;
         break;
     }
   }
 
   // accessors for cached/uncached counters and current API name
-  const uint64_t cached_calls() const { return cached_calls_; }
-  const uint64_t uncached_calls() const { return uncached_calls_; }
+  const uint64_t uncached_redfish_calls() const {
+    return uncached_redfish_calls_;
+  }
+  const uint64_t cached_redfish_calls() const { return cached_redfish_calls_; }
+  const uint64_t uncached_gsys_calls() const { return uncached_gsys_calls_; }
+
   absl::string_view api_name() const { return api_name_; }
 
  private:
   std::string api_name_ = "";
-  uint64_t uncached_calls_ = 0;
-  uint64_t cached_calls_ = 0;
+  uint64_t uncached_redfish_calls_ = 0;
+  uint64_t cached_redfish_calls_ = 0;
+  uint64_t uncached_gsys_calls_ = 0;
 };
 
 // Defines an API to create/retrieve/change ApiComplexityContext.
@@ -94,9 +103,9 @@ class ApiComplexityContextManager {
   class ImplInterface {
    public:
     virtual ~ImplInterface() = default;
-    virtual absl::StatusOr<ApiComplexityContext*> GetContext() const = 0;
+    virtual absl::StatusOr<ApiComplexityContext*> GetContext() = 0;
     virtual void ReportContextResult(
-        const ApiComplexityContext& context) const = 0;
+        const ApiComplexityContext& context) = 0;
   };
   // Class is used as a return value from PrepareForInboundApi method. It
   // simplifies results reporting using "report on destroy" approach.
@@ -159,6 +168,7 @@ class ApiComplexityContextManager {
   };
 
   ApiComplexityContextManager();
+  ApiComplexityContextManager(std::unique_ptr<ImplInterface> impl);
 
   // Returns context local to a thread/fiber. It should return the same pointer
   // when called multiple times from the same handler, regardless of the stack
@@ -190,17 +200,6 @@ class ApiComplexityContextManager {
 
   // Increments downstream call counter depending on the call type.
   void RecordDownstreamCall(ApiComplexityContext::CallType call_type) const;
-
-  // Method is not thread safe and should be called from main method before
-  // starting server.
-  void SetImplementation(std::unique_ptr<ImplInterface> manager) {
-    impl_ = std::move(manager);
-  }
-
-  static ApiComplexityContextManager& GetGlobalInstance() {
-    static auto* const manager = new ApiComplexityContextManager();
-    return *manager;
-  }
 
  private:
   std::unique_ptr<ImplInterface> impl_;

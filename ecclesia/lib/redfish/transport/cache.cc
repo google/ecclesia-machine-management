@@ -27,47 +27,37 @@
 
 namespace ecclesia {
 
-RedfishCachedGetterInterface::GetResult NullCache::CachedGet(
+RedfishCachedGetterInterface::GetResult NullCache::CachedGetInternal(
     absl::string_view path) {
   // Report uncached call as this is nullcache
-  ApiComplexityContextManager::GetGlobalInstance().RecordDownstreamCall(
-      ApiComplexityContext::CallType::kUncached);
   return {.result = transport_->Get(path), .is_fresh = true};
 }
 
-RedfishCachedGetterInterface::GetResult NullCache::UncachedGet(
+RedfishCachedGetterInterface::GetResult NullCache::UncachedGetInternal(
     absl::string_view path) {
-  ApiComplexityContextManager::GetGlobalInstance().RecordDownstreamCall(
-      ApiComplexityContext::CallType::kUncached);
   return {.result = transport_->Get(path), .is_fresh = true};
 }
 
-RedfishCachedGetterInterface::GetResult TimeBasedCache::CachedGet(
+RedfishCachedGetterInterface::GetResult TimeBasedCache::CachedGetInternal(
     absl::string_view path) {
   absl::MutexLock mu(&cache_lock_);
   auto val = cache_.find(path);
   if (val != cache_.end() &&
       (clock_->Now() - val->second.insert_time) < max_age_) {
     // Report cached result
-    ApiComplexityContextManager::GetGlobalInstance().RecordDownstreamCall(
-        ApiComplexityContext::CallType::kCached);
     return {.result = val->second.data, .is_fresh = false};
   }
   return DoUncachedGet(path);
 }
 
-RedfishCachedGetterInterface::GetResult TimeBasedCache::UncachedGet(
+RedfishCachedGetterInterface::GetResult TimeBasedCache::UncachedGetInternal(
     absl::string_view path) {
-  ApiComplexityContextManager::GetGlobalInstance().RecordDownstreamCall(
-      ApiComplexityContext::CallType::kUncached);
   absl::MutexLock mu(&cache_lock_);
   return DoUncachedGet(path);
 }
 
 RedfishCachedGetterInterface::GetResult TimeBasedCache::DoUncachedGet(
     absl::string_view path) {
-  ApiComplexityContextManager::GetGlobalInstance().RecordDownstreamCall(
-      ApiComplexityContext::CallType::kUncached);
   auto result = transport_->Get(path);
   cache_[path] = CacheEntry{.insert_time = clock_->Now(), .data = result};
   return {.result = result, .is_fresh = true};
