@@ -168,6 +168,7 @@ std::optional<SystemModel::NvmePluginInfo> SystemModel::GetNvmeByPhysLocation(
 std::vector<PciStorageLocation> SystemModel::GetPciStorageLocations() const {
   std::vector<PciStorageLocation> locations;
   absl::ReaderMutexLock ml(&pci_storage_locations_lock_);
+  locations.reserve(pci_storage_locations_.size());
   for (const auto &loc : pci_storage_locations_) {
     locations.push_back(loc);
   }

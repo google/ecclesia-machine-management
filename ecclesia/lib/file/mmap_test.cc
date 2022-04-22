@@ -33,7 +33,6 @@ namespace ecclesia {
 namespace {
 
 using ::testing::ElementsAreArray;
-using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Not;
 

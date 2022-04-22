@@ -63,7 +63,7 @@ void OpenAndWriteFile(const std::string &path, int flags,
   if (fd == -1) {
     PosixFatalLog() << "open() failed for file " << path;
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   // Write the file. Fail if the write fails, OR if it's too short.
   int rc = write(fd, data.data(), data.size());
@@ -81,7 +81,7 @@ std::string PathContents(const std::string &path) {
   if (fd == -1) {
     FatalLog() << "open() was unable to return file descriptor: " << path;
   }
-  auto fd_closer = absl::MakeCleanup([fd]() { close(fd); });
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   // Read from the file in 4k chunks until read returns 0, or fails.
   char buffer[4096];
