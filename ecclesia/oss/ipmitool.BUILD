@@ -127,6 +127,7 @@ cc_library(
         "-w",
         "-DHAVE_CONFIG_H",
         "-DDEFAULT_INTF='\"open\"'",
+        "-DIPMI_INTF_LANPLUS",
     ],
     includes = [
         "include",
