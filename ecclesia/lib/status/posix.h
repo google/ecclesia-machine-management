@@ -27,7 +27,7 @@ namespace ecclesia {
 // Helper factory method for taking a POSIX errno and translating it to an
 // applicable absl::Status error with the provided message. The resulting
 // absl::Status message will be prepended with the error_number.
-absl::Status PosixErrorToStatus(std::string_view message,
+absl::Status PosixErrorToStatus(absl::string_view message,
                                 int error_number = errno);
 
 }  // namespace ecclesia

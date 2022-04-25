@@ -38,7 +38,7 @@ struct GrpcTransportParams {
 
 absl::StatusOr<std::unique_ptr<RedfishTransport>>
 CreateGrpcRedfishTransport(
-    std::string_view endpoint, const GrpcTransportParams& params,
+    absl::string_view endpoint, const GrpcTransportParams& params,
     const std::shared_ptr<grpc::ChannelCredentials>& creds,
     ServiceRootUri service_root = ServiceRootUri::kRedfish);
 

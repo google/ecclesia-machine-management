@@ -86,7 +86,7 @@ class GrpcRedfishMockUpServerTest : public Test {
 // resource has been Patched.
 TEST_F(GrpcRedfishMockUpServerTest, TestPostPatchAndGetRequest) {
   // Test Post request
-  std::string_view data_post = R"json({
+  absl::string_view data_post = R"json({
     "ChassisType": "RackMount",
     "Name": "MyChassis"
   })json";
@@ -97,7 +97,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPostPatchAndGetRequest) {
             ecclesia::HttpResponseCode::HTTP_CODE_NO_CONTENT);
 
   // Test Patch request
-  std::string_view data_patch = R"json({
+  absl::string_view data_patch = R"json({
     "Name": "MyNewName"
   })json";
   absl::StatusOr<RedfishTransport::Result> result_patch =
@@ -183,7 +183,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPost) {
         *response->mutable_message() = kResponse;
         return grpc::Status::OK;
       });
-  std::string_view data_post = R"json({
+  absl::string_view data_post = R"json({
     "num": 1,
     "str": "hi"
   })json";
@@ -225,7 +225,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPatch) {
         *response->mutable_message() = kResponse;
         return grpc::Status::OK;
       });
-  std::string_view data_patch = R"json({
+  absl::string_view data_patch = R"json({
     "num": 1,
     "str": "hi"
   })json";
@@ -247,7 +247,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPostReset) {
         called = true;
         return grpc::Status::OK;
       });
-  std::string_view data_post = R"json({
+  absl::string_view data_post = R"json({
     "Id": "id",
     "Name": "MyChassis"
   })json";
@@ -274,7 +274,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPatchReset) {
         called = true;
         return grpc::Status::OK;
       });
-  std::string_view data = R"json({
+  absl::string_view data = R"json({
     "Name": "Test Name"
   })json";
   absl::StatusOr<RedfishTransport::Result> result_patch =
@@ -326,7 +326,7 @@ TEST(GrpcRedfishMockUpServerUdsTest, TestUds) {
   auto transport = CreateGrpcRedfishTransport(
       absl::StrCat("unix:", mockup_uds), {}, options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
-  std::string_view expexted_str = R"json({
+  absl::string_view expexted_str = R"json({
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
     "@odata.id": "/redfish/v1",
     "@odata.type": "#ServiceRoot.v1_5_0.ServiceRoot",

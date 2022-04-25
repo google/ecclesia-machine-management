@@ -147,7 +147,6 @@ cc_library(
     hdrs = ["grpc.h"],
     visibility = ["//visibility:public"],
     deps = [
-        ":grpc_tls_options",
         ":interface",
         ":struct_proto_conversion",
         "//ecclesia/lib/http:codes",
@@ -157,7 +156,6 @@ cc_library(
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/status:rpc",
         "//ecclesia/lib/time:clock",
-        "@com_github_grpc_grpc//:grpc++",
         "@com_github_grpc_grpc//:grpc++_public_hdrs",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
@@ -184,6 +182,7 @@ cc_test(
         "//ecclesia/lib/status:rpc",
         "//ecclesia/lib/testing:status",
         "//ecclesia/lib/time:clock_fake",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )

@@ -24,6 +24,7 @@
 #include "absl/status/status.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/logging/logging.h"
@@ -109,7 +110,7 @@ class GrpcRedfishTransport : public RedfishTransport {
   // credentials.
   // Params:
   //   endpoint: e.g. "dns:///localhost:80", "unix:///var/run/my.socket"
-  GrpcRedfishTransport(std::string_view endpoint,
+  GrpcRedfishTransport(absl::string_view endpoint,
                        const GrpcTransportParams& params,
                        const std::shared_ptr<grpc::ChannelCredentials>& creds,
                        ServiceRootUri service_root)
@@ -119,7 +120,7 @@ class GrpcRedfishTransport : public RedfishTransport {
         service_root_(std::move(service_root)),
         fqdn_(EndpointToFqdn(endpoint)) {}
 
-  GrpcRedfishTransport(std::string_view endpoint)
+  GrpcRedfishTransport(absl::string_view endpoint)
       : client_(redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
             std::string(endpoint), grpc::InsecureChannelCredentials()))),
         params_({}),

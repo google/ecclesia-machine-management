@@ -18,6 +18,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
@@ -40,9 +41,8 @@ TEST(GrpcRedfishTransport, Get) {
   options.SetToInsecure();
   auto port = mockup_server.Port();
   ASSERT_TRUE(port.has_value());
-  auto transport =
-      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port),
-                                 {}, options.GetChannelCredentials());
+  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port), {},
+                                              options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
   absl::string_view expected_str = R"json({
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
@@ -76,9 +76,8 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   options.SetToInsecure();
   auto port = mockup_server.Port();
   ASSERT_TRUE(port.has_value());
-  auto transport =
-      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port),
-                                 {}, options.GetChannelCredentials());
+  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port), {},
+                                              options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
   nlohmann::json expected_post =
       nlohmann::json::parse(R"json({})json", nullptr, false);
@@ -162,9 +161,8 @@ TEST(GrpcRedfishTransport, GetRootUri) {
   options.SetToInsecure();
   auto port = mockup_server.Port();
   ASSERT_TRUE(port.has_value());
-  auto transport =
-      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port),
-                                 {}, options.GetChannelCredentials());
+  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port), {},
+                                              options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
   EXPECT_EQ((*transport)->GetRootUri(), "/redfish/v1");
 }
@@ -176,9 +174,8 @@ TEST(GrpcRedfishTransport, ResourceNotFound) {
   options.SetToInsecure();
   auto port = mockup_server.Port();
   ASSERT_TRUE(port.has_value());
-  auto transport =
-      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port),
-                                 {}, options.GetChannelCredentials());
+  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port), {},
+                                              options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
 
   auto result_get = (*transport)->Get("/redfish/v1/Chassis/noexist");
@@ -196,12 +193,11 @@ TEST(GrpcRedfishTransport, NotAllowed) {
   options.SetToInsecure();
   auto port = mockup_server.Port();
   ASSERT_TRUE(port.has_value());
-  auto transport =
-      CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port),
-                                 {}, options.GetChannelCredentials());
+  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port), {},
+                                              options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
 
-  std::string_view data_post = R"json({
+  absl::string_view data_post = R"json({
     "ChassisType": "RackMount",
     "Name": "MyChassis"
   })json";
