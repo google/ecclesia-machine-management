@@ -17,13 +17,32 @@
 #include "ecclesia/lib/time/proto.h"
 
 #include <cstdint>
+#include <string>
 
+#include "google/protobuf/duration.pb.h"
 #include "google/protobuf/timestamp.pb.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/time/time.h"
 
 namespace ecclesia {
+
+// Validation requirements per google::protobuf::Duration.
+absl::Status Validate(const google::protobuf::Duration& d) {
+  const auto sec = d.seconds();
+  const auto ns = d.nanos();
+  if (sec < -315576000000 || sec > 315576000000) {
+    return absl::InvalidArgumentError(absl::StrCat("seconds=", sec));
+  }
+  if (ns < -999999999 || ns > 999999999) {
+    return absl::InvalidArgumentError(absl::StrCat("nanos=", ns));
+  }
+  if ((sec < 0 && ns > 0) || (sec > 0 && ns < 0)) {
+    return absl::InvalidArgumentError("sign mismatch");
+  }
+  return absl::OkStatus();
+}
 
 absl::Time AbslTimeFromProtoTime(google::protobuf::Timestamp timestamp) {
   // Protobuf time is just a combo of seconds and nanoseconds so we can
@@ -57,6 +76,31 @@ absl::StatusOr<google::protobuf::Timestamp> AbslTimeToProtoTime(
   duration %= absl::Seconds(1);
   proto_timestamp.set_nanos(duration / absl::Nanoseconds(1));
   return proto_timestamp;
+}
+
+absl::StatusOr<google::protobuf::Duration> AbslDurationToProtoDuration(
+    absl::Duration d) {
+  google::protobuf::Duration proto;
+  absl::Status status = AbslDurationToProtoDuration(d, &proto);
+  if (!status.ok()) return status;
+  return proto;
+}
+
+absl::Status AbslDurationToProtoDuration(absl::Duration d,
+                                         google::protobuf::Duration* proto) {
+  // s and n may both be negative, per the Duration proto spec.
+  const int64_t s = absl::IDivDuration(d, absl::Seconds(1), &d);
+  const int64_t n = absl::IDivDuration(d, absl::Nanoseconds(1), &d);
+  proto->set_seconds(s);
+  proto->set_nanos(n);
+  return Validate(*proto);
+}
+
+absl::StatusOr<absl::Duration> AbslDurationFromProtoDuration(
+    const google::protobuf::Duration& proto) {
+  absl::Status status = Validate(proto);
+  if (!status.ok()) return status;
+  return absl::Seconds(proto.seconds()) + absl::Nanoseconds(proto.nanos());
 }
 
 }  // namespace ecclesia

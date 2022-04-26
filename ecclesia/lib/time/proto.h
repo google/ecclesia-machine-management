@@ -17,7 +17,9 @@
 #ifndef ECCLESIA_LIB_TIME_PROTO_H_
 #define ECCLESIA_LIB_TIME_PROTO_H_
 
+#include "google/protobuf/duration.pb.h"
 #include "google/protobuf/timestamp.pb.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
 
@@ -30,6 +32,25 @@ absl::Time AbslTimeFromProtoTime(google::protobuf::Timestamp timestamp);
 // situations.
 absl::StatusOr<google::protobuf::Timestamp> AbslTimeToProtoTime(
     absl::Time timestamp);
+
+// Decodes the given protobuf and returns an absl::Duration, or returns an error
+// status if the argument is invalid.
+absl::StatusOr<absl::Duration> AbslDurationFromProtoDuration(
+    const google::protobuf::Duration& proto);
+
+// Encodes an absl::Duration as a google::protobuf::Duration.  Returns an error
+// if the given absl::Duration is beyond the range allowed by the protobuf.
+// Otherwise, truncates toward zero with nanosecond precision and returns the
+// google::protobuf::Duration.
+//
+// Note: +/- absl::InfiniteDuration() cannot be encoded because they are not
+// representable in the protobuf.
+absl::StatusOr<google::protobuf::Duration> AbslDurationToProtoDuration(
+    absl::Duration d);
+
+// Same as above but taking a proto pointer.
+absl::Status AbslDurationToProtoDuration(absl::Duration d,
+                                         google::protobuf::Duration* proto);
 
 }  // namespace ecclesia
 
