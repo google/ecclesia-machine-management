@@ -19,8 +19,9 @@ cc_library(
     deps = [
         "//ecclesia/lib/http:codes",
         "//ecclesia/lib/logging",
+        "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:interface",
-        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
@@ -28,7 +29,6 @@ cc_library(
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
-        "@com_json//:json",
     ],
 )
 
@@ -189,25 +189,6 @@ cc_library(
         ":interface",
         ":property_definitions",
         "@com_google_absl//absl/functional:function_ref",
-    ],
-)
-
-cc_test(
-    name = "sysmodel_test",
-    srcs = ["sysmodel_test.cc"],
-    data = [
-        "//ecclesia/redfish_mockups/topology_v2_testing:mockup.shar",
-    ],
-    deps = [
-        ":interface",
-        ":property_definitions",
-        ":sysmodel",
-        "//ecclesia/lib/redfish/testing:fake_redfish_server",
-        "@com_google_absl//absl/memory",
-        "@com_google_absl//absl/strings",
-        "@com_google_googletest//:gtest_main",
-        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
-        "@com_json//:json",
     ],
 )
 

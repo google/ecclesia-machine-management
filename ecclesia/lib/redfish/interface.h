@@ -19,7 +19,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <iterator>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -28,19 +27,19 @@
 #include <variant>
 #include <vector>
 
-#include "absl/base/attributes.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/http/codes.h"
-#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
+#include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
-#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 
@@ -56,39 +55,6 @@ enum class RedfishIterReturnValue {
   kContinue = 0,
   // Stop searching for resources. The callback will not be invoked again.
   kStop
-};
-
-// Stores what RedFish features are supported by the specific backend.
-// See ProtocolFeaturesSupported defenition:
-//    https://www.dmtf.org/sites/default/files/standards/documents/DSP0268_2021.4_0.pdf
-struct RedfishSupportedFeatures {
-  struct Expand {
-    // This property shall indicate whether this service supports the asterisk
-    // option of the $expand query parameter. Meaning of (*):
-    // (*): Shall expand all hyperlinks, including those in payload
-    // annotations, such as @Redfish.Settings, @Redfish.ActionInfo, and
-    // @Redfish.CollectionCapabilities.
-    bool expand_all = false;
-    // This property shall indicate whether the service supports the $levels
-    // option of the $expand query parameter.
-    bool levels = false;
-    // This property shall indicate whether this service supports the tilde (~)
-    // option of the $expand query parameter. Meaning of (~):
-    // (~) : Shall expand all hyperlinks found in all links property - instances
-    // of the resource.
-    bool links = false;
-    // This property shall indicate whether the service supports the period (.)
-    // option of the $expand query parameter. Meaning of (.):
-    // - Shall expand all hyperlinks not in any links property instances of the
-    // resource, including those in payload annotations, such as
-    // @Redfish.Settings, @Redfish.ActionInfo, and
-    // @Redfish.CollectionCapabilities .
-    bool no_links = false;
-    // This property shall contain the maximum $levels option value in the
-    // $expand query parameter. Shall be included only if $levels is true.
-    int max_levels = 0;
-  };
-  Expand expand;
 };
 
 // Classes below provide an interface to supply query parameters to mmanager
@@ -108,22 +74,15 @@ class RedfishQueryParamExpand : public GetParamQueryInterface {
 
   struct Params {
     ExpandType type = ExpandType::kLinks;
-    size_t levels = 1;
+    int levels = 1;
   };
 
   RedfishQueryParamExpand(Params params);
-
-  // Validates if redfish agent supports the Expand query args.
-  // Redfish agent is supposed to return ProtocolFeaturesSupported as part of
-  // the /redfish/v1 object
-  absl::Status ValidateRedfishSupport(
-      const absl::optional<RedfishSupportedFeatures> &features) const;
-
   std::string ToString() const override;
 
  private:
   ExpandType type_;
-  size_t levels_;
+  int levels_;
 };
 
 // Struct to be used as a parameter to RedfishInterface implementations
@@ -194,43 +153,15 @@ class RedfishVariant final {
     virtual std::string DebugString() const = 0;
   };
 
-  // Helper structures used with IndexHelper class
-  // Denote a loop through an iterator.
-  struct IndexEach {};
-  // Denotes the named item to be got with a redfish 'expand' syntax.
-  // Number of levels to be expanded is fixed by 'levels' field
-  struct IndexExpand {
-    std::string index;
-    RedfishQueryParamExpand::ExpandType expand_type =
-        RedfishQueryParamExpand::kBoth;
-    size_t levels = 1;
-  };
-  // Denotes that item to be got with a redfish 'expand' syntax.
-  // Number of levels is extra_levels + number of "each" helpers applied to an
-  // indexer after IndexExpandAll.
-  // An example:
-  //   GetRoot()["System"].Each()
-  //     .ExpandAll("item2", RedfishQueryParamExpand::kNotLinks, 0)
-  //     .Each()["item3"].Each().Do(...)
-  //   Will do:
-  //     curl("/redfish/v1")
-  //     curl("/redfish/v1/System")
-  //     curl("/redfish/v1/System/<index>/item2?$expand=.($levels=2)")
-  struct IndexExpandAll {
-    std::string index;
-    RedfishQueryParamExpand::ExpandType expand_type =
-        RedfishQueryParamExpand::kBoth;
-    size_t extra_levels = 1;
-  };
-  using IndexType =
-      std::variant<std::string, size_t, IndexEach, IndexExpand, IndexExpandAll>;
+  // A helper class to denote a loop through an iterator.
+  class IndexEach {};
+  using IndexType = std::variant<std::string, size_t, IndexEach>;
 
   // A helper class for lazy evaluation of an index operator chain, when
   // IndexEach is involved.
   class IndexHelper {
    public:
     IndexHelper() = delete;
-    explicit IndexHelper(const RedfishVariant &root) : root_(root) {}
     IndexHelper(const RedfishVariant &root, IndexType index) : root_(root) {
       AppendIndex(index);
     }
@@ -239,22 +170,8 @@ class RedfishVariant final {
 
     bool IsEmpty() const { return indices_.empty(); }
 
-    IndexHelper Each(IterableMode mode = IterableMode::kAllowExpand) {
-      AppendIndex(IndexEach{});
-      return *this;
-    }
-
-    IndexHelper Expand(std::string index,
-                       RedfishQueryParamExpand::ExpandType expand_type,
-                       size_t levels) {
-      AppendIndex(IndexExpand{std::move(index), expand_type, levels});
-      return *this;
-    }
-
-    IndexHelper ExpandAll(std::string index,
-                          RedfishQueryParamExpand::ExpandType expand_type,
-                          size_t extra_levels) {
-      AppendIndex(IndexExpandAll{std::move(index), expand_type, extra_levels});
+    IndexHelper Each() {
+      AppendIndex(IndexEach());
       return *this;
     }
 
@@ -306,12 +223,8 @@ class RedfishVariant final {
   RedfishVariant(RedfishVariant &&other) = default;
   RedfishVariant &operator=(RedfishVariant &&other) = default;
 
-  inline RedfishVariant operator[](const IndexExpand &property) const;
   inline RedfishVariant operator[](const std::string &property) const;
   inline RedfishVariant operator[](const size_t index) const;
-
-  IndexHelper AsIndexHelper() const { return IndexHelper(*this); }
-
   IndexHelper Each() const {
     return IndexHelper(*this, IndexType(IndexEach()));
   }
@@ -456,13 +369,6 @@ class RedfishObject {
   // the node is an "@odata.id" field, the RedfishInterface will be queried
   // to retrieve the payload corresponding to that "@odata.id".
   virtual RedfishVariant operator[](const std::string &node_name) const = 0;
-
-  // Returns the payload for a given named property node. Implementation is
-  // similar to 'operator[](const std::string &node_name)' and extended with
-  // redfish expand parameters added.
-  virtual RedfishVariant GetExpanded(const std::string &node_name,
-                                     RedfishQueryParamExpand expand) const = 0;
-
   // Returns the string URI of the current RedfishObject, if available.
   virtual std::optional<std::string> GetUriString() const = 0;
 
@@ -596,10 +502,6 @@ class RedfishInterface {
   virtual RedfishVariant PatchUri(absl::string_view uri,
                                   absl::string_view data) = 0;
 
-  virtual std::optional<RedfishSupportedFeatures> SupportedFeatures() const {
-    return std::nullopt;
-  }
-
  protected:
   static inline constexpr absl::string_view kServiceRoot = "/redfish/v1";
   static inline constexpr absl::string_view kGoogleServiceRoot = "/google/v1";
@@ -646,18 +548,6 @@ class NullRedfish : public RedfishInterface {
   }
 };
 
-RedfishVariant RedfishVariant::operator[](const IndexExpand &property) const {
-  if (!status_.ok()) {
-    return RedfishVariant(nullptr, status_, httpcode_);
-  }
-  if (std::unique_ptr<RedfishObject> obj = AsObject()) {
-    return (*obj).GetExpanded(
-        property.index,
-        RedfishQueryParamExpand({property.expand_type, property.levels}));
-  }
-  return RedfishVariant(absl::InternalError("not a RedfishObject"));
-}
-
 RedfishVariant RedfishVariant::operator[](const std::string &property) const {
   if (!status_.ok()) {
     return RedfishVariant(nullptr, status_, httpcode_);
@@ -667,7 +557,6 @@ RedfishVariant RedfishVariant::operator[](const std::string &property) const {
   }
   return RedfishVariant(absl::InternalError("not a RedfishObject"));
 }
-
 RedfishVariant RedfishVariant::operator[](const size_t index) const {
   if (!status_.ok()) {
     return RedfishVariant(nullptr, status_, httpcode_);
@@ -700,32 +589,17 @@ RedfishIterReturnValue RedfishVariant::IndexHelper::Do(
       [&](auto &&index_value) -> RedfishIterReturnValue {
         using T = std::decay_t<decltype(index_value)>;
         auto rest = indices.last(indices.size() - 1);
-        if constexpr (std::is_same_v<T, std::string> ||
-                      std::is_same_v<T, IndexExpand> ||
-                      std::is_same_v<T, size_t>) {
-          // If the index is a string, likely we are looking at a RedfishObject.
-          // If the index is an Expand, we are looking at a RedfishObject with
-          // redfish expand options added.
-          // If the index is an integer. We should be looking at a
-          // RedfishIterable.
+        if constexpr (std::is_same_v<T, std::string>) {
+          // The index is a string. Likely we are looking at a RedfishObject.
           // Simply drill down.
           if (Do(root[index_value], rest, what) ==
               RedfishIterReturnValue::kStop) {
             return RedfishIterReturnValue::kStop;
           }
-        } else if constexpr (std::is_same_v<T, IndexExpandAll>) {
-          // The index is similar to string, but we need to expand an entire
-          // tree. Then simply drill down. Number of levels should be increased
-          // to cover all the "rest" elements. The expectation is that number of
-          // expands is similar to number of 'each' indexes
-          IndexExpand expand = {index_value.index, index_value.expand_type,
-                                index_value.extra_levels};
-          for (const auto &rest_index : rest) {
-            if (std::get_if<IndexEach>(&rest_index) != nullptr) {
-              expand.levels++;
-            }
-          }
-          if (Do(root[std::move(expand)], rest, what) ==
+        } else if constexpr (std::is_same_v<T, size_t>) {
+          // The index is an integer. We should be looking at a RedfishIterable.
+          // Simply drill down.
+          if (Do(root[index_value], rest, what) ==
               RedfishIterReturnValue::kStop) {
             return RedfishIterReturnValue::kStop;
           }

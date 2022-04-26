@@ -2,9 +2,6 @@
   "@odata.id": "/redfish/v1/Chassis/child2",
   "@odata.type": "#Chassis.v1_14_0.Chassis",
   "ChassisType": "RackMount",
-  "Drives": {
-    "@odata.id": "/redfish/v1/Chassis/child2/Drives"
-  },
   "Id": "child2",
   "Links": {
     "ContainedBy": {
@@ -16,15 +13,6 @@
       "LocationType": "Slot",
       "ServiceLabel": "C2"
     }
-  },
-  "Power": {
-    "@odata.id": "/redfish/v1/Chassis/child2/Power"
-  },
-  "Sensors": {
-    "@odata.id": "/redfish/v1/Chassis/child2/Sensors"
-  },
-  "Thermal": {
-    "@odata.id": "/redfish/v1/Chassis/child2/Thermal"
   },
   "Name": "child2"
 }

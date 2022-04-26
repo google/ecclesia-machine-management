@@ -17,7 +17,6 @@
 #include "ecclesia/lib/redfish/interface.h"
 
 #include <memory>
-#include <optional>
 #include <string>
 
 #include "gmock/gmock.h"
@@ -134,78 +133,9 @@ TEST(RedfishVariant, PropertyError) {
 }
 
 TEST(RedfishVariant, RedfishQueryParamExpand) {
-  EXPECT_EQ(
-      RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 1})
-          .ToString(),
-      "$expand=*($levels=1)");
-
-  EXPECT_EQ(
-      RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::ExpandType::kLinks, .levels = 2})
-          .ToString(),
-      "$expand=~($levels=2)");
-
-  EXPECT_EQ(
-      RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::ExpandType::kNotLinks, .levels = 3})
-          .ToString(),
-      "$expand=.($levels=3)");
-}
-
-TEST(RedfishVariant, ValidateRedfishSupportSuccess) {
-  EXPECT_THAT(
-      RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 1})
-          .ValidateRedfishSupport(std::nullopt),
-      ecclesia::IsStatusInternal());
-  // Test successful scenarios
-  EXPECT_THAT(
-      RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 1})
-          .ValidateRedfishSupport(RedfishSupportedFeatures{
-              .expand = {.expand_all = true, .max_levels = 1}}),
-      ecclesia::IsOk());
-  EXPECT_THAT(
-      RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::ExpandType::kLinks, .levels = 2})
-          .ValidateRedfishSupport(RedfishSupportedFeatures{
-              .expand = {.links = true, .max_levels = 3}}),
-      ecclesia::IsOk());
-  EXPECT_THAT(
-      RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::ExpandType::kNotLinks, .levels = 1})
-          .ValidateRedfishSupport(RedfishSupportedFeatures{
-              .expand = {.no_links = true, .max_levels = 1}}),
-      ecclesia::IsOk());
-}
-
-TEST(RedfishVariant, ValidateRedfishSupportFailures) {
-  EXPECT_THAT(
-      RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 1})
-          .ValidateRedfishSupport(RedfishSupportedFeatures{
-              .expand = {.expand_all = false, .max_levels = 1}}),
-      ecclesia::IsStatusInternal());
-  EXPECT_THAT(
-      RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::ExpandType::kLinks, .levels = 2})
-          .ValidateRedfishSupport(RedfishSupportedFeatures{
-              .expand = {.links = false, .max_levels = 3}}),
-      ecclesia::IsStatusInternal());
-  EXPECT_THAT(
-      RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::ExpandType::kNotLinks, .levels = 1})
-          .ValidateRedfishSupport(RedfishSupportedFeatures{
-              .expand = {.no_links = false, .max_levels = 1}}),
-      ecclesia::IsStatusInternal());
-  // Validate levels are controlled
-  EXPECT_THAT(
-      RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::ExpandType::kNotLinks, .levels = 2})
-          .ValidateRedfishSupport(RedfishSupportedFeatures{
-              .expand = {.no_links = true, .max_levels = 1}}),
-      ecclesia::IsStatusInternal());
+  RedfishQueryParamExpand expand(
+      {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 2});
+  EXPECT_EQ(expand.ToString(), "$expand=*($levels=2)");
 }
 
 }  // namespace

@@ -150,10 +150,6 @@ inline constexpr char kRfPropertyComponentCertificate[] =
 
 inline constexpr char kRfResourceTypeProcessorMetrics[] = "ProcessorMetrics";
 
-inline constexpr char kProtocolFeaturesSupported[] =
-    "ProtocolFeaturesSupported";
-inline constexpr char kExpandQuery[] = "ExpandQuery";
-
 DEFINE_REDFISH_RESOURCE(ResourceCertificate, "Certificate");
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
 DEFINE_REDFISH_RESOURCE(ResourceChassis, "Chassis");
@@ -346,14 +342,6 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyTopologyRepresentation, std::string,
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyTcgOpalAdditionalDataStoreRawData,
                         std::string, "TcgOpalAdditionalDataStoreRawData");
 DEFINE_REDFISH_PROPERTY(OemPropertyRootOfTrust, std::string, "RootOfTrust");
-
-// Redfish agent expand support capabilites
-DEFINE_REDFISH_PROPERTY(ExpandQueryExpandAll, bool, "ExpandAll");
-DEFINE_REDFISH_PROPERTY(ExpandQueryLevels, bool, "Levels");
-DEFINE_REDFISH_PROPERTY(ExpandQuerykLinks, bool, "Links");
-DEFINE_REDFISH_PROPERTY(ExpandQuerykMaxLevels, int, "MaxLevels");
-DEFINE_REDFISH_PROPERTY(ExpandQuerykNoLinks, bool, "NoLinks");
-
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_PROPERTY_DEFINITIONS_H_

@@ -1,5 +1,0 @@
-{
-    "@odata.id": "/redfish/v1/Chassis/child2/Thermal",
-    "@odata.type": "#Thermal.v1_4_0.Thermal",
-    "Fans": []
-}

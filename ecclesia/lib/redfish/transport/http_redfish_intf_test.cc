@@ -27,7 +27,6 @@
 #include "absl/flags/declare.h"
 #include "absl/flags/flag.h"
 #include "absl/memory/memory.h"
-#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
@@ -47,6 +46,8 @@
 #include "ecclesia/lib/time/clock_fake.h"
 #include "single_include/nlohmann/json.hpp"
 
+ABSL_DECLARE_FLAG(bool, ecclesia_enable_expanded_iterations);
+
 namespace ecclesia {
 namespace {
 
@@ -54,9 +55,6 @@ using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::Gt;
 using ::testing::UnorderedElementsAre;
-
-using ::tensorflow::serving::net_http::ServerRequestInterface;
-using ::tensorflow::serving::net_http::SetContentType;
 
 TEST(HttpRedfishInterfaceMultithreadedTest, NoMultithreadedIssuesOnGet) {
   // Number of threads to test with.
@@ -163,13 +161,15 @@ TEST_F(HttpRedfishInterfaceTest, UpdateTransport) {
   "Description": "My Test Resource"
 })json";
   int called_count = 0;
-  server2->AddHttpGetHandler("/redfish/v1/Chassis/chassis",
-                             [&](ServerRequestInterface *req) {
-                               called_count++;
-                               SetContentType(req, "application/json");
-                               req->WriteResponseString(kSecondServerResponse);
-                               req->Reply();
-                             });
+  server2->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called_count++;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(kSecondServerResponse);
+        req->Reply();
+      });
 
   // First GET should fetch from the original server.
   EXPECT_TRUE(intf_->IsTrusted());
@@ -363,16 +363,19 @@ TEST_F(HttpRedfishInterfaceTest, ForEachPropertyTestStop) {
 TEST_F(HttpRedfishInterfaceTest, CachedGet) {
   int called_count = 0;
   auto result_json = nlohmann::json::parse(R"json({
-    "Id": "1",
-    "Name": "MyResource",
-    "Description": "My Test Resource"
-  })json");
-  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
-    called_count++;
-    SetContentType(req, "application/json");
-    req->WriteResponseString(result_json.dump());
-    req->Reply();
-  });
+  "Id": "1",
+  "Name": "MyResource",
+  "Description": "My Test Resource"
+})json");
+  server_->AddHttpGetHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called_count++;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->Reply();
+      });
 
   // The first GET will need to hit the backend as the cache is empty.
   {
@@ -401,75 +404,77 @@ TEST_F(HttpRedfishInterfaceTest, CachedGet) {
   }
 }
 
-TEST_F(HttpRedfishInterfaceTest, GetWithExpand) {
+TEST_F(HttpRedfishInterfaceTest, AsIterableWithExpands) {
   int called_expanded_count = 0;
-  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
-    SetContentType(req, "application/json");
-    auto reply = nlohmann::json::parse(
-        R"json({
-              "@odata.id": "/redfish/v1",
-              "Chassis": {
-                "@odata.id": "/redfish/v1/Chassis"
-              },
-              "ProtocolFeaturesSupported": {
-                "ExpandQuery": {
-                  "ExpandAll": true,
-                  "Levels": true,
-                  "Links": true,
-                  "MaxLevels": 6,
-                  "NoLinks": true
-                }
-              }
-            })json");
-    req->WriteResponseString(reply.dump());
-    req->Reply();
-  });
-  server_->AddHttpGetHandler("/redfish/v1/Chassis?$expand=*($levels=1)",
-                             [&](ServerRequestInterface *req) {
-                               SetContentType(req, "application/json");
-                               called_expanded_count++;
-                               req->WriteResponseString(R"json({})json");
-                               req->Reply();
-                             });
+  absl::SetFlag(&FLAGS_ecclesia_enable_expanded_iterations, true);
+  server_->AddHttpGetHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(
+            R"json({
+          "@odata.id": "/my/uri",
+          "Members":[ { "@odata.id":"/my/uri/member1" } ],
+          "Members@odata.count":1,"Name":"Chassis Collection"})json");
+        req->Reply();
+      });
+  server_->AddHttpGetHandler(
+      "/my/uri?$expand=*($levels=1)",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called_expanded_count++;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(
+            R"json({
+              "@odata.id": "/my/uri",
+              "Members":[ {"@odata.id":"/my/uri/member1" "Name": "chassis"} ],
+              "Members@odata.count":1,"Name":"Chassis Collection"})json");
+        req->Reply();
+      });
 
-  auto redfish_object = intf_->GetRoot().AsObject();
-  ASSERT_NE(redfish_object, nullptr);
-  redfish_object->GetExpanded(
-      "Chassis", RedfishQueryParamExpand({RedfishQueryParamExpand::kBoth, 1}));
+  auto redfish_object = intf_->CachedGetUri("/my/uri");
+  redfish_object.AsIterable();
   EXPECT_EQ(called_expanded_count, 1);
+  // Invalidate cache and try reading members directly
+  clock_.AdvanceTime(absl::Seconds(1) + absl::Minutes(1));
+  redfish_object["Members"].AsIterable();
+  EXPECT_EQ(called_expanded_count, 2);
 }
 
-TEST_F(HttpRedfishInterfaceTest, GetWithoutExpand) {
+TEST_F(HttpRedfishInterfaceTest, AsIterableWithNoExpands) {
   int called_expanded_count = 0;
-  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
-    SetContentType(req, "application/json");
-    auto reply = nlohmann::json::parse(
-        R"json({
-              "@odata.id": "/redfish/v1",
-              "Chassis": {
-                "@odata.id": "/redfish/v1/Chassis"
-              }
-            })json");
-    req->WriteResponseString(reply.dump());
-    req->Reply();
-  });
-  server_->AddHttpGetHandler("/redfish/v1/Chassis",
-                             [&](ServerRequestInterface *req) {
-                               SetContentType(req, "application/json");
-                               req->WriteResponseString(R"json({})json");
-                               req->Reply();
-                             });
-  server_->AddHttpGetHandler("/redfish/v1/Chassis?$expand=*($levels=1)",
-                             [&](ServerRequestInterface *req) {
-                               SetContentType(req, "application/json");
-                               called_expanded_count++;
-                               req->WriteResponseString(R"json({})json");
-                               req->Reply();
-                             });
-  auto redfish_object = intf_->GetRoot().AsObject();
-  ASSERT_NE(redfish_object, nullptr);
-  redfish_object->GetExpanded(
-      "Chassis", RedfishQueryParamExpand({RedfishQueryParamExpand::kBoth, 1}));
+  absl::SetFlag(&FLAGS_ecclesia_enable_expanded_iterations, true);
+  server_->AddHttpGetHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(
+            R"json({
+              "@odata.id": "/my/uri",
+              "NonMembersArray": [ { "@odata.id":"/my/uri/non_member1" } ]
+              "Members":[ { "@odata.id":"/my/uri/member1" } ],
+              "Members@odata.count":1,"Name":"Chassis Collection"})json");
+        req->Reply();
+      });
+  // Is expected to never be called
+  server_->AddHttpGetHandler(
+      "/my/uri?$expand=*($levels=1)",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called_expanded_count++;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(R"json({})json");
+        req->Reply();
+      });
+
+  auto redfish_object = intf_->CachedGetUri("/my/uri");
+
+  redfish_object.AsIterable(RedfishVariant::IterableMode::kDisableExpand);
+  EXPECT_EQ(called_expanded_count, 0);
+  // Try getting an iterable from non Members
+  redfish_object["NonMembersArray"].AsIterable();
   EXPECT_EQ(called_expanded_count, 0);
 }
 
@@ -477,28 +482,34 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetWithOperator) {
   int parent_called_count = 0;
   int child_called_count = 0;
   auto json_parent = nlohmann::json::parse(R"json({
-    "Id": "1",
-    "Name": "MyResource",
-    "Description": "My Test Resource",
-    "Reference": { "@odata.id": "/my/other/uri" }
-  })json");
+  "Id": "1",
+  "Name": "MyResource",
+  "Description": "My Test Resource",
+  "Reference": { "@odata.id": "/my/other/uri" }
+})json");
   auto json_child = nlohmann::json::parse(R"json({
-    "Id": "2",
-    "Name": "MyOtherResource",
-    "Description": "My Other Test Resource"
-  })json");
-  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
-    parent_called_count++;
-    SetContentType(req, "application/json");
-    req->WriteResponseString(json_parent.dump());
-    req->Reply();
-  });
-  server_->AddHttpGetHandler("/my/other/uri", [&](ServerRequestInterface *req) {
-    child_called_count++;
-    SetContentType(req, "application/json");
-    req->WriteResponseString(json_child.dump());
-    req->Reply();
-  });
+  "Id": "2",
+  "Name": "MyOtherResource",
+  "Description": "My Other Test Resource"
+})json");
+  server_->AddHttpGetHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        parent_called_count++;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(json_parent.dump());
+        req->Reply();
+      });
+  server_->AddHttpGetHandler(
+      "/my/other/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        child_called_count++;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(json_child.dump());
+        req->Reply();
+      });
 
   // The first GET will need to hit the backend as the cache is empty.
   auto parent = intf_->CachedGetUri("/my/uri", GetParams{});
@@ -541,17 +552,20 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetWithOperator) {
 TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGet) {
   int called_count = 0;
   auto result_json = nlohmann::json::parse(R"json({
-    "@odata.id": "/my/uri",
-    "Id": "1",
-    "Name": "MyResource",
-    "Description": "My Test Resource"
-  })json");
-  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
-    called_count++;
-    SetContentType(req, "application/json");
-    req->WriteResponseString(result_json.dump());
-    req->Reply();
-  });
+  "@odata.id": "/my/uri",
+  "Id": "1",
+  "Name": "MyResource",
+  "Description": "My Test Resource"
+})json");
+  server_->AddHttpGetHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called_count++;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->Reply();
+      });
 
   // The first GET will need to hit the backend as the cache is empty.
   {
@@ -608,17 +622,20 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGet) {
 TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGetUncached) {
   int called_count = 0;
   auto result_json = nlohmann::json::parse(R"json({
-    "@odata.id": "/my/uri",
-    "Id": "1",
-    "Name": "MyResource",
-    "Description": "My Test Resource"
-  })json");
-  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
-    called_count++;
-    SetContentType(req, "application/json");
-    req->WriteResponseString(result_json.dump());
-    req->Reply();
-  });
+  "@odata.id": "/my/uri",
+  "Id": "1",
+  "Name": "MyResource",
+  "Description": "My Test Resource"
+})json");
+  server_->AddHttpGetHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called_count++;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->Reply();
+      });
 
   // The first GET will need to hit the backend as the cache is empty.
   {
@@ -654,15 +671,18 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGetUncached) {
 }
 TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadFailsWithNoOdataId) {
   auto result_json = nlohmann::json::parse(R"json({
-    "Id": "1",
-    "Name": "MyResource",
-    "Description": "My Test Resource With no @odata.id property"
-  })json");
-  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
-    SetContentType(req, "application/json");
-    req->WriteResponseString(result_json.dump());
-    req->Reply();
-  });
+  "Id": "1",
+  "Name": "MyResource",
+  "Description": "My Test Resource With no @odata.id property"
+})json");
+  server_->AddHttpGetHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(result_json.dump());
+        req->Reply();
+      });
 
   // First GET primes the cache.
   auto result1 = intf_->CachedGetUri("/my/uri", GetParams{});
@@ -676,16 +696,18 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadFailsWithNoOdataId) {
 
 TEST_F(HttpRedfishInterfaceTest, PostHandler) {
   bool called = false;
-  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface *req) {
-    int64_t size;
-    auto buf = req->ReadRequestBytes(&size);
-    ASSERT_THAT(size, Gt(0));
-    auto read_request = nlohmann::json::parse(
-        absl::string_view(buf.get(), size), /*cb=*/nullptr,
-        /*allow_exceptions=*/false);
-    ASSERT_FALSE(read_request.is_discarded());
-    EXPECT_THAT(read_request, Eq(nlohmann::json::parse(
-                                  R"json({
+  server_->AddHttpPostHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        EXPECT_THAT(read_request, Eq(nlohmann::json::parse(
+                                      R"json({
   "int": 1,
   "string": "hello",
   "char": "hi",
@@ -714,13 +736,14 @@ TEST_F(HttpRedfishInterfaceTest, PostHandler) {
     }
   }
 })json",
-                                  /*cb=*/nullptr, /*exceptions=*/false)));
-    called = true;
+                                      /*cb=*/nullptr, /*exceptions=*/false)));
+        called = true;
 
-    SetContentType(req, "application/json");
-    req->WriteResponseString("{}");
-    req->Reply();
-  });
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
 
   constexpr char kHi[] = "hi";
   constexpr char kBye[] = "bye";
@@ -758,16 +781,18 @@ TEST_F(HttpRedfishInterfaceTest, PostHandler) {
 
 TEST_F(HttpRedfishInterfaceTest, PatchHandler) {
   bool called = false;
-  server_->AddHttpPatchHandler("/my/uri", [&](ServerRequestInterface *req) {
-    int64_t size;
-    auto buf = req->ReadRequestBytes(&size);
-    ASSERT_THAT(size, Gt(0));
-    auto read_request = nlohmann::json::parse(
-        absl::string_view(buf.get(), size), /*cb=*/nullptr,
-        /*allow_exceptions=*/false);
-    ASSERT_FALSE(read_request.is_discarded());
-    EXPECT_THAT(read_request, Eq(nlohmann::json::parse(
-                                  R"json({
+  server_->AddHttpPatchHandler(
+      "/my/uri",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        int64_t size;
+        auto buf = req->ReadRequestBytes(&size);
+        ASSERT_THAT(size, Gt(0));
+        auto read_request = nlohmann::json::parse(
+            absl::string_view(buf.get(), size), /*cb=*/nullptr,
+            /*allow_exceptions=*/false);
+        ASSERT_FALSE(read_request.is_discarded());
+        EXPECT_THAT(read_request, Eq(nlohmann::json::parse(
+                                      R"json({
   "int": 1,
   "string": "hello",
   "char": "hi",
@@ -796,13 +821,14 @@ TEST_F(HttpRedfishInterfaceTest, PatchHandler) {
     }
   }
 })json",
-                                  /*cb=*/nullptr, /*exceptions=*/false)));
-    called = true;
+                                      /*cb=*/nullptr, /*exceptions=*/false)));
+        called = true;
 
-    SetContentType(req, "application/json");
-    req->WriteResponseString("{}");
-    req->Reply();
-  });
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
 
   constexpr char kHi[] = "hi";
   constexpr char kBye[] = "bye";

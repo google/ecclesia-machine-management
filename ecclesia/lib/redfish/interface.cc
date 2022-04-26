@@ -16,9 +16,6 @@
 
 #include "ecclesia/lib/redfish/interface.h"
 
-#include "absl/status/status.h"
-#include "absl/types/optional.h"
-
 namespace ecclesia {
 
 RedfishQueryParamExpand::RedfishQueryParamExpand(
@@ -41,35 +38,6 @@ std::string RedfishQueryParamExpand::ToString() const {
   return absl::StrCat("$expand=", expand_type, "($levels=", levels_, ")");
 }
 
-absl::Status RedfishQueryParamExpand::ValidateRedfishSupport(
-    const absl::optional<RedfishSupportedFeatures> &features) const {
-  if (!features.has_value()) {
-    return absl::InternalError("Expands are not supported.");
-  }
-  std::string expand_type;
-  switch (type_) {
-    case ExpandType::kBoth:
-      if (!features->expand.expand_all) {
-        return absl::InternalError("'expand_all' is not supported");
-      }
-      break;
-    case ExpandType::kNotLinks:
-      if (!features->expand.no_links) {
-        return absl::InternalError("'no_links' is not supported");
-      }
-      break;
-    case ExpandType::kLinks:
-      if (!features->expand.links) {
-        return absl::InternalError("'links' is not supported");
-      }
-      break;
-  }
-  if (levels_ > features->expand.max_levels) {
-    return absl::InternalError(
-        "number of levels exceed max levels set in redfish features");
-  }
-  return absl::OkStatus();
-}
 std::unique_ptr<RedfishObject> RedfishVariant::AsFreshObject() const {
   if (!ptr_) return nullptr;
   std::unique_ptr<RedfishObject> obj = ptr_->AsObject();
