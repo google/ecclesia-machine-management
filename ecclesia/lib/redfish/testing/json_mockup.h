@@ -36,6 +36,11 @@ class JsonMockupObject : public RedfishObject {
       : json_view_(std::move(json_view)) {}
   RedfishVariant operator[](const std::string &node_name) const override;
 
+  virtual RedfishVariant GetExpanded(const std::string &node_name,
+                                     RedfishQueryParamExpand expand) const {
+    return this->operator[](node_name);
+  }
+
   std::optional<std::string> GetUriString() const override {
     return GetNodeValue<std::string>("@odata.id");
   }

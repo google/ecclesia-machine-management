@@ -17,7 +17,6 @@
 #ifndef ECCLESIA_LIB_REDFISH_SYSMODEL_H_
 #define ECCLESIA_LIB_REDFISH_SYSMODEL_H_
 
-#include <functional>
 #include <memory>
 
 #include "absl/functional/function_ref.h"
@@ -30,6 +29,9 @@ namespace ecclesia {
 // Redfish system model.
 class Sysmodel {
  public:
+  using ResultCallback =
+      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>;
+
   Sysmodel(RedfishInterface *redfish_intf) : redfish_intf_(redfish_intf) {}
   Sysmodel(const Sysmodel &) = delete;
   Sysmodel &operator=(const Sysmodel &) = delete;
@@ -41,11 +43,22 @@ class Sysmodel {
   // order to support the various URI locations for the resources defined in the
   // Redfish Schema Supplement.
   template <typename ResourceT>
-  void QueryAllResources(
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback) {
+  void QueryAllResources(ResultCallback result_callback) {
     // Invoke the overload using a Token of the appropriate type.
-    QueryAllResourceInternal(Token<ResourceT>(), result_callback);
+    QueryAllResourceInternal(Token<ResourceT>(), result_callback, 0);
+  }
+
+  // QueryAllResources invokes result_callback with a RedfishObject representing
+  // the desired resources of the requested type found in the Redfish backend.
+  //
+  // Template specializations of this function will need to be implemented in
+  // order to support the various URI locations for the resources defined in the
+  // Redfish Schema Supplement.
+  template <typename ResourceT>
+  void QueryAllResources(int expand_levels, ResultCallback result_callback) {
+    // Invoke the overload using a Token of the appropriate type.
+    QueryAllResourceInternal(Token<ResourceT>(), result_callback,
+                             expand_levels);
   }
 
  private:
@@ -58,98 +71,75 @@ class Sysmodel {
   // Internal implementations for each resource type to find all instances of
   // a Redfish resource type. These functions overload QueryAllResourceInternal
   // using a Token struct.
-  void QueryAllResourceInternal(
-      Token<ResourceChassis>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceSystem>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceEthernetInterface>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceMemory>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceStorage>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceStorageController>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceDrive>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceProcessor>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<AbstractionPhysicalLpu>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceThermal>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceTemperature>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceVoltage>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceFan>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceSensor>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourcePcieFunction>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceComputerSystem>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceManager>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceLogService>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceLogEntry>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceSoftwareInventory>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<OemResourceRootOfTrust>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourceComponentIntegrity>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
-  void QueryAllResourceInternal(
-      Token<ResourcePcieSlots>,
-      absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>
-          result_callback);
+  void QueryAllResourceInternal(Token<ResourceChassis>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceSystem>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceEthernetInterface>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceMemory>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceStorage>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceStorageController>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceDrive>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceProcessor>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<AbstractionPhysicalLpu>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceThermal>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceTemperature>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceVoltage>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceFan>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceSensor>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourcePcieFunction>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceComputerSystem>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceManager>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceLogService>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceLogEntry>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceSoftwareInventory>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<OemResourceRootOfTrust>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourceComponentIntegrity>,
+                                ResultCallback result_callback,
+                                int expand_levels);
+  void QueryAllResourceInternal(Token<ResourcePcieSlots>,
+                                ResultCallback result_callback,
+                                int expand_levels);
   RedfishInterface *redfish_intf_;
 };
 

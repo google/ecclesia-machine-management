@@ -32,6 +32,8 @@
 #include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/ascii.h"
+#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -50,11 +52,6 @@
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
 #include "single_include/nlohmann/json.hpp"
-
-// TODO (b/223426511) change to true when expand support is implemented on BMC
-// and then removed afer rollout is done
-ABSL_FLAG(bool, ecclesia_enable_expanded_iterations, false,
-          "Enable RedFish expands for mmanager iterations.");
 
 namespace ecclesia {
 namespace {
@@ -80,6 +77,15 @@ enum CacheState {
 struct RedfishExtendedPath {
   std::string uri;
   std::vector<std::variant<std::string, int>> properties;
+  std::string GetFullPath() const {
+    std::string raw_path = uri;
+    for (const auto &item : properties) {
+      std::visit(
+          [&](auto &&typed_item) { raw_path += absl::StrCat("/", typed_item); },
+          item);
+    }
+    return raw_path;
+  }
 };
 
 // Helper function to convert a key-value span to a JSON object that can be
@@ -271,6 +277,27 @@ class HttpIntfObjectImpl : public RedfishObject {
                             std::move(new_path), cache_state_,
                             "HttpIntfObjectImpl");
   }
+  RedfishVariant GetExpanded(const std::string &node_name,
+                             RedfishQueryParamExpand expand) const override {
+    if (!expand.ValidateRedfishSupport(intf_->SupportedFeatures()).ok()) {
+      return (*this)[node_name];
+    }
+    RedfishExtendedPath new_path = path_;
+
+    new_path.properties.push_back(node_name);
+    if (auto itr = result_.body.find(node_name); itr != result_.body.end()) {
+      // Use the result if we can successfully get the result.
+      // Otherwise fallback to the implementation without expands
+      if (auto variant = intf_->CachedGetUri(
+              new_path.GetFullPath(),
+              GetParams{.query_params = {std::move(expand)}});
+          variant.status().ok()) {
+        return variant;
+      }
+    }
+    return (*this)[node_name];
+  }
+
   std::optional<std::string> GetUriString() const override {
     auto itr = result_.body.find(PropertyOdataId::Name);
     if (itr == result_.body.end()) return std::nullopt;
@@ -362,10 +389,10 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
   CacheState cache_state_;
 };
 
-// HttpIntfCollectionIterableImpl implements the RedfishIterable interface with
-// a JSON object representing a Redfish Collection. The Collection object must
-// be verified before constructing this class. Redfish Collection objects must
-// have "Members@odata.count" and "Members" fields.
+// HttpIntfCollectionIterableImpl implements the RedfishIterable interface
+// with a JSON object representing a Redfish Collection. The Collection object
+// must be verified before constructing this class. Redfish Collection objects
+// must have "Members@odata.count" and "Members" fields.
 class HttpIntfCollectionIterableImpl : public RedfishIterable {
  public:
   explicit HttpIntfCollectionIterableImpl(
@@ -425,33 +452,10 @@ std::unique_ptr<RedfishObject> HttpIntfVariantImpl::AsObject() const {
 
 std::unique_ptr<RedfishIterable> HttpIntfVariantImpl::AsIterable(
     RedfishVariant::IterableMode mode) const {
-  // We do expand the iterable in two cases:
-  // 1. This is an object that contains "Members" field, aka collection_iterable
-  // 2. This is a sub object requested using obj["Members"] syntax
   bool is_collection_iterable =
       result_.body.is_object() &&
       result_.body.contains(PropertyMembers::Name) &&
       result_.body.contains(PropertyMembersCount::Name);
-  bool is_members_array =
-      result_.body.is_array() && path_.properties.size() == 1 &&
-      std::holds_alternative<std::string>(path_.properties[0]) &&
-      std::get<std::string>(path_.properties[0]) == PropertyMembers::Name;
-  if (mode == RedfishVariant::IterableMode::kAllowExpand &&
-      absl::GetFlag(FLAGS_ecclesia_enable_expanded_iterations) &&
-      (is_members_array || is_collection_iterable)) {
-    RedfishVariant expanded_variant = intf_->CachedGetUri(
-        path_.uri, GetParams{.query_params = {RedfishQueryParamExpand(
-                                 {.type = RedfishQueryParamExpand::kBoth})}});
-    // Ignore the result if there is a failure or result code changed
-    if (expanded_variant.status().ok() &&
-        expanded_variant.httpcode() == result_.code) {
-      if (is_members_array) {
-        expanded_variant = expanded_variant[PropertyMembers::Name];
-      }
-      return expanded_variant.AsIterable(
-          RedfishVariant::IterableMode::kDisableExpand);
-    }
-  }
   if (result_.body.is_array()) {
     return std::make_unique<HttpIntfArrayIterableImpl>(intf_, path_, result_,
                                                        cache_state_);
@@ -505,11 +509,16 @@ class HttpRedfishInterface : public RedfishInterface {
   }
 
   RedfishVariant GetRoot(GetParams params) override {
-    if (service_root_ == ServiceRootUri::kGoogle) {
-      return CachedGetUri(kGoogleServiceRoot, std::move(params));
-    }
+    RedfishVariant root = [&]() {
+      if (service_root_ == ServiceRootUri::kGoogle) {
+        return CachedGetUri(kGoogleServiceRoot, std::move(params));
+      }
 
-    return CachedGetUri(kServiceRoot, std::move(params));
+      return CachedGetUri(kServiceRoot, std::move(params));
+    }();
+    // parse supported features if not parsed yet
+    PopuplateSupportedFeatures(root);
+    return root;
   }
 
   // GetUri fetches the given URI and resolves any JSON pointers. Note that
@@ -520,15 +529,16 @@ class HttpRedfishInterface : public RedfishInterface {
                               GetParams params) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
     std::string full_redfish_path = GetUriWithQueryParameters(uri, params);
-    RedfishCachedGetterInterface::GetResult result =
-        cache_->CachedGet(full_redfish_path);
-    return GetUriHelper(uri, std::move(params), std::move(result));
+
+    return GetUriHelper(uri, std::move(params),
+                        cache_->CachedGet(full_redfish_path));
   }
 
   RedfishVariant UncachedGetUri(absl::string_view uri,
                                 GetParams params) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
-    auto get_result = cache_->UncachedGet(uri);
+    std::string full_redfish_path = GetUriWithQueryParameters(uri, params);
+    auto get_result = cache_->UncachedGet(full_redfish_path);
     return GetUriHelper(uri, std::move(params), std::move(get_result));
   }
 
@@ -568,6 +578,11 @@ class HttpRedfishInterface : public RedfishInterface {
                               this, RedfishExtendedPath{std::string(uri)},
                               std::move(*result), kIsFresh),
                           ecclesia::HttpResponseCodeFromInt(code));
+  }
+
+  std::optional<RedfishSupportedFeatures> SupportedFeatures() const override {
+    absl::MutexLock lock(&supported_features_mutex_);
+    return supported_features_;
   }
 
  private:
@@ -619,6 +634,43 @@ class HttpRedfishInterface : public RedfishInterface {
         ecclesia::HttpResponseCodeFromInt(code));
   }
 
+  void PopuplateSupportedFeatures(const RedfishVariant &root) {
+    absl::MutexLock lock(&supported_features_mutex_);
+    if (supported_features_.has_value() || !root.status().ok()) {
+      return;
+    }
+    auto root_object = root.AsObject();
+    if (root_object == nullptr) {
+      return;
+    }
+    auto features_json =
+        (*root_object)[kProtocolFeaturesSupported][kExpandQuery].AsObject();
+    RedfishSupportedFeatures features;
+    if (features_json != nullptr) {
+      if (auto val = features_json->GetNodeValue<ExpandQueryExpandAll>();
+          val.has_value()) {
+        features.expand.expand_all = *val;
+      }
+      if (auto val = features_json->GetNodeValue<ExpandQueryLevels>();
+          val.has_value()) {
+        features.expand.levels = *val;
+      }
+      if (auto val = features_json->GetNodeValue<ExpandQuerykLinks>();
+          val.has_value()) {
+        features.expand.links = *val;
+      }
+      if (auto val = features_json->GetNodeValue<ExpandQuerykMaxLevels>();
+          val.has_value()) {
+        features.expand.max_levels = *val;
+      }
+      if (auto val = features_json->GetNodeValue<ExpandQuerykNoLinks>();
+          val.has_value()) {
+        features.expand.no_links = *val;
+      }
+    }
+    supported_features_ = std::move(features);
+  }
+
   mutable absl::Mutex transport_mutex_;
   std::unique_ptr<ecclesia::RedfishTransport> transport_
       ABSL_GUARDED_BY(transport_mutex_);
@@ -627,6 +679,11 @@ class HttpRedfishInterface : public RedfishInterface {
       ABSL_GUARDED_BY(transport_mutex_);
   RedfishTransportCacheFactory cache_factory_ ABSL_GUARDED_BY(transport_mutex_);
   const ServiceRootUri service_root_;
+
+  mutable absl::Mutex supported_features_mutex_;
+
+  std::optional<RedfishSupportedFeatures> supported_features_
+      ABSL_GUARDED_BY(supported_features_mutex_);
 };
 
 }  // namespace

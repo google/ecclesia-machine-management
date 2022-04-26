@@ -1,0 +1,9 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/child2/Power",
+    "@odata.type": "#Power.v1_5_2.Power",
+    "Id": "Power",
+    "Name": "Power",
+    "PowerControl": [],
+    "Redundancy": [],
+    "Voltages": []
+}
