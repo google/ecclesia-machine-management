@@ -24,6 +24,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/meta/type_traits.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
@@ -70,9 +71,14 @@ void FakeRedfishServer::HandleHttpGet(
   auto itr = http_get_handlers_.find(req->uri_path());
   if (itr == http_get_handlers_.end()) {
     ::tensorflow::serving::net_http::SetContentType(req, "application/json");
-    req->WriteResponseString(
-        redfish_intf_->UncachedGetUri(req->uri_path()).DebugString());
-    req->Reply();
+    auto response = redfish_intf_->UncachedGetUri(req->uri_path());
+    req->WriteResponseString(response.DebugString());
+    if (response.httpcode().has_value()) {
+      req->ReplyWithStatus(::tensorflow::serving::net_http::HTTPStatusCode(
+          response.httpcode().value()));
+    } else {
+      req->Reply();
+    }
     return;
   }
   itr->second(req);

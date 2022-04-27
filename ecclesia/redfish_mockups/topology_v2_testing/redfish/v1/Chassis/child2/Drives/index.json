@@ -1,0 +1,8 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/child2/Drives",
+    "@odata.type": "#DriveCollection.DriveCollection",
+    "Members": [
+    ],
+    "Members@odata.count": 0,
+    "Name": "Drive Collection"
+}
