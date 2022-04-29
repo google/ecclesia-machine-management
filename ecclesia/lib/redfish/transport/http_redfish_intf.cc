@@ -208,6 +208,18 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
   CacheState cache_state_;
 };
 
+// Returns the URI from Json object or NotFound error
+absl::StatusOr<std::string> GetObjectUri(const nlohmann::json &json) {
+  std::string reference;
+  if (json.is_object()) {
+    if (auto odata = json.find(PropertyOdataId::Name);
+        // Object can be re-read by URI. Store it.
+        odata != json.end() && odata.value().is_string()) {
+      return odata.value().get<std::string>();
+    }
+  }
+  return absl::NotFoundError("Unable to find @odata.id");
+}
 // Helper function for automatically fetching an @odata.id reference using
 // GET. The goal of this function is to help "flatten" a Redfish service's
 // entire Redfish tree to make it appear like a single JSON document.
@@ -223,18 +235,13 @@ RedfishVariant ResolveReference(int reuse_code, nlohmann::json json,
                                 CacheState cache_state,
                                 absl::string_view source,
                                 GetParams params = {}) {
-  std::string reference;
-  if (json.is_object()) {
-    if (auto odata = json.find(PropertyOdataId::Name);
-        // Object can be re-read by URI. Store it.
-        odata != json.end() && odata.value().is_string()) {
-      reference = odata.value().get<std::string>();
-      path = RedfishExtendedPath{reference, {}};
+  if (absl::StatusOr<std::string> reference = GetObjectUri(json);
+      reference.ok()) {
+    path = RedfishExtendedPath{*reference, {}};
+    if (json.size() == 1) {
+      // It is a reference, call GET on it
+      return intf->CachedGetUri(*reference, params);
     }
-  }
-  if (json.size() == 1 && !reference.empty()) {
-    // It is a reference, call GET on it
-    return intf->CachedGetUri(reference, params);
   }
   // Return the object as-is.
   return RedfishVariant(
@@ -279,21 +286,26 @@ class HttpIntfObjectImpl : public RedfishObject {
   }
   RedfishVariant GetExpanded(const std::string &node_name,
                              RedfishQueryParamExpand expand) const override {
-    if (!expand.ValidateRedfishSupport(intf_->SupportedFeatures()).ok()) {
+    auto itr = result_.body.find(node_name);
+    if (itr == result_.body.end() ||
+        !expand.ValidateRedfishSupport(intf_->SupportedFeatures()).ok()) {
       return (*this)[node_name];
     }
-    RedfishExtendedPath new_path = path_;
-
-    new_path.properties.push_back(node_name);
-    if (auto itr = result_.body.find(node_name); itr != result_.body.end()) {
-      // Use the result if we can successfully get the result.
-      // Otherwise fallback to the implementation without expands
-      if (auto variant = intf_->CachedGetUri(
-              new_path.GetFullPath(),
-              GetParams{.query_params = {std::move(expand)}});
-          variant.status().ok()) {
-        return variant;
-      }
+    // Use the result if we can successfully get the result.
+    // Otherwise fallback to the implementation without expands
+    RedfishExtendedPath new_path;
+    if (absl::StatusOr<std::string> reference = GetObjectUri(*itr);
+        reference.ok()) {
+      new_path = {std::move(*reference), {}};
+    } else {
+      new_path = path_;
+      new_path.properties.push_back(node_name);
+    }
+    if (auto variant =
+            intf_->CachedGetUri(new_path.GetFullPath(),
+                                GetParams{.query_params = {std::move(expand)}});
+        variant.status().ok()) {
+      return variant;
     }
     return (*this)[node_name];
   }

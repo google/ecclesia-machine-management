@@ -402,15 +402,16 @@ TEST_F(HttpRedfishInterfaceTest, CachedGet) {
 }
 
 TEST_F(HttpRedfishInterfaceTest, GetWithExpand) {
-  int called_expanded_count = 0;
   server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
     SetContentType(req, "application/json");
+    // Reply will redirect the chassis
     auto reply = nlohmann::json::parse(
         R"json({
               "@odata.id": "/redfish/v1",
               "Chassis": {
-                "@odata.id": "/redfish/v1/Chassis"
+                "@odata.id": "/redfish/v2/Chassis"
               },
+              "FakeItemWithoutId": {},
               "ProtocolFeaturesSupported": {
                 "ExpandQuery": {
                   "ExpandAll": true,
@@ -424,19 +425,33 @@ TEST_F(HttpRedfishInterfaceTest, GetWithExpand) {
     req->WriteResponseString(reply.dump());
     req->Reply();
   });
-  server_->AddHttpGetHandler("/redfish/v1/Chassis?$expand=*($levels=1)",
+  int called_chassis_expanded_count = 0;
+  server_->AddHttpGetHandler("/redfish/v2/Chassis?$expand=*($levels=1)",
                              [&](ServerRequestInterface *req) {
                                SetContentType(req, "application/json");
-                               called_expanded_count++;
+                               called_chassis_expanded_count++;
                                req->WriteResponseString(R"json({})json");
                                req->Reply();
                              });
+  int called_fake_item_expanded_count = 0;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/FakeItemWithoutId?$expand=.($levels=1)",
+      [&](ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        called_fake_item_expanded_count++;
+        req->WriteResponseString(R"json({})json");
+        req->Reply();
+      });
 
   auto redfish_object = intf_->GetRoot().AsObject();
   ASSERT_NE(redfish_object, nullptr);
   redfish_object->GetExpanded(
       "Chassis", RedfishQueryParamExpand({RedfishQueryParamExpand::kBoth, 1}));
-  EXPECT_EQ(called_expanded_count, 1);
+  EXPECT_EQ(called_chassis_expanded_count, 1);
+  redfish_object->GetExpanded(
+      "FakeItemWithoutId",
+      RedfishQueryParamExpand({RedfishQueryParamExpand::kNotLinks, 1}));
+  EXPECT_EQ(called_fake_item_expanded_count, 1);
 }
 
 TEST_F(HttpRedfishInterfaceTest, GetWithoutExpand) {
