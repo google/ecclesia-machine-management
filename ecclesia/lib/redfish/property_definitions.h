@@ -75,7 +75,7 @@ inline constexpr char kRfPropertyTemperaturesCount[] =
 inline constexpr char kRfPropertyParameters[] = "Parameters";
 inline constexpr char kRfPropertyPower[] = "Power";
 inline constexpr char kRfPropertyPowerWatts[] = "PowerWatts";
-inline constexpr char kRfPropertyProcessorMetrics[] = "ProcessorStatistics";
+inline constexpr char kRfPropertyProcessorStatistics[] = "ProcessorStatistics";
 inline constexpr char kRfPropertyVoltages[] = "Voltages";
 inline constexpr char kRfPropertyFans[] = "Fans";
 inline constexpr char kRfPropertySensors[] = "Sensors";
@@ -86,6 +86,7 @@ inline constexpr char kRfPropertyState[] = "State";
 inline constexpr char kRfPropertyThresholds[] = "Thresholds";
 inline constexpr char kRfPropertyUpperCritical[] = "UpperCritical";
 inline constexpr char kRfPropertyStorageControllers[] = "StorageControllers";
+inline constexpr char kRfPropertyMemoryStatistics[] = "MemoryStatistics";
 inline constexpr char kRfPropertyNvmeControllersProperties[] =
     "NVMeControllerProperties";
 inline constexpr char kRfPropertyNvmeSmartCriticalWarnings[] =
@@ -322,6 +323,7 @@ DEFINE_REDFISH_PROPERTY(PropertyCreatedTime, std::string, "Created");
 // ManagerDiagnosticData properties
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
 DEFINE_REDFISH_PROPERTY(PropertyUserPercent, double, "UserPercent");
+DEFINE_REDFISH_PROPERTY(PropertyAvailableBytes, int64_t, "AvailableBytes");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
