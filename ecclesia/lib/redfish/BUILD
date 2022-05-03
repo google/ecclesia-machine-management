@@ -233,6 +233,7 @@ cc_library(
         "//ecclesia/lib/http:curl_client",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/logging:posix",
+        "//ecclesia/lib/network:ip",
         "//ecclesia/lib/network:testing",
         "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:http",

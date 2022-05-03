@@ -20,6 +20,23 @@ cc_test(
 )
 
 cc_library(
+    name = "ip",
+    srcs = ["ip.cc"],
+    hdrs = ["ip.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_test(
+    name = "ip_test",
+    srcs = ["ip_test.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ip",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "testing",
     testonly = True,
     srcs = ["testing.cc"],

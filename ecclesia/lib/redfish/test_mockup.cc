@@ -44,6 +44,7 @@
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/logging/posix.h"
+#include "ecclesia/lib/network/ip.h"
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
@@ -113,22 +114,21 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
 TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
                                          ServiceRootUri service_root)
     : connection_config_(ConfigNetwork{
-          .hostname = "[::1]", .port = ecclesia::FindUnusedPortOrDie()}) {
+          .hostname = "localhost", .port = ecclesia::FindUnusedPortOrDie()}) {
   std::string mockup_path = ecclesia::GetTestDataDependencyPath(
       ecclesia::JoinFilePaths("redfish_mockups", mockup_shar));
-  std::string string_argv[] = {
-      mockup_path,
-      "--host",
-      "::1",
-      "--port",
-      absl::StrCat(std::get<ConfigNetwork>(connection_config_).port),
-      "--ipv6"};
-  char *argv[ABSL_ARRAYSIZE(string_argv) + 1] = {};
-  for (size_t i = 0; i < ABSL_ARRAYSIZE(string_argv); ++i) {
+  std::vector<std::string> string_argv = {
+      mockup_path, "--host", "localhost", "--port",
+      absl::StrCat(std::get<ConfigNetwork>(connection_config_).port)};
+  if (IsIpv6LocalhostAvailable()) {
+    string_argv.push_back("--ipv6");
+  }
+  std::vector<char *> argv(string_argv.size() + 1);
+  for (size_t i = 0; i < string_argv.size(); ++i) {
     argv[i] = &string_argv[i][0];
   }
   SetUpMockupServer(
-      argv,
+      argv.data(),
       [this, service_root]() {
         return RedfishClientInterface(/*client=*/nullptr, service_root);
       },
@@ -140,17 +140,16 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
                                          const ClientTlsConfig &client_config,
                                          ServiceRootUri service_root)
     : connection_config_(ConfigNetwork{
-          .hostname = "[::1]", .port = ecclesia::FindUnusedPortOrDie()}),
+          .hostname = "localhost", .port = ecclesia::FindUnusedPortOrDie()}),
       client_tls_config_(client_config) {
   std::string mockup_path = ecclesia::GetTestDataDependencyPath(
       ecclesia::JoinFilePaths("redfish_mockups", mockup_shar));
-  std::string string_argv[] = {
+  std::vector<std::string> string_argv = {
       mockup_path,
       "--host",
-      "::1",
+      "localhost",
       "--port",
       absl::StrCat(std::get<ConfigNetwork>(connection_config_).port),
-      "--ipv6",
       "--mode",
       "mtls",
       "--cert",
@@ -159,12 +158,15 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
       server_config.key_file,
       "--ca",
       server_config.ca_cert_file};
-  char *argv[ABSL_ARRAYSIZE(string_argv) + 1] = {};
-  for (size_t i = 0; i < ABSL_ARRAYSIZE(string_argv); ++i) {
+  if (IsIpv6LocalhostAvailable()) {
+    string_argv.push_back("--ipv6");
+  }
+  std::vector<char *> argv(string_argv.size() + 1);
+  for (size_t i = 0; i < string_argv.size(); ++i) {
     argv[i] = &string_argv[i][0];
   }
   SetUpMockupServer(
-      argv,
+      argv.data(),
       [this, service_root]() {
         return RedfishClientTlsAuthInterface(service_root);
       },
