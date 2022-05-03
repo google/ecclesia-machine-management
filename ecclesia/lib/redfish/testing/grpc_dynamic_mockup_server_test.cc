@@ -63,16 +63,16 @@ class GrpcRedfishMockUpServerTest : public Test {
     StaticBufferBasedTlsOptions options;
     options.SetToInsecure();
     mockup_server_ = absl::make_unique<GrpcDynamicMockupServer>(
-        "barebones_session_auth/mockup.shar", "[::1]", 0);
+        "barebones_session_auth/mockup.shar", "localhost", 0);
     auto port = mockup_server_->Port();
     EXPECT_TRUE(port.has_value());
     auto transport = CreateGrpcRedfishTransport(
-        absl::StrCat("[::1]:", *port), {}, options.GetChannelCredentials());
+        absl::StrCat("localhost:", *port), {}, options.GetChannelCredentials());
     if (transport.ok()) {
       client_ = std::move(*transport);
     }
     std::shared_ptr<grpc::Channel> channel = CreateChannel(
-        absl::StrCat("[::1]:", *port), grpc::InsecureChannelCredentials());
+        absl::StrCat("localhost:", *port), grpc::InsecureChannelCredentials());
     stub_ = ::redfish::v1::RedfishV1::NewStub(channel);
   }
 

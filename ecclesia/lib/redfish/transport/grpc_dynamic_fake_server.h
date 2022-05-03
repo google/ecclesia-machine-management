@@ -104,7 +104,7 @@ class GrpcDynamicFakeServer {
                         std::shared_ptr<grpc::ServerCredentials> credentials);
   ~GrpcDynamicFakeServer();
 
-  std::string GetHostPort() const { return absl::StrCat("[::1]:", port_); }
+  std::string GetHostPort() const { return absl::StrCat("localhost:", port_); }
   int GetPort() const { return port_; }
   void SetCallback(std::function<grpc::Status(grpc::ServerContext*,
                                               const ::redfish::v1::Request*,

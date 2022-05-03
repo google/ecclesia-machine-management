@@ -36,13 +36,13 @@ using ::testing::Eq;
 TEST(GrpcRedfishTransport, Get) {
   absl::flat_hash_map<std::string, std::string> headers;
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
-                                        "[::1]", 0);
+                                        "localhost", 0);
   StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
   auto port = mockup_server.Port();
   ASSERT_TRUE(port.has_value());
-  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port), {},
-                                              options.GetChannelCredentials());
+  auto transport = CreateGrpcRedfishTransport(
+      absl::StrCat("localhost:", *port), {}, options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
   absl::string_view expected_str = R"json({
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
@@ -71,13 +71,13 @@ TEST(GrpcRedfishTransport, Get) {
 TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   absl::flat_hash_map<std::string, std::string> headers;
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
-                                        "[::1]", 0);
+                                        "localhost", 0);
   StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
   auto port = mockup_server.Port();
   ASSERT_TRUE(port.has_value());
-  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port), {},
-                                              options.GetChannelCredentials());
+  auto transport = CreateGrpcRedfishTransport(
+      absl::StrCat("localhost:", *port), {}, options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
   nlohmann::json expected_post =
       nlohmann::json::parse(R"json({})json", nullptr, false);
@@ -156,26 +156,26 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
 
 TEST(GrpcRedfishTransport, GetRootUri) {
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
-                                        "[::1]", 0);
+                                        "localhost", 0);
   StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
   auto port = mockup_server.Port();
   ASSERT_TRUE(port.has_value());
-  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port), {},
-                                              options.GetChannelCredentials());
+  auto transport = CreateGrpcRedfishTransport(
+      absl::StrCat("localhost:", *port), {}, options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
   EXPECT_EQ((*transport)->GetRootUri(), "/redfish/v1");
 }
 
 TEST(GrpcRedfishTransport, ResourceNotFound) {
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
-                                        "[::1]", 0);
+                                        "localhost", 0);
   StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
   auto port = mockup_server.Port();
   ASSERT_TRUE(port.has_value());
-  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port), {},
-                                              options.GetChannelCredentials());
+  auto transport = CreateGrpcRedfishTransport(
+      absl::StrCat("localhost:", *port), {}, options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
 
   auto result_get = (*transport)->Get("/redfish/v1/Chassis/noexist");
@@ -188,13 +188,13 @@ TEST(GrpcRedfishTransport, ResourceNotFound) {
 
 TEST(GrpcRedfishTransport, NotAllowed) {
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
-                                        "[::1]", 0);
+                                        "localhost", 0);
   StaticBufferBasedTlsOptions options;
   options.SetToInsecure();
   auto port = mockup_server.Port();
   ASSERT_TRUE(port.has_value());
-  auto transport = CreateGrpcRedfishTransport(absl::StrCat("[::1]:", *port), {},
-                                              options.GetChannelCredentials());
+  auto transport = CreateGrpcRedfishTransport(
+      absl::StrCat("localhost:", *port), {}, options.GetChannelCredentials());
   ASSERT_THAT(transport, IsOk());
 
   absl::string_view data_post = R"json({
@@ -227,10 +227,10 @@ TEST(GrpcRedfishTransport, Timeout) {
   params.timeout = absl::AbsDuration(absl::Milliseconds(50));
   params.clock = &clock;
 
-  std::string endpoint = absl::StrCat("[::1]:", port);
+  std::string endpoint = absl::StrCat("localhost:", port);
   testing::internal::Notification notification;
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
-                                        "[::1]", port);
+                                        "localhost", port);
 
   if (auto transport = CreateGrpcRedfishTransport(
           endpoint, params, options.GetChannelCredentials());

@@ -47,7 +47,7 @@ GrpcDynamicFakeServer::GrpcDynamicFakeServer(
 GrpcDynamicFakeServer::GrpcDynamicFakeServer(
     int port, std::shared_ptr<grpc::ServerCredentials> credentials)
     : port_(port) {
-  std::string server_address(absl::StrCat("[::1]:", port_));
+  std::string server_address(absl::StrCat("localhost:", port_));
   grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, std::move(credentials));
   builder.RegisterService(&service_impl_);
