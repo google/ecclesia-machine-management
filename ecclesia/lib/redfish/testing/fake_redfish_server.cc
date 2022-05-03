@@ -196,7 +196,7 @@ FakeRedfishServer::~FakeRedfishServer() {
 }
 
 FakeRedfishServer::Config FakeRedfishServer::GetConfig() const {
-  return FakeRedfishServer::Config{.hostname = "[::1]",
+  return FakeRedfishServer::Config{.hostname = "localhost",
                                    .port = proxy_server_->listen_port()};
 }
 
