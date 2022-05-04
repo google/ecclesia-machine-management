@@ -381,3 +381,38 @@ cc_data_library(
     data = glob(["topology_configs/*.textpb"]),
     var_name = "kTopologyConfig",
 )
+
+cc_library(
+    name = "to_proto",
+    srcs = ["to_proto.cc"],
+    hdrs = ["to_proto.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//ecclesia/lib/redfish:interface",
+        "@com_google_absl//absl/status",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+proto_library(
+    name = "to_proto_test_proto",
+    srcs = ["to_proto_test.proto"],
+)
+
+cc_proto_library(
+    name = "to_proto_test_cc_proto",
+    deps = [":to_proto_test_proto"],
+)
+
+cc_test(
+    name = "to_proto_test",
+    srcs = ["to_proto_test.cc"],
+    deps = [
+        ":to_proto",
+        ":to_proto_test_cc_proto",
+        "//ecclesia/lib/redfish/testing:json_mockup",
+        "//ecclesia/lib/testing:proto",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

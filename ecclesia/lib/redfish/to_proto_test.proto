@@ -1,0 +1,51 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Protobuffers to test the to_proto library.
+
+syntax = "proto3";
+
+package ecclesia;
+
+message RedfishToProtoTestDataB {
+  optional float b1 = 1;
+  optional double b2 = 2;
+  optional int64 b3 = 3;
+  optional uint64 b4 = 4;
+  optional int32 b5 = 5;
+  optional uint32 b6 = 6;
+  repeated uint32 b6repeated = 7;
+  optional bool b7 = 8;
+  optional string b8 = 9;
+}
+
+message RedfishToProtoTestDataA {
+  optional float a1 = 1;
+  optional double a2 = 2;
+  optional int64 a3 = 3;
+  optional uint64 a4 = 4;
+  optional int32 a5 = 5;
+  optional uint32 a6 = 6;
+  repeated uint32 a6repeated = 7;
+  optional bool a7 = 8;
+  optional string a8 = 9;
+  enum A9 {
+    A91 = 0;
+    A92 = 1;
+  }
+  optional A9 a9 = 10;
+  repeated A9 a9repeated = 11;
+  optional RedfishToProtoTestDataB b = 12;
+  repeated RedfishToProtoTestDataB brepeated = 13;
+}
