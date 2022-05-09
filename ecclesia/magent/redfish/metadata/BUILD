@@ -9,9 +9,7 @@ pkg_tar(
     srcs = [":index.xml"],
     extension = "tar.gz",
     strip_prefix = ".",
-    visibility = [
-        "//ecclesia:magent_library_users",
-    ],
+    visibility = ["//visibility:private"],
 )
 
 exports_files(
