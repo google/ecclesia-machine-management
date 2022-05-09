@@ -11,10 +11,7 @@ cc_library(
     srcs = ["bits.cc"],
     hdrs = ["bits.h"],
     visibility = ["//visibility:public"],
-    deps = [
-        "@com_google_absl//absl/base:core_headers",
-        "@com_google_absl//absl/numeric:bits",
-    ],
+    deps = ["@com_google_absl//absl/numeric:bits"],
 )
 
 cc_test(

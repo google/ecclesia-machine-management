@@ -25,7 +25,6 @@
 #include <iterator>
 #include <type_traits>
 
-#include "absl/base/attributes.h"
 #include "absl/numeric/bits.h"
 
 namespace ecclesia {
@@ -69,7 +68,7 @@ struct BitRange {
 //     ExtractBits(0x12345678, BitRange(15, 8))  = 0x56
 //     ExtractBits(0x12345678, BitRange(8, 15))  = 0x0
 template <typename T>
-ABSL_MUST_USE_RESULT T ExtractBits(const T &value, const BitRange &bits) {
+[[nodiscard]] T ExtractBits(const T &value, const BitRange &bits) {
   // Prevent right-shift of signed numbers.
   static_assert(std::is_integral<T>::value, "Integral required.");
   using unsignedT = std::make_unsigned_t<T>;
@@ -169,8 +168,9 @@ class AddressRange {
   }
   bool operator!=(const AddressRange &range) const { return !(*this == range); }
 
-  // The range is empty if last < first. Upon an First/Last address access request
-  // to an empty range , return value of BeginAddress for both First and Last.
+  // The range is empty if last < first. Upon an First/Last address access
+  // request to an empty range , return value of BeginAddress for both First and
+  // Last.
   bool Empty() const;
   // An address is in the range if first <= address <= last.
   bool InRange(uint64_t address) const;

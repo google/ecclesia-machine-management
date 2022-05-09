@@ -104,8 +104,7 @@ class ApiComplexityContextManager {
    public:
     virtual ~ImplInterface() = default;
     virtual absl::StatusOr<ApiComplexityContext*> GetContext() = 0;
-    virtual void ReportContextResult(
-        const ApiComplexityContext& context) = 0;
+    virtual void ReportContextResult(const ApiComplexityContext& context) = 0;
   };
   // Class is used as a return value from PrepareForInboundApi method. It
   // simplifies results reporting using "report on destroy" approach.
@@ -195,8 +194,7 @@ class ApiComplexityContextManager {
   // Resets counters to track a new API.
   // Why: Threading implementation can reuse threads and that can lead to the
   // stale context.
-  ReportOnDestroy PrepareForInboundApi(std::string name) const
-      ABSL_MUST_USE_RESULT;
+  [[nodiscard]] ReportOnDestroy PrepareForInboundApi(std::string name) const;
 
   // Increments downstream call counter depending on the call type.
   void RecordDownstreamCall(ApiComplexityContext::CallType call_type) const;
