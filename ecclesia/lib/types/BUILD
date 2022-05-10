@@ -22,7 +22,7 @@ cc_test(
 cc_library(
     name = "enum",
     hdrs = ["enum.h"],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
 )
 
 cc_test(
