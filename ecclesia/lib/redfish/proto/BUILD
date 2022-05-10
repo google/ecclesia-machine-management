@@ -5,7 +5,7 @@ licenses(["notice"])
 proto_library(
     name = "redfish_v1_proto",
     srcs = ["redfish_v1.proto"],
-    visibility = ["//ecclesia:redfish_grpc_users"],
+    visibility = ["//visibility:private"],
     deps = ["@com_google_protobuf//:struct_proto"],
 )
 
