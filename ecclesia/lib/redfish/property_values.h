@@ -35,6 +35,7 @@ inline constexpr char kCertificateTypePEM[] = "PEM";
 inline constexpr char kCertificateTypePEMchain[] = "PEMchain";
 inline constexpr char kProcessorTypeAccelerator[] = "Accelerator";
 inline constexpr char kProcessorTypeCpu[] = "CPU";
+inline constexpr char kProcessorTypeGPU[] = "GPU";
 }  // namespace ecclesia
 
 namespace ecclesia {
