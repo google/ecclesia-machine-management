@@ -5,7 +5,6 @@ licenses(["notice"])
 config_setting(
     name = "external_build",
     values = {"define": "build=external"},
-    visibility = ["//visibility:private"],
 )
 
 ecclesia_oss_static_linked_cc_binary(

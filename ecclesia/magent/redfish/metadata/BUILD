@@ -9,7 +9,6 @@ pkg_tar(
     srcs = [":index.xml"],
     extension = "tar.gz",
     strip_prefix = ".",
-    visibility = ["//visibility:private"],
 )
 
 exports_files(

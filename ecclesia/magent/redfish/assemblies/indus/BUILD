@@ -17,5 +17,4 @@ pkg_tar(
 filegroup(
     name = "assemblies_json_files",
     srcs = glob(["assemblies/*.json"]),
-    visibility = ["//visibility:private"],
 )

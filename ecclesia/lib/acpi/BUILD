@@ -16,8 +16,6 @@ load("@com_google_emboss//:build_defs.bzl", "emboss_cc_library")
 
 licenses(["notice"])
 
-package(default_visibility = ["//visibility:private"])
-
 emboss_cc_library(
     name = "dmar_emb",
     srcs = ["dmar.emb"],

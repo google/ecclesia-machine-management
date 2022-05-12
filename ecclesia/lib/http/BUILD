@@ -99,7 +99,6 @@ cc_test(
 proto_library(
     name = "cred_proto",
     srcs = ["cred.proto"],
-    visibility = ["//visibility:private"],
 )
 
 cc_proto_library(

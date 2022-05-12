@@ -76,7 +76,6 @@ cc_library(
     name = "sanitize_log_page",
     srcs = ["sanitize_log_page.cc"],
     hdrs = ["sanitize_log_page.h"],
-    visibility = ["//visibility:private"],
     deps = [
         ":nvme_types_emb",
         "@com_google_absl//absl/status",
@@ -184,14 +183,12 @@ cc_test(
 emboss_cc_library(
     name = "controller_registers_emb",
     srcs = ["controller_registers.emb"],
-    visibility = ["//visibility:private"],
 )
 
 cc_library(
     name = "controller_registers",
     srcs = [],
     hdrs = ["controller_registers.h"],
-    visibility = ["//visibility:private"],
     deps = [
         ":controller_registers_emb",
         "@com_google_absl//absl/status",
