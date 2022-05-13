@@ -25,7 +25,6 @@
 #include <utility>
 
 #include "absl/functional/function_ref.h"
-#include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
@@ -244,8 +243,8 @@ class JsonMockupMockup : public RedfishInterface {
 
 }  // namespace
 
-RedfishVariant JsonMockupObject::operator[](
-    const std::string &node_name) const {
+RedfishVariant JsonMockupObject::Get(const std::string &node_name,
+                                     GetParams params) const {
   auto node = json_view_.find(node_name);
   if (node == json_view_.end())
     return RedfishVariant(absl::NotFoundError(absl::StrCat(

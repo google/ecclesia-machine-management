@@ -189,6 +189,7 @@ cc_library(
     deps = [
         ":interface",
         ":property_definitions",
+        "//ecclesia/lib/logging",
         "@com_google_absl//absl/functional:function_ref",
     ],
 )

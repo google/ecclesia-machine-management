@@ -16,6 +16,8 @@
 
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 
+#include <stdint.h>
+
 #include <memory>
 #include <optional>
 #include <string>
@@ -24,10 +26,13 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "absl/types/span.h"
 #include "ecclesia/lib/http/client.h"
+#include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -39,6 +44,7 @@
 #include "ecclesia/lib/thread/thread.h"
 #include "ecclesia/lib/time/clock_fake.h"
 #include "single_include/nlohmann/json.hpp"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
 namespace {
@@ -438,12 +444,12 @@ TEST_F(HttpRedfishInterfaceTest, GetWithExpand) {
 
   auto redfish_object = intf_->GetRoot().AsObject();
   ASSERT_NE(redfish_object, nullptr);
-  redfish_object->GetExpanded(
-      "Chassis", RedfishQueryParamExpand({RedfishQueryParamExpand::kBoth, 1}));
+  redfish_object->Get(
+      "Chassis", {.expand = RedfishQueryParamExpand(
+                      {.type = RedfishQueryParamExpand::kBoth, .levels = 1})});
   EXPECT_EQ(called_chassis_expanded_count, 1);
-  redfish_object->GetExpanded(
-      "FakeItemWithoutId",
-      RedfishQueryParamExpand({RedfishQueryParamExpand::kNotLinks, 1}));
+  redfish_object->Get("FakeItemWithoutId",
+                      {.expand = RedfishQueryParamExpand({.levels = 1})});
   EXPECT_EQ(called_fake_item_expanded_count, 1);
 }
 
@@ -467,7 +473,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithoutExpand) {
                                req->WriteResponseString(R"json({})json");
                                req->Reply();
                              });
-  server_->AddHttpGetHandler("/redfish/v1/Chassis?$expand=*($levels=1)",
+  server_->AddHttpGetHandler("/redfish/v1/Chassis?$expand=.($levels=1)",
                              [&](ServerRequestInterface *req) {
                                SetContentType(req, "application/json");
                                called_expanded_count++;
@@ -476,8 +482,8 @@ TEST_F(HttpRedfishInterfaceTest, GetWithoutExpand) {
                              });
   auto redfish_object = intf_->GetRoot().AsObject();
   ASSERT_NE(redfish_object, nullptr);
-  redfish_object->GetExpanded(
-      "Chassis", RedfishQueryParamExpand({RedfishQueryParamExpand::kBoth, 1}));
+  redfish_object->Get("Chassis",
+                      {.expand = RedfishQueryParamExpand({.levels = 1})});
   EXPECT_EQ(called_expanded_count, 0);
 }
 
@@ -544,6 +550,52 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetWithOperator) {
   EXPECT_THAT(child_called_count, Eq(2));
   EXPECT_THAT(nlohmann::json::parse(child3.DebugString(), nullptr, false),
               Eq(json_child));
+}
+
+TEST_F(HttpRedfishInterfaceTest, GetFreshWithGetMethod) {
+  int child_called_count = 0;
+  auto json_parent = nlohmann::json::parse(R"json({
+    "Id": "1",
+    "Name": "MyResource",
+    "Description": "My Test Resource",
+    "Reference": { "@odata.id": "/my/other/uri" }
+  })json");
+  auto json_child = nlohmann::json::parse(R"json({
+    "Id": "2",
+    "Name": "MyOtherResource",
+    "Description": "My Other Test Resource"
+  })json");
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
+    SetContentType(req, "application/json");
+    req->WriteResponseString(json_parent.dump());
+    req->Reply();
+  });
+  server_->AddHttpGetHandler("/my/other/uri", [&](ServerRequestInterface *req) {
+    child_called_count++;
+    SetContentType(req, "application/json");
+    req->WriteResponseString(json_child.dump());
+    req->Reply();
+  });
+
+  // The first GET will need to hit the backend as the cache is empty.
+  auto parent = intf_->CachedGetUri("/my/uri", GetParams{}).AsObject();
+  // Get the child, cache is empty and will increment the child's handler once.
+  // Send read to cache the data
+  parent->Get("Reference");
+  EXPECT_THAT(child_called_count, Eq(1));
+  // Read with default parameters + any freshness. Cache should be used.
+  parent->Get("Reference");
+  parent->Get("Reference",
+              GetParams{.freshness = GetParams::Freshness::kOptional});
+  EXPECT_THAT(child_called_count, Eq(1));
+  // Read with freshness set to kRequired. Cache should be ignored.
+  parent->Get("Reference",
+              GetParams{.freshness = GetParams::Freshness::kRequired});
+  EXPECT_THAT(child_called_count, Eq(2));
+  // Validate that kRequired freshness also updated the cache
+  parent->Get("Reference",
+              GetParams{.freshness = GetParams::Freshness::kOptional});
+  EXPECT_THAT(child_called_count, Eq(2));
 }
 
 TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGet) {

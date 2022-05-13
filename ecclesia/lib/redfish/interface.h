@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -108,7 +109,7 @@ class RedfishQueryParamExpand : public GetParamQueryInterface {
   enum ExpandType { kBoth, kNotLinks, kLinks };
 
   struct Params {
-    ExpandType type = ExpandType::kLinks;
+    ExpandType type = ExpandType::kNotLinks;
     size_t levels = 1;
   };
 
@@ -122,6 +123,10 @@ class RedfishQueryParamExpand : public GetParamQueryInterface {
 
   std::string ToString() const override;
 
+  size_t IncrementLevels() { return ++levels_; }
+
+  size_t levels() const { return levels_; }
+
  private:
   ExpandType type_;
   size_t levels_;
@@ -129,8 +134,19 @@ class RedfishQueryParamExpand : public GetParamQueryInterface {
 
 // Struct to be used as a parameter to RedfishInterface implementations
 struct GetParams {
-  // Query params will be extended with Filter and Select params
-  std::vector<std::variant<RedfishQueryParamExpand>> query_params;
+  enum class Freshness { kOptional, kRequired };
+
+  std::vector<const GetParamQueryInterface *> GetQueryParams() const {
+    std::vector<const GetParamQueryInterface *> query_params;
+    if (expand.has_value()) {
+      query_params.push_back(&expand.value());
+    }
+    return query_params;
+  }
+
+  Freshness freshness = Freshness::kOptional;
+  bool auto_adjust_levels = false;
+  std::optional<RedfishQueryParamExpand> expand;
 };
 
 // RedfishVariant is the standard return type for all Redfish interfaces.
@@ -198,33 +214,14 @@ class RedfishVariant final {
   // Helper structures used with IndexHelper class
   // Denote a loop through an iterator.
   struct IndexEach {};
-  // Denotes the named item to be got with a redfish 'expand' syntax.
-  // Number of levels to be expanded is fixed by 'levels' field
-  struct IndexExpand {
-    std::string index;
-    RedfishQueryParamExpand::ExpandType expand_type =
-        RedfishQueryParamExpand::kBoth;
-    size_t levels = 1;
-  };
-  // Denotes that item to be got with a redfish 'expand' syntax.
-  // Number of levels is extra_levels + number of "each" helpers applied to an
-  // indexer after IndexExpandAll.
-  // An example:
-  //   GetRoot()["System"].Each()
-  //     .ExpandAll("item2", RedfishQueryParamExpand::kNotLinks, 0)
-  //     .Each()["item3"].Each().Do(...)
-  //   Will do:
-  //     curl("/redfish/v1")
-  //     curl("/redfish/v1/System")
-  //     curl("/redfish/v1/System/<index>/item2?$expand=.($levels=2)")
-  struct IndexExpandAll {
-    std::string index;
-    RedfishQueryParamExpand::ExpandType expand_type =
-        RedfishQueryParamExpand::kBoth;
-    size_t extra_levels = 1;
+  // Denotes that item is a named element of the redfish schema and should be
+  // read using GetArgs parameters
+  struct IndexGetWithArgs {
+    std::string name;
+    GetParams args;
   };
   using IndexType =
-      std::variant<std::string, size_t, IndexEach, IndexExpand, IndexExpandAll>;
+      std::variant<std::string, size_t, IndexEach, IndexGetWithArgs>;
 
   // A helper class for lazy evaluation of an index operator chain, when
   // IndexEach is involved.
@@ -245,17 +242,8 @@ class RedfishVariant final {
       return *this;
     }
 
-    IndexHelper Expand(std::string index,
-                       RedfishQueryParamExpand::ExpandType expand_type,
-                       size_t levels) {
-      AppendIndex(IndexExpand{std::move(index), expand_type, levels});
-      return *this;
-    }
-
-    IndexHelper ExpandAll(std::string index,
-                          RedfishQueryParamExpand::ExpandType expand_type,
-                          size_t extra_levels) {
-      AppendIndex(IndexExpandAll{std::move(index), expand_type, extra_levels});
+    IndexHelper Get(std::string index, GetParams args = {}) {
+      AppendIndex(IndexGetWithArgs{std::move(index), std::move(args)});
       return *this;
     }
 
@@ -307,7 +295,7 @@ class RedfishVariant final {
   RedfishVariant(RedfishVariant &&other) = default;
   RedfishVariant &operator=(RedfishVariant &&other) = default;
 
-  inline RedfishVariant operator[](const IndexExpand &property) const;
+  inline RedfishVariant operator[](IndexGetWithArgs property) const;
   inline RedfishVariant operator[](const std::string &property) const;
   inline RedfishVariant operator[](const size_t index) const;
 
@@ -460,9 +448,9 @@ class RedfishObject {
 
   // Returns the payload for a given named property node. Implementation is
   // similar to 'operator[](const std::string &node_name)' and extended with
-  // redfish expand parameters added.
-  virtual RedfishVariant GetExpanded(const std::string &node_name,
-                                     RedfishQueryParamExpand expand) const = 0;
+  // GetParams arguments
+  virtual RedfishVariant Get(const std::string &node_name,
+                             GetParams params = {}) const = 0;
 
   // Returns the string URI of the current RedfishObject, if available.
   virtual std::optional<std::string> GetUriString() const = 0;
@@ -647,14 +635,12 @@ class NullRedfish : public RedfishInterface {
   }
 };
 
-RedfishVariant RedfishVariant::operator[](const IndexExpand &property) const {
+RedfishVariant RedfishVariant::operator[](IndexGetWithArgs property) const {
   if (!status_.ok()) {
     return RedfishVariant(nullptr, status_, httpcode_);
   }
   if (std::unique_ptr<RedfishObject> obj = AsObject()) {
-    return (*obj).GetExpanded(
-        property.index,
-        RedfishQueryParamExpand({property.expand_type, property.levels}));
+    return (*obj).Get(property.name, std::move(property.args));
   }
   return RedfishVariant(absl::InternalError("not a RedfishObject"));
 }
@@ -701,8 +687,28 @@ RedfishIterReturnValue RedfishVariant::IndexHelper::Do(
       [&](auto &&index_value) -> RedfishIterReturnValue {
         using T = std::decay_t<decltype(index_value)>;
         auto rest = indices.last(indices.size() - 1);
+        if constexpr (std::is_same_v<T, IndexGetWithArgs>) {
+          if (index_value.args.expand.has_value() &&
+              index_value.args.auto_adjust_levels) {
+            // Number of levels should be incremented to cover elements in the
+            // query after expand+auto_adjust_levels. The expectation is that
+            // number of expands is similar to number of 'each' indexes.
+            IndexGetWithArgs index_get = index_value;
+            RedfishQueryParamExpand &expand = index_get.args.expand.value();
+            for (const auto &rest_index : rest) {
+              if (std::get_if<IndexEach>(&rest_index) != nullptr) {
+                expand.IncrementLevels();
+              }
+            }
+            if (Do(root[index_get], rest, what) ==
+                RedfishIterReturnValue::kStop) {
+              return RedfishIterReturnValue::kStop;
+            }
+            return RedfishIterReturnValue::kContinue;
+          }
+        }
         if constexpr (std::is_same_v<T, std::string> ||
-                      std::is_same_v<T, IndexExpand> ||
+                      std::is_same_v<T, IndexGetWithArgs> ||
                       std::is_same_v<T, size_t>) {
           // If the index is a string, likely we are looking at a RedfishObject.
           // If the index is an Expand, we are looking at a RedfishObject with
@@ -711,22 +717,6 @@ RedfishIterReturnValue RedfishVariant::IndexHelper::Do(
           // RedfishIterable.
           // Simply drill down.
           if (Do(root[index_value], rest, what) ==
-              RedfishIterReturnValue::kStop) {
-            return RedfishIterReturnValue::kStop;
-          }
-        } else if constexpr (std::is_same_v<T, IndexExpandAll>) {
-          // The index is similar to string, but we need to expand an entire
-          // tree. Then simply drill down. Number of levels should be increased
-          // to cover all the "rest" elements. The expectation is that number of
-          // expands is similar to number of 'each' indexes
-          IndexExpand expand = {index_value.index, index_value.expand_type,
-                                index_value.extra_levels};
-          for (const auto &rest_index : rest) {
-            if (std::get_if<IndexEach>(&rest_index) != nullptr) {
-              expand.levels++;
-            }
-          }
-          if (Do(root[std::move(expand)], rest, what) ==
               RedfishIterReturnValue::kStop) {
             return RedfishIterReturnValue::kStop;
           }

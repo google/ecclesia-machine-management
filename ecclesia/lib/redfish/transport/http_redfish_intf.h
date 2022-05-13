@@ -20,11 +20,9 @@
 #include <functional>
 #include <memory>
 
-#include "absl/base/attributes.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
-#include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
 

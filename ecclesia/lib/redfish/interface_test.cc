@@ -23,8 +23,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/status/status.h"
-#include "absl/strings/str_cat.h"
-#include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/redfish/property.h"
 #include "ecclesia/lib/redfish/property_definitions.h"

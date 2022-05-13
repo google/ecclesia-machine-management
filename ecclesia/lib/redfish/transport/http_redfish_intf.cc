@@ -226,17 +226,27 @@ absl::StatusOr<std::string> GetObjectUri(const nlohmann::json &json) {
 RedfishVariant ResolveReference(int reuse_code, nlohmann::json json,
                                 RedfishInterface *intf,
                                 RedfishExtendedPath path,
-                                CacheState cache_state,
-                                absl::string_view source,
-                                GetParams params = {}) {
+                                CacheState cache_state, GetParams params = {}) {
+  auto get_uri = [intf](const RedfishExtendedPath &path, GetParams params) {
+    return params.freshness == GetParams::Freshness::kRequired
+               ? intf->UncachedGetUri(path.GetFullPath(), std::move(params))
+               : intf->CachedGetUri(path.GetFullPath(), std::move(params));
+  };
   if (absl::StatusOr<std::string> reference = GetObjectUri(json);
       reference.ok()) {
     path = RedfishExtendedPath{*reference, {}};
     if (json.size() == 1) {
-      // It is a reference, call GET on it
-      return intf->CachedGetUri(*reference, params);
+      return get_uri(path, std::move(params));
     }
   }
+  // Try to expand if expand is requested even if json doesn't have URI
+  if (params.expand.has_value()) {
+    if (RedfishVariant variant = get_uri(path, std::move(params));
+        variant.status().ok()) {
+      return variant;
+    }
+  }
+
   // Return the object as-is.
   return RedfishVariant(
       std::make_unique<HttpIntfVariantImpl>(intf, std::move(path),
@@ -261,8 +271,15 @@ class HttpIntfObjectImpl : public RedfishObject {
   HttpIntfObjectImpl &operator=(const HttpIntfObjectImpl &) = delete;
 
   RedfishVariant operator[](const std::string &node_name) const override {
+    return Get(node_name, GetParams{});
+  }
+
+  RedfishVariant Get(const std::string &node_name,
+                     GetParams params) const override {
+    // Update path with a new node name
     RedfishExtendedPath new_path = path_;
     new_path.properties.push_back(node_name);
+
     auto itr = result_.body.find(node_name);
     if (itr == result_.body.end()) {
       return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
@@ -274,34 +291,16 @@ class HttpIntfObjectImpl : public RedfishObject {
                                 cache_state_),
                             ecclesia::HttpResponseCodeFromInt(result_.code));
     }
+    // Reset expands if requested but not available
+    if (params.expand.has_value() &&
+        !params.expand.value()
+             .ValidateRedfishSupport(intf_->SupportedFeatures())
+             .ok()) {
+      params.expand.reset();
+    }
     return ResolveReference(result_.code, itr.value(), intf_,
                             std::move(new_path), cache_state_,
-                            "HttpIntfObjectImpl");
-  }
-  RedfishVariant GetExpanded(const std::string &node_name,
-                             RedfishQueryParamExpand expand) const override {
-    auto itr = result_.body.find(node_name);
-    if (itr == result_.body.end() ||
-        !expand.ValidateRedfishSupport(intf_->SupportedFeatures()).ok()) {
-      return (*this)[node_name];
-    }
-    // Use the result if we can successfully get the result.
-    // Otherwise fallback to the implementation without expands
-    RedfishExtendedPath new_path;
-    if (absl::StatusOr<std::string> reference = GetObjectUri(*itr);
-        reference.ok()) {
-      new_path = {std::move(*reference), {}};
-    } else {
-      new_path = path_;
-      new_path.properties.push_back(node_name);
-    }
-    if (auto variant =
-            intf_->CachedGetUri(new_path.GetFullPath(),
-                                GetParams{.query_params = {std::move(expand)}});
-        variant.status().ok()) {
-      return variant;
-    }
-    return (*this)[node_name];
+                            std::move(params));
   }
 
   std::optional<std::string> GetUriString() const override {
@@ -390,8 +389,7 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
     RedfishExtendedPath new_path = path_;
     new_path.properties.push_back(index);
     return ResolveReference(result_.code, result_.body[index], intf_,
-                            std::move(new_path), cache_state_,
-                            "HttpIntfArrayIterableImpl");
+                            std::move(new_path), cache_state_);
   }
 
  private:
@@ -445,8 +443,7 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
     RedfishExtendedPath new_path = path_;
     new_path.properties.push_back(index);
     return ResolveReference(result_.code, itr.value()[index], intf_,
-                            std::move(new_path), cache_state_,
-                            "HttpIntfCollectionIterableImpl");
+                            std::move(new_path), cache_state_);
   }
 
  private:
@@ -542,8 +539,9 @@ class HttpRedfishInterface : public RedfishInterface {
     absl::ReaderMutexLock mu(&transport_mutex_);
     std::string full_redfish_path = GetUriWithQueryParameters(uri, params);
 
-    return GetUriHelper(uri, std::move(params),
-                        cache_->CachedGet(full_redfish_path));
+    auto result = GetUriHelper(uri, std::move(params),
+                               cache_->CachedGet(full_redfish_path));
+    return result;
   }
 
   RedfishVariant UncachedGetUri(absl::string_view uri,
@@ -601,17 +599,16 @@ class HttpRedfishInterface : public RedfishInterface {
   // extends uri with query parameters if needed
   std::string GetUriWithQueryParameters(absl::string_view uri,
                                         const GetParams &params) {
-    if (params.query_params.empty()) {
+    auto query_params = params.GetQueryParams();
+    if (query_params.empty()) {
       return std::string(uri);
     }
-    std::string query_args = absl::StrJoin(
-        params.query_params.begin(), params.query_params.end(), "&",
-        [](std::string *output,
-           const std::variant<ecclesia::RedfishQueryParamExpand> &query_arg) {
-          std::visit([output](auto arg) { output->append(arg.ToString()); },
-                     query_arg);
+    std::string query_str = absl::StrJoin(
+        query_params.begin(), query_params.end(), "&",
+        [](std::string *output, const GetParamQueryInterface *param) {
+          output->append(param->ToString());
         });
-    return absl::StrCat(uri, "?", query_args);
+    return absl::StrCat(uri, "?", query_str);
   }
 
   // Helper function to resolve JSON pointers after doing a GET.

@@ -55,7 +55,7 @@ class Sysmodel {
   // order to support the various URI locations for the resources defined in the
   // Redfish Schema Supplement.
   template <typename ResourceT>
-  void QueryAllResources(int expand_levels, ResultCallback result_callback) {
+  void QueryAllResources(size_t expand_levels, ResultCallback result_callback) {
     // Invoke the overload using a Token of the appropriate type.
     QueryAllResourceInternal(Token<ResourceT>(), result_callback,
                              expand_levels);
@@ -73,73 +73,73 @@ class Sysmodel {
   // using a Token struct.
   void QueryAllResourceInternal(Token<ResourceChassis>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceSystem>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceEthernetInterface>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceMemory>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceStorage>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceStorageController>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceDrive>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceProcessor>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<AbstractionPhysicalLpu>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceThermal>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceTemperature>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceVoltage>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceFan>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceSensor>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourcePcieFunction>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceComputerSystem>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceManager>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceLogService>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceLogEntry>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceSoftwareInventory>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<OemResourceRootOfTrust>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceComponentIntegrity>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourcePcieSlots>,
                                 ResultCallback result_callback,
-                                int expand_levels);
+                                size_t expand_levels);
   RedfishInterface *redfish_intf_;
 };
 
