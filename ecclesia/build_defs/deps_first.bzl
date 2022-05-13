@@ -89,6 +89,28 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             urls = ["https://github.com/abseil/abseil-cpp/archive/143a27800eb35f4568b9be51647726281916aac9.zip"],
         )
 
+    if not native.existing_rule("com_google_absl_py"):
+        # Abseil Python. Only release is v1.0.0 from Nov 2021. Pick a commit from Mar 29, 2022.
+        http_archive(
+            name = "com_google_absl_py",
+            sha256 = "5e683d5b63d177977d07f653fb17af3797aacde57de3608ce64a6b152b510fb2",
+            strip_prefix = "abseil-py-ce06222fa6feae6f7569310e7af6b9baa97e388a",
+            urls = ["https://github.com/abseil/abseil-py/archive/ce06222fa6feae6f7569310e7af6b9baa97e388a.zip"],
+        )
+
+    if not native.existing_rule("six_archive"):
+        # Six is a dependency of com_google_absl_py. Arbitrarily pick v1.10.0.
+        http_archive(
+            name = "six_archive",
+            urls = [
+                "http://mirror.bazel.build/pypi.python.org/packages/source/s/six/six-1.10.0.tar.gz",
+                "https://pypi.python.org/packages/source/s/six/six-1.10.0.tar.gz",
+            ],
+            sha256 = "105f8d68616f8248e24bf0e9372ef04d3cc10104f1980f54d57b2ce73a5ad56a",
+            strip_prefix = "six-1.10.0",
+            build_file = "@com_google_absl_py//third_party:six.BUILD",
+        )
+
     if not native.existing_rule("com_google_emboss"):
         # Emboss. Uses the latest commit as of May 19, 2021.
         http_archive(
