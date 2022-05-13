@@ -27,19 +27,14 @@
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
-#include "absl/container/flat_hash_map.h"
-#include "absl/flags/flag.h"
 #include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/ascii.h"
-#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
-#include "absl/strings/strip.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
@@ -50,7 +45,6 @@
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
-#include "ecclesia/lib/time/clock.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
@@ -320,15 +314,21 @@ class HttpIntfObjectImpl : public RedfishObject {
 
   std::string DebugString() override { return result_.body.dump(); }
 
-  std::unique_ptr<RedfishObject> EnsureFreshPayload(GetParams params) {
+  absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
+      GetParams params) {
     if (cache_state_ == kIsFresh) {
       return std::make_unique<HttpIntfObjectImpl>(intf_, path_, result_,
                                                   cache_state_);
     }
     if (auto uri = GetUriString(); uri.has_value()) {
-      return intf_->UncachedGetUri(*uri).AsObject();
+      auto get_response = intf_->UncachedGetUri(*uri);
+      if (get_response.status().ok()) {
+        return get_response.AsObject();
+      } else {
+        return get_response.status();
+      }
     }
-    return nullptr;
+    return absl::NotFoundError("No URI to query");
   }
 
   void ForEachProperty(absl::FunctionRef<RedfishIterReturnValue(

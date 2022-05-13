@@ -24,16 +24,9 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/flags/declare.h"
-#include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
-#include "absl/strings/match.h"
-#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
-#include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
@@ -580,9 +573,9 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGet) {
     auto obj = result.AsObject();
     ASSERT_TRUE(obj);
     auto new_obj = obj->EnsureFreshPayload();
-    ASSERT_TRUE(new_obj);
+    ASSERT_TRUE(new_obj.ok());
     EXPECT_THAT(called_count, Eq(1));
-    EXPECT_THAT(new_obj->DebugString(), Eq(obj->DebugString()));
+    EXPECT_THAT((*new_obj)->DebugString(), Eq(obj->DebugString()));
   }
 
   // The next GET should hit the cache. called_count should not increase.
@@ -597,9 +590,9 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGet) {
     auto obj = result.AsObject();
     ASSERT_TRUE(obj);
     auto new_obj = obj->EnsureFreshPayload();
-    ASSERT_TRUE(new_obj);
+    ASSERT_TRUE(new_obj.ok());
     EXPECT_THAT(called_count, Eq(2));
-    EXPECT_THAT(new_obj->DebugString(), Eq(obj->DebugString()));
+    EXPECT_THAT((*new_obj)->DebugString(), Eq(obj->DebugString()));
   }
 
   // After the age expires, called_count should increase.
@@ -615,9 +608,9 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGet) {
     auto obj = result.AsObject();
     ASSERT_TRUE(obj);
     auto new_obj = obj->EnsureFreshPayload();
-    ASSERT_TRUE(new_obj);
+    ASSERT_TRUE(new_obj.ok());
     EXPECT_THAT(called_count, Eq(3));
-    EXPECT_THAT(new_obj->DebugString(), Eq(obj->DebugString()));
+    EXPECT_THAT((*new_obj)->DebugString(), Eq(obj->DebugString()));
   }
 }
 TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGetUncached) {
@@ -646,9 +639,9 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGetUncached) {
     auto obj = result.AsObject();
     ASSERT_TRUE(obj);
     auto new_obj = obj->EnsureFreshPayload();
-    ASSERT_TRUE(new_obj);
+    ASSERT_TRUE(new_obj.ok());
     EXPECT_THAT(called_count, Eq(1));
-    EXPECT_THAT(new_obj->DebugString(), Eq(obj->DebugString()));
+    EXPECT_THAT((*new_obj)->DebugString(), Eq(obj->DebugString()));
   }
 
   // The next GET is explicitly uncached. called_count should increase.
@@ -662,9 +655,9 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGetUncached) {
     auto obj = result.AsObject();
     ASSERT_TRUE(obj);
     auto new_obj = obj->EnsureFreshPayload();
-    ASSERT_TRUE(new_obj);
+    ASSERT_TRUE(new_obj.ok());
     EXPECT_THAT(called_count, Eq(2));
-    EXPECT_THAT(new_obj->DebugString(), Eq(obj->DebugString()));
+    EXPECT_THAT((*new_obj)->DebugString(), Eq(obj->DebugString()));
   }
 }
 TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadFailsWithNoOdataId) {
@@ -686,7 +679,7 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadFailsWithNoOdataId) {
   auto obj = result2.AsObject();
   ASSERT_TRUE(obj);
   auto new_obj = obj->EnsureFreshPayload();
-  EXPECT_FALSE(new_obj);
+  EXPECT_FALSE(new_obj.ok());
 }
 
 TEST_F(HttpRedfishInterfaceTest, PostHandler) {

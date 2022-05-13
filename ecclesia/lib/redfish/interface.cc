@@ -74,7 +74,7 @@ std::unique_ptr<RedfishObject> RedfishVariant::AsFreshObject() const {
   if (!ptr_) return nullptr;
   std::unique_ptr<RedfishObject> obj = ptr_->AsObject();
   if (!obj) return nullptr;
-  return obj->EnsureFreshPayload();
+  return obj->EnsureFreshPayload().value_or(nullptr);
 }
 
 }  // namespace ecclesia

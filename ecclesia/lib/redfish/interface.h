@@ -31,6 +31,7 @@
 #include "absl/base/attributes.h"
 #include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
@@ -471,7 +472,7 @@ class RedfishObject {
   // RedfishObject was already a fresh instance, a copy of object itself will be
   // returned. This method will fail to return a valid RedfishVariant if this
   // RedfishObject does not have a string URI.
-  virtual std::unique_ptr<RedfishObject> EnsureFreshPayload(
+  virtual absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
       GetParams params = {}) = 0;
 
   // Returns the content in the body of this object as a JSON. If the body

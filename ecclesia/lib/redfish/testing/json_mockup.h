@@ -19,6 +19,7 @@
 
 #include <memory>
 
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "single_include/nlohmann/json.hpp"
@@ -49,7 +50,8 @@ class JsonMockupObject : public RedfishObject {
 
   std::string DebugString() override { return json_view_.dump(/*indent=*/1); }
 
-  std::unique_ptr<RedfishObject> EnsureFreshPayload(GetParams params) override {
+  absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
+      GetParams params) override {
     return std::unique_ptr<RedfishObject>(this);
   }
 
