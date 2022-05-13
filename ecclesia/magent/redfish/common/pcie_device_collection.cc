@@ -46,8 +46,8 @@ nlohmann::json GetPcieDeviceUrlsAsJsonArray(SystemModel *system_model) {
 
   for (const auto &pcie_dev_id : pcie_dev_ids) {
     const nlohmann::json entry{
-      { kOdataId,
-        absl::StrCat(kPCIeDeviceCollectionUri, "/", pcie_dev_id.ToString()) },
+        {kOdataId,
+         absl::StrCat(kPCIeDeviceCollectionUri, "/", pcie_dev_id.ToString())},
     };
     array.push_back(entry);
   }

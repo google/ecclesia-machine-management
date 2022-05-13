@@ -29,7 +29,7 @@
 namespace ecclesia {
 
 // Validation requirements per google::protobuf::Duration.
-absl::Status Validate(const google::protobuf::Duration& d) {
+absl::Status Validate(const google::protobuf::Duration &d) {
   const auto sec = d.seconds();
   const auto ns = d.nanos();
   if (sec < -315576000000 || sec > 315576000000) {
@@ -87,7 +87,7 @@ absl::StatusOr<google::protobuf::Duration> AbslDurationToProtoDuration(
 }
 
 absl::Status AbslDurationToProtoDuration(absl::Duration d,
-                                         google::protobuf::Duration* proto) {
+                                         google::protobuf::Duration *proto) {
   // s and n may both be negative, per the Duration proto spec.
   const int64_t s = absl::IDivDuration(d, absl::Seconds(1), &d);
   const int64_t n = absl::IDivDuration(d, absl::Nanoseconds(1), &d);
@@ -97,7 +97,7 @@ absl::Status AbslDurationToProtoDuration(absl::Duration d,
 }
 
 absl::StatusOr<absl::Duration> AbslDurationFromProtoDuration(
-    const google::protobuf::Duration& proto) {
+    const google::protobuf::Duration &proto) {
   absl::Status status = Validate(proto);
   if (!status.ok()) return status;
   return absl::Seconds(proto.seconds()) + absl::Nanoseconds(proto.nanos());

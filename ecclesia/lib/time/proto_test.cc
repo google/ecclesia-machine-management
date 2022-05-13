@@ -158,7 +158,7 @@ TEST(AbslTimeProtoDuration, EncodeDurationFailure) {
       MakeAbslDurationMin() - absl::Nanoseconds(1),
       MakeAbslDurationMax() + absl::Nanoseconds(1), -absl::InfiniteDuration(),
       absl::InfiniteDuration()};
-  for (const auto& d : kTestCases) {
+  for (const auto &d : kTestCases) {
     const auto sor = AbslDurationToProtoDuration(d);
     EXPECT_FALSE(sor.ok()) << "d=" << d;
 
@@ -185,7 +185,7 @@ TEST(AbslTimeProtoDuration, DecodeDurationFailure) {
       MakeProtoDuration(std::numeric_limits<int64_t>::max(),
                         std::numeric_limits<int32_t>::max()),
   };
-  for (const auto& d : kTestCases) {
+  for (const auto &d : kTestCases) {
     const auto sor = AbslDurationFromProtoDuration(d);
     EXPECT_FALSE(sor.ok()) << "d=" << d.DebugString();
   }

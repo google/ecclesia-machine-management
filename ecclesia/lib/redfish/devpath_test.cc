@@ -266,7 +266,7 @@ TEST(GetManagerDevpathFromNodeTopology, DevpathByFallbackPath) {
     topology.uri_to_associated_node_map[uri].push_back(node.get());
     topology.nodes.push_back(std::move(node));
   }
-    auto devpath = GetManagerDevpathFromNodeTopology(json.get(), topology);
+  auto devpath = GetManagerDevpathFromNodeTopology(json.get(), topology);
   ASSERT_NE(devpath, std::nullopt);
 
   // The fallback will attempt to find a devpath directly associated with the

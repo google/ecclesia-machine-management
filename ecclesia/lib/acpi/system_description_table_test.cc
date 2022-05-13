@@ -146,7 +146,7 @@ class SraHeaderFactory {
     header_view_ = header_view_writeable;
   }
 
-  const SraHeaderView& header_view() const { return header_view_; }
+  const SraHeaderView &header_view() const { return header_view_; }
 
  private:
   char data_[SraHeaderView::SizeInBytes()];
@@ -196,9 +196,9 @@ class SystemDescriptionTableReaderTest : public ::testing::Test {
   // Sub-class SystemDescriptionTableReader so that it's possible to test it.
   class Reader : public SystemDescriptionTableReader<SraHeaderDescriptor> {
    public:
-    Reader(const char* data, size_t size)
+    Reader(const char *data, size_t size)
         : SystemDescriptionTableReader(data, size) {}
-    explicit Reader(const char* data)
+    explicit Reader(const char *data)
         : SystemDescriptionTableReader(
               data, SystemDescriptionTableHeaderView::SizeInBytes()) {}
 
@@ -245,8 +245,8 @@ class SystemDescriptionTableReaderTest : public ::testing::Test {
               header_view_.oem_table_id().BackingStorage().data());
     header_view_.oem_revision().Write(kOemRevision);
     header_view_.creator_id().Write(LittleEndian::Load32(kCreatorId.data()));
-    static_assert(
-        kCreatorId.size() >= sizeof(header_view_.creator_id().Read()));
+    static_assert(kCreatorId.size() >=
+                  sizeof(header_view_.creator_id().Read()));
     header_view_.creator_revision().Write(kCreatorRevision);
 
     // Initialize the empty static resource allocation structures.
@@ -269,7 +269,7 @@ class SystemDescriptionTableReaderTest : public ::testing::Test {
     header_view_.checksum().Write(table->CalculateChecksum());
   }
 
-  static SraTestView SraHeaderToSraTest(const SraHeaderView& header_view) {
+  static SraTestView SraHeaderToSraTest(const SraHeaderView &header_view) {
     Check(header_view.BackingStorage().SizeInBytes() >=
               SraTestView::SizeInBytes(),
           "sufficient backing bytes")
@@ -283,7 +283,7 @@ class SystemDescriptionTableReaderTest : public ::testing::Test {
 
   SystemDescriptionTableHeaderWriter header_view_ =
       MakeSystemDescriptionTableHeaderView(
-          reinterpret_cast<char*>(&table_data_[0]),
+          reinterpret_cast<char *>(&table_data_[0]),
           SystemDescriptionTableHeaderView::SizeInBytes());
 
   SraHeaderView sra_headers_[4];

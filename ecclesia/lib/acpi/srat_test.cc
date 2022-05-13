@@ -60,15 +60,15 @@ class SratTest : public ::testing::Test {
   // proximity_domain and match memory_ranges. Returns a vector containing the
   // remainder of the structures following the validated structures.
   std::vector<SratMemoryAffinityView> ValidateMemoryAffinityStructures(
-      const std::vector<SratMemoryAffinityView>& memory_affinities,
+      const std::vector<SratMemoryAffinityView> &memory_affinities,
       const uint32_t proximity_domain,
-      const std::vector<MemoryRange>& memory_ranges) {
+      const std::vector<MemoryRange> &memory_ranges) {
     EXPECT_GE(memory_affinities.size(), memory_ranges.size());
     for (size_t i = 0; i < memory_ranges.size(); ++i) {
       const uint64_t base_address = memory_ranges[i].base_address;
       const uint64_t length = memory_ranges[i].length;
 
-      const auto& memory_affinity = memory_affinities[i];
+      const auto &memory_affinity = memory_affinities[i];
       EXPECT_EQ(SRAT_SRA_HEADER_MEMORY_AFFINITY,
                 memory_affinity.header().struct_type().Read());
       EXPECT_EQ(SratMemoryAffinityView::SizeInBytes(),
@@ -93,9 +93,9 @@ class SratTest : public ::testing::Test {
   // remainder of the structures following the validated structures.
   std::vector<SratProcessorApicAffinityView>
   ValidateProcessorApicAffinityStructures(
-      const std::vector<SratProcessorApicAffinityView>&
-          processor_apic_affinities,
-      const uint32_t proximity_domain, const std::vector<uint8_t>& apic_ids) {
+      const std::vector<SratProcessorApicAffinityView>
+          &processor_apic_affinities,
+      const uint32_t proximity_domain, const std::vector<uint8_t> &apic_ids) {
     const uint8_t proximity_domain_bytes[] = {
         static_cast<uint8_t>(proximity_domain),
         static_cast<uint8_t>(proximity_domain >> 8),
@@ -104,7 +104,7 @@ class SratTest : public ::testing::Test {
 
     EXPECT_GE(processor_apic_affinities.size(), apic_ids.size());
     for (size_t i = 0; i < apic_ids.size(); ++i) {
-      const auto& processor_apic_affinity = processor_apic_affinities[i];
+      const auto &processor_apic_affinity = processor_apic_affinities[i];
       EXPECT_EQ(SRAT_SRA_HEADER_PROCESSOR_APIC_AFFINITY,
                 processor_apic_affinity.header().struct_type().Read());
       EXPECT_EQ(SratProcessorApicAffinityView::SizeInBytes(),
@@ -178,7 +178,7 @@ TEST_F(SratTest, ReadSratFromFileSuccess) {
   ASSERT_THAT(table, IsOk());
 
   Srat srat(std::move(table.value()));
-  const SratHeaderView& srat_header = srat.GetSratHeader();
+  const SratHeaderView &srat_header = srat.GetSratHeader();
 
   // Validate SRAT contents
   const std::vector<MemoryRange> domain0_memory_ranges = {
@@ -332,8 +332,8 @@ class SratReaderTest : public ::testing::Test {
     // structures 0 and 2 as enabled.
     uint8_t i;
     for (i = 0; i < ABSL_ARRAYSIZE(processor_apic_affinity_); ++i) {
-      memset(processor_apic_affinity_[i].BackingStorage().data(),
-             0, processor_apic_affinity_[i].SizeInBytes());
+      memset(processor_apic_affinity_[i].BackingStorage().data(), 0,
+             processor_apic_affinity_[i].SizeInBytes());
       processor_apic_affinity_[i].header().length().Write(
           processor_apic_affinity_[i].SizeInBytes());
       processor_apic_affinity_[i].header().struct_type().Write(
@@ -356,8 +356,8 @@ class SratReaderTest : public ::testing::Test {
     // Initialize all memory affinity structures but only mark 1 and 2 as
     // enabled.
     for (i = 0; i < ABSL_ARRAYSIZE(memory_affinity_); ++i) {
-      memset(memory_affinity_[i].BackingStorage().data(),
-             0, memory_affinity_[i].SizeInBytes());
+      memset(memory_affinity_[i].BackingStorage().data(), 0,
+             memory_affinity_[i].SizeInBytes());
       memory_affinity_[i].header().length().Write(
           memory_affinity_[i].SizeInBytes());
       memory_affinity_[i].header().struct_type().Write(

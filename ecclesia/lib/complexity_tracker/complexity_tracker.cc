@@ -30,12 +30,11 @@ namespace {
 class NullApiComplexityContextManagerImpl
     : public ApiComplexityContextManager::ImplInterface {
  public:
-  absl::StatusOr<ApiComplexityContext*> GetContext() override {
+  absl::StatusOr<ApiComplexityContext *> GetContext() override {
     return absl::InternalError(
         "Method is not implemented for NullApiComplexityContextManager");
   }
-  void ReportContextResult(const ApiComplexityContext& context) override {
-  }
+  void ReportContextResult(const ApiComplexityContext &context) override {}
 };
 
 }  // namespace
@@ -49,7 +48,7 @@ ApiComplexityContextManager::ApiComplexityContextManager(
 
 ApiComplexityContextManager::ReportOnDestroy
 ApiComplexityContextManager::PrepareForInboundApi(std::string name) const {
-  absl::StatusOr<ApiComplexityContext*> context = impl_->GetContext();
+  absl::StatusOr<ApiComplexityContext *> context = impl_->GetContext();
   if (context.ok() && *context != nullptr) {
     (*context)->PrepareForInboundApi(std::move(name));
     return ReportOnDestroy(this, *context);
@@ -59,7 +58,7 @@ ApiComplexityContextManager::PrepareForInboundApi(std::string name) const {
 
 void ApiComplexityContextManager::RecordDownstreamCall(
     ApiComplexityContext::CallType call_type) const {
-  absl::StatusOr<ApiComplexityContext*> context = impl_->GetContext();
+  absl::StatusOr<ApiComplexityContext *> context = impl_->GetContext();
   if (context.ok() && *context != nullptr) {
     (*context)->RecordDownstreamCall(call_type);
   }

@@ -49,7 +49,7 @@ namespace {
 using ::redfish::v1::Request;
 
 absl::Status SetGrpcResponseAndReturnStatus(RedfishVariant variant,
-                                            redfish::v1::Response* response) {
+                                            redfish::v1::Response *response) {
   absl::Status status = absl::OkStatus();
   if (!variant.httpcode().has_value()) {
     return absl::InternalError("The response doesn't have HTTP code.");
@@ -68,8 +68,8 @@ absl::Status SetGrpcResponseAndReturnStatus(RedfishVariant variant,
 }  // namespace
 
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Get(
-    grpc::ServerContext* context, const Request* request,
-    redfish::v1::Response* response) {
+    grpc::ServerContext *context, const Request *request,
+    redfish::v1::Response *response) {
   absl::MutexLock mu(&patch_lock_);
   if (auto itr = rest_get_handlers_.find(request->url());
       itr != rest_get_handlers_.end()) {
@@ -79,8 +79,8 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Get(
       redfish_intf_->UncachedGetUri(request->url()), response));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Post(
-    grpc::ServerContext* context, const Request* request,
-    redfish::v1::Response* response) {
+    grpc::ServerContext *context, const Request *request,
+    redfish::v1::Response *response) {
   absl::MutexLock mu(&patch_lock_);
   if (auto itr = rest_post_handlers_.find(request->url());
       itr != rest_post_handlers_.end()) {
@@ -97,8 +97,8 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Post(
       redfish_intf_->PostUri(request->url(), message), response));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Patch(
-    grpc::ServerContext* context, const Request* request,
-    redfish::v1::Response* response) {
+    grpc::ServerContext *context, const Request *request,
+    redfish::v1::Response *response) {
   absl::MutexLock mu(&patch_lock_);
   if (auto itr = rest_patch_handlers_.find(request->url());
       itr != rest_patch_handlers_.end()) {
@@ -115,14 +115,14 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Patch(
       redfish_intf_->PatchUri(request->url(), message), response));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Put(
-    grpc::ServerContext* context, const Request* request,
-    redfish::v1::Response* response) {
+    grpc::ServerContext *context, const Request *request,
+    redfish::v1::Response *response) {
   return StatusToGrpcStatus(
       absl::UnimplementedError("Put RPC is not implemented yet."));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Delete(
-    grpc::ServerContext* context, const Request* request,
-    redfish::v1::Response* response) {
+    grpc::ServerContext *context, const Request *request,
+    redfish::v1::Response *response) {
   // DELETE.
   return StatusToGrpcStatus(
       absl::UnimplementedError("Delete RPC is not implemented yet."));

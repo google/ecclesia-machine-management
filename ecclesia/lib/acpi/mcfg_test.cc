@@ -68,9 +68,10 @@ TEST(McfgTest, ReadFromFile) {
       << oem_table_id.ToString<std::string>();
   EXPECT_EQ(1, header_view.oem_revision().Read());
   uint32_t creator_id = header_view.creator_id().Read();
-  EXPECT_TRUE(std::equal(reinterpret_cast<const char*>(&creator_id),
-                         reinterpret_cast<const char*>(&creator_id + 1),
-                         "INTL")) << std::hex << creator_id;
+  EXPECT_TRUE(std::equal(reinterpret_cast<const char *>(&creator_id),
+                         reinterpret_cast<const char *>(&creator_id + 1),
+                         "INTL"))
+      << std::hex << creator_id;
   EXPECT_EQ(1, header_view.creator_revision().Read());
 }
 

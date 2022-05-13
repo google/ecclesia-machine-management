@@ -16,7 +16,6 @@
 
 #include "ecclesia/lib/status/rpc.h"
 
-
 #include <string>
 
 #include "google/protobuf/any.pb.h"

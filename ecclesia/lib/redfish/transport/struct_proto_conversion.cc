@@ -20,27 +20,27 @@
 
 namespace ecclesia {
 
-nlohmann::json StructToJson(const google::protobuf::Struct& message) {
+nlohmann::json StructToJson(const google::protobuf::Struct &message) {
   auto json = nlohmann::json::object();
-  for (const auto& [key, value] : message.fields()) {
+  for (const auto &[key, value] : message.fields()) {
     json[key] = ValueToJson(value);
   }
   return json;
 }
 
-google::protobuf::Struct JsonToStruct(const nlohmann::json& json) {
+google::protobuf::Struct JsonToStruct(const nlohmann::json &json) {
   google::protobuf::Struct message;
   if (json.is_object()) {
-    auto* fields = message.mutable_fields();
+    auto *fields = message.mutable_fields();
 
-    for (const auto& [key, value] : json.items()) {
+    for (const auto &[key, value] : json.items()) {
       (*fields)[key] = JsonToValue(value);
     }
   }
   return message;
 }
 
-nlohmann::json ValueToJson(const google::protobuf::Value& message) {
+nlohmann::json ValueToJson(const google::protobuf::Value &message) {
   nlohmann::json json;
   switch (message.kind_case()) {
     case google::protobuf::Value::kNullValue:
@@ -68,7 +68,7 @@ nlohmann::json ValueToJson(const google::protobuf::Value& message) {
   return json;
 }
 
-google::protobuf::Value JsonToValue(const nlohmann::json& json) {
+google::protobuf::Value JsonToValue(const nlohmann::json &json) {
   google::protobuf::Value message;
   if (json.is_null()) {
     message.set_null_value(google::protobuf::NullValue::NULL_VALUE);
@@ -89,18 +89,18 @@ google::protobuf::Value JsonToValue(const nlohmann::json& json) {
   return message;
 }
 
-nlohmann::json ListValueToJson(const google::protobuf::ListValue& message) {
+nlohmann::json ListValueToJson(const google::protobuf::ListValue &message) {
   nlohmann::json json = nlohmann::json::array();
-  for (const auto& value : message.values()) {
+  for (const auto &value : message.values()) {
     json.push_back(ValueToJson(value));
   }
   return json;
 }
 
-google::protobuf::ListValue JsonToListValue(const nlohmann::json& json) {
+google::protobuf::ListValue JsonToListValue(const nlohmann::json &json) {
   google::protobuf::ListValue message;
   if (json.is_array()) {
-    for (const auto& value : json) {
+    for (const auto &value : json) {
       *message.add_values() = JsonToValue(value);
     }
   }

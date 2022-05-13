@@ -93,8 +93,8 @@ Assembly::AssemblyModifier CreateModifierToCreateComponent(
     for (auto &assembly : iter->second[kAssemblies]) {
       if (auto name = JsonDrillDown(assembly, {kName});
           name.ok() && (*name)->get<std::string>() == assembly_name) {
-        auto inner_components = JsonDrillDown(
-            assembly, {kOem, kGoogle, kComponents});
+        auto inner_components =
+            JsonDrillDown(assembly, {kOem, kGoogle, kComponents});
         if (!inner_components.ok()) {
           return absl::NotFoundError(absl::StrFormat(
               "Assembly %s does not have components", assembly_name));
@@ -108,9 +108,9 @@ Assembly::AssemblyModifier CreateModifierToCreateComponent(
           }
         }
         nlohmann::json component;
-        component[kOdataId] = absl::StrCat(
-            assembly[kOdataId].get<std::string>(), "/Components/",
-            components->size());
+        component[kOdataId] =
+            absl::StrCat(assembly[kOdataId].get<std::string>(), "/Components/",
+                         components->size());
         component[kMemberId] = components->size();
         component[kName] = component_name;
         components->push_back(component);

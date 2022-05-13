@@ -36,14 +36,21 @@ const std::string kTestJson = R"json({
 
 TEST(JsonHelper, JsonDrillDown) {
   nlohmann::json json = nlohmann::json::parse(kTestJson, nullptr, false);
-  auto value = JsonDrillDown(json, {"Oem", "Google", "Key",});
+  auto value = JsonDrillDown(json, {
+                                       "Oem",
+                                       "Google",
+                                       "Key",
+                                   });
   EXPECT_TRUE(value.ok());
   EXPECT_EQ((*value)->get<std::string>(), "value");
 }
 
 TEST(JsonHelper, JsonDrillDownHalfWay) {
   nlohmann::json json = nlohmann::json::parse(kTestJson, nullptr, false);
-  auto key_value = JsonDrillDown(json, {"Oem", "Google",});
+  auto key_value = JsonDrillDown(json, {
+                                           "Oem",
+                                           "Google",
+                                       });
   EXPECT_TRUE(key_value.ok());
   std::string value = (**key_value)["Key"].get<std::string>();
   EXPECT_EQ(value, "value");

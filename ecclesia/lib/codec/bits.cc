@@ -68,7 +68,7 @@ bool AddressRange::InRange(uint64_t address) const {
 }
 
 bool AddressRange::CoversMask(MaskedAddress address) const {
-  return address.first() >= first_ && address.last() <=last_;
+  return address.first() >= first_ && address.last() <= last_;
 }
 
 bool AddressRange::OverlapsMask(MaskedAddress address) const {

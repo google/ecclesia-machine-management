@@ -92,8 +92,8 @@ class GrpcRedfishCredentials : public grpc::MetadataCredentialsPlugin {
   // gRPC credentials.
   grpc::Status GetMetadata(
       grpc::string_ref /*service_url*/, grpc::string_ref /*method_name*/,
-      const grpc::AuthContext& /*channel_auth_context*/,
-      std::multimap<grpc::string, grpc::string>* metadata) override {
+      const grpc::AuthContext & /*channel_auth_context*/,
+      std::multimap<grpc::string, grpc::string> *metadata) override {
     metadata->insert(std::make_pair(kTargetKey, target_fqdn_));
     metadata->insert(std::make_pair(kResourceKey, resource_));
     return grpc::Status::OK;
@@ -111,8 +111,8 @@ class GrpcRedfishTransport : public RedfishTransport {
   // Params:
   //   endpoint: e.g. "dns:///localhost:80", "unix:///var/run/my.socket"
   GrpcRedfishTransport(absl::string_view endpoint,
-                       const GrpcTransportParams& params,
-                       const std::shared_ptr<grpc::ChannelCredentials>& creds,
+                       const GrpcTransportParams &params,
+                       const std::shared_ptr<grpc::ChannelCredentials> &creds,
                        ServiceRootUri service_root)
       : client_(redfish::v1::RedfishV1::NewStub(
             grpc::CreateChannel(std::string(endpoint), creds))),
@@ -139,9 +139,9 @@ class GrpcRedfishTransport : public RedfishTransport {
       ABSL_LOCKS_EXCLUDED(mutex_) override {
     return DoRpc(
         path, std::nullopt, params_,
-        [this, path](grpc::ClientContext& context,
-                     const redfish::v1::Request& request,
-                     ::redfish::v1::Response* response) -> grpc::Status {
+        [this, path](grpc::ClientContext &context,
+                     const redfish::v1::Request &request,
+                     ::redfish::v1::Response *response) -> grpc::Status {
           absl::ReaderMutexLock mu(&mutex_);
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
@@ -158,9 +158,9 @@ class GrpcRedfishTransport : public RedfishTransport {
         std::string(data), &request_body, google::protobuf::util::JsonParseOptions())));
     return DoRpc(
         path, std::move(request_body), params_,
-        [this, path](grpc::ClientContext& context,
-                     const redfish::v1::Request& request,
-                     ::redfish::v1::Response* response) -> grpc::Status {
+        [this, path](grpc::ClientContext &context,
+                     const redfish::v1::Request &request,
+                     ::redfish::v1::Response *response) -> grpc::Status {
           absl::ReaderMutexLock mu(&mutex_);
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
@@ -177,9 +177,9 @@ class GrpcRedfishTransport : public RedfishTransport {
         std::string(data), &request_body, google::protobuf::util::JsonParseOptions())));
     return DoRpc(
         path, std::move(request_body), params_,
-        [this, path](grpc::ClientContext& context,
-                     const redfish::v1::Request& request,
-                     ::redfish::v1::Response* response) -> grpc::Status {
+        [this, path](grpc::ClientContext &context,
+                     const redfish::v1::Request &request,
+                     ::redfish::v1::Response *response) -> grpc::Status {
           absl::ReaderMutexLock mu(&mutex_);
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
@@ -196,9 +196,9 @@ class GrpcRedfishTransport : public RedfishTransport {
         std::string(data), &request_body, google::protobuf::util::JsonParseOptions())));
     return DoRpc(
         path, std::move(request_body), params_,
-        [this, path](grpc::ClientContext& context,
-                     const redfish::v1::Request& request,
-                     ::redfish::v1::Response* response) -> grpc::Status {
+        [this, path](grpc::ClientContext &context,
+                     const redfish::v1::Request &request,
+                     ::redfish::v1::Response *response) -> grpc::Status {
           absl::ReaderMutexLock mu(&mutex_);
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
@@ -245,8 +245,8 @@ absl::Status ValidateEndpoint(absl::string_view endpoint) {
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
-    absl::string_view endpoint, const GrpcTransportParams& params,
-    const std::shared_ptr<grpc::ChannelCredentials>& creds,
+    absl::string_view endpoint, const GrpcTransportParams &params,
+    const std::shared_ptr<grpc::ChannelCredentials> &creds,
     ServiceRootUri service_root) {
   ECCLESIA_RETURN_IF_ERROR(ValidateEndpoint(endpoint));
   return std::make_unique<GrpcRedfishTransport>(std::string(endpoint), params,

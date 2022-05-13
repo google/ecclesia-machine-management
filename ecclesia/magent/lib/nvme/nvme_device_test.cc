@@ -147,8 +147,8 @@ TEST(EnumerateAllNamespacesTest, ThreeCommandsWorthOfNsids) {
   EXPECT_THAT(ret.value(), expected_set);
 }
 
-absl::Status ReturnShortNsList(nvme_passthru_cmd* cmd) {
-  uint32_t* nsid = reinterpret_cast<uint32_t*>(cmd->addr);
+absl::Status ReturnShortNsList(nvme_passthru_cmd *cmd) {
+  uint32_t *nsid = reinterpret_cast<uint32_t *>(cmd->addr);
   memset(nsid, 0, cmd->data_len);
   nsid[0] = 1;
   return absl::OkStatus();
@@ -172,7 +172,7 @@ TEST(EnumerateNamespacesAfterTest, ShortList) {
   EXPECT_THAT(nvme->EnumerateAllNamespaces(), IsOkAndHolds(expected_set));
 }
 
-absl::Status ReturnNsList(nvme_passthru_cmd* cmd) {
+absl::Status ReturnNsList(nvme_passthru_cmd *cmd) {
   int nsid_count;
 
   switch (cmd->nsid) {
@@ -188,7 +188,7 @@ absl::Status ReturnNsList(nvme_passthru_cmd* cmd) {
           absl::Substitute("Unexpected nsid $0", cmd->nsid));
   }
 
-  uint32_t* nsid = reinterpret_cast<uint32_t*>(cmd->addr);
+  uint32_t *nsid = reinterpret_cast<uint32_t *>(cmd->addr);
   memset(nsid, 0, cmd->data_len);
   for (int i = 0; i < nsid_count; i++) {
     nsid[i] = cmd->nsid + i + 1;

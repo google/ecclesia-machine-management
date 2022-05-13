@@ -36,20 +36,20 @@ namespace {
 using ::grpc::experimental::TlsCustomVerificationCheckRequest;
 
 bool ReturnSyncAndAssignVerifierStatus(absl::Status status,
-                                       grpc::Status& output_status) {
+                                       grpc::Status &output_status) {
   constexpr bool kIsVerifierSync = true;
   output_status = StatusToGrpcStatus(status);
   return kIsVerifierSync;
 }
 }  // namespace
 
-BmcVerifier::BmcVerifier(const SubjectAltName& node_san,
+BmcVerifier::BmcVerifier(const SubjectAltName &node_san,
                          std::function<VerifyFunc> verify_func)
     : node_san_(node_san), verify_func_(std::move(verify_func)) {}
 
-bool BmcVerifier::Verify(TlsCustomVerificationCheckRequest* request,
+bool BmcVerifier::Verify(TlsCustomVerificationCheckRequest *request,
                          std::function<void(::grpc::Status)> /*callback*/,
-                         grpc::Status* sync_status) {
+                         grpc::Status *sync_status) {
   absl::string_view peer_cert_buffer(request->peer_cert().data(),
                                      request->peer_cert().size());
   absl::StatusOr<SubjectAltName> peer_san = GetSubjectAltName(peer_cert_buffer);

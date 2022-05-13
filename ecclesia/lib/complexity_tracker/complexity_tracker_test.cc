@@ -30,9 +30,9 @@ using ::testing::Return;
 class TestApiComplexityContextManagerImpl
     : public ApiComplexityContextManager::ImplInterface {
  public:
-  MOCK_METHOD(absl::StatusOr<ApiComplexityContext*>, GetContext, (),
+  MOCK_METHOD(absl::StatusOr<ApiComplexityContext *>, GetContext, (),
               (override));
-  MOCK_METHOD(void, ReportContextResult, (const ApiComplexityContext& context),
+  MOCK_METHOD(void, ReportContextResult, (const ApiComplexityContext &context),
               (override));
 };
 

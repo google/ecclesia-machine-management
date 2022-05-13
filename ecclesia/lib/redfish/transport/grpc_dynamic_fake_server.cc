@@ -57,8 +57,8 @@ GrpcDynamicFakeServer::GrpcDynamicFakeServer(
 GrpcDynamicFakeServer::~GrpcDynamicFakeServer() { grpc_server_->Shutdown(); }
 
 void GrpcDynamicFakeServer::SetCallback(
-    std::function<grpc::Status(grpc::ServerContext*, const Request*,
-                               redfish::v1::Response*)>
+    std::function<grpc::Status(grpc::ServerContext *, const Request *,
+                               redfish::v1::Response *)>
         callback) {
   service_impl_.SetCallback(std::move(callback));
 }

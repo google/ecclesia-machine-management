@@ -44,7 +44,7 @@ std::optional<std::string> GetDevpathForUri(const NodeTopology &topology,
 }
 
 std::optional<std::string> GetSensorDevpathFromNodeTopology(
-    RedfishObject* obj, const NodeTopology& topology) {
+    RedfishObject *obj, const NodeTopology &topology) {
   auto related_uri = (*obj)[kRfPropertyRelatedItem][0].AsObject();
   if (related_uri != nullptr && related_uri->GetUriString().has_value()) {
     auto related_devpath =
@@ -82,7 +82,7 @@ std::optional<std::string> GetSensorDevpathFromNodeTopology(
 }
 
 std::optional<std::string> GetSlotDevpathFromNodeTopology(
-    RedfishObject* obj, std::string parent_uri, const NodeTopology& topology) {
+    RedfishObject *obj, std::string parent_uri, const NodeTopology &topology) {
   // Append the parent URL to each SLOT Service label.
   std::vector<absl::string_view> uri_parts = absl::StrSplit(parent_uri, '/');
   // The URI should be of the format
@@ -110,7 +110,7 @@ std::optional<std::string> GetSlotDevpathFromNodeTopology(
 }
 
 std::optional<std::string> GetManagerDevpathFromNodeTopology(
-    RedfishObject* obj, const NodeTopology& topology) {
+    RedfishObject *obj, const NodeTopology &topology) {
   auto manager_in_chassis =
       (*obj)[kRfPropertyLinks][kRfPropertyManagerInChassis].AsObject();
   if (manager_in_chassis != nullptr) {

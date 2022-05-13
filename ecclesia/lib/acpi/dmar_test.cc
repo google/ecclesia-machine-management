@@ -59,17 +59,18 @@ TEST(DmarTest, ReadFromFileReturnsValidContent) {
   EXPECT_EQ(header_view.checksum().Read(), 0xDC);
 
   auto oem_id = header_view.oem_id().BackingStorage();
-  EXPECT_TRUE(std::equal(oem_id.begin(), oem_id.end(),
-                         "ALASKA")) << oem_id.ToString<std::string>();
+  EXPECT_TRUE(std::equal(oem_id.begin(), oem_id.end(), "ALASKA"))
+      << oem_id.ToString<std::string>();
   auto oem_table_id = header_view.oem_table_id().BackingStorage();
-  EXPECT_TRUE(std::equal(oem_table_id.begin(), oem_table_id.end(),
-                         "A M I \0\0")) << oem_table_id.ToString<std::string>();
+  EXPECT_TRUE(
+      std::equal(oem_table_id.begin(), oem_table_id.end(), "A M I \0\0"))
+      << oem_table_id.ToString<std::string>();
   EXPECT_EQ(header_view.oem_revision().Read(), 0x00000001);
   uint32_t creator_id = header_view.creator_id().Read();
-  EXPECT_TRUE(
-      std::equal(reinterpret_cast<const char*>(&creator_id),
-                 reinterpret_cast<const char*>(&creator_id + 1),
-                 "INTL")) << std::hex << creator_id;
+  EXPECT_TRUE(std::equal(reinterpret_cast<const char *>(&creator_id),
+                         reinterpret_cast<const char *>(&creator_id + 1),
+                         "INTL"))
+      << std::hex << creator_id;
   EXPECT_EQ(header_view.creator_revision().Read(), 0x20160527);
   // Check the SRA Structures.
   Dmar dmar(std::move(table.value()));

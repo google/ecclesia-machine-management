@@ -213,8 +213,8 @@ Assembly::AssemblyModifier CreateModifierToAttachSpicy16Fru(
     auto &indus_assembly_resource_json = assembly_iter->second;
     int member_id = indus_assembly_resource_json[kAssemblies].size();
     // 1.1 Construct JSON value with spicy16 assembly static info.
-    nlohmann::json value = nlohmann::json::parse(kSpicy16AssemblyStaticJson,
-                                                 nullptr, false);
+    nlohmann::json value =
+        nlohmann::json::parse(kSpicy16AssemblyStaticJson, nullptr, false);
     // Add dynamic info in the JSON content.
     std::string self_url =
         absl::StrFormat("%s/Assembly#/Assemblies/%d", kChassisUri, member_id);
@@ -265,7 +265,7 @@ Assembly::AssemblyModifier CreateModifierToAttachSpicy16Fru(
     for (int idx = 0; idx < sleipnir_assembly_resource_json[kAssemblies].size();
          idx++) {
       if (sleipnir_assembly_resource_json[kAssemblies][idx][kName]
-              .get_ref<std::string&>() == kSweet16CableAssemblyName) {
+              .get_ref<std::string &>() == kSweet16CableAssemblyName) {
         matched_sweet16_idx = idx;
         // Here it assumes there are two spicy16 intp cards and two sweet16
         // cables. And the first & second sweet16 cable match the spicy16 card

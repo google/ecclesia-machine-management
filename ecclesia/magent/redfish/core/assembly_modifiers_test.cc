@@ -67,8 +67,7 @@ TEST(PcieFunctionAssemblyModifier, AssemblyMissing) {
   EXPECT_FALSE(CreateStandardPcieFunctionModifier()(assemblies).ok());
 
   // Check that assembly is not modified
-  EXPECT_EQ(FlattenStylizedJsonString(
-      assemblies.find(kBadUri)->second.dump()),
+  EXPECT_EQ(FlattenStylizedJsonString(assemblies.find(kBadUri)->second.dump()),
             FlattenStylizedJsonString(kStaticAssembly));
 }
 
@@ -198,8 +197,7 @@ TEST(AddComponentModifier, AssemblyMissing) {
   EXPECT_FALSE(CreateStandardComponentModifier()(assemblies).ok());
 
   // Check that assembly is not modified
-  EXPECT_EQ(FlattenStylizedJsonString(
-                assemblies.find(kBadUri)->second.dump()),
+  EXPECT_EQ(FlattenStylizedJsonString(assemblies.find(kBadUri)->second.dump()),
             FlattenStylizedJsonString(kStaticAssembly));
 }
 

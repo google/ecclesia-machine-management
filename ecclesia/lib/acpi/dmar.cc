@@ -41,7 +41,7 @@ bool DmarReader::ValidateRevision() const {
 bool DmarSraHeaderDescriptor::Validate(View header_view,
                                        const uint16_t expected_type,
                                        const uint16_t minimum_size,
-                                       const char* const structure_name) {
+                                       const char *const structure_name) {
   Check(minimum_size >= View::SizeInBytes(), "sufficient minimum size")
       << absl::StrFormat(
              "insufficient minimum size for DMAR header check, "

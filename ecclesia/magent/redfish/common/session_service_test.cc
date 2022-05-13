@@ -124,8 +124,8 @@ TEST_F(SessionServiceTest, QuerySessionService) {
   RedfishVariant response = redfish_intf->UncachedGetUri(kSessionServiceUri);
 
   // Parse the raw contents and compare it to the expected session service.
-  nlohmann::json actual = nlohmann::json::parse(response.DebugString(), nullptr,
-                                                false);
+  nlohmann::json actual =
+      nlohmann::json::parse(response.DebugString(), nullptr, false);
   ASSERT_FALSE(actual.is_discarded());
   EXPECT_EQ(expected, actual);
 }

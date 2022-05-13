@@ -99,10 +99,8 @@ void MemoryMetrics::Get(
   auto *lifetime = GetJsonObject(&json, kLifeTime);
 
   if (auto itr = mem_errors.find(dimm_num); itr != mem_errors.end()) {
-    (*lifetime)[kCorrectableECCErrorCount] =
-        itr->second.correctable;
-    (*lifetime)[kUncorrectableECCErrorCount] =
-        itr->second.uncorrectable;
+    (*lifetime)[kCorrectableECCErrorCount] = itr->second.correctable;
+    (*lifetime)[kUncorrectableECCErrorCount] = itr->second.uncorrectable;
   } else {
     (*lifetime)[kCorrectableECCErrorCount] = 0;
     (*lifetime)[kUncorrectableECCErrorCount] = 0;

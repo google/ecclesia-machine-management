@@ -77,9 +77,8 @@ SystemDescriptionTable::ReadFromFile(absl::string_view sysfs_acpi_table_path) {
   result->table_data_ = std::move(table_data);
 
   // Make a local header view that is writeable.
-  auto header_view =
-      MakeSystemDescriptionTableHeaderView(result->table_data_.data(),
-                                           result->table_data_.size());
+  auto header_view = MakeSystemDescriptionTableHeaderView(
+      result->table_data_.data(), result->table_data_.size());
   if (header_view.length().Read() > table_data_size) {
     WarningLog() << absl::StrFormat(
         "Table %s specified a size %d larger than the data read from "
@@ -93,7 +92,7 @@ SystemDescriptionTable::ReadFromFile(absl::string_view sysfs_acpi_table_path) {
 }
 
 std::unique_ptr<SystemDescriptionTable>
-SystemDescriptionTable::CreateTableFromData(const char* data, size_t size) {
+SystemDescriptionTable::CreateTableFromData(const char *data, size_t size) {
   // Can't use make_unique() because the constructor is private.
   std::unique_ptr<SystemDescriptionTable> result(new SystemDescriptionTable);
   result->table_data_ = std::string(data, size);

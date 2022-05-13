@@ -126,8 +126,8 @@ TEST_F(ServiceRootTest, QueryServiceRoot) {
   RedfishVariant response = redfish_intf->UncachedGetUri(kServiceRootUri);
 
   // Parse the raw contents and compare it to the expected service root.
-  nlohmann::json actual = nlohmann::json::parse(response.DebugString(), nullptr,
-                                                false);
+  nlohmann::json actual =
+      nlohmann::json::parse(response.DebugString(), nullptr, false);
   ASSERT_FALSE(actual.is_discarded());
   EXPECT_EQ(expected, actual);
 }
@@ -152,8 +152,8 @@ TEST_F(ServiceRootTest, QueryServiceRootEquivalentUri) {
       redfish_intf->UncachedGetUri(absl::StripSuffix(kServiceRootUri, "/"));
 
   // Parse the raw contents and compare it to the expected service root.
-  nlohmann::json actual = nlohmann::json::parse(response.DebugString(), nullptr,
-                                                false);
+  nlohmann::json actual =
+      nlohmann::json::parse(response.DebugString(), nullptr, false);
   ASSERT_FALSE(actual.is_discarded());
   EXPECT_EQ(expected, actual);
 }

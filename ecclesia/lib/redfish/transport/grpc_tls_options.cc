@@ -34,7 +34,7 @@ namespace ecclesia {
 namespace {
 // gRPC API requires we pass a parsable root cert even if we do not verify the
 // cert signature.
-const char* kUnusedFakeRootCert =
+const char *kUnusedFakeRootCert =
     R"(-----BEGIN CERTIFICATE-----
 MIIDiDCCAnCgAwIBAgIIdwMbYuGm3akwDQYJKoZIhvcNAQELBQAwRTEXMBUGA1UE
 ChMOR29vZ2xlIFRFU1RJTkcxKjAoBgNVBAMMIUdvb2dsZSBCTUNXZWIgKipUZXN0
@@ -65,8 +65,8 @@ void StaticBufferBasedTlsOptions::SetToInsecure() {
   auth_type_ = AuthType::kInsecure;
 }
 void StaticBufferBasedTlsOptions::SetToTls(absl::string_view root_certs_buffer,
-                                      absl::string_view key_buffer,
-                                      absl::string_view cert_buffer) {
+                                           absl::string_view key_buffer,
+                                           absl::string_view cert_buffer) {
   auth_type_ = AuthType::kTlsVerifyServer;
   root_certs_ = root_certs_buffer;
   key_cert_ = {.private_key = std::string(key_buffer),
@@ -162,8 +162,8 @@ StaticBufferBasedTlsOptions::GetCertificateProvider() const {
 }
 
 void FileWatcherBasedOptions::SetToTls(absl::string_view root_certs_path,
-                                    absl::string_view key_path,
-                                    absl::string_view cert_path) {
+                                       absl::string_view key_path,
+                                       absl::string_view cert_path) {
   auth_type_ = AuthType::kTlsVerifyServer;
   root_certs_path_ = root_certs_path;
   key_path_ = key_path;

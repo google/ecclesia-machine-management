@@ -33,8 +33,7 @@ namespace {
 // Examples of these members are SetInt32, AddFloat, etc.
 template <typename ProtoValueType>
 using MutateFieldFuncType = void (google::protobuf::Reflection::*)(
-    google::protobuf::Message *, const google::protobuf::FieldDescriptor *,
-    ProtoValueType) const;
+    google::protobuf::Message *, const google::protobuf::FieldDescriptor *, ProtoValueType) const;
 
 // Copies the value of one Redfish property from RedfishObject “obj” into a
 // proto field in a Message “msg”. The Redfish property to copy is determined by
@@ -86,48 +85,46 @@ absl::Status RedfishObjToProto(const RedfishObject &obj, google::protobuf::Messa
     switch (field->type()) {
       case google::protobuf::FieldDescriptor::TYPE_FLOAT:
         RedfishPropertyToProto<double, float, &google::protobuf::Reflection::AddFloat,
-                               &google::protobuf::Reflection::SetFloat>(obj, *ref,
-                                                                *field, msg);
+                               &google::protobuf::Reflection::SetFloat>(obj, *ref, *field,
+                                                              msg);
         break;
       case google::protobuf::FieldDescriptor::TYPE_DOUBLE:
         RedfishPropertyToProto<double, double, &google::protobuf::Reflection::AddDouble,
                                &google::protobuf::Reflection::SetDouble>(obj, *ref,
-                                                                 *field, msg);
+                                                               *field, msg);
         break;
       case google::protobuf::FieldDescriptor::TYPE_INT64:
-        RedfishPropertyToProto<int64_t, int64_t,
-                               &google::protobuf::Reflection::AddInt64,
-                               &google::protobuf::Reflection::SetInt64>(obj, *ref,
-                                                                *field, msg);
+        RedfishPropertyToProto<int64_t, int64_t, &google::protobuf::Reflection::AddInt64,
+                               &google::protobuf::Reflection::SetInt64>(obj, *ref, *field,
+                                                              msg);
         break;
       case google::protobuf::FieldDescriptor::TYPE_UINT64:
         RedfishPropertyToProto<int64_t, uint64_t,
                                &google::protobuf::Reflection::AddUInt64,
                                &google::protobuf::Reflection::SetUInt64>(obj, *ref,
-                                                                 *field, msg);
+                                                               *field, msg);
         break;
       case google::protobuf::FieldDescriptor::TYPE_INT32:
-        RedfishPropertyToProto<int32_t, int32_t,
-                               &google::protobuf::Reflection::AddInt32,
-                               &google::protobuf::Reflection::SetInt32>(obj, *ref,
-                                                                *field, msg);
+        RedfishPropertyToProto<int32_t, int32_t, &google::protobuf::Reflection::AddInt32,
+                               &google::protobuf::Reflection::SetInt32>(obj, *ref, *field,
+                                                              msg);
         break;
       case google::protobuf::FieldDescriptor::TYPE_UINT32:
         RedfishPropertyToProto<int32_t, uint32_t,
                                &google::protobuf::Reflection::AddUInt32,
                                &google::protobuf::Reflection::SetUInt32>(obj, *ref,
-                                                                 *field, msg);
+                                                               *field, msg);
         break;
       case google::protobuf::FieldDescriptor::TYPE_BOOL:
         RedfishPropertyToProto<bool, bool, &google::protobuf::Reflection::AddBool,
-                               &google::protobuf::Reflection::SetBool>(obj, *ref,
-                                                               *field, msg);
+                               &google::protobuf::Reflection::SetBool>(obj, *ref, *field,
+                                                             msg);
         break;
       case google::protobuf::FieldDescriptor::TYPE_STRING:
         RedfishPropertyToProto<std::string, std::string,
                                &google::protobuf::Reflection::AddString,
                                &google::protobuf::Reflection::SetString>(obj, *ref,
-                                                                 *field, msg);
+                                                               *field, msg);
         break;
       case google::protobuf::FieldDescriptor::TYPE_ENUM: {
         // Enum values are string in JSON.
