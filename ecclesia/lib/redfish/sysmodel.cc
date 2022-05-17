@@ -349,11 +349,18 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceLogEntry>,
 
 // SoftwareInventory:
 // "/redfish/v1/UpdateService/FirmwareInventory/{id}"
+// "/redfish/v1/UpdateService/SoftwareInventory/{id}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceSoftwareInventory>,
                                         ResultCallback result_callback,
                                         size_t expand_levels) {
   auto root = redfish_intf_->GetRoot();
+  RedfishIterReturnValue return_val = RedfishIterReturnValue::kContinue;
   root[kRfPropertyUpdateService][kRfPropertyFirmwareInventory].Each().Do(
+      [&](std::unique_ptr<RedfishObject> &software) {
+        return return_val = result_callback(std::move(software));
+      });
+  if (return_val == RedfishIterReturnValue::kStop) return;
+  root[kRfPropertyUpdateService][ResourceSoftwareInventory::Name].Each().Do(
       [&](std::unique_ptr<RedfishObject> &software) {
         return result_callback(std::move(software));
       });
