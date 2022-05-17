@@ -56,7 +56,7 @@ def _process_profile_to_requirement_map(
     map from Resource name to Requirement.
   """
   all_profile_requirements = {}
-  for resource, resource_reqs in profile.items():
+  for resource, resource_reqs in profile['Resources'].items():
     min_version = None
     if 'MinVersion' in resource_reqs:
       min_version = resource_reqs['MinVersion']

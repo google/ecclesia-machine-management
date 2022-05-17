@@ -1,28 +1,36 @@
 {
-  "InstrumentCollection": {
-    "MinVersion": "1.1.0",
-    "Purpose": "Every music collection must have at least 1 Instrument.",
-    "PropertyRequirements": {
-      "Members": {
-        "MinCount": 1
+  "SchemaDefinition": "RedfishInteroperabilityProfile.v1_0_0",
+  "ProfileName": "Simple Test Profile",
+  "ProfileVersion": "1.0.0",
+  "Purpose": "A simple test for musical Redfish.",
+  "OwningEntity": "G Major",
+  "ContactInfo": "conductor@g-major.music",
+  "Resources": {
+    "InstrumentCollection": {
+      "MinVersion": "1.1.0",
+      "Purpose": "Every music collection must have at least 1 Instrument.",
+      "PropertyRequirements": {
+        "Members": {
+          "MinCount": 1
+        }
       }
-    }
-  },
-  "Instrument": {
-    "MinVersion": "1.0.1",
-    "Purpose": "An instrument should contain manufacturing info and key info.",
-    "PropertyRequirements": {
-      "Manufacturer": {},
-      "PartNumber": {},
-      "SerialNumber": {},
-      "Key": {}
-    }
-  },
-  "ServiceRoot": {
-    "Purpose": "Service root needs minimum set of links.",
-    "PropertyRequirements": {
-      "Instruments": {},
-      "ConcertService": {}
+    },
+    "Instrument": {
+      "MinVersion": "1.0.1",
+      "Purpose": "An instrument should contain manufacturing info and key info.",
+      "PropertyRequirements": {
+        "Manufacturer": {},
+        "PartNumber": {},
+        "SerialNumber": {},
+        "Key": {}
+      }
+    },
+    "ServiceRoot": {
+      "Purpose": "Service root needs minimum set of links.",
+      "PropertyRequirements": {
+        "Instruments": {},
+        "ConcertService": {}
+      }
     }
   }
 }
