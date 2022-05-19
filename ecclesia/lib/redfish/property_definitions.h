@@ -219,7 +219,7 @@ DEFINE_REDFISH_PROPERTY(PropertySocket, std::string, "Socket");
 DEFINE_REDFISH_PROPERTY(PropertyTotalCores, int, "TotalCores");
 DEFINE_REDFISH_PROPERTY(PropertyTotalEnabledCores, int, "TotalEnabledCores");
 DEFINE_REDFISH_PROPERTY(PropertyTotalThreads, int, "TotalThreads");
-DEFINE_REDFISH_PROPERTY(PropertyMaxSpeedMhz, int, "MaxSpeedMHz");
+DEFINE_REDFISH_PROPERTY(PropertyMaxSpeedMHz, int, "MaxSpeedMHz");
 DEFINE_REDFISH_PROPERTY(PropertyLinkStatus, std::string, "LinkStatus");
 DEFINE_REDFISH_PROPERTY(PropertySpeedMbps, int, "SpeedMbps");
 DEFINE_REDFISH_PROPERTY(PropertyMacAddress, std::string, "MACAddress");
