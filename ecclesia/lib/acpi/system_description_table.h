@@ -44,10 +44,10 @@ class SystemDescriptionTable {
   static constexpr size_t kHeaderSize =
       SystemDescriptionTableHeaderView::SizeInBytes();
 
-  SystemDescriptionTable(const SystemDescriptionTable&) = delete;
-  SystemDescriptionTable& operator=(const SystemDescriptionTable&) = delete;
+  SystemDescriptionTable(const SystemDescriptionTable &) = delete;
+  SystemDescriptionTable &operator=(const SystemDescriptionTable &) = delete;
 
-  virtual ~SystemDescriptionTable() { }
+  virtual ~SystemDescriptionTable() {}
 
   // Call this to get an Emboss struct view into the SystemDescriptionTable
   // header.
@@ -61,7 +61,7 @@ class SystemDescriptionTable {
   // Returns signature string taken from underlying table data.
   std::string GetSignatureString() const;
 
-  const std::string& table_data() const { return table_data_; }
+  const std::string &table_data() const { return table_data_; }
 
   // Read a system description table from sysfs_acpi_table_path returning a
   // SystemDescriptionTable containing the read data if successful, or error
@@ -71,7 +71,7 @@ class SystemDescriptionTable {
 
   // Create a table with a copy of `data` that is stored internally.
   static std::unique_ptr<SystemDescriptionTable> CreateTableFromData(
-      const char* data, size_t size);
+      const char *data, size_t size);
 
  private:
   // Use ReadFromFile to create instances of this class.
@@ -85,7 +85,7 @@ class SystemDescriptionTable {
 class SraHeaderDescriptor {
  public:
   using View = SraHeaderView;
-  static SraHeaderView MakeView(const char* data, size_t size) {
+  static SraHeaderView MakeView(const char *data, size_t size) {
     return MakeSraHeaderView(data, size);
   }
 
@@ -115,12 +115,12 @@ class SystemDescriptionTableReader {
   // structures.
   class SraHeaderFilter {
    public:
-    SraHeaderFilter() { }
-    virtual ~SraHeaderFilter() { }
+    SraHeaderFilter() {}
+    virtual ~SraHeaderFilter() {}
 
     // Return false to ignore the static resource allocation structure, true
     // to include the structure.
-    virtual bool Filter(View  /*sra_header*/) { return true; }
+    virtual bool Filter(View /*sra_header*/) { return true; }
   };
 
   // Filter SraHeader structures returned by GetSraStructures() by type and
@@ -167,26 +167,26 @@ class SystemDescriptionTableReader {
   // allocation entries.  header_size should be lesser than or equal to
   // the size of the entire table.
   template <typename HeaderType>
-  SystemDescriptionTableReader(const HeaderType& header,
+  SystemDescriptionTableReader(const HeaderType &header,
                                const uint32_t header_size)
-      : table_data_(reinterpret_cast<const char*>(&header)),
+      : table_data_(reinterpret_cast<const char *>(&header)),
         header_size_(header_size) {}
-  SystemDescriptionTableReader(const char* table_data,
+  SystemDescriptionTableReader(const char *table_data,
                                const uint32_t header_size)
       : table_data_(table_data), header_size_(header_size) {}
-  SystemDescriptionTableReader(const SystemDescriptionTableReader&) = delete;
-  SystemDescriptionTableReader& operator=(
-      const SystemDescriptionTableReader&) = delete;
-  virtual ~SystemDescriptionTableReader() { }
+  SystemDescriptionTableReader(const SystemDescriptionTableReader &) = delete;
+  SystemDescriptionTableReader &operator=(
+      const SystemDescriptionTableReader &) = delete;
+  virtual ~SystemDescriptionTableReader() {}
 
-  static View MakeView(const char* data, size_t size) {
+  static View MakeView(const char *data, size_t size) {
     return SraHeaderDescType::MakeView(data, size);
   }
 
   // Validate the table.
   virtual bool Validate() const {
     return ValidateSignature() && ValidateRevision() &&
-        0 == CalculateChecksum();
+           0 == CalculateChecksum();
   }
 
   // Calculate the checksum of the table.  A valid structure should yield a
@@ -217,10 +217,10 @@ class SystemDescriptionTableReader {
   std::optional<SraHeaderDataViewType> GetNextSraStructure(
       SraHeaderDataViewType sra_header) const {
     const uint32_t hdr_size = header_size();
-    const char* sra_start = table_data_ + hdr_size;
-    const char* sra_end = table_data_ + GetHeaderView().length().Read();
-    const char* sra =
-        reinterpret_cast<const char*>(sra_header.BackingStorage().data());
+    const char *sra_start = table_data_ + hdr_size;
+    const char *sra_end = table_data_ + GetHeaderView().length().Read();
+    const char *sra =
+        reinterpret_cast<const char *>(sra_header.BackingStorage().data());
     uint32_t maximum_sra_size =
         GetHeaderView().length().Read() -
         (hdr_size + static_cast<uint32_t>(sra - sra_start));
@@ -240,12 +240,13 @@ class SystemDescriptionTableReader {
     }
     uint32_t next_sra_length =
         MakeView(sra + sra_header.length().Read(), View::SizeInBytes())
-            .length().Read();
+            .length()
+            .Read();
     if (maximum_sra_size < next_sra_length) {
       return std::nullopt;
     }
-    View next_sra_header = MakeView(sra + sra_header.length().Read(),
-                                    next_sra_length);
+    View next_sra_header =
+        MakeView(sra + sra_header.length().Read(), next_sra_length);
     if (!SraHeaderDescType::ValidateMaximumSize(next_sra_header,
                                                 maximum_sra_size)) {
       return std::nullopt;
@@ -258,7 +259,7 @@ class SystemDescriptionTableReader {
   // allocation structures.
   template <typename SraHeaderDataViewType = View>
   std::vector<SraHeaderDataViewType> GetSraStructures(
-      SraHeaderFilter& filter) const {
+      SraHeaderFilter &filter) const {
     std::vector<SraHeaderDataViewType> result;
     for (std::optional<View> sra_header = GetFirstSraStructure(); sra_header;
          sra_header = GetNextSraStructure(*sra_header)) {
@@ -280,10 +281,9 @@ class SystemDescriptionTableReader {
         GetSraStructures(filter_by_type_and_min_size);
     std::vector<SraHeaderDataViewType> result;
     result.reserve(structures.size());
-    std::transform(structures.begin(), structures.end(),
-                   std::back_inserter(result), [](View view) {
-                     return SraHeaderDataViewType(view.BackingStorage());
-                   });
+    std::transform(
+        structures.begin(), structures.end(), std::back_inserter(result),
+        [](View view) { return SraHeaderDataViewType(view.BackingStorage()); });
     return result;
   }
 
@@ -325,7 +325,7 @@ class SystemDescriptionTableReader {
   virtual bool ValidateRevision() const = 0;
 
  private:
-  const char* table_data_;
+  const char *table_data_;
   // Size of the table header prior to static resource allocation entries.
   // This is header_->length for tables without static resource allocation
   // entries.

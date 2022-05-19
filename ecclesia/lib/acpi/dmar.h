@@ -36,8 +36,8 @@ class Dmar {
  public:
   explicit Dmar(std::unique_ptr<SystemDescriptionTable> table)
       : table_(std::move(table)) {}
-  Dmar(const Dmar&) = delete;
-  Dmar& operator=(const Dmar&) = delete;
+  Dmar(const Dmar &) = delete;
+  Dmar &operator=(const Dmar &) = delete;
 
   DmarHeaderView GetDmarHeader() const {
     return MakeDmarHeaderView(table_->table_data().data(),
@@ -57,17 +57,14 @@ class Dmar {
 };
 
 // Flags of the Dmar.flags field.
-enum DmarFlags {
-  DMAR_FLAGS_INTERRUPT_REMAPPING_ENABLED = (1 << 0)
-};
-
+enum DmarFlags { DMAR_FLAGS_INTERRUPT_REMAPPING_ENABLED = (1 << 0) };
 
 // Used to pass DmarSraHeader emboss struct and its Make and Validate functions
 // as a single template variable.
 class DmarSraHeaderDescriptor {
  public:
   using View = DmarSraHeaderView;
-  static DmarSraHeaderView MakeView(const char* data, size_t size) {
+  static DmarSraHeaderView MakeView(const char *data, size_t size) {
     return MakeDmarSraHeaderView(data, size);
   }
 
@@ -76,7 +73,7 @@ class DmarSraHeaderDescriptor {
   // format error messages.
   static bool Validate(View header_view, const uint16_t expected_type,
                        const uint16_t minimum_size,
-                       const char* const structure_name);
+                       const char *const structure_name);
 
   // Determine whether the size of this structure is smaller than
   // maximum_sra_size.
@@ -102,10 +99,10 @@ class DmarReader
  public:
   explicit DmarReader(DmarHeaderView dmar)
       : SystemDescriptionTableReader(
-            reinterpret_cast<const char*>(dmar.BackingStorage().data()),
+            reinterpret_cast<const char *>(dmar.BackingStorage().data()),
             dmar.SizeInBytes()) {}
-  DmarReader(const DmarReader&) = delete;
-  DmarReader& operator=(const DmarReader&) = delete;
+  DmarReader(const DmarReader &) = delete;
+  DmarReader &operator=(const DmarReader &) = delete;
 
   // Validate the table signature.
   bool ValidateSignature() const override;

@@ -38,52 +38,51 @@ namespace ecclesia {
 class FakeRedfishV1Impl : public ::redfish::v1::RedfishV1::Service {
  public:
   FakeRedfishV1Impl()
-      : callback_([](grpc::ServerContext*, const ::redfish::v1::Request*,
-                     redfish::v1::Response*) {
-          return grpc::Status::CANCELLED;
-        }) {}
+      : callback_(
+            [](grpc::ServerContext *, const ::redfish::v1::Request *,
+               redfish::v1::Response *) { return grpc::Status::CANCELLED; }) {}
 
-  grpc::Status Get(grpc::ServerContext* context,
-                   const ::redfish::v1::Request* request,
-                   redfish::v1::Response* response) override {
+  grpc::Status Get(grpc::ServerContext *context,
+                   const ::redfish::v1::Request *request,
+                   redfish::v1::Response *response) override {
     return callback_(context, request, response);
   }
 
-  grpc::Status Post(grpc::ServerContext* context,
-                    const ::redfish::v1::Request* request,
-                    redfish::v1::Response* response) override {
+  grpc::Status Post(grpc::ServerContext *context,
+                    const ::redfish::v1::Request *request,
+                    redfish::v1::Response *response) override {
     return callback_(context, request, response);
   }
 
-  grpc::Status Patch(grpc::ServerContext* context,
-                     const ::redfish::v1::Request* request,
-                     redfish::v1::Response* response) override {
+  grpc::Status Patch(grpc::ServerContext *context,
+                     const ::redfish::v1::Request *request,
+                     redfish::v1::Response *response) override {
     return callback_(context, request, response);
   }
 
-  grpc::Status Put(grpc::ServerContext* context,
-                   const ::redfish::v1::Request* request,
-                   redfish::v1::Response* response) override {
+  grpc::Status Put(grpc::ServerContext *context,
+                   const ::redfish::v1::Request *request,
+                   redfish::v1::Response *response) override {
     return callback_(context, request, response);
   }
 
-  grpc::Status Delete(grpc::ServerContext* context,
-                      const ::redfish::v1::Request* request,
-                      redfish::v1::Response* response) override {
+  grpc::Status Delete(grpc::ServerContext *context,
+                      const ::redfish::v1::Request *request,
+                      redfish::v1::Response *response) override {
     return callback_(context, request, response);
   }
 
-  void SetCallback(std::function<grpc::Status(grpc::ServerContext*,
-                                              const ::redfish::v1::Request*,
-                                              redfish::v1::Response*)>
+  void SetCallback(std::function<grpc::Status(grpc::ServerContext *,
+                                              const ::redfish::v1::Request *,
+                                              redfish::v1::Response *)>
                        callback) {
     callback_ = std::move(callback);
   }
 
  private:
-  std::function<grpc::Status(grpc::ServerContext*,
-                             const ::redfish::v1::Request*,
-                             redfish::v1::Response*)>
+  std::function<grpc::Status(grpc::ServerContext *,
+                             const ::redfish::v1::Request *,
+                             redfish::v1::Response *)>
       callback_;
 };
 
@@ -106,9 +105,9 @@ class GrpcDynamicFakeServer {
 
   std::string GetHostPort() const { return absl::StrCat("localhost:", port_); }
   int GetPort() const { return port_; }
-  void SetCallback(std::function<grpc::Status(grpc::ServerContext*,
-                                              const ::redfish::v1::Request*,
-                                              redfish::v1::Response*)>
+  void SetCallback(std::function<grpc::Status(grpc::ServerContext *,
+                                              const ::redfish::v1::Request *,
+                                              redfish::v1::Response *)>
                        callback);
 
  private:

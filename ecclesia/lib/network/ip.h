@@ -28,6 +28,6 @@ namespace ecclesia {
 bool IsIpv4LocalhostAvailable();
 bool IsIpv6LocalhostAvailable();
 
-}
+}  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_NETWORK_IP_H_

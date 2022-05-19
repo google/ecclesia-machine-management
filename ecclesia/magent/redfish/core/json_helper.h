@@ -34,23 +34,23 @@ namespace ecclesia {
 
 // Create and return an empty json object with the given name nested inside
 // the input json object
-inline nlohmann::json *GetJsonObject(
-    nlohmann::json *json, const std::string &name) {
+inline nlohmann::json *GetJsonObject(nlohmann::json *json,
+                                     const std::string &name) {
   assert(json && json->is_object());
   return &((*json)[name] = nlohmann::json::object());
 }
 
 // Create and return an empty json array with the given name nested inside
 // the input json object
-inline nlohmann::json *GetJsonArray(
-    nlohmann::json *json, const std::string &name) {
+inline nlohmann::json *GetJsonArray(nlohmann::json *json,
+                                    const std::string &name) {
   assert(json && json->is_object());
   return &((*json)[name] = nlohmann::json::array());
 }
 
 // Given an array instance for the "Members" array, append a collection member
-inline void AppendCollectionMember(
-    nlohmann::json *array, const std::string &uri) {
+inline void AppendCollectionMember(nlohmann::json *array,
+                                   const std::string &uri) {
   if (!array->is_array()) return;
   nlohmann::json member{{kOdataId, uri}};
   array->push_back(member);
@@ -58,7 +58,7 @@ inline void AppendCollectionMember(
 
 // Drills down a nested JSON object, using a serious of keys. If any of the
 // drill-down steps fails, returns a status.
-inline absl::StatusOr<nlohmann::json*> JsonDrillDown(
+inline absl::StatusOr<nlohmann::json *> JsonDrillDown(
     nlohmann::json &data, const std::initializer_list<absl::string_view> keys) {
   nlohmann::json *node = &data;
   for (absl::string_view key : keys) {

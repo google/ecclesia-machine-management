@@ -26,8 +26,8 @@
 namespace ecclesia {
 
 struct SmartReading {
-  std::string name;                 // The key to be reported in the response
-  std::optional<int> maybe_value;   // The value read from the redfish resource
+  std::string name;                // The key to be reported in the response
+  std::optional<int> maybe_value;  // The value read from the redfish resource
 };
 
 // Parse Nvme smart data from SMARTAttributes redfish object

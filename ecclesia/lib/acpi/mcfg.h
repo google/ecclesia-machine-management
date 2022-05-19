@@ -34,8 +34,8 @@ class Mcfg {
  public:
   explicit Mcfg(std::unique_ptr<SystemDescriptionTable> table)
       : table_(std::move(table)) {}
-  Mcfg(const Mcfg&) = delete;
-  Mcfg& operator=(const Mcfg&) = delete;
+  Mcfg(const Mcfg &) = delete;
+  Mcfg &operator=(const Mcfg &) = delete;
 
   McfgHeaderView GetMcfgHeader() const {
     return MakeMcfgHeaderView(table_->table_data().data(),
@@ -60,10 +60,10 @@ class McfgReader : public SystemDescriptionTableReader<SraHeaderDescriptor> {
  public:
   explicit McfgReader(McfgHeaderView mcfg)
       : SystemDescriptionTableReader(
-            reinterpret_cast<const char*>(mcfg.BackingStorage().data()),
+            reinterpret_cast<const char *>(mcfg.BackingStorage().data()),
             mcfg.SizeInBytes()) {}
-  McfgReader(const McfgReader&) = delete;
-  McfgReader& operator=(const McfgReader&) = delete;
+  McfgReader(const McfgReader &) = delete;
+  McfgReader &operator=(const McfgReader &) = delete;
 
   // Validate the table signature/revision.
   bool ValidateSignature() const override;

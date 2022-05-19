@@ -103,8 +103,8 @@ class ApiComplexityContextManager {
   class ImplInterface {
    public:
     virtual ~ImplInterface() = default;
-    virtual absl::StatusOr<ApiComplexityContext*> GetContext() = 0;
-    virtual void ReportContextResult(const ApiComplexityContext& context) = 0;
+    virtual absl::StatusOr<ApiComplexityContext *> GetContext() = 0;
+    virtual void ReportContextResult(const ApiComplexityContext &context) = 0;
   };
   // Class is used as a return value from PrepareForInboundApi method. It
   // simplifies results reporting using "report on destroy" approach.
@@ -128,21 +128,21 @@ class ApiComplexityContextManager {
 
   class ReportOnDestroy {
    public:
-    ReportOnDestroy(const ApiComplexityContextManager* manager,
-                    const ApiComplexityContext* context)
+    ReportOnDestroy(const ApiComplexityContextManager *manager,
+                    const ApiComplexityContext *context)
         : manager_(*manager), context_(context) {}
 
     // copy and assignment are not allowed
-    ReportOnDestroy(const ReportOnDestroy&) = delete;
-    ReportOnDestroy& operator=(const ReportOnDestroy&) = delete;
+    ReportOnDestroy(const ReportOnDestroy &) = delete;
+    ReportOnDestroy &operator=(const ReportOnDestroy &) = delete;
 
     // Move forces other instance to 'forget' reporting on destroy
-    ReportOnDestroy(ReportOnDestroy&& other)
+    ReportOnDestroy(ReportOnDestroy &&other)
         : manager_(other.manager_), context_(other.context_) {
       other.report_on_destroy = false;
     }
 
-    ReportOnDestroy& operator=(ReportOnDestroy&& other) {
+    ReportOnDestroy &operator=(ReportOnDestroy &&other) {
       manager_ = other.manager_;
       context_ = other.context_;
       report_on_destroy = other.report_on_destroy;
@@ -163,7 +163,7 @@ class ApiComplexityContextManager {
    private:
     bool report_on_destroy = true;
     std::reference_wrapper<const ApiComplexityContextManager> manager_;
-    const ApiComplexityContext* context_;
+    const ApiComplexityContext *context_;
   };
 
   ApiComplexityContextManager();
@@ -172,14 +172,14 @@ class ApiComplexityContextManager {
   // Returns context local to a thread/fiber. It should return the same pointer
   // when called multiple times from the same handler, regardless of the stack
   // frame it is called from.
-  absl::StatusOr<ApiComplexityContext*> GetContext() const {
+  absl::StatusOr<ApiComplexityContext *> GetContext() const {
     return impl_->GetContext();
   }
 
   // Reports values stored in context. Reporting destination depends on the
   // implementation. In this case GetContext method is used to get the context
   // object to report.
-  void ReportContextResult(const ApiComplexityContext& context) const {
+  void ReportContextResult(const ApiComplexityContext &context) const {
     return impl_->ReportContextResult(context);
   }
 

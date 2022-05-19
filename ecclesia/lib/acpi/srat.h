@@ -34,8 +34,8 @@ class Srat {
  public:
   explicit Srat(std::unique_ptr<SystemDescriptionTable> table)
       : table_(std::move(table)) {}
-  Srat(const Srat&) = delete;
-  Srat& operator=(const Srat&) = delete;
+  Srat(const Srat &) = delete;
+  Srat &operator=(const Srat &) = delete;
 
   SratHeaderView GetSratHeader() const {
     return MakeSratHeaderView(table_->table_data().data(),
@@ -67,7 +67,6 @@ enum SratSraHeaderType {
   SRAT_SRA_HEADER_GICC_AFFINITY = 3,
 };
 
-
 // Valid flags for ProcessorApicAffinity.flags.
 enum SratProcessorApicAffinityFlags {
   // If this flag isn't set the associated structure should be ignored.
@@ -89,10 +88,10 @@ class SratReader : public SystemDescriptionTableReader<SraHeaderDescriptor> {
  public:
   explicit SratReader(SratHeaderView srat)
       : SystemDescriptionTableReader(
-            reinterpret_cast<const char*>(srat.BackingStorage().data()),
+            reinterpret_cast<const char *>(srat.BackingStorage().data()),
             srat.SizeInBytes()) {}
-  SratReader(const SratReader&) = delete;
-  SratReader& operator=(const SratReader&) = delete;
+  SratReader(const SratReader &) = delete;
+  SratReader &operator=(const SratReader &) = delete;
 
   // Validate the SRAT signature.
   bool ValidateSignature() const override;

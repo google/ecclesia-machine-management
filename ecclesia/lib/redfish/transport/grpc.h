@@ -31,17 +31,15 @@ namespace ecclesia {
 
 struct GrpcTransportParams {
   // Clock used for all operations.
-  Clock* clock = Clock::RealClock();
+  Clock *clock = Clock::RealClock();
   // Timeout used for all operations.
   absl::Duration timeout = absl::Seconds(5);
 };
 
-absl::StatusOr<std::unique_ptr<RedfishTransport>>
-CreateGrpcRedfishTransport(
-    absl::string_view endpoint, const GrpcTransportParams& params,
-    const std::shared_ptr<grpc::ChannelCredentials>& creds,
+absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
+    absl::string_view endpoint, const GrpcTransportParams &params,
+    const std::shared_ptr<grpc::ChannelCredentials> &creds,
     ServiceRootUri service_root = ServiceRootUri::kRedfish);
-
 
 }  // namespace ecclesia
 

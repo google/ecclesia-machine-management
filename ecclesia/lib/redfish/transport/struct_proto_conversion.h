@@ -22,14 +22,14 @@
 
 namespace ecclesia {
 // Converts a Struct into a JSON object.
-nlohmann::json StructToJson(const google::protobuf::Struct& message);
+nlohmann::json StructToJson(const google::protobuf::Struct &message);
 
 // Assumes the input JSON is an object. If the JSON is not an object, returns
 // an empty Struct.
-google::protobuf::Struct JsonToStruct(const nlohmann::json& json);
+google::protobuf::Struct JsonToStruct(const nlohmann::json &json);
 
 // Converts a Value into a JSON value.
-nlohmann::json ValueToJson(const google::protobuf::Value& message);
+nlohmann::json ValueToJson(const google::protobuf::Value &message);
 
 // Converts every input JSON into the corresponding Struct_Value:
 // Struct_Value <-> JSON
@@ -41,14 +41,14 @@ nlohmann::json ValueToJson(const google::protobuf::Value& message);
 // struct_value     object
 // list_value       array
 ////////////////////////////
-google::protobuf::Value JsonToValue(const nlohmann::json& json);
+google::protobuf::Value JsonToValue(const nlohmann::json &json);
 
 // Converts a ListValue into a JSON value.
-nlohmann::json ListValueToJson(const google::protobuf::ListValue& message);
+nlohmann::json ListValueToJson(const google::protobuf::ListValue &message);
 
 // Assumes the input JSON is an array. If the JSON is not an array, returns an
 // empty ListValue
-google::protobuf::ListValue JsonToListValue(const nlohmann::json& json);
+google::protobuf::ListValue JsonToListValue(const nlohmann::json &json);
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TRANSPORT_STRUCT_PROTO_CONVERSION_H_

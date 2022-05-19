@@ -23,7 +23,8 @@ template <typename PropertyDefinitionSubtypeT, typename PropertyType>
 struct PropertyDefinition;
 // The base class for all property definitions. Subclasses must declare a type
 // and a string Name.
-template <typename PropertyDefinitionSubtypeT, typename PropertyType> struct PropertyDefinition;
+template <typename PropertyDefinitionSubtypeT, typename PropertyType>
+struct PropertyDefinition;
 
 template <typename PropertyDefinitionSubtypeT, typename PropertyType>
 struct PropertyDefinition {

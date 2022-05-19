@@ -36,7 +36,7 @@ absl::StatusOr<google::protobuf::Timestamp> AbslTimeToProtoTime(
 // Decodes the given protobuf and returns an absl::Duration, or returns an error
 // status if the argument is invalid.
 absl::StatusOr<absl::Duration> AbslDurationFromProtoDuration(
-    const google::protobuf::Duration& proto);
+    const google::protobuf::Duration &proto);
 
 // Encodes an absl::Duration as a google::protobuf::Duration.  Returns an error
 // if the given absl::Duration is beyond the range allowed by the protobuf.
@@ -50,7 +50,7 @@ absl::StatusOr<google::protobuf::Duration> AbslDurationToProtoDuration(
 
 // Same as above but taking a proto pointer.
 absl::Status AbslDurationToProtoDuration(absl::Duration d,
-                                         google::protobuf::Duration* proto);
+                                         google::protobuf::Duration *proto);
 
 }  // namespace ecclesia
 

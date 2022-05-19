@@ -30,28 +30,27 @@ namespace ecclesia {
 // An certificate verifier for multi-node machines.
 // The class ensures peer is an authenticated BMC node on the same multi-node
 // machine via performing matching on X509v3 Subject Alternative Name (SAN).
-class BmcVerifier
-    : public grpc::experimental::ExternalCertificateVerifier {
+class BmcVerifier : public grpc::experimental::ExternalCertificateVerifier {
  public:
-  using VerifyFunc = absl::Status(const SubjectAltName& node_san,
-                                  const SubjectAltName& peer_san);
+  using VerifyFunc = absl::Status(const SubjectAltName &node_san,
+                                  const SubjectAltName &peer_san);
 
   // Constructs a verifier for the node identified by the given SubjectAltName.
   //  |SubjectAltName.spiffe_id| shall be extracted from node's certificate.
   //  |SubjectAltName.fqdn| shall be the authorized FQDN of the node.
   // Users shall also specify how to perform verification via |verify| which
   //  takes the node's SAN and Peer's SAN.
-  BmcVerifier(const SubjectAltName& node_san,
-                   std::function<VerifyFunc> verify_func);
+  BmcVerifier(const SubjectAltName &node_san,
+              std::function<VerifyFunc> verify_func);
 
   ~BmcVerifier() override = default;
 
-  bool Verify(grpc::experimental::TlsCustomVerificationCheckRequest* request,
+  bool Verify(grpc::experimental::TlsCustomVerificationCheckRequest *request,
               std::function<void(::grpc::Status)> callback,
-              grpc::Status* sync_status) override;
+              grpc::Status *sync_status) override;
 
-  void Cancel(grpc::experimental::TlsCustomVerificationCheckRequest*) override {
-  }
+  void Cancel(
+      grpc::experimental::TlsCustomVerificationCheckRequest *) override {}
 
  private:
   SubjectAltName node_san_;

@@ -28,7 +28,7 @@ namespace ecclesia {
 
 // Function to find devpath for an arbitrary URI by searching through
 // NodeTopology
-std::optional<std::string> GetDevpathForUri(const NodeTopology& topology,
+std::optional<std::string> GetDevpathForUri(const NodeTopology &topology,
                                             absl::string_view uri);
 
 // Function to find devpath for Sensor resources (Sensor/Power/Thermal) based on
@@ -43,13 +43,13 @@ std::optional<std::string> GetDevpathForUri(const NodeTopology& topology,
 // The RedfishObject passed to this function must be under a subURI of a Chassis
 // in order to produce a valid depvath i.e. /redfish/v1/Chassis/<chassis-id>/...
 std::optional<std::string> GetSensorDevpathFromNodeTopology(
-    RedfishObject* obj, const NodeTopology& topology);
+    RedfishObject *obj, const NodeTopology &topology);
 
 std::optional<std::string> GetManagerDevpathFromNodeTopology(
-    RedfishObject* obj, const NodeTopology& topology);
+    RedfishObject *obj, const NodeTopology &topology);
 
 std::optional<std::string> GetSlotDevpathFromNodeTopology(
-    RedfishObject* obj, std::string parent_uri, const NodeTopology& topology);
+    RedfishObject *obj, std::string parent_uri, const NodeTopology &topology);
 
 }  // namespace ecclesia
 

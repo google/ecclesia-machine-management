@@ -28,7 +28,7 @@ namespace ecclesia {
 
 using RedfishTransportCacheFactory =
     std::function<std::unique_ptr<ecclesia::RedfishCachedGetterInterface>(
-        ecclesia::RedfishTransport*)>;
+        ecclesia::RedfishTransport *)>;
 
 // Constructs a RedfishInterface backed by a Redfish Transport.
 std::unique_ptr<RedfishInterface> NewHttpInterface(
