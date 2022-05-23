@@ -255,7 +255,7 @@ cc_library(
 cc_test(
     name = "struct_proto_conversion_test",
     srcs = ["struct_proto_conversion_test.cc"],
-    visibility = ["//visibility:public"],
+    visibility = ["//visibility:private"],
     deps = [
         ":struct_proto_conversion",
         "//ecclesia/lib/protobuf:parse",
