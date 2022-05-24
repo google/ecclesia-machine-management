@@ -34,16 +34,14 @@ using RedfishTransportCacheFactory =
 std::unique_ptr<RedfishInterface> NewHttpInterface(
     std::unique_ptr<ecclesia::RedfishTransport> transport,
     std::unique_ptr<ecclesia::RedfishCachedGetterInterface> cache,
-    RedfishInterface::TrustedEndpoint trusted,
-    ServiceRootUri service_root = ServiceRootUri::kRedfish);
+    RedfishInterface::TrustedEndpoint trusted);
 
 // Constructs a RedfishInterface backed by a Redfish Transport with a cache
 // factory. Is useful for the use-case when transport can be changed runtime
 std::unique_ptr<RedfishInterface> NewHttpInterface(
     std::unique_ptr<ecclesia::RedfishTransport> transport,
     RedfishTransportCacheFactory cache_factory,
-    RedfishInterface::TrustedEndpoint trusted,
-    ServiceRootUri service_root = ServiceRootUri::kRedfish);
+    RedfishInterface::TrustedEndpoint trusted);
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TRANSPORT_HTTP_REDFISH_INTF_H_

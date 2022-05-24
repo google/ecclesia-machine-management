@@ -171,28 +171,23 @@ std::unique_ptr<HttpClient::HttpRequest> HttpRedfishTransport::MakeRequest(
 
 HttpRedfishTransport::HttpRedfishTransport(
     std::unique_ptr<HttpClient> client,
-    std::variant<TcpTarget, UdsTarget> target, ServiceRootUri service_root)
-    : client_(std::move(client)),
-      target_(std::move(target)),
-      service_root_(service_root) {}
+    std::variant<TcpTarget, UdsTarget> target)
+    : client_(std::move(client)), target_(std::move(target)) {}
 
 std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeNetwork(
-    std::unique_ptr<HttpClient> client, std::string endpoint,
-    ServiceRootUri service_root) {
+    std::unique_ptr<HttpClient> client, std::string endpoint) {
   return absl::WrapUnique(new HttpRedfishTransport(
-      std::move(client), TcpTarget{std::move(endpoint)}, service_root));
+      std::move(client), TcpTarget{std::move(endpoint)}));
 }
 
 std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeUds(
-    std::unique_ptr<HttpClient> client, std::string unix_domain_socket,
-    ServiceRootUri service_root) {
+    std::unique_ptr<HttpClient> client, std::string unix_domain_socket) {
   return absl::WrapUnique(new HttpRedfishTransport(
-      std::move(client), UdsTarget{std::string(unix_domain_socket)},
-      service_root));
+      std::move(client), UdsTarget{std::string(unix_domain_socket)}));
 }
 
 absl::string_view HttpRedfishTransport::GetRootUri() {
-  return RedfishInterface::ServiceRootToUri(service_root_);
+  return RedfishInterface::ServiceRootToUri(ServiceRootUri::kRedfish);
 }
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Get(

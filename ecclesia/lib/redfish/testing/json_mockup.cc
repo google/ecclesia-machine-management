@@ -168,7 +168,8 @@ class JsonMockupMockup : public RedfishInterface {
     // in case someone is expecting some particular behaviour.
     ecclesia::FatalLog() << "Tried to update the endpoint of a JsonMockup";
   }
-  RedfishVariant GetRoot(GetParams params) override {
+  RedfishVariant GetRoot(GetParams params,
+                         ServiceRootUri service_root) override {
     return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(json_model_));
   }
   RedfishVariant UncachedGetUri(absl::string_view uri,

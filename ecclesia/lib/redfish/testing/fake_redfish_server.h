@@ -67,15 +67,10 @@ namespace ecclesia {
 class FakeRedfishServer {
  public:
   FakeRedfishServer(absl::string_view mockup_shar,
-                    absl::string_view mockup_uds_path,
-                    ServiceRootUri service_root = ServiceRootUri::kRedfish);
-  explicit FakeRedfishServer(
-      absl::string_view mockup_shar,
-      ServiceRootUri service_root = ServiceRootUri::kRedfish)
-      : FakeRedfishServer(
-            mockup_shar,
-            absl::StrCat(GetTestTempUdsDirectory(), "/mockup.socket"),
-            service_root) {}
+                    absl::string_view mockup_uds_path);
+  explicit FakeRedfishServer(absl::string_view mockup_shar)
+      : FakeRedfishServer(mockup_shar, absl::StrCat(GetTestTempUdsDirectory(),
+                                                    "/mockup.socket")) {}
   ~FakeRedfishServer();
 
   using HandlerFunc = std::function<void(

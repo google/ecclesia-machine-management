@@ -65,33 +65,27 @@ class TestingMockupServer {
   // Then, provide the name of the mockup .shar file. Currently only mockups
   // defined in redfish_mockups are supported.For example:
   //   mockup_sar = "indus_hmb_cn_mockup.shar"
-  explicit TestingMockupServer(
-      absl::string_view mockup_shar,
-      ServiceRootUri service_root = ServiceRootUri::kRedfish);
-  TestingMockupServer(absl::string_view mockup_shar, absl::string_view uds_path,
-                      ServiceRootUri service_root = ServiceRootUri::kRedfish);
+  explicit TestingMockupServer(absl::string_view mockup_shar);
+  TestingMockupServer(absl::string_view mockup_shar,
+                      absl::string_view uds_path);
   // Creates an mTLS enabled mockup server
   TestingMockupServer(absl::string_view mockup_shar,
                       const ServerTlsConfig &server_config,
-                      const ClientTlsConfig &client_config,
-                      ServiceRootUri service_root = ServiceRootUri::kRedfish);
+                      const ClientTlsConfig &client_config);
   ~TestingMockupServer();
 
   // Returns a new RedfishInterface connected to the mockup server.
   std::unique_ptr<RedfishInterface> RedfishClientInterface(
-      std::unique_ptr<ecclesia::HttpClient> client = nullptr,
-      ServiceRootUri service_root = ServiceRootUri::kRedfish);
+      std::unique_ptr<ecclesia::HttpClient> client = nullptr);
 
   // Returns a new RedfishInterface connected to the mockup server.
   // Auth type is REDFISH_AUTH_SESSION
   std::unique_ptr<RedfishInterface> RedfishClientSessionAuthInterface(
-      std::unique_ptr<ecclesia::HttpClient> client = nullptr,
-      ServiceRootUri service_root = ServiceRootUri::kRedfish);
+      std::unique_ptr<ecclesia::HttpClient> client = nullptr);
 
   // Returns a new RedfishInterface connected to the mockup server.
   // Auth type is REDFISH_AUTH_TLS
-  std::unique_ptr<RedfishInterface> RedfishClientTlsAuthInterface(
-      ServiceRootUri service_root = ServiceRootUri::kRedfish);
+  std::unique_ptr<RedfishInterface> RedfishClientTlsAuthInterface();
 
   // The hostname and port the server will be listening on.
   struct ConfigNetwork {

@@ -482,23 +482,19 @@ class HttpRedfishInterface : public RedfishInterface {
   HttpRedfishInterface(
       std::unique_ptr<ecclesia::RedfishTransport> transport,
       std::unique_ptr<ecclesia::RedfishCachedGetterInterface> cache,
-      RedfishInterface::TrustedEndpoint trusted,
-      ServiceRootUri service_root = ServiceRootUri::kRedfish)
+      RedfishInterface::TrustedEndpoint trusted)
       : transport_(std::move(transport)),
         trusted_(trusted),
         cache_(std::move(cache)),
-        cache_factory_(nullptr),
-        service_root_(service_root) {}
+        cache_factory_(nullptr) {}
 
   HttpRedfishInterface(std::unique_ptr<ecclesia::RedfishTransport> transport,
                        RedfishTransportCacheFactory cache_factory,
-                       RedfishInterface::TrustedEndpoint trusted,
-                       ServiceRootUri service_root = ServiceRootUri::kRedfish)
+                       RedfishInterface::TrustedEndpoint trusted)
       : transport_(std::move(transport)),
         trusted_(trusted),
         cache_(cache_factory(transport_.get())),
-        cache_factory_(std::move(cache_factory)),
-        service_root_(service_root) {}
+        cache_factory_(std::move(cache_factory)) {}
 
   bool IsTrusted() const override {
     absl::ReaderMutexLock mu(&transport_mutex_);
@@ -517,13 +513,10 @@ class HttpRedfishInterface : public RedfishInterface {
     cache_ = cache_factory_(transport_.get());
   }
 
-  RedfishVariant GetRoot(GetParams params) override {
+  RedfishVariant GetRoot(GetParams params,
+                         ServiceRootUri service_root) override {
     RedfishVariant root = [&]() {
-      if (service_root_ == ServiceRootUri::kGoogle) {
-        return CachedGetUri(kGoogleServiceRoot, std::move(params));
-      }
-
-      return CachedGetUri(kServiceRoot, std::move(params));
+      return CachedGetUri(ServiceRootToUri(service_root), std::move(params));
     }();
     // parse supported features if not parsed yet
     PopuplateSupportedFeatures(root);
@@ -687,7 +680,6 @@ class HttpRedfishInterface : public RedfishInterface {
   std::unique_ptr<ecclesia::RedfishCachedGetterInterface> cache_
       ABSL_GUARDED_BY(transport_mutex_);
   RedfishTransportCacheFactory cache_factory_ ABSL_GUARDED_BY(transport_mutex_);
-  const ServiceRootUri service_root_;
 
   mutable absl::Mutex supported_features_mutex_;
 
@@ -700,17 +692,17 @@ class HttpRedfishInterface : public RedfishInterface {
 std::unique_ptr<RedfishInterface> NewHttpInterface(
     std::unique_ptr<ecclesia::RedfishTransport> transport,
     std::unique_ptr<ecclesia::RedfishCachedGetterInterface> cache,
-    RedfishInterface::TrustedEndpoint trusted, ServiceRootUri service_root) {
-  return std::make_unique<HttpRedfishInterface>(
-      std::move(transport), std::move(cache), trusted, service_root);
+    RedfishInterface::TrustedEndpoint trusted) {
+  return std::make_unique<HttpRedfishInterface>(std::move(transport),
+                                                std::move(cache), trusted);
 }
 
 std::unique_ptr<RedfishInterface> NewHttpInterface(
     std::unique_ptr<ecclesia::RedfishTransport> transport,
     RedfishTransportCacheFactory cache_factory,
-    RedfishInterface::TrustedEndpoint trusted, ServiceRootUri service_root) {
+    RedfishInterface::TrustedEndpoint trusted) {
   return std::make_unique<HttpRedfishInterface>(
-      std::move(transport), std::move(cache_factory), trusted, service_root);
+      std::move(transport), std::move(cache_factory), trusted);
 }
 
 }  // namespace ecclesia

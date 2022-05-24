@@ -158,10 +158,9 @@ std::unique_ptr<RedfishInterface> FakeRedfishServer::RedfishClientInterface() {
 }
 
 FakeRedfishServer::FakeRedfishServer(absl::string_view mockup_shar,
-                                     absl::string_view mockup_uds_path,
-                                     ServiceRootUri service_root)
+                                     absl::string_view mockup_uds_path)
     : proxy_server_(ecclesia::CreateServer(0)),
-      mockup_server_(mockup_shar, mockup_uds_path, service_root),
+      mockup_server_(mockup_shar, mockup_uds_path),
       redfish_intf_(mockup_server_.RedfishClientInterface()) {
   auto handler =
       [this](::tensorflow::serving::net_http::ServerRequestInterface *req) {

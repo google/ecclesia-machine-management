@@ -112,19 +112,16 @@ class GrpcRedfishTransport : public RedfishTransport {
   //   endpoint: e.g. "dns:///localhost:80", "unix:///var/run/my.socket"
   GrpcRedfishTransport(absl::string_view endpoint,
                        const GrpcTransportParams &params,
-                       const std::shared_ptr<grpc::ChannelCredentials> &creds,
-                       ServiceRootUri service_root)
+                       const std::shared_ptr<grpc::ChannelCredentials> &creds)
       : client_(redfish::v1::RedfishV1::NewStub(
             grpc::CreateChannel(std::string(endpoint), creds))),
         params_(std::move(params)),
-        service_root_(std::move(service_root)),
         fqdn_(EndpointToFqdn(endpoint)) {}
 
   GrpcRedfishTransport(absl::string_view endpoint)
       : client_(redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
             std::string(endpoint), grpc::InsecureChannelCredentials()))),
         params_({}),
-        service_root_(std::move(ServiceRootUri::kRedfish)),
         fqdn_(EndpointToFqdn(endpoint)) {}
 
   ~GrpcRedfishTransport() override {}
@@ -132,7 +129,7 @@ class GrpcRedfishTransport : public RedfishTransport {
   // Returns the path of the root URI for the Redfish service this transport is
   // connected to.
   absl::string_view GetRootUri() override {
-    return RedfishInterface::ServiceRootToUri(service_root_);
+    return RedfishInterface::ServiceRootToUri(ServiceRootUri::kRedfish);
   }
 
   absl::StatusOr<Result> Get(absl::string_view path)
@@ -214,8 +211,6 @@ class GrpcRedfishTransport : public RedfishTransport {
   std::unique_ptr<::redfish::v1::RedfishV1::Stub> client_
       ABSL_GUARDED_BY(mutex_);
   GrpcTransportParams params_;
-  // The service root for RedfishInterface.
-  const ServiceRootUri service_root_;
   std::string fqdn_;
 };
 
@@ -246,11 +241,10 @@ absl::Status ValidateEndpoint(absl::string_view endpoint) {
 
 absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
     absl::string_view endpoint, const GrpcTransportParams &params,
-    const std::shared_ptr<grpc::ChannelCredentials> &creds,
-    ServiceRootUri service_root) {
+    const std::shared_ptr<grpc::ChannelCredentials> &creds) {
   ECCLESIA_RETURN_IF_ERROR(ValidateEndpoint(endpoint));
   return std::make_unique<GrpcRedfishTransport>(std::string(endpoint), params,
-                                                creds, service_root);
+                                                creds);
 }
 
 }  // namespace ecclesia
