@@ -18,6 +18,7 @@ cc_proto_library(
 cc_grpc_library(
     name = "redfish_v1_grpc_proto",
     srcs = [":redfish_v1_proto"],
+    generate_mocks = True,
     grpc_only = ["True"],
     visibility = ["//ecclesia:redfish_grpc_users"],
     deps = [":redfish_v1_cc_proto"],
