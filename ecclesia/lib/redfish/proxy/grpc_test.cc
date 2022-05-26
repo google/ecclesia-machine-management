@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "google/protobuf/struct.pb.h"
 #include "gmock/gmock.h"
@@ -50,6 +51,9 @@ using ::testing::Return;
 using ::testing::SetArgPointee;
 using ::testing::StrictMock;
 
+// Typed test for all GRPC proxy tests. This is parameterized on the verb being
+// tested, using one of the RedfishXXX objects defined below (e.g. RedfishGet).
+template <typename T>
 class GrpcProxyTest : public ::testing::Test {
  protected:
   GrpcProxyTest()
@@ -78,9 +82,45 @@ class GrpcProxyTest : public ::testing::Test {
   std::unique_ptr<grpc::Server> proxy_server_;
 };
 
-TEST_F(GrpcProxyTest, GetTest) {
-  StartProxy();
-  auto stub = MakeProxyStub();
+// Classes for defining the different verbs/RPCs to execute on. We want to
+// parameterize the tests, because we want to run the same tests on each RPC,
+// but because of the way RPC stubs work we can't easily parameterize the stub
+// call themselves, or the mocks for doing them. So instead we define a simple
+// mini-type that wraps each verb, and we parameterize on that.
+//
+// The wrappers define two functions:
+//   * ExpectMockStubCall(stub, ...), which basically works the same way as
+//     doing EXPECT_CALL(stub, NAME(...)) with NAME being the RPC name.
+//   * CallStub(stub, ...) which does stub.NAME(...) with NAME again
+//     being the RPC name.
+#define DEFINE_RPC_TYPE(name)                                              \
+  struct Redfish##name {                                                   \
+    template <typename... Matchers>                                        \
+    static auto &ExpectMockStubCall(redfish::v1::MockRedfishV1Stub &stub,  \
+                                    Matchers &&...matchers) {              \
+      return EXPECT_CALL(stub, name(std::forward<Matchers>(matchers)...)); \
+    }                                                                      \
+                                                                           \
+    template <typename... Params>                                          \
+    static grpc::Status CallStub(redfish::v1::RedfishV1::Stub &stub,       \
+                                 Params &&...params) {                     \
+      return stub.name(std::forward<Params>(params)...);                   \
+    }                                                                      \
+  }
+DEFINE_RPC_TYPE(Get);
+DEFINE_RPC_TYPE(Post);
+DEFINE_RPC_TYPE(Patch);
+DEFINE_RPC_TYPE(Put);
+DEFINE_RPC_TYPE(Delete);
+#undef DEFINE_RPC_TYPE
+
+using TestTypes = ::testing::Types<RedfishGet, RedfishPost, RedfishPatch,
+                                   RedfishPut, RedfishDelete>;
+TYPED_TEST_SUITE(GrpcProxyTest, TestTypes);
+
+TYPED_TEST(GrpcProxyTest, SimpleTest) {
+  this->StartProxy();
+  auto stub = this->MakeProxyStub();
 
   redfish::v1::Response mock_response =
       ParseTextProtoOrDie(R"pb(message {
@@ -90,15 +130,16 @@ TEST_F(GrpcProxyTest, GetTest) {
                                  }
                                }
                                code: 200)pb");
-  EXPECT_CALL(mock_stub_,
-              Get(_, EqualsProto(R"pb(url: "/a/b/c"
-                                      message {
-                                        fields {
-                                          key: "d"
-                                          value { string_value: "e" }
-                                        }
-                                      })pb"),
-                  _))
+
+  TypeParam::ExpectMockStubCall(this->mock_stub_, _,
+                                EqualsProto(R"pb(url: "/a/b/c"
+                                                 message {
+                                                   fields {
+                                                     key: "d"
+                                                     value { string_value: "e" }
+                                                   }
+                                                 })pb"),
+                                _)
       .WillOnce(
           DoAll(SetArgPointee<2>(mock_response), Return(grpc::Status::OK)));
 
@@ -107,139 +148,9 @@ TEST_F(GrpcProxyTest, GetTest) {
   request.set_url("/a/b/c");
   (*request.mutable_message()->mutable_fields())["d"].set_string_value("e");
   redfish::v1::Response response;
-  EXPECT_THAT(AsAbslStatus(stub->Get(&context, request, &response)), IsOk());
-  EXPECT_THAT(response, EqualsProto(mock_response));
-}
-
-TEST_F(GrpcProxyTest, PostTest) {
-  StartProxy();
-  auto stub = MakeProxyStub();
-
-  redfish::v1::Response mock_response =
-      ParseTextProtoOrDie(R"pb(message {
-                                 fields {
-                                   key: "f"
-                                   value { number_value: 1.5 }
-                                 }
-                               }
-                               code: 200)pb");
-  EXPECT_CALL(mock_stub_,
-              Post(_, EqualsProto(R"pb(url: "/a/b/c"
-                                       message {
-                                         fields {
-                                           key: "d"
-                                           value { string_value: "e" }
-                                         }
-                                       })pb"),
-                   _))
-      .WillOnce(
-          DoAll(SetArgPointee<2>(mock_response), Return(grpc::Status::OK)));
-
-  grpc::ClientContext context;
-  redfish::v1::Request request;
-  request.set_url("/a/b/c");
-  (*request.mutable_message()->mutable_fields())["d"].set_string_value("e");
-  redfish::v1::Response response;
-  EXPECT_THAT(AsAbslStatus(stub->Post(&context, request, &response)), IsOk());
-  EXPECT_THAT(response, EqualsProto(mock_response));
-}
-
-TEST_F(GrpcProxyTest, PatchTest) {
-  StartProxy();
-  auto stub = MakeProxyStub();
-
-  redfish::v1::Response mock_response =
-      ParseTextProtoOrDie(R"pb(message {
-                                 fields {
-                                   key: "f"
-                                   value { number_value: 1.5 }
-                                 }
-                               }
-                               code: 200)pb");
-  EXPECT_CALL(mock_stub_,
-              Patch(_, EqualsProto(R"pb(url: "/a/b/c"
-                                        message {
-                                          fields {
-                                            key: "d"
-                                            value { string_value: "e" }
-                                          }
-                                        })pb"),
-                    _))
-      .WillOnce(
-          DoAll(SetArgPointee<2>(mock_response), Return(grpc::Status::OK)));
-
-  grpc::ClientContext context;
-  redfish::v1::Request request;
-  request.set_url("/a/b/c");
-  (*request.mutable_message()->mutable_fields())["d"].set_string_value("e");
-  redfish::v1::Response response;
-  EXPECT_THAT(AsAbslStatus(stub->Patch(&context, request, &response)), IsOk());
-  EXPECT_THAT(response, EqualsProto(mock_response));
-}
-
-TEST_F(GrpcProxyTest, PutTest) {
-  StartProxy();
-  auto stub = MakeProxyStub();
-
-  redfish::v1::Response mock_response =
-      ParseTextProtoOrDie(R"pb(message {
-                                 fields {
-                                   key: "f"
-                                   value { number_value: 1.5 }
-                                 }
-                               }
-                               code: 200)pb");
-  EXPECT_CALL(mock_stub_,
-              Put(_, EqualsProto(R"pb(url: "/a/b/c"
-                                      message {
-                                        fields {
-                                          key: "d"
-                                          value { string_value: "e" }
-                                        }
-                                      })pb"),
-                  _))
-      .WillOnce(
-          DoAll(SetArgPointee<2>(mock_response), Return(grpc::Status::OK)));
-
-  grpc::ClientContext context;
-  redfish::v1::Request request;
-  request.set_url("/a/b/c");
-  (*request.mutable_message()->mutable_fields())["d"].set_string_value("e");
-  redfish::v1::Response response;
-  EXPECT_THAT(AsAbslStatus(stub->Put(&context, request, &response)), IsOk());
-  EXPECT_THAT(response, EqualsProto(mock_response));
-}
-
-TEST_F(GrpcProxyTest, DeleteTest) {
-  StartProxy();
-  auto stub = MakeProxyStub();
-
-  redfish::v1::Response mock_response =
-      ParseTextProtoOrDie(R"pb(message {
-                                 fields {
-                                   key: "f"
-                                   value { number_value: 1.5 }
-                                 }
-                               }
-                               code: 200)pb");
-  EXPECT_CALL(mock_stub_,
-              Delete(_, EqualsProto(R"pb(url: "/a/b/c"
-                                         message {
-                                           fields {
-                                             key: "d"
-                                             value { string_value: "e" }
-                                           }
-                                         })pb"),
-                     _))
-      .WillOnce(
-          DoAll(SetArgPointee<2>(mock_response), Return(grpc::Status::OK)));
-
-  grpc::ClientContext context;
-  redfish::v1::Request request;
-  request.set_url("/a/b/c");
-  (*request.mutable_message()->mutable_fields())["d"].set_string_value("e");
-  redfish::v1::Response response;
-  EXPECT_THAT(AsAbslStatus(stub->Delete(&context, request, &response)), IsOk());
+  EXPECT_THAT(
+      AsAbslStatus(TypeParam::CallStub(*stub, &context, request, &response)),
+      IsOk());
   EXPECT_THAT(response, EqualsProto(mock_response));
 }
 

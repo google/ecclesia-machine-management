@@ -35,8 +35,8 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/network:testing",
+        "//ecclesia/lib/redfish/proto:redfish_v1_cc_grpc_proto",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
-        "//ecclesia/lib/redfish/proto:redfish_v1_grpc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/strings",
     ],
@@ -47,8 +47,8 @@ cc_test(
     srcs = ["grpc_dynamic_fake_server_test.cc"],
     deps = [
         ":grpc_dynamic_fake_server",
+        "//ecclesia/lib/redfish/proto:redfish_v1_cc_grpc_proto",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
-        "//ecclesia/lib/redfish/proto:redfish_v1_grpc_proto",
         "//ecclesia/lib/testing:proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/time",
@@ -151,7 +151,7 @@ cc_library(
         "//ecclesia/lib/http:codes",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/redfish:interface",
-        "//ecclesia/lib/redfish/proto:redfish_v1_grpc_proto",
+        "//ecclesia/lib/redfish/proto:redfish_v1_cc_grpc_proto",
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/status:rpc",
         "//ecclesia/lib/time:clock",
