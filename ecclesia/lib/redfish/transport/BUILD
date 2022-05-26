@@ -302,3 +302,14 @@ cc_library(
         "@com_google_absl//absl/strings",
     ],
 )
+
+proto_library(
+    name = "rf_override_proto",
+    srcs = ["redfish_override/rf_override.proto"],
+    deps = ["@com_google_protobuf//:struct_proto"],
+)
+
+cc_proto_library(
+    name = "rf_override_cc_proto",
+    deps = [":rf_override_proto"],
+)
