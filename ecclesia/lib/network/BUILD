@@ -24,6 +24,7 @@ cc_library(
     srcs = ["ip.cc"],
     hdrs = ["ip.h"],
     visibility = ["//visibility:public"],
+    deps = ["@com_google_absl//absl/cleanup"],
 )
 
 cc_test(

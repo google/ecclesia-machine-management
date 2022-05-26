@@ -23,7 +23,7 @@ namespace ecclesia {
 
 // Functions for testing if IPv4 or IPv6 support is available locally. Note that
 // these functions only test if local support is available, which just means
-// that you can bind to localhost. It does not test if there's any actual
+// that you can bind to "localhost". It does not test if there's any actual
 // network connectivity available over the protocol.
 bool IsIpv4LocalhostAvailable();
 bool IsIpv6LocalhostAvailable();

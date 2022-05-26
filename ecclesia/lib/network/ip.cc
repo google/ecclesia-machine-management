@@ -18,28 +18,36 @@
 
 #include <netdb.h>
 #include <sys/socket.h>
-#include <sys/types.h>
+
+#include "absl/cleanup/cleanup.h"
 
 namespace ecclesia {
+namespace {
 
-// Both of these functions are implemented by seeing if we can get address info
-// for the standard IPv4 and IPv6 local addresses. If we can get info then it
-// should be possible to bind to ports on localhost using that address family.
-bool IsIpv4LocalhostAvailable() {
+// The underlying implementation of the IsIpvX functions. We implement the check
+// getting all the address info for "localhost" and seeing if it supports the
+// address family in question.
+bool DoesLocalhostContainFamily(int addr_family) {
   struct addrinfo *addr;
-  if (getaddrinfo("127.0.0.1", nullptr, nullptr, &addr) == 0) {
-    freeaddrinfo(addr);
-    return true;
+  if (getaddrinfo("localhost", nullptr, nullptr, &addr) != 0) {
+    // If we can't get localhost info at all, return false.
+    return false;
   }
-  return false;
-}
-bool IsIpv6LocalhostAvailable() {
-  struct addrinfo *addr;
-  if (getaddrinfo("::1", nullptr, nullptr, &addr) == 0) {
-    freeaddrinfo(addr);
-    return true;
+  // Now search through the linked list of info for anything with the matching
+  // family. None of the other values matter.
+  absl::Cleanup free_info_when_done = [addr]() { freeaddrinfo(addr); };
+  while (addr) {
+    if (addr->ai_family == addr_family) {
+      return true;
+    }
+    addr = addr->ai_next;
   }
-  return false;
+  return false;  // Getting here means address family not found.
 }
+
+}  // namespace
+
+bool IsIpv4LocalhostAvailable() { return DoesLocalhostContainFamily(AF_INET); }
+bool IsIpv6LocalhostAvailable() { return DoesLocalhostContainFamily(AF_INET6); }
 
 }  // namespace ecclesia

@@ -16,7 +16,7 @@
 
 #include "ecclesia/lib/network/testing.h"
 
-#include <resolv.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
