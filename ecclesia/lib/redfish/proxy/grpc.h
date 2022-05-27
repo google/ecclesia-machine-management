@@ -58,7 +58,9 @@ class RedfishV1GrpcProxy final : public redfish::v1::RedfishV1::Service {
   // Generic method that gets called before every request is forwarded. Is given
   // the RPC name and the request. Used for any generic pre-RPC operations such
   // as logging the request.
-  void PreCall(absl::string_view rpc_name, const redfish::v1::Request &request);
+  void PreCall(absl::string_view rpc_name, grpc::ServerContext &context,
+               const redfish::v1::Request &request,
+               grpc::ClientContext &client_context);
 
   std::string name_;
   redfish::v1::RedfishV1::StubInterface *stub_;

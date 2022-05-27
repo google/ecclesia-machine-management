@@ -41,8 +41,8 @@ RedfishV1GrpcProxy::RedfishV1GrpcProxy(
   grpc::Status RedfishV1GrpcProxy::name(grpc::ServerContext *context,        \
                                         const redfish::v1::Request *request, \
                                         redfish::v1::Response *response) {   \
-    PreCall(#name, *request);                                                \
     grpc::ClientContext client_context;                                      \
+    PreCall(#name, *context, *request, client_context);                      \
     return stub_->name(&client_context, *request, response);                 \
   }
 DEFINE_RPC_HANDLER(Get)
@@ -53,7 +53,9 @@ DEFINE_RPC_HANDLER(Delete)
 #undef DEFINE_RPC_HANDLER
 
 void RedfishV1GrpcProxy::PreCall(absl::string_view rpc_name,
-                                 const redfish::v1::Request &request) {
+                                 grpc::ServerContext &context,
+                                 const redfish::v1::Request &request,
+                                 grpc::ClientContext &client_context) {
   // Write a log message for any requests which can modify state. These requests
   // should be relatively rare and so shouldn't produce too much log spam, and
   // mutating requests are the most important ones to have some visibility into.
@@ -61,6 +63,11 @@ void RedfishV1GrpcProxy::PreCall(absl::string_view rpc_name,
     InfoLog() << "proxy (" << name_ << ") sending " << rpc_name
               << "request for URL: " << request.url();
   }
+  // Forward the deadline from the original call to the proxied call. Note that
+  // in practice the caller is unlikely to see this deadline exceeded as that
+  // error will likely trigger on their end first, but this also keep the call
+  // from lingering in the proxy after the client has abandoned it.
+  client_context.set_deadline(context.deadline());
 }
 
 }  // namespace ecclesia
