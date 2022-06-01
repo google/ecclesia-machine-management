@@ -18,10 +18,16 @@
 #define ECCLESIA_LIB_REDFISH_PROXY_GRPC_H_
 
 #include <string>
+#include <utility>
 
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/atomic/sequence.h"
+#include "ecclesia/lib/logging/globals.h"
+#include "ecclesia/lib/logging/interfaces.h"
+#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
+#include "grpcpp/client_context.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
 
@@ -55,14 +61,39 @@ class RedfishV1GrpcProxy final : public redfish::v1::RedfishV1::Service {
                       redfish::v1::Response *response) override;
 
  private:
+  // Generate a new sequence number. These numbers have no intrinsic meaning and
+  // are just intended to allow log statements associated with a specific proxy
+  // RPC to be matched up with each other.
+  SequenceNumberGenerator::ValueType GenerateSeqNum() {
+    return seq_num_generator_.GenerateValue();
+  }
+
+  // Log an info-level message associated with a specific RPC sequence number.
+  // Just calls InfoLog, but prefixes it with the proxy and RPC info.
+  LogMessageStream RpcInfoLog(
+      SequenceNumberGenerator::ValueType seq_num,
+      SourceLocation loc = SourceLocation::current()) const {
+    return std::move(InfoLog(loc)
+                     << "proxy(" << name_ << "), seq=" << seq_num << ": ");
+  }
+
   // Generic method that gets called before every request is forwarded. Is given
   // the RPC name and the request. Used for any generic pre-RPC operations such
   // as logging the request.
-  void PreCall(absl::string_view rpc_name, grpc::ServerContext &context,
+  void PreCall(SequenceNumberGenerator::ValueType seq_num,
+               absl::string_view rpc_name, grpc::ServerContext &context,
                const redfish::v1::Request &request,
                grpc::ClientContext &client_context);
 
+  // Generic method that gets called after very request returns. It is given
+  // the RPC name, the request, and the status of the result. Used for any
+  // generic post-RPC operations such as logging the result of the RPC.
+  void PostCall(SequenceNumberGenerator::ValueType seq_num,
+                absl::string_view rpc_name, const redfish::v1::Request &request,
+                const grpc::Status &rpc_status);
+
   std::string name_;
+  SequenceNumberGenerator seq_num_generator_;
   redfish::v1::RedfishV1::StubInterface *stub_;
 };
 

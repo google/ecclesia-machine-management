@@ -5,9 +5,11 @@ cc_library(
     srcs = ["grpc.cc"],
     hdrs = ["grpc.h"],
     deps = [
+        "//ecclesia/lib/atomic:sequence",
         "//ecclesia/lib/logging",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_grpc_proto",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
+        "//ecclesia/lib/status:rpc",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/strings",
     ],
