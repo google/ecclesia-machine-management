@@ -1,0 +1,20 @@
+{
+  "@odata.id": "/google/v1/RootOfTrustCollection/Hoth",
+  "@odata.type": "#RootOfTrust.v1_0_0.RootOfTrust",
+  "Actions": {
+    "#RootOfTrust.SendCommand": {
+      "target": "/google/v1/RootOfTrustCollection/Hoth/Actions/RootOfTrust.SendCommand"
+    }
+  },
+  "Id": "Hoth",
+  "Location": {
+    "PartLocation": {
+        "ServiceLabel": "Hoth",
+        "LocationType": "Embedded"
+    }
+  },
+  "Name": "Hoth",
+  "Status": {
+    "State": "Enabled"
+  }
+}

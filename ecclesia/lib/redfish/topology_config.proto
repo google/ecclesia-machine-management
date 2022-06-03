@@ -62,6 +62,9 @@ message TopologyConfig {
       // current Chassis
       string chassis_link = 1;
     }
+
+    // Root node search also starts from the google service root.
+    bool google_service_root = 2;
   }
   FindingRootNode find_root_node = 1;
 

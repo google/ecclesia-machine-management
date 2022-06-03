@@ -382,6 +382,13 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
       topology.uri_to_associated_node_map[node_to_attach.uri].push_back(
           node.get());
       topology.devpath_to_node_map[node->local_devpath] = node.get();
+      // Also push google service root; order matters so that the first chassis
+      // can default to being the real root.
+      if (config->find_root_node().google_service_root()) {
+        queue.push({.parent = node.get(),
+                    .uri = std::string(redfish_intf->ServiceRootToUri(
+                        ServiceRootUri::kGoogle))});
+      }
       topology.nodes.push_back(std::move(node));
     } else if (!location_attribute[kRfPropertyPartLocation].AsObject()) {
       // If no Location but parent: attach to parent in topology

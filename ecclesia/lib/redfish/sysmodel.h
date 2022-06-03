@@ -134,6 +134,9 @@ class Sysmodel {
   void QueryAllResourceInternal(Token<OemResourceRootOfTrust>,
                                 ResultCallback result_callback,
                                 size_t expand_levels);
+  void QueryAllResourceInternal(Token<OemResourceRootOfTrustCollection>,
+                                ResultCallback result_callback,
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourceComponentIntegrity>,
                                 ResultCallback result_callback,
                                 size_t expand_levels);

@@ -5,6 +5,7 @@
 
 find_root_node {
   chassis_link: "ContainedBy"
+  google_service_root: true
 }
 
 cable_linkages {
@@ -43,6 +44,15 @@ resource_to_config {
     first_class_attributes {
       array_attributes: "StorageControllers"
       array_attributes: "Drives"
+    }
+  }
+}
+
+resource_to_config {
+  key: "GoogleServiceRoot"
+  value {
+    first_class_attributes {
+      collection_attributes: "RootOfTrustCollection"
     }
   }
 }

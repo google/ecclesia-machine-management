@@ -150,6 +150,10 @@ inline constexpr char kRfPropertyResponderAuthentication[] =
     "ResponderAuthentication";
 inline constexpr char kRfPropertyComponentCertificate[] =
     "ComponentCertificate";
+inline constexpr char kRfPropertyRootOfTrustCollection[] =
+    "RootOfTrustCollection";
+inline constexpr char kRfPropertyRootOfTrustSendCommand[] =
+    "#RootOfTrust.SendCommand";
 
 inline constexpr char kRfResourceTypeProcessorMetrics[] = "ProcessorMetrics";
 
@@ -191,6 +195,8 @@ DEFINE_REDFISH_RESOURCE(ResourcePcieSlots, "PCIeSlots");
 DEFINE_REDFISH_RESOURCE(AbstractionPhysicalLpu, "PhysicalLpu");
 
 // OEM Google resources
+DEFINE_REDFISH_RESOURCE(OemResourceRootOfTrustCollection,
+                        "RootOfTrustCollection");
 DEFINE_REDFISH_RESOURCE(OemResourceRootOfTrust, "RootOfTrust");
 
 DEFINE_REDFISH_PROPERTY(PropertyOdataId, std::string, "@odata.id");
@@ -308,6 +314,9 @@ DEFINE_REDFISH_PROPERTY(PropertySigningAlgorithm, std::string,
                         "SigningAlgorithm");
 DEFINE_REDFISH_PROPERTY(PropertyMeasurementIndices, std::vector<int64_t>,
                         "MeasurementIndices");
+DEFINE_REDFISH_PROPERTY(PropertyCommand, std::string, "Command");
+DEFINE_REDFISH_PROPERTY(PropertyCommandResponse, std::string,
+                        "CommandResponse");
 DEFINE_REDFISH_PROPERTY(PropertyModel, std::string, "Model");
 DEFINE_REDFISH_PROPERTY(PropertyProcessorType, std::string, "ProcessorType");
 DEFINE_REDFISH_PROPERTY(PropertyCorrectableCoreErrorCount, int,

@@ -315,5 +315,26 @@ TEST(RawInterfaceTestWithMockup, TestingLocationTypes) {
   mockup.ClearHandlers();
 }
 
+TEST(RawInterfaceTestWithMockup, GoogleRootCoexistsWithRedfishRoot) {
+  ecclesia::FakeRedfishServer mockup(
+      "features/component_integrity/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+  NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
+
+  const std::vector<Node> expected_nodes = {
+      Node{"root", "/phys", NodeType::kBoard},
+      Node{"erot-gpu1", "/phys:device:erot-gpu1", NodeType::kDevice},
+      Node{"erot-gpu2", "/phys:device:erot-gpu2", NodeType::kDevice},
+      Node{"hoth", "/phys:device:hoth", NodeType::kDevice},
+  };
+
+  std::vector<Node> actual_nodes;
+  for (const auto &node : topology.nodes) {
+    actual_nodes.push_back(*node);
+  }
+
+  EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
+}
+
 }  // namespace
 }  // namespace ecclesia

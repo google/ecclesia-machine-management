@@ -1,0 +1,10 @@
+{
+  "@odata.id": "/google/v1",
+  "@odata.type": "#GoogleServiceRoot.v1_0_0.GoogleServiceRoot",
+  "Id": "Google Rest RootService",
+  "Name": "Google Service Root",
+  "Version": "1.0.0",
+  "RootOfTrustCollection": {
+    "@odata.id": "/google/v1/RootOfTrustCollection"
+  }
+}

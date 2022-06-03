@@ -1,0 +1,10 @@
+{
+  "@odata.id": "/google/v1/RootOfTrustCollection",
+  "@odata.type": "#RootOfTrustCollection.RootOfTrustCollection",
+  "Members": [
+    {
+      "@odata.id": "/google/v1/RootOfTrustCollection/Hoth"
+    }
+  ],
+  "Members@odata.count": 1
+}

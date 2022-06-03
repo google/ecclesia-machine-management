@@ -367,18 +367,16 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceSoftwareInventory>,
 }
 
 // RootOfTrust:
-// "/google/v1/Chassis/RootOfTrust/"
+// "/google/v1/RootOfTrustCollection/{id}/"
 void Sysmodel::QueryAllResourceInternal(Token<OemResourceRootOfTrust>,
                                         ResultCallback result_callback,
                                         size_t expand_levels) {
-  auto root = redfish_intf_->GetRoot();
-  auto root_of_trust =
-      root[kRfPropertyChassis][OemPropertyRootOfTrust::Name].AsObject();
-  if (root_of_trust != nullptr) {
-    result_callback(std::move(root_of_trust));
+  auto root = redfish_intf_->GetRoot({}, ServiceRootUri::kGoogle);
+  root[kRfPropertyRootOfTrustCollection].Each().Do(
+      [&](std::unique_ptr<RedfishObject> &rot) {
+        return result_callback(std::move(rot));
+      });
   }
-}
-
 // ComponentIntegrity:
 // "/redfish/v1/ComponentIntegrity/{id}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceComponentIntegrity>,
