@@ -95,7 +95,7 @@ message OverrideRequirement {
   message Requirement {
     string uri = 1;
     ObjectIdentifier object_identifier = 2;
-    google.protobuf.Value value = 3;
+    repeated google.protobuf.Value value = 3;
   }
   repeated Requirement requirement = 1;
 }

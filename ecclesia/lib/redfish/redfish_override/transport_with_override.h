@@ -21,6 +21,7 @@
 #include <utility>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
@@ -36,6 +37,9 @@ class RedfishTransportWithOverride : public RedfishTransport {
       OverridePolicy override_policy)
       : redfish_transport_(std::move(redfish_transport)),
         override_policy_(std::move(override_policy)) {}
+  RedfishTransportWithOverride(
+      std::unique_ptr<RedfishTransport> redfish_transport,
+      std::string policy_selector_path);
 
   ~RedfishTransportWithOverride() override = default;
 
@@ -76,7 +80,6 @@ class RedfishTransportWithOverride : public RedfishTransport {
 
  private:
   std::unique_ptr<RedfishTransport> redfish_transport_;
-
   absl::Mutex policy_lock_;
   OverridePolicy override_policy_ ABSL_GUARDED_BY(policy_lock_);
 };

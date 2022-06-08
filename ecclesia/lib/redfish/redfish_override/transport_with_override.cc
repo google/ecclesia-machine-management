@@ -244,6 +244,10 @@ absl::Status ResultUpdateHelper(const OverrideField &field,
 }
 }  // namespace
 
+RedfishTransportWithOverride::RedfishTransportWithOverride(
+      std::unique_ptr<RedfishTransport> redfish_transport,
+      std::string policy_selector_path) {}
+
 absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
     absl::string_view path) {
   auto get_result = redfish_transport_->Get(path);
