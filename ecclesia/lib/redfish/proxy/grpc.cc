@@ -16,9 +16,11 @@
 
 #include "ecclesia/lib/redfish/proxy/grpc.h"
 
+#include <memory>
 #include <string>
 #include <utility>
 
+#include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/atomic/sequence.h"
 #include "ecclesia/lib/logging/globals.h"
@@ -30,6 +32,18 @@
 #include "grpcpp/support/status.h"
 
 namespace ecclesia {
+namespace {
+
+// Forward metadata values from the client to the server.
+void ForwardMetadataFromServerContext(grpc::ServerContext &server_context,
+                                      grpc::ClientContext &client_context) {
+  for (const auto &[key, value] : server_context.client_metadata()) {
+    client_context.AddMetadata(std::string(key.data(), key.size()),
+                               std::string(value.data(), value.size()));
+  }
+}
+
+}  // namespace
 
 RedfishV1GrpcProxy::RedfishV1GrpcProxy(
     std::string name, redfish::v1::RedfishV1::StubInterface *stub)
@@ -43,9 +57,15 @@ RedfishV1GrpcProxy::RedfishV1GrpcProxy(
                                         const redfish::v1::Request *request, \
                                         redfish::v1::Response *response) {   \
     SequenceNumberGenerator::ValueType seq_num = GenerateSeqNum();           \
-    grpc::ClientContext client_context;                                      \
-    PreCall(seq_num, #name, *context, *request, client_context);             \
-    grpc::Status status = stub_->name(&client_context, *request, response);  \
+    if (!IsRpcAuthorized(*context)) {                                        \
+      return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,               \
+                          "User is not authorized to call this RPC");        \
+    }                                                                        \
+    auto client_context = grpc::ClientContext::FromServerContext(*context);  \
+    ForwardMetadataFromServerContext(*context, *client_context);             \
+    PreCall(seq_num, #name, *request);                                       \
+    grpc::Status status =                                                    \
+        stub_->name(client_context.get(), *request, response);               \
     PostCall(seq_num, #name, *request, status);                              \
     return status;                                                           \
   }
@@ -58,9 +78,7 @@ DEFINE_RPC_HANDLER(Delete)
 
 void RedfishV1GrpcProxy::PreCall(SequenceNumberGenerator::ValueType seq_num,
                                  absl::string_view rpc_name,
-                                 grpc::ServerContext &context,
-                                 const redfish::v1::Request &request,
-                                 grpc::ClientContext &client_context) {
+                                 const redfish::v1::Request &request) {
   // Write a log message for any requests which can modify state. These requests
   // should be relatively rare and so shouldn't produce too much log spam, and
   // mutating requests are the most important ones to have some visibility into.
@@ -68,11 +86,6 @@ void RedfishV1GrpcProxy::PreCall(SequenceNumberGenerator::ValueType seq_num,
     RpcInfoLog(seq_num) << "sending " << rpc_name
                         << " request for URL: " << request.url();
   }
-  // Forward the deadline from the original call to the proxied call. Note that
-  // in practice the caller is unlikely to see this deadline exceeded as that
-  // error will likely trigger on their end first, but this also keep the call
-  // from lingering in the proxy after the client has abandoned it.
-  client_context.set_deadline(context.deadline());
 }
 
 void RedfishV1GrpcProxy::PostCall(SequenceNumberGenerator::ValueType seq_num,

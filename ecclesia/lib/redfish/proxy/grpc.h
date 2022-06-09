@@ -27,13 +27,12 @@
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
-#include "grpcpp/client_context.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
 
 namespace ecclesia {
 
-class RedfishV1GrpcProxy final : public redfish::v1::RedfishV1::Service {
+class RedfishV1GrpcProxy : public redfish::v1::RedfishV1::Service {
  public:
   // Define a proxy with the given name that forward requests to the given stub.
   // The name is for use in logging and other debugging and tracing contexts.
@@ -61,6 +60,12 @@ class RedfishV1GrpcProxy final : public redfish::v1::RedfishV1::Service {
                       redfish::v1::Response *response) override;
 
  private:
+  // Virtual function that subclasses can override to do authorization checks.
+  // This will be called with the server context on every proxy call. If this
+  // returns false, then the RPC will be rejected with a "permission denied"
+  // error. The default implementation just returns true.
+  virtual bool IsRpcAuthorized(grpc::ServerContext &context) { return true; }
+
   // Generate a new sequence number. These numbers have no intrinsic meaning and
   // are just intended to allow log statements associated with a specific proxy
   // RPC to be matched up with each other.
@@ -81,9 +86,7 @@ class RedfishV1GrpcProxy final : public redfish::v1::RedfishV1::Service {
   // the RPC name and the request. Used for any generic pre-RPC operations such
   // as logging the request.
   void PreCall(SequenceNumberGenerator::ValueType seq_num,
-               absl::string_view rpc_name, grpc::ServerContext &context,
-               const redfish::v1::Request &request,
-               grpc::ClientContext &client_context);
+               absl::string_view rpc_name, const redfish::v1::Request &request);
 
   // Generic method that gets called after very request returns. It is given
   // the RPC name, the request, and the status of the result. Used for any
