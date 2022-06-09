@@ -76,8 +76,8 @@ absl::Status JsonAdd(nlohmann::json &json,
     return absl::OkStatus();
   } else if (object_identifier.has_array_field()) {
     return absl::InvalidArgumentError(
-              "Please specify a field before adding inside an array type "
-              "json");
+        "Please specify a field before adding inside an array type "
+        "json");
   } else if (object_identifier.has_array_idx()) {
     if (!json.is_array()) {
       return absl::InvalidArgumentError("Json is not an array type");
@@ -130,10 +130,10 @@ absl::Status JsonClear(nlohmann::json &json,
 // the action functions (JsonReplace, JsonAdd, JsonClear). The idx is the index
 // to do recursive find with object_identifier
 absl::Status FindObjectAndAct(nlohmann::json &json,
-                               const ObjectIdentifier &object_identifier,
-                               int idx, const OverrideValue &override_value,
-                               ecclesia::RedfishTransport *transport,
-                               OverrideField::ActionCase action) {
+                              const ObjectIdentifier &object_identifier,
+                              int idx, const OverrideValue &override_value,
+                              ecclesia::RedfishTransport *transport,
+                              OverrideField::ActionCase action) {
   if (action == OverrideField::ActionCase::kActionReplace &&
       idx == object_identifier.individual_object_identifier_size()) {
     return JsonReplace(json, override_value, transport);
@@ -181,7 +181,7 @@ absl::Status FindObjectAndAct(nlohmann::json &json,
                               .array_field()
                               .value())) {
         return FindObjectAndAct(iter, object_identifier, idx + 1,
-                                 override_value, transport, action);
+                                override_value, transport, action);
       }
     }
   } else if (object_identifier.individual_object_identifier()
@@ -204,8 +204,8 @@ absl::Status FindObjectAndAct(nlohmann::json &json,
 }
 // Updating the result by the specific OverrideField
 absl::Status ResultUpdateHelper(const OverrideField &field,
-                          RedfishTransport::Result &result,
-                          RedfishTransport *transport) {
+                                RedfishTransport::Result &result,
+                                RedfishTransport *transport) {
   switch (field.Action_case()) {
     case OverrideField::kActionReplace: {
       auto result_check = FindObjectAndAct(
@@ -220,8 +220,8 @@ absl::Status ResultUpdateHelper(const OverrideField &field,
     case OverrideField::kActionAdd: {
       auto result_check =
           FindObjectAndAct(result.body, field.action_add().object_identifier(),
-                            0, field.action_add().override_value(), transport,
-                            OverrideField::ActionCase::kActionAdd);
+                           0, field.action_add().override_value(), transport,
+                           OverrideField::ActionCase::kActionAdd);
       if (!result_check.ok()) {
         return result_check;
       }
@@ -245,8 +245,8 @@ absl::Status ResultUpdateHelper(const OverrideField &field,
 }  // namespace
 
 RedfishTransportWithOverride::RedfishTransportWithOverride(
-      std::unique_ptr<RedfishTransport> redfish_transport,
-      std::string policy_selector_path) {}
+    std::unique_ptr<RedfishTransport> redfish_transport,
+    std::string policy_selector_path) {}
 
 absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
     absl::string_view path) {

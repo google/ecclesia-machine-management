@@ -376,7 +376,7 @@ void Sysmodel::QueryAllResourceInternal(Token<OemResourceRootOfTrust>,
       [&](std::unique_ptr<RedfishObject> &rot) {
         return result_callback(std::move(rot));
       });
-  }
+}
 // ComponentIntegrity:
 // "/redfish/v1/ComponentIntegrity/{id}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceComponentIntegrity>,
