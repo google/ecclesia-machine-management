@@ -46,7 +46,10 @@ def _proto_data_impl(ctx):
         command = " ".join([ctx.executable._tool.path] + args + redirect),
         use_default_shell_env = False,
     )
-    return DefaultInfo(files = depset([output]))
+    return DefaultInfo(
+        files = depset([output]),
+        runfiles = ctx.runfiles(files = [output]),
+    )
 
 _TOOL = "@com_google_protobuf//:protoc"
 
@@ -62,6 +65,7 @@ _TOOL = "@com_google_protobuf//:protoc"
 #        output file is name + ".binarypb" extension.
 proto_data = rule(
     implementation = _proto_data_impl,
+    output_to_genfiles = True,
     attrs = {
         "src": attr.label(
             allow_single_file = True,
