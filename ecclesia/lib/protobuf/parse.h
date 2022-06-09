@@ -30,15 +30,21 @@
 //   defined message type and returns a vector of protos. Basically just a
 //   wrapper around ParseTextAsProtoOrDie, but useful for cutting down on a lot
 //   of repeated boilerplate when parsing N protos instead of 1.
+//
+// ParseTextFileAsProtoOrDie<MessageType>(filepath):
+//   Loads in the file path provided and parses contents as explicitly defined
+//   message type.
 
 #ifndef ECCLESIA_LIB_PROTOBUF_PARSE_H_
 #define ECCLESIA_LIB_PROTOBUF_PARSE_H_
 
+#include <fstream>
 #include <initializer_list>
 #include <string>
 #include <vector>
 
 #include "google/protobuf/io/tokenizer.h"
+#include "google/protobuf/io/zero_copy_stream_impl.h"
 #include "google/protobuf/text_format.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -137,6 +143,21 @@ std::vector<MessageType> ParseTextAsProtoVectorOrDie(
         ParseTextAsProtoOrDie<MessageType>(std::string(text), loc));
   }
   return messages;
+}
+
+template <typename MessageType>
+MessageType ParseTextFileAsProtoOrDie(
+    const std::string &path, SourceLocation loc = SourceLocation::current()) {
+  std::ifstream textfile(path);
+  if (textfile.fail()) {
+    FatalLog(loc) << "failed to open file at path " << path;
+  }
+  google::protobuf::io::IstreamInputStream input_stream(&textfile);
+  MessageType message;
+  if (!google::protobuf::TextFormat::Parse(&input_stream, &message)) {
+    FatalLog(loc) << "failed to parse text file at path " << path;
+  }
+  return message;
 }
 
 }  // namespace ecclesia
