@@ -483,6 +483,7 @@ TEST(FruTest, MultiRecordGetSetTest) {
   EXPECT_EQ(5, multi_record.get_size());
   std::vector<unsigned char> data;
   const int kDataSize = 8;
+  data.reserve(kDataSize);
   for (int i = 0; i < kDataSize; ++i) {
     data.push_back(i);
   }

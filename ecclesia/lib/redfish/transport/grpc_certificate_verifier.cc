@@ -35,7 +35,7 @@ namespace ecclesia {
 namespace {
 using ::grpc::experimental::TlsCustomVerificationCheckRequest;
 
-bool ReturnSyncAndAssignVerifierStatus(absl::Status status,
+bool ReturnSyncAndAssignVerifierStatus(const absl::Status &status,
                                        grpc::Status &output_status) {
   constexpr bool kIsVerifierSync = true;
   output_status = StatusToGrpcStatus(status);

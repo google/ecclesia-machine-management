@@ -111,6 +111,7 @@ TEST(HttpRedfishInterfaceMultithreadedTest, NoMultithreadedIssuesOnGet) {
 
   // Create a bunch of threads and make them do the same work.
   auto thread_factory = GetDefaultThreadFactory();
+  threads.reserve(kThreads);
   for (int i = 0; i < kThreads; ++i) {
     threads.push_back(thread_factory->New(my_getter_func));
   }

@@ -90,12 +90,9 @@ bool ParseIntelDecodedMceAttributes(const MceAttributes &attributes,
   if (!attributes.GetAttribute(MceAttributes::kMciStatusValid, &flag)) {
     return false;
   }
-  if (!flag ||
-      (decoded_msg->cpu_errors.empty() && decoded_msg->mem_errors.empty())) {
-    decoded_msg->mce_bucket.mce_corrupt = true;
-  } else {
-    decoded_msg->mce_bucket.mce_corrupt = false;
-  }
+  decoded_msg->mce_bucket.mce_corrupt =
+      !flag ||
+      (decoded_msg->cpu_errors.empty() && decoded_msg->mem_errors.empty());
 
   int tmp_value;
   if (!attributes.GetAttribute(MceAttributes::kMceBank, &tmp_value)) {

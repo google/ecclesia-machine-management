@@ -347,6 +347,7 @@ TEST(RawInterfaceTestWithMockup, IndusHmbCnMockupNodesArePopulated) {
   };
 
   std::vector<Node> actual_nodes;
+  actual_nodes.reserve(topology.nodes.size());
   for (const auto &node : topology.nodes) {
     actual_nodes.push_back(*node);
   }
@@ -579,6 +580,7 @@ TEST(RawInterfaceTestWithMockup, HandleAssemblyStateCorrectlly) {
   NodeTopology topology = CreateTopologyFromRedfish(raw_intf.get());
 
   std::vector<std::string> actual_devpaths;
+  actual_devpaths.reserve(topology.nodes.size());
   for (const auto &node : topology.nodes) {
     actual_devpaths.push_back(node->local_devpath);
   }

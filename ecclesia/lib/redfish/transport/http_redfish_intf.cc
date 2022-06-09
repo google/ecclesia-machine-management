@@ -85,10 +85,10 @@ struct RedfishExtendedPath {
 // Helper function to convert a key-value span to a JSON object that can be
 // used as a request body.
 
-nlohmann::json ProcessValueVariant(RedfishInterface::ListValue val);
-nlohmann::json ProcessValueVariant(RedfishInterface::ObjectValue val);
+nlohmann::json ProcessValueVariant(const RedfishInterface::ListValue &val);
+nlohmann::json ProcessValueVariant(const RedfishInterface::ObjectValue &val);
 nlohmann::json ProcessValueVariant(int val) { return nlohmann::json(val); }
-nlohmann::json ProcessValueVariant(std::string val) {
+nlohmann::json ProcessValueVariant(const std::string &val) {
   return nlohmann::json(val);
 }
 nlohmann::json ProcessValueVariant(const char *val) {
@@ -96,14 +96,14 @@ nlohmann::json ProcessValueVariant(const char *val) {
 }
 nlohmann::json ProcessValueVariant(bool val) { return nlohmann::json(val); }
 nlohmann::json ProcessValueVariant(double val) { return nlohmann::json(val); }
-nlohmann::json ProcessValueVariant(RedfishInterface::ListValue val) {
+nlohmann::json ProcessValueVariant(const RedfishInterface::ListValue &val) {
   nlohmann::json array(nlohmann::json::value_t::array);
   for (const auto &item : val.items) {
     std::visit([&](auto i) { array.push_back(ProcessValueVariant(i)); }, item);
   }
   return array;
 }
-nlohmann::json ProcessValueVariant(RedfishInterface::ObjectValue val) {
+nlohmann::json ProcessValueVariant(const RedfishInterface::ObjectValue &val) {
   nlohmann::json obj(nlohmann::json::value_t::object);
   for (const auto &i : val.items) {
     std::visit([&](auto v) { obj[i.first] = ProcessValueVariant(v); },

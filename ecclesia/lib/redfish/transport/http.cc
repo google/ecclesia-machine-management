@@ -183,7 +183,8 @@ std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeNetwork(
 std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeUds(
     std::unique_ptr<HttpClient> client, std::string unix_domain_socket) {
   return absl::WrapUnique(new HttpRedfishTransport(
-      std::move(client), UdsTarget{std::string(unix_domain_socket)}));
+      std::move(client),
+      UdsTarget{std::string(std::move(unix_domain_socket))}));
 }
 
 absl::string_view HttpRedfishTransport::GetRootUri() {

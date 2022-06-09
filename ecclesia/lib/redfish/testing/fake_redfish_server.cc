@@ -56,7 +56,7 @@ void FakeRedfishServer::ClearHandlers() {
 void FakeRedfishServer::AddHttpGetHandlerWithData(std::string uri,
                                                   absl::Span<const char> data) {
   AddHttpGetHandler(
-      uri,
+      std::move(uri),
       [&, data](::tensorflow::serving::net_http::ServerRequestInterface *req) {
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");

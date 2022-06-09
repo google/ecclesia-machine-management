@@ -63,7 +63,7 @@ nlohmann::json ReadJsonFile(const std::string &file_path) {
 // applies the given modifiers to the dictionary.
 absl::flat_hash_map<std::string, nlohmann::json> GetAssemblies(
     absl::string_view dir_path,
-    std::vector<Assembly::AssemblyModifier> assembly_modifiers) {
+    const std::vector<Assembly::AssemblyModifier> &assembly_modifiers) {
   // First, load static JSON files into the assemblies which is an URL to JSON
   // value mapping.
   absl::flat_hash_map<std::string, nlohmann::json> assemblies;

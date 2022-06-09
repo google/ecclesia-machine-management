@@ -53,6 +53,7 @@ void CheckAgainstTestingMockupFullDevpaths(const NodeTopology &topology) {
       Node{"expansion_child", "/phys/C2/HDMI/DOWNLINK/E1", NodeType::kBoard}};
 
   std::vector<Node> actual_nodes;
+  actual_nodes.reserve(topology.nodes.size());
   for (const auto &node : topology.nodes) {
     actual_nodes.push_back(*node);
   }
@@ -269,6 +270,7 @@ TEST(RawInterfaceTestWithMockup, TestingNodeName) {
       CreateTopologyFromRedfishV2(raw_intf.get());
 
   std::vector<std::string> node_names;
+  node_names.reserve(constructed_topology.nodes.size());
   for (const auto &node : constructed_topology.nodes) {
     node_names.push_back(node->name);
   }
@@ -329,6 +331,7 @@ TEST(RawInterfaceTestWithMockup, GoogleRootCoexistsWithRedfishRoot) {
   };
 
   std::vector<Node> actual_nodes;
+  actual_nodes.reserve(topology.nodes.size());
   for (const auto &node : topology.nodes) {
     actual_nodes.push_back(*node);
   }

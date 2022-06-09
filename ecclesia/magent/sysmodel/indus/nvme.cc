@@ -40,11 +40,11 @@ constexpr int kPciClassCodeStorageNvme = 0x010802;
 // This helper function scans the NVMe devices as PCI plugins along the PCI root
 // bus. If matched devices are found, their locations (PCI location and
 // connector name) are added to the nvme_locations vector.
-void ScanNvmeAsPciPlugins(const PciTopologyInterface *pci_topology,
-                          const PciNodeMap &pci_nodes_map,
-                          const PciDomain &pci_domain, const PciBusNum &pci_bus,
-                          std::function<std::string(int)> connector_name_func,
-                          std::vector<NvmeLocation> *nvme_locations) {
+void ScanNvmeAsPciPlugins(
+    const PciTopologyInterface *pci_topology, const PciNodeMap &pci_nodes_map,
+    const PciDomain &pci_domain, const PciBusNum &pci_bus,
+    const std::function<std::string(int)> &connector_name_func,
+    std::vector<NvmeLocation> *nvme_locations) {
   for (int pci_dev = 0; pci_dev <= 3; ++pci_dev) {
     std::optional<PciDbdfLocation> pci_location = PciDbdfLocation::TryMake(
         pci_domain.value(), pci_bus.value(), pci_dev, 0);

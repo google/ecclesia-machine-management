@@ -52,7 +52,9 @@ constexpr int kFruBoardInfoAreaSizeIndex = 9;
 // but we want to avoid this because many linting tools will (correctly) flag
 // string -> char* -> string conversions as possible bugs.
 
-std::string StringUpToNul(std::string s) { return s.substr(0, s.find('\0')); }
+std::string StringUpToNul(const std::string &s) {
+  return s.substr(0, s.find('\0'));
+}
 
 absl::Status ValidateFruCommonHeader(
     absl::Span<const unsigned char> common_header) {

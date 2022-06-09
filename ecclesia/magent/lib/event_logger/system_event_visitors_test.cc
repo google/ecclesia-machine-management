@@ -235,11 +235,7 @@ TEST_F(SystemEventVisitorTest, CpuErrorExcludeWhitelisted) {
     MceDecodedMessage output;
     output.cpu_errors.push_back(CpuError{});
     // To emulate that all CPU errors with socket <= 2 are whitelisted.
-    if (socket <= 2) {
-      output.cpu_errors[0].cpu_error_bucket.whitelisted = true;
-    } else {
-      output.cpu_errors[0].cpu_error_bucket.whitelisted = false;
-    }
+    output.cpu_errors[0].cpu_error_bucket.whitelisted = socket <= 2;
     output.cpu_errors[0].cpu_error_bucket.socket = socket++;
     output.cpu_errors[0].cpu_error_bucket.correctable = correctable;
     output.cpu_errors[0].error_count = 1;

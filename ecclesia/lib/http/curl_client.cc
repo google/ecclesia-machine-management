@@ -53,7 +53,7 @@ constexpr auto kSupportedProtocols = CURLPROTO_HTTP | CURLPROTO_HTTPS;
 
 // SetCurlOpts is an overloaded helper function for setting curl options from
 // the different credential configs supported.
-void SetCurlOpts(LibCurl *libcurl, CURL *curl, HttpCredential creds) {
+void SetCurlOpts(LibCurl *libcurl, CURL *curl, const HttpCredential &creds) {
   libcurl->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false);
   libcurl->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, false);
   if (!creds.username().empty() && !creds.password().empty()) {
@@ -62,7 +62,7 @@ void SetCurlOpts(LibCurl *libcurl, CURL *curl, HttpCredential creds) {
         absl::StrCat(creds.username(), ":", creds.password()));
   }
 }
-void SetCurlOpts(LibCurl *libcurl, CURL *curl, TlsCredential creds) {
+void SetCurlOpts(LibCurl *libcurl, CURL *curl, const TlsCredential &creds) {
   libcurl->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST,
                             creds.verify_hostname());
   libcurl->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, creds.verify_peer());
@@ -199,8 +199,7 @@ CurlHttpClient::CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
 CurlHttpClient::CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
                                std::variant<HttpCredential, TlsCredential> cred,
                                CurlHttpClient::Config config)
-    : HttpClient(),
-      libcurl_(std::move(libcurl)),
+    : libcurl_(std::move(libcurl)),
       config_(std::move(config)),
       cred_(std::move(cred)) {
   // Setup share interface
@@ -370,9 +369,8 @@ void CurlHttpClient::SetDefaultCurlOpts(CURL *curl) const {
   libcurl_->curl_easy_setopt(curl, CURLOPT_NOSIGNAL, (uint64_t)1L);
 
   libcurl_->curl_easy_setopt(curl, CURLOPT_HTTP_TRANSFER_DECODING,
-                             config_.raw ? false : true);
-  libcurl_->curl_easy_setopt(curl, CURLOPT_VERBOSE,
-                             config_.verbose ? true : false);
+                             !config_.raw);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_VERBOSE, config_.verbose);
   if (config_.verbose_cb != nullptr) {
     (libcurl_->curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION,
                                 config_.verbose_cb));
@@ -387,7 +385,7 @@ void CurlHttpClient::SetDefaultCurlOpts(CURL *curl) const {
   libcurl_->curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT,
                              static_cast<uint32_t>(config_.dns_timeout));
   libcurl_->curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION,
-                             config_.follow_redirect ? true : false);
+                             config_.follow_redirect);
   libcurl_->curl_easy_setopt(curl, CURLOPT_PROTOCOLS,
                              static_cast<uint32_t>(kSupportedProtocols));
 

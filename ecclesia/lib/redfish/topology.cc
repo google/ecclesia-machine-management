@@ -371,7 +371,7 @@ std::vector<Assembly> CreateAssembliesFromRedfish(
 }
 
 NodeTopology CreateNodeTopologyFromAssemblies(
-    std::vector<Assembly> assemblies) {
+    const std::vector<Assembly> &assemblies) {
   NodeTopology node_topology;
 
   // A map of odata IDs to the Node* created for them.
