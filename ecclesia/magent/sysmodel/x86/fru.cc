@@ -52,8 +52,13 @@ constexpr int kFruBoardInfoAreaSizeIndex = 9;
 // but we want to avoid this because many linting tools will (correctly) flag
 // string -> char* -> string conversions as possible bugs.
 
-std::string StringUpToNul(const std::string &s) {
-  return s.substr(0, s.find('\0'));
+inline std::string StringUpToNul(std::string s) {
+  auto iter = s.find('\0');
+  if (iter == std::string::npos) {
+    // If there is no null, just return the string.
+    return s;
+  }
+  return s.substr(0, iter);
 }
 
 absl::Status ValidateFruCommonHeader(
