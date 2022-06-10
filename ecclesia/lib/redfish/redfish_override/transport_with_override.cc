@@ -17,13 +17,17 @@
 #include "ecclesia/lib/redfish/redfish_override/transport_with_override.h"
 
 #include <fstream>
+#include <memory>
 #include <string>
+#include <utility>
 
-#include "google/protobuf/text_format.h"
-#include "absl/container/flat_hash_map.h"
+#include "google/protobuf/message.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -378,7 +382,6 @@ absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
   if (!get_result.ok()) {
     return get_result;
   }
-  absl::MutexLock mu(&policy_lock_);
   auto iter = override_policy_.override_content_map_uri().find(path);
   if (iter != override_policy_.override_content_map_uri().end()) {
     for (const auto &field : iter->second.override_field()) {

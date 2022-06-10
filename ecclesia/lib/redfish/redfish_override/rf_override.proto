@@ -57,7 +57,7 @@ message OverrideField {
       string uri = 1;
       ObjectIdentifier object_identifier = 2;
     }
-    oneof Values{
+    oneof Values {
       google.protobuf.Value value = 1;
       OverrideByReading override_by_reading = 2;
     }
@@ -90,11 +90,15 @@ message OverridePolicy {
   map<string, OverrideContent> override_content_map_regex = 2;
 }
 
-// Requirement should specify a field value in a reading of uri
+// An OverrideRequirement is expressed as a list of requirements, where each
+// requirement checks if the actual value in a resource matches ANY of the given
+// values.
 message OverrideRequirement {
   message Requirement {
     string uri = 1;
     ObjectIdentifier object_identifier = 2;
+    // The requirement is met if the actual value matches any of the following
+    // values.
     repeated google.protobuf.Value value = 3;
   }
   repeated Requirement requirement = 1;

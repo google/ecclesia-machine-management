@@ -22,7 +22,6 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 
@@ -49,11 +48,6 @@ class RedfishTransportWithOverride : public RedfishTransport {
 
   absl::string_view GetRootUri() override {
     return redfish_transport_->GetRootUri();
-  }
-
-  void ReloadOverridePolicy(OverridePolicy override_policy) {
-    absl::MutexLock lock(&policy_lock_);
-    override_policy_ = std::move(override_policy);
   }
 
   // The RedfishOverride may intercept the request and manipulate the response
@@ -84,8 +78,8 @@ class RedfishTransportWithOverride : public RedfishTransport {
 
  private:
   std::unique_ptr<RedfishTransport> redfish_transport_;
-  absl::Mutex policy_lock_;
-  OverridePolicy override_policy_ ABSL_GUARDED_BY(policy_lock_);
+
+  const OverridePolicy override_policy_;
 };
 }  // namespace ecclesia
 #endif  // ECCLESIA_LIB_REDFISH_REDFISH_OVERRIDE_TRANSPORT_WITH_OVERRIDE_H_

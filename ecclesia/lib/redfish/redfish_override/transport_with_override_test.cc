@@ -17,10 +17,12 @@
 #include "ecclesia/lib/redfish/redfish_override/transport_with_override.h"
 
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/protobuf/parse.h"
@@ -29,6 +31,7 @@
 #include "ecclesia/lib/redfish/transport/mocked_interface.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 namespace {
@@ -591,34 +594,7 @@ TEST_F(RedfishOverrideTest, AddArrayFail) {
 
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/expected/result/1");
-  ASSERT_THAT(res_get, IsOk());
-
-  policy = ParseTextProtoOrDie(R"pb(
-    override_content_map_uri: {
-      key: "/expected/result/1"
-      value: {
-        override_field:
-        [ {
-          action_add: {
-            object_identifier: {
-              individual_object_identifier:
-              [ { field_name: "TestArray" }
-                , {
-                  array_field: {
-                    field_name: "TestStruct"
-                    value { string_value: "tests1" }
-                  }
-                }]
-            }
-            override_value: { value: { string_value: "test" } }
-          }
-        }]
-      }
-    }
-  )pb");
-  rf_override->ReloadOverridePolicy(policy);
-  res_get = rf_override->Get("/expected/result/1");
-  ASSERT_THAT(res_get, IsOk());
+  EXPECT_THAT(res_get, IsOk());
 }
 
 TEST_F(RedfishOverrideTest, EmptyIdentifierFail) {
@@ -644,26 +620,7 @@ TEST_F(RedfishOverrideTest, EmptyIdentifierFail) {
 
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/expected/result/1");
-  ASSERT_THAT(res_get, IsOk());
-  policy = ParseTextProtoOrDie(R"pb(
-    override_content_map_uri: {
-      key: "/expected/result/1"
-      value: {
-        override_field:
-        [ {
-          action_clear: {
-            object_identifier: {
-              individual_object_identifier:
-              [ {}]
-            }
-          }
-        }]
-      }
-    }
-  )pb");
-  rf_override->ReloadOverridePolicy(policy);
-  res_get = rf_override->Get("/expected/result/1");
-  ASSERT_THAT(res_get, IsOk());
+  EXPECT_THAT(res_get, IsOk());
 }
 }  // namespace
 }  // namespace ecclesia
