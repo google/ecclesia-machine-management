@@ -16,11 +16,13 @@
 
 #include "ecclesia/lib/redfish/redfish_override/transport_with_override.h"
 
+#include <fstream>
 #include <string>
 
-#include "google/protobuf/struct.pb.h"
+#include "google/protobuf/text_format.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
@@ -31,9 +33,97 @@
 
 namespace ecclesia {
 namespace {
-
 using OverrideValue = OverrideField::OverrideValue;
 using IndividualObjectIdentifier = ObjectIdentifier::IndividualObjectIdentifier;
+
+absl::Status GetBinaryProto(absl::string_view path, google::protobuf::Message *message) {
+  std::ifstream ifs((std::string(path)));
+  if (!ifs) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("File doesn't exist: ", path));
+  }
+  if (auto parse_status = message->ParseFromIstream(&ifs); !parse_status) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Parse binary file to proto failed: ", path));
+  }
+  return absl::OkStatus();
+}
+
+bool CheckValue(nlohmann::json &json,
+                const OverrideRequirement::Requirement &requirement, int idx) {
+  auto object_identifier = requirement.object_identifier();
+  if (idx == object_identifier.individual_object_identifier_size()) {
+    for (const auto &value : requirement.value()) {
+      if (ValueToJson(value) == json) {
+        return true;
+      }
+    }
+    return false;
+  }
+  if (object_identifier.individual_object_identifier()
+          .Get(idx)
+          .has_field_name()) {
+    if (json.find(object_identifier.individual_object_identifier()
+                      .Get(idx)
+                      .field_name()) != json.end()) {
+      return CheckValue(json[object_identifier.individual_object_identifier()
+                                 .Get(idx)
+                                 .field_name()],
+                        requirement, idx + 1);
+    }
+  } else if (object_identifier.individual_object_identifier()
+                 .Get(idx)
+                 .has_array_field()) {
+    if (!json.is_array()) {
+      return false;
+    }
+    for (auto &iter : json) {
+      if (iter.contains(object_identifier.individual_object_identifier()
+                            .Get(idx)
+                            .array_field()
+                            .field_name()) &&
+          iter[object_identifier.individual_object_identifier()
+                   .Get(idx)
+                   .array_field()
+                   .field_name()] ==
+              ValueToJson(object_identifier.individual_object_identifier()
+                              .Get(idx)
+                              .array_field()
+                              .value())) {
+        return CheckValue(iter, requirement, idx + 1);
+      }
+    }
+  } else if (object_identifier.individual_object_identifier()
+                 .Get(idx)
+                 .has_array_idx()) {
+    if (!json.is_array()) {
+      return false;
+    }
+    if (object_identifier.individual_object_identifier().Get(idx).array_idx() >=
+        json.size()) {
+      return false;
+    }
+    return CheckValue(json[object_identifier.individual_object_identifier()
+                               .Get(idx)
+                               .array_idx()],
+                      requirement, idx + 1);
+  }
+  return false;
+}
+
+bool CheckRequirement(const OverrideRequirement &override_requirement,
+                      RedfishTransport *transport) {
+  for (const auto &requirement : override_requirement.requirement()) {
+    auto get_result = transport->Get(requirement.uri());
+    if (!get_result.ok()) {
+      return false;
+    }
+    if (!CheckValue((*get_result).body, requirement, 0)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 absl::Status JsonReplace(nlohmann::json &json,
                          const OverrideValue &override_value,
@@ -243,10 +333,44 @@ absl::Status ResultUpdateHelper(const OverrideField &field,
   return absl::OkStatus();
 }
 }  // namespace
+OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
+                                  RedfishTransport *transport) {
+  OverridePolicy policy;
+  OverridePolicySelector selector;
+  absl::Status read_selector = GetBinaryProto(policy_selector_path, &selector);
+  if (!read_selector.ok()) {
+    WarningLog() << "Read selector file failed: " << read_selector.message();
+    return policy;
+  }
+  std::string policy_file_path;
+  for (const auto &policy_selector : selector.policy_selector()) {
+    if (CheckRequirement(policy_selector.second, transport)) {
+      auto pos = policy_selector_path.find_last_of('/');
+      if (pos == std::string::npos) {
+        continue;
+      }
+      policy_file_path = absl::StrCat(policy_selector_path.substr(0, pos), "/",
+                                      policy_selector.first);
+    }
+  }
+  if (policy_file_path.empty()) {
+    WarningLog() << "No matching policy";
+    return policy;
+  }
+  absl::Status read_policy = GetBinaryProto(policy_file_path, &policy);
+  if (!read_policy.ok()) {
+    WarningLog() << "Read policy file failed: " << read_policy.message();
+    return policy;
+  }
+  return policy;
+}
 
 RedfishTransportWithOverride::RedfishTransportWithOverride(
     std::unique_ptr<RedfishTransport> redfish_transport,
-    std::string policy_selector_path) {}
+    absl::string_view policy_selector_path)
+    : redfish_transport_(std::move(redfish_transport)),
+      override_policy_(
+          LoadOverridePolicy(policy_selector_path, redfish_transport_.get())) {}
 
 absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
     absl::string_view path) {

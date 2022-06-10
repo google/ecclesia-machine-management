@@ -1,0 +1,101 @@
+# proto-file: third_party/ecclesia/lib/redfish/redfish_override/rf_override.proto
+# proto-message: OverridePolicySelector
+policy_selector: {
+  key: "non_exist1.binarypb"
+  value: {
+    requirement: [
+      {
+        uri: "/expected/result/1"
+        object_identifier: {
+          individual_object_identifier: [ { field_name: "TestString" } ]
+        }
+        value: [
+          { string_value: "wrong123" },
+          { string_value: "wrong456" }
+        ]
+      },
+      {
+        uri: "/expected/result/2"
+        object_identifier: {
+          individual_object_identifier: [ { field_name: "TestString" } ]
+        }
+        value: [
+          { string_value: "wrong123" },
+          { string_value: "wrong456" }
+        ]
+      }
+    ]
+  }
+}
+policy_selector: {
+  key: "non_exist2.binarypb"
+  value: {
+    requirement: [
+      {
+        uri: "/expected/result/1"
+        object_identifier: {
+          individual_object_identifier: [
+            { field_name: "TestArray" },
+            {
+              array_field: {
+                field_name: "TestNumber"
+                value: { number_value: 1234 }
+              }
+            }
+          ]
+        }
+        value: [
+          { number_value: 5678 }
+        ]
+      }
+    ]
+  }
+}
+policy_selector: {
+  key: "test_policy.binarypb"
+  value: {
+    requirement: [
+      {
+        uri: "/expected/result/1"
+        object_identifier: {
+          individual_object_identifier: [
+            { field_name: "TestArray" },
+            {
+              array_field: {
+                field_name: "TestStruct"
+                value: { string_value: "tests2" }
+              }
+            },
+            { field_name: "TestStruct" }
+          ]
+        }
+        value: [
+          { string_value: "tests2" }
+        ]
+      },
+      {
+        uri: "/expected/result/2"
+        object_identifier: {
+          individual_object_identifier: [ { field_name: "TestString" } ]
+        }
+        value: [
+          { string_value: "test456" },
+          { string_value: "test123" }
+        ]
+      },
+      {
+        uri: "/expected/result/1"
+        object_identifier: {
+          individual_object_identifier: [
+            { field_name: "TestArray" },
+            { array_idx: 0 },
+            { field_name: "TestStruct" }
+          ]
+        }
+        value: [
+          { string_value: "tests0" }
+        ]
+      }
+    ]
+  }
+}

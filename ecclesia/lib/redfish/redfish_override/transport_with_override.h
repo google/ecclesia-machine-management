@@ -20,8 +20,6 @@
 #include <memory>
 #include <utility>
 
-#include "absl/base/thread_annotations.h"
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
@@ -29,6 +27,12 @@
 #include "ecclesia/lib/redfish/transport/interface.h"
 
 namespace ecclesia {
+
+// This function returns the policy by giving it the selector file's path. This
+// is created public for testing purpose, to create an
+// RedfishTransportWithOverride with selector file, please use the constructor.
+OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
+                                  RedfishTransport *transport);
 
 class RedfishTransportWithOverride : public RedfishTransport {
  public:
@@ -39,7 +43,7 @@ class RedfishTransportWithOverride : public RedfishTransport {
         override_policy_(std::move(override_policy)) {}
   RedfishTransportWithOverride(
       std::unique_ptr<RedfishTransport> redfish_transport,
-      std::string policy_selector_path);
+      absl::string_view policy_selector_path);
 
   ~RedfishTransportWithOverride() override = default;
 
@@ -83,6 +87,5 @@ class RedfishTransportWithOverride : public RedfishTransport {
   absl::Mutex policy_lock_;
   OverridePolicy override_policy_ ABSL_GUARDED_BY(policy_lock_);
 };
-
 }  // namespace ecclesia
 #endif  // ECCLESIA_LIB_REDFISH_REDFISH_OVERRIDE_TRANSPORT_WITH_OVERRIDE_H_
