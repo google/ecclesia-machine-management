@@ -30,8 +30,8 @@ class IndusSmbiosFieldTranslator : public SmbiosFieldTranslator {
  public:
   std::string GetDimmSlotName(absl::string_view device_locator) const override {
     unsigned slot_num;
-    static const RE2 regexp("Slot (\\d+)");
-    if (RE2::FullMatch(device_locator, regexp, &slot_num)) {
+    static constexpr LazyRE2 kRegex = {"Slot (\\d+)"};
+    if (RE2::FullMatch(device_locator, *kRegex, &slot_num)) {
       return absl::StrCat("DIMM", slot_num);
     }
     return "DIMM_UNKNOWN";

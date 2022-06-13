@@ -41,8 +41,10 @@ namespace {
 
 constexpr char kUsbDevicesDir[] = "/sys/bus/usb/devices";
 // A regex pattern to match a hex string with possible trailing empty space.
-const RE2 kHexRegexp = {R"re(([[:xdigit:]]+)\s*)re"};
-const RE2 kDecimalRegexp = {R"re((\d+))re"};
+constexpr LazyRE2 kHexRegexp = {R"re(([[:xdigit:]]+)\s*)re"};
+constexpr LazyRE2 kDecimalRegexp = {R"re((\d+))re"};
+constexpr LazyRE2 kUsbDirRegex = {"usb(\\d+)"};
+constexpr LazyRE2 kUsbBusPortRegex = {"(\\d+)-(\\d+(?:\\.\\d+)*)"};
 
 // Read a single unsigned integer out of a sysfs file. Writes the value into
 // out when success. If is_hex is true then the file must contain a base-16
@@ -56,11 +58,11 @@ absl::Status ReadUintFromSysfs(const ApifsFile &api_fs, bool is_hex,
 
   // The value should just be a number that we can parse and fit into an int.
   if (is_hex) {
-    if (RE2::FullMatch(contents, kHexRegexp, RE2::Hex(out))) {
+    if (RE2::FullMatch(contents, *kHexRegexp, RE2::Hex(out))) {
       return absl::OkStatus();
     }
   } else {
-    if (RE2::FullMatch(contents, kDecimalRegexp, out)) {
+    if (RE2::FullMatch(contents, *kDecimalRegexp, out)) {
       return absl::OkStatus();
     }
   }
@@ -90,14 +92,14 @@ absl::Status ReadUintFromSysfs(const ApifsFile &api_fs, bool is_hex,
 std::optional<UsbLocation> DirectoryToUsbLocation(absl::string_view dirname) {
   int bus;
   std::string port_substr;
-  if (RE2::FullMatch(dirname, "usb(\\d+)", &bus)) {
+  if (RE2::FullMatch(dirname, *kUsbDirRegex, &bus)) {
     auto usb_bus = UsbBusLocation::TryMake(bus);
     if (!usb_bus.has_value()) {
       return std::nullopt;
     }
     return UsbLocation(usb_bus.value(), UsbPortSequence());
-  } else if (RE2::FullMatch(dirname, "(\\d+)-(\\d+(?:\\.\\d+)*)", &bus,
-                            &port_substr)) {
+  }
+  if (RE2::FullMatch(dirname, *kUsbBusPortRegex, &bus, &port_substr)) {
     auto maybe_usb_bus = UsbBusLocation::TryMake(bus);
     if (!maybe_usb_bus.has_value()) {
       return std::nullopt;

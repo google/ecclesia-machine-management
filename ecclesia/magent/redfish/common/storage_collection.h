@@ -47,8 +47,9 @@ class StorageCollection : public Resource {
         system_model_->GetNvmePhysLocations();
     auto *members = GetJsonArray(&json, kMembers);
     int num_members = 0;
+    static constexpr LazyRE2 kLocationRegex = {".*U2_\\d"};
     for (const auto &location : nvme_locations) {
-      if (RE2::FullMatch(location, ".*U2_\\d")) {
+      if (RE2::FullMatch(location, *kLocationRegex)) {
         AppendCollectionMember(members, absl::StrCat(Uri(), "/", location));
         num_members++;
       }
