@@ -40,8 +40,8 @@ class LockedLockFile {
 
   LockedLockFile(const LockedLockFile &) = delete;
   LockedLockFile &operator=(const LockedLockFile &) = delete;
-  LockedLockFile(LockedLockFile &&other);
-  LockedLockFile &operator=(LockedLockFile &&other);
+  LockedLockFile(LockedLockFile &&other) noexcept;
+  LockedLockFile &operator=(LockedLockFile &&other) noexcept;
   ~LockedLockFile();
 
   // Functions to read, store and clear contents of the lock file.  Note that if

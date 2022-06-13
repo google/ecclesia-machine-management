@@ -55,7 +55,7 @@ absl::Status GetBinaryProto(absl::string_view path, google::protobuf::Message *m
 
 bool CheckValue(nlohmann::json &json,
                 const OverrideRequirement::Requirement &requirement, int idx) {
-  auto object_identifier = requirement.object_identifier();
+  const auto &object_identifier = requirement.object_identifier();
   if (idx == object_identifier.individual_object_identifier_size()) {
     for (const auto &value : requirement.value()) {
       if (ValueToJson(value) == json) {

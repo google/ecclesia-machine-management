@@ -40,12 +40,12 @@ namespace ecclesia {
 
 LockedLockFile::LockedLockFile(LockFile *lock_file) : lock_file_(lock_file) {}
 
-LockedLockFile::LockedLockFile(LockedLockFile &&other)
+LockedLockFile::LockedLockFile(LockedLockFile &&other) noexcept
     : lock_file_(other.lock_file_) {
   other.lock_file_ = nullptr;
 }
 
-LockedLockFile &LockedLockFile::operator=(LockedLockFile &&other) {
+LockedLockFile &LockedLockFile::operator=(LockedLockFile &&other) noexcept {
   if (this != &other) {
     lock_file_ = other.lock_file_;
     other.lock_file_ = nullptr;

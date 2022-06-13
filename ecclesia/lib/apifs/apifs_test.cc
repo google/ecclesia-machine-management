@@ -123,6 +123,7 @@ TEST_F(ApifsTest, TestListEntries) {
   ASSERT_TRUE(maybe_entries.ok());
   EXPECT_THAT(*maybe_entries, UnorderedElementsAreArray(entries_names));
   std::vector<std::string> entries_fullpaths;
+  entries_fullpaths.reserve(entries_names.size());
   for (const std::string &entry : entries_names) {
     entries_fullpaths.push_back(
         JoinFilePaths(GetTestTempdirPath("sys"), "ab", entry));
