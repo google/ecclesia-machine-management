@@ -25,6 +25,7 @@ resource_to_config {
     first_class_attributes {
       collection_attributes: "Memory"
       collection_attributes: "Drives"
+      singular_attributes: "ThermalSubsystem"
     }
   }
 }
@@ -44,6 +45,14 @@ resource_to_config {
     first_class_attributes {
       array_attributes: "StorageControllers"
       array_attributes: "Drives"
+    }
+  }
+}
+resource_to_config {
+  key: "ThermalSubsystem"
+  value {
+    first_class_attributes {
+      collection_attributes: "Fans"
     }
   }
 }

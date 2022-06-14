@@ -48,6 +48,8 @@ message ResourceConfig {
     repeated string collection_attributes = 1;
     // Attribute is an array of nodes that point to downstream resources
     repeated string array_attributes = 2;
+    // Attribute is a link to a singular Redfish Resource
+    repeated string singular_attributes = 3;
   }
   FirstClassAttributes first_class_attributes = 2;
 }

@@ -166,6 +166,16 @@ std::vector<std::string> FindAllDownstreamsUris(const RedfishObject &obj,
         });
   }
 
+  for (const auto &singular_attribute :
+       resource_config.first_class_attributes().singular_attributes()) {
+    if (auto singular_obj = obj[singular_attribute].AsObject();
+        singular_obj != nullptr) {
+      if (auto uri = singular_obj->GetUriString(); uri.has_value()) {
+        downstream_uris.push_back(*std::move(uri));
+      }
+    }
+  }
+
   for (const auto &single_link :
        resource_config.usable_links().singular_links()) {
     if (const auto json = obj[kRfPropertyLinks][single_link].AsObject(); json) {
