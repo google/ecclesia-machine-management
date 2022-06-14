@@ -50,11 +50,33 @@ class BmcVerifier : public grpc::experimental::ExternalCertificateVerifier {
               grpc::Status *sync_status) override;
 
   void Cancel(
-      grpc::experimental::TlsCustomVerificationCheckRequest *) override {}
+      grpc::experimental::TlsCustomVerificationCheckRequest *request) override {
+  }
 
  private:
   SubjectAltName node_san_;
   std::function<VerifyFunc> verify_func_;
+};
+
+// A No-op certificate verifier.
+// It's unsafe; clients should understand the security impacts of using this.
+class NoOpCertificateVerifier
+    : public grpc::experimental::ExternalCertificateVerifier {
+ public:
+  ~NoOpCertificateVerifier() override {}
+
+  // Checks nothing; it is designed that power cycle RPCs don't verify server.
+  bool Verify(grpc::experimental::TlsCustomVerificationCheckRequest *request,
+              std::function<void(grpc::Status)> callback,
+              grpc::Status *sync_status) override {
+    *sync_status = grpc::Status(grpc::StatusCode::OK, "");
+    // Sync verifications should always return true.
+    return true;
+  }
+
+  void Cancel(
+      grpc::experimental::TlsCustomVerificationCheckRequest *request) override {
+  }
 };
 
 }  // namespace ecclesia
