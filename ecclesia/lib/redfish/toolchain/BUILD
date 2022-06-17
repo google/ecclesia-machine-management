@@ -1,5 +1,6 @@
 """Tools and libraries for Redfish client interfaces."""
 
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
 load("//ecclesia/build_defs:proto.bzl", "proto_data")
 
 licenses(["notice"])
@@ -34,6 +35,11 @@ py_test(
 proto_library(
     name = "descriptor_proto",
     srcs = ["descriptor.proto"],
+)
+
+py_proto_library(
+    name = "descriptor_py_pb2",
+    deps = [":descriptor_proto"],
 )
 
 proto_data(
