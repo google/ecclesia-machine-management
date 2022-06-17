@@ -430,6 +430,26 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             urls = ["https://github.com/zeromq/cppzmq/archive/v4.7.1.tar.gz"],
         )
 
+    if not native.existing_rule("jinja2"):
+        http_archive(
+            name = "jinja2",
+            build_file = _format_oss_path("jinja2.BUILD", package_name),
+            sha256 = "255fdcbc456f20914bb1616dba866b24b047af001238442280ba06649d9a412e",
+            # Strip out the root directory and only keep the src files to make python imports work.
+            strip_prefix = "jinja-3.0.3/src/jinja2",
+            # https://github.com/pallets/jinja2 links to pallets/jinja.
+            urls = ["https://github.com/pallets/jinja/archive/refs/tags/3.0.3.tar.gz"],
+        )
+    if not native.existing_rule("markupsafe"):
+        http_archive(
+            name = "markupsafe",
+            build_file = _format_oss_path("markupsafe.BUILD", package_name),
+            sha256 = "0f83b6d1bf6fa65546221d42715034e7e654845583a84906c5936590f9a7ad8f",
+            # Strip out the root directory and only keep the src files to make python imports work.
+            strip_prefix = "markupsafe-2.1.1/src/markupsafe/",
+            urls = ["https://github.com/pallets/markupsafe/archive/refs/tags/2.1.1.tar.gz"],
+        )
+
     if not native.existing_rule("com_google_riegeli"):
         # Riegeli. Uses the latest commit as of Feb 16, 2022.
         http_archive(

@@ -125,3 +125,15 @@ package_group(
         "//ecclesia/mmanager/service/...",
     ],
 )
+
+# Jinja2 users.
+#
+# Jinja requires common infrastructure such as a file accessor implementation. Users of jinja2 in
+# //third_party/ecclesia can use these common utilities.
+package_group(
+    name = "ecclesia_jinja_users",
+    packages = [
+        "//ecclesia/lib/redfish/toolchain/accessors/...",
+        "//ecclesia/tools/changelog/...",
+    ],
+)
