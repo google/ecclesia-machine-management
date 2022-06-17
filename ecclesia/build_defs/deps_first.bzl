@@ -154,9 +154,16 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
         )
 
     if not native.existing_rule("com_github_grpc_grpc"):
-        # gRPC. Taken from HEAD to include compiler fix for gcc error. Name is required
-        # by Google APIs.
-        patch_files = ["grpc.visibility.patch", "grpc.delete_ios.patch"]
+        # gRPC. Taken from commit to include compiler fix for gcc error.
+        patch_files = [
+            # Add visibility to GRPC testing
+            "grpc.visibility.patch",
+            # Remove any iOS dependencies
+            "grpc.delete_ios.patch",
+            # Patching in commit dbe73c9004e483d24168c220cd589fe1824e72bc
+            # Replacing distutils.sysconfig with sysconfig import
+            "grpc.replace_sysconfig_dbe73c9004e483d24168c220cd589fe1824e72bc.patch",
+        ]
         http_archive(
             name = "com_github_grpc_grpc",
             patches = _make_patch_paths("grpc.patches", patch_files, package_name),
