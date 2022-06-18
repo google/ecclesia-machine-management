@@ -3,76 +3,90 @@
 
 profile_name: "Simple Test Profile"
 profile_version: "1.0.0"
-purpose: "A simple test for melodious Redfish."
-contact_info: "G Major"
-owning_entity: "conductor@g-major.music"
+purpose: "A simple test for musical Redfish."
+contact_info: "conductor@g-major.music"
+owning_entity: "G Major"
 
-schema {
-  schema_namespace: "ServiceRoot"
-  resources {
-    entity_name: "ServiceRoot"
-    properties {
-      name: "Instruments"
-      type {
-        reference {
-          schema_namespace: "InstrumentCollection"
-          entity_name: "InstrumentCollection"
+schemas_by_namespace {
+  key: "ServiceRoot"
+  value {
+    schema_namespace: "ServiceRoot"
+    resources {
+      entity_name: "ServiceRoot"
+      properties {
+        name: "Instruments"
+        type {
+          reference {
+            schema_namespace: "InstrumentCollection"
+            entity_name: "InstrumentCollection"
+          }
         }
       }
-    }
-    properties {
-      name: "ConcertService"
-      type {
-        reference {
-          schema_namespace: "ConcertService"
-          entity_name: "ConcertService"
-        }
-      }
-    }
-  }
-}
-
-schema {
-  schema_namespace: "InstrumentCollection"
-  resources {
-    entity_name: "InstrumentCollection"
-    properties {
-      name: "Members"
-      type {
-        collection {
-          schema_namespace: "Instrument"
-          entity_name: "Instrument"
+      properties {
+        name: "ConcertService"
+        type {
+          reference {
+            schema_namespace: "ConcertService"
+            entity_name: "ConcertService"
+          }
         }
       }
     }
   }
 }
 
-schema {
-  schema_namespace: "Instrument"
-  resources {
-    entity_name: "Instrument"
-    properties {
-      name: "Manufacturer"
-      type { primitive: STRING }
-    }
-    properties {
-      name: "PartNumber"
-      type { primitive: STRING }
-    }
-    properties {
-      name: "SerialNumber"
-      type { primitive: STRING }
-    }
-    properties {
-      name: "Key"
-      type { primitive: STRING }
+schemas_by_namespace {
+  key: "InstrumentCollection"
+  value {
+    schema_namespace: "InstrumentCollection"
+    resources {
+      entity_name: "InstrumentCollection"
+      properties {
+        name: "Members"
+        type {
+          collection {
+            schema_namespace: "Instrument"
+            entity_name: "Instrument"
+          }
+        }
+      }
     }
   }
-  enums {
-    entity_name: "Key"
-    values: "C"
-    values: "Eb"
-    values: "Bb"
+}
+
+schemas_by_namespace {
+  key: "Instrument"
+  value {
+    schema_namespace: "Instrument"
+    resources {
+      entity_name: "Instrument"
+      properties {
+        name: "Manufacturer"
+        type { primitive: STRING }
+      }
+      properties {
+        name: "PartNumber"
+        type { primitive: STRING }
+      }
+      properties {
+        name: "SerialNumber"
+        type { primitive: STRING }
+      }
+      properties {
+        name: "Key"
+        type {
+          reference {
+            schema_namespace: "Instrument"
+            entity_name: "Key"
+          }
+        }
+      }
+    }
+    enums {
+      entity_name: "Key"
+      values: "C"
+      values: "Eb"
+      values: "Bb"
+    }
   }
 }

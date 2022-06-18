@@ -67,5 +67,6 @@ message Profile {
   string purpose = 3;
   string contact_info = 4;
   string owning_entity = 5;
-  repeated Schema schema = 6;
+  reserved 6;
+  map<string, Schema> schemas_by_namespace = 7;
 }
