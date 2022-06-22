@@ -330,6 +330,7 @@ DEFINE_REDFISH_PROPERTY(PropertyUncorrectableOtherErrorCount, int,
 DEFINE_REDFISH_PROPERTY(PropertyAdditionalDataURI, std::string,
                         "AdditionalDataURI");
 DEFINE_REDFISH_PROPERTY(PropertyCreatedTime, std::string, "Created");
+DEFINE_REDFISH_PROPERTY(PropertySlotType, std::string, "SlotType");
 
 // ManagerDiagnosticData properties
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
