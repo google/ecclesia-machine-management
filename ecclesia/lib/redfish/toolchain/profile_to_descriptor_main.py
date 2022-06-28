@@ -37,7 +37,12 @@ def main() -> None:
       '--output_file',
       type=str,
       required=True,
-      help='output file for descriptor proto')
+      help='output file for binary descriptor proto')
+  parser.add_argument(
+      '--debug_output',
+      type=str,
+      required=False,
+      help='file to output text proto format of descriptor proto')
 
   args = parser.parse_args()
 
@@ -53,8 +58,12 @@ def main() -> None:
   profile_proto = profile_to_descriptor.profile_to_descriptor(
       profile_data, schema_files)
 
-  with open(args.output_file, 'w+') as output_file:
-    output_file.write(text_format.MessageToString(profile_proto))
+  with open(args.output_file, 'wb+') as output_file:
+    output_file.write(profile_proto.SerializeToString())
+
+  if args.debug_output:
+    with open(args.debug_output, 'w+') as debug_file:
+      debug_file.write(text_format.MessageToString(profile_proto))
 
 
 if __name__ == '__main__':
