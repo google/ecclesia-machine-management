@@ -49,3 +49,40 @@ proto_data(
     proto_deps = [":descriptor_proto"],
     proto_name = "ecclesia.Profile",
 )
+
+py_library(
+    name = "profile_to_descriptor",
+    srcs = ["profile_to_descriptor.py"],
+    deps = [
+        ":descriptor_py_pb2",
+        "@com_google_absl_py//absl/logging",
+    ],
+)
+
+py_test(
+    name = "profile_to_descriptor_test",
+    srcs = ["profile_to_descriptor_test.py"],
+    data =
+        glob([
+            "test/csdl_in/**",
+        ]) + [
+            "test/simple_profile.json",
+            "test/simple_profile_descriptor.textproto",
+        ],
+    deps = [
+        ":descriptor_py_pb2",
+        ":profile_to_descriptor",
+        "//ecclesia/lib/protobuf:compare",
+        "@com_google_absl_py//absl/testing:absltest",
+        "@com_google_protobuf//:protobuf_python",
+    ],
+)
+
+py_binary(
+    name = "profile_to_descriptor_main",
+    srcs = ["profile_to_descriptor_main.py"],
+    deps = [
+        ":profile_to_descriptor",
+        "@com_google_protobuf//:protobuf_python",
+    ],
+)

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package ecclesia;
+
+message TestProto {
+  string field1 = 1;
+  repeated string field2 = 2;
+
+  message NestedTest {
+    int32 nested_field1 = 1;
+    repeated int32 nested_field2 = 2;
+  }
+  NestedTest nested_test1 = 3;
+  repeated NestedTest nested_test2 = 4;
+
+  map<string, string> map_field1 = 5;
+  map<string, NestedTest> map_field2 = 6;
+}
