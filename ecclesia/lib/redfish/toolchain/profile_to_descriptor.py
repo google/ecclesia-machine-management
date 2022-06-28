@@ -82,12 +82,22 @@ class SchemaDefinition:
     # Case 1: prop_type is a primitive type ("Edm.<Type>")
     if property_type.startswith('Edm.'):
       primitive_type = _remove_prefix(property_type, 'Edm.')
-      if primitive_type == 'String':
-        descriptor_type.primitive = descriptor_pb2.Property.Type.STRING
-      elif primitive_type == 'Boolean':
+      if primitive_type == 'Boolean':
         descriptor_type.primitive = descriptor_pb2.Property.Type.BOOLEAN
-      elif primitive_type.startswith('Int'):
-        descriptor_type.primitive = descriptor_pb2.Property.Type.NUMBER
+      elif primitive_type == 'DateTimeOffset':
+        descriptor_type.primitive = descriptor_pb2.Property.Type.DATE_TIME_OFFSET
+      elif primitive_type == 'Decimal':
+        descriptor_type.primitive = descriptor_pb2.Property.Type.DECIMAL
+      elif primitive_type == 'Double':
+        descriptor_type.primitive = descriptor_pb2.Property.Type.DOUBLE
+      elif primitive_type == 'Duration':
+        descriptor_type.primitive = descriptor_pb2.Property.Type.DURATION
+      elif primitive_type == 'Guid':
+        descriptor_type.primitive = descriptor_pb2.Property.Type.GUID
+      elif primitive_type == 'Int64':
+        descriptor_type.primitive = descriptor_pb2.Property.Type.INT64
+      elif primitive_type == 'String':
+        descriptor_type.primitive = descriptor_pb2.Property.Type.STRING
       else:
         logging.warning('Unrecognized type for property %s: %s', property_name,
                         property_type)

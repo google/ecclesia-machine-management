@@ -25,12 +25,16 @@ message Property {
   }
   // A property type.
   message Type {
-    // Primitive data types defined in DSP0266 v1.14.0 §9.5.1, minus the
-    // container types.
+    // Primitive data types defined in DSP0266 v1.15.1 §11.1.5.6.
     enum PrimitiveType {
       BOOLEAN = 0;
-      NUMBER = 1;
+      INT64 = 1;
       STRING = 2;
+      DECIMAL = 3;
+      DOUBLE = 4;
+      DATE_TIME_OFFSET = 5;
+      DURATION = 6;
+      GUID = 7;
     }
     oneof type {
       PrimitiveType primitive = 2;
