@@ -42,3 +42,9 @@ bzl_library(
     name = "query",
     srcs = ["query.bzl"],
 )
+
+bzl_library(
+    name = "proto",
+    srcs = ["proto.bzl"],
+    visibility = ["//visibility:public"],
+)

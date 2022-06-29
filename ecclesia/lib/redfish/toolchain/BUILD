@@ -1,7 +1,7 @@
 """Tools and libraries for Redfish client interfaces."""
 
 load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
-load("//ecclesia/build_defs:proto.bzl", "proto_data")
+load("//ecclesia/lib/redfish/toolchain/accessors:accessors.bzl", "cc_redfish_accessor_library")
 
 licenses(["notice"])
 
@@ -35,19 +35,18 @@ py_test(
 proto_library(
     name = "descriptor_proto",
     srcs = ["descriptor.proto"],
+    visibility = ["//visibility:public"],
 )
 
 py_proto_library(
     name = "descriptor_py_pb2",
+    visibility = [":__subpackages__"],
     deps = [":descriptor_proto"],
 )
 
-proto_data(
-    name = "descriptor_proto_data",
-    src = "test/simple_profile_descriptor.textproto",
-    out = "test/simple_profile_descriptor.binarypb",
-    proto_deps = [":descriptor_proto"],
-    proto_name = "ecclesia.Profile",
+cc_redfish_accessor_library(
+    name = "descriptor_sample",
+    descriptor_proto_src = "test/simple_profile_descriptor.textproto",
 )
 
 py_library(

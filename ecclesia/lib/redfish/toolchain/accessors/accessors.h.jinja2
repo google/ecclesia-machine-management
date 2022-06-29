@@ -1,0 +1,31 @@
+#include <optional>
+
+#include "absl/strings/string_view.h"
+#include "absl/time/time.h"
+#include "ecclesia/lib/redfish/interface.h"
+
+namespace ecclesia {
+{% for profile in profiles %}
+// Generated class {{profile.sanitized_profile_name}}.
+// Profile Version: {{profile.pb.profile_version}}
+// Purpose: {{profile.pb.purpose}}
+// Contact Info: {{profile.pb.contact_info}}
+// Owning Entity: {{profile.pb.owning_entity}}
+class {{profile.sanitized_profile_name}} {
+  public:
+  {% for _, schema in profile.pb.schemas_by_namespace.items() -%}
+  {% for resource in schema.resources -%}
+  class {{resource.entity_name}} {
+    public:
+      {{resource.entity_name}}(RedfishObject *obj) : obj_(obj) {}
+      {% for property in resource.properties %}
+      std::optional<{{type_to_string(property.type)}}> {{property.name}}();
+      {%- endfor %} {# property in resource.properties #}
+    private:
+      RedfishObject *obj_;
+  };
+{%- endfor %}
+{%- endfor %}
+};
+{%- endfor %} {# profile in profiles #}
+}  // namespace ecclesia
