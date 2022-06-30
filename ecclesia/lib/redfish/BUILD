@@ -396,6 +396,17 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "query",
+    srcs = ["query.cc"],
+    hdrs = ["query.h"],
+    deps = [
+        ":sysmodel",
+        "@com_google_absl//absl/strings",
+        "@com_googlesource_code_re2//:re2",
+    ],
+)
+
 proto_library(
     name = "to_proto_test_proto",
     srcs = ["to_proto_test.proto"],
@@ -415,6 +426,20 @@ cc_test(
         "//ecclesia/lib/redfish/testing:json_mockup",
         "//ecclesia/lib/testing:proto",
         "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "query_test",
+    srcs = ["query_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/indus_hmb_cn:mockup.shar",
+    ],
+    deps = [
+        ":property_definitions",
+        ":query",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "@com_google_googletest//:gtest_main",
     ],
 )
