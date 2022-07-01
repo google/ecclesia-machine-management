@@ -334,6 +334,7 @@ DEFINE_REDFISH_PROPERTY(PropertyAdditionalDataURI, std::string,
                         "AdditionalDataURI");
 DEFINE_REDFISH_PROPERTY(PropertyCreatedTime, std::string, "Created");
 DEFINE_REDFISH_PROPERTY(PropertySlotType, std::string, "SlotType");
+DEFINE_REDFISH_PROPERTY(PropertyReleaseDate, std::string, "ReleaseDate");
 
 // ManagerDiagnosticData properties
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
