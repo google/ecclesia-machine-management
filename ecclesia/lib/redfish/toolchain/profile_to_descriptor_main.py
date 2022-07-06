@@ -15,7 +15,6 @@
 
 import argparse
 import json
-import os
 
 from google.protobuf import text_format
 from ecclesia.lib.redfish.toolchain import profile_to_descriptor
@@ -27,8 +26,9 @@ def main() -> None:
       + 'into a descriptor proto and writes the proto into the output ' +
       'file location')
   parser.add_argument(
-      '--csdl_dir',
+      '--csdl_files',
       type=str,
+      nargs='*',
       required=True,
       help='relative dirpath of CSDL files')
   parser.add_argument(
@@ -46,17 +46,12 @@ def main() -> None:
 
   args = parser.parse_args()
 
-  schema_files = [
-      os.path.join(args.csdl_dir, filename)
-      for filename in os.listdir(args.csdl_dir)
-  ]
-
   profile_data = {}
   with open(args.profile) as profile_file:
     profile_data = json.load(profile_file)
 
   profile_proto = profile_to_descriptor.profile_to_descriptor(
-      profile_data, schema_files)
+      profile_data, args.csdl_files)
 
   with open(args.output_file, 'wb+') as output_file:
     output_file.write(profile_proto.SerializeToString())

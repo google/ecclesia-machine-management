@@ -46,7 +46,8 @@ py_proto_library(
 
 cc_redfish_accessor_library(
     name = "descriptor_sample",
-    descriptor_proto_src = "test/simple_profile_descriptor.textproto",
+    csdl_files = glob(["test/csdl_in/*.xml"]),
+    redfish_profile = "test/simple_profile.json",
 )
 
 py_library(
