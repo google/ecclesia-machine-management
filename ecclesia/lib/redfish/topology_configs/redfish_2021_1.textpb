@@ -26,6 +26,7 @@ resource_to_config {
       collection_attributes: "Memory"
       collection_attributes: "Drives"
       singular_attributes: "ThermalSubsystem"
+      singular_attributes: "Assembly"
     }
   }
 }
