@@ -17,7 +17,7 @@ import argparse
 import json
 
 from google.protobuf import text_format
-from ecclesia.lib.redfish.toolchain import profile_to_descriptor
+from ecclesia.lib.redfish.toolchain.internal import profile_to_descriptor
 
 
 def main() -> None:

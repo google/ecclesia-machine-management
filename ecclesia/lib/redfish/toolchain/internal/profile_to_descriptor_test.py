@@ -20,8 +20,8 @@ from absl.testing import absltest
 
 from google.protobuf import text_format
 from ecclesia.lib.protobuf import compare
-from ecclesia.lib.redfish.toolchain import descriptor_pb2
-from ecclesia.lib.redfish.toolchain import profile_to_descriptor
+from ecclesia.lib.redfish.toolchain.internal import descriptor_pb2
+from ecclesia.lib.redfish.toolchain.internal import profile_to_descriptor
 
 
 class ProfileToDescriptorTest(absltest.TestCase):

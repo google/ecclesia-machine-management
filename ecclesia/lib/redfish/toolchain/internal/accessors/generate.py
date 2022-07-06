@@ -12,10 +12,10 @@ from typing import Sequence
 import jinja2
 
 from ecclesia.lib.jinja2 import loader
-from ecclesia.lib.redfish.toolchain import descriptor_pb2
+from ecclesia.lib.redfish.toolchain.internal import descriptor_pb2
 
 # Directory relative to ecclesia/.
-_PACKAGE_DIR = 'ecclesia/lib/redfish/toolchain/accessors'
+_PACKAGE_DIR = 'ecclesia/lib/redfish/toolchain/internal/accessors'
 
 # Map of descriptor primitive types to their C++ equivalent.
 _PRIMITIVE_TYPE_MAP = {

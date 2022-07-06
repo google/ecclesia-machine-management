@@ -27,7 +27,7 @@ def _redfish_profile_descriptor(name, csdl_files, redfish_profile, output, debug
         csdl_sources.append("$(location {})".format(csdl))
 
     command = \
-        """$(location //ecclesia/lib/redfish/toolchain:profile_to_descriptor_main) \
+        """$(location //ecclesia/lib/redfish/toolchain/internal:profile_to_descriptor_main) \
         --csdl_files {} --profile=$(location {}) --output_file=$(location {}) {}""".format(
             " ".join(csdl_sources),
             redfish_profile,
@@ -40,7 +40,7 @@ def _redfish_profile_descriptor(name, csdl_files, redfish_profile, output, debug
         srcs = csdl_files + [redfish_profile],
         outs = outs,
         cmd = command,
-        exec_tools = ["//ecclesia/lib/redfish/toolchain:profile_to_descriptor_main"],
+        exec_tools = ["//ecclesia/lib/redfish/toolchain/internal:profile_to_descriptor_main"],
     )
 
 def cc_redfish_accessor_library(name, csdl_files, redfish_profile):
@@ -79,8 +79,8 @@ def cc_redfish_accessor_library(name, csdl_files, redfish_profile):
             cc_out_filename,
             h_out_filename,
         ],
-        cmd = "$(location //ecclesia/lib/redfish/toolchain/accessors:generate) --proto_path_in=$(location {}) --cc_path=$(location {}) --h_path=$(location {})".format(output_proto_name, cc_out_filename, h_out_filename),
-        exec_tools = ["//ecclesia/lib/redfish/toolchain/accessors:generate"],
+        cmd = "$(location //ecclesia/lib/redfish/toolchain/internal/accessors:generate) --proto_path_in=$(location {}) --cc_path=$(location {}) --h_path=$(location {})".format(output_proto_name, cc_out_filename, h_out_filename),
+        exec_tools = ["//ecclesia/lib/redfish/toolchain/internal/accessors:generate"],
     )
 
     # Compile the generated C++ into a library.

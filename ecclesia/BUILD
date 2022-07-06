@@ -133,7 +133,7 @@ package_group(
 package_group(
     name = "ecclesia_jinja_users",
     packages = [
-        "//ecclesia/lib/redfish/toolchain/accessors/...",
+        "//ecclesia/lib/redfish/toolchain/internal/...",
         "//ecclesia/tools/changelog/...",
     ],
 )

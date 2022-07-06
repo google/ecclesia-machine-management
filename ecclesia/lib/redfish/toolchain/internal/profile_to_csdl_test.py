@@ -19,7 +19,7 @@ import os
 from xml.etree import ElementTree
 
 from absl.testing import absltest
-from ecclesia.lib.redfish.toolchain import profile_to_csdl
+from ecclesia.lib.redfish.toolchain.internal import profile_to_csdl
 
 
 class ProfileToCsdlTest(absltest.TestCase):

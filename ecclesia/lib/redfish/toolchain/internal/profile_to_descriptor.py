@@ -22,7 +22,7 @@ from typing import Sequence, Mapping, MutableMapping, DefaultDict, Optional, Tup
 from xml.etree import ElementTree
 from absl import logging
 
-from ecclesia.lib.redfish.toolchain import descriptor_pb2
+from ecclesia.lib.redfish.toolchain.internal import descriptor_pb2
 
 # Constants used for parsing CSDL schema files
 _CSDL_NAMESPACE_REGISTRY = {

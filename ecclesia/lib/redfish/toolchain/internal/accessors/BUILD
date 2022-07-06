@@ -1,12 +1,4 @@
-load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-
 licenses(["notice"])
-
-bzl_library(
-    name = "accessors",
-    srcs = ["accessors.bzl"],
-    deps = ["//ecclesia/build_defs:proto"],
-)
 
 py_binary(
     name = "generate",
@@ -20,7 +12,7 @@ py_binary(
     visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/jinja2:loader",
-        "//ecclesia/lib/redfish/toolchain:descriptor_py_pb2",
+        "//ecclesia/lib/redfish/toolchain/internal:descriptor_py_pb2",
         "@jinja2",
     ],
 )

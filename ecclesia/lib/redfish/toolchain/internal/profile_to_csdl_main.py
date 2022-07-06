@@ -3,7 +3,7 @@
 import argparse
 import os
 
-from ecclesia.lib.redfish.toolchain import profile_to_csdl
+from ecclesia.lib.redfish.toolchain.internal import profile_to_csdl
 
 
 def main() -> None:
