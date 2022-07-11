@@ -41,6 +41,17 @@ _ODATA_TAG_MEMBER = 'edm:Member'
 _ODATA_ATTRIBUTE_NAMESPACE = 'Namespace'
 _ODATA_ATTRIBUTE_NAME = 'Name'
 _ODATA_ATTRIBUTE_TYPE = 'Type'
+# Map string EDM defined types to descriptor primitive type equivalent.
+_PRIMITIVE_TYPE_MAP = {
+    'Boolean': descriptor_pb2.Property.Type.BOOLEAN,
+    'DateTimeOffset': descriptor_pb2.Property.Type.DATE_TIME_OFFSET,
+    'Decimal': descriptor_pb2.Property.Type.DECIMAL,
+    'Double': descriptor_pb2.Property.Type.DOUBLE,
+    'Duration': descriptor_pb2.Property.Type.DURATION,
+    'Guid': descriptor_pb2.Property.Type.GUID,
+    'Int64': descriptor_pb2.Property.Type.INT64,
+    'String': descriptor_pb2.Property.Type.STRING
+}
 
 
 def _remove_prefix(string: str, prefix: str) -> str:
@@ -82,22 +93,8 @@ class SchemaDefinition:
     # Case 1: prop_type is a primitive type ("Edm.<Type>")
     if property_type.startswith('Edm.'):
       primitive_type = _remove_prefix(property_type, 'Edm.')
-      if primitive_type == 'Boolean':
-        descriptor_type.primitive = descriptor_pb2.Property.Type.BOOLEAN
-      elif primitive_type == 'DateTimeOffset':
-        descriptor_type.primitive = descriptor_pb2.Property.Type.DATE_TIME_OFFSET
-      elif primitive_type == 'Decimal':
-        descriptor_type.primitive = descriptor_pb2.Property.Type.DECIMAL
-      elif primitive_type == 'Double':
-        descriptor_type.primitive = descriptor_pb2.Property.Type.DOUBLE
-      elif primitive_type == 'Duration':
-        descriptor_type.primitive = descriptor_pb2.Property.Type.DURATION
-      elif primitive_type == 'Guid':
-        descriptor_type.primitive = descriptor_pb2.Property.Type.GUID
-      elif primitive_type == 'Int64':
-        descriptor_type.primitive = descriptor_pb2.Property.Type.INT64
-      elif primitive_type == 'String':
-        descriptor_type.primitive = descriptor_pb2.Property.Type.STRING
+      if primitive_type in _PRIMITIVE_TYPE_MAP:
+        descriptor_type.primitive = _PRIMITIVE_TYPE_MAP[primitive_type]
       else:
         logging.warning('Unrecognized type for property %s: %s', property_name,
                         property_type)
