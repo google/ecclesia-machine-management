@@ -30,6 +30,16 @@ resource_to_config {
     }
   }
 }
+
+resource_to_config {
+  key: "Assembly"
+  value {
+    first_class_attributes {
+      array_attributes: "Assemblies"
+    }
+  }
+}
+
 resource_to_config {
   key: "Cable"
   value {
