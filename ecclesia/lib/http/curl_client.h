@@ -172,7 +172,8 @@ class LibCurlProxy : public LibCurl {
 class CurlHttpClient : public HttpClient {
  public:
   struct Config {
-    // These are the values we use to parse to curl_easy_setopt
+    // These are the values we use to parse to curl_easy_setopt.
+    // Defaults are set in this file but can be overwritten by clients.
 
     // CURLOPT_HTTP_TRANSFER_DECODING
     bool raw = false;
@@ -182,10 +183,10 @@ class CurlHttpClient : public HttpClient {
     curl_debug_callback verbose_cb = nullptr;
     // CURLOPT_PROXY
     std::string proxy;
-    // CURLOPT_TIMEOUT, in sec.
-    int request_timeout = 5;
-    // CURLOPT_CONNECTTIMEOUT, in sec.
-    int connect_timeout = 5;
+    // CURLOPT_TIMEOUT_MS, in milliseconds.
+    uint64_t request_timeout_msec = 5000;
+    // CURLOPT_CONNECTTIMEOUT_MS, in milliseconds.
+    uint64_t connect_timeout_msec = 5000;
     // CURLOPT_DNS_CACHE_TIMEOUT, in sec.
     int dns_timeout = 60;
     // CURLOPT_FOLLOWLOCATION

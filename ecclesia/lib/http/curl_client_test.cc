@@ -54,20 +54,6 @@ HttpCredential GetSimpleCredential() {
   return cred;
 }
 
-TEST(CurlHttpClient, TestDefaultConfig) {
-  CurlHttpClient client(LibCurlProxy::CreateInstance(), GetSimpleCredential());
-  const auto config = client.GetConfig();
-  EXPECT_FALSE(config.raw);
-  EXPECT_FALSE(config.verbose);
-  EXPECT_EQ(config.verbose_cb, nullptr);
-  EXPECT_EQ(config.proxy, "");
-  EXPECT_EQ(config.request_timeout, 5);
-  EXPECT_EQ(config.connect_timeout, 5);
-  EXPECT_EQ(config.dns_timeout, 60);
-  EXPECT_FALSE(config.follow_redirect);
-  EXPECT_EQ(config.max_recv_speed, -1);
-}
-
 class CurlHttpClientTest : public ::testing::Test {
  protected:
   CurlHttpClientTest()

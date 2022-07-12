@@ -377,10 +377,10 @@ void CurlHttpClient::SetDefaultCurlOpts(CURL *curl) const {
   }
 
   libcurl_->curl_easy_setopt(curl, CURLOPT_PROXY, config_.proxy.c_str());
-  libcurl_->curl_easy_setopt(curl, CURLOPT_TIMEOUT,
-                             static_cast<uint32_t>(config_.request_timeout));
-  libcurl_->curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT,
-                             static_cast<uint32_t>(config_.connect_timeout));
+  libcurl_->curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS,
+                             config_.request_timeout_msec);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS,
+                             config_.connect_timeout_msec);
 
   libcurl_->curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT,
                              static_cast<uint32_t>(config_.dns_timeout));
