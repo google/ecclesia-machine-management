@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_STRINGS_STRIP_TEST_H_
-#define ECCLESIA_LIB_STRINGS_STRIP_TEST_H_
-
 #include "ecclesia/lib/strings/strip.h"
 
 #include "gtest/gtest.h"
@@ -56,5 +53,3 @@ TEST(StringStripTest, TrimString) {
 
 }  // namespace
 }  // namespace ecclesia
-
-#endif  // ECCLESIA_LIB_STRINGS_STRIP_TEST_H_
