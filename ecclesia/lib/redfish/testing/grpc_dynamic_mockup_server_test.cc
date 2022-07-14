@@ -143,7 +143,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomGet) {
       "/redfish/v1/MyResource",
       [&kResponse](grpc::ServerContext *context,
                    const ::redfish::v1::Request *request, Response *response) {
-        *response->mutable_message() = kResponse;
+        *response->mutable_json() = kResponse;
         return grpc::Status::OK;
       });
   absl::StatusOr<RedfishTransport::Result> result_get =
@@ -157,7 +157,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomGet) {
 TEST_F(GrpcRedfishMockUpServerTest, TestCustomPost) {
   const ::redfish::v1::Request kRequest = ParseTextProtoOrDie(R"pb(
     url: "/redfish/v1/MyResource"
-    message {
+    json {
       fields {
         key: "num"
         value: { number_value: 1 }
@@ -181,7 +181,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPost) {
           Response *response) {
         called = true;
         EXPECT_THAT(*request, EqualsProto(kRequest));
-        *response->mutable_message() = kResponse;
+        *response->mutable_json() = kResponse;
         return grpc::Status::OK;
       });
   absl::string_view data_post = R"json({
@@ -200,7 +200,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPost) {
 TEST_F(GrpcRedfishMockUpServerTest, TestCustomPatch) {
   const ::redfish::v1::Request kRequest = ParseTextProtoOrDie(R"pb(
     url: "/redfish/v1/MyResource"
-    message {
+    json {
       fields {
         key: "num"
         value: { number_value: 1 }
@@ -224,7 +224,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPatch) {
           Response *response) {
         called = true;
         EXPECT_THAT(*request, EqualsProto(kRequest));
-        *response->mutable_message() = kResponse;
+        *response->mutable_json() = kResponse;
         return grpc::Status::OK;
       });
   absl::string_view data_patch = R"json({

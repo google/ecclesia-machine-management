@@ -123,7 +123,7 @@ TYPED_TEST(GrpcProxyTest, SimpleTest) {
   auto stub = this->MakeProxyStub();
 
   redfish::v1::Response mock_response =
-      ParseTextProtoOrDie(R"pb(message {
+      ParseTextProtoOrDie(R"pb(json {
                                  fields {
                                    key: "f"
                                    value { number_value: 1.5 }
@@ -133,7 +133,7 @@ TYPED_TEST(GrpcProxyTest, SimpleTest) {
 
   TypeParam::ExpectMockStubCall(this->mock_stub_, _,
                                 EqualsProto(R"pb(url: "/a/b/c"
-                                                 message {
+                                                 json {
                                                    fields {
                                                      key: "d"
                                                      value { string_value: "e" }
@@ -146,7 +146,7 @@ TYPED_TEST(GrpcProxyTest, SimpleTest) {
   grpc::ClientContext context;
   redfish::v1::Request request;
   request.set_url("/a/b/c");
-  (*request.mutable_message()->mutable_fields())["d"].set_string_value("e");
+  (*request.mutable_json()->mutable_fields())["d"].set_string_value("e");
   redfish::v1::Response response;
   EXPECT_THAT(
       AsAbslStatus(TypeParam::CallStub(*stub, &context, request, &response)),

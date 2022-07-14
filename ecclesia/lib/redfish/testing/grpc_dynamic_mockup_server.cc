@@ -57,7 +57,7 @@ absl::Status SetGrpcResponseAndReturnStatus(RedfishVariant variant,
   response->set_code(variant.httpcode().value());
   if (variant.AsObject() != nullptr) {
     if (absl::Status status = AsAbslStatus(google::protobuf::util::JsonStringToMessage(
-            variant.DebugString(), response->mutable_message()));
+            variant.DebugString(), response->mutable_json()));
         !status.ok()) {
       return status;
     }
@@ -89,7 +89,7 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Post(
 
   std::string message;
   absl::Status status = AsAbslStatus(
-      google::protobuf::util::MessageToJsonString(request->message(), &message));
+      google::protobuf::util::MessageToJsonString(request->json(), &message));
   if (!status.ok()) {
     return StatusToGrpcStatus(status);
   }
@@ -107,7 +107,7 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Patch(
 
   std::string message;
   absl::Status status = AsAbslStatus(
-      google::protobuf::util::MessageToJsonString(request->message(), &message));
+      google::protobuf::util::MessageToJsonString(request->json(), &message));
   if (!status.ok()) {
     return StatusToGrpcStatus(status);
   }

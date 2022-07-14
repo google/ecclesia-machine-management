@@ -52,7 +52,7 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
   redfish::v1::Request request;
   request.set_url(std::string(path));
   if (message.has_value()) {
-    *request.mutable_message() = *std::move(message);
+    *request.mutable_json() = *std::move(message);
   }
   grpc::ClientContext context;
   context.set_deadline(ToChronoTime(params.clock->Now() + params.timeout));
@@ -63,7 +63,7 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
   }
 
   RedfishTransport::Result ret_result;
-  ret_result.body = StructToJson(response.message());
+  ret_result.body = StructToJson(response.json());
   ret_result.code = response.code();
   return ret_result;
 }

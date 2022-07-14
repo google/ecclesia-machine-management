@@ -70,7 +70,7 @@ TEST(FakeServerTest, InsecureChannelOk) {
                               grpc::ServerContext *context,
                               const Request *request, Response *response) {
     EXPECT_EQ(request->url(), expected_url);
-    *response->mutable_message() = expected_response;
+    *response->mutable_json() = expected_response;
     return grpc::Status::OK;
   });
   grpc::ClientContext context;
@@ -79,7 +79,7 @@ TEST(FakeServerTest, InsecureChannelOk) {
   Request request;
   request.set_url(expected_url);
   EXPECT_TRUE(stub->Get(&context, request, &response).ok());
-  EXPECT_THAT(response.message(), EqualsProto(expected_response));
+  EXPECT_THAT(response.json(), EqualsProto(expected_response));
 }
 
 TEST(FakeServerTest, InsecureChannelNotOk) {
