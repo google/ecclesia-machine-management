@@ -23,6 +23,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/property.h"

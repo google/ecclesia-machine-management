@@ -257,6 +257,7 @@ cc_library(
     deps = [
         ":interface",
         ":property_definitions",
+        "//ecclesia/lib/redfish/transport:interface",
         "@com_google_absl//absl/strings",
     ],
 )

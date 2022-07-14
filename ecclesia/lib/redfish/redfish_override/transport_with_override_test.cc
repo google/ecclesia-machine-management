@@ -188,18 +188,18 @@ TEST_F(RedfishOverrideTest, SelectorConstructorTest) {
         "TestStruct": "tests2"
       },
       {
-        "TestNumber": 54321.0 
+        "TestNumber": 54321.0
       },
       "TestArrayString",
       [ "TestArrayInArray1" ]
-      
     ]})json";
   nlohmann::json expected_get =
       nlohmann::json::parse(expected_get_str, nullptr, false);
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/expected/result/1");
   ASSERT_THAT(res_get, IsOk());
-  EXPECT_THAT(res_get->body, Eq(expected_get));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
 }
 
@@ -223,7 +223,7 @@ TEST_F(RedfishOverrideTest, SelectorConstructorInvalidFileTest) {
         "TestStruct": "tests2"
       },
       {
-        "TestNumber": 1234.0 
+        "TestNumber": 1234.0
       },
       "TestArrayString",
       [ "TestArrayInArray1" ]
@@ -233,7 +233,8 @@ TEST_F(RedfishOverrideTest, SelectorConstructorInvalidFileTest) {
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/expected/result/1");
   ASSERT_THAT(res_get, IsOk());
-  EXPECT_THAT(res_get->body, Eq(expected_get));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
 }
 
@@ -302,18 +303,18 @@ TEST_F(RedfishOverrideTest, GetReplaceValue) {
         "TestStruct": "tests2"
       },
       {
-        "TestNumber": 54321.0 
+        "TestNumber": 54321.0
       },
       "TestArrayString",
       [ "TestArrayInArray1" ]
-      
     ]})json";
   nlohmann::json expected_get =
       nlohmann::json::parse(expected_get_str, nullptr, false);
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/expected/result/1");
   ASSERT_THAT(res_get, IsOk());
-  EXPECT_THAT(res_get->body, Eq(expected_get));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
 }
 
@@ -392,7 +393,8 @@ TEST_F(RedfishOverrideTest, GetExpandReplaceValue) {
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/expected/result/1?$expand=.($levels=1)");
   ASSERT_THAT(res_get, IsOk());
-  EXPECT_THAT(res_get->body, Eq(expected_get));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
 }
 
@@ -434,7 +436,7 @@ TEST_F(RedfishOverrideTest, GetReplaceValueRegex) {
         "TestStruct": "tests2"
       },
       {
-        "TestNumber": 1234.0 
+        "TestNumber": 1234.0
       },
       "TestArrayString",
       [ "TestArrayInArray1" ]
@@ -445,7 +447,8 @@ TEST_F(RedfishOverrideTest, GetReplaceValueRegex) {
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/expected/result/1");
   ASSERT_THAT(res_get, IsOk());
-  EXPECT_THAT(res_get->body, Eq(expected_get));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
 }
 
@@ -562,7 +565,8 @@ TEST_F(RedfishOverrideTest, GetAddValue) {
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/expected/result/1");
   ASSERT_THAT(res_get, IsOk());
-  EXPECT_THAT(res_get->body, Eq(expected_get));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
 }
 
@@ -624,7 +628,8 @@ TEST_F(RedfishOverrideTest, GetClear) {
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/expected/result/2");
   ASSERT_THAT(res_get, IsOk());
-  EXPECT_THAT(res_get->body, Eq(expected_get));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
 }
 TEST_F(RedfishOverrideTest, ReplaceTypeFail) {

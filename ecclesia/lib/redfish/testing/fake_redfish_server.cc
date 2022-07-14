@@ -60,6 +60,7 @@ void FakeRedfishServer::AddHttpGetHandlerWithData(std::string uri,
       [&, data](::tensorflow::serving::net_http::ServerRequestInterface *req) {
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseBytes(data.data(), data.length());
         req->Reply();
       });
@@ -71,6 +72,7 @@ void FakeRedfishServer::HandleHttpGet(
   auto itr = http_get_handlers_.find(req->uri_path());
   if (itr == http_get_handlers_.end()) {
     ::tensorflow::serving::net_http::SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     auto response = redfish_intf_->UncachedGetUri(req->uri_path());
     req->WriteResponseString(response.DebugString());
     if (response.httpcode().has_value()) {

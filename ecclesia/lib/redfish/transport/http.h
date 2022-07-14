@@ -22,12 +22,12 @@
 #include <variant>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/http/client.h"
-#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 
 namespace ecclesia {
@@ -35,18 +35,28 @@ namespace ecclesia {
 // HttpRedfishTransport implements RedfishTransport with an HttpClient.
 class HttpRedfishTransport : public RedfishTransport {
  public:
+  struct HttpHeaderCondition {
+    // The key of the header, e.g., "Content-Type", "OData-Version".
+    std::string header_key;
+    // The possible values of the corresponding header.
+    absl::flat_hash_set<std::string> matched_values;
+  };
   // Creates an HttpRedfishTransport using a network endpoint.
   // Params:
   //   client: HttpClient instance
   //   tcp_endpoint: e.g. "localhost:80", "https://10.0.0.1", "[::1]:8000"
   static std::unique_ptr<HttpRedfishTransport> MakeNetwork(
-      std::unique_ptr<HttpClient> client, std::string tcp_endpoint);
+      std::unique_ptr<HttpClient> client, std::string tcp_endpoint,
+      HttpHeaderCondition header_for_json = {"Content-Type",
+                                             {"application/json"}});
   // Creates an HttpRedfishTransport using a unix domain socket endpoint.
   // Params:
   //   client: HttpClient instance
   //   unix_domain_socket: e.g. "/var/run/my.socket"
   static std::unique_ptr<HttpRedfishTransport> MakeUds(
-      std::unique_ptr<HttpClient> client, std::string unix_domain_socket);
+      std::unique_ptr<HttpClient> client, std::string unix_domain_socket,
+      HttpHeaderCondition header_for_json = {"Content-Type",
+                                             {"application/json"}});
   // Performs the Redfish Session Login Authorization procedure, as documented
   // in the Redfish Spec (DSP0266 Redfish Specification v1.14.0 Section 13.3.4:
   // Redfish session login authentication).
@@ -103,7 +113,8 @@ class HttpRedfishTransport : public RedfishTransport {
   // The public Make* functions should be used instead to avoid exposing the
   // internal target structs in the public interface.
   HttpRedfishTransport(std::unique_ptr<HttpClient> client,
-                       std::variant<TcpTarget, UdsTarget> target);
+                       std::variant<TcpTarget, UdsTarget> target,
+                       HttpHeaderCondition header_for_json);
 
   // Helper function for creating a HTTP request, overloaded on the target type.
   std::unique_ptr<HttpClient::HttpRequest> MakeRequest(TcpTarget target,
@@ -127,6 +138,11 @@ class HttpRedfishTransport : public RedfishTransport {
   std::string x_auth_token_ ABSL_GUARDED_BY(mutex_);
   // The session URI that stores our session state.
   std::string session_auth_uri_ ABSL_GUARDED_BY(mutex_);
+
+  // This stores the header condition based which the payload is set to JSON,
+  // i.e., If there's such header and the header value matches any of the values
+  // in the condition, the payload is set to JSON.
+  const HttpHeaderCondition header_for_json_payload_;
 };
 
 }  // namespace ecclesia

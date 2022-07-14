@@ -47,6 +47,9 @@ class JsonMockupVariantImpl : public RedfishVariant::ImplIntf {
   std::unique_ptr<RedfishObject> AsObject() const override;
   std::unique_ptr<RedfishIterable> AsIterable(
       RedfishVariant::IterableMode mode) const override;
+  std::optional<RedfishTransport::bytes> AsRaw() const override {
+    return std::nullopt;
+  }
   std::string DebugString() const override;
 
   bool GetValue(std::string *val) const override {

@@ -64,7 +64,8 @@ TEST(GrpcRedfishTransport, Get) {
   absl::StatusOr<RedfishTransport::Result> res_get =
       (*transport)->Get("/redfish/v1");
   ASSERT_THAT(res_get, IsOk());
-  EXPECT_THAT(res_get->body, Eq(expected));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected));
   EXPECT_THAT(res_get->code, Eq(200));
 }
 
@@ -87,7 +88,8 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
     "Name": "MyChassis"
   })json");
   ASSERT_THAT(res_post, IsOk());
-  EXPECT_THAT(res_post->body, expected_post);
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_post->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_post->body), expected_post);
   EXPECT_THAT(res_post->code, Eq(204));
 
   absl::string_view expected_get_str = R"json({
@@ -112,7 +114,8 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   absl::StatusOr<RedfishTransport::Result> res_get =
       (*transport)->Get("/redfish/v1/Chassis");
   ASSERT_THAT(res_get, IsOk());
-  EXPECT_THAT(res_get->body, Eq(expected_get));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
 
   absl::string_view data_patch = R"json({
@@ -123,7 +126,8 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   absl::StatusOr<RedfishTransport::Result> res_patch =
       (*transport)->Patch("/redfish/v1/Chassis/Member1", data_patch);
   ASSERT_THAT(res_patch, IsOk());
-  EXPECT_THAT(res_patch->body, Eq(expected_patch));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_patch->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_patch->body), Eq(expected_patch));
   EXPECT_THAT(res_patch->code, Eq(204));
 
   expected_get_str = R"json({
@@ -146,7 +150,8 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   expected_get = nlohmann::json::parse(expected_get_str, nullptr, false);
   res_get = (*transport)->Get("/redfish/v1/Chassis");
   ASSERT_THAT(res_get, IsOk());
-  EXPECT_THAT(res_get->body, Eq(expected_get));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
 
   EXPECT_THAT(
@@ -182,7 +187,8 @@ TEST(GrpcRedfishTransport, ResourceNotFound) {
   EXPECT_THAT(result_get, IsOk());
   nlohmann::json expected_get =
       nlohmann::json::parse(R"json({})json", nullptr, false);
-  EXPECT_THAT(result_get->body, Eq(expected_get));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(result_get->body), Eq(expected_get));
   EXPECT_THAT(result_get->code, Eq(404));
 }
 
@@ -205,14 +211,16 @@ TEST(GrpcRedfishTransport, NotAllowed) {
   EXPECT_THAT(result_post, IsOk());
   nlohmann::json expected_post =
       nlohmann::json::parse(R"json({})json", nullptr, false);
-  EXPECT_THAT(result_post->body, Eq(expected_post));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result_post->body));
+  EXPECT_THAT(std::get<nlohmann::json>(result_post->body), Eq(expected_post));
   EXPECT_THAT(result_post->code, Eq(405));
 
   auto result_patch = (*transport)->Patch("/redfish", data_post);
   EXPECT_THAT(result_patch, IsOk());
   nlohmann::json expected_patch =
       nlohmann::json::parse(R"json({})json", nullptr, false);
-  EXPECT_THAT(result_patch->body, Eq(expected_patch));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result_post->body));
+  EXPECT_THAT(std::get<nlohmann::json>(result_post->body), Eq(expected_post));
   EXPECT_THAT(result_patch->code, Eq(204));
 }
 

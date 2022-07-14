@@ -25,14 +25,18 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/bind_front.h"
 #include "absl/memory/memory.h"
+#include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/http/client.h"
+#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/redfish/utils.h"
 #include "ecclesia/lib/status/macros.h"
 #include "single_include/nlohmann/json.hpp"
 
@@ -51,13 +55,24 @@ constexpr absl::string_view kLocation = "Location";
 // RestOp is a functor which invokes the relevant REST operation.
 template <typename RestOp>
 absl::StatusOr<RedfishTransport::Result> RestHelper(
-    std::unique_ptr<HttpClient::HttpRequest> request, RestOp rest_func) {
+    std::unique_ptr<HttpClient::HttpRequest> request, RestOp rest_func,
+    const HttpRedfishTransport::HttpHeaderCondition &header_for_json) {
   ECCLESIA_ASSIGN_OR_RETURN(HttpClient::HttpResponse resp,
                             rest_func(std::move(request)));
   RedfishTransport::Result result;
   result.code = resp.code;
-  result.body = resp.GetBodyJson();
   result.headers = std::move(resp.headers);
+  // Determine whether to represent the body as JSON or bytes based on the
+  // conditions of headers. If there are any headers meeting the specific condition,
+  // set the body as JSON. Otherwise, set the body as the bytes.
+  auto header_iter = result.headers.find(header_for_json.header_key);
+  if (header_iter != result.headers.end() &&
+      header_for_json.matched_values.contains(header_iter->second)) {
+    result.body = resp.GetBodyJson();
+  } else {
+    result.body = GetBytesFromString(resp.body);
+  }
+
   return result;
 }
 
@@ -120,8 +135,12 @@ absl::Status HttpRedfishTransport::LockedDoSessionAuth() {
     return absl::OkStatus();
   }
   ECCLESIA_ASSIGN_OR_RETURN(Result root, LockedGet(GetRootUri()));
-  ECCLESIA_ASSIGN_OR_RETURN(std::string post_uri,
-                            GetSessionServicePostTarget(root.body));
+  if (!std::holds_alternative<nlohmann::json>(root.body)) {
+    return absl::InternalError("Result from the root URI is not JSON");
+  }
+  ECCLESIA_ASSIGN_OR_RETURN(
+      std::string post_uri,
+      GetSessionServicePostTarget(std::get<nlohmann::json>(root.body)));
 
   nlohmann::json session_post_payload;
   session_post_payload[PropertyUserName::Name] = session_username_;
@@ -171,20 +190,26 @@ std::unique_ptr<HttpClient::HttpRequest> HttpRedfishTransport::MakeRequest(
 
 HttpRedfishTransport::HttpRedfishTransport(
     std::unique_ptr<HttpClient> client,
-    std::variant<TcpTarget, UdsTarget> target)
-    : client_(std::move(client)), target_(std::move(target)) {}
+    std::variant<TcpTarget, UdsTarget> target,
+    HttpHeaderCondition header_for_json)
+    : client_(std::move(client)),
+      target_(std::move(target)),
+      header_for_json_payload_(std::move(header_for_json)) {}
 
 std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeNetwork(
-    std::unique_ptr<HttpClient> client, std::string endpoint) {
+    std::unique_ptr<HttpClient> client, std::string endpoint,
+    HttpHeaderCondition header_for_json) {
   return absl::WrapUnique(new HttpRedfishTransport(
-      std::move(client), TcpTarget{std::move(endpoint)}));
+      std::move(client), TcpTarget{std::move(endpoint)},
+      std::move(header_for_json)));
 }
 
 std::unique_ptr<HttpRedfishTransport> HttpRedfishTransport::MakeUds(
-    std::unique_ptr<HttpClient> client, std::string unix_domain_socket) {
+    std::unique_ptr<HttpClient> client, std::string unix_domain_socket,
+    HttpHeaderCondition header_for_json) {
   return absl::WrapUnique(new HttpRedfishTransport(
-      std::move(client),
-      UdsTarget{std::string(std::move(unix_domain_socket))}));
+      std::move(client), UdsTarget{std::string(std::move(unix_domain_socket))},
+      std::move(header_for_json)));
 }
 
 absl::string_view HttpRedfishTransport::GetRootUri() {
@@ -202,7 +227,8 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedGet(
   return RestHelper(std::visit([&](const auto &t) ABSL_SHARED_LOCKS_REQUIRED(
                                    mutex_) { return MakeRequest(t, path, ""); },
                                target_),
-                    absl::bind_front(&HttpClient::Get, client_.get()));
+                    absl::bind_front(&HttpClient::Get, client_.get()),
+                    header_for_json_payload_);
 }
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Post(
@@ -217,7 +243,8 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedPost(
       std::visit([&](const auto &t) ABSL_SHARED_LOCKS_REQUIRED(
                      mutex_) { return MakeRequest(t, path, data); },
                  target_),
-      absl::bind_front(&HttpClient::Post, client_.get()));
+      absl::bind_front(&HttpClient::Post, client_.get()),
+      header_for_json_payload_);
 }
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Patch(
@@ -232,7 +259,8 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedPatch(
       std::visit([&](const auto &t) ABSL_SHARED_LOCKS_REQUIRED(
                      mutex_) { return MakeRequest(t, path, data); },
                  target_),
-      absl::bind_front(&HttpClient::Patch, client_.get()));
+      absl::bind_front(&HttpClient::Patch, client_.get()),
+      header_for_json_payload_);
 }
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Delete(
@@ -247,7 +275,8 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedDelete(
       std::visit([&](const auto &t) ABSL_SHARED_LOCKS_REQUIRED(
                      mutex_) { return MakeRequest(t, path, data); },
                  target_),
-      absl::bind_front(&HttpClient::Delete, client_.get()));
+      absl::bind_front(&HttpClient::Delete, client_.get()),
+      header_for_json_payload_);
 }
 
 }  // namespace ecclesia

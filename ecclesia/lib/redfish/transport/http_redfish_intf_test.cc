@@ -163,13 +163,14 @@ TEST_F(HttpRedfishInterfaceTest, UpdateTransport) {
   "Description": "My Test Resource"
 })json";
   int called_count = 0;
-  server2->AddHttpGetHandler("/redfish/v1/Chassis/chassis",
-                             [&](ServerRequestInterface *req) {
-                               called_count++;
-                               SetContentType(req, "application/json");
-                               req->WriteResponseString(kSecondServerResponse);
-                               req->Reply();
-                             });
+  server2->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis", [&](ServerRequestInterface *req) {
+        called_count++;
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(kSecondServerResponse);
+        req->Reply();
+      });
 
   // First GET should fetch from the original server.
   EXPECT_TRUE(intf_->IsTrusted());
@@ -370,6 +371,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedGet) {
   server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
     called_count++;
     SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(result_json.dump());
     req->Reply();
   });
@@ -403,6 +405,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedGet) {
 
 TEST_F(HttpRedfishInterfaceTest, GetWithExpand) {
   server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     SetContentType(req, "application/json");
     // Reply will redirect the chassis
     auto reply = nlohmann::json::parse(
@@ -429,6 +432,8 @@ TEST_F(HttpRedfishInterfaceTest, GetWithExpand) {
   server_->AddHttpGetHandler("/redfish/v2/Chassis?$expand=*($levels=1)",
                              [&](ServerRequestInterface *req) {
                                SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
                                called_chassis_expanded_count++;
                                req->WriteResponseString(R"json({})json");
                                req->Reply();
@@ -438,6 +443,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithExpand) {
       "/redfish/v1/FakeItemWithoutId?$expand=.($levels=1)",
       [&](ServerRequestInterface *req) {
         SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         called_fake_item_expanded_count++;
         req->WriteResponseString(R"json({})json");
         req->Reply();
@@ -458,6 +464,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithoutExpand) {
   int called_expanded_count = 0;
   server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
     SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     auto reply = nlohmann::json::parse(
         R"json({
               "@odata.id": "/redfish/v1",
@@ -468,15 +475,18 @@ TEST_F(HttpRedfishInterfaceTest, GetWithoutExpand) {
     req->WriteResponseString(reply.dump());
     req->Reply();
   });
-  server_->AddHttpGetHandler("/redfish/v1/Chassis",
-                             [&](ServerRequestInterface *req) {
-                               SetContentType(req, "application/json");
-                               req->WriteResponseString(R"json({})json");
-                               req->Reply();
-                             });
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis", [&](ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({})json");
+        req->Reply();
+      });
   server_->AddHttpGetHandler("/redfish/v1/Chassis?$expand=.($levels=1)",
                              [&](ServerRequestInterface *req) {
                                SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
                                called_expanded_count++;
                                req->WriteResponseString(R"json({})json");
                                req->Reply();
@@ -505,12 +515,14 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetWithOperator) {
   server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
     parent_called_count++;
     SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(json_parent.dump());
     req->Reply();
   });
   server_->AddHttpGetHandler("/my/other/uri", [&](ServerRequestInterface *req) {
     child_called_count++;
     SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(json_child.dump());
     req->Reply();
   });
@@ -568,12 +580,14 @@ TEST_F(HttpRedfishInterfaceTest, GetFreshWithGetMethod) {
   })json");
   server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
     SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(json_parent.dump());
     req->Reply();
   });
   server_->AddHttpGetHandler("/my/other/uri", [&](ServerRequestInterface *req) {
     child_called_count++;
     SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(json_child.dump());
     req->Reply();
   });
@@ -610,6 +624,7 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGet) {
   server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
     called_count++;
     SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(result_json.dump());
     req->Reply();
   });
@@ -677,6 +692,7 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGetUncached) {
   server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
     called_count++;
     SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(result_json.dump());
     req->Reply();
   });
@@ -721,6 +737,7 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadFailsWithNoOdataId) {
   })json");
   server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
     SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(result_json.dump());
     req->Reply();
   });
@@ -779,6 +796,7 @@ TEST_F(HttpRedfishInterfaceTest, PostHandler) {
     called = true;
 
     SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString("{}");
     req->Reply();
   });
@@ -861,6 +879,7 @@ TEST_F(HttpRedfishInterfaceTest, PatchHandler) {
     called = true;
 
     SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString("{}");
     req->Reply();
   });

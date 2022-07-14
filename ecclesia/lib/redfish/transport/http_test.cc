@@ -47,7 +47,7 @@ using ::testing::Gt;
 
 class HttpRedfishTransportTest : public ::testing::Test {
  protected:
-  HttpRedfishTransportTest() {
+  void SetUp() override {
     server_ = std::make_unique<FakeRedfishServer>(
         "barebones_session_auth/mockup.shar");
     auto config = server_->GetConfig();
@@ -86,8 +86,10 @@ TEST_F(HttpRedfishTransportTest, CanGet) {
   "RedfishVersion": "1.6.1"
 })json",
                             nullptr, /*allow_exceptions=*/false);
-  EXPECT_THAT(result->body, Eq(expected))
-      << "Diff: " << nlohmann::json::diff(result->body, expected);
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
+  const auto &json = std::get<nlohmann::json>(result->body);
+  EXPECT_THAT(json, Eq(expected))
+      << "Diff: " << nlohmann::json::diff(json, expected);
 }
 
 TEST_F(HttpRedfishTransportTest, GetInvalidJson) {
@@ -99,6 +101,7 @@ TEST_F(HttpRedfishTransportTest, GetInvalidJson) {
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         // Return some invalid JSON.
         req->WriteResponseString("{");
         req->Reply();
@@ -108,7 +111,8 @@ TEST_F(HttpRedfishTransportTest, GetInvalidJson) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
-  EXPECT_TRUE(result->body.is_discarded());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
+  EXPECT_TRUE(std::get<nlohmann::json>(result->body).is_discarded());
 }
 
 TEST_F(HttpRedfishTransportTest, GetError) {
@@ -126,6 +130,7 @@ TEST_F(HttpRedfishTransportTest, GetError) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(result_json.dump());
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::ERROR);
@@ -135,7 +140,8 @@ TEST_F(HttpRedfishTransportTest, GetError) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(500));
-  EXPECT_THAT(result->body, Eq(result_json));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
+  EXPECT_THAT(std::get<nlohmann::json>(result->body), Eq(result_json));
 }
 
 TEST_F(HttpRedfishTransportTest, CanPost) {
@@ -174,6 +180,7 @@ TEST_F(HttpRedfishTransportTest, CanPost) {
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(result_json.dump());
         req->Reply();
       });
@@ -183,8 +190,10 @@ TEST_F(HttpRedfishTransportTest, CanPost) {
   ASSERT_TRUE(called);
   ASSERT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
-  EXPECT_THAT(result->body, Eq(result_json))
-      << "Diff: " << nlohmann::json::diff(result->body, result_json);
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
+  const auto &json = std::get<nlohmann::json>(result->body);
+  EXPECT_THAT(json, Eq(result_json))
+      << "Diff: " << nlohmann::json::diff(json, result_json);
 }
 
 TEST_F(HttpRedfishTransportTest, PostInvalidJson) {
@@ -199,6 +208,7 @@ TEST_F(HttpRedfishTransportTest, PostInvalidJson) {
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         // Return some invalid JSON.
         req->WriteResponseString("{");
         req->Reply();
@@ -209,7 +219,8 @@ TEST_F(HttpRedfishTransportTest, PostInvalidJson) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
-  EXPECT_TRUE(result->body.is_discarded());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
+  EXPECT_TRUE(std::get<nlohmann::json>(result->body).is_discarded());
 }
 
 TEST_F(HttpRedfishTransportTest, PostError) {
@@ -230,6 +241,7 @@ TEST_F(HttpRedfishTransportTest, PostError) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(result_json.dump());
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::ERROR);
@@ -240,7 +252,8 @@ TEST_F(HttpRedfishTransportTest, PostError) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(500));
-  EXPECT_THAT(result->body, Eq(result_json));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
+  EXPECT_THAT(std::get<nlohmann::json>(result->body), Eq(result_json));
 }
 
 TEST_F(HttpRedfishTransportTest, CanPatch) {
@@ -274,6 +287,7 @@ TEST_F(HttpRedfishTransportTest, CanPatch) {
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(result_json.dump());
         req->Reply();
       });
@@ -282,8 +296,10 @@ TEST_F(HttpRedfishTransportTest, CanPatch) {
   ASSERT_TRUE(called);
   ASSERT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
-  EXPECT_THAT(result->body, Eq(result_json))
-      << "Diff: " << nlohmann::json::diff(result->body, result_json);
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
+  const auto &json = std::get<nlohmann::json>(result->body);
+  EXPECT_THAT(json, Eq(result_json))
+      << "Diff: " << nlohmann::json::diff(json, result_json);
 }
 
 TEST_F(HttpRedfishTransportTest, PatchInvalidJson) {
@@ -298,6 +314,7 @@ TEST_F(HttpRedfishTransportTest, PatchInvalidJson) {
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         // Return some invalid JSON.
         req->WriteResponseString("{");
         req->Reply();
@@ -307,7 +324,8 @@ TEST_F(HttpRedfishTransportTest, PatchInvalidJson) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
-  EXPECT_TRUE(result->body.is_discarded());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
+  EXPECT_TRUE(std::get<nlohmann::json>(result->body).is_discarded());
 }
 
 TEST_F(HttpRedfishTransportTest, PatchError) {
@@ -328,6 +346,7 @@ TEST_F(HttpRedfishTransportTest, PatchError) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(result_json.dump());
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::ERROR);
@@ -337,7 +356,8 @@ TEST_F(HttpRedfishTransportTest, PatchError) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(500));
-  EXPECT_THAT(result->body, Eq(result_json));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
+  EXPECT_THAT(std::get<nlohmann::json>(result->body), Eq(result_json));
 }
 
 TEST_F(HttpRedfishTransportTest, CanDelete) {
@@ -360,6 +380,7 @@ TEST_F(HttpRedfishTransportTest, CanDelete) {
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(result_json.dump());
         req->Reply();
       });
@@ -368,8 +389,10 @@ TEST_F(HttpRedfishTransportTest, CanDelete) {
   ASSERT_TRUE(called);
   ASSERT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
-  EXPECT_THAT(result->body, Eq(result_json))
-      << "Diff: " << nlohmann::json::diff(result->body, result_json);
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
+  const auto &json = std::get<nlohmann::json>(result->body);
+  EXPECT_THAT(json, Eq(result_json))
+      << "Diff: " << nlohmann::json::diff(json, result_json);
 }
 
 TEST_F(HttpRedfishTransportTest, DeleteError) {
@@ -387,6 +410,7 @@ TEST_F(HttpRedfishTransportTest, DeleteError) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(result_json.dump());
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::ERROR);
@@ -396,7 +420,8 @@ TEST_F(HttpRedfishTransportTest, DeleteError) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(500));
-  EXPECT_THAT(result->body, Eq(result_json));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
+  EXPECT_THAT(std::get<nlohmann::json>(result->body), Eq(result_json));
 }
 
 TEST_F(HttpRedfishTransportTest, CanEstablishSessionRootSessionCollection) {
@@ -427,6 +452,7 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionRootSessionCollection) {
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(root_json.dump());
         req->Reply();
       };
@@ -525,6 +551,7 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionServiceRootLinks) {
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(root_json.dump());
         req->Reply();
       };
@@ -568,6 +595,7 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionServiceRootLinks) {
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString("{}");
         req->Reply();
       });
@@ -674,6 +702,7 @@ TEST_F(HttpRedfishTransportTest, FailEstablishSessionNoSessionSupported) {
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(root_json.dump());
         req->Reply();
       };

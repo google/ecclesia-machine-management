@@ -21,8 +21,10 @@
 #include <optional>
 #include <string>
 
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 
 namespace ecclesia {
 
@@ -74,6 +76,11 @@ std::optional<std::string> GetResourceType(const RedfishObject *node);
 // converted from the "Name" property like " ABc XYz "->"abc_xyz". For certain
 // types of resources the name is obtained from other context of the resource.
 std::optional<std::string> GetConvertedResourceName(const RedfishObject *node);
+
+
+std::string RedfishTransportBytesToString(const RedfishTransport::bytes& bytes);
+
+RedfishTransport::bytes GetBytesFromString(absl::string_view str);
 
 }  // namespace ecclesia
 

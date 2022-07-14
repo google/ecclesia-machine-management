@@ -27,6 +27,7 @@
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 
 namespace ecclesia {
 
@@ -72,6 +73,15 @@ std::optional<std::string> GetConvertedResourceName(const RedfishObject *node) {
   }
 
   return std::nullopt;
+}
+
+std::string RedfishTransportBytesToString(
+    const RedfishTransport::bytes &bytes) {
+  return std::string(bytes.begin(), bytes.end());
+}
+
+RedfishTransport::bytes GetBytesFromString(absl::string_view str) {
+  return RedfishTransport::bytes(str.begin(), str.end());
 }
 
 }  // namespace ecclesia

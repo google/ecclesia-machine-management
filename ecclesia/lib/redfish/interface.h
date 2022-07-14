@@ -21,7 +21,6 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
-#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -202,6 +201,7 @@ class RedfishVariant final {
     virtual std::unique_ptr<RedfishObject> AsObject() const = 0;
     virtual std::unique_ptr<RedfishIterable> AsIterable(
         IterableMode mode) const = 0;
+    virtual std::optional<RedfishTransport::bytes> AsRaw() const = 0;
     virtual bool GetValue(std::string *val) const = 0;
     virtual bool GetValue(int32_t *val) const = 0;
     virtual bool GetValue(int64_t *val) const = 0;
@@ -297,7 +297,7 @@ class RedfishVariant final {
 
   inline RedfishVariant operator[](IndexGetWithArgs property) const;
   inline RedfishVariant operator[](const std::string &property) const;
-  inline RedfishVariant operator[](const size_t index) const;
+  inline RedfishVariant operator[](size_t index) const;
 
   IndexHelper AsIndexHelper() const { return IndexHelper(*this); }
 
@@ -313,6 +313,10 @@ class RedfishVariant final {
       IterableMode mode = IterableMode::kAllowExpand) const {
     if (!ptr_) return nullptr;
     return ptr_->AsIterable(mode);
+  }
+  std::optional<RedfishTransport::bytes> AsRaw() const {
+    if (!ptr_) return std::nullopt;
+    return ptr_->AsRaw();
   }
 
   // This method will only return a valid object if this RedfishVariant
@@ -509,6 +513,7 @@ class RedfishInterface {
   // exposing the underlying transport data format (e.g. JSON).
   struct ListValue;
   struct ObjectValue;
+
   using ValueVariant = std::variant<int, bool, std::string, const char *,
                                     double, ListValue, ObjectValue>;
 

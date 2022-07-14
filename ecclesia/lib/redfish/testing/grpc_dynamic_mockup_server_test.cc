@@ -110,8 +110,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPostPatchAndGetRequest) {
   absl::StatusOr<RedfishTransport::Result> result_get =
       client_->Get("/redfish/v1/Chassis/Member1");
   ASSERT_TRUE(result_get.status().ok()) << result_get.status().message();
-  std::string name;
-  name = (result_get->body)["Name"];
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result_get->body));
+  std::string name = std::get<nlohmann::json>(result_get->body)["Name"];
   EXPECT_EQ(name, "MyNewName");
   EXPECT_EQ(result_get->code, ecclesia::HttpResponseCode::HTTP_CODE_REQUEST_OK);
 }
@@ -149,7 +149,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomGet) {
   absl::StatusOr<RedfishTransport::Result> result_get =
       client_->Get("/redfish/v1/MyResource");
   ASSERT_TRUE(result_get.status().ok()) << result_get.status().message();
-  std::string name = (result_get->body)["Name"];
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result_get->body));
+  std::string name = std::get<nlohmann::json>(result_get->body)["Name"];
   EXPECT_THAT(name, Eq("MyResource"));
 }
 
@@ -191,7 +192,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPost) {
       client_->Post("/redfish/v1/MyResource", data_post);
   ASSERT_TRUE(result_post.status().ok()) << result_post.status().message();
   ASSERT_TRUE(called);
-  std::string name = (result_post->body)["Result"];
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result_post->body));
+  std::string name = std::get<nlohmann::json>(result_post->body)["Result"];
   EXPECT_THAT(name, Eq("OK"));
 }
 
@@ -233,7 +235,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPatch) {
       client_->Patch("/redfish/v1/MyResource", data_patch);
   ASSERT_TRUE(result_patch.status().ok()) << result_patch.status().message();
   EXPECT_TRUE(called);
-  std::string name = (result_patch->body)["Result"];
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result_patch->body));
+  std::string name = std::get<nlohmann::json>(result_patch->body)["Result"];
   EXPECT_THAT(name, Eq("OK"));
 }
 
@@ -310,7 +313,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestGetReset) {
   mockup_server_->ClearHandlers();
   result_get = client_->Get("/redfish/v1");
   ASSERT_TRUE(result_get.status().ok()) << result_get.status().message();
-  std::string name = (result_get->body)["Name"];
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result_get->body));
+  std::string name = std::get<nlohmann::json>(result_get->body)["Name"];
   EXPECT_THAT(name, Eq("Root Service"));
   EXPECT_FALSE(called);
 }
@@ -346,7 +350,8 @@ TEST(GrpcRedfishMockUpServerUdsTest, TestUds) {
   absl::StatusOr<RedfishTransport::Result> res_get =
       (*transport)->Get("/redfish/v1");
   ASSERT_THAT(res_get, IsOk());
-  EXPECT_THAT(res_get->body, Eq(expected));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected));
 }
 
 }  // namespace

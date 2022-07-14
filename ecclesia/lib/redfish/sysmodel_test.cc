@@ -59,6 +59,7 @@ class SysmodelTest : public testing::Test {
         "/redfish/v1", [&](ServerRequestInterface *req) {
           ::tensorflow::serving::net_http::SetContentType(req,
                                                           "application/json");
+          req->OverwriteResponseHeader("OData-Version", "4.0");
           req->WriteResponseString(root_with_expands_);
           req->Reply();
         });
@@ -67,6 +68,7 @@ class SysmodelTest : public testing::Test {
   void SendJsonHttpResponse(ServerRequestInterface *req,
                             absl::string_view json) {
     ::tensorflow::serving::net_http::SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(json);
     req->Reply();
   }

@@ -17,7 +17,10 @@
 #ifndef ECCLESIA_LIB_REDFISH_TRANSPORT_INTERFACE_H_
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_INTERFACE_H_
 
+#include <cstdint>
 #include <string>
+#include <variant>
+#include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
@@ -31,12 +34,15 @@ namespace ecclesia {
 // raw RESTful operations to a Redfish Service.
 class RedfishTransport {
  public:
+  using bytes = std::vector<uint8_t>;
   // Result contains a successful REST response.
   struct Result {
     // HTTP code.
     int code = 0;
-    // If the response body was JSON format, it will be parsed here.
-    nlohmann::json body = nlohmann::json::value_t::discarded;
+    // If the result is in the Redfish tree, it will be parsed as JSON.
+    // Otherwise, it will be treated as bytes.
+    std::variant<nlohmann::json, bytes> body =
+        nlohmann::json::value_t::discarded;
     // Headers returned in the response.
     absl::flat_hash_map<std::string, std::string> headers;
   };

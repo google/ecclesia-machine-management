@@ -119,10 +119,12 @@ bool CheckRequirement(const OverrideRequirement &override_requirement,
                       RedfishTransport *transport) {
   for (const auto &requirement : override_requirement.requirement()) {
     auto get_result = transport->Get(requirement.uri());
-    if (!get_result.ok()) {
+    if (!get_result.ok() ||
+        !std::holds_alternative<nlohmann::json>(get_result->body)) {
       return false;
     }
-    if (!CheckValue((*get_result).body, requirement, 0)) {
+    if (!CheckValue(std::get<nlohmann::json>(get_result->body), requirement,
+                    0)) {
       return false;
     }
   }
@@ -300,12 +302,16 @@ absl::Status FindObjectAndAct(nlohmann::json &json,
 absl::Status ResultUpdateHelper(const OverrideField &field,
                                 RedfishTransport::Result &result,
                                 RedfishTransport *transport) {
+  if (!std::holds_alternative<nlohmann::json>(result.body)) {
+    return absl::InternalError("Result body is not storing JSON");
+  }
+  auto &json = std::get<nlohmann::json>(result.body);
   switch (field.Action_case()) {
     case OverrideField::kActionReplace: {
-      auto result_check = FindObjectAndAct(
-          result.body, field.action_replace().object_identifier(), 0,
-          field.action_replace().override_value(), transport,
-          OverrideField::ActionCase::kActionReplace);
+      auto result_check =
+          FindObjectAndAct(json, field.action_replace().object_identifier(), 0,
+                           field.action_replace().override_value(), transport,
+                           OverrideField::ActionCase::kActionReplace);
       if (!result_check.ok()) {
         return result_check;
       }
@@ -313,8 +319,8 @@ absl::Status ResultUpdateHelper(const OverrideField &field,
     }
     case OverrideField::kActionAdd: {
       auto result_check =
-          FindObjectAndAct(result.body, field.action_add().object_identifier(),
-                           0, field.action_add().override_value(), transport,
+          FindObjectAndAct(json, field.action_add().object_identifier(), 0,
+                           field.action_add().override_value(), transport,
                            OverrideField::ActionCase::kActionAdd);
       if (!result_check.ok()) {
         return result_check;
@@ -322,10 +328,10 @@ absl::Status ResultUpdateHelper(const OverrideField &field,
       break;
     }
     case OverrideField::kActionClear: {
-      auto result_check = FindObjectAndAct(
-          result.body, field.action_clear().object_identifier(), 0,
-          field.action_add().override_value(), transport,
-          OverrideField::ActionCase::kActionClear);
+      auto result_check =
+          FindObjectAndAct(json, field.action_clear().object_identifier(), 0,
+                           field.action_add().override_value(), transport,
+                           OverrideField::ActionCase::kActionClear);
       if (!result_check.ok()) {
         return result_check;
       }
