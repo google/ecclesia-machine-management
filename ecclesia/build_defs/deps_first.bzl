@@ -194,9 +194,11 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
     if not native.existing_rule("rules_pkg"):
         http_archive(
             name = "rules_pkg",
-            sha256 = "b9d1387deed06eef45edd3eb7fd166577b8ad1884cb6a17898d136059d03933c",
-            strip_prefix = "rules_pkg-0.2.6-1/pkg",
-            urls = ["https://github.com/bazelbuild/rules_pkg/archive/0.2.6-1.tar.gz"],
+            sha256 = "8a298e832762eda1830597d64fe7db58178aa84cd5926d76d5b744d6558941c2",
+            urls = [
+                "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.7.0/rules_pkg-0.7.0.tar.gz",
+                "https://github.com/bazelbuild/rules_pkg/releases/download/0.7.0/rules_pkg-0.7.0.tar.gz",
+            ],
         )
 
     if not native.existing_rule("build_bazel_rules_swift"):
