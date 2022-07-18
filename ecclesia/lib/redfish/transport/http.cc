@@ -56,15 +56,15 @@ constexpr absl::string_view kLocation = "Location";
 template <typename RestOp>
 absl::StatusOr<RedfishTransport::Result> RestHelper(
     std::unique_ptr<HttpClient::HttpRequest> request, RestOp rest_func,
-    const HttpRedfishTransport::HttpHeaderCondition &header_for_json) {
+    const HttpHeaderCondition &header_for_json) {
   ECCLESIA_ASSIGN_OR_RETURN(HttpClient::HttpResponse resp,
                             rest_func(std::move(request)));
   RedfishTransport::Result result;
   result.code = resp.code;
   result.headers = std::move(resp.headers);
   // Determine whether to represent the body as JSON or bytes based on the
-  // conditions of headers. If there are any headers meeting the specific condition,
-  // set the body as JSON. Otherwise, set the body as the bytes.
+  // conditions of headers. If there are any headers meeting the specific
+  // condition, set the body as JSON. Otherwise, set the body as the bytes.
   auto header_iter = result.headers.find(header_for_json.header_key);
   if (header_iter != result.headers.end() &&
       header_for_json.matched_values.contains(header_iter->second)) {

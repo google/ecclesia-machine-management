@@ -32,31 +32,41 @@
 
 namespace ecclesia {
 
+// A HTTP header condition as a struct of key and values. This can be used as
+// the condition to specify further actions, e.g., whether to convert the body
+// to JSON.
+struct HttpHeaderCondition {
+  // The header name, e.g., "Content-Type", "OData-Version".
+  std::string header_key;
+  // The possible values of the corresponding header.
+  absl::flat_hash_set<std::string> matched_values;
+};
+
+// The default HTTP header condition for which the HTTP body is converted to
+// JSON.
+inline HttpHeaderCondition DefaultHttpHeaderConditionForJson() {
+  return HttpHeaderCondition{"Content-Type", {"application/json"}};
+}
+
 // HttpRedfishTransport implements RedfishTransport with an HttpClient.
 class HttpRedfishTransport : public RedfishTransport {
  public:
-  struct HttpHeaderCondition {
-    // The key of the header, e.g., "Content-Type", "OData-Version".
-    std::string header_key;
-    // The possible values of the corresponding header.
-    absl::flat_hash_set<std::string> matched_values;
-  };
   // Creates an HttpRedfishTransport using a network endpoint.
   // Params:
   //   client: HttpClient instance
   //   tcp_endpoint: e.g. "localhost:80", "https://10.0.0.1", "[::1]:8000"
   static std::unique_ptr<HttpRedfishTransport> MakeNetwork(
       std::unique_ptr<HttpClient> client, std::string tcp_endpoint,
-      HttpHeaderCondition header_for_json = {"Content-Type",
-                                             {"application/json"}});
+      HttpHeaderCondition header_for_json =
+          DefaultHttpHeaderConditionForJson());
   // Creates an HttpRedfishTransport using a unix domain socket endpoint.
   // Params:
   //   client: HttpClient instance
   //   unix_domain_socket: e.g. "/var/run/my.socket"
   static std::unique_ptr<HttpRedfishTransport> MakeUds(
       std::unique_ptr<HttpClient> client, std::string unix_domain_socket,
-      HttpHeaderCondition header_for_json = {"Content-Type",
-                                             {"application/json"}});
+      HttpHeaderCondition header_for_json =
+          DefaultHttpHeaderConditionForJson());
   // Performs the Redfish Session Login Authorization procedure, as documented
   // in the Redfish Spec (DSP0266 Redfish Specification v1.14.0 Section 13.3.4:
   // Redfish session login authentication).
