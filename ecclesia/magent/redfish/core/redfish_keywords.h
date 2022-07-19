@@ -172,6 +172,10 @@ inline constexpr char kServiceEnabled[] = "ServiceEnabled";
 inline constexpr char kLogServices[] = "LogServices";
 inline constexpr char kClearLog[] = "ClearLog";
 
+// Header keywords
+inline constexpr char kHeaderOdataVersion[] = "OData-Version";
+inline constexpr char kHeaderOdataVersionValue[] = "4.0";
+
 // Assembly keywords
 inline constexpr char kAssemblies[] = "Assemblies";
 inline constexpr char kAssemblyDataType[] = "#Assembly.v1_2_1.Assembly";

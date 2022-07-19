@@ -25,6 +25,7 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
@@ -73,6 +74,7 @@ class Resource {
 
   virtual void RequestHandler(
       tensorflow::serving::net_http::ServerRequestInterface *req) {
+    req->AppendResponseHeader(kHeaderOdataVersion, kHeaderOdataVersionValue);
     if (req->http_method() == "GET") {
       Get(req, ParamsType());
     } else if (req->http_method() == "POST") {

@@ -26,6 +26,7 @@
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/strings/regex.h"
 #include "ecclesia/lib/types/overloaded.h"
+#include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "ecclesia/magent/redfish/core/resource.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
@@ -79,6 +80,7 @@ class IndexResource : public Resource {
  private:
   void RequestHandler(
       tensorflow::serving::net_http::ServerRequestInterface *req) override {
+    req->AppendResponseHeader(kHeaderOdataVersion, kHeaderOdataVersionValue);
     // The URI of this IndexResource is normally a regex pattern. Here we get
     // all the resource index from the request URI and store in a tuple.
     // Then cast the tuple to a vector, the extracted indices will be passed as
