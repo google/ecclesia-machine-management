@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,18 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_DAEMONS_COMMON_MAIN_H_
-#define ECCLESIA_MAGENT_DAEMONS_COMMON_MAIN_H_
+#ifndef ECCLESIA_LIB_HTTP_SERVER_H_
+#define ECCLESIA_LIB_HTTP_SERVER_H_
 
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "absl/flags/flag.h"
-#include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/magent/lib/thread_pool/thread_pool.h"
+#include "ecclesia/lib/thread/thread_pool.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
-
-ABSL_FLAG(int, port, 3995, "Port number for the magent to listen on");
-ABSL_FLAG(std::string, assemblies_dir, "/etc/google/magent",
-          "Path to a directory containing JSON Assemblies");
 
 namespace ecclesia {
 
@@ -47,17 +41,15 @@ class RequestExecutor : public tensorflow::serving::net_http::EventExecutor {
 };
 
 inline std::unique_ptr<tensorflow::serving::net_http::HTTPServerInterface>
-CreateServer(int port) {
-  // Size of the thread pool for handling incoming http requests
-  constexpr unsigned kNumWorkerThreads = 5;
+CreateServer(int port, int num_threads) {
   auto options =
       std::make_unique<tensorflow::serving::net_http::ServerOptions>();
   options->AddPort(port);
-  options->SetExecutor(std::make_unique<RequestExecutor>(kNumWorkerThreads));
+  options->SetExecutor(std::make_unique<RequestExecutor>(num_threads));
   auto server = CreateEvHTTPServer(std::move(options));
   return server;
 }
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_DAEMONS_COMMON_MAIN_H_
+#endif  // ECCLESIA_LIB_HTTP_SERVER_H_

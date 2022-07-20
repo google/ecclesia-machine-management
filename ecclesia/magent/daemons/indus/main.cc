@@ -24,7 +24,6 @@
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
-#include "absl/memory/memory.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
@@ -32,6 +31,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/apifs/apifs.h"
+#include "ecclesia/lib/http/server.h"
 #include "ecclesia/lib/io/ioctl.h"
 #include "ecclesia/lib/io/pci/discovery.h"
 #include "ecclesia/lib/io/pci/location.h"
@@ -42,7 +42,6 @@
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/smbios/indus/platform_translator.h"
 #include "ecclesia/lib/types/fixed_range_int.h"
-#include "ecclesia/magent/daemons/common.h"
 #include "ecclesia/magent/lib/eeprom/eeprom.h"
 #include "ecclesia/magent/lib/eeprom/smbus_eeprom.h"
 #include "ecclesia/magent/lib/ipmi/interface_options.h"
@@ -71,7 +70,14 @@ ABSL_FLAG(std::string, odata_metadata_file_path,
 ABSL_FLAG(std::string, system_event_clear_script_path, "",
           "Path to an script that clears the system events.");
 
+ABSL_FLAG(int, port, 3995, "Port number for the magent to listen on");
+
+ABSL_FLAG(std::string, assemblies_dir, "/etc/google/magent",
+          "Path to a directory containing JSON Assemblies");
+
 namespace {
+
+constexpr int kMagentDefaultHttpThreadCount = 5;
 
 using ::tensorflow::serving::net_http::HTTPServerInterface;
 
@@ -327,7 +333,8 @@ int main(int argc, char **argv) {
   std::unique_ptr<ecclesia::SystemModel> system_model =
       std::make_unique<ecclesia::SystemModel>(std::move(params));
 
-  auto server = ecclesia::CreateServer(absl::GetFlag(FLAGS_port));
+  auto server = ecclesia::CreateServer(absl::GetFlag(FLAGS_port),
+                                       kMagentDefaultHttpThreadCount);
   server->RegisterRequestHandler(
       "/healthz",
       [](tensorflow::serving::net_http::ServerRequestInterface *req) {

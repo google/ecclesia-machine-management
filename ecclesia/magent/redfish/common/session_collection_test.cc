@@ -36,7 +36,7 @@
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
-#include "ecclesia/magent/lib/thread_pool/thread_pool.h"
+#include "ecclesia/lib/thread/thread_pool.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/client/public/httpclient.h"

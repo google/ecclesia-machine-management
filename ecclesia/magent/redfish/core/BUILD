@@ -77,7 +77,7 @@ cc_test(
         "//ecclesia/lib/apifs",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/network:testing",
-        "//ecclesia/magent/lib/thread_pool",
+        "//ecclesia/lib/thread:thread_pool",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",

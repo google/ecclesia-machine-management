@@ -28,7 +28,7 @@
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/network/testing.h"
-#include "ecclesia/magent/lib/thread_pool/thread_pool.h"
+#include "ecclesia/lib/thread/thread_pool.h"
 #include "ecclesia/magent/redfish/core/redfish_keywords.h"
 #include "tensorflow_serving/util/net_http/client/public/httpclient.h"
 #include "tensorflow_serving/util/net_http/client/public/httpclient_interface.h"

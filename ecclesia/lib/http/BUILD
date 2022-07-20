@@ -106,3 +106,17 @@ cc_proto_library(
     visibility = ["//visibility:public"],
     deps = [":cred_proto"],
 )
+
+cc_library(
+    name = "server",
+    hdrs = ["server.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//ecclesia/lib/thread:thread_pool",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/strings",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+    ],
+)

@@ -20,6 +20,7 @@ ecclesia_oss_static_linked_cc_binary(
     ],
     deps = [
         "//ecclesia/lib/apifs",
+        "//ecclesia/lib/http:server",
         "//ecclesia/lib/io:ioctl",
         "//ecclesia/lib/io/pci:discovery",
         "//ecclesia/lib/io/pci:location",
@@ -29,7 +30,6 @@ ecclesia_oss_static_linked_cc_binary(
         "//ecclesia/lib/logging:file_globals",
         "//ecclesia/lib/smbios/indus:indus_platform_translator",
         "//ecclesia/lib/types:fixed_range_int",
-        "//ecclesia/magent/daemons:magent_hdr",
         "//ecclesia/magent/lib/eeprom",
         "//ecclesia/magent/lib/ipmi",
         "//ecclesia/magent/lib/ipmi:interface_options",

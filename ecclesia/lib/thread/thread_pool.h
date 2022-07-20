@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_MAGENT_LIB_THREAD_POOL_THREAD_POOL_H_
-#define ECCLESIA_MAGENT_LIB_THREAD_POOL_THREAD_POOL_H_
+#ifndef ECCLESIA_LIB_THREAD_THREAD_POOL_H_
+#define ECCLESIA_LIB_THREAD_THREAD_POOL_H_
 
 #include <cassert>
 #include <cstddef>
@@ -89,4 +89,4 @@ class ThreadPool {
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_MAGENT_LIB_THREAD_POOL_THREAD_POOL_H_
+#endif  // ECCLESIA_LIB_THREAD_THREAD_POOL_H_

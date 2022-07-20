@@ -24,7 +24,6 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/meta/type_traits.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
@@ -32,6 +31,7 @@
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
+#include "ecclesia/lib/http/server.h"
 #include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -39,11 +39,17 @@
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
-#include "ecclesia/magent/daemons/common.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
+namespace {
+
+// Binding to port 0 will bind to any available port.
+constexpr int kDefaultPort = 0;
+constexpr int kNumThreads = 5;
+
+}  // namespace
 
 void FakeRedfishServer::ClearHandlers() {
   absl::MutexLock mu(&patch_lock_);
@@ -161,7 +167,7 @@ std::unique_ptr<RedfishInterface> FakeRedfishServer::RedfishClientInterface() {
 
 FakeRedfishServer::FakeRedfishServer(absl::string_view mockup_shar,
                                      absl::string_view mockup_uds_path)
-    : proxy_server_(ecclesia::CreateServer(0)),
+    : proxy_server_(ecclesia::CreateServer(kDefaultPort, kNumThreads)),
       mockup_server_(mockup_shar, mockup_uds_path),
       redfish_intf_(mockup_server_.RedfishClientInterface()) {
   auto handler =
