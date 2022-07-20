@@ -5,7 +5,6 @@ generated based entirely upon embedded data.
 
 """
 import argparse
-import os
 import sys
 from typing import Sequence
 
@@ -70,27 +69,6 @@ def type_to_string(ptype: descriptor_pb2.Property.Type) -> str:
         f'type_to_string() cannot map oneof "{oneof}" into a C++ type')
 
 
-def _strip_genfiles_leading_dir(path: str) -> str:
-  """Given an absolute dirpath, returns the dirpath relative to genfiles.
-
-  This is to produce a string which can be used in C++ #include statements.
-
-  Args:
-    path: absolute dirpath.
-
-  Returns:
-    string of relative dirpath from genfiles directory.
-  """
-  curr_leading_dir, rest = path.split(os.path.sep, 1)
-  # ecclesia:google3-begin(need for working with blaze)
-  # This is overwritten for bazel using copybara.
-  # ecclesia:google3-end(need for working with blaze)
-  _BUILD_ROOT_DIR = 'bin'
-  while curr_leading_dir != _BUILD_ROOT_DIR:
-    curr_leading_dir, rest = rest.split(os.path.sep, 1)
-  return rest
-
-
 def main(argv: Sequence[str]) -> None:
   parser = argparse.ArgumentParser(
       description='Generate profile based accessors.')
@@ -99,6 +77,8 @@ def main(argv: Sequence[str]) -> None:
       type=str,
       help='filepath of the compiled proto file for input')
   parser.add_argument('--h_path', type=str, help='filepath of the .h file')
+  parser.add_argument(
+      '--h_include', type=str, help='filepath for including header file')
   parser.add_argument('--cc_path', type=str, help='filepath of the .cc file')
   args = parser.parse_args(argv[1:])
 
@@ -107,7 +87,7 @@ def main(argv: Sequence[str]) -> None:
 
   render_dict = {
       'profiles': [ProfileDescriptor(pb)],
-      'header_filepath': _strip_genfiles_leading_dir(args.h_path)
+      'header_filepath': args.h_include
   }
 
   # Use the constructed environment to render the template.

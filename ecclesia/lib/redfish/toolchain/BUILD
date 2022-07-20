@@ -5,4 +5,5 @@ licenses(["notice"])
 bzl_library(
     name = "accessors",
     srcs = ["accessors.bzl"],
+    visibility = ["//visibility:public"],
 )

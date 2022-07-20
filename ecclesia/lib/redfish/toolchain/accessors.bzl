@@ -1,49 +1,75 @@
 """Macros for producing Redfish accessors."""
 
-def _redfish_profile_descriptor(name, csdl_files, redfish_profile, output, debug_output = None):
-    """Create a Profile descriptor proto from provided Redfish profile and CSDL files.
+def _cc_redfish_accessor_library_ipml(ctx):
+    outputs = []
 
-    Produces a binary proto file at the output. If the debug_output is set, an equivalent textproto
-    file will be generated.
-
-    Args:
-      name: Name of the genrule to create the protobuffer data.
-      csdl_files: List of all schema files.
-      redfish_profile: Filepath to the Redfish Profile to process.
-      output: Location to output the binary proto data.
-      debug_output: If set, location to output the text proto data.
-    """
-    outs = [output]
-    if debug_output:
-        outs.append(debug_output)
-
-    if len(csdl_files) == 0:
+    # Generate descriptor proto from the input profile and CSDL
+    redfish_profile_descriptor_name = "{}__profile_descriptor.pb".format(ctx.attr.base_name)
+    descriptor_proto_out = ctx.actions.declare_file(redfish_profile_descriptor_name)
+    outputs.append(descriptor_proto_out)
+    if len(ctx.attr.csdl_files) == 0:
         fail("CSDL files cannot be empty")
+    profile_to_descriptor_args = ctx.actions.args()
+    profile_to_descriptor_args.add("--profile", ctx.file.redfish_profile.path)
+    profile_to_descriptor_args.add_all("--csdl_files", ctx.files.csdl_files)
+    profile_to_descriptor_args.add("--output_file", descriptor_proto_out.path)
 
-    debug_command = "--debug_output=$(location {})".format(debug_output) if debug_output else ""
-
-    csdl_sources = []
-    for csdl in csdl_files:
-        csdl_sources.append("$(location {})".format(csdl))
-
-    command = \
-        """$(location //ecclesia/lib/redfish/toolchain/internal:profile_to_descriptor_main) \
-        --csdl_files {} --profile=$(location {}) --output_file=$(location {}) {}""".format(
-            " ".join(csdl_sources),
-            redfish_profile,
-            output,
-            debug_command,
-        )
-
-    native.genrule(
-        name = name,
-        srcs = csdl_files + [redfish_profile],
-        outs = outs,
-        cmd = command,
-        exec_tools = ["//ecclesia/lib/redfish/toolchain/internal:profile_to_descriptor_main"],
+    ctx.actions.run(
+        inputs = [ctx.file.redfish_profile] + ctx.files.csdl_files,
+        arguments = [profile_to_descriptor_args],
+        executable = ctx.executable._profile_to_descriptor_tool,
+        outputs = [descriptor_proto_out],
     )
 
-def cc_redfish_accessor_library(name, csdl_files, redfish_profile):
+    # Generate .h and .cc files from output descriptor proto
+    header_out = ctx.outputs.header_output
+    source_out = ctx.outputs.source_output
+    outputs.append(header_out)
+    outputs.append(source_out)
+
+    descriptor_to_cc_args = ctx.actions.args()
+    descriptor_to_cc_args.add("--proto_path_in", descriptor_proto_out.path)
+    descriptor_to_cc_args.add("--h_path", header_out.path)
+    descriptor_to_cc_args.add("--cc_path", source_out.path)
+    descriptor_to_cc_args.add("--h_include", header_out.short_path)
+
+    ctx.actions.run(
+        inputs = [descriptor_proto_out],
+        arguments = [descriptor_to_cc_args],
+        executable = ctx.executable._descriptor_to_cc_tool,
+        outputs = [header_out, source_out],
+    )
+
+    return DefaultInfo(
+        files = depset(outputs),
+        runfiles = ctx.runfiles(files = outputs),
+    )
+
+_cc_redfish_accessor_library_generate = rule(
+    implementation = _cc_redfish_accessor_library_ipml,
+    attrs = {
+        "base_name": attr.string(),
+        "csdl_files": attr.label_list(allow_files = True),
+        "redfish_profile": attr.label(allow_single_file = True),
+        "header_output": attr.output(),
+        "source_output": attr.output(),
+        "_profile_to_descriptor_tool": attr.label(
+            executable = True,
+            cfg = "exec",
+            allow_files = True,
+            default = Label("//ecclesia/lib/redfish/toolchain/internal:profile_to_descriptor_main"),
+        ),
+        "_descriptor_to_cc_tool": attr.label(
+            executable = True,
+            cfg = "exec",
+            allow_files = True,
+            default = Label("//ecclesia/lib/redfish/toolchain/internal/accessors:generate"),
+        ),
+    },
+    output_to_genfiles = True,
+)
+
+def cc_redfish_accessor_library(name, csdl_files, redfish_profile, visibility = None):
     """Macro for producing a cc_library rule which produces C++ Redfish accessors.
 
     Produces a cc_library with label matching $name.
@@ -55,31 +81,21 @@ def cc_redfish_accessor_library(name, csdl_files, redfish_profile):
       name: name of the cc_library rule to be produced.
       csdl_files: List of all schema files.
       redfish_profile: Filepath to the Redfish Profile to process.
+      visibility: visibility of cc_library generated.
     """
-    redfish_profile_descriptor_name = "{}__profile_descriptor".format(name)
     genrule_name = "{}__genrule".format(name)
+
     cc_out_filename = "{}.cc".format(name)
     h_out_filename = "{}.h".format(name)
-    output_proto_name = "{}__descriptor_proto.pb".format(name)
 
-    # Generate Profile descriptor proto
-    _redfish_profile_descriptor(
-        name = redfish_profile_descriptor_name,
+    _cc_redfish_accessor_library_generate(
+        name = genrule_name,
+        base_name = name,
         csdl_files = csdl_files,
         redfish_profile = redfish_profile,
-        output = output_proto_name,
-    )
-
-    # Run the jinja generator tool which takes a descriptor textpb and outputs the C++ files.
-    native.genrule(
-        name = genrule_name,
-        srcs = [output_proto_name],
-        outs = [
-            cc_out_filename,
-            h_out_filename,
-        ],
-        cmd = "$(location //ecclesia/lib/redfish/toolchain/internal/accessors:generate) --proto_path_in=$(location {}) --cc_path=$(location {}) --h_path=$(location {})".format(output_proto_name, cc_out_filename, h_out_filename),
-        exec_tools = ["//ecclesia/lib/redfish/toolchain/internal/accessors:generate"],
+        header_output = h_out_filename,
+        source_output = cc_out_filename,
+        visibility = ["//visibility:private"],
     )
 
     # Compile the generated C++ into a library.
@@ -92,4 +108,5 @@ def cc_redfish_accessor_library(name, csdl_files, redfish_profile):
             "@com_google_absl//absl/time",
             "//ecclesia/lib/redfish:interface",
         ],
+        visibility = visibility,
     )

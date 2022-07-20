@@ -54,6 +54,7 @@ py_test(
 py_binary(
     name = "profile_to_descriptor_main",
     srcs = ["profile_to_descriptor_main.py"],
+    visibility = ["//visibility:public"],
     deps = [
         ":profile_to_descriptor",
         "@com_google_protobuf//:protobuf_python",
