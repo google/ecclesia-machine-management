@@ -161,7 +161,6 @@ class SchemaDefinition:
       logging.info('Adding enum %s to schema definition', enum_name)
       self.enums[enum_name] = proto_enum
 
-    # TODO(b/234742768): Handle complex types
 
 
 def _preprocess_csdl_files(
@@ -206,7 +205,6 @@ def profile_to_descriptor(
   """
   schema_definitions_by_namespace = _preprocess_csdl_files(schema_files)
 
-  # TODO(b/234742768): Handle dependent schemas
 
   profile_proto = descriptor_pb2.Profile(
       profile_name=profile_data['ProfileName'],

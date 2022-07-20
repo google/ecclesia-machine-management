@@ -63,7 +63,6 @@ def type_to_string(ptype: descriptor_pb2.Property.Type) -> str:
         f'type_to_string() cannot map primitive type "{attr}" into a C++ type')
   elif isinstance(attr, type(ptype.reference)) or isinstance(
       attr, type(ptype.collection)):
-    # TODO(b/234745697): Actually handle complex types. For now just return a
     # trivial placeholder.
     return 'RedfishVariant'
   else:

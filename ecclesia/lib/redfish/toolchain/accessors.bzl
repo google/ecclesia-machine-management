@@ -63,7 +63,6 @@ def cc_redfish_accessor_library(name, csdl_files, redfish_profile):
     output_proto_name = "{}__descriptor_proto.pb".format(name)
 
     # Generate Profile descriptor proto
-    # TODO(b/234745697): Add in custom flag generating debug output proto
     _redfish_profile_descriptor(
         name = redfish_profile_descriptor_name,
         csdl_files = csdl_files,
