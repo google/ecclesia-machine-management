@@ -506,3 +506,12 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             strip_prefix = "snappy-1.1.9",
             urls = ["https://github.com/google/snappy/archive/1.1.9.zip"],
         )
+
+    if not native.existing_rule("public_redfish_schema"):
+        http_archive(
+            name = "public_redfish_schema",
+            build_file = _format_oss_path("public_redfish_schema.BUILD", package_name),
+            strip_prefix = "csdl",
+            sha256 = "88534f1ec24943fea67ec7b329ebfee8d513de4fd48dfd1d743ce218e76090fe",
+            urls = ["https://www.dmtf.org/sites/default/files/standards/documents/DSP8010_2021.4.zip"],
+        )
