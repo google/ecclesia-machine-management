@@ -35,7 +35,8 @@ class ProfileToDescriptorTest(absltest.TestCase):
     ]
 
     input_profile = None
-    input_filepath = os.path.join(workingdir, 'test/simple_profile.json')
+    input_filepath = os.path.join(
+        workingdir, 'test/profiles/simple_profile.json')
     with open(input_filepath, 'r') as profile_file:
       input_profile = json.load(profile_file)
     if not input_profile:

@@ -191,6 +191,7 @@ def _preprocess_csdl_files(
   return namespace_mapping
 
 
+# builder utilities.
 def profile_to_descriptor(
     profile_data: Mapping[str, Any],
     schema_files: Sequence[str]) -> descriptor_pb2.Profile:
@@ -250,6 +251,36 @@ def profile_to_descriptor(
               'reference') else property_proto.type.collection
           referenced_properties.add(
               (reference_type.schema_namespace, reference_type.entity_name))
+
+        # DSP0272_1.0.0 Section 11.2 ->
+        # "One additional level of JSON objects may be embedded, essentially
+        # nesting a 'PropertyRequirements' object."
+        # The spec implies that at most 1 level of property requirement
+        # nesting is allowed.
+        # If the property is nested and is of type 'collection', then create a
+        # new resource within the current schema and add properties per
+        # namespace mapping.
+        nested_property = resource_requirements['PropertyRequirements'][
+            property_requirement].get('PropertyRequirements')
+        if nested_property and property_proto.type.HasField('collection'):
+          # Go through required properties and add their types to the schema
+          nested_namespace = property_proto.type.collection.schema_namespace
+          nested_entity = property_proto.type.collection.entity_name
+          schema_definition = schema_definitions_by_namespace[nested_namespace]
+          nested_resource_proto = schema_proto.resources.add(
+              entity_name=nested_entity)
+
+          for nested_requirement in nested_property.keys():
+            property_proto = nested_resource_proto.properties.add(
+                name=nested_requirement)
+            if nested_requirement not in schema_definition.property_types[
+                nested_entity]:
+              logging.warning('Failed to find property %s in entity %s',
+                              nested_requirement, nested_entity)
+              continue
+            property_proto.type.CopyFrom(
+                schema_definition.property_types[nested_entity][
+                    nested_requirement])
 
     # Add referenced types to the appropriate schema definition
     for referenced_prop_namespace, referenced_prop_entity in referenced_properties:

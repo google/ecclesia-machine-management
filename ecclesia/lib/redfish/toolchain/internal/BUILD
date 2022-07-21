@@ -19,8 +19,32 @@ py_proto_library(
 
 cc_redfish_accessor_library(
     name = "descriptor_sample",
-    csdl_files = glob(["test/csdl_in/*.xml"]),
-    redfish_profile = "test/simple_profile.json",
+    csdl_files = [
+        "test/csdl_in/ConcertService_v1.xml",
+        "test/csdl_in/ConductorCollection_v1.xml",
+        "test/csdl_in/InstrumentCollection_v1.xml",
+        "test/csdl_in/Instrument_v1.xml",
+        "test/csdl_in/ServiceRoot_v1.xml",
+        "test/csdl_in/VenueCollection_v1.xml",
+    ],
+    redfish_profile = "test/profiles/simple_profile.json",
+)
+
+cc_redfish_accessor_library(
+    name = "redfish_accessors",
+    csdl_files = ["test/csdl_in/Assembly_v1.xml"],
+    redfish_profile = "test/profiles/Assembly.v1_0_0.json",
+)
+
+cc_test(
+    name = "redfish_accessors_test",
+    srcs = ["redfish_accessors_test.cc"],
+    deps = [
+        ":redfish_accessors",
+        "//ecclesia/lib/redfish/testing:json_mockup",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 py_library(
@@ -36,10 +60,14 @@ py_test(
     name = "profile_to_descriptor_test",
     srcs = ["profile_to_descriptor_test.py"],
     data =
-        glob([
-            "test/csdl_in/**",
-        ]) + [
-            "test/simple_profile.json",
+        [
+            "test/csdl_in/ConcertService_v1.xml",
+            "test/csdl_in/ConductorCollection_v1.xml",
+            "test/csdl_in/InstrumentCollection_v1.xml",
+            "test/csdl_in/Instrument_v1.xml",
+            "test/csdl_in/ServiceRoot_v1.xml",
+            "test/csdl_in/VenueCollection_v1.xml",
+            "test/profiles/simple_profile.json",
             "test/simple_profile_descriptor.textproto",
         ],
     deps = [
