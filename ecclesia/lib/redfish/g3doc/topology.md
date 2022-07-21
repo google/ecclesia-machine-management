@@ -2,10 +2,19 @@
 
 ## Motivation
 
-Human technicians require an unambiguous identifier to represent a unit of
-hardware for performing repair actions. This document proposes an identification
-scheme for replaceable units in a system based on a unique physical location
-using well-defined standard Redfish schemas and properties.
+Datacenter hardware require an identifier for any replaceable hardware unit
+which can satisfy the following requirements:
+
+1.  Identifiers that are stable over the life of a machine, even in the face of
+    component failure.
+2.  Identifiers which are consistent across telemetry producers to allow data
+    correlation from different producers.
+3.  Identifiers which can be understood unambiguously by humans without needing
+    additional tools.
+
+This document proposes an identification scheme for replaceable units in a
+machine based on unique physical location. The proposed scheme uses well-defined
+standard Redfish schemas and properties.
 
 ### Identification Scheme
 
