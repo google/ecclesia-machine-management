@@ -1,4 +1,4 @@
-# proto-file: //third_party/ecclesia/lib/redfish/toolchain/descriptor.proto
+# proto-file: //third_party/ecclesia/lib/redfish/toolchain/internal/descriptor.proto
 # proto-message: Profile
 
 profile_name: "Simple Test Profile"
