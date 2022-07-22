@@ -1,4 +1,5 @@
 {
+    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors",
     "@odata.type": "#SensorCollection.SensorCollection",
     "Name": "Chassis sensors",
     "Members@odata.count": 14,
