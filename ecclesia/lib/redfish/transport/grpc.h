@@ -19,10 +19,9 @@
 
 #include <memory>
 
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
-#include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
 #include "grpcpp/security/credentials.h"

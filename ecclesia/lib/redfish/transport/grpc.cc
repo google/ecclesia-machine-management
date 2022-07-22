@@ -18,21 +18,32 @@
 
 #include <cctype>
 #include <cstddef>
+#include <map>
+#include <memory>
 #include <optional>
+#include <string>
+#include <utility>
+#include <variant>
 
+#include "google/protobuf/struct.pb.h"
 #include "google/protobuf/util/json_util.h"
+#include "absl/base/thread_annotations.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
-#include "ecclesia/lib/http/codes.h"
-#include "ecclesia/lib/logging/logging.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/struct_proto_conversion.h"
+#include "ecclesia/lib/redfish/utils.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/status/rpc.h"
+#include "ecclesia/lib/time/clock.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
@@ -63,7 +74,11 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
   }
 
   RedfishTransport::Result ret_result;
-  ret_result.body = StructToJson(response.json());
+  if (response.has_json()) {
+    ret_result.body = StructToJson(response.json());
+  } else if (response.has_octet_stream()) {
+    ret_result.body = GetBytesFromString(response.octet_stream());
+  }
   ret_result.code = response.code();
   return ret_result;
 }
