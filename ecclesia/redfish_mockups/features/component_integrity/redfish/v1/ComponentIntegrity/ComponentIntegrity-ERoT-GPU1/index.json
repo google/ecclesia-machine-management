@@ -12,12 +12,14 @@
       "LocationType": "Embedded"
     }
   },
-  "IdentityAuthentication": {
-    "ResponderAuthentication": {
-      "ComponentCertificate": {
-        "@odata.id": "/redfish/v1/Chassis/ERoT-GPU1/Certificates/0"
-      },
-      "VerificationStatus": "Success"
+  "SPDM": {
+    "IdentityAuthentication": {
+      "ResponderAuthentication": {
+        "ComponentCertificate": {
+          "@odata.id": "/redfish/v1/Chassis/ERoT-GPU1/Certificates/0"
+        },
+        "VerificationStatus": "Success"
+      }
     }
   },
   "Links": {

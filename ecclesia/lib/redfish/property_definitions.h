@@ -148,6 +148,7 @@ inline constexpr char kRfPropertyAdditionalDataUri[] = "AdditionalDataURI";
 inline constexpr char kRfPropertyAbsent[] = "Absent";
 
 inline constexpr char kRfPropertyCertificates[] = "Certificates";
+inline constexpr char kRfPropertySPDM[] = "SPDM";
 inline constexpr char kRfPropertyIdentityAuthentication[] =
     "IdentityAuthentication";
 inline constexpr char kRfPropertyResponderAuthentication[] =
