@@ -16,6 +16,8 @@
 
 #include "ecclesia/lib/redfish/transport/cache.h"
 
+#include <variant>
+
 #include "absl/container/flat_hash_map.h"
 #include "absl/meta/type_traits.h"
 #include "absl/strings/string_view.h"
@@ -59,7 +61,11 @@ RedfishCachedGetterInterface::GetResult TimeBasedCache::UncachedGetInternal(
 RedfishCachedGetterInterface::GetResult TimeBasedCache::DoUncachedGet(
     absl::string_view path) {
   auto result = transport_->Get(path);
-  cache_[path] = CacheEntry{.insert_time = clock_->Now(), .data = result};
+  // Only cache the result if the body is JSON. This is to avoid unnecessary
+  // cache for octet_stream (bytes) payload.
+  if (result.ok() && std::holds_alternative<nlohmann::json>(result->body)) {
+    cache_[path] = CacheEntry{.insert_time = clock_->Now(), .data = result};
+  }
   return {.result = result, .is_fresh = true};
 }
 
