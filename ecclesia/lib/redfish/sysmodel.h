@@ -113,6 +113,9 @@ class Sysmodel {
   void QueryAllResourceInternal(Token<ResourceSensor>,
                                 ResultCallback result_callback,
                                 size_t expand_levels);
+  void QueryAllResourceInternal(Token<ResourceSensorCollection>,
+                                ResultCallback result_callback,
+                                size_t expand_levels);
   void QueryAllResourceInternal(Token<ResourcePcieFunction>,
                                 ResultCallback result_callback,
                                 size_t expand_levels);

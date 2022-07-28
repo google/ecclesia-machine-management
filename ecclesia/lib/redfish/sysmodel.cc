@@ -271,6 +271,24 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceSensor>,
       });
 }
 
+// SensorsCollection:
+// "/redfish/v1/Chassis/{id}/Sensors"
+void Sysmodel::QueryAllResourceInternal(Token<ResourceSensorCollection>,
+                                        ResultCallback result_callback,
+                                        size_t expand_levels) {
+  auto root = redfish_intf_->GetRoot();
+  root.AsIndexHelper()
+      .Get(kRfPropertyChassis,
+           {.expand = RedfishQueryParamExpand({.levels = 1})})
+      .Each()
+      .Get(kRfPropertySensors,
+           {.freshness = GetParams::Freshness::kRequired,
+            .expand = RedfishQueryParamExpand({.levels = 1})})
+      .Do([&](auto &sensor_obj) {
+        return result_callback(std::move(sensor_obj));
+      });
+}
+
 // Pcie Function:
 // "/redfish/v1/Systems/{id}/PCIeDevices/{id}/PCIeFunctions/{id}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourcePcieFunction>,

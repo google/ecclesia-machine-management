@@ -181,6 +181,7 @@ DEFINE_REDFISH_RESOURCE(ResourceThermal, "Thermal");
 DEFINE_REDFISH_RESOURCE(ResourceVoltage, "Voltage");
 DEFINE_REDFISH_RESOURCE(ResourceFan, "Fan");
 DEFINE_REDFISH_RESOURCE(ResourceSensor, "Sensor");
+DEFINE_REDFISH_RESOURCE(ResourceSensorCollection, "SensorCollection");
 DEFINE_REDFISH_RESOURCE(ResourcePcieFunction, "PCIeFunction");
 DEFINE_REDFISH_RESOURCE(ResourceComputerSystem, "ComputerSystem");
 DEFINE_REDFISH_RESOURCE(ResourceLogService, "LogService");

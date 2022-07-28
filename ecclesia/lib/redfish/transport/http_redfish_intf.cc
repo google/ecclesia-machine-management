@@ -373,7 +373,7 @@ class HttpIntfObjectImpl : public RedfishObject {
                                                   cache_state_);
     }
     if (auto uri = GetUriString(); uri.has_value()) {
-      auto get_response = intf_->UncachedGetUri(*uri);
+      auto get_response = intf_->UncachedGetUri(*uri, params);
       if (get_response.status().ok()) {
         return get_response.AsObject();
       }
