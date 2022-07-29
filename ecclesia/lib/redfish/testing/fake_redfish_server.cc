@@ -207,4 +207,29 @@ FakeRedfishServer::Config FakeRedfishServer::GetConfig() const {
                                    .port = proxy_server_->listen_port()};
 }
 
+void FakeRedfishServer::EnableExpandGetHandler(ExpandQuery expand_query) {
+  RedfishVariant redfish_var = redfish_intf_->UncachedGetUri("/redfish/v1");
+  nlohmann::json json_res;
+  std::unique_ptr<RedfishObject> obj_res = redfish_var.AsObject();
+  if (obj_res != nullptr) {
+    json_res = obj_res->GetContentAsJson();
+  }
+  nlohmann::json root_response_for_expand;
+  root_response_for_expand["ExpandQuery"]["ExpandALL"] = expand_query.ExpandAll;
+  root_response_for_expand["ExpandQuery"]["Levels"] = expand_query.Levels;
+  root_response_for_expand["ExpandQuery"]["Links"] = expand_query.Links;
+  root_response_for_expand["ExpandQuery"]["MaxLevels"] = expand_query.MaxLevels;
+  root_response_for_expand["ExpandQuery"]["NoLinks"] = expand_query.NoLinks;
+  json_res["ProtocolFeaturesSupported"] = root_response_for_expand;
+  std::string result = json_res.dump();
+  AddHttpGetHandler(
+      "/redfish/v1",
+      [&, result](tensorflow::serving::net_http::ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(result);
+        req->Reply();
+      });
+}
+
 }  // namespace ecclesia

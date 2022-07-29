@@ -41,28 +41,7 @@ class SysmodelTest : public testing::Test {
     mockup_server_ = absl::make_unique<FakeRedfishServer>(mockup_path);
     intf_ = mockup_server_->RedfishClientInterface();
     sysmodel_ = absl::make_unique<Sysmodel>(intf_.get());
-    auto root_json = nlohmann::json::parse(
-        intf_->UncachedGetUri("/redfish/v1").AsObject()->DebugString());
-    auto features_json = nlohmann::json::parse(
-        R"json({"ProtocolFeaturesSupported": {
-                "ExpandQuery": {
-                  "ExpandAll": true,
-                  "Levels": true,
-                  "Links": true,
-                  "MaxLevels": 6,
-                  "NoLinks": true
-                }
-              }})json");
-    root_json.merge_patch(features_json);
-    root_with_expands_ = root_json.dump();
-    mockup_server_->AddHttpGetHandler(
-        "/redfish/v1", [&](ServerRequestInterface *req) {
-          ::tensorflow::serving::net_http::SetContentType(req,
-                                                          "application/json");
-          req->OverwriteResponseHeader("OData-Version", "4.0");
-          req->WriteResponseString(root_with_expands_);
-          req->Reply();
-        });
+    mockup_server_->EnableExpandGetHandler();
   }
 
   void SendJsonHttpResponse(ServerRequestInterface *req,

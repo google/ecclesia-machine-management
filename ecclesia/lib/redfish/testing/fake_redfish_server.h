@@ -102,6 +102,17 @@ class FakeRedfishServer {
     int port;
   };
   Config GetConfig() const;
+  // Because FakeRedfishServer does not fully support $expand currently, we
+  // emulate an expanded response for this test.
+  struct ExpandQuery {
+    bool ExpandAll = true;
+    bool Levels = true;
+    bool Links = true;
+    int MaxLevels = 6;
+    bool NoLinks = true;
+  };
+  void EnableExpandGetHandler(ExpandQuery expand_query = {true, true, true, 6,
+                                                          true});
 
  private:
   // Store of all patches
