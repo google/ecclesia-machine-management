@@ -39,7 +39,10 @@ package_group(
 # Allowed users of the machine manager API.
 package_group(
     name = "mmanager_users",
-    packages = ["//ecclesia/mmanager/..."],
+    packages = [
+        "//ecclesia/lib/root_of_trust/...",
+        "//ecclesia/mmanager/...",
+    ],
 )
 
 # Allowed users of the machine manager service metadata.
