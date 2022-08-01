@@ -93,6 +93,9 @@ class PersistentUsageMap {
     std::optional<size_t> maximum_proto_size;
   };
 
+  // Returns `Options` instance with default settings.
+  static Options DefaultOptions();
+
   // The type usage key map type. This is just an (operation, user) pair with
   // a comparison and hashing function so that we can use it as the map key.
   struct OperationUser {

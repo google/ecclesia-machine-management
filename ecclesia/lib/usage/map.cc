@@ -309,4 +309,12 @@ absl::Status PersistentUsageMap::WriteToPersistentStoreUnlocked() {
   return absl::OkStatus();
 }
 
+PersistentUsageMap::Options PersistentUsageMap::DefaultOptions() {
+  return PersistentUsageMap::Options{
+      .auto_write_on_older_than = absl::Hours(24) * 30,
+      .trim_entries_older_than = absl::Hours(24) * 90,
+      .maximum_proto_size = 100000,
+  };
+}
+
 }  // namespace ecclesia
