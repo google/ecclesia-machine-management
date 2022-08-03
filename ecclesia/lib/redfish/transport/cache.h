@@ -121,9 +121,6 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
   GetResult UncachedGetInternal(absl::string_view path) override;
 
  private:
-  GetResult DoUncachedGet(absl::string_view path)
-      ABSL_EXCLUSIVE_LOCKS_REQUIRED(cache_lock_);
-
   struct CacheEntry {
     absl::Time insert_time;
     absl::StatusOr<RedfishTransport::Result> data;

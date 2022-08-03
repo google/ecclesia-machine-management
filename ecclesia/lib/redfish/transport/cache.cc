@@ -19,13 +19,12 @@
 #include <variant>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/meta/type_traits.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
-#include "ecclesia/lib/complexity_tracker/complexity_tracker.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 
@@ -42,27 +41,27 @@ RedfishCachedGetterInterface::GetResult NullCache::UncachedGetInternal(
 
 RedfishCachedGetterInterface::GetResult TimeBasedCache::CachedGetInternal(
     absl::string_view path) {
-  absl::MutexLock mu(&cache_lock_);
-  auto val = cache_.find(path);
-  if (val != cache_.end() &&
-      (clock_->Now() - val->second.insert_time) < max_age_) {
-    // Report cached result
-    return {.result = val->second.data, .is_fresh = false};
+  {
+    absl::MutexLock mu(&cache_lock_);
+    auto val = cache_.find(path);
+    if (val != cache_.end() &&
+        (clock_->Now() - val->second.insert_time) < max_age_) {
+      // Report cached result
+      return {.result = val->second.data, .is_fresh = false};
+    }
   }
-  return DoUncachedGet(path);
+  auto result = transport_->Get(path);
+  absl::MutexLock mu(&cache_lock_);
+  if (result.ok() && std::holds_alternative<nlohmann::json>(result->body)) {
+    cache_[path] = CacheEntry{.insert_time = clock_->Now(), .data = result};
+  }
+  return {.result = result, .is_fresh = true};
 }
 
 RedfishCachedGetterInterface::GetResult TimeBasedCache::UncachedGetInternal(
     absl::string_view path) {
-  absl::MutexLock mu(&cache_lock_);
-  return DoUncachedGet(path);
-}
-
-RedfishCachedGetterInterface::GetResult TimeBasedCache::DoUncachedGet(
-    absl::string_view path) {
   auto result = transport_->Get(path);
-  // Only cache the result if the body is JSON. This is to avoid unnecessary
-  // cache for octet_stream (bytes) payload.
+  absl::MutexLock mu(&cache_lock_);
   if (result.ok() && std::holds_alternative<nlohmann::json>(result->body)) {
     cache_[path] = CacheEntry{.insert_time = clock_->Now(), .data = result};
   }
