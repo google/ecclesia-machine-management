@@ -1,7 +1,7 @@
-diff --git a/tensorflow_serving/util/net_http/client/public/BUILD b/tensorflow_serving/util/net_http/client/public/BUILD
+diff --git a/tensorflow_serving/util/net_http/client/test_client/public/BUILD b/tensorflow_serving/util/net_http/client/test_client/public/BUILD
 index 34e9d41f..98047448 100644
---- tensorflow_serving/util/net_http/client/public/BUILD
-+++ tensorflow_serving/util/net_http/client/public/BUILD
+--- tensorflow_serving/util/net_http/client/test_client/public/BUILD
++++ tensorflow_serving/util/net_http/client/test_client/public/BUILD
 @@ -11,6 +11,7 @@ package_group(
      name = "http_client_users",
      packages = [
