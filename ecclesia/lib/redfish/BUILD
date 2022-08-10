@@ -403,6 +403,7 @@ cc_library(
     hdrs = ["query.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":interface",
         ":sysmodel",
         "@com_google_absl//absl/strings",
         "@com_googlesource_code_re2//:re2",
@@ -437,6 +438,8 @@ cc_test(
     srcs = ["query_test.cc"],
     data = [
         "//ecclesia/redfish_mockups/indus_hmb_cn:mockup.shar",
+        "//ecclesia/redfish_mockups/indus_hmb_cn_playground:mockup.shar",
+        "//ecclesia/redfish_mockups/indus_hmb_shim:mockup.shar",
     ],
     deps = [
         ":property_definitions",
