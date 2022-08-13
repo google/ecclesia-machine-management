@@ -168,5 +168,30 @@ TEST(StructProtoConversionTest, EmptyJsonToStruct) {
       )pb");
   EXPECT_THAT(test_struct, EqualsProto(expected_struct));
 }
+
+TEST(StructProtoConversionTest, StructToJsonNumberTest) {
+  google::protobuf::Struct test_struct =
+      ParseTextAsProtoOrDie<google::protobuf::Struct>(R"pb(
+        fields {
+          key: "test_integer"
+          value: { number_value: 1234.0 }
+        }
+        fields {
+          key: "test_double"
+          value: { number_value: 1234.5 }
+        }
+      )pb");
+
+  nlohmann::json json_int = StructToJson(test_struct)["test_integer"];
+  EXPECT_TRUE(json_int.is_number_integer());
+  EXPECT_FALSE(json_int.is_number_float());
+  EXPECT_EQ(json_int, 1234);
+
+  nlohmann::json json_double = StructToJson(test_struct)["test_double"];
+  EXPECT_TRUE(json_double.is_number_float());
+  EXPECT_FALSE(json_double.is_number_integer());
+  EXPECT_DOUBLE_EQ(json_double, 1234.5);
+}
+
 }  // namespace
 }  // namespace ecclesia

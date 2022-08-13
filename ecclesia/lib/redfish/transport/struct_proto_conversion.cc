@@ -16,9 +16,26 @@
 
 #include "ecclesia/lib/redfish/transport/struct_proto_conversion.h"
 
+#include <complex>
+#include <cstdint>
+#include <limits>
+
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
+namespace {
+
+void ConvertToIntegerOrDouble(nlohmann::json &json, double value) {
+  int64_t int_value = static_cast<int64_t>(value);
+  if (std::abs(static_cast<double>(int_value) - value) <
+      std::numeric_limits<double>::epsilon()) {
+    json = int_value;
+    return;
+  }
+  json = value;
+}
+
+}  // namespace
 
 nlohmann::json StructToJson(const google::protobuf::Struct &message) {
   auto json = nlohmann::json::object();
@@ -47,7 +64,7 @@ nlohmann::json ValueToJson(const google::protobuf::Value &message) {
       json = nullptr;
       break;
     case google::protobuf::Value::kNumberValue:
-      json = message.number_value();
+      ConvertToIntegerOrDouble(json, message.number_value());
       break;
     case google::protobuf::Value::kStringValue:
       json = message.string_value();

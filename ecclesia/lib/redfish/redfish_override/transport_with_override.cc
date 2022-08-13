@@ -136,13 +136,15 @@ absl::Status JsonReplace(nlohmann::json &json,
                          RedfishTransport *transport) {
   if (override_value.has_value()) {
     nlohmann::json replace_json = ValueToJson(override_value.value());
-    if (json.type() != replace_json.type()) {
+    if (json.type() != replace_json.type() &&
+        !(json.is_number() && replace_json.is_number())) {
       return absl::InvalidArgumentError(
           "Value type is different from original type");
     }
     json = replace_json;
     return absl::OkStatus();
-  } else if (override_value.has_override_by_reading()) {
+  }
+  if (override_value.has_override_by_reading()) {
     return absl::UnimplementedError("To be implemented");
   }
   return absl::InvalidArgumentError("Replace Json not found.");
