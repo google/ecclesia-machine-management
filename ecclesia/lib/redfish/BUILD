@@ -407,6 +407,7 @@ cc_library(
         ":sysmodel",
         "@com_google_absl//absl/strings",
         "@com_googlesource_code_re2//:re2",
+        "@com_json//:json",
     ],
 )
 
@@ -442,9 +443,11 @@ cc_test(
         "//ecclesia/redfish_mockups/indus_hmb_shim:mockup.shar",
     ],
     deps = [
+        ":interface",
         ":property_definitions",
         ":query",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )

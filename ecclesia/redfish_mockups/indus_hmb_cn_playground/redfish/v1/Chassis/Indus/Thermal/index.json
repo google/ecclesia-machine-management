@@ -5,6 +5,21 @@
     "Id": "Thermal",
     "Name": "Thermal",
     "Temperatures@odata.count": 24,
+    "Fans": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Fans/0",
+            "@odata.type": "#Thermal.v1_6_2.Fan",
+            "Assembly": {
+                "@odata.id": "/redfish/v1/Chassis/Indus/Assembly"
+            },
+            "FanName": "System Board Fan1",
+            "HotPluggable": false,
+            "LowerThresholdCritical": 240,
+            "LowerThresholdFatal": null,
+            "LowerThresholdNonCritical": 360,
+            "MaxReadingRange": null
+        }
+    ],
     "Temperatures": [
         {
             "@odata.id": "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/0",

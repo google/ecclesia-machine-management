@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <iostream>
+#include <iterator>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,6 +29,7 @@
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "single_include/nlohmann/json.hpp"
 #include "re2/re2.h"
 
 namespace ecclesia {
@@ -76,6 +78,35 @@ void InequalityFilterPropertyForNumbers(RedfishVariant&& var,
   };
   ApplyFilter(std::move(var), condition, temp);
 }
+
+// Helper function is used to ensure the obtained value equal or not equal to a
+// non-number value.
+template <typename F>
+void StringEqualityFilterProperty(RedfishVariant&& var, F filter_condition,
+                                  absl::string_view property,
+                                  absl::string_view inequality_string,
+                                  std::vector<RedfishVariant>& temp) {
+  if (inequality_string == "!=") {
+    const auto condition = [property,
+                            filter_condition](const RedfishVariant& variant) {
+      if (variant.AsObject()->GetContentAsJson().contains(property)) {
+        return !filter_condition(variant);
+      }
+      return false;
+    };
+    ApplyFilter(std::move(var), condition, temp);
+  } else {
+    const auto condition = [property,
+                            filter_condition](const RedfishVariant& variant) {
+      if (variant.AsObject()->GetContentAsJson().contains(property)) {
+        return filter_condition(variant);
+      }
+      return false;
+    };
+    ApplyFilter(std::move(var), condition, temp);
+  }
+}
+
 // Helper function decide which inequality or equal condition will be used.
 void FilterOnPropertyWithValue(absl::string_view inequality_string,
                                absl::string_view subpath_content,
@@ -85,6 +116,7 @@ void FilterOnPropertyWithValue(absl::string_view inequality_string,
       absl::StrSplit(subpath_content, inequality_string);
   double value;
   if (absl::SimpleAtod(split_subpath[1], &value)) {
+    // For the property value's type is int or double.
     const auto condition = [&inequality_string, value](double number) {
       if (inequality_string == ">=") return number >= value;
       if (inequality_string == ">") return number > value;
@@ -96,22 +128,35 @@ void FilterOnPropertyWithValue(absl::string_view inequality_string,
     };
     InequalityFilterPropertyForNumbers(std::move(var), condition,
                                        split_subpath[0], temp);
-  } else {
+  } else if (split_subpath[1] == "false" || split_subpath[1] == "true") {
+    // For the property value's type is boolean.
+    bool bool_value = split_subpath[1] != "false";
     const auto condition = [split_subpath,
-                            inequality_string](const RedfishVariant& variant) {
-      if (variant.AsObject()->GetContentAsJson().contains(split_subpath[0])) {
-        if (inequality_string == "!=") {
-          return variant.AsObject()
-                     ->GetContentAsJson()[std::string(split_subpath[0])] !=
-                 split_subpath[1];
-        }
-        return variant.AsObject()
-                   ->GetContentAsJson()[std::string(split_subpath[0])] ==
-               split_subpath[1];
-      }
-      return false;
+                            bool_value](const RedfishVariant& variant) {
+      return variant.AsObject()
+                 ->GetContentAsJson()[std::string(split_subpath[0])] ==
+             bool_value;
     };
-    ApplyFilter(std::move(var), condition, temp);
+    StringEqualityFilterProperty(std::move(var), condition, split_subpath[0],
+                                 inequality_string, temp);
+  } else if (split_subpath[1] == "null") {
+    // For the property value is null.
+    const auto condition = [split_subpath](const RedfishVariant& variant) {
+      return variant.AsObject()
+          ->GetContentAsJson()[std::string(split_subpath[0])]
+          .empty();
+    };
+    StringEqualityFilterProperty(std::move(var), condition, split_subpath[0],
+                                 inequality_string, temp);
+  } else {
+    // For the property value's type is string.
+    const auto condition = [split_subpath](const RedfishVariant& variant) {
+      return variant.AsObject()
+                 ->GetContentAsJson()[std::string(split_subpath[0])] ==
+             split_subpath[1];
+    };
+    StringEqualityFilterProperty(std::move(var), condition, split_subpath[0],
+                                 inequality_string, temp);
   }
 }
 
@@ -125,9 +170,24 @@ void FilterOnPropertyContainingChild(absl::string_view subpath_content,
   std::vector<RedfishVariant> subobject;
   const auto condition = [split_subpath](const RedfishVariant& variant) {
     nlohmann::json json_res = variant.AsObject()->GetContentAsJson();
+    bool bool_value = false;
     for (const auto& elem : split_subpath) {
-      if (!json_res.contains(elem) && json_res != elem &&
-          json_res.dump() != elem) {
+      if (elem == split_subpath.back()) {
+        if (json_res.is_null()) {
+          if (elem != "null") return false;
+          break;
+        }
+        if (json_res.is_number()) {
+          if (json_res.dump() != elem) return false;
+          break;
+        }
+        if (json_res.is_boolean()) {
+          bool_value = elem != "false";
+          if (bool_value != json_res) return false;
+          break;
+        }
+      }
+      if (!json_res.contains(elem) && json_res != elem) {
         return false;
       }
       if (elem != split_subpath.back()) {

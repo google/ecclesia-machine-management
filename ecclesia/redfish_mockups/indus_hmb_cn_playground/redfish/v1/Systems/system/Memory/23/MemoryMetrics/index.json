@@ -8,7 +8,9 @@
         "Google": {
             "MemoryErrorCounts": {
                 "Correctable": 0,
-                "Uncorrectable": 0
+                "Uncorrectable": 0,
+                "Count": null,
+                "Countable": false
             }
         }
     }

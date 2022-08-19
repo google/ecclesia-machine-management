@@ -16,10 +16,13 @@
 
 #include "ecclesia/lib/redfish/query.h"
 
+#include <memory>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/strings/string_view.h"
+#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 
@@ -27,43 +30,53 @@ namespace ecclesia {
 namespace {
 using ::testing::UnorderedElementsAre;
 
-// Root
-TEST(GetRedPath, RootRedPath) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
+template <const absl::string_view& mockup>
+class RedPathQueryTest : public testing::Test {
+ protected:
+  RedPathQueryTest()
+      : server_(mockup), intf_(server_.RedfishClientInterface()) {}
+
+  void PopulateIdsFromRedpath(absl::string_view redpath) {
+    GetRedPath(intf_.get(), redpath,
+               [&](std::unique_ptr<RedfishObject> object) {
+                 auto value = object->GetNodeValue<PropertyOdataId>();
+                 if (value.has_value()) {
+                   ids.push_back(std::move(*value));
+                 }
+                 return RedfishIterReturnValue::kContinue;
+               });
+  }
+
   std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetNodeValue<PropertyOdataId>();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+  FakeRedfishServer server_;
+  std::unique_ptr<RedfishInterface> intf_;
+};
+
+inline constexpr absl::string_view kMockupPathIndus =
+    "indus_hmb_cn/mockup.shar";
+inline constexpr absl::string_view kMockupPathIndusPlayground =
+    "indus_hmb_cn_playground/mockup.shar";
+inline constexpr absl::string_view kMockupPathIndusShim =
+    "indus_hmb_shim/mockup.shar";
+
+using GetRedPathTestIndus = RedPathQueryTest<kMockupPathIndus>;
+using GetRedPathTestIndusPlayground =
+    RedPathQueryTest<kMockupPathIndusPlayground>;
+using GetRedPathTestIndusShim = RedPathQueryTest<kMockupPathIndusShim>;
+
+// Root
+TEST_F(GetRedPathTestIndus, RootRedPath) {
+  PopulateIdsFromRedpath("/");
   EXPECT_THAT(ids, UnorderedElementsAre("/redfish/v1"));
 }
 
 // ********************************[*]******************************************
-TEST(GetRedPath, GetObjectAllSystem) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectAllSystem) {
+  PopulateIdsFromRedpath("/Systems[*]");
   EXPECT_THAT(ids, UnorderedElementsAre("/redfish/v1/Systems/system"));
 }
-TEST(GetRedPath, GetObjectAllMemory) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[*]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectAllMemory) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[*]");
   EXPECT_THAT(ids,
               UnorderedElementsAre("/redfish/v1/Systems/system/Memory/0",
                                    "/redfish/v1/Systems/system/Memory/1",
@@ -90,16 +103,8 @@ TEST(GetRedPath, GetObjectAllMemory) {
                                    "/redfish/v1/Systems/system/Memory/22",
                                    "/redfish/v1/Systems/system/Memory/23"));
 }
-TEST(GetRedPath, GetNoDelimiter) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[*]/Assembly";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetNoDelimiter) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[*]/Assembly");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Systems/system/Memory/0/Assembly",
                        "/redfish/v1/Systems/system/Memory/1/Assembly",
@@ -126,16 +131,8 @@ TEST(GetRedPath, GetNoDelimiter) {
                        "/redfish/v1/Systems/system/Memory/22/Assembly",
                        "/redfish/v1/Systems/system/Memory/23/Assembly"));
 }
-TEST(GetRedPath, GetArrayAllMembers) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Thermal/Temperatures[*]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetArrayAllMembers) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[*]");
   EXPECT_THAT(ids,
               UnorderedElementsAre(
                   "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/0",
@@ -163,172 +160,66 @@ TEST(GetRedPath, GetArrayAllMembers) {
                   "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/22",
                   "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/23"));
 }
-TEST(GetRedPath, WrongWordRedPath) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Syste[*]/Memory[*]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, WrongWordRedPath) {
+  PopulateIdsFromRedpath("/Syste[*]/Memory[*]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, SpaceAsRedPath) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "  ";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, SpaceAsRedPath) {
+  PopulateIdsFromRedpath("  ");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, WrongCharacterRedPath) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/System[*]/z~023=;";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, WrongCharacterRedPath) {
+  PopulateIdsFromRedpath("/System[*]/z~023=");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, EmptyRedPath) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath;
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetNodeValue<PropertyOdataId>();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, EmptyRedPath) {
+  PopulateIdsFromRedpath("");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, RedPathWithEmptyFilter) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Syste[*]/Memory[]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, RedPathWithEmptyFilter) {
+  PopulateIdsFromRedpath("/Syste[*]/Memory[]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
 // *****************************[Index]*****************************************
-TEST(GetRedPath, GetObjectByIndex) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[3]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(*std::move(value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectByIndex) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[3]");
   EXPECT_THAT(ids, UnorderedElementsAre("/redfish/v1/Systems/system/Memory/3"));
 }
-TEST(GetRedPath, GetArrayByIndex) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Thermal/Temperatures[5]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetArrayByIndex) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[5]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/5"));
 }
-TEST(GetRedPath, GetObjectByNotExistIndex) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[100]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(*std::move(value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectByNotExistIndex) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[100]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectByNegativeIndex) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[-1]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(*std::move(value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectByNegativeIndex) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[-1]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
 // *****************************[last()]****************************************
-TEST(GetRedPath, GetLastObject) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[last()]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetLastObject) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[last()]");
   EXPECT_THAT(ids,
               UnorderedElementsAre("/redfish/v1/Systems/system/Memory/23"));
 }
-TEST(GetRedPath, GetLastArray) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[last()]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetLastArray) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[last()]");
   EXPECT_THAT(ids,
               UnorderedElementsAre(
                   "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/23"));
 }
-TEST(GetRedPath, PropertyDoNotHaveMembersOrArrayToGetLast) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Thermal[last()]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, PropertyDoNotHaveMembersOrArrayToGetLast) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal[last()]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
 // ***************************[nodename]****************************************
-TEST(GetRedPath, GetObjectByNodename) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Systems[*]/Memory[SerialNumber]/Assembly";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectByNodename) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[SerialNumber]/Assembly");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Systems/system/Memory/0/Assembly",
                        "/redfish/v1/Systems/system/Memory/1/Assembly",
@@ -355,212 +246,94 @@ TEST(GetRedPath, GetObjectByNodename) {
                        "/redfish/v1/Systems/system/Memory/22/Assembly",
                        "/redfish/v1/Systems/system/Memory/23/Assembly"));
 }
-TEST(GetRedPath, GetArrayByNodename) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Systems[*]/Processors[*]/Assembly/Assemblies[Name]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetArrayByNodename) {
+  PopulateIdsFromRedpath("/Systems[*]/Processors[*]/Assembly/Assemblies[Name]");
   EXPECT_THAT(
       ids,
       UnorderedElementsAre(
           "/redfish/v1/Systems/system/Processors/0/Assembly#/Assemblies/0",
           "/redfish/v1/Systems/system/Processors/1/Assembly#/Assemblies/0"));
 }
-TEST(GetRedPath, GetArrayByNodenameWithSpecialCharacter) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Systems[*]/Processors[*]/Assembly/Assemblies[@odata.id]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetArrayByNodenameWithSpecialCharacter) {
+  PopulateIdsFromRedpath(
+      "/Systems[*]/Processors[*]/Assembly/Assemblies[@odata.id]");
   EXPECT_THAT(
       ids,
       UnorderedElementsAre(
           "/redfish/v1/Systems/system/Processors/0/Assembly#/Assemblies/0",
           "/redfish/v1/Systems/system/Processors/1/Assembly#/Assemblies/0"));
 }
-TEST(GetRedPath, GetObjectByNodenameWithNumValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Processors[MaxSpeedMHz]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectByNodenameWithNumValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Processors[MaxSpeedMHz]");
   EXPECT_THAT(ids,
               UnorderedElementsAre("/redfish/v1/Systems/system/Processors/0",
                                    "/redfish/v1/Systems/system/Processors/1"));
 }
-TEST(GetRedPath, GetUnexistNodename) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Systems[*]/Processors[*]/Assembly/Assemblies[Test]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetUnexistNodename) {
+  PopulateIdsFromRedpath("/Systems[*]/Processors[*]/Assembly/Assemblies[Test]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
 // ***************************[node=value]**************************************
-TEST(GetRedPath, GetObjectByNodenameAndValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Systems[*]/Memory[Name=DIMM0]/Assembly";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectByNodenameAndValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[Name=DIMM0]/Assembly");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Systems/system/Memory/0/Assembly"));
 }
-TEST(GetRedPath, GetObjectMemberByNodename) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[Id=system]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectMemberByNodename) {
+  PopulateIdsFromRedpath("/Systems[Id=system]");
   EXPECT_THAT(ids, UnorderedElementsAre("/redfish/v1/Systems/system"));
 }
-TEST(GetRedPath, GetObjectByNodenameAndNumValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Systems[*]/Processors[MaxSpeedMHz=4000]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectByNodenameAndNumValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Processors[MaxSpeedMHz=4000]");
   EXPECT_THAT(ids,
               UnorderedElementsAre("/redfish/v1/Systems/system/Processors/0",
                                    "/redfish/v1/Systems/system/Processors/1"));
 }
-TEST(GetRedPath, GetObjectByNodenameAndNumValueDoNotExist) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Systems[*]/Processors[MaxSpeedMHz=4001]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
-  EXPECT_THAT(ids,
-              UnorderedElementsAre());
+TEST_F(GetRedPathTestIndus, GetObjectByNodenameAndNumValueDoNotExist) {
+  PopulateIdsFromRedpath("/Systems[*]/Processors[MaxSpeedMHz=4001]");
+  EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetArrayByNodenameAndValue) {
+TEST_F(GetRedPathTestIndus, GetArrayByNodenameAndValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[Name=dimm0]");
   FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[Name=dimm0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/0"));
 }
-TEST(GetRedPath, GetObjectByNodenameAndWrongValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Systems[*]/Memory[Name=DIM]/Assembly";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground, GetObjectNodewithBoolValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Fans[HotPluggable=false]");
+  EXPECT_THAT(
+      ids, UnorderedElementsAre("/redfish/v1/Chassis/Indus/Thermal/#/Fans/0"));
+}
+TEST_F(GetRedPathTestIndusPlayground, GetObjectNodewithNullValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Fans[LowerThresholdFatal=null]");
+  EXPECT_THAT(
+      ids, UnorderedElementsAre("/redfish/v1/Chassis/Indus/Thermal/#/Fans/0"));
+}
+TEST_F(GetRedPathTestIndus, GetObjectByNodenameAndWrongValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[Name=DIM]/Assembly");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectByWrongNodenameAndValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Systems[*]/Memory[id=DIMM0]/Assembly";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectByWrongNodenameAndValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[id=DIMM0]/Assembly");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectByEmptyNodenameAndValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[=DIMM0]/Assembly";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectByEmptyNodenameAndValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[=DIMM0]/Assembly");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectByNodenameAndEmptyValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[Id=]/Assembly";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectByNodenameAndEmptyValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[Id=]/Assembly");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectByEmptyNodenameAndEmptyValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[=]/Assembly";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectByEmptyNodenameAndEmptyValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[=]/Assembly");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
 // ****************************[node!=value]************************************
-TEST(GetRedPath, GetObjectNameNotEqualValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[Id!=DIMM0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectNameNotEqualValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[Id!=DIMM0]");
   EXPECT_THAT(ids,
               UnorderedElementsAre("/redfish/v1/Systems/system/Memory/1",
                                    "/redfish/v1/Systems/system/Memory/2",
@@ -586,17 +359,8 @@ TEST(GetRedPath, GetObjectNameNotEqualValue) {
                                    "/redfish/v1/Systems/system/Memory/22",
                                    "/redfish/v1/Systems/system/Memory/23"));
 }
-TEST(GetRedPath, GetArrayNameNotEqualValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[Name!=dimm0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetArrayNameNotEqualValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[Name!=dimm0]");
   EXPECT_THAT(ids,
               UnorderedElementsAre(
                   "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/1",
@@ -623,17 +387,9 @@ TEST(GetRedPath, GetArrayNameNotEqualValue) {
                   "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/22",
                   "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/23"));
 }
-TEST(GetRedPath, GetArrayNameNotEqualNumberValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius!=45]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground, GetArrayNameNotEqualNumberValue) {
+  PopulateIdsFromRedpath(
+      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius!=45]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/12",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/13",
@@ -648,53 +404,32 @@ TEST(GetRedPath, GetArrayNameNotEqualNumberValue) {
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/22",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/23"));
 }
-TEST(GetRedPath, GetObjectByNodenameDoNotExisttNotEqualValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Systems[*]/Processors[Reading!=#Processor.v1_7_1.Processor]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectByNodenameDoNotExisttNotEqualValue) {
+  PopulateIdsFromRedpath(
+      "/Systems[*]/Processors[Reading!=#Processor.v1_7_1.Processor]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectWithWrongNameNotEqualValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[id!=DIMM0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground, GetObjectNodeNotEqualBoolValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Fans[HotPluggable!=true]");
+  EXPECT_THAT(
+      ids, UnorderedElementsAre("/redfish/v1/Chassis/Indus/Thermal/#/Fans/0"));
+}
+TEST_F(GetRedPathTestIndusPlayground, GetObjectNodeNotEqualNullValue) {
+  PopulateIdsFromRedpath(
+      "/Chassis[*]/Thermal/Fans[LowerThresholdNonCritical!=null]");
+  EXPECT_THAT(
+      ids, UnorderedElementsAre("/redfish/v1/Chassis/Indus/Thermal/#/Fans/0"));
+}
+TEST_F(GetRedPathTestIndus, GetObjectWithWrongNameNotEqualValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[id!=DIMM0]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectWithEmptyNameNotEqualValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[!=DIMM0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectWithEmptyNameNotEqualValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[!=DIMM0]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectWithNameNotEqualEmptyValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[Id!=]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectWithNameNotEqualEmptyValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[Id!=]");
   EXPECT_THAT(ids,
               UnorderedElementsAre("/redfish/v1/Systems/system/Memory/0",
                                    "/redfish/v1/Systems/system/Memory/1",
@@ -721,31 +456,14 @@ TEST(GetRedPath, GetObjectWithNameNotEqualEmptyValue) {
                                    "/redfish/v1/Systems/system/Memory/22",
                                    "/redfish/v1/Systems/system/Memory/23"));
 }
-TEST(GetRedPath, GetObjectWithEmptyNameEqualEmptyValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[!=]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectWithEmptyNameEqualEmptyValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[!=]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
 // **************************[node>=value]**************************************
-TEST(GetRedPath, GetObjectNodeValueGreaterEqualThanDoubleValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Sensors[Reading>=16115.0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectNodeValueGreaterEqualThanDoubleValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[Reading>=16115.0]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan0_rpm",
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan1_rpm",
@@ -755,16 +473,8 @@ TEST(GetRedPath, GetObjectNodeValueGreaterEqualThanDoubleValue) {
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan5_rpm",
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan6_rpm"));
 }
-TEST(GetRedPath, GetObjectNodeValueGreaterEqualThanIntValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[Reading>=16115]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectNodeValueGreaterEqualThanIntValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[Reading>=16115]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan0_rpm",
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan1_rpm",
@@ -774,17 +484,10 @@ TEST(GetRedPath, GetObjectNodeValueGreaterEqualThanIntValue) {
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan5_rpm",
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan6_rpm"));
 }
-TEST(GetRedPath, GetArrayNodeValueGreaterEqualThanDoubleValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius>=50.0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground,
+       GetArrayNodeValueGreaterEqualThanDoubleValue) {
+  PopulateIdsFromRedpath(
+      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius>=50.0]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/12",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/13",
@@ -799,17 +502,10 @@ TEST(GetRedPath, GetArrayNodeValueGreaterEqualThanDoubleValue) {
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/22",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/23"));
 }
-TEST(GetRedPath, GetArrayNodeValueGreaterEqualThanIntValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius>=50]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground,
+       GetArrayNodeValueGreaterEqualThanIntValue) {
+  PopulateIdsFromRedpath(
+      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius>=50]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/12",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/13",
@@ -824,83 +520,35 @@ TEST(GetRedPath, GetArrayNodeValueGreaterEqualThanIntValue) {
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/22",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/23"));
 }
-TEST(GetRedPath, GetObjectStringNodeValueGreaterEqual) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Sensors[ReadingType>=16115.0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectStringNodeValueGreaterEqual) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[ReadingType>=16115.0]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
-TEST(GetRedPath, GetArrayWrongNodeGreaterEqualThanIntValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[readingCelsius>=50]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground,
+       GetArrayWrongNodeGreaterEqualThanIntValue) {
+  PopulateIdsFromRedpath(
+      "/Chassis[*]/Thermal/Temperatures[readingCelsius>=50]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetArrayEmptyNodeGreaterEqualThanIntValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[>=50]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground,
+       GetArrayEmptyNodeGreaterEqualThanIntValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[>=50]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetArrayNodeGreaterEuqalThanEmptyValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius>=]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground, GetArrayNodeGreaterEuqalThanEmptyValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[ReadingCelsius>=]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetArrayEmptyNodeGreaterEqualThanEmptyValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Thermal/Temperatures[>=]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground,
+       GetArrayEmptyNodeGreaterEqualThanEmptyValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[>=]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
 // ************************* [node<=value]**************************************
-TEST(GetRedPath, GetObjectNodeValueLessEqualThanDoubleValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[Reading<=60.0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectNodeValueLessEqualThanDoubleValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[Reading<=60.0]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/chassis/Sensors/indus_eat_temp",
                        "/redfish/v1/Chassis/chassis/Sensors/indus_latm_temp",
@@ -909,16 +557,8 @@ TEST(GetRedPath, GetObjectNodeValueLessEqualThanDoubleValue) {
                        "/redfish/v1/Chassis/chassis/Sensors/i_cpu0_t",
                        "/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t"));
 }
-TEST(GetRedPath, GetObjectNodeValueLessEqualThanIntValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[Reading<=60]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectNodeValueLessEqualThanIntValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[Reading<=60]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/chassis/Sensors/indus_eat_temp",
                        "/redfish/v1/Chassis/chassis/Sensors/indus_latm_temp",
@@ -927,17 +567,10 @@ TEST(GetRedPath, GetObjectNodeValueLessEqualThanIntValue) {
                        "/redfish/v1/Chassis/chassis/Sensors/i_cpu0_t",
                        "/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t"));
 }
-TEST(GetRedPath, GetArrayNodeValueLessEqualThanDoubleValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius<=45.0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground,
+       GetArrayNodeValueLessEqualThanDoubleValue) {
+  PopulateIdsFromRedpath(
+      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius<=45.0]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/0",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/1",
@@ -952,17 +585,9 @@ TEST(GetRedPath, GetArrayNodeValueLessEqualThanDoubleValue) {
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/10",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/11"));
 }
-TEST(GetRedPath, GetArrayNodeValueLessEqualThanIntValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius<=45]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground, GetArrayNodeValueLessEqualThanIntValue) {
+  PopulateIdsFromRedpath(
+      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius<=45]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/0",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/1",
@@ -977,69 +602,30 @@ TEST(GetRedPath, GetArrayNodeValueLessEqualThanIntValue) {
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/10",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/11"));
 }
-TEST(GetRedPath, GetArrayWrongNodeValueLessEqualThanIntValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[readingCelsius<=45]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground,
+       GetArrayWrongNodeValueLessEqualThanIntValue) {
+  PopulateIdsFromRedpath(
+      "/Chassis[*]/Thermal/Temperatures[readingCelsius<=45]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetArrayEmptyNodeLessEqualThanIntValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[<=45]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground, GetArrayEmptyNodeLessEqualThanIntValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[<=45]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetArrayNodeValueLessEqualThanEmptyValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius<=]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground,
+       GetArrayNodeValueLessEqualThanEmptyValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[ReadingCelsius<=]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetArrayEmptyNodeValueLessEqualThanEmptyValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Thermal/Temperatures[<=]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground,
+       GetArrayEmptyNodeValueLessEqualThanEmptyValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[<=]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
 // ****************************[node>value]*************************************
-TEST(GetRedPath, GetObjectNodeValueGreaterThanDoubleValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[Reading>16114.9]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectNodeValueGreaterThanDoubleValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[Reading>16114.9]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan0_rpm",
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan1_rpm",
@@ -1049,16 +635,8 @@ TEST(GetRedPath, GetObjectNodeValueGreaterThanDoubleValue) {
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan5_rpm",
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan6_rpm"));
 }
-TEST(GetRedPath, GetObjectNodeValueGreaterThanIntValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[Reading>16114]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectNodeValueGreaterThanIntValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[Reading>16114]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan0_rpm",
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan1_rpm",
@@ -1068,17 +646,9 @@ TEST(GetRedPath, GetObjectNodeValueGreaterThanIntValue) {
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan5_rpm",
                        "/redfish/v1/Chassis/chassis/Sensors/indus_fan6_rpm"));
 }
-TEST(GetRedPath, GetArrayNodeValueGreaterThanDoubleValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius>45.0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground, GetArrayNodeValueGreaterThanDoubleValue) {
+  PopulateIdsFromRedpath(
+      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius>45.0]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/12",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/13",
@@ -1093,17 +663,8 @@ TEST(GetRedPath, GetArrayNodeValueGreaterThanDoubleValue) {
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/22",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/23"));
 }
-TEST(GetRedPath, GetArrayNodeValueGreaterThanIntValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius>45]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground, GetArrayNodeValueGreaterThanIntValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[ReadingCelsius>45]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/12",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/13",
@@ -1118,66 +679,26 @@ TEST(GetRedPath, GetArrayNodeValueGreaterThanIntValue) {
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/22",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/23"));
 }
-TEST(GetRedPath, GetObjectWrongNodeGreaterThanDoubleValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[reading>16114.9]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectWrongNodeGreaterThanDoubleValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[reading>16114.9]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectEmptyNodeGreaterThanDoubleValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[>16114.9]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectEmptyNodeGreaterThanDoubleValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[>16114.9]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectNodeGreaterThanEmptyValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[Reading>]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectNodeGreaterThanEmptyValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[Reading>]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectEmptyNodeGreaterThanEmptyValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[>]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectEmptyNodeGreaterThanEmptyValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[>]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
 // ***************************[node<value]**************************************
-TEST(GetRedPath, GetObjectNodeValueLessThanDoubleValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[Reading<100.0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectNodeValueLessThanDoubleValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[Reading<100.0]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/chassis/Sensors/indus_eat_temp",
                        "/redfish/v1/Chassis/chassis/Sensors/indus_latm_temp",
@@ -1186,16 +707,8 @@ TEST(GetRedPath, GetObjectNodeValueLessThanDoubleValue) {
                        "/redfish/v1/Chassis/chassis/Sensors/i_cpu0_t",
                        "/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t"));
 }
-TEST(GetRedPath, GetObjectNodeValueLessThanIntValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[Reading<100]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectNodeValueLessThanIntValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[Reading<100]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/chassis/Sensors/indus_eat_temp",
                        "/redfish/v1/Chassis/chassis/Sensors/indus_latm_temp",
@@ -1204,17 +717,9 @@ TEST(GetRedPath, GetObjectNodeValueLessThanIntValue) {
                        "/redfish/v1/Chassis/chassis/Sensors/i_cpu0_t",
                        "/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t"));
 }
-TEST(GetRedPath, GetArrayNodeValueLessThanDoubleValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius<50.0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground, GetArrayNodeValueLessThanDoubleValue) {
+  PopulateIdsFromRedpath(
+      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius<50.0]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/0",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/1",
@@ -1229,17 +734,8 @@ TEST(GetRedPath, GetArrayNodeValueLessThanDoubleValue) {
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/10",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/11"));
 }
-TEST(GetRedPath, GetArrayNodeValueLessThanIntValue) {
-  FakeRedfishServer server("indus_hmb_cn_playground/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[ReadingCelsius<50]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground, GetArrayNodeValueLessThanIntValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Thermal/Temperatures[ReadingCelsius<50]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/0",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/1",
@@ -1254,66 +750,26 @@ TEST(GetRedPath, GetArrayNodeValueLessThanIntValue) {
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/10",
                        "/redfish/v1/Chassis/Indus/Thermal/#/Temperatures/11"));
 }
-TEST(GetRedPath, GetObjectWrongNodeValueLessThanDoubleValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[reading<100.0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectWrongNodeValueLessThanDoubleValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[reading<100.0]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectEmptyNodeValueLessThanDoubleValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[<100.0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectEmptyNodeValueLessThanDoubleValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[<100.0]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectNodeValueLessThanEmptyValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[Reading<]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectNodeValueLessThanEmptyValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[Reading<]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectEmptyNodeValueLessThanEmptyValue) {
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Chassis[*]/Sensors[<]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusShim, GetObjectEmptyNodeValueLessThanEmptyValue) {
+  PopulateIdsFromRedpath("/Chassis[*]/Sensors[<]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
 // ***************************[node.child]**************************************
-TEST(GetRedPath, GetObjectChild) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[Status.State]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectChild) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[Status.State]");
   EXPECT_THAT(ids,
               UnorderedElementsAre("/redfish/v1/Systems/system/Memory/0",
                                    "/redfish/v1/Systems/system/Memory/1",
@@ -1340,17 +796,8 @@ TEST(GetRedPath, GetObjectChild) {
                                    "/redfish/v1/Systems/system/Memory/22",
                                    "/redfish/v1/Systems/system/Memory/23"));
 }
-TEST(GetRedPath, GetArrayChild) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Assembly/Assemblies[Oem.Google]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetArrayChild) {
+  PopulateIdsFromRedpath("/Chassis[*]/Assembly/Assemblies[Oem.Google]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0",
                        "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/1",
@@ -1371,17 +818,9 @@ TEST(GetRedPath, GetArrayChild) {
                        "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/16",
                        "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/17"));
 }
-TEST(GetRedPath, GetArrayMultiChild) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Assembly/Assemblies[Oem.Google.AttachedTo]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetArrayMultiChild) {
+  PopulateIdsFromRedpath(
+      "/Chassis[*]/Assembly/Assemblies[Oem.Google.AttachedTo]");
   EXPECT_THAT(ids, UnorderedElementsAre(
                        "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/1",
                        "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/2",
@@ -1401,96 +840,39 @@ TEST(GetRedPath, GetArrayMultiChild) {
                        "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/16",
                        "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/17"));
 }
-TEST(GetRedPath, GetArrayMultiChildAndVelue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
+TEST_F(GetRedPathTestIndus, GetArrayMultiChildAndValue) {
+  PopulateIdsFromRedpath(
       "/Systems[*]/Processors[*]/"
-      "Metrics[Oem.Google.ProcessorErrorCounts.Correctable=0]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+      "Metrics[Oem.Google.ProcessorErrorCounts.Correctable=0]");
   EXPECT_THAT(ids,
               UnorderedElementsAre(
                   "/redfish/v1/Systems/system/Processors/0/ProcessorMetrics",
                   "/redfish/v1/Systems/system/Processors/1/ProcessorMetrics"));
 }
-TEST(GetRedPath, GetObjectWithWrongNodeAndChild) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[status.State]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectWithWrongNodeAndChild) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[status.State]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectWithNodeAndWrongChild) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[Status.state]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectWithNodeAndWrongChild) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[Status.state]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectWithEmptyNodeAndChild) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[.state]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectWithEmptyNodeAndChild) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[.state]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectWithNodeAndEmptyChild) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[Status.]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectWithNodeAndEmptyChild) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[Status.]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectWithEmptyNodeAndEmptyChild) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[.]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectWithEmptyNodeAndEmptyChild) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[.]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
 // *************************[node.child=value]**********************************
-TEST(GetRedPath, GetObjectChildwithValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Systems[*]/Memory[Status.State=Enabled]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectChildwithValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[Status.State=Enabled]");
   EXPECT_THAT(ids,
               UnorderedElementsAre("/redfish/v1/Systems/system/Memory/0",
                                    "/redfish/v1/Systems/system/Memory/1",
@@ -1517,17 +899,9 @@ TEST(GetRedPath, GetObjectChildwithValue) {
                                    "/redfish/v1/Systems/system/Memory/22",
                                    "/redfish/v1/Systems/system/Memory/23"));
 }
-TEST(GetRedPath, GetArrayChildwithValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Chassis[*]/Thermal/Temperatures[Status.State=Enabled]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetArrayChildwithValue) {
+  PopulateIdsFromRedpath(
+      "/Chassis[*]/Thermal/Temperatures[Status.State=Enabled]");
   EXPECT_THAT(ids,
               UnorderedElementsAre(
                   "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/0",
@@ -1555,41 +929,30 @@ TEST(GetRedPath, GetArrayChildwithValue) {
                   "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/22",
                   "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/23"));
 }
-TEST(GetRedPath, GetObjectNodeAndChildwithWrongValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath =
-      "/Systems[*]/Memory[status.State=Enable]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndusPlayground, GetObjectNodeAndChildwithNullValue) {
+  PopulateIdsFromRedpath(
+      "/Systems[*]/Memory[*]/"
+      "Metrics[Oem.Google.MemoryErrorCounts.Count=null]");
+  EXPECT_THAT(ids, UnorderedElementsAre(
+                       "/redfish/v1/Systems/system/Memory/23/MemoryMetrics"));
+}
+TEST_F(GetRedPathTestIndusPlayground, GetObjectNodeAndChildwithBoolValue) {
+  PopulateIdsFromRedpath(
+      "/Systems[*]/Memory[*]/"
+      "Metrics[Oem.Google.MemoryErrorCounts.Countable=false]");
+  EXPECT_THAT(ids, UnorderedElementsAre(
+                       "/redfish/v1/Systems/system/Memory/23/MemoryMetrics"));
+}
+TEST_F(GetRedPathTestIndus, GetObjectNodeAndChildwithWrongValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[status.State=Enable]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectNodeAndChildwithEmptyValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[Status.State=]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectNodeAndChildwithEmptyValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[Status.State=]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
-TEST(GetRedPath, GetObjectEmptyNodeAndEmptyChildwithEmptyValue) {
-  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  std::vector<std::string> ids;
-  constexpr absl::string_view kRedpath = "/Systems[*]/Memory[.=]";
-  GetRedPath(intf.get(), kRedpath, [&](std::unique_ptr<RedfishObject> object) {
-    auto value = object->GetUriString();
-    ids.push_back(std::move(*value));
-    return RedfishIterReturnValue::kContinue;
-  });
+TEST_F(GetRedPathTestIndus, GetObjectEmptyNodeAndEmptyChildwithEmptyValue) {
+  PopulateIdsFromRedpath("/Systems[*]/Memory[.=]");
   EXPECT_THAT(ids, UnorderedElementsAre());
 }
 
