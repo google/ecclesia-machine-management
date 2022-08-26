@@ -392,6 +392,10 @@ absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
   if (extend_pos != std::string::npos) {
     path = path.substr(0, extend_pos);
   }
+  extend_pos = path.find_first_of('#');
+  if (extend_pos != std::string::npos) {
+    path = path.substr(0, extend_pos);
+  }
   auto iter = override_policy_.override_content_map_uri().find(path);
   if (iter != override_policy_.override_content_map_uri().end()) {
     for (const auto &field : iter->second.override_field()) {
