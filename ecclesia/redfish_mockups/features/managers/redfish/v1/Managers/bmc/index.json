@@ -1,0 +1,19 @@
+{
+  "@odata.id": "/redfish/v1/Managers/bmc",
+  "@odata.type": "#Manager.v1_14_0.Manager",
+  "DateTime": "2022-09-07T13:21:31+00:00",
+  "Description": "Baseboard Management Controller",
+  "Id": "bmc",
+  "LastResetTime": "2022-08-27T06:45:18+00:00",
+  "ManagerType": "BMC",
+  "Model": "OpenBmc",
+  "Name": "OpenBmc Manager",
+  "PowerState": "On",
+  "ServiceEntryPointUUID": "c0b1b58c-0a56-43bc-b696-e23d8301b2c7",
+  "Status": {
+      "Health": "OK",
+      "HealthRollup": "OK",
+      "State": "Enabled"
+  },
+  "UUID": "c704ce4d-bc0e-42b9-ad55-4926704e8538"
+}
