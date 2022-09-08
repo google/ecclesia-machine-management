@@ -411,6 +411,13 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "status",
+    hdrs = ["status.h"],
+    visibility = ["//visibility:public"],
+    deps = ["@com_google_absl//absl/strings"],
+)
+
 proto_library(
     name = "to_proto_test_proto",
     srcs = ["to_proto_test.proto"],
