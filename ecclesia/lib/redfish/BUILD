@@ -78,6 +78,48 @@ cc_test(
 )
 
 cc_library(
+    name = "manager",
+    srcs = [
+        "manager.cc",
+    ],
+    hdrs = [
+        "manager.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":interface",
+        ":property_definitions",
+        ":status",
+        "//ecclesia/lib/time:proto",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+        "@com_google_absl//absl/types:optional",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_test(
+    name = "manager_test",
+    srcs = ["manager_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/features/managers:mockup.shar",
+    ],
+    deps = [
+        ":interface",
+        ":manager",
+        ":property",
+        ":property_definitions",
+        ":test_mockup",
+        "//ecclesia/lib/testing:proto",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
     name = "property",
     hdrs = ["property.h"],
     visibility = ["//visibility:public"],

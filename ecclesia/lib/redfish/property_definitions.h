@@ -207,6 +207,7 @@ DEFINE_REDFISH_RESOURCE(OemResourceRootOfTrust, "RootOfTrust");
 
 DEFINE_REDFISH_PROPERTY(PropertyOdataId, std::string, "@odata.id");
 DEFINE_REDFISH_PROPERTY(PropertyOdataType, std::string, "@odata.type");
+DEFINE_REDFISH_PROPERTY(PropertyUuid, std::string, "UUID");
 DEFINE_REDFISH_PROPERTY(PropertyMembers, std::string, "Members");
 DEFINE_REDFISH_PROPERTY(PropertyMembersCount, int, "Members@odata.count");
 DEFINE_REDFISH_PROPERTY(PropertyCapacityMiB, int, "CapacityMiB");
@@ -338,6 +339,8 @@ DEFINE_REDFISH_PROPERTY(PropertyAdditionalDataURI, std::string,
 DEFINE_REDFISH_PROPERTY(PropertyCreatedTime, std::string, "Created");
 DEFINE_REDFISH_PROPERTY(PropertySlotType, std::string, "SlotType");
 DEFINE_REDFISH_PROPERTY(PropertyReleaseDate, std::string, "ReleaseDate");
+DEFINE_REDFISH_PROPERTY(PropertyServiceEntryPointUuid, std::string,
+                        "ServiceEntryPointUUID");
 
 // ManagerDiagnosticData properties
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
