@@ -33,7 +33,7 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> GetManagerForRoot(
 // Returns an "uptime" for a Manager resource by calculating the duration
 // between the current system time and the last reset time.
 absl::StatusOr<google::protobuf::Duration> GetUptimeForManager(
-    std::unique_ptr<RedfishObject> mgr_obj);
+    const RedfishObject &mgr_obj);
 
 }  // namespace ecclesia
 

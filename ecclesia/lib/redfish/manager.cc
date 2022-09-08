@@ -71,17 +71,13 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> GetManagerForRoot(
 }
 
 absl::StatusOr<google::protobuf::Duration> GetUptimeForManager(
-    std::unique_ptr<RedfishObject> mgr_obj) {
-  if (mgr_obj == nullptr) {
-    return absl::InternalError("nullptr was passed as `mgr_obj` parameter.");
-  }
-
-  std::optional<absl::Time> dt = mgr_obj->GetNodeValue<PropertyDateTime>();
+    const RedfishObject &mgr_obj) {
+  std::optional<absl::Time> dt = mgr_obj.GetNodeValue<PropertyDateTime>();
   if (!dt.has_value()) {
     return absl::InternalError(UnableToGetPropertyMessage<PropertyDateTime>());
   }
   std::optional<absl::Time> last_reset_dt =
-      mgr_obj->GetNodeValue<PropertyLastResetTime>();
+      mgr_obj.GetNodeValue<PropertyLastResetTime>();
   if (!last_reset_dt.has_value()) {
     return absl::InternalError(
         UnableToGetPropertyMessage<PropertyLastResetTime>());
