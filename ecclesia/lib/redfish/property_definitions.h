@@ -224,6 +224,7 @@ DEFINE_REDFISH_PROPERTY(PropertyMemoryDeviceType, std::string,
 DEFINE_REDFISH_PROPERTY(PropertyName, std::string, "Name");
 DEFINE_REDFISH_PROPERTY(PropertyId, std::string, "Id");
 DEFINE_REDFISH_PROPERTY(PropertyOperatingSpeedMhz, int, "OperatingSpeedMhz");
+DEFINE_REDFISH_PROPERTY(PropertyOperatingSpeedMHz, int, "OperatingSpeedMHz");
 DEFINE_REDFISH_PROPERTY(PropertyPartNumber, std::string, "PartNumber");
 DEFINE_REDFISH_PROPERTY(PropertyPhysicalContext, std::string,
                         "PhysicalContext");
