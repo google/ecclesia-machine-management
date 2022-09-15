@@ -342,6 +342,11 @@ DEFINE_REDFISH_PROPERTY(PropertySlotType, std::string, "SlotType");
 DEFINE_REDFISH_PROPERTY(PropertyReleaseDate, std::string, "ReleaseDate");
 DEFINE_REDFISH_PROPERTY(PropertyServiceEntryPointUuid, std::string,
                         "ServiceEntryPointUUID");
+DEFINE_REDFISH_PROPERTY(PropertyAllowableMaxMHz, int, "AllowableMaxMHz");
+DEFINE_REDFISH_PROPERTY(PropertyAllowedSpeedsMHz, std::vector<int>,
+                        "AllowedSpeedsMHz");
+DEFINE_REDFISH_PROPERTY(PropertyAllowableMax, int, "AllowableMax");
+DEFINE_REDFISH_PROPERTY(PropertyAllowableMin, int, "AllowableMin");
 
 // ManagerDiagnosticData properties
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
