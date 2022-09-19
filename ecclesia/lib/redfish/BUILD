@@ -500,3 +500,24 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_binary(
+    name = "node_toplogy_render_main",
+    srcs = ["node_toplogy_render_main.cc"],
+    deps = [
+        ":interface",
+        ":node_topology",
+        ":topology",
+        "//ecclesia/lib/http:cred_cc_proto",
+        "//ecclesia/lib/http:curl_client",
+        "//ecclesia/lib/redfish/transport:cache",
+        "//ecclesia/lib/redfish/transport:http",
+        "//ecclesia/lib/redfish/transport:http_redfish_intf",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
