@@ -1,0 +1,24 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "AssemblyCollector"
+subquery {
+  subquery_id: "Memory"
+  redpath: "/Systems[*]/Memory[*]"
+  properties { name: "serial_number" property: "SerialNumber" type: STRING }
+  properties { name: "part_number" property: "PartNumber" type: STRING }
+}
+
+subquery {
+  subquery_id: "Processors"
+  redpath: "/Systems[*]/Processors[*]"
+  properties { name: "serial_number" property: "SerialNumber" type: STRING }
+  properties { name: "part_number" property: "PartNumber" type: STRING }
+}
+
+subquery {
+  subquery_id: "Chassis"
+  redpath: "/Chassis[*]"
+  properties { name: "serial_number" property: "SerialNumber" type: STRING }
+  properties { name: "part_number" property: "PartNumber" type: STRING }
+}

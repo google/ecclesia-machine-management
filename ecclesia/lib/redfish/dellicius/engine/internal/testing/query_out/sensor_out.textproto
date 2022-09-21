@@ -1,0 +1,66 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQueryResult
+
+subquery_output_by_id {
+  key: "Sensors"
+  value {
+    data {
+      name: "Reading"
+      int64_value: 16115
+    }
+    data {
+      name: "Reading"
+      int64_value: 16115
+    }
+    data {
+      name: "Reading"
+      int64_value: 16115
+    }
+    data {
+      name: "Reading"
+      int64_value: 16115
+    }
+    data {
+      name: "Reading"
+      int64_value: 16115
+    }
+    data {
+      name: "Reading"
+      int64_value: 16115
+    }
+    data {
+      name: "Reading"
+      int64_value: 16115
+    }
+    data {
+      name: "Reading"
+      int64_value: 28
+    }
+    data {
+      name: "Reading"
+      int64_value: 35
+    }
+    data {
+      name: "Reading"
+      int64_value: 30
+    }
+    data {
+      name: "Reading"
+      int64_value: 30
+    }
+    data {
+      name: "Reading"
+      int64_value: 60
+    }
+    data {
+      name: "Reading"
+      int64_value: 60
+    }
+  }
+}
+start_timestamp {
+  seconds: 10
+}
+end_timestamp {
+  seconds: 10
+}
