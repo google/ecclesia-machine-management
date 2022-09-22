@@ -26,8 +26,12 @@ namespace ecclesia {
 
 // Helper functions standardizing status messages for frequently-encountered
 // errors.
-inline std::string UnableToGetAsFreshObjectMessage(absl::string_view uri) {
-  return absl::StrCat("Unable to get '", uri, "' as fresh object.");
+inline std::string UnableToGetAsFreshObjectMessage(
+    std::optional<absl::string_view> uri) {
+  if (!uri.has_value()) {
+    return absl::StrCat("Unable to get fresh object for unspecified URI.");
+  }
+  return absl::StrCat("Unable to get '", *uri, "' as fresh object.");
 }
 inline std::string UnableToGetAsObjectMessage(absl::string_view property_name) {
   return absl::StrCat("Unable to get '", property_name, "' as object.");
