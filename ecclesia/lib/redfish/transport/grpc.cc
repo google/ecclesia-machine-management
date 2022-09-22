@@ -236,6 +236,9 @@ absl::Status ValidateEndpoint(absl::string_view endpoint) {
       return absl::InvalidArgumentError(
           absl::StrCat("bad endpoint: ", endpoint, " ;no colons inside a uds"));
     }
+  } else if (absl::StartsWith(endpoint, "google:")) {
+    // Support Google resolver
+    return absl::OkStatus();
   } else {
     size_t pos = endpoint.find_last_of(':');
     if (pos == endpoint.npos || pos + 1 == endpoint.size()) {
