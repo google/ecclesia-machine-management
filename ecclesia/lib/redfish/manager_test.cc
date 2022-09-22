@@ -57,7 +57,7 @@ TEST(RedfishInterface, GetUptimeForManager) {
       GetManagerForRoot(rf_intf->GetRoot());
   ASSERT_TRUE(manager.ok());
   absl::StatusOr<google::protobuf::Duration> uptime =
-      GetUptimeForManager(*std::move(manager));
+      GetUptimeForManager(**manager);
   ASSERT_TRUE(uptime.ok());
   EXPECT_THAT(*uptime, EqualsProto(R"pb(seconds: 974173)pb"));
 }
