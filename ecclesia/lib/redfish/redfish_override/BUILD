@@ -13,7 +13,7 @@ proto_data(
     ],
     proto_name = "ecclesia.OverridePolicy",
     visibility = [
-        "//visibility:public",
+        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
     ],
 )
 
@@ -26,7 +26,7 @@ proto_data(
     ],
     proto_name = "ecclesia.OverridePolicySelector",
     visibility = [
-        "//visibility:public",
+        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
     ],
 )
 
@@ -85,6 +85,8 @@ proto_library(
 
 cc_proto_library(
     name = "rf_override_cc_proto",
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+    ],
     deps = [":rf_override_proto"],
 )
