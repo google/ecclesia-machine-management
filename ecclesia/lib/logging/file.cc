@@ -51,8 +51,16 @@ ABSL_FLAG(
     "Directories that the file logging should attempt to write logs to. The "
     "first directory in the list that exists is the one which will be used.");
 
+ABSL_FLAG(int, ecclesia_file_log_level, -1,
+          "The level of logging to create log files for. If none is provided "
+          "or the value provided is outside of 0 to 4 inclusive range, the "
+          "default of kDefaultLogLevel is used instead.");
+
 namespace ecclesia {
 namespace {
+
+constexpr int kDefaultLogLevel = 3;
+constexpr int kMaxLogLevel = 4;
 
 // Provides a function that can be called by the absl failure signal handler to
 // log the given test to all of the known logfiles. In order to make this
@@ -108,11 +116,14 @@ absl::StatusOr<std::unique_ptr<FileLogger>> FileLogger::Create(
   if (!maybe_dir.ok()) return maybe_dir.status();
 
   // We found a logging directory, so try to create files.
-  static constexpr int kMaxLogLevel = 3;
+  int log_level = absl::GetFlag(FLAGS_ecclesia_file_log_level);
+  if (log_level < 0 || log_level > kMaxLogLevel) {
+    log_level = kDefaultLogLevel;
+  }
   absl::Time creation_time = clock->Now();
   std::vector<LogFile> logfiles;
-  logfiles.reserve(kMaxLogLevel + 1);
-  for (int level = 0; level <= kMaxLogLevel; ++level) {
+  logfiles.reserve(log_level + 1);
+  for (int level = 0; level <= log_level; ++level) {
     logfiles.push_back(
         OpenLogFile(*maybe_dir, base_filename, level, creation_time));
   }
@@ -180,7 +191,7 @@ FileLogger::LogFile FileLogger::OpenLogFile(absl::string_view logging_dir,
   // Try to symlink. If it fails log an error, but continue.
   if (symlink(log_filename.c_str(), symlink_path.c_str()) == -1) {
     PosixErrorLog() << "unable to create " << symlink_path << " symlink";
-  };
+  }
 
   // Construct the actual log file stream.
   std::string log_path = JoinFilePaths(logging_dir, log_filename);

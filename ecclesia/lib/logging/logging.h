@@ -87,7 +87,11 @@ inline LogMessageStream InfoLog(
 }
 inline LogMessageStream DebugLog(
     SourceLocation loc = SourceLocation::current()) {
+#ifndef NDEBUG
   return GetGlobalLogger().MakeStream(4, loc);
+#else
+  return GetGlobalLogger().MakeNullStream();
+#endif
 }
 
 // An function that will check a condition and log a fatal error if it fails.
@@ -109,11 +113,10 @@ inline LogMessageStream Check(bool condition, absl::string_view description,
                               SourceLocation loc = SourceLocation::current()) {
   if (condition) {
     return GetGlobalLogger().MakeNullStream();
-  } else {
-    auto fatal_logger = GetGlobalLogger().MakeStream(0, loc);
-    fatal_logger << "Check failed (" << description << ") ";
-    return fatal_logger;
   }
+  auto fatal_logger = GetGlobalLogger().MakeStream(0, loc);
+  fatal_logger << "Check failed (" << description << ") ";
+  return fatal_logger;
 }
 
 // A macro version of Check that will just use the condition expression as the
