@@ -23,9 +23,9 @@
 #include <string>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "ecclesia/lib/http/cred.pb.h"
@@ -84,19 +84,23 @@ int RealMain(int argc, char* argv[]) {
   std::vector<std::string> lines;
   lines.push_back("// Start of the digraph");
   lines.push_back("digraph {");
+  lines.push_back("  graph [splines=ortho, nodesep=0.25]");
   lines.push_back("  rankdir = LR;");
   lines.push_back("  node [shape=box];");
   lines.push_back("  edge [arrowsize=0.75];");
 
-  absl::flat_hash_set<std::string> seen_devpaths;
+  absl::flat_hash_map<std::string, uint32_t> devpath_to_counter;
   absl::flat_hash_map<Node*, std::string> node_to_secondary_devpath;
   for (auto& node : topology.nodes) {
     std::string devpath = node->local_devpath;
-    if (seen_devpaths.contains(devpath)) {
+    auto [it, inserted] = devpath_to_counter.try_emplace(devpath, 0);
+    if (!inserted) {
       // Need to create the node as a secondary node
       lines.push_back("  // Duplicate devpath found");
+      uint32_t current_counter = ++it->second;
+      absl::StrAppend(&devpath, "_dupe_", current_counter);
+      node_to_secondary_devpath[node.get()] = devpath;
     }
-    seen_devpaths.insert(devpath);
 
     lines.push_back(absl::StrFormat(
         "  \"%s\" [tooltip=\"%s\", label=<<b>%s</b><br/><i>%s</i>>]", devpath,
@@ -116,10 +120,24 @@ int RealMain(int argc, char* argv[]) {
 
       auto children = topology.node_to_children.find(current_node);
       if (children != topology.node_to_children.end()) {
+        // Check if the current node has a duplicated devpath
+        auto current_node_local_devpath = current_node->local_devpath;
+        if (auto current_node_it = node_to_secondary_devpath.find(current_node);
+            current_node_it != node_to_secondary_devpath.end()) {
+          current_node_local_devpath = current_node_it->second;
+        }
+
         for (auto* child : children->second) {
+          // Check if the child node has a duplicated devpath
+          auto child_local_devpath = child->local_devpath;
+          if (auto child_it = node_to_secondary_devpath.find(child);
+              child_it != node_to_secondary_devpath.end()) {
+            child_local_devpath = child_it->second;
+          }
+
           lines.push_back(absl::StrFormat("  \"%s\" -> \"%s\"",
-                                          current_node->local_devpath,
-                                          child->local_devpath));
+                                          current_node_local_devpath,
+                                          child_local_devpath));
 
           queue.push_back(child);
         }

@@ -514,7 +514,6 @@ cc_binary(
         "//ecclesia/lib/redfish/transport:http",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
         "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/strings",
