@@ -30,6 +30,7 @@
 #include "absl/strings/str_join.h"
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
+#include "ecclesia/lib/logging/file_globals.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/topology.h"
@@ -46,7 +47,7 @@ namespace ecclesia {
 namespace {
 
 int RealMain(int argc, char* argv[]) {
-  absl::ParseCommandLine(argc, argv);
+  TrySetGlobalLoggerToFileLogger(absl::ParseCommandLine(argc, argv)[0]);
 
   std::string hostname_port = absl::GetFlag(FLAGS_hostname_port),
               unix_domain_socket = absl::GetFlag(FLAGS_unix_domain_socket);
