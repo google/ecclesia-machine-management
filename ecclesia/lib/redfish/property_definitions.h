@@ -117,6 +117,7 @@ inline constexpr char kRfPropertyPartLocation[] = "PartLocation";
 inline constexpr char kRfPropertyCables[] = "Cables";
 inline constexpr char kRfPropertyCableUpstreamResources[] = "UpstreamResources";
 inline constexpr char kRfPropertySlots[] = "Slots";
+inline constexpr char kRfPropertyMemorySummary[] = "MemorySummary";
 
 inline constexpr char kRfOemPropertyAssociatedWith[] = "AssociatedWith";
 inline constexpr char kRfOemPropertyAttachedTo[] = "AttachedTo";
@@ -347,6 +348,7 @@ DEFINE_REDFISH_PROPERTY(PropertyAllowedSpeedsMHz, std::vector<int>,
                         "AllowedSpeedsMHz");
 DEFINE_REDFISH_PROPERTY(PropertyAllowableMax, int, "AllowableMax");
 DEFINE_REDFISH_PROPERTY(PropertyAllowableMin, int, "AllowableMin");
+DEFINE_REDFISH_PROPERTY(PropertyECCModeEnabled, bool, "ECCModeEnabled");
 
 // ManagerDiagnosticData properties
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
