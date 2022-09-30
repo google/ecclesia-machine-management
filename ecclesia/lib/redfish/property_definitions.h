@@ -349,6 +349,7 @@ DEFINE_REDFISH_PROPERTY(PropertyAllowedSpeedsMHz, std::vector<int>,
 DEFINE_REDFISH_PROPERTY(PropertyAllowableMax, int, "AllowableMax");
 DEFINE_REDFISH_PROPERTY(PropertyAllowableMin, int, "AllowableMin");
 DEFINE_REDFISH_PROPERTY(PropertyECCModeEnabled, bool, "ECCModeEnabled");
+DEFINE_REDFISH_PROPERTY(PropertyTotalMemorySizeMiB, int, "TotalMemorySizeMiB");
 
 // ManagerDiagnosticData properties
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
