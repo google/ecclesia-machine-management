@@ -81,12 +81,12 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
         )
 
     if not native.existing_rule("com_google_absl"):
-        # Abseil. Latest feature not releases yet. Picked up a commit from Sep 2, 2020
+        # Abseil. Abseil LTS branch, June 2022, Patch 1.
         http_archive(
             name = "com_google_absl",
-            sha256 = "5ec35586b685eea11f198bb6e75f870e37fde62d15b95a3897c37b2d0bbd9017",
-            strip_prefix = "abseil-cpp-143a27800eb35f4568b9be51647726281916aac9",
-            urls = ["https://github.com/abseil/abseil-cpp/archive/143a27800eb35f4568b9be51647726281916aac9.zip"],
+            sha256 = "54707f411cb62a26a776dad5fd60829098c181700edcd022ea5c2ca49e9b7ef1",
+            strip_prefix = "abseil-cpp-20220623.1",
+            urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20220623.1.zip"],
         )
 
     if not native.existing_rule("com_google_absl_py"):
