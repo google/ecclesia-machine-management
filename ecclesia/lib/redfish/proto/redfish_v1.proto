@@ -37,6 +37,14 @@ message Response {
   uint32 code = 2;
 }
 
+message GetOverridePolicyRequest {}
+
+message GetOverridePolicyResponse {
+  // Contents of the policy file as raw bytes. Encoding is defined by the source
+  // file.
+  bytes policy = 1;
+}
+
 // The dynamic Redfish service definition.
 service RedfishV1 {
   // Sends a GET request
@@ -49,4 +57,7 @@ service RedfishV1 {
   rpc Put(Request) returns (Response) {}
   // Sends a DELETE request
   rpc Delete(Request) returns (Response) {}
+  // Get Redfish override data
+  rpc GetOverridePolicy(GetOverridePolicyRequest)
+      returns (GetOverridePolicyResponse) {}
 }
