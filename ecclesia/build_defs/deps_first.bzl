@@ -61,6 +61,14 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
     Args:
       package_name: The name of the Ecclesia external package.
     """
+    if not native.existing_rule("com_google_absl"):
+        # Abseil. Latest feature not releases yet. Picked up a commit from Sep 30, 2022
+        http_archive(
+            name = "com_google_absl",
+            sha256 = "f7d92ecdff271fc491a918d4193d02a300072a5c2d949ee0ce561067acd5c043",
+            strip_prefix = "abseil-cpp-7f3c0d781134d25b24e0b55346482a2d366bf59b",
+            urls = ["https://github.com/abseil/abseil-cpp/archive/7f3c0d781134d25b24e0b55346482a2d366bf59b.zip"],
+        )
 
     if not native.existing_rule("com_google_googletest"):
         # Google Test. Official release 1.10.0.
@@ -78,15 +86,6 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             sha256 = "789f85b4810d13ff803834ea75999e41b326405d83d6a538baf01499eda96102",
             strip_prefix = "benchmark-1.5.6",
             urls = ["https://github.com/google/benchmark/archive/refs/tags/v1.5.6.tar.gz"],
-        )
-
-    if not native.existing_rule("com_google_absl"):
-        # Abseil. Abseil LTS branch, June 2022, Patch 1.
-        http_archive(
-            name = "com_google_absl",
-            sha256 = "54707f411cb62a26a776dad5fd60829098c181700edcd022ea5c2ca49e9b7ef1",
-            strip_prefix = "abseil-cpp-20220623.1",
-            urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20220623.1.zip"],
         )
 
     if not native.existing_rule("com_google_absl_py"):
