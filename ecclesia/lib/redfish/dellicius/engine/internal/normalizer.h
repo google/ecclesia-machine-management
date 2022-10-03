@@ -17,20 +17,42 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_NORMALIZER_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_NORMALIZER_H_
 
+#include <memory>
+#include <utility>
+
+#include "absl/status/statusor.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/topology.h"
 
 namespace ecclesia {
 
 // Populates the Subquery output using property requirements in the subquery.
-class DefaultNormalizer final {
+class DefaultNormalizer final : public Normalizer {
  public:
-  // TODO (b/241784544): Construct normalizer with logic to run time load CSDL
   // with fallback to default CSDL bundle.
 
-  void operator()(const RedfishVariant &var,
-                  const DelliciusQuery::Subquery &subquery,
-                  DelliciusQueryResult &output) const;
+  absl::StatusOr<SubqueryDataSet> Normalize(
+      const RedfishVariant &var,
+      const DelliciusQuery::Subquery &subquery) const override;
+};
+
+// Decorates provided concrete Normalizer to add devpath to subquery output.
+class NormalizerDevpathDecorator final : public Normalizer {
+ public:
+  NormalizerDevpathDecorator(
+      std::unique_ptr<Normalizer> default_normalizer, RedfishInterface *service)
+          : default_normalizer_(std::move(default_normalizer)),
+            topology_(CreateTopologyFromRedfish(service)) {}
+
+  absl::StatusOr<SubqueryDataSet> Normalize(
+      const RedfishVariant &var,
+      const DelliciusQuery::Subquery &subquery) const override;
+ private:
+  std::unique_ptr<Normalizer> default_normalizer_;
+  NodeTopology topology_;
 };
 
 }  // namespace ecclesia

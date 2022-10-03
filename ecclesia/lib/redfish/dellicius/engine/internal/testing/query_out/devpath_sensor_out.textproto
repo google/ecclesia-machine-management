@@ -6,6 +6,7 @@ subquery_output_by_id {
   key: "Sensors"
   value {
     data_set {
+      devpath: "/phys/SYS_FAN0"
       data {
         name: "Name"
         string_value: "fan0"
@@ -24,6 +25,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/SYS_FAN1"
       data {
         name: "Name"
         string_value: "fan1"
@@ -42,6 +44,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/SYS_FAN2/FAN2"
       data {
         name: "Name"
         string_value: "fan2"
@@ -60,6 +63,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/SYS_FAN2/FAN3"
       data {
         name: "Name"
         string_value: "fan3"
@@ -78,6 +82,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/SYS_FAN2/FAN4"
       data {
         name: "Name"
         string_value: "fan4"
@@ -96,6 +101,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/SYS_FAN2/FAN5"
       data {
         name: "Name"
         string_value: "fan5"
@@ -114,6 +120,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/SYS_FAN2/FAN6"
       data {
         name: "Name"
         string_value: "fan6"
@@ -132,6 +139,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/SYS_FAN2/FAN7"
       data {
         name: "Name"
         string_value: "fan7"
@@ -146,6 +154,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/KA0"
       data {
         name: "Name"
         string_value: "indus_eat_temp"
@@ -164,6 +173,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/KA2"
       data {
         name: "Name"
         string_value: "indus_latm_temp"
@@ -182,6 +192,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/CPU0"
       data {
         name: "Name"
         string_value: "CPU0"
@@ -200,6 +211,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/CPU1"
       data {
         name: "Name"
         string_value: "CPU1"
@@ -218,6 +230,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/CPU0"
       data {
         name: "Name"
         string_value: "CPU0"
@@ -236,6 +249,7 @@ subquery_output_by_id {
       }
     }
     data_set {
+      devpath: "/phys/CPU1"
       data {
         name: "Name"
         string_value: "CPU1"

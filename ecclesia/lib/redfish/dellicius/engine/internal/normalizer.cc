@@ -15,21 +15,24 @@
  */
 
 #include "ecclesia/lib/redfish/dellicius/engine/internal/normalizer.h"
+#include <utility>
 
+#include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/time/proto.h"
 
 namespace ecclesia {
 
-void DefaultNormalizer::operator()(const RedfishVariant &var,
-                                const DelliciusQuery::Subquery &subquery,
-                                DelliciusQueryResult &output) const {
+absl::StatusOr<SubqueryDataSet> DefaultNormalizer::Normalize(
+    const RedfishVariant &var,
+    const DelliciusQuery::Subquery &subquery) const {
+  auto data_set_local = SubqueryDataSet();
   for (const auto &property_requirement : subquery.properties()) {
-    DelliciusQueryResult::SubqueryOutput::SubqueryData response;
+    SubqueryDataSet::SubqueryData response;
     // Check the redfish payload for the property listed in data model.
     RedfishVariant payload = var[property_requirement.property()];
-    // TODO (b/241784544): Add logic to infer type from csdl.
     using RedfishProperty = DelliciusQuery::Subquery::RedfishProperty;
     switch (property_requirement.type()) {
       case RedfishProperty::STRING: {
@@ -81,11 +84,33 @@ void DefaultNormalizer::operator()(const RedfishVariant &var,
         response.set_name(property_requirement.name());
       }
       response.set_name(property_requirement.property());
-      auto* subquery_to_output = output.mutable_subquery_output_by_id();
-      (*subquery_to_output)[subquery.subquery_id()].mutable_data()->Add(
-          std::move(response));
+      *data_set_local.add_data() = std::move(response);
     }
   }
+  if (data_set_local.data().empty()) {
+    return absl::NotFoundError(
+        "Redfish object does not have any of the required properties");
+  }
+  return data_set_local;
+}
+
+absl::StatusOr<SubqueryDataSet> NormalizerDevpathDecorator::Normalize(
+    const RedfishVariant &var,
+    const DelliciusQuery::Subquery &subquery) const {
+  absl::StatusOr<SubqueryDataSet> normalized_data
+      = default_normalizer_->Normalize(var, subquery);
+  if (!normalized_data.ok()) return normalized_data;
+  std::optional<std::string> odata_id = var.AsObject()->GetUriString();
+  if (odata_id.has_value()) {
+    auto it = topology_.uri_to_associated_node_map.find(odata_id.value());
+    if (it != topology_.uri_to_associated_node_map.end()) {
+      if (!it->second.empty()) {
+        normalized_data.value().set_devpath(it->second[0]->local_devpath);
+        return normalized_data;
+      }
+    }
+  }
+  return normalized_data;
 }
 
 }  // namespace ecclesia

@@ -2,10 +2,6 @@ syntax = "proto3";
 
 package ecclesia;
 
-import "google/protobuf/any.proto";
-import "google/protobuf/timestamp.proto";
-import "google/rpc/status.proto";
-
 // Message encapsulating Redfish server input to a Query format.
 message DelliciusQuery {
   // Smallest unit of operation, targeting specific set of resources
@@ -25,6 +21,11 @@ message DelliciusQuery {
       optional string name = 2;
       PrimitiveType type = 3;
     }
+    // Uniquely identifies the subquery. It is the responsibility of client
+    // application to use a unique string else the subquery output will be
+    // bundled together. Query engine processes the subqueries irrespective of
+    // the subquery id and it is only at the time of aggregating the output or
+    // caching the leaf nodes is when query engine uses the subquery id.
     string subquery_id = 1;
     // Identifies json object to query and expressions to apply.
     string redpath = 2;
@@ -33,36 +34,4 @@ message DelliciusQuery {
   // A unique name for identifying this platform-related query.
   string query_id = 1;
   repeated Subquery subquery = 2;
-}
-
-// Message encapsulating Query result
-message DelliciusQueryResult {
-  message SubqueryOutput {
-    message SubqueryData {
-      // Named attribute to which queried property in response data is mapped.
-      // By default, name of the queried property is set if the client
-      // application does not explicitly provide a name to map the queried
-      // property to within a subquery.
-      string name = 1;
-      optional string devpath = 2;
-      oneof value {
-        string string_value = 3;
-        double double_value = 4;
-        int64 int64_value = 5;
-        bool boolean_value = 6;
-        google.protobuf.Timestamp timestamp_value = 7;
-      }
-    }
-    // Describes the status of Subquery abstracting away transport specifics.
-    optional google.rpc.Status status = 1;
-    // Normalised data per subquery based on data model defined in the subquery
-    repeated SubqueryData data = 2;
-  }
-  // Identifies the parent query the subquery data associates with.
-  string query_id = 1;
-  // Maps subquery id to associated subquery response data.
-  map<string, SubqueryOutput> subquery_output_by_id = 2;
-  // Time of query.
-  google.protobuf.Timestamp start_timestamp = 3;
-  google.protobuf.Timestamp end_timestamp = 4;
 }

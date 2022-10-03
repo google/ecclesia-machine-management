@@ -1,16 +1,19 @@
-# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
 # proto-message: DelliciusQueryResult
 
-subquery_output_by_id 	 {
+query_id: "AssemblyCollector"
+subquery_output_by_id {
   key: "Chassis"
   value {
-    data {
-      name: "SerialNumber"
-      string_value: "MBBQTW194106556"
-    }
-    data {
-      name: "PartNumber"
-      string_value: "1043652-02"
+    data_set {
+      data {
+        name: "SerialNumber"
+        string_value: "MBBQTW194106556"
+      }
+      data {
+        name: "PartNumber"
+        string_value: "1043652-02"
+      }
     }
   }
 }

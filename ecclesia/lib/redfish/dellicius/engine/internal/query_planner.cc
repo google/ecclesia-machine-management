@@ -32,6 +32,7 @@
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/time/proto.h"
 
@@ -41,10 +42,8 @@ namespace {
 
 constexpr absl::string_view kPredicateSelectAll = "*";
 
-// TODO (b/241784544): Add support for other Predicate Expr used in Redpath.
 bool ApplySelectAllFilter(const RedfishVariant &/*variant*/) { return true; }
 
-// TODO (b/241784544): Expand the validity check using regex for all predicates.
 // Only Checks if predicate expression is enclosed in square brackets.
 absl::StatusOr<std::pair<std::string, std::string>> GetNodeAndPredicate(
     absl::string_view step) {
@@ -62,66 +61,81 @@ absl::StatusOr<std::pair<std::string, std::string>> GetNodeAndPredicate(
 
 }  // namespace
 
-SubqueryHandle::SubqueryHandle(const DelliciusQuery::Subquery &subquery)
-    : subquery_(subquery) {
+QueryPlanner::SubqueryHandle::SubqueryHandle(
+    const DelliciusQuery::Subquery &subquery) : subquery_(subquery) {
+  is_redpath_valid_ = false;
   // Step expressions in Subquery's redpath are split into pairs of node name
   // and predicate expression handlers.
   for (absl::string_view step_expression : absl::StrSplit(
       subquery.redpath(), '/', absl::SkipEmpty())) {
-    // TODO (b/241784544): Add logic to validate Redpath and support
     // malformed path error code
     absl::StatusOr<std::pair<std::string, std::string>> node_x_predicate
         = GetNodeAndPredicate(step_expression);
     if (!node_x_predicate.ok()) {
-      ecclesia::ErrorLog() << node_x_predicate.status();
+      ErrorLog() << node_x_predicate.status();
       return;
     }
     auto [node_name, predicate] = node_x_predicate.value();
     if (predicate == kPredicateSelectAll) {
       steps_in_redpath_.emplace_back(node_name, ApplySelectAllFilter);
     } else {
-      ecclesia::ErrorLog() << "Unknown predicate " << predicate;
+      ErrorLog() << "Unknown predicate " << predicate;
       return;
     }
   }
-
   // An iterator is configured to traverse the Step expressions in subquery's
   // redpath as redfish requests are dispatched.
   iter_ = steps_in_redpath_.begin();
-  continue_ = true;
+  is_redpath_valid_ = true;
 }
 
-std::optional<std::string> SubqueryHandle::NextNodeInRedpath() const {
-  if (continue_) { return iter_->first; }
+std::optional<std::string>
+QueryPlanner::SubqueryHandle::NextNodeInRedpath() const {
+  if (is_redpath_valid_) { return iter_->first; }
   return std::nullopt;
 }
 
-void SubqueryHandle::FilterNodeSet(const RedfishVariant &redfish_variant,
-                                   NormalizerCallback normalizer,
-                                   DelliciusQueryResult &response) {
+QueryPlanner::PredicateReturnValue QueryPlanner::SubqueryHandle::FilterNodeSet(
+    const RedfishVariant &redfish_variant) {
   // Apply the predicate rule on the given RedfishObject.
-  continue_ = iter_->second(redfish_variant);
-  // If it is the last step expression in the redpath, stop the traversal and
-  // normalize.
+  bool is_filter_success = iter_->second(redfish_variant);
+  if (!is_filter_success) { return PredicateReturnValue::kEndByPredicate; }
+  // If it is the last step expression in the redpath, stop tree traversal.
   if (!steps_in_redpath_.empty()
       && iter_->first == steps_in_redpath_.back().first) {
-    // Normalize the data if final Step expression successfully applies on the
-    // redfish object.
-    if (continue_) { normalizer(redfish_variant, subquery_, response); }
-    continue_ = false;
-  } else {
-    ++iter_;
+    return PredicateReturnValue::kEndOfRedpath;
   }
+  ++iter_;
+  return PredicateReturnValue::kContinue;
 }
 
 void QueryPlanner::QualifyEachSubquery(
       const RedfishVariant &var,
       std::vector<SubqueryHandle> handles,
       DelliciusQueryResult &result) {
+  std::vector<SubqueryHandle> qualified_subqueries;
   for (auto &subquery_handle : handles) {
-    subquery_handle.FilterNodeSet(var, normalizer_cb_, result);
+    QueryPlanner::PredicateReturnValue status
+        = subquery_handle.FilterNodeSet(var);
+    // Prepare subquery response if the end of redpath is reached.
+    if (status == QueryPlanner::PredicateReturnValue::kEndOfRedpath) {
+      DelliciusQuery::Subquery subquery = subquery_handle.GetSubquery();
+      // Normalize redfish response per the property requirements in subquery.
+      absl::StatusOr<SubqueryDataSet> normalized_data = normalizer->Normalize(
+          var, subquery);
+      if (normalized_data.ok()) {
+        // Populate the response data in subquery output for the given id.
+        auto* subquery_output = result.mutable_subquery_output_by_id();
+        (*subquery_output)[
+            subquery.subquery_id()].mutable_data_set()->Add(
+            std::move(normalized_data.value()));
+      }
+    } else if (status == QueryPlanner::PredicateReturnValue::kContinue) {
+      qualified_subqueries.push_back(std::move(subquery_handle));
+    }
   }
-  RunRecursive(var, handles, result);
+  if (qualified_subqueries.empty()) return;
+  RunRecursive(var, qualified_subqueries, result);
 }
 
 void QueryPlanner::Dispatch(
@@ -177,6 +191,7 @@ void QueryPlanner::Run(const RedfishVariant &variant,
   if (timestamp.ok()) {
     result.mutable_start_timestamp()->CopyFrom(*std::move(timestamp));
   }
+  result.set_query_id(plan_id_);
   RunRecursive(variant, subquery_handles_, result);
   timestamp = AbslTimeToProtoTime(clock.Now());
   if (timestamp.ok()) {
@@ -184,9 +199,8 @@ void QueryPlanner::Run(const RedfishVariant &variant,
   }
 }
 
-QueryPlanner::QueryPlanner(const DelliciusQuery &query,
-                           NormalizerCallback normalizer)
-    : normalizer_cb_(normalizer), plan_id_(query.query_id()) {
+QueryPlanner::QueryPlanner(const DelliciusQuery &query, Normalizer *normalizer)
+    : normalizer(normalizer), plan_id_(query.query_id()) {
   // Create subquery handles aka subquery plans.
   for (const auto &subquery : query.subquery()) {
     auto subquery_handle = SubqueryHandle(subquery);
