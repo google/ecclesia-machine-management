@@ -16,7 +16,10 @@ cc_library(
     name = "normalizer",
     srcs = ["normalizer.cc"],
     hdrs = ["normalizer.h"],
-    visibility = ["//ecclesia/lib/redfish/dellicius/engine/internal:__subpackages__"],
+    visibility = [
+        "//ecclesia/lib/redfish/dellicius/engine/internal:__subpackages__",
+        "//platforms/ecclesia/simplicius_tool:__subpackages__",
+    ],
     deps = [
         ":interface",
         "//ecclesia/lib/redfish:interface",
@@ -33,7 +36,10 @@ cc_library(
     name = "query_planner",
     srcs = ["query_planner.cc"],
     hdrs = ["query_planner.h"],
-    visibility = ["//ecclesia/lib/redfish/dellicius/engine/internal:__subpackages__"],
+    visibility = [
+        "//ecclesia/lib/redfish/dellicius/engine/internal:__subpackages__",
+        "//platforms/ecclesia/simplicius_tool:__subpackages__",
+    ],
     deps = [
         ":interface",
         "//ecclesia/lib/logging",
