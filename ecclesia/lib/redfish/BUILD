@@ -499,8 +499,8 @@ cc_test(
 )
 
 cc_binary(
-    name = "node_toplogy_render_main",
-    srcs = ["node_toplogy_render_main.cc"],
+    name = "node_topology_render_main",
+    srcs = ["node_topology_render_main.cc"],
     deps = [
         ":interface",
         ":node_topology",
