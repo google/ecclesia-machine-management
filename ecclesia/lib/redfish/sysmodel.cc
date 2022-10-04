@@ -361,8 +361,20 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceLogService>,
                                         ResultCallback result_callback,
                                         const QueryParams &query_params) {
   auto root = redfish_intf_->GetRoot();
+  RedfishIterReturnValue return_val = RedfishIterReturnValue::kContinue;
+
   root.AsIndexHelper()
       .Get(kRfPropertySystems,
+           {.freshness = query_params.freshness,
+            .expand = RedfishQueryParamExpand({.levels = 1})})
+      .Each()[kRfPropertyLogServices]
+      .Each()
+      .Do([&](std::unique_ptr<RedfishObject> &service) {
+        return return_val = result_callback(std::move(service));
+      });
+  if (return_val == RedfishIterReturnValue::kStop) return;
+  root.AsIndexHelper()
+      .Get(kRfPropertyManagers,
            {.freshness = query_params.freshness,
             .expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()[kRfPropertyLogServices]
