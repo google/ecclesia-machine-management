@@ -48,6 +48,7 @@ namespace {
 
 int RealMain(int argc, char* argv[]) {
   absl::InitializeLog();
+  absl::ParseCommandLine(argc, argv);
 
   std::string hostname_port = absl::GetFlag(FLAGS_hostname_port),
               unix_domain_socket = absl::GetFlag(FLAGS_unix_domain_socket);
