@@ -23,13 +23,13 @@
 #include <string>
 #include <utility>
 
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/acpi/system_description_table.emb.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "runtime/cpp/emboss_cpp_util.h"
 #include "runtime/cpp/emboss_prelude.h"
 
@@ -80,7 +80,7 @@ SystemDescriptionTable::ReadFromFile(absl::string_view sysfs_acpi_table_path) {
   auto header_view = MakeSystemDescriptionTableHeaderView(
       result->table_data_.data(), result->table_data_.size());
   if (header_view.length().Read() > table_data_size) {
-    WarningLog() << absl::StrFormat(
+    LOG(WARNING) << absl::StrFormat(
         "Table %s specified a size %d larger than the data read from "
         "%s %u.",
         result->GetSignatureString(), header_view.length().Read(),
@@ -103,18 +103,18 @@ bool SraHeaderDescriptor::Validate(SraHeaderView header_view,
                                    const uint8_t expected_type,
                                    const uint8_t minimum_size,
                                    absl::string_view structure_name) {
-  Check(minimum_size >= SraHeaderView::SizeInBytes(),
-        "Not enough bytes for SRA header");
+  CHECK(minimum_size >= SraHeaderView::SizeInBytes())
+      << "Not enough bytes for SRA header";
   uint8_t type = header_view.struct_type().Read();
   if (type != expected_type) {
-    ErrorLog() << absl::StrFormat(
+    LOG(ERROR) << absl::StrFormat(
         "Unexpected header type %d vs. %d for %s structure %p.", type,
         expected_type, structure_name, header_view.BackingStorage().data());
     return false;
   }
   uint8_t length = header_view.length().Read();
   if (length < minimum_size) {
-    ErrorLog() << absl::StrFormat(
+    LOG(ERROR) << absl::StrFormat(
         "%s structure %p too small %d vs. %d bytes.", structure_name,
         header_view.BackingStorage().data(), length, minimum_size);
     return false;
@@ -127,7 +127,7 @@ bool SraHeaderDescriptor::ValidateMaximumSize(SraHeaderView header_view,
   uint8_t length = header_view.length().Read();
   if (header_view.SizeInBytes() > maximum_sra_size ||
       length > maximum_sra_size) {
-    ErrorLog() << absl::StrFormat(
+    LOG(ERROR) << absl::StrFormat(
         "Static resource allocation structure size %d "
         "exceeds the maximum size %d",
         length, static_cast<int>(maximum_sra_size));

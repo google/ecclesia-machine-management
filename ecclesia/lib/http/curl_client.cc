@@ -29,6 +29,7 @@
 #include "absl/base/const_init.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/log/log.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -40,8 +41,6 @@
 #include "curl/curl.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 
 namespace ecclesia {
 
@@ -362,7 +361,7 @@ void CurlHttpClient::UnlockSharedMutex(CURL *handle, curl_lock_data data,
 
 void CurlHttpClient::SetDefaultCurlOpts(CURL *curl) const {
   if (!curl) {
-    ErrorLog() << "curl is nullptr.";
+    LOG(ERROR) << "curl is nullptr.";
     return;
   }
   libcurl_->curl_easy_reset(curl);

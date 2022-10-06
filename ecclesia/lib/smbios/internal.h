@@ -24,10 +24,9 @@
 #include <string>
 #include <vector>
 
+#include "absl/log/log.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/smbios/structures.emb.h"
 
 namespace ecclesia {
@@ -77,7 +76,7 @@ class TableEntry {
   absl::string_view GetString(std::size_t num) const {
     if (num == 0) return absl::string_view();
     if (num > strings_.size()) {
-      ErrorLog() << "string number " << num << " out of bounds";
+      LOG(ERROR) << "string number " << num << " out of bounds";
       return absl::string_view();
     }
     return strings_[num - 1];

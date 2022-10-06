@@ -18,10 +18,10 @@
 
 #include <memory>
 
+#include "absl/log/log.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/synchronization/mutex.h"
-#include "ecclesia/lib/logging/logging.h"
 
 namespace ecclesia {
 

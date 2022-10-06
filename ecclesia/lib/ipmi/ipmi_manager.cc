@@ -29,6 +29,8 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/flags/flag.h"
 #include "absl/functional/bind_front.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/memory/memory.h"
 #include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
@@ -41,8 +43,6 @@
 #include "ecclesia/lib/ipmi/ipmi_consts.h"
 #include "ecclesia/lib/ipmi/ipmi_handle.h"
 #include "ecclesia/lib/ipmi/ipmi_interface_params.pb.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/thread/thread.h"
 #include "ecclesia/lib/time/clock.h"
@@ -80,7 +80,7 @@ bool IsOpenInterface(const IpmiInterfaceParams &params) {
     case IpmiInterfaceParams::kNetwork:
       return false;
   }
-  ErrorLog()
+  LOG(ERROR)
       << "Processed IpmiInterfaceParams in `IsOpenInterface` which had invalid "
          "params, assuming open params. Params: "
       << params.DebugString();
@@ -153,7 +153,7 @@ IpmiManager::InterfaceCloser::InterfaceCloser(IpmiManager *manager,
 IpmiManager::InterfaceCloser::~InterfaceCloser() {
   absl::Status status = manager_->Close(params_, timeout_);
   if (!status.ok()) {
-    ErrorLog() << "Could not close interface " << OptsToString(params_) << ": "
+    LOG(ERROR) << "Could not close interface " << OptsToString(params_) << ": "
                << status;
   }
 }
@@ -212,7 +212,7 @@ absl::StatusOr<std::unique_ptr<IpmiHandle>> IpmiManagerImpl::Acquire(
 
     it = lanplus_interfaces_.insert({key, std::move(new_interface)}).first;
 
-    InfoLog() << "Successfully opened IPMI interface " << key;
+    LOG(INFO) << "Successfully opened IPMI interface " << key;
   }
 
   // Either the iterator did not return `end()`, or the preceding block
@@ -258,7 +258,7 @@ absl::Status IpmiManagerImpl::Close(const IpmiInterfaceParams &params,
 void IpmiManagerImpl::EnableGlobalIpmiLogging() {
   ExclusiveLock<ipmi_intf *> lock = ipmi_arbiter_.AcquireOrDie();
 
-  InfoLog() << "Enabling global verbose logging";
+  LOG(INFO) << "Enabling global verbose logging";
   log_halt();
   log_init(/*name=*/nullptr, /*isdaemon=*/0, /*verbose=*/2);
   lprintf(LOG_DEBUG, "ipmitool logging enabled");
@@ -271,7 +271,7 @@ IpmiManagerImpl::~IpmiManagerImpl() {
 }
 
 void IpmiManagerImpl::RunKeepAliver() {
-  DebugLog() << "Running keepalive on lanplus interfaces...";
+  DLOG(INFO) << "Running keepalive on lanplus interfaces...";
 
   while (true) {
     // Wait the specified amount of time between keep alive attempts
@@ -290,17 +290,18 @@ void IpmiManagerImpl::RunKeepAliver() {
         ipmi_arbiter_.Acquire(options_.keepalive_arbiter_timeout);
 
     if (!handle.ok()) {
-      ErrorLog() << "Failed to acquire handle: " << handle.status()
+      LOG(ERROR) << "Failed to acquire handle: " << handle.status()
                  << ", with timeout: " << options_.keepalive_arbiter_timeout;
       return;
     }
 
     for (const auto &[connection_name, interface] : lanplus_interfaces_) {
-      DebugLog() << "Keepaliving " << connection_name;
+      DLOG(INFO) << "Keepaliving " << connection_name;
 
       // Verify the map entry contains a value, it should never be allowed
       // to have empty values, but we still want to check here
-      Check(interface != nullptr, "Interface cannot be nullptr")
+      CHECK(interface != nullptr)
+          << "Interface cannot be nullptr"
           << "lanplus_interfaces_ map value empty for key " << connection_name;
 
       if (interface->keepalive == nullptr) {
@@ -309,14 +310,14 @@ void IpmiManagerImpl::RunKeepAliver() {
 
       int res = interface->keepalive(interface.get());
       if (res != 0) {
-        ErrorLog() << "Error while sending keepalive: " << res;
+        LOG(ERROR) << "Error while sending keepalive: " << res;
         ipmi_close(interface.get());
 
         if (ipmi_open(interface.get()) >= 0) {
-          WarningLog() << "Re-opened ipmi raw_intf for connection "
+          LOG(WARNING) << "Re-opened ipmi raw_intf for connection "
                        << connection_name;
         } else {
-          ErrorLog() << "Fail to re-open ipmi raw_intf for connection "
+          LOG(ERROR) << "Fail to re-open ipmi raw_intf for connection "
                      << connection_name;
         }
       }

@@ -21,9 +21,8 @@
 #include <unistd.h>
 
 #include "absl/cleanup/cleanup.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/lib/logging/posix.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 namespace ecclesia {
 
@@ -31,7 +30,7 @@ int FindUnusedPortOrDie() {
   // Open the socket as an IPv6 TCP socket.
   int fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
   if (fd < 0) {
-    PosixFatalLog() << "socket() failed: ";
+    PLOG(FATAL) << "socket() failed: ";
   }
   absl::Cleanup fd_closer = [fd]() { close(fd); };
 
@@ -39,7 +38,7 @@ int FindUnusedPortOrDie() {
   // caller as an available port they can use it immediately.
   int one = 1;
   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one)) == -1) {
-    PosixFatalLog() << "setsockopt() failed";
+    PLOG(FATAL) << "setsockopt() failed";
   }
 
   // Use an IPv6 sockaddr structure.
@@ -51,17 +50,17 @@ int FindUnusedPortOrDie() {
   addr.sin6_family = AF_INET6;
   addr.sin6_port = 0;
   if (bind(fd, addr_ptr, addr_len) == -1) {
-    PosixFatalLog() << "bind() failed for port 0";
+    PLOG(FATAL) << "bind() failed for port 0";
   }
 
   // Get the port number that we bound to.
   if (getsockname(fd, addr_ptr, &addr_len) == -1) {
-    PosixFatalLog() << "getsockname() failed on the port we bound to";
+    PLOG(FATAL) << "getsockname() failed on the port we bound to";
   }
-  Check(addr_len <= sizeof(addr),
-        "getsockname() returned a valid address length");
+  CHECK(addr_len <= sizeof(addr))
+      << "getsockname() returned a valid address length";
   int port = ntohs(addr.sin6_port);
-  Check(port > 0, "bound port is a real, positive port number");
+  CHECK(port > 0) << "bound port is a real, positive port number";
   return port;
 }
 

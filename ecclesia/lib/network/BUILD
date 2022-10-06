@@ -44,9 +44,9 @@ cc_library(
     hdrs = ["testing.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//ecclesia/lib/logging",
-        "//ecclesia/lib/logging:posix",
         "@com_google_absl//absl/cleanup",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
     ],
 )
 

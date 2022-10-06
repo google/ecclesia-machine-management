@@ -30,6 +30,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/base/macros.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
@@ -37,8 +39,6 @@
 #include "ecclesia/lib/acpi/system_description_table.emb.h"
 #include "ecclesia/lib/codec/endian.h"
 #include "ecclesia/lib/file/test_filesystem.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/testing/status.h"
 #include "runtime/cpp/emboss_cpp_util.h"
 #include "runtime/cpp/emboss_prelude.h"
@@ -270,9 +270,8 @@ class SystemDescriptionTableReaderTest : public ::testing::Test {
   }
 
   static SraTestView SraHeaderToSraTest(const SraHeaderView &header_view) {
-    Check(header_view.BackingStorage().SizeInBytes() >=
-              SraTestView::SizeInBytes(),
-          "sufficient backing bytes")
+    CHECK(header_view.BackingStorage().SizeInBytes() >=
+          SraTestView::SizeInBytes())
         << absl::StrFormat(
                "Not enough bytes backing header view, need at least"
                " %u, actual %u",

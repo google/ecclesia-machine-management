@@ -25,12 +25,11 @@
 #include <tuple>
 #include <vector>
 
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/types/span.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/types/fixed_range_int.h"
 
@@ -39,7 +38,7 @@ namespace ecclesia {
 std::optional<UsbPortSequence> UsbPortSequence::TryMake(
     absl::Span<const int> ports) {
   if (ports.size() > kDeviceChainMaxLength) {
-    WarningLog() << "Usb ports excceed max length";
+    LOG(WARNING) << "Usb ports excceed max length";
     return std::nullopt;
   }
 

@@ -21,11 +21,11 @@
 #include <string>
 #include <vector>
 
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/status/statusor.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/ipmi/ipmi_response.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 
 extern "C" {
 #include "include/ipmitool/ipmi_intf.h"
@@ -88,7 +88,7 @@ absl::StatusOr<ecclesia::IpmiResponse> RawIpmitool::SendWithRetry(
   ipmi_rs *resp;
 
   int tries = retries + 1;
-  Check(tries > 0, "tries > 0")
+  CHECK(tries > 0)
       << "Negative number passed to function through retries count";
 
   std::vector<uint8_t> buffer(ecclesia::kMinimumIpmiPacketLength +

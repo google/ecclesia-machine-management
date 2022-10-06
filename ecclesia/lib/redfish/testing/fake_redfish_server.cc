@@ -22,6 +22,8 @@
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/meta/type_traits.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
@@ -32,8 +34,6 @@
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/http/server.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "ecclesia/lib/redfish/transport/http.h"
@@ -97,7 +97,7 @@ void FakeRedfishServer::HandleHttpPatch(
   absl::MutexLock mu(&patch_lock_);
   auto itr = http_patch_handlers_.find(req->uri_path());
   if (itr == http_patch_handlers_.end()) {
-    FatalLog() << "Unhandled PATCH to URI: " << req->uri_path();
+    LOG(FATAL) << "Unhandled PATCH to URI: " << req->uri_path();
     return;
   }
   itr->second(req);
@@ -108,7 +108,7 @@ void FakeRedfishServer::HandleHttpPost(
   absl::MutexLock mu(&patch_lock_);
   auto itr = http_post_handlers_.find(req->uri_path());
   if (itr == http_post_handlers_.end()) {
-    FatalLog() << "Unhandled POST to URI: " << req->uri_path();
+    LOG(FATAL) << "Unhandled POST to URI: " << req->uri_path();
     return;
   }
   itr->second(req);
@@ -119,7 +119,7 @@ void FakeRedfishServer::HandleHttpDelete(
   absl::MutexLock mu(&patch_lock_);
   auto itr = http_delete_handlers_.find(req->uri_path());
   if (itr == http_delete_handlers_.end()) {
-    FatalLog() << "Unhandled DELETE to URI: " << req->uri_path();
+    LOG(FATAL) << "Unhandled DELETE to URI: " << req->uri_path();
     return;
   }
   itr->second(req);
@@ -161,7 +161,7 @@ std::unique_ptr<RedfishInterface> FakeRedfishServer::RedfishClientInterface() {
   auto cache = std::make_unique<NullCache>(transport.get());
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
-  ecclesia::Check(intf != nullptr, "can connect to the redfish proxy server");
+  CHECK(intf != nullptr) << "can connect to the redfish proxy server";
   return intf;
 }
 
@@ -189,8 +189,8 @@ FakeRedfishServer::FakeRedfishServer(absl::string_view mockup_shar,
         return handler;
       },
       ::tensorflow::serving::net_http::RequestHandlerOptions());
-  ecclesia::Check(proxy_server_->StartAcceptingRequests(),
-                  "can start the proxy server");
+  CHECK(proxy_server_->StartAcceptingRequests())
+      << "can start the proxy server";
 }
 
 FakeRedfishServer::~FakeRedfishServer() {

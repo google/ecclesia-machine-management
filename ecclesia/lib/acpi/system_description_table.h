@@ -26,12 +26,12 @@
 #include <string>
 #include <vector>
 
+#include "absl/log/log.h"
 #include "absl/memory/memory.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/acpi/system_description_table.emb.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "runtime/cpp/emboss_cpp_util.h"
 
 namespace ecclesia {
@@ -227,7 +227,7 @@ class SystemDescriptionTableReader {
     if (sra < sra_start || sra >= sra_end ||
         !SraHeaderDescType::ValidateMaximumSize(sra_header, maximum_sra_size) ||
         sra_header.length().Read() == 0) {
-      ErrorLog() << absl::StrFormat(
+      LOG(ERROR) << absl::StrFormat(
           "Static resource allocation structure %p out of range of %s "
           "%p table",
           sra_header.BackingStorage().data(),

@@ -23,7 +23,6 @@
 #include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/atomic/sequence.h"
-#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/status/rpc.h"
@@ -83,8 +82,8 @@ void RedfishV1GrpcProxy::PreCall(SequenceNumberGenerator::ValueType seq_num,
   // should be relatively rare and so shouldn't produce too much log spam, and
   // mutating requests are the most important ones to have some visibility into.
   if (rpc_name != "Get") {
-    RpcInfoLog(seq_num) << "sending " << rpc_name
-                        << " request for URL: " << request.url();
+    RpcInfoLog(seq_num, absl::StrCat("sending ", rpc_name,
+                                     " request for URL: ", request.url()));
   }
 }
 
@@ -93,9 +92,10 @@ void RedfishV1GrpcProxy::PostCall(SequenceNumberGenerator::ValueType seq_num,
                                   const redfish::v1::Request &request,
                                   const grpc::Status &rpc_status) {
   if (rpc_name != "Get") {
-    RpcInfoLog(seq_num) << "completed " << rpc_name
-                        << " request for URL: " << request.url()
-                        << " with status: " << AsAbslStatus(rpc_status);
+    RpcInfoLog(seq_num,
+               absl::StrCat(
+                   "completed ", rpc_name, " request for URL: ", request.url(),
+                   " with status: ", AsAbslStatus(rpc_status).message()));
   }
 }
 

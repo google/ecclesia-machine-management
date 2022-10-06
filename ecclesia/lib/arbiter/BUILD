@@ -8,8 +8,9 @@ cc_library(
     hdrs = ["arbiter.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//ecclesia/lib/logging",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",

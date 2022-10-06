@@ -21,9 +21,10 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "grpcpp/security/credentials.h"
 #include "grpcpp/security/tls_certificate_provider.h"
 #include "grpcpp/security/tls_certificate_verifier.h"
@@ -128,7 +129,7 @@ StaticBufferBasedTlsOptions::GetChannelCredentials() const {
       return grpc::InsecureChannelCredentials();
       // No default. We own the AuthType enum.
   }
-  Check(false, absl::StrCat("Unexpected value for AuthType: ", auth_type_));
+  CHECK(false) << absl::StrCat("Unexpected value for AuthType: ", auth_type_);
   return grpc::InsecureChannelCredentials();
 }
 
@@ -157,7 +158,7 @@ StaticBufferBasedTlsOptions::GetCertificateProvider() const {
       return nullptr;
       // No default. We own the AuthType enum.
   }
-  Check(false, absl::StrCat("Unexpected value for AuthType: ", auth_type_));
+  CHECK(false) << absl::StrCat("Unexpected value for AuthType: ", auth_type_);
   return nullptr;
 }
 
@@ -212,7 +213,7 @@ FileWatcherBasedOptions::GetCertificateProvider() const {
       return nullptr;
       // No default. We own the AuthType enum.
   }
-  Check(false, absl::StrCat("Unexpected value for AuthType: ", auth_type_));
+  CHECK(false) << absl::StrCat("Unexpected value for AuthType: ", auth_type_);
   return nullptr;
 }
 }  // namespace ecclesia

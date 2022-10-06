@@ -37,9 +37,10 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":rf_override_cc_proto",
-        "//ecclesia/lib/logging",
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:struct_proto_conversion",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",

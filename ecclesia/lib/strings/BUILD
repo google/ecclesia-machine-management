@@ -8,7 +8,8 @@ cc_library(
     hdrs = ["natural_sort.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//ecclesia/lib/logging",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",
     ],
 )

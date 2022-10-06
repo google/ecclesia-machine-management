@@ -21,11 +21,11 @@
 #include <utility>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/status/statusor.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 
 // These classes enable transactional behavior when using a subject resource.
 // An Arbiter instance can be used to grant an exclusive lock over a backing
@@ -101,7 +101,7 @@ class Arbiter {
    public:
     explicit ArbiterState(std::shared_ptr<T> subject)
         : subject_(std::move(subject)) {
-      Check(subject_ != nullptr, "subject is not null")
+      CHECK(subject_ != nullptr)
           << "Arbiter was constructed with a null subject which is strictly "
              "prohibited.";
     }
@@ -120,8 +120,7 @@ class Arbiter {
 
     void Release() {
       absl::MutexLock lock(&mu_);
-      Check(locked_, "release called on an unlocked subject")
-          << "Lock released when Arbiter not locked";
+      CHECK(locked_) << "Lock released when Arbiter not locked";
       locked_ = false;
     }
 
@@ -186,7 +185,7 @@ class ExclusiveLock {
     ~Releaser() {
       std::shared_ptr<ArbiterState> arbiter_state = arbiter_state_.lock();
       if (arbiter_state == nullptr) {
-        ErrorLog() << "ExclusiveLock destroyed after its Arbiter";
+        LOG(ERROR) << "ExclusiveLock destroyed after its Arbiter";
         return;
       }
 

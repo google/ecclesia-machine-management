@@ -33,6 +33,7 @@
 #include "absl/base/thread_annotations.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/log/log.h"
 #include "absl/memory/memory.h"
 #include "absl/meta/type_traits.h"
 #include "absl/numeric/bits.h"
@@ -40,8 +41,6 @@
 #include "absl/strings/str_format.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/time/proto.h"
 #include "ecclesia/lib/usage/serialization.pb.h"
 #include "riegeli/bytes/fd_reader.h"
@@ -117,7 +116,7 @@ void PersistentUsageMap::RecordUses(std::vector<OperationUser> uses,
     absl::Status write_result = WriteToPersistentStoreUnlocked();
     // We can't do anything with the write error, so just log it.
     if (!write_result.ok()) {
-      ErrorLog() << "automatic write of the persistent usage map to "
+      LOG(ERROR) << "automatic write of the persistent usage map to "
                  << persistent_file_ << " failed: " << write_result;
     }
   }

@@ -24,12 +24,11 @@
 #include <string>
 #include <vector>
 
+#include "absl/log/log.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/smbios/baseboard_information.h"
 #include "ecclesia/lib/smbios/bios.h"
 #include "ecclesia/lib/smbios/entry_point.emb.h"
@@ -60,7 +59,7 @@ std::vector<uint8_t> GetBinaryFileContents(const std::string &file_path,
   std::ifstream file(file_path,
                      std::ios::in | std::ios::binary | std::ios::ate);
   if (!file.is_open()) {
-    ErrorLog() << "failed to open file " << file_path;
+    LOG(ERROR) << "failed to open file " << file_path;
     return std::vector<uint8_t>();
   }
   auto size = file.tellg();
@@ -93,7 +92,7 @@ bool ExtractSmbiosStructure(uint8_t *start_address, std::size_t max_length,
       MakeSmbiosStructureView(start_address, max_length);
 
   if (!smbios_structure_view.Ok()) {
-    ErrorLog() << "Failure parsing smbios structure";
+    LOG(ERROR) << "Failure parsing smbios structure";
     return false;
   }
 
@@ -126,7 +125,7 @@ std::vector<TableEntry> BuildEntries(std::vector<uint8_t> &table_data) {
     std::size_t max_length = end_address - start_address + 1;
     SmbiosStructureInfo info;
     if (!ExtractSmbiosStructure(start_address, max_length, &info)) {
-      ErrorLog() << "Error extracting SMBIOS structure";
+      LOG(ERROR) << "Error extracting SMBIOS structure";
       return entries;
     }
     entries.emplace_back(info);
@@ -146,12 +145,12 @@ SmbiosReader::SmbiosReader(std::string entry_point_path,
 
   if (!(entry_point_view.entry_point_32bit().Ok() ||
         entry_point_view.entry_point_64bit().Ok())) {
-    ErrorLog() << "Failure parsing entry point structure";
+    LOG(ERROR) << "Failure parsing entry point structure";
     return;
   }
 
   if (!VerifyChecksum(entry_point_view)) {
-    ErrorLog() << "Entry point checksum verification failed.";
+    LOG(ERROR) << "Entry point checksum verification failed.";
     return;
   }
 

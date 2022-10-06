@@ -18,11 +18,11 @@
 
 #include <cstddef>
 
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/strings/ascii.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 
 namespace ecclesia {
 
@@ -36,9 +36,9 @@ int NaturalSortCmp(absl::string_view lhs, absl::string_view rhs) {
       while (absl::ascii_isdigit(rhs[index + rhs_seq_length])) rhs_seq_length++;
 
       int lhs_num = -1, rhs_num = -1;
-      Check(absl::SimpleAtoi(lhs.substr(index, lhs_seq_length), &lhs_num) &&
-                absl::SimpleAtoi(rhs.substr(index, rhs_seq_length), &rhs_num),
-            "Converting the series of digits to integers")
+      CHECK(absl::SimpleAtoi(lhs.substr(index, lhs_seq_length), &lhs_num) &&
+            absl::SimpleAtoi(rhs.substr(index, rhs_seq_length), &rhs_num))
+          << "Converting the series of digits to integers"
           << "Failed to convert these sequences into integers: "
           << lhs.substr(index, lhs_seq_length) << " and "
           << rhs.substr(index, rhs_seq_length);

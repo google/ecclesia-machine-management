@@ -40,7 +40,6 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/interfaces.h"
 #include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/logging/posix.h"
 #include "ecclesia/lib/time/clock.h"
@@ -190,7 +189,7 @@ FileLogger::LogFile FileLogger::OpenLogFile(absl::string_view logging_dir,
   }
   // Try to symlink. If it fails log an error, but continue.
   if (symlink(log_filename.c_str(), symlink_path.c_str()) == -1) {
-    PosixErrorLog() << "unable to create " << symlink_path << " symlink";
+    PLOG(ERROR) << "unable to create " << symlink_path << " symlink";
   }
 
   // Construct the actual log file stream.

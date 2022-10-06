@@ -22,12 +22,13 @@
 
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/complexity_tracker/complexity_tracker.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
 
@@ -49,8 +50,8 @@ class RedfishCachedGetterInterface {
   RedfishCachedGetterInterface(
       std::optional<const ApiComplexityContextManager *> manager)
       : manager_(manager) {
-    ecclesia::Check(!manager.has_value() || (*manager) != nullptr,
-                    "Complexity manager is nullptr");
+    CHECK(!manager.has_value() || (*manager) != nullptr)
+        << "Complexity manager is nullptr";
   }
   virtual ~RedfishCachedGetterInterface() {}
 

@@ -49,8 +49,9 @@ cc_library(
     deps = [
         ":entry_point_emb",
         ":structures_emb",
-        "//ecclesia/lib/logging",
         "//ecclesia/lib/strings:natural_sort",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

@@ -25,6 +25,7 @@
 #include <utility>
 
 #include "absl/functional/function_ref.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
@@ -32,8 +33,6 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "single_include/nlohmann/json.hpp"
 
@@ -161,7 +160,7 @@ class JsonMockupMockup : public RedfishInterface {
   explicit JsonMockupMockup(absl::string_view raw_json) {
     json_model_ = nlohmann::json::parse(raw_json, nullptr, false);
     if (json_model_.is_discarded()) {
-      ecclesia::FatalLog() << "Could not load JSON.";
+      LOG(FATAL) << "Could not load JSON.";
     }
   }
   bool IsTrusted() const override { return true; }
@@ -169,7 +168,7 @@ class JsonMockupMockup : public RedfishInterface {
                        TrustedEndpoint trusted) override {
     // There's no reason why this cannot be a no-op, but for now just terminate
     // in case someone is expecting some particular behaviour.
-    ecclesia::FatalLog() << "Tried to update the endpoint of a JsonMockup";
+    LOG(FATAL) << "Tried to update the endpoint of a JsonMockup";
   }
   RedfishVariant GetRoot(GetParams params,
                          ServiceRootUri service_root) override {

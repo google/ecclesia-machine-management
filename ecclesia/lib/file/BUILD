@@ -8,10 +8,11 @@ cc_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":path",
-        "//ecclesia/lib/logging",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -21,7 +22,8 @@ cc_library(
     hdrs = ["cc_embed_interface.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//ecclesia/lib/logging",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -137,9 +139,9 @@ cc_library(
     hdrs = ["mmap.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//ecclesia/lib/logging",
-        "//ecclesia/lib/logging:posix",
         "@com_google_absl//absl/cleanup",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -178,7 +180,8 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":cc_embed_interface",
-        "//ecclesia/lib/logging",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -228,9 +231,9 @@ cc_library(
     deps = [
         ":dir",
         ":path",
-        "//ecclesia/lib/logging",
-        "//ecclesia/lib/logging:posix",
         "@com_google_absl//absl/cleanup",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
     ],
@@ -254,8 +257,8 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":path",
-        "//ecclesia/lib/logging",
-        "//ecclesia/lib/logging:posix",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/strings",
     ],
 )

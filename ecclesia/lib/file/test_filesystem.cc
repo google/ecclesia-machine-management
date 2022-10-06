@@ -29,15 +29,14 @@
 #include <vector>
 
 #include "absl/cleanup/cleanup.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/dir.h"
 #include "ecclesia/lib/file/path.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/lib/logging/posix.h"
 
 namespace ecclesia {
 namespace {
@@ -50,7 +49,7 @@ constexpr absl::string_view kEcclesiaRoot = "com_google_ecclesia/ecclesia";
 void MakeDirectoryExist(const std::string &path) {
   int rc = mkdir(path.c_str(), 0755);
   if (rc < 0 && errno != EEXIST) {
-    PosixFatalLog() << "mkdir() failed for dir " << path;
+    PLOG(FATAL) << "mkdir() failed for dir " << path;
   }
 }
 
@@ -61,16 +60,16 @@ void OpenAndWriteFile(const std::string &path, int flags,
   // Open the file.
   int fd = open(path.c_str(), flags, S_IRWXU);
   if (fd == -1) {
-    PosixFatalLog() << "open() failed for file " << path;
+    PLOG(FATAL) << "open() failed for file " << path;
   }
   absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   // Write the file. Fail if the write fails, OR if it's too short.
   int rc = write(fd, data.data(), data.size());
   if (rc == -1) {
-    PosixFatalLog() << "write() failed for file " << path;
+    PLOG(FATAL) << "write() failed for file " << path;
   } else if (rc < data.size()) {
-    FatalLog() << "write() was unable to write the full contents to " << path;
+    LOG(FATAL) << "write() was unable to write the full contents to " << path;
   }
 }
 
@@ -79,7 +78,7 @@ std::string PathContents(const std::string &path) {
   // Open the file.
   int fd = open(path.c_str(), O_RDONLY);
   if (fd == -1) {
-    FatalLog() << "open() was unable to return file descriptor: " << path;
+    LOG(FATAL) << "open() was unable to return file descriptor: " << path;
   }
   absl::Cleanup fd_closer = [fd]() { close(fd); };
 
@@ -87,7 +86,7 @@ std::string PathContents(const std::string &path) {
   char buffer[4096];
   std::string contents;
   while (ssize_t rc = read(fd, buffer, sizeof(buffer))) {
-    if (rc == -1) PosixFatalLog() << "read() failed for file " << path;
+    if (rc == -1) PLOG(FATAL) << "read() failed for file " << path;
     contents.append(buffer, rc);
   }
   return contents;
@@ -107,7 +106,7 @@ void RemoveDirectoryTree(const std::string &path) {
     }
     // If the last remove failed the we can't recover.
     if (rc == -1) {
-      PosixFatalLog() << "remove() failed for path " << path;
+      PLOG(FATAL) << "remove() failed for path " << path;
     }
   }).IgnoreError();
 }
@@ -131,16 +130,16 @@ std::string GetTestDataDependencyPath(absl::string_view path) {
       return JoinFilePaths(runfiles_srcdir, kEcclesiaRoot, path);
     }
   }
-  FatalLog() << "TEST_SRCDIR environment variable was not defined, and "
+  LOG(FATAL) << "TEST_SRCDIR environment variable was not defined, and "
                 ".runfiles directory was not found.";
 #else
-  FatalLog() << "TEST_SRCDIR environment variable was not defined";
+  LOG(FATAL) << "TEST_SRCDIR environment variable was not defined";
 #endif
 }
 
 std::string GetTestTempdirPath() {
   char *tmpdir = std::getenv("TEST_TMPDIR");
-  Check(tmpdir, "TEST_TMPDIR environment variable is defined");
+  CHECK(tmpdir) << "TEST_TMPDIR environment variable is defined";
   return tmpdir;
 }
 
@@ -151,7 +150,7 @@ std::string GetTestTempdirPath(absl::string_view path) {
 std::string GetTestTempUdsDirectory() {
   char tempdir_buffer[] = "/tmp/socket_dir.XXXXXX";
   if (mkdtemp(tempdir_buffer) == nullptr) {
-    FatalLog() << "unable to create a temporary directory";
+    LOG(FATAL) << "unable to create a temporary directory";
   }
   return tempdir_buffer;
 }
@@ -163,14 +162,14 @@ TestFilesystem::TestFilesystem(std::string root) : root_(std::move(root)) {
 TestFilesystem::~TestFilesystem() { RemoveAllContents(); }
 
 std::string TestFilesystem::GetTruePath(absl::string_view path) const {
-  Check(path[0] == '/', "path is absolute") << "path=" << path;
+  CHECK(path[0] == '/') << "path is absolute, path=" << path;
   while (!path.empty() && path[0] == '/') path.remove_prefix(1);
   return JoinFilePaths(root_, path);
 }
 
 void TestFilesystem::CreateDir(absl::string_view path) {
-  CheckCondition(!path.empty());
-  Check(path[0] == '/', "path is absolute") << "path=" << path;
+  CHECK(!path.empty());
+  CHECK(path[0] == '/') << "path is absolute, path=" << path;
 
   // Break the path up into components to be created.
   std::vector<absl::string_view> parts =
@@ -186,21 +185,21 @@ void TestFilesystem::CreateDir(absl::string_view path) {
 
 void TestFilesystem::CreateFile(absl::string_view path,
                                 absl::string_view data) {
-  CheckCondition(!path.empty());
+  CHECK(!path.empty());
 
   // Open and write, treating an existing file as an open() error.
   OpenAndWriteFile(GetTruePath(path), O_CREAT | O_EXCL | O_WRONLY, data);
 }
 
 void TestFilesystem::WriteFile(absl::string_view path, absl::string_view data) {
-  CheckCondition(!path.empty());
+  CHECK(!path.empty());
 
   // Open and write, truncating any existing file to empty.
   OpenAndWriteFile(GetTruePath(path), O_CREAT | O_TRUNC | O_WRONLY, data);
 }
 
 std::string TestFilesystem::ReadFile(absl::string_view path) {
-  CheckCondition(!path.empty());
+  CHECK(!path.empty());
 
   // Open and read file.
   return PathContents(GetTruePath(path));
@@ -208,8 +207,8 @@ std::string TestFilesystem::ReadFile(absl::string_view path) {
 
 void TestFilesystem::CreateSymlink(absl::string_view target,
                                    absl::string_view link_path) {
-  CheckCondition(!target.empty());
-  CheckCondition(!link_path.empty());
+  CHECK(!target.empty());
+  CHECK(!link_path.empty());
 
   // Construct the true target path.
   std::string full_target =
@@ -218,8 +217,8 @@ void TestFilesystem::CreateSymlink(absl::string_view target,
   // Create the symlink.
   int rc = symlink(full_target.c_str(), GetTruePath(link_path).c_str());
   if (rc == -1) {
-    PosixFatalLog() << "symlink() failed for " << link_path << " -> "
-                    << "target";
+    PLOG(FATAL) << "symlink() failed for " << link_path << " -> "
+                << "target";
   }
 }
 

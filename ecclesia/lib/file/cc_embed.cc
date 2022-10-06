@@ -36,14 +36,13 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
+#include "absl/log/log.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/strip.h"
 #include "absl/strings/substitute.h"
 #include "ecclesia/lib/file/path.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 
 // Flags that control the output files.
 ABSL_FLAG(std::string, output_name, "",
@@ -133,13 +132,13 @@ int RealMain(int argc, char *argv[]) {
 
   // Make sure all of the required flags were specified.
   if (absl::GetFlag(FLAGS_output_name).empty()) {
-    FatalLog() << "source_name was not specified";
+    LOG(FATAL) << "source_name was not specified";
   }
   if (absl::GetFlag(FLAGS_namespace).empty()) {
-    FatalLog() << "namespace was not specified";
+    LOG(FATAL) << "namespace was not specified";
   }
   if (absl::GetFlag(FLAGS_variable_name).empty()) {
-    FatalLog() << "variable_name was not specified";
+    LOG(FATAL) << "variable_name was not specified";
   }
 
   // Strip off the leading entry of args. The rest of the arguments are now the
@@ -160,7 +159,7 @@ int RealMain(int argc, char *argv[]) {
         JoinFilePaths(absl::GetFlag(FLAGS_output_dir),
                       absl::StrCat(absl::GetFlag(FLAGS_output_name), ".h"));
     std::fstream out_f(header_path, out_f.binary | out_f.trunc | out_f.out);
-    if (!out_f.is_open()) FatalLog() << "unable to open " << header_path;
+    if (!out_f.is_open()) LOG(FATAL) << "unable to open " << header_path;
     out_f << absl::Substitute(kHeaderTemplate, absl::GetFlag(FLAGS_namespace),
                               args.size(), absl::GetFlag(FLAGS_variable_name));
   }
@@ -174,7 +173,7 @@ int RealMain(int argc, char *argv[]) {
         JoinFilePaths(absl::GetFlag(FLAGS_output_dir),
                       absl::StrCat(absl::GetFlag(FLAGS_output_name), ".cc"));
     std::fstream out_f(source_path, out_f.binary | out_f.trunc | out_f.out);
-    if (!out_f.is_open()) FatalLog() << "unable to open " << source_path;
+    if (!out_f.is_open()) LOG(FATAL) << "unable to open " << source_path;
     out_f << absl::Substitute(kSourcePrefixTemplate,
                               absl::GetFlag(FLAGS_namespace), args.size(),
                               absl::GetFlag(FLAGS_variable_name));
@@ -185,11 +184,11 @@ int RealMain(int argc, char *argv[]) {
     for (const char *input_path : args) {
       // Open up the input file.
       std::fstream in_f(input_path, in_f.binary | in_f.in);
-      if (!in_f.is_open()) FatalLog() << "unable to open " << input_path;
+      if (!in_f.is_open()) LOG(FATAL) << "unable to open " << input_path;
       // Make sure there's no duplicate name.
       absl::string_view input_name = NameFromPath(input_path);
       if (!input_names.insert(input_name).second) {
-        FatalLog() << "multiple entries named: " << input_name;
+        LOG(FATAL) << "multiple entries named: " << input_name;
       }
       // Start the EmbeddedFile entry and write out the input name. Note that
       // we have to wrap all the data literals in an explicitly sized

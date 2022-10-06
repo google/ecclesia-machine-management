@@ -24,11 +24,9 @@
 #include <optional>
 #include <string>
 
+#include "absl/log/log.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/path.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/lib/logging/posix.h"
 
 namespace ecclesia {
 
@@ -51,7 +49,7 @@ bool SetUpUnixDomainSocket(
 
   // Fail immediately if the socket root is not safe.
   if (!is_root_safe(socket_root)) {
-    ErrorLog() << "cannot set up domain sockets in " << socket_root
+    LOG(ERROR) << "cannot set up domain sockets in " << socket_root
                << " because it is not a safe and secure location";
     return false;
   }
@@ -66,7 +64,7 @@ bool SetUpUnixDomainSocket(
       expected_perms = S_IRWXU | S_IRGRP | S_IXGRP;
       break;
     default:
-      ErrorLog() << "unrecognized permissions enum value "
+      LOG(ERROR) << "unrecognized permissions enum value "
                  << static_cast<int>(permissions) << " (as int)";
       return false;
   }
@@ -86,8 +84,8 @@ bool SetUpUnixDomainSocket(
   // check afterwards). Any other failure is an error.
   if (mkdir(socket_directory.c_str(), expected_perms) != 0) {
     if (errno != EEXIST) {
-      PosixErrorLog() << "unable to create the socket directory "
-                      << socket_directory;
+      PLOG(ERROR) << "unable to create the socket directory "
+                  << socket_directory;
       return false;
     }
   }
@@ -96,12 +94,12 @@ bool SetUpUnixDomainSocket(
   // correct permissions and ownership.
   struct stat socket_dir_stat;
   if (lstat(socket_directory.c_str(), &socket_dir_stat) != 0) {
-    PosixErrorLog() << "unable to lstat() " << socket_directory;
+    PLOG(ERROR) << "unable to lstat() " << socket_directory;
     return false;
   }
   // First make sure it's actually a directory.
   if (!S_ISDIR(socket_dir_stat.st_mode)) {
-    ErrorLog() << "socket directory " << socket_directory
+    LOG(ERROR) << "socket directory " << socket_directory
                << "is not a directory";
     return false;
   }
@@ -110,9 +108,9 @@ bool SetUpUnixDomainSocket(
   if ((socket_dir_stat.st_mode & ALLPERMS) != expected_perms) {
     if (chmod(socket_directory.c_str(),
               (socket_dir_stat.st_mode & ~ALLPERMS) | expected_perms) != 0) {
-      PosixErrorLog() << "socket directory " << socket_directory
-                      << "does not have the correct user permissions and "
-                         "we cannot change them; chmod() failed";
+      PLOG(ERROR) << "socket directory " << socket_directory
+                  << "does not have the correct user permissions and "
+                     "we cannot change them; chmod() failed";
       return false;
     }
   }
@@ -122,9 +120,9 @@ bool SetUpUnixDomainSocket(
   if (socket_dir_stat.st_uid != expected_uid ||
       socket_dir_stat.st_gid != expected_gid) {
     if (lchown(socket_directory.c_str(), expected_uid, expected_gid) != 0) {
-      PosixErrorLog() << "socket directory " << socket_directory
-                      << " does not have the correct ownership and we cannot "
-                         "change it; lchown() failed";
+      PLOG(ERROR) << "socket directory " << socket_directory
+                  << " does not have the correct ownership and we cannot "
+                     "change it; lchown() failed";
       return false;
     }
   }
@@ -134,7 +132,7 @@ bool SetUpUnixDomainSocket(
   // remove to fail because the file already doesn't exist, but any other
   // failure is an error.
   if (unlink(socket_path.c_str()) != 0 && errno != ENOENT) {
-    PosixErrorLog() << "unable to remove the existing socket " << socket_path;
+    PLOG(ERROR) << "unable to remove the existing socket " << socket_path;
     return false;
   }
 

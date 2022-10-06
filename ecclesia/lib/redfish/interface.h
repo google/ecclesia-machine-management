@@ -30,6 +30,7 @@
 
 #include "absl/base/attributes.h"
 #include "absl/functional/function_ref.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
@@ -38,8 +39,6 @@
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/http/codes.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "single_include/nlohmann/json.hpp"
 
@@ -533,7 +532,7 @@ class RedfishInterface {
         return kGoogleServiceRoot;
     }
     // We use assert here to avoid g3 dependencies.
-    ecclesia::FatalLog() << "Unexpected value for Service Root";
+    LOG(FATAL) << "Unexpected value for Service Root";
   }
 
   virtual ~RedfishInterface() {}

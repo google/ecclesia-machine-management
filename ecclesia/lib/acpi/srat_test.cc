@@ -27,6 +27,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/base/macros.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -37,8 +39,6 @@
 #include "ecclesia/lib/acpi/system_description_table.h"
 #include "ecclesia/lib/codec/endian.h"
 #include "ecclesia/lib/file/test_filesystem.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/testing/status.h"
 #include "runtime/cpp/emboss_cpp_util.h"
 #include "runtime/cpp/emboss_prelude.h"
@@ -304,8 +304,7 @@ class SratReaderTest : public ::testing::Test {
         srat_buffer_ptr, SratMemoryAffinityView::SizeInBytes());
     srat_buffer_ptr += memory_affinity_[2].SizeInBytes();
 
-    Check(srat_buffer_ptr == &srat_buffer_[sizeof(srat_buffer_)],
-          "correct number of bytes copied")
+    CHECK(srat_buffer_ptr == &srat_buffer_[sizeof(srat_buffer_)])
         << absl::StrFormat("Srat buffer pointer expected to be %p, actual %p",
                            &srat_buffer_[sizeof(srat_buffer_)],
                            srat_buffer_ptr);
@@ -517,7 +516,7 @@ class SratTestV3 : public ::testing::Test {
   SratTestV3() {
     auto table = SystemDescriptionTable::ReadFromFile(
         GetTestDataDependencyPath(kTestSysfsAcpiSratPath));
-    Check(table.ok(), "successfully read file") << table.status().ToString();
+    CHECK(table.ok()) << table.status().ToString();
 
     srat_ = std::make_unique<Srat>(std::move(table.value()));
   }

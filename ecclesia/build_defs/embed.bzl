@@ -145,8 +145,8 @@ def shar_binary(
             "@com_google_absl//absl/strings",
             "//ecclesia/lib/file:dir",
             "//ecclesia/lib/file:path",
-            "//ecclesia/lib/logging",
-            "//ecclesia/lib/logging:posix",
+            "@com_google_absl//absl/log",
+            "@com_google_absl//absl/log:check",
         ],
         visibility = visibility,
     )

@@ -25,12 +25,11 @@
 #include <string>
 
 #include "absl/cleanup/cleanup.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/posix.h"
 
 namespace ecclesia {
 
@@ -80,8 +79,8 @@ absl::StatusOr<MappedMemory> MappedMemory::Create(const std::string &path,
 MappedMemory::~MappedMemory() {
   if (mapping_.addr) {
     if (munmap(mapping_.addr, mapping_.size) == -1) {
-      PosixErrorLog() << "munmap() of " << mapping_.addr << ", "
-                      << mapping_.size << " failed";
+      PLOG(ERROR) << "munmap() of " << mapping_.addr << ", " << mapping_.size
+                  << " failed";
     }
   }
 }

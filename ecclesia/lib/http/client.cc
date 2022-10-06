@@ -18,7 +18,8 @@
 
 #include <string>
 
-#include "ecclesia/lib/logging/logging.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
@@ -35,7 +36,7 @@ std::string GetHttpMethodName(ecclesia::Protocol protocol) {
       return "PATCH";
   }
   // We use assert here to avoid g3 dependencies.
-  ecclesia::Check(false, "Unexpected value for Protocol");
+  CHECK(false) << "Unexpected value for Protocol";
   return "GET";
 }
 

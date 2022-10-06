@@ -37,7 +37,8 @@
 #include <utility>
 
 #include "absl/algorithm/container.h"
-#include "ecclesia/lib/logging/logging.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 
 namespace ecclesia {
 
@@ -192,7 +193,7 @@ class CircularBuffer {
 
   // Remove the front element.
   void pop_front() {
-    Check(size_ > 0, "size_ > 0");
+    CHECK(size_ > 0) << "size_ > 0";
 
     Destroy(&front());
     begin_ = nextpos(begin_);
@@ -201,7 +202,7 @@ class CircularBuffer {
 
   // Remove the back element.
   void pop_back() {
-    Check(size_ > 0, "size_ > 0");
+    CHECK(size_ > 0) << "size_ > 0";
     Destroy(&back());
     --size_;
   }
@@ -239,13 +240,13 @@ class CircularBuffer {
   // For pos < 0, returns the item at logical position 'pos + size()'
   reference at(difference_type pos) {
     size_type logical = pos + (pos < 0) * size_;
-    Check(logical < size_, "logical < size_");
+    CHECK(logical < size_) << "logical < size_";
     return space_[logical_to_absolute(logical)];
   }
 
   const_reference at(difference_type pos) const {
     size_type logical = pos + (pos < 0) * size_;
-    Check(logical < size_, "logical < size_");
+    CHECK(logical < size_) << "logical < size_";
     return space_[logical_to_absolute(logical)];
   }
 
@@ -309,29 +310,29 @@ class CircularBuffer {
 
   // Pre: logical in [0, size).
   size_type logical_to_absolute(size_type logical) const {
-    Check(logical < size_, "logical < size_");
+    CHECK(logical < size_) << "logical < size_";
     size_type absolute = begin_ + logical;
     if (absolute >= capacity_) {
       absolute -= capacity_;
     }
-    Check(absolute < capacity_, "absolute < capacity_");
+    CHECK(absolute < capacity_) << "absolute < capacity_";
     return absolute;
   }
 
   // Pre: absolute in [0, capacity).
   size_type absolute_to_logical(size_type absolute) const {
-    Check(absolute < capacity_, "absolute < capacity_");
+    CHECK(absolute < capacity_) << "absolute < capacity_";
     size_type logical = capacity_ - begin_ + absolute;
     if (logical >= capacity_) {
       logical -= capacity_;
     }
-    Check(logical <= capacity_, "absolute <= capacity_");
+    CHECK(logical <= capacity_) << "absolute <= capacity_";
     return logical;
   }
 
   // Pre: absolute in [0, capacity).
   size_type nextpos(size_type absolute) const {
-    Check(absolute < capacity_, "absolute < capacity_");
+    CHECK(absolute < capacity_) << "absolute < capacity_";
     ++absolute;
     if (absolute == capacity_) {
       absolute = 0;
@@ -341,7 +342,7 @@ class CircularBuffer {
 
   // Pre: absolute in [0, capacity).
   size_type prevpos(size_type absolute) const {
-    Check(absolute < capacity_, "absolute < capacity_");
+    CHECK(absolute < capacity_) << "absolute < capacity_";
     if (absolute == 0) {
       absolute += capacity_;
     }
@@ -445,8 +446,8 @@ class CircularBuffer<T>::Iterator {
 
   Iterator &Incr(difference_type n) {
     const auto logical = static_cast<size_type>(logical_pos() + n);
-    Check(logical <= cb_->size(),
-          "logical position is within the buffer or one past the end of it")
+    CHECK(logical <= cb_->size())
+        << "logical position is within the buffer or one past the end of it, "
         << "bad Incr by n=" << n << " from " << logical_pos();
     pos_ = (logical == cb_->size() ? kEnd : cb_->logical_to_absolute(logical));
     return *this;

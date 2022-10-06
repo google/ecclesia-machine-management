@@ -29,9 +29,8 @@
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/dir.h"
 #include "ecclesia/lib/file/path.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/lib/logging/posix.h"
+#include "absl/log/log.h"
+
 
 // Include the header that defines kSharDataFiles.
 #include "$DATA_HEADER"
@@ -46,7 +45,7 @@ int RealMain(int argc, char *argv[]) {
   std::string tempdir_buffer =
     JoinFilePaths(GetSystemTempdirPath(), "shar_binary.XXXXXX");
   if (mkdtemp(tempdir_buffer.data()) == nullptr) {
-    FatalLog() << "unable to create temporary directory";
+    LOG(FATAL) << "unable to create temporary directory";
   }
   absl::string_view tempdir = tempdir_buffer;
 
@@ -55,11 +54,11 @@ int RealMain(int argc, char *argv[]) {
     std::string file_path = JoinFilePaths(tempdir, file.name);
     absl::Status mkdir_status = MakeDirectories(GetDirname(file_path));
     if (!mkdir_status.ok()) {
-      FatalLog() << "unable to create directory " << mkdir_status;
+      LOG(FATAL) << "unable to create directory " << mkdir_status;
     }
     std::fstream out_f(file_path, out_f.binary | out_f.trunc | out_f.out);
     if (!out_f.is_open()) {
-      FatalLog() << "unable to open " << file_path;
+      LOG(FATAL) << "unable to open " << file_path;
     }
     out_f << file.data;
   }
@@ -93,7 +92,7 @@ int RealMain(int argc, char *argv[]) {
   execv(kShell.data(), new_argv.data());
 
   // If we get here then exec'ing the shell failed somehow.
-  PosixFatalLog() << "unable to exec the shell " << shell_path
+  PLOG(FATAL) << "unable to exec the shell " << shell_path
                   << " with script " << script_path;
 }
 

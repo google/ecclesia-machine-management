@@ -30,6 +30,7 @@
 
 #include "absl/base/thread_annotations.h"
 #include "absl/functional/function_ref.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -41,8 +42,6 @@
 #include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/http/codes.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/json_ptr.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
@@ -583,8 +582,7 @@ class HttpRedfishInterface : public RedfishInterface {
                        TrustedEndpoint trusted) {
     absl::WriterMutexLock mu(&transport_mutex_);
     if (cache_factory_ == nullptr) {
-      ecclesia::FatalLog()
-          << "Tried to update the endpoint without CacheFactory set";
+      LOG(FATAL) << "Tried to update the endpoint without CacheFactory set";
     }
     trusted_ = trusted;
     transport_ = std::move(new_transport);

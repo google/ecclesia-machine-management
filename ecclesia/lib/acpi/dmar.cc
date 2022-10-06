@@ -19,10 +19,10 @@
 #include <cstdint>
 #include <string>
 
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "ecclesia/lib/acpi/system_description_table.emb.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "runtime/cpp/emboss_cpp_util.h"
 #include "runtime/cpp/emboss_prelude.h"
 
@@ -42,13 +42,12 @@ bool DmarSraHeaderDescriptor::Validate(View header_view,
                                        const uint16_t expected_type,
                                        const uint16_t minimum_size,
                                        const char *const structure_name) {
-  Check(minimum_size >= View::SizeInBytes(), "sufficient minimum size")
-      << absl::StrFormat(
-             "insufficient minimum size for DMAR header check, "
-             "need at least %u, actual %u",
-             View::SizeInBytes(), minimum_size);
+  CHECK(minimum_size >= View::SizeInBytes()) << absl::StrFormat(
+      "insufficient minimum size for DMAR header check, "
+      "need at least %u, actual %u",
+      View::SizeInBytes(), minimum_size);
   if (header_view.struct_type().Read() != expected_type) {
-    ErrorLog() << absl::StrFormat(
+    LOG(ERROR) << absl::StrFormat(
         "Unexpected header type %d vs. %d for %s "
         "structure %p.",
         header_view.struct_type().Read(), expected_type, structure_name,
@@ -56,7 +55,7 @@ bool DmarSraHeaderDescriptor::Validate(View header_view,
     return false;
   }
   if (header_view.length().Read() < minimum_size) {
-    ErrorLog() << absl::StrFormat("%s structure %p too small %d vs. %d bytes.",
+    LOG(ERROR) << absl::StrFormat("%s structure %p too small %d vs. %d bytes.",
                                   structure_name,
                                   header_view.BackingStorage().data(),
                                   header_view.length().Read(), minimum_size);
@@ -69,7 +68,7 @@ bool DmarSraHeaderDescriptor::ValidateMaximumSize(
     View header_view, const uint32_t maximum_sra_size) {
   if (View::SizeInBytes() > maximum_sra_size ||
       header_view.length().Read() > maximum_sra_size) {
-    ErrorLog() << absl::StrFormat(
+    LOG(ERROR) << absl::StrFormat(
         "Static resource allocation structure size %d "
         "exceeds the maximum size %d",
         header_view.length().Read(), static_cast<int>(maximum_sra_size));

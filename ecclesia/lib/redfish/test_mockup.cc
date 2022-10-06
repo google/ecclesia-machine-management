@@ -30,6 +30,8 @@
 #include <variant>
 
 #include "absl/base/macros.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
@@ -41,9 +43,6 @@
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
-#include "ecclesia/lib/logging/posix.h"
 #include "ecclesia/lib/network/ip.h"
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -175,8 +174,8 @@ void TestingMockupServer::SetUpMockupServer(
   // Pass our environment to the child to at least get TEST_TMPDIR.
   int result = posix_spawn(&server_pid_, server_argv[0], nullptr, &attr,
                            server_argv, environ);
-  ecclesia::Check(result == 0, "mockup server process started")
-      << "posix_spawn() returned " << result;
+  CHECK(result == 0) << "mockup server process started, "
+                     << "posix_spawn() returned " << result;
 
   // Wait for the client to be up.
   bool server_ready = false;
@@ -206,26 +205,26 @@ void TestingMockupServer::SetUpMockupServer(
     int status;
     pid_t waited = waitpid(server_pid_, &status, WNOHANG);
     if (waited == -1) {
-      ecclesia::PosixFatalLog() << "waitpid() failed";
+      PLOG(FATAL) << "waitpid() failed";
     } else if (waited == 0) {
       // This is the good case, it means we're still waiting, so do nothing.
     } else {
       // The process terminated in some way, try and log a useful indicator of
       // how it terminated.
       if (WIFEXITED(status)) {
-        ecclesia::FatalLog() << "mockup server terminated early with exit code "
-                             << WEXITSTATUS(status);
+        LOG(FATAL) << "mockup server terminated early with exit code "
+                   << WEXITSTATUS(status);
       } else if (WIFSIGNALED(status)) {
-        ecclesia::FatalLog() << "mockup server terminated early with signal "
-                             << WTERMSIG(status);
+        LOG(FATAL) << "mockup server terminated early with signal "
+                   << WTERMSIG(status);
       } else {
-        ecclesia::FatalLog() << "mockup server terminated in an unknown way";
+        LOG(FATAL) << "mockup server terminated in an unknown way";
       }
     }
     // Wait a little while before trying again.
     absl::SleepFor(kDaemonStartSleepDuration);
   } while (!server_ready && absl::Now() < give_up_time);
-  ecclesia::Check(server_ready, "mockup server came up");
+  CHECK(server_ready) << "mockup server came up";
 }
 
 TestingMockupServer::~TestingMockupServer() {
@@ -250,7 +249,7 @@ std::unique_ptr<RedfishInterface> TestingMockupServer::RedfishClientInterface(
   auto cache = std::make_unique<ecclesia::NullCache>(transport.get());
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
-  ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
+  CHECK(intf != nullptr) << "can connect to the redfish mockup server";
   return intf;
 }
 
@@ -267,26 +266,24 @@ TestingMockupServer::RedfishClientSessionAuthInterface(
         return ConfigToTransport(std::move(client), "http", conn);
       },
       connection_config_);
-  ecclesia::Check(transport != nullptr, "can create a redfish transport.");
+  CHECK(transport != nullptr) << "can create a redfish transport.";
 
   if (auto auth_status = transport->DoSessionAuth("FakeName", "FakePassword");
       !auth_status.ok()) {
-    ecclesia::ErrorLog() << "Failed to do session auth: "
-                         << auth_status.message();
+    LOG(ERROR) << "Failed to do session auth: " << auth_status.message();
     return nullptr;
   }
 
   auto cache = std::make_unique<ecclesia::NullCache>(transport.get());
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
-  ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
+  CHECK(intf != nullptr) << "can connect to the redfish mockup server";
   return intf;
 }
 
 std::unique_ptr<RedfishInterface>
 TestingMockupServer::RedfishClientTlsAuthInterface() {
-  ecclesia::Check(client_tls_config_.has_value(),
-                  "client TLS configuration exists");
+  CHECK(client_tls_config_.has_value()) << "client TLS configuration exists";
 
   ecclesia::TlsCredential creds;
   creds.set_verify_hostname(client_tls_config_->verify_hostname);
@@ -306,7 +303,7 @@ TestingMockupServer::RedfishClientTlsAuthInterface() {
   auto cache = std::make_unique<ecclesia::NullCache>(transport.get());
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
-  ecclesia::Check(intf != nullptr, "can connect to the redfish mockup server");
+  CHECK(intf != nullptr) << "can connect to the redfish mockup server";
   return intf;
 }
 

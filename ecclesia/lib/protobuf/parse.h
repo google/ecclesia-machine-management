@@ -46,12 +46,11 @@
 #include "google/protobuf/io/tokenizer.h"
 #include "google/protobuf/io/zero_copy_stream_impl.h"
 #include "google/protobuf/text_format.h"
+#include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/interfaces.h"
-#include "ecclesia/lib/logging/logging.h"
 
 namespace ecclesia {
 
@@ -87,8 +86,9 @@ MessageType ParseTextAsProtoOrDie(
   // Try the actual parse. If it fails, terminate with all of the errors.
   MessageType message;
   if (!parser.ParseFromString(text, &message)) {
-    FatalLog(loc) << "text proto parsing failed:\n"
-                  << absl::StrJoin(collector.errors(), "\n");
+    LOG(FATAL).AtLocation(loc.file_name(), loc.line())
+        << "text proto parsing failed:\n"
+        << absl::StrJoin(collector.errors(), "\n");
   }
   return message;
 }
@@ -150,12 +150,14 @@ MessageType ParseTextFileAsProtoOrDie(
     const std::string &path, SourceLocation loc = SourceLocation::current()) {
   std::ifstream textfile(path);
   if (textfile.fail()) {
-    FatalLog(loc) << "failed to open file at path " << path;
+    LOG(FATAL).AtLocation(loc.file_name(), loc.line())
+        << "failed to open file at path " << path;
   }
   google::protobuf::io::IstreamInputStream input_stream(&textfile);
   MessageType message;
   if (!google::protobuf::TextFormat::Parse(&input_stream, &message)) {
-    FatalLog(loc) << "failed to parse text file at path " << path;
+    LOG(FATAL).AtLocation(loc.file_name(), loc.line())
+        << "failed to parse text file at path " << path;
   }
   return message;
 }

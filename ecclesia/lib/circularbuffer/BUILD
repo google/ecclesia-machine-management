@@ -19,7 +19,8 @@ cc_library(
     hdrs = ["circularbuffer.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//ecclesia/lib/logging",
         "@com_google_absl//absl/algorithm:container",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
     ],
 )

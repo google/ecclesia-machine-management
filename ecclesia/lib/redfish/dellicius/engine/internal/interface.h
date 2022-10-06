@@ -21,6 +21,7 @@
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
 
@@ -44,8 +45,7 @@ class QueryPlannerInterface {
   // resource acting as local root for redfish subtree.
   // If invoked multiple times using the same result object, the datasets shall
   // be accumulated for each subquery and not replaced.
-  virtual void Run(const RedfishVariant &variant,
-                   const Clock &clock,
+  virtual void Run(const RedfishVariant &variant, const Clock &clock,
                    DelliciusQueryResult &result) = 0;
 };
 

@@ -22,13 +22,12 @@
 #include <utility>
 
 #include "google/protobuf/message.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/struct_proto_conversion.h"
@@ -349,7 +348,7 @@ OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
   OverridePolicySelector selector;
   absl::Status read_selector = GetBinaryProto(policy_selector_path, &selector);
   if (!read_selector.ok()) {
-    WarningLog() << "Read selector file failed: " << read_selector.message();
+    LOG(WARNING) << "Read selector file failed: " << read_selector.message();
     return policy;
   }
   std::string policy_file_path;
@@ -364,12 +363,12 @@ OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
     }
   }
   if (policy_file_path.empty()) {
-    WarningLog() << "No matching policy";
+    LOG(WARNING) << "No matching policy";
     return policy;
   }
   absl::Status read_policy = GetBinaryProto(policy_file_path, &policy);
   if (!read_policy.ok()) {
-    WarningLog() << "Read policy file failed: " << read_policy.message();
+    LOG(WARNING) << "Read policy file failed: " << read_policy.message();
     return policy;
   }
   return policy;
@@ -402,7 +401,7 @@ absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
       auto update_status =
           ResultUpdateHelper(field, *get_result, redfish_transport_.get());
       if (!update_status.ok()) {
-        WarningLog() << absl::StrFormat(
+        LOG(WARNING) << absl::StrFormat(
             "Failed to perform override to uri: %s, failure: %s.", path,
             update_status.message());
       }
@@ -417,7 +416,7 @@ absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
       auto update_status =
           ResultUpdateHelper(field, *get_result, redfish_transport_.get());
       if (!update_status.ok()) {
-        WarningLog() << absl::StrFormat(
+        LOG(WARNING) << absl::StrFormat(
             "Failed to perform override to uri: %s, failure: %s.", path,
             update_status.message());
       }

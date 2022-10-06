@@ -6,9 +6,10 @@ cc_library(
     hdrs = ["usb.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//ecclesia/lib/logging",
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/types:fixed_range_int",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings:str_format",

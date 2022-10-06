@@ -27,13 +27,12 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/io/ioctl.h"
 #include "ecclesia/lib/io/smbus/smbus.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 
 using ::testing::_;
 using ::testing::ElementsAre;
@@ -49,7 +48,7 @@ class MockIoctl : public IoctlInterface {
     if (request == I2C_SLAVE) {
       return Slave(fd, argi);
     } else {
-      FatalLog() << "unsupported ioctl() call";
+      LOG(FATAL) << "unsupported ioctl() call";
     }
   }
 
@@ -68,7 +67,7 @@ class MockIoctl : public IoctlInterface {
       *funcs |= I2C_FUNC_SMBUS_READ_I2C_BLOCK;
       return ret;
     } else {
-      FatalLog() << "unsupported ioctl() call";
+      LOG(FATAL) << "unsupported ioctl() call";
     }
   }
 

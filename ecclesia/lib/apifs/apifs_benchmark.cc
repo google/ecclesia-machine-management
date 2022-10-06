@@ -18,10 +18,11 @@
 
 #include "benchmark/benchmark.h"
 #include "absl/flags/flag.h"
+#include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/apifs/apifs.h"
-#include "ecclesia/lib/logging/logging.h"
 
 // In order to produce meaningful results, these benchmarks require you to
 // specify sysfs file(s) for operating on. This does mean that the actual
@@ -35,7 +36,7 @@ namespace {
 
 void BM_CreateApifsFileAndRead(benchmark::State &state) {
   std::string path = absl::GetFlag(FLAGS_sysfs_file_for_benchmark);
-  Check(!path.empty(), "--sysfs_file_for_benchmark has been set");
+  CHECK(!path.empty()) << "--sysfs_file_for_benchmark has been set";
 
   for (auto s : state) {
     ApifsFile pci_state(path);
@@ -45,7 +46,7 @@ void BM_CreateApifsFileAndRead(benchmark::State &state) {
 
 void BM_ReuseApifsFileAndRead(benchmark::State &state) {
   std::string path = absl::GetFlag(FLAGS_sysfs_file_for_benchmark);
-  Check(!path.empty(), "--sysfs_file_for_benchmark has been set");
+  CHECK(!path.empty()) << "--sysfs_file_for_benchmark has been set";
   ApifsFile pci_state(path);
 
   for (auto s : state) {

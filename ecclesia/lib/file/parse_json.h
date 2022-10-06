@@ -24,12 +24,11 @@
 #include <cstddef>
 #include <optional>
 
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
@@ -43,7 +42,7 @@ absl::StatusOr<nlohmann::json> ParseJsonValueFromEmbeddedFile(
       GetEmbeddedFileWithName(file_path, array));
 
   if (embedded_file_contents == std::nullopt) {
-    ErrorLog() << "Embedded file with name " << file_path << " not found";
+    LOG(ERROR) << "Embedded file with name " << file_path << " not found";
     return absl::NotFoundError("Embedded file not found.");
   }
 
@@ -53,7 +52,7 @@ absl::StatusOr<nlohmann::json> ParseJsonValueFromEmbeddedFile(
 
   // Check for parsing error
   if (json_contents.is_discarded()) {
-    ErrorLog() << "Error(s) parsing embedded file contents.";
+    LOG(ERROR) << "Error(s) parsing embedded file contents.";
     return absl::InternalError("Embedded Data not JSON parseable.");
   }
 

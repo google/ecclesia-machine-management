@@ -24,9 +24,8 @@
 #include <cstddef>
 #include <optional>
 
+#include "absl/log/log.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/logging/globals.h"
-#include "ecclesia/lib/logging/logging.h"
 
 namespace ecclesia {
 
@@ -81,7 +80,7 @@ absl::string_view GetEmbeddedFileWithNameOrDie(
       return entry.data;
     }
   }
-  FatalLog() << "found no embedded file named: " << name;
+  LOG(FATAL) << "found no embedded file named: " << name;
 }
 
 }  // namespace ecclesia

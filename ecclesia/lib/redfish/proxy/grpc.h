@@ -20,11 +20,10 @@
 #include <string>
 #include <utility>
 
+#include "absl/log/log.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/atomic/sequence.h"
-#include "ecclesia/lib/logging/globals.h"
 #include "ecclesia/lib/logging/interfaces.h"
-#include "ecclesia/lib/logging/logging.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "grpcpp/server_context.h"
@@ -75,11 +74,11 @@ class RedfishV1GrpcProxy : public redfish::v1::RedfishV1::Service {
 
   // Log an info-level message associated with a specific RPC sequence number.
   // Just calls InfoLog, but prefixes it with the proxy and RPC info.
-  LogMessageStream RpcInfoLog(
-      SequenceNumberGenerator::ValueType seq_num,
-      SourceLocation loc = SourceLocation::current()) const {
-    return std::move(InfoLog(loc)
-                     << "proxy(" << name_ << "), seq=" << seq_num << ": ");
+  void RpcInfoLog(SequenceNumberGenerator::ValueType seq_num,
+                  absl::string_view message,
+                  SourceLocation loc = SourceLocation::current()) const {
+    LOG(INFO).AtLocation(loc.file_name(), loc.line())
+        << "proxy(" << name_ << "), seq=" << seq_num << ": " << message;
   }
 
   // Generic method that gets called before every request is forwarded. Is given
