@@ -8,7 +8,9 @@ licenses(["notice"])
 proto_library(
     name = "descriptor_proto",
     srcs = ["descriptor.proto"],
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+    ],
 )
 
 py_proto_library(
