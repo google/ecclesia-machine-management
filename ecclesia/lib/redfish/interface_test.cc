@@ -28,7 +28,7 @@
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/testing/status.h"
-#include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {

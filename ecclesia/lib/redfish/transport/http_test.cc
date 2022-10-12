@@ -36,7 +36,7 @@
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/testing/status.h"
 #include "single_include/nlohmann/json.hpp"
-#include "tensorflow_serving/util/net_http/server/public/response_code_enum.h"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {

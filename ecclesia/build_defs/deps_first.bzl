@@ -276,14 +276,13 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
         )
 
     if not native.existing_rule("com_google_tensorflow_serving"):
-        # tensorflow/serving 2.9.1 release from from July 11, 2022
         patch_file = "tensorflow.visibility.patch"
         http_archive(
             name = "com_google_tensorflow_serving",
             patches = _make_patch_paths("tensorflow.patches", [patch_file], package_name),
-            sha256 = "cb2fbfa2b63b0c417f2c56f429abd50bb304abae44abd1db63d1ba12445c2b52",
-            strip_prefix = "serving-2.9.1",
-            urls = ["https://github.com/tensorflow/serving/archive/refs/tags/2.9.1.zip"],
+            sha256 = "013fb45df1f8d18c1a912aafa793834adab39a667705e84862880bc72eaac199",
+            strip_prefix = "serving-a17d0388ff0146c6ee2b66c75054845cdbd26677",
+            urls = ["https://github.com/tensorflow/serving/archive/a17d0388ff0146c6ee2b66c75054845cdbd26677.zip"],
         )
 
     if not native.existing_rule("com_json"):
