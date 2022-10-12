@@ -32,7 +32,7 @@ struct GrpcTransportParams {
   // Clock used for all operations.
   Clock *clock = Clock::RealClock();
   // Timeout used for all operations.
-  absl::Duration timeout = absl::Seconds(90);
+  absl::Duration timeout = absl::Seconds(40);
 };
 
 absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
