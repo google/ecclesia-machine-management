@@ -1,7 +1,7 @@
 # proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
 # proto-message: DelliciusQueryResult
 
-query_id: "SensorCollector"
+query_ids: "SensorCollector"
 subquery_output_by_id {
   key: "Sensors"
   value {

@@ -1,14 +1,13 @@
+load("//ecclesia/build_defs:embed.bzl", "cc_data_library")
+
 licenses(["notice"])
 
 cc_test(
     name = "query_planner_test",
     srcs = ["query_planner_test.cc"],
     data = [
-        "query_in/assembly_in.textproto",
-        "query_in/sensor_in.textproto",
-        "query_out/assembly_out.textproto",
-        "query_out/devpath_sensor_out.textproto",
-        "query_out/sensor_out.textproto",
+        "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_in",
+        "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_out",
         "//ecclesia/redfish_mockups/indus_hmb_shim:mockup.shar",
     ],
     deps = [
@@ -22,13 +21,44 @@ cc_test(
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
-        "//ecclesia/lib/redfish/testing:json_mockup",
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/time:clock_fake",
-        "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/time",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_data_library(
+    name = "test_queries_embedded",
+    cc_namespace = "ecclesia",
+    data = [
+        "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_in",
+    ],
+    var_name = "kDelliciusQueries",
+)
+
+cc_test(
+    name = "query_engine_test",
+    srcs = ["query_engine_test.cc"],
+    data = [
+        "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_out",
+        "//ecclesia/redfish_mockups/indus_hmb_shim:mockup.shar",
+    ],
+    deps = [
+        ":test_queries_embedded",
+        "//ecclesia/lib/file:path",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
+        "//ecclesia/lib/redfish/dellicius/engine:query_engine_config",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "//ecclesia/lib/testing:proto",
+        "//ecclesia/lib/time:clock_fake",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )

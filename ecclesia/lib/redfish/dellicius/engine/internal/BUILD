@@ -3,7 +3,7 @@ licenses(["notice"])
 cc_library(
     name = "interface",
     hdrs = ["interface.h"],
-    visibility = ["//ecclesia/lib/redfish/dellicius/engine/internal:__subpackages__"],
+    visibility = ["//ecclesia/lib/redfish/dellicius:__subpackages__"],
     deps = [
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
@@ -24,7 +24,6 @@ cc_library(
     deps = [
         ":interface",
         "//ecclesia/lib/redfish:interface",
-        "//ecclesia/lib/redfish:property_definitions",
         "//ecclesia/lib/redfish:topology",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
@@ -57,5 +56,18 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
+    ],
+)
+
+cc_library(
+    name = "factory",
+    hdrs = ["factory.h"],
+    visibility = ["//ecclesia/lib/redfish/dellicius:__subpackages__"],
+    deps = [
+        ":interface",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:normalizer",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:query_planner",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
     ],
 )

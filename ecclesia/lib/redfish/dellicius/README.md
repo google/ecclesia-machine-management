@@ -3,9 +3,9 @@ This directory houses key modules that implement a layered architecture for
 managing life cycle of a Dellicius Query.
 
 ## Dellicius Query Engine
-Dellicius query is a query language that allows a redfish service to be accessed
+Dellicius query is a query language that allows a Redfish service to be accessed
 as a single JSON document. The query needs an interpreter and dispatcher to
-translate query operations into redfish resource requests and dispatch over
+translate query operations into Redfish resource requests and dispatch over
 specific transport interface.
 Dellicius Query Engine is a logical composition of interpreter, dispatcher and
 normalizer, responsible for batch processing Redpath queries that are wrapped
@@ -28,11 +28,11 @@ one or more subqueries and each subquery has following components:
 
     A redpath, based on XPath v1.0,  is a sequence of ‘Step’ expressions.
     A 'Step' expression is composed of 'NodeTest' and 'Predicate'. ‘NodeTest’ is
-    the qualified name of redfish resource and ‘Predicate’ is filter operation
+    the qualified name of Redfish resource and ‘Predicate’ is filter operation
     to further refine the nodes returned for the NodeTest expression. Redpath
     uses abbreviated syntax where child axis is the default axis that narrows
     the scope of a ‘Step’ expression to children of the context node which is
-    the base redfish resource for any ‘Step’ in the redpath. All redpaths begin
+    the base Redfish resource for any ‘Step’ in the redpath. All redpaths begin
     with service root as the context node. 'Node Test' specifies the qualified
     name of the resource to match with. 'Predicate' is the expression to further
     refine the set of nodes selected by the location step.\
@@ -47,7 +47,7 @@ one or more subqueries and each subquery has following components:
 
 2. **Property Requirements**:
    Each subquery calls out the properties to be queried
-   from the filtered redfish node-set. An optional normalization specification
+   from the filtered Redfish node-set. An optional normalization specification
    for mapping properties to specific variables can be specified using the ‘key’
    attribute.
 3. **Subquery Id**: String field uniquely identifying subquery in a
@@ -82,7 +82,7 @@ one or more subqueries and each subquery has following components:
 >'Key' is an optional attribute  in the properties specification within a
   subquery. The default normalization level is no normalization and data shall
   transparently be sent to the client with the value of key attribute set to the
-  requested redfish property name. A Dellicius query does not impose a
+  requested Redfish property name. A Dellicius query does not impose a
   relationship requirement between the subqueries. Although, performance wise,
   it is optimal to batch subqueries whose redpaths have common ancestors because
   the query engine  batch processes the subqueries and dispatches request only
@@ -93,33 +93,30 @@ one or more subqueries and each subquery has following components:
 Dellicius query output comprises metadata for the query operation that describes
 performance characteristics like query latency and a sequence of subquery
 results.
-Following are the key components of a Dellicius Query Result.
 
-1. Query Identifier
-2. Start and End Timestamp
-3. Subquery Output:
-4. Subquery Identifier
-5. Status
-6. Data:-
+Following are the key components of a Dellicius Query Result:
 
-    **Devpath**: Uniquely identifies the source of the telemetry based on
-             the physical topology of the system.
-
-    **Key**: Identifies the redfish property parsed for this subquery when the
-         engine is configured for no normalization. Else, identifies a custom
-         property the redfish property maps to for property level normalization.
-
-    **Value**: Value of requested redfish property.
+1. **Query Identifier**
+2. **Start Timestamp**: Represents the point in time when a delicious query is received by the query engine.
+3. **End Timestamp**: Represents the point in time when the  last subquery response within a delicious query is processed by the query engine.
+4. **Subquery Output**: Map where key is unique subquery id string and value is collection of data sets. A data set in this context is a subset of properties collected from a Redfish resource per the property specification in the corresponding subquery of a Dellicius query. A data set has following properties:
+    1. **Devpath**: Uniquely identifies the source of the dataset based on the physical topology of the system.
+    2. **Data**: Repeated field capturing the requested property and the identifier.
+        1. **Name**: Identifies the Redfish property parsed for this subquery when the engine is configured for no normalization. Else, represents a variable the Redfish property is mapped to for property level normalization.
+        2. **Value**: Value of requested Redfish property.
 
 ## Usage
 
 ```c++
-DelliciusQuery query = ParseTextFileAsProtoOrDie<DelliciusQuery>(path);
-DelliciusQueryResult result;
-// Instantiate query engine for specific configuration.
-absl::StatusOr<
-    std::unique_ptr<QueryInterface>> intf = GetQueryInterface(config);
-if (intf.ok()) { (*intf)->ExecuteQuery(query, result); }
+FakeRedfishServer server("indus_hmb_shim/mockup.shar");
+std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
+QueryEngineConfiguration config{
+    .flags{.enable_devpath_extension = true,
+           .enable_cached_uri_dispatch = false},
+    .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
+QueryEngine query_engine(config, &clock, std::move(intf));
+DelliciusQueryResult result_sensor;
+query_engine.ExecuteQuery({"SensorCollector"}, result_sensor);
 ```
 
 ## References

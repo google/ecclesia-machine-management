@@ -35,7 +35,9 @@ message DelliciusQueryResult {
     repeated SubqueryDataSet data_set = 2;
   }
   // Identifies the parent query the subquery data associates with.
-  string query_id = 1;
+  // In case of concurrent dispatch of Dellicius Queries, query_ids indicate all
+  // the Dellicius Queries for which response data is aggregated.
+  repeated string query_ids = 1;
   // Maps subquery id to associated subquery response data.
   map<string, SubqueryOutput> subquery_output_by_id = 2;
   // Time of query.

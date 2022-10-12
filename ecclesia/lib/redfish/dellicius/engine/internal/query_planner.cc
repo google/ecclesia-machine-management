@@ -186,13 +186,13 @@ void QueryPlanner::Run(const RedfishVariant &variant, const Clock &clock,
                        DelliciusQueryResult &result) {
   auto timestamp = AbslTimeToProtoTime(clock.Now());
   if (timestamp.ok()) {
-    result.mutable_start_timestamp()->CopyFrom(*std::move(timestamp));
+    *result.mutable_start_timestamp() = *std::move(timestamp);
   }
-  result.set_query_id(plan_id_);
+  result.add_query_ids(plan_id_);
   RunRecursive(variant, subquery_handles_, result);
   timestamp = AbslTimeToProtoTime(clock.Now());
   if (timestamp.ok()) {
-    result.mutable_end_timestamp()->CopyFrom(*std::move(timestamp));
+    *result.mutable_end_timestamp() = *std::move(timestamp);
   }
 }
 
