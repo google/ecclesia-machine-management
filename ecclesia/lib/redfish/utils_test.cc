@@ -141,5 +141,13 @@ TEST(GetConvertedResourceName, CorrectMemoryResourceName) {
   EXPECT_EQ(*converted_name, "ddr5");
 }
 
+TEST(ParseJson, CanParse) {
+  EXPECT_EQ(ParseJson(R"({"a": "b"})"), nlohmann::json({{"a", "b"}}));
+}
+
+TEST(ParseJson, WontAbort) {
+  EXPECT_TRUE(ParseJson(",").is_discarded());
+}
+
 }  // namespace
 }  // namespace ecclesia

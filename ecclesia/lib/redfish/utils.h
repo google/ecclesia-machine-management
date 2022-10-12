@@ -82,6 +82,15 @@ std::string RedfishTransportBytesToString(const RedfishTransport::bytes& bytes);
 
 RedfishTransport::bytes GetBytesFromString(absl::string_view str);
 
+// Parses a string as JSON and returns a nlohmann::json object. This
+// provides a good set of arguments to nlohmann::json::parse(). Note
+// that by default nlohmann::json::parse() can throw or abort().
+inline nlohmann::json ParseJson(absl::string_view json_str) {
+  return nlohmann::json::parse(json_str,
+                               nullptr,  // No parse callback needed
+                               false);   // Not allowing exception
+}
+
 }  // namespace ecclesia
 
 #endif
