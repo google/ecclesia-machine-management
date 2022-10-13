@@ -71,6 +71,7 @@ inline constexpr char kRfPropertyManagerDiagnosticData[] =
 inline constexpr char kRfPropertyEthernetInterfaces[] = "EthernetInterfaces";
 inline constexpr char kRfPropertyThermal[] = "Thermal";
 inline constexpr char kRfPropertyTemperatures[] = "Temperatures";
+inline constexpr char kRfPropertyTemperatureCelsius[] = "TemperatureCelsius";
 inline constexpr char kRfPropertyTemperaturesCount[] =
     "Temperatures@odata.count";
 inline constexpr char kRfPropertyParameters[] = "Parameters";
