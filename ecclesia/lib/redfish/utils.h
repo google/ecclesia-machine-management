@@ -91,6 +91,18 @@ inline nlohmann::json ParseJson(absl::string_view json_str) {
                                false);   // Not allowing exception
 }
 
+// Serializes a JSON object into a string. This provides a good set of arguments
+// to nlohmann::json::dump(), which can throw or abort() by default. Invalid
+// UTF-8 bytes are dropped.
+inline std::string JsonToString(const nlohmann::json &data,
+                                const int indent = -1) {
+  return data.dump(
+      indent,
+      /*indent_char=*/' ',
+      /*ensure_ascii=*/false,
+      /*error_handler=*/nlohmann::json::error_handler_t::ignore);
+}
+
 }  // namespace ecclesia
 
 #endif

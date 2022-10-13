@@ -149,5 +149,15 @@ TEST(ParseJson, WontAbort) {
   EXPECT_TRUE(ParseJson(",").is_discarded());
 }
 
+TEST(JsonToString, CanSerialize) {
+  EXPECT_EQ(JsonToString(nlohmann::json{{"a", "b"}}), R"({"a":"b"})");
+  EXPECT_EQ(JsonToString(nlohmann::json("aaa")), "\"aaa\"");
+}
+
+TEST(JsonToString, WontAbort) {
+  EXPECT_EQ(JsonToString(nlohmann::json("\xff")),  // This is invalid UTF-8.
+            "\"\"");
+}
+
 }  // namespace
 }  // namespace ecclesia
