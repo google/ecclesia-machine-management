@@ -8,7 +8,7 @@ import "google/rpc/status.proto";
 // Encapsulates subset of redfish properties and devpath obtained from a redfish
 // resource.
 message SubqueryDataSet {
-  message SubqueryData {
+  message Property {
     // Named attribute to which queried property in response data is mapped.
     // By default, name of the queried property is set if the client
     // application does not explicitly provide a name to map the queried
@@ -23,7 +23,7 @@ message SubqueryDataSet {
     }
   }
   optional string devpath = 1;
-  repeated SubqueryData data = 2;
+  repeated Property properties = 2;
 }
 
 // Message encapsulating Query result
@@ -32,15 +32,14 @@ message DelliciusQueryResult {
     // Describes the status of Subquery abstracting away transport specifics.
     optional google.rpc.Status status = 1;
     // Normalised data per subquery based on data model defined in the subquery
-    repeated SubqueryDataSet data_set = 2;
+    repeated SubqueryDataSet data_sets = 2;
   }
   // Identifies the parent query the subquery data associates with.
-  // In case of concurrent dispatch of Dellicius Queries, query_ids indicate all
-  // the Dellicius Queries for which response data is aggregated.
-  repeated string query_ids = 1;
+  string query_id = 1;
   // Maps subquery id to associated subquery response data.
   map<string, SubqueryOutput> subquery_output_by_id = 2;
-  // Time of query.
+  // Represents point in time when Dellicius Queries are received by QueryEngine
   google.protobuf.Timestamp start_timestamp = 3;
+  // Represents point in time when output for last Dellicus Query is processed.
   google.protobuf.Timestamp end_timestamp = 4;
 }

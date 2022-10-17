@@ -15,6 +15,7 @@
  */
 
 #include "ecclesia/lib/redfish/dellicius/engine/internal/normalizer.h"
+
 #include <utility>
 
 #include "absl/status/statusor.h"
@@ -26,11 +27,10 @@
 namespace ecclesia {
 
 absl::StatusOr<SubqueryDataSet> DefaultNormalizer::Normalize(
-    const RedfishVariant &var,
-    const DelliciusQuery::Subquery &subquery) const {
+    const RedfishVariant &var, const DelliciusQuery::Subquery &subquery) const {
   auto data_set_local = SubqueryDataSet();
   for (const auto &property_requirement : subquery.properties()) {
-    SubqueryDataSet::SubqueryData response;
+    SubqueryDataSet::Property property;
     // Check the redfish payload for the property listed in data model.
     RedfishVariant payload = var[property_requirement.property()];
     using RedfishProperty = DelliciusQuery::Subquery::RedfishProperty;
@@ -38,56 +38,57 @@ absl::StatusOr<SubqueryDataSet> DefaultNormalizer::Normalize(
       case RedfishProperty::STRING: {
         std::string stringvalue;
         if (payload.GetValue(&stringvalue)) {
-          response.set_string_value(stringvalue);
+          property.set_string_value(stringvalue);
         }
         break;
       }
       case RedfishProperty::BOOLEAN: {
         bool boolvalue;
         if (payload.GetValue(&boolvalue)) {
-          response.set_boolean_value(boolvalue);
+          property.set_boolean_value(boolvalue);
         }
         break;
       }
       case RedfishProperty::DOUBLE: {
         double doublevalue;
         if (payload.GetValue(&doublevalue)) {
-          response.set_double_value(doublevalue);
+          property.set_double_value(doublevalue);
         }
         break;
       }
       case RedfishProperty::INT64: {
         int64_t intvalue;
         if (payload.GetValue(&intvalue)) {
-          response.set_int64_value(intvalue);
+          property.set_int64_value(intvalue);
         }
         break;
       }
       case RedfishProperty::DATE_TIME_OFFSET: {
         absl::Time timevalue;
         if (payload.GetValue(&timevalue)) {
-          absl::StatusOr<
-              google::protobuf::Timestamp> timestamp = AbslTimeToProtoTime(
-                  timevalue);
+          absl::StatusOr<google::protobuf::Timestamp> timestamp =
+              AbslTimeToProtoTime(timevalue);
           if (timestamp.ok()) {
-            *response.mutable_timestamp_value() = std::move(*timestamp);
+            *property.mutable_timestamp_value() = std::move(*timestamp);
           }
         }
         break;
       }
-      default: { break; }
+      default: {
+        break;
+      }
     }
-    if (response.value_case()) {
+    if (property.value_case()) {
       // By default, name of the queried property is set as name if the client
       // application does not provide a name to map the parsed property to.
       if (property_requirement.has_name()) {
-        response.set_name(property_requirement.name());
+        property.set_name(property_requirement.name());
       }
-      response.set_name(property_requirement.property());
-      *data_set_local.add_data() = std::move(response);
+      property.set_name(property_requirement.property());
+      *data_set_local.add_properties() = std::move(property);
     }
   }
-  if (data_set_local.data().empty()) {
+  if (data_set_local.properties().empty()) {
     return absl::NotFoundError(
         "Redfish object does not have any of the required properties");
   }
@@ -95,10 +96,9 @@ absl::StatusOr<SubqueryDataSet> DefaultNormalizer::Normalize(
 }
 
 absl::StatusOr<SubqueryDataSet> NormalizerDevpathDecorator::Normalize(
-    const RedfishVariant &var,
-    const DelliciusQuery::Subquery &subquery) const {
-  absl::StatusOr<SubqueryDataSet> normalized_data
-      = default_normalizer_->Normalize(var, subquery);
+    const RedfishVariant &var, const DelliciusQuery::Subquery &subquery) const {
+  absl::StatusOr<SubqueryDataSet> normalized_data =
+      default_normalizer_->Normalize(var, subquery);
   if (!normalized_data.ok()) return normalized_data;
   std::optional<std::string> odata_id = var.AsObject()->GetUriString();
   if (odata_id.has_value()) {

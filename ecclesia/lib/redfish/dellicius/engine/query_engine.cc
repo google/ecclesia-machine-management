@@ -59,8 +59,10 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     }
   }
 
-  void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
-                    DelliciusQueryResult &result) override {
+  std::vector<DelliciusQueryResult> ExecuteQuery(
+      absl::Span<const absl::string_view> query_ids) override {
+    std::vector<DelliciusQueryResult> response_entries;
+    // them sequentially.
     for (const absl::string_view query_id : query_ids) {
       auto it = id_to_query_plans_.find(query_id);
       if (it == id_to_query_plans_.end()) {
@@ -70,8 +72,11 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       if (it->second == nullptr) {
         LOG(ERROR) << "Query plan is null for id " << query_id;
       }
-      it->second->Run(intf_->GetRoot(), *clock_, result);
+      DelliciusQueryResult result_single;
+      it->second->Run(intf_->GetRoot(), *clock_, result_single);
+      response_entries.push_back(std::move(result_single));
     }
+    return response_entries;
   }
 
  private:

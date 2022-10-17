@@ -1,268 +1,268 @@
 # proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
 # proto-message: DelliciusQueryResult
 
-query_ids: "SensorCollector"
+query_id: "SensorCollector"
 subquery_output_by_id {
   key: "Sensors"
   value {
-    data_set {
+    data_sets {
       devpath: "/phys/SYS_FAN0"
-      data {
+      properties {
         name: "Name"
         string_value: "fan0"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Rotational"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "RPM"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 16115
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/SYS_FAN1"
-      data {
+      properties {
         name: "Name"
         string_value: "fan1"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Rotational"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "RPM"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 16115
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/SYS_FAN2/FAN2"
-      data {
+      properties {
         name: "Name"
         string_value: "fan2"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Rotational"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "RPM"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 16115
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/SYS_FAN2/FAN3"
-      data {
+      properties {
         name: "Name"
         string_value: "fan3"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Rotational"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "RPM"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 16115
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/SYS_FAN2/FAN4"
-      data {
+      properties {
         name: "Name"
         string_value: "fan4"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Rotational"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "RPM"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 16115
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/SYS_FAN2/FAN5"
-      data {
+      properties {
         name: "Name"
         string_value: "fan5"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Rotational"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "RPM"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 16115
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/SYS_FAN2/FAN6"
-      data {
+      properties {
         name: "Name"
         string_value: "fan6"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Rotational"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "RPM"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 16115
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/SYS_FAN2/FAN7"
-      data {
+      properties {
         name: "Name"
         string_value: "fan7"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Rotational"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "RPM"
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/KA0"
-      data {
+      properties {
         name: "Name"
         string_value: "indus_eat_temp"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Temperature"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "Cel"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 28
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/KA2"
-      data {
+      properties {
         name: "Name"
         string_value: "indus_latm_temp"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Temperature"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "Cel"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 35
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/CPU0"
-      data {
+      properties {
         name: "Name"
         string_value: "CPU0"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Power"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "W"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 30
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/CPU1"
-      data {
+      properties {
         name: "Name"
         string_value: "CPU1"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Power"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "W"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 30
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/CPU0"
-      data {
+      properties {
         name: "Name"
         string_value: "CPU0"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Temperature"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "Cel"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 60
       }
     }
-    data_set {
+    data_sets {
       devpath: "/phys/CPU1"
-      data {
+      properties {
         name: "Name"
         string_value: "CPU1"
       }
-      data {
+      properties {
         name: "ReadingType"
         string_value: "Temperature"
       }
-      data {
+      properties {
         name: "ReadingUnits"
         string_value: "Cel"
       }
-      data {
+      properties {
         name: "Reading"
         int64_value: 60
       }

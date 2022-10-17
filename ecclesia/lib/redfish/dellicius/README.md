@@ -115,8 +115,8 @@ QueryEngineConfiguration config{
            .enable_cached_uri_dispatch = false},
     .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
 QueryEngine query_engine(config, &clock, std::move(intf));
-DelliciusQueryResult result_sensor;
-query_engine.ExecuteQuery({"SensorCollector"}, result_sensor);
+std::vector<DelliciusQueryResult> response_entries =
+    query_engine.ExecuteQuery({"SensorCollector"});
 ```
 
 ## References

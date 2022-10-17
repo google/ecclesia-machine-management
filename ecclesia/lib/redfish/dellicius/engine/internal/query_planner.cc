@@ -25,7 +25,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/functional/function_ref.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -128,7 +127,7 @@ void QueryPlanner::QualifyEachSubquery(const RedfishVariant &var,
       if (normalized_data.ok()) {
         // Populate the response data in subquery output for the given id.
         auto *subquery_output = result.mutable_subquery_output_by_id();
-        (*subquery_output)[subquery.subquery_id()].mutable_data_set()->Add(
+        (*subquery_output)[subquery.subquery_id()].mutable_data_sets()->Add(
             std::move(normalized_data.value()));
       }
     } else if (status == QueryPlanner::PredicateReturnValue::kContinue) {
@@ -188,7 +187,7 @@ void QueryPlanner::Run(const RedfishVariant &variant, const Clock &clock,
   if (timestamp.ok()) {
     *result.mutable_start_timestamp() = *std::move(timestamp);
   }
-  result.add_query_ids(plan_id_);
+  result.set_query_id(plan_id_);
   RunRecursive(variant, subquery_handles_, result);
   timestamp = AbslTimeToProtoTime(clock.Now());
   if (timestamp.ok()) {

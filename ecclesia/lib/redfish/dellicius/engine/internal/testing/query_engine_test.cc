@@ -64,13 +64,14 @@ TEST_F(QueryEngineTest, QueryEngineDevpathConfiguration) {
              .enable_cached_uri_dispatch = false},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
   QueryEngine query_engine(config, &clock_, std::move(intf_));
-  DelliciusQueryResult result_sensor;
-  query_engine.ExecuteQuery({"SensorCollector"}, result_sensor);
+  std::vector<DelliciusQueryResult> response_entries =
+      query_engine.ExecuteQuery({"SensorCollector"});
 
   DelliciusQueryResult intent_output_sensor =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
+  EXPECT_EQ(response_entries.size(), 1);
   EXPECT_THAT(intent_output_sensor,
-              IgnoringRepeatedFieldOrdering(EqualsProto(result_sensor)));
+              IgnoringRepeatedFieldOrdering(EqualsProto(response_entries[0])));
 }
 
 TEST_F(QueryEngineTest, QueryEngineDefaultConfiguration) {
@@ -82,19 +83,17 @@ TEST_F(QueryEngineTest, QueryEngineDefaultConfiguration) {
              .enable_cached_uri_dispatch = false},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
   QueryEngine query_engine(config, &clock_, std::move(intf_));
-  DelliciusQueryResult result_sensor;
-  query_engine.ExecuteQuery({"SensorCollector"}, result_sensor);
+  std::vector<DelliciusQueryResult> response_entries =
+      query_engine.ExecuteQuery({"SensorCollector"});
 
   DelliciusQueryResult intent_output_sensor =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
+  EXPECT_EQ(response_entries.size(), 1);
   EXPECT_THAT(intent_output_sensor,
-              IgnoringRepeatedFieldOrdering(EqualsProto(result_sensor)));
+              IgnoringRepeatedFieldOrdering(EqualsProto(response_entries[0])));
 }
 
 TEST_F(QueryEngineTest, QueryEngineInvalidQueries) {
-  std::string sensor_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
-
   QueryEngineConfiguration config{
       .flags{.enable_devpath_extension = false,
              .enable_cached_uri_dispatch = false},
@@ -102,9 +101,33 @@ TEST_F(QueryEngineTest, QueryEngineInvalidQueries) {
 
   // Invalid Query Id
   QueryEngine query_engine(config, &clock_, std::move(intf_));
-  DelliciusQueryResult result_sensor;
-  query_engine.ExecuteQuery({"ThereIsNoSuchId"}, result_sensor);
-  EXPECT_EQ(result_sensor.ByteSizeLong(), 0);
+  std::vector<DelliciusQueryResult> response_entries =
+      query_engine.ExecuteQuery({"ThereIsNoSuchId"});
+  EXPECT_EQ(response_entries.size(), 0);
+}
+
+TEST_F(QueryEngineTest, QueryEngineConcurrentQueries) {
+  std::string assembly_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_out/assembly_out.textproto"));
+  std::string sensor_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
+
+  QueryEngineConfiguration config{
+      .flags{.enable_devpath_extension = false,
+             .enable_cached_uri_dispatch = false},
+      .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
+  QueryEngine query_engine(config, &clock_, std::move(intf_));
+  std::vector<DelliciusQueryResult> response_entries =
+      query_engine.ExecuteQuery({"SensorCollector", "AssemblyCollector"});
+  DelliciusQueryResult intent_sensor_out =
+      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
+  DelliciusQueryResult intent_assembly_out =
+      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
+  EXPECT_EQ(response_entries.size(), 2);
+  EXPECT_THAT(intent_sensor_out,
+              IgnoringRepeatedFieldOrdering(EqualsProto(response_entries[0])));
+  EXPECT_THAT(intent_assembly_out,
+              IgnoringRepeatedFieldOrdering(EqualsProto(response_entries[1])));
 }
 
 }  // namespace

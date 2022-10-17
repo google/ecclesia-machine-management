@@ -38,16 +38,16 @@ namespace ecclesia {
 //              .enable_cached_uri_dispatch = false},
 //       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
 //   QueryEngine query_engine(config, &clock, std::move(intf));
-//   DelliciusQueryResult result_sensor;
-//   query_engine.ExecuteQuery({"SensorCollector"}, result_sensor);
+//   std::vector<DelliciusQueryResult> response_entries =
+//       query_engine.ExecuteQuery({"SensorCollector"});
 class QueryEngine final {
  public:
   // Interface for private implementation of Query Engine using PImpl Idiom
   class QueryEngineIntf {
    public:
     virtual ~QueryEngineIntf() = default;
-    virtual void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
-                              DelliciusQueryResult &result) = 0;
+    virtual std::vector<DelliciusQueryResult> ExecuteQuery(
+        absl::Span<const absl::string_view> query_ids) = 0;
   };
   QueryEngine(const QueryEngineConfiguration &config, const Clock *clock,
               std::unique_ptr<RedfishInterface> intf);
@@ -57,9 +57,9 @@ class QueryEngine final {
   QueryEngine(QueryEngine &&other) = default;
   QueryEngine &operator=(QueryEngine &&other) = default;
 
-  void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
-                    DelliciusQueryResult &result) {
-    engine_impl_->ExecuteQuery(query_ids, result);
+  std::vector<DelliciusQueryResult> ExecuteQuery(
+      absl::Span<const absl::string_view> query_ids) {
+    return engine_impl_->ExecuteQuery(query_ids);
   }
 
  private:
