@@ -76,6 +76,7 @@ inline constexpr char kRfPropertyTemperaturesCount[] =
     "Temperatures@odata.count";
 inline constexpr char kRfPropertyParameters[] = "Parameters";
 inline constexpr char kRfPropertyPower[] = "Power";
+inline constexpr char kRfPropertyPowerLimitWatts[] = "PowerLimitWatts";
 inline constexpr char kRfPropertyPowerWatts[] = "PowerWatts";
 inline constexpr char kRfPropertyProcessorStatistics[] = "ProcessorStatistics";
 inline constexpr char kRfPropertyVoltages[] = "Voltages";
