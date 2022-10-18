@@ -167,7 +167,7 @@ absl::Status HttpRedfishTransport::LockedDoSessionAuth() {
 
 std::unique_ptr<HttpClient::HttpRequest> HttpRedfishTransport::MakeRequest(
     TcpTarget target, absl::string_view path, absl::string_view data) {
-  auto request = absl::make_unique<HttpClient::HttpRequest>();
+  auto request = std::make_unique<HttpClient::HttpRequest>();
   request->uri = absl::StrCat(target.endpoint, path);
   request->body = std::string(data);
   if (!x_auth_token_.empty()) {
@@ -178,7 +178,7 @@ std::unique_ptr<HttpClient::HttpRequest> HttpRedfishTransport::MakeRequest(
 
 std::unique_ptr<HttpClient::HttpRequest> HttpRedfishTransport::MakeRequest(
     UdsTarget target, absl::string_view path, absl::string_view data) {
-  auto request = absl::make_unique<HttpClient::HttpRequest>();
+  auto request = std::make_unique<HttpClient::HttpRequest>();
   request->uri = absl::StrCat(kUdsDummyEndpoint, path);
   request->body = std::string(data);
   request->unix_socket_path = target.path;

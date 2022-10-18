@@ -16,6 +16,8 @@
 
 #include "ecclesia/lib/complexity_tracker/complexity_tracker.h"
 
+#include <memory>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/status/status.h"
@@ -57,7 +59,7 @@ TEST(TestApiComplexityContextManager, TestNoReportOnDestroy) {
 
 TEST(TestApiComplexityContextManager, TestManagerOverride) {
   ApiComplexityContext context;
-  auto impl = absl::make_unique<TestApiComplexityContextManagerImpl>();
+  auto impl = std::make_unique<TestApiComplexityContextManagerImpl>();
   EXPECT_CALL(*impl, GetContext).WillOnce(Return(&context));
   ApiComplexityContextManager manager(std::move(impl));
   EXPECT_THAT(manager.GetContext(), ecclesia::IsOkAndHolds(&context));
@@ -66,7 +68,7 @@ TEST(TestApiComplexityContextManager, TestManagerOverride) {
 TEST(TestApiComplexityContextManager, TestReportContextResult) {
   ApiComplexityContext default_context;
   ApiComplexityContext context_as_a_parameter;
-  auto impl = absl::make_unique<TestApiComplexityContextManagerImpl>();
+  auto impl = std::make_unique<TestApiComplexityContextManagerImpl>();
   // When ReportContextResult is called using nullptr it should pull the context
   // using GetContext method
   EXPECT_CALL(*impl, GetContext).WillOnce(Return(&default_context));
@@ -82,7 +84,7 @@ TEST(TestApiComplexityContextManager, TestReportContextResult) {
 
 TEST(TestApiComplexityContextManager, ReportOnDestroy) {
   ApiComplexityContext default_context;
-  auto impl = absl::make_unique<TestApiComplexityContextManagerImpl>();
+  auto impl = std::make_unique<TestApiComplexityContextManagerImpl>();
   // When ReportContextResult is called using nullptr it should pull the context
   // using GetContext method
   EXPECT_CALL(*impl, GetContext).WillOnce(Return(&default_context));
@@ -101,7 +103,7 @@ TEST(TestApiComplexityContextManager, ReportOnDestroy) {
 
 TEST(TestApiComplexityContextManager, PrepareForInboundApi) {
   ApiComplexityContext context;
-  auto impl = absl::make_unique<TestApiComplexityContextManagerImpl>();
+  auto impl = std::make_unique<TestApiComplexityContextManagerImpl>();
   // When ReportContextResult is called using nullptr it should pull the context
   // using GetContext method
   EXPECT_CALL(*impl, GetContext).WillRepeatedly(Return(&context));

@@ -166,7 +166,7 @@ GrpcDynamicMockupServer::GrpcDynamicMockupServer(
     absl::string_view mockup_shar, absl::string_view host, int port,
     std::shared_ptr<grpc::ServerCredentials> credentials)
     : mockup_server_(mockup_shar),
-      redfish_v1_impl_(absl::make_unique<RedfishV1Impl>(
+      redfish_v1_impl_(std::make_unique<RedfishV1Impl>(
           mockup_server_.RedfishClientInterface())) {
   std::string server_address = absl::StrCat(host, ":", port);
   grpc::ServerBuilder builder;
@@ -190,7 +190,7 @@ GrpcDynamicMockupServer::GrpcDynamicMockupServer(
     absl::string_view mockup_shar, absl::string_view uds_path,
     std::shared_ptr<grpc::ServerCredentials> credentials)
     : mockup_server_(mockup_shar),
-      redfish_v1_impl_(absl::make_unique<RedfishV1Impl>(
+      redfish_v1_impl_(std::make_unique<RedfishV1Impl>(
           mockup_server_.RedfishClientInterface())) {
   std::string server_address = absl::StrCat("unix://", uds_path);
   grpc::ServerBuilder builder;

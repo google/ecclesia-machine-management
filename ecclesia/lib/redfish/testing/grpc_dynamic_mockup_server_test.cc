@@ -62,7 +62,7 @@ class GrpcRedfishMockUpServerTest : public Test {
   void SetUp() override {
     StaticBufferBasedTlsOptions options;
     options.SetToInsecure();
-    mockup_server_ = absl::make_unique<GrpcDynamicMockupServer>(
+    mockup_server_ = std::make_unique<GrpcDynamicMockupServer>(
         "barebones_session_auth/mockup.shar", "localhost", 0);
     auto port = mockup_server_->Port();
     EXPECT_TRUE(port.has_value());

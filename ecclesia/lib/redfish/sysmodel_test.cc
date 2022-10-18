@@ -38,9 +38,9 @@ class SysmodelTest : public testing::Test {
   SysmodelTest() = default;
 
   void InitServer(absl::string_view mockup_path) {
-    mockup_server_ = absl::make_unique<FakeRedfishServer>(mockup_path);
+    mockup_server_ = std::make_unique<FakeRedfishServer>(mockup_path);
     intf_ = mockup_server_->RedfishClientInterface();
-    sysmodel_ = absl::make_unique<Sysmodel>(intf_.get());
+    sysmodel_ = std::make_unique<Sysmodel>(intf_.get());
     mockup_server_->EnableExpandGetHandler();
   }
 

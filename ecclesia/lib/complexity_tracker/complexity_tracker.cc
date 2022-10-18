@@ -40,7 +40,7 @@ class NullApiComplexityContextManagerImpl
 }  // namespace
 
 ApiComplexityContextManager::ApiComplexityContextManager()
-    : impl_(absl::make_unique<NullApiComplexityContextManagerImpl>()) {}
+    : impl_(std::make_unique<NullApiComplexityContextManagerImpl>()) {}
 
 ApiComplexityContextManager::ApiComplexityContextManager(
     std::unique_ptr<ApiComplexityContextManager::ImplInterface> impl)
