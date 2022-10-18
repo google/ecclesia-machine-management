@@ -91,6 +91,21 @@ cc_library(
 )
 
 cc_library(
+    name = "logged_transport",
+    srcs = ["logged_transport.cc"],
+    hdrs = ["logged_transport.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":interface",
+        "//ecclesia/lib/redfish:utils",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
     name = "http",
     srcs = ["http.cc"],
     hdrs = ["http.h"],
