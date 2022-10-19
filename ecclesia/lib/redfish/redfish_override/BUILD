@@ -41,6 +41,7 @@ cc_library(
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_grpc_proto",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
         "//ecclesia/lib/redfish/transport:grpc",
+        "//ecclesia/lib/redfish/transport:grpc_tls_options",
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:struct_proto_conversion",
         "@com_github_grpc_grpc//:grpc++_codegen_base",
@@ -94,7 +95,7 @@ proto_library(
 cc_proto_library(
     name = "rf_override_cc_proto",
     visibility = [
-        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+        "//visibility:public",
     ],
     deps = [":rf_override_proto"],
 )
