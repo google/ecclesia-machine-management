@@ -127,6 +127,16 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Delete(
   return StatusToGrpcStatus(
       absl::UnimplementedError("Delete RPC is not implemented yet."));
 }
+grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::GetOverridePolicy(
+    ::grpc::ServerContext *context,
+    const ::redfish::v1::GetOverridePolicyRequest *request,
+    ::redfish::v1::GetOverridePolicyResponse *response) {
+  absl::MutexLock mu(&patch_lock_);
+  if (!override_policy_str_.empty()) {
+    response->set_policy(override_policy_str_);
+  }
+  return StatusToGrpcStatus(absl::OkStatus());
+}
 
 void GrpcDynamicMockupServer::RedfishV1Impl::AddHttpGetHandler(
     absl::string_view uri, HandlerFunc handler)
@@ -146,7 +156,11 @@ void GrpcDynamicMockupServer::RedfishV1Impl::AddHttpPostHandler(
   absl::MutexLock mu(&patch_lock_);
   rest_post_handlers_[uri] = std::move(handler);
 }
-
+void GrpcDynamicMockupServer::RedfishV1Impl::AddOverridePolicy(
+    absl::string_view override_policy_str) ABSL_LOCKS_EXCLUDED(patch_lock_) {
+  absl::MutexLock mu(&patch_lock_);
+  override_policy_str_ = override_policy_str;
+}
 // Clear all registered handlers.
 void GrpcDynamicMockupServer::RedfishV1Impl::ClearHandlers()
     ABSL_LOCKS_EXCLUDED(patch_lock_) {
@@ -215,6 +229,10 @@ void GrpcDynamicMockupServer::AddHttpPatchHandler(absl::string_view uri,
 void GrpcDynamicMockupServer::AddHttpPostHandler(absl::string_view uri,
                                                  HandlerFunc handler) {
   redfish_v1_impl_->AddHttpPostHandler(uri, std::move(handler));
+}
+void GrpcDynamicMockupServer::AddOverridePolicy(
+    absl::string_view override_policy_str) {
+  redfish_v1_impl_->AddOverridePolicy(override_policy_str);
 }
 
 }  // namespace ecclesia

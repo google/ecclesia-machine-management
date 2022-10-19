@@ -24,6 +24,7 @@
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "grpcpp/security/credentials.h"
 
 namespace ecclesia {
 
@@ -32,6 +33,13 @@ namespace ecclesia {
 // RedfishTransportWithOverride with selector file, please use the constructor.
 OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
                                   RedfishTransport *transport);
+// This function returns the policy by BMC's hostname, port and a Chennel
+// credential for gRPC. If this function fails to find an override policy, it'll
+// return an empty policy with some warning log as no policy should not be a
+// blocker.
+OverridePolicy GetOverridePolicy(
+    absl::string_view hostname, int port,
+    const std::shared_ptr<grpc::ChannelCredentials> &creds);
 
 class RedfishTransportWithOverride : public RedfishTransport {
  public:

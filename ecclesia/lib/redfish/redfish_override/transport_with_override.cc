@@ -17,20 +17,30 @@
 #include "ecclesia/lib/redfish/redfish_override/transport_with_override.h"
 
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
 
 #include "google/protobuf/message.h"
+#include "google/protobuf/text_format.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
+#include "ecclesia/lib/redfish/transport/grpc.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/struct_proto_conversion.h"
+#include "ecclesia/lib/redfish/utils.h"
+#include "grpc/grpc_security_constants.h"
+#include "grpcpp/client_context.h"
+#include "grpcpp/create_channel.h"
 #include "single_include/nlohmann/json.hpp"
 #include "re2/re2.h"
 
@@ -38,6 +48,32 @@ namespace ecclesia {
 namespace {
 using OverrideValue = OverrideField::OverrideValue;
 using IndividualObjectIdentifier = ObjectIdentifier::IndividualObjectIdentifier;
+
+constexpr absl::string_view kTargetKey = "target";
+constexpr absl::string_view kResourceKey = "redfish-resource";
+
+// This is the Grpc credentials specific for getting override policy through
+// gRPC Redfish BMC.
+// The metadata actually does nothing but using gRPC RPCs it is required. We're
+// adding some reasonable dummy datas in this credential.
+class GrpcCredentialsForOverride : public grpc::MetadataCredentialsPlugin {
+ public:
+  explicit GrpcCredentialsForOverride(absl::string_view target_fqdn)
+      : target_fqdn_(target_fqdn) {}
+  // Sends out the target server and the Redfish resource as part of
+  // gRPC credentials.
+  grpc::Status GetMetadata(
+      grpc::string_ref /*service_url*/, grpc::string_ref /*method_name*/,
+      const grpc::AuthContext & /*channel_auth_context*/,
+      std::multimap<grpc::string, grpc::string> *metadata) override {
+    metadata->insert(std::make_pair(kTargetKey, target_fqdn_));
+    metadata->insert(std::make_pair(kResourceKey, "/redfish/v1"));
+    return grpc::Status::OK;
+  }
+
+ private:
+  std::string target_fqdn_;
+};
 
 absl::Status GetBinaryProto(absl::string_view path, google::protobuf::Message *message) {
   std::ifstream ifs((std::string(path)));
@@ -370,6 +406,41 @@ OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
   if (!read_policy.ok()) {
     LOG(WARNING) << "Read policy file failed: " << read_policy.message();
     return policy;
+  }
+  return policy;
+}
+
+OverridePolicy GetOverridePolicy(
+    absl::string_view hostname, int port,
+    const std::shared_ptr<grpc::ChannelCredentials> &creds) {
+  OverridePolicy policy;
+  std::string service_address = absl::StrCat(hostname, ":", port);
+  auto client = redfish::v1::RedfishV1::NewStub(
+      grpc::CreateChannel(service_address, creds));
+  if (client == nullptr) {
+    LOG(WARNING) << "Override Stub creation failed";
+    return policy;
+  }
+  grpc::ClientContext context;
+  redfish::v1::GetOverridePolicyRequest request;
+  redfish::v1::GetOverridePolicyResponse response;
+  GrpcTransportParams params;
+
+  context.set_deadline(ToChronoTime(params.clock->Now() + params.timeout));
+  context.set_credentials(grpc::experimental::MetadataCredentialsFromPlugin(
+      std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+          std::make_unique<GrpcCredentialsForOverride>(service_address)),
+      GRPC_SECURITY_NONE));
+
+  auto status = client->GetOverridePolicy(&context, request, &response);
+  if (!status.ok()) {
+    LOG(WARNING) << "GetOverridePolicy failed: " << status.error_message();
+    return policy;
+  }
+  bool result = google::protobuf::TextFormat::ParseFromString(response.policy(), &policy);
+  if (!result) {
+    LOG(WARNING) << "Byte is unable to translate to proto "
+                 << response.policy();
   }
   return policy;
 }

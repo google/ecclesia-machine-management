@@ -27,6 +27,8 @@
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
+#include "ecclesia/lib/redfish/testing/grpc_dynamic_mockup_server.h"
+#include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/mocked_interface.h"
 #include "ecclesia/lib/testing/proto.h"
@@ -168,6 +170,37 @@ TEST_F(RedfishOverrideTest, LoadPolicyInvalidFileTest) {
                          transport_.get());
   OverridePolicy expected_policy = ParseTextProtoOrDie(R"pb()pb");
   EXPECT_THAT(policy, EqualsProto(expected_policy));
+}
+
+TEST_F(RedfishOverrideTest, GetOverridePolicyTest) {
+  GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
+                                        "localhost", 0);
+  auto port = mockup_server.Port();
+  ASSERT_THAT(port.has_value(), true);
+  std::string policy_str =
+      R"pb(override_content_map_uri: {
+             key: "/expected/result/1"
+             value: {
+               override_field:
+               [ {
+                 action_replace: {
+                   object_identifier: {
+                     individual_object_identifier:
+                     [ { field_name: "TestString" }]
+                   }
+                   override_value: {
+                     value: { string_value: "OverrideReplaceByField" }
+                   }
+                 }
+               }]
+             }
+           })pb";
+  mockup_server.AddOverridePolicy(policy_str);
+  StaticBufferBasedTlsOptions options;
+  OverridePolicy get_policy = GetOverridePolicy(
+      "localhost", port.value(), options.GetChannelCredentials());
+  OverridePolicy expected_policy = ParseTextProtoOrDie(policy_str);
+  EXPECT_THAT(get_policy, EqualsProto(expected_policy));
 }
 
 TEST_F(RedfishOverrideTest, SelectorConstructorTest) {

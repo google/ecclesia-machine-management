@@ -101,6 +101,8 @@ class GrpcDynamicMockupServer {
   void AddHttpGetHandler(absl::string_view uri, HandlerFunc handler);
   void AddHttpPatchHandler(absl::string_view uri, HandlerFunc handler);
   void AddHttpPostHandler(absl::string_view uri, HandlerFunc handler);
+  // Add a raw override policy proto string into the mockup server.
+  void AddOverridePolicy(absl::string_view override_policy_str);
 
   // Clear all registered handlers.
   void ClearHandlers();
@@ -139,12 +141,19 @@ class GrpcDynamicMockupServer {
     grpc::Status Delete(grpc::ServerContext *context,
                         const ::redfish::v1::Request *request,
                         redfish::v1::Response *response) override;
+    grpc::Status GetOverridePolicy(
+        ::grpc::ServerContext *context,
+        const ::redfish::v1::GetOverridePolicyRequest *request,
+        ::redfish::v1::GetOverridePolicyResponse *response) override;
+
     using HandlerFunc = GrpcDynamicMockupServer::HandlerFunc;
     void AddHttpGetHandler(absl::string_view uri, HandlerFunc handler)
         ABSL_LOCKS_EXCLUDED(patch_lock_);
     void AddHttpPatchHandler(absl::string_view uri, HandlerFunc handler)
         ABSL_LOCKS_EXCLUDED(patch_lock_);
     void AddHttpPostHandler(absl::string_view uri, HandlerFunc handler)
+        ABSL_LOCKS_EXCLUDED(patch_lock_);
+    void AddOverridePolicy(absl::string_view override_policy_str)
         ABSL_LOCKS_EXCLUDED(patch_lock_);
 
     // Clear all registered handlers.
@@ -162,6 +171,7 @@ class GrpcDynamicMockupServer {
         ABSL_GUARDED_BY(patch_lock_);
     absl::flat_hash_map<std::string, HandlerFunc> rest_post_handlers_
         ABSL_GUARDED_BY(patch_lock_);
+    std::string override_policy_str_ ABSL_GUARDED_BY(patch_lock_);
   };
 
   std::unique_ptr<RedfishV1Impl> redfish_v1_impl_;
