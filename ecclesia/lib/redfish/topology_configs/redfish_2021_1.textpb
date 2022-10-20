@@ -50,6 +50,16 @@ resource_to_config {
     }
   }
 }
+
+resource_to_config {
+  key: "Processor"
+  value {
+    usable_links: {
+      array_links: "Memory"
+    }
+  }
+}
+
 resource_to_config {
   key: "Storage"
   value {
