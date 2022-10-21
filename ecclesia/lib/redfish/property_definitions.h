@@ -148,6 +148,7 @@ inline constexpr char kRfPropertyResponseMessage[] = "message";
 
 inline constexpr char kRfPropertyUpdateService[] = "UpdateService";
 inline constexpr char kRfPropertyFirmwareInventory[] = "FirmwareInventory";
+inline constexpr char kRfPropertyFirmwareVersion[] = "FirmwareVersion";
 inline constexpr char kRfPropertyAdditionalDataUri[] = "AdditionalDataURI";
 inline constexpr char kRfPropertyAbsent[] = "Absent";
 
