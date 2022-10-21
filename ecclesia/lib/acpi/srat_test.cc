@@ -241,7 +241,7 @@ TEST_F(SratTest, ReadSratFromFileSuccess) {
 
 class SratReaderTest : public ::testing::Test {
  public:
-  SratReaderTest() {}
+  SratReaderTest() = default;
 
   void SetUp() override {
     SetupSratStructurePointers();

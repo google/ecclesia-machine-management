@@ -47,7 +47,6 @@
 namespace ecclesia {
 namespace {
 
-using ::redfish::v1::Request;
 using ::redfish::v1::Response;
 using ::testing::Eq;
 

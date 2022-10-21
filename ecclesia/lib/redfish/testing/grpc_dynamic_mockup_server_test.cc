@@ -57,7 +57,7 @@ using ::testing::Test;
 
 class GrpcRedfishMockUpServerTest : public Test {
  protected:
-  GrpcRedfishMockUpServerTest() {}
+  GrpcRedfishMockUpServerTest() = default;
 
   void SetUp() override {
     StaticBufferBasedTlsOptions options;

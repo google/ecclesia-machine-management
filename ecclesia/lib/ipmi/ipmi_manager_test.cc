@@ -71,7 +71,7 @@ void CloseLanplus(struct ipmi_intf *intf) {
 
 class MockLowLevelInterface {
  public:
-  explicit MockLowLevelInterface() {}
+  explicit MockLowLevelInterface() = default;
   MOCK_METHOD(int, open, (struct ipmi_intf *));
   MOCK_METHOD(void, close, (struct ipmi_intf *));
   MOCK_METHOD(int, keepalive, ());

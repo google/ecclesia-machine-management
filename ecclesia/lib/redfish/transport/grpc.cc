@@ -139,7 +139,7 @@ class GrpcRedfishTransport : public RedfishTransport {
         params_({}),
         fqdn_(EndpointToFqdn(endpoint)) {}
 
-  ~GrpcRedfishTransport() override {}
+  ~GrpcRedfishTransport() override = default;
 
   // Returns the path of the root URI for the Redfish service this transport is
   // connected to.

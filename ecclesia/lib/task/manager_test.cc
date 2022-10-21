@@ -36,7 +36,7 @@ using ::testing::UnorderedElementsAre;
 // A stub task implementation for testing the manager.
 class TestTask : public BackgroundTask {
  public:
-  TestTask() {}
+  TestTask() = default;
 
   absl::Duration RunOnce() override { return absl::InfiniteDuration(); }
 };
@@ -45,7 +45,7 @@ class TestTask : public BackgroundTask {
 // actually run anything.
 class TestManager : public BackgroundTaskManager {
  public:
-  TestManager() {}
+  TestManager() = default;
 
   absl::flat_hash_set<BackgroundTask *> RegisteredTasks() const {
     absl::flat_hash_set<BackgroundTask *> registered;

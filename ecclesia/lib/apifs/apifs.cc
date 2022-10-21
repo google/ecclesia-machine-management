@@ -66,7 +66,7 @@ absl::StatusOr<std::vector<std::string>> ListEntriesInDir(
 
 }  // namespace
 
-ApifsDirectory::ApifsDirectory() {}
+ApifsDirectory::ApifsDirectory() = default;
 
 ApifsDirectory::ApifsDirectory(std::string path) : dir_path_(std::move(path)) {}
 
@@ -130,7 +130,7 @@ absl::StatusOr<std::string> ApifsDirectory::ReadLink(std::string path) const {
   return f.ReadLink();
 }
 
-ApifsFile::ApifsFile() {}
+ApifsFile::ApifsFile() = default;
 
 ApifsFile::ApifsFile(std::string path) : path_(std::move(path)) {}
 

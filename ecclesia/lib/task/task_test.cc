@@ -24,7 +24,7 @@ namespace {
 
 class TestTask : public BackgroundTask {
  public:
-  TestTask() {}
+  TestTask() = default;
 
   absl::Duration RunOnce() override { return absl::InfiniteDuration(); }
 };
