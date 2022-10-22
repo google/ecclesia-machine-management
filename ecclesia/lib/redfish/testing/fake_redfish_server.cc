@@ -49,6 +49,29 @@ namespace {
 constexpr int kDefaultPort = 0;
 constexpr int kNumThreads = 5;
 
+// Create HTTP Transport
+std::unique_ptr<RedfishTransport> MakeHttpRedfishTransport(
+    ::tensorflow::serving::net_http::HTTPServerInterface *proxy_server) {
+  std::string endpoint =
+      absl::StrCat("http://localhost:", proxy_server->listen_port());
+
+  HttpCredential creds;
+  auto curl_http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), std::move(creds));
+  auto transport =
+      HttpRedfishTransport::MakeNetwork(std::move(curl_http_client), endpoint);
+  return transport;
+}
+
+std::unique_ptr<RedfishInterface> MakeHttpRedfishInterface(
+    std::unique_ptr<RedfishTransport> transport) {
+  auto cache = std::make_unique<NullCache>(transport.get());
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+  CHECK(intf != nullptr) << "can connect to the redfish proxy server";
+  return intf;
+}
+
 }  // namespace
 
 void FakeRedfishServer::ClearHandlers() {
@@ -150,19 +173,13 @@ void FakeRedfishServer::AddHttpDeleteHandler(std::string uri,
 }
 
 std::unique_ptr<RedfishInterface> FakeRedfishServer::RedfishClientInterface() {
-  std::string endpoint =
-      absl::StrCat("http://localhost:", proxy_server_->listen_port());
+  std::unique_ptr<RedfishTransport> transport =
+      MakeHttpRedfishTransport(proxy_server_.get());
+  return MakeHttpRedfishInterface(std::move(transport));
+}
 
-  HttpCredential creds;
-  auto curl_http_client = std::make_unique<CurlHttpClient>(
-      LibCurlProxy::CreateInstance(), std::move(creds));
-  auto transport =
-      HttpRedfishTransport::MakeNetwork(std::move(curl_http_client), endpoint);
-  auto cache = std::make_unique<NullCache>(transport.get());
-  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
-                               RedfishInterface::kTrusted);
-  CHECK(intf != nullptr) << "can connect to the redfish proxy server";
-  return intf;
+std::unique_ptr<RedfishTransport> FakeRedfishServer::RedfishClientTransport() {
+  return MakeHttpRedfishTransport(proxy_server_.get());
 }
 
 FakeRedfishServer::FakeRedfishServer(absl::string_view mockup_shar,

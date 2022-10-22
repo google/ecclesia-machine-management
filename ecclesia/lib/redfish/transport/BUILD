@@ -1,4 +1,6 @@
+# Description:
 # Transport interfaces for Redfish
+
 licenses(["notice"])
 
 cc_library(
@@ -330,5 +332,34 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+    ],
+)
+
+proto_library(
+    name = "transport_metrics_proto",
+    srcs = ["transport_metrics.proto"],
+    visibility = ["//visibility:public"],
+)
+
+cc_proto_library(
+    name = "transport_metrics_cc_proto",
+    visibility = ["//visibility:public"],
+    deps = [":transport_metrics_proto"],
+)
+
+cc_library(
+    name = "metrical_transport",
+    testonly = True,
+    srcs = ["metrical_transport.cc"],
+    hdrs = ["metrical_transport.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":interface",
+        ":transport_metrics_cc_proto",
+        "//ecclesia/lib/time:clock",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
     ],
 )

@@ -16,8 +16,10 @@
 
 #include <algorithm>
 #include <fstream>
+#include <memory>
 #include <ostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "google/protobuf/io/zero_copy_stream_impl.h"
@@ -46,14 +48,20 @@
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/redfish/transport/metrical_transport.h"
+#include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/time/clock.h"
 
 ABSL_FLAG(bool, devpath_enabled, false, "Boolean to enable devpath extension.");
+ABSL_FLAG(bool, metrics_enabled, false, "Boolean to enable redfish metrics.");
 ABSL_FLAG(std::string, hostname, "localhost",
           "Hostname of the Redfish server.");
-ABSL_FLAG(int, port, 8000, "Port number of the server. Defaults to 8000");
-ABSL_FLAG(std::string, dir, "",
-          "Absolute path to directory containing textproto files for Queries");
+ABSL_FLAG(int, port, 8000, "Port number of the server.");
+ABSL_FLAG(std::string, input_dir, "",
+          "Absolute path to directory containing textproto files for Queries.");
+ABSL_FLAG(std::string, transport_metric_output_dir, "",
+          "Absolute path to output directory to store transport metrics.");
 ABSL_FLAG(std::vector<std::string>, query_ids, {},
           "List of Identifiers for the Dellicius Queries to execute.");
 
@@ -70,9 +78,12 @@ constexpr absl::string_view kUsage =
     "in the directory that the user expects to execute using the tool.\n"
     "Example:\n"
     "  blaze run ecclesia/lib/redfish/dellicius/debug:query_cli"
-    " -- --dir=/usr/local/google/home/foo/repos/query_in "
+    " -- --input_dir=/usr/local/google/home/foo/repos/query_in "
     "--query_ids=SensorCollector,AssemblyCollector --devpath_enabled=true"
     " --hostname='localhost' --port=8000\n";
+
+// Identifier for the output metrics file.
+constexpr absl::string_view kMetricOutId = "query_cli_redfish_metrics";
 
 // Defines attributes used to construct EmbeddedFile object from Dellicius Query
 struct DelliciusQueryMetadata {
@@ -116,7 +127,7 @@ int QueryMain(int argc, char **argv) {
   absl::InitializeLog();
   // Parse Dellicius Queries from the given directory.
   absl::StatusOr<std::vector<DelliciusQueryMetadata>> queries_metadata =
-      GetQueriesFromLocation(absl::GetFlag(FLAGS_dir));
+      GetQueriesFromLocation(absl::GetFlag(FLAGS_input_dir));
   if (!queries_metadata.ok()) {
     LOG(ERROR) << queries_metadata.status();
     return -1;
@@ -144,29 +155,51 @@ int QueryMain(int argc, char **argv) {
   // Configure HTTP transport.
   auto curl_http_client = std::make_unique<CurlHttpClient>(
       LibCurlProxy::CreateInstance(), HttpCredential());
-  std::unique_ptr<HttpRedfishTransport> transport =
+  std::unique_ptr<HttpRedfishTransport> base_transport =
       HttpRedfishTransport::MakeNetwork(
           std::move(curl_http_client),
           absl::StrCat(absl::GetFlag(FLAGS_hostname), ":",
                        absl::GetFlag(FLAGS_port)));
-  auto cache = std::make_unique<NullCache>(transport.get());
-  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
-                               RedfishInterface::kTrusted);
-  if (auto root = intf->GetRoot(); root.AsObject() == nullptr) {
-    LOG(ERROR) << "Error connecting to redfish service. "
-               << "Check host configuration";
-    return -1;
+  RedfishMetrics transport_metrics;
+  std::unique_ptr<RedfishInterface> intf;
+  std::unique_ptr<NullCache> cache;
+  std::unique_ptr<RedfishTransport> transport = std::move(base_transport);
+  {
+    if (absl::GetFlag(FLAGS_metrics_enabled)) {
+      transport = std::make_unique<MetricalRedfishTransport>(
+          std::move(transport), Clock::RealClock(), transport_metrics);
+    }
+    cache = std::make_unique<NullCache>(transport.get());
+    intf = NewHttpInterface(std::move(transport), std::move(cache),
+                            RedfishInterface::kTrusted);
+    if (auto root = intf->GetRoot(); root.AsObject() == nullptr) {
+      LOG(ERROR) << "Error connecting to redfish service. "
+                 << "Check host configuration";
+      return -1;
+    }
+    // Build QueryEngine
+    QueryEngine query_engine(config, Clock::RealClock(), std::move(intf));
+    // Dispatch Dellicius Queries
+    std::vector<DelliciusQueryResult> response_entries =
+        query_engine.ExecuteQuery(absl::FixedArray<absl::string_view>(
+            query_ids_provided.begin(), query_ids_provided.end()));
+    std::cout << "Output from Dellicius Query Engine: " << std::endl;
+    std::for_each(
+        response_entries.begin(), response_entries.end(),
+        [](auto &entry) { std::cout << entry.DebugString() << std::endl; });
   }
-  // Build QueryEngine
-  QueryEngine query_engine(config, Clock::RealClock(), std::move(intf));
-  // Dispatch Dellicius Queries
-  std::vector<DelliciusQueryResult> response_entries =
-      query_engine.ExecuteQuery(absl::FixedArray<absl::string_view>(
-          query_ids_provided.begin(), query_ids_provided.end()));
-  std::cout << "Output from Dellicius Query Engine: " << std::endl;
-  std::for_each(
-      response_entries.begin(), response_entries.end(),
-      [](auto &entry) { std::cout << entry.DebugString() << std::endl; });
+  if (absl::GetFlag(FLAGS_metrics_enabled)) {
+    std::string output_directory(
+        absl::GetFlag(FLAGS_transport_metric_output_dir));
+    std::ofstream metric_file_stream(
+        JoinFilePaths(output_directory, kMetricOutId), std::ofstream::out);
+    if (metric_file_stream.bad() || !metric_file_stream.is_open()) {
+      LOG(ERROR) << "Error opening output file for storing transport metrics ";
+      return -1;
+    }
+    metric_file_stream << std::setw(2) << transport_metrics.DebugString()
+                       << std::endl;
+  }
   return 0;
 }
 

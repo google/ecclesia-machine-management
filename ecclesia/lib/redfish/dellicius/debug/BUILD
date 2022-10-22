@@ -1,5 +1,6 @@
 cc_binary(
     name = "query_cli",
+    testonly = True,
     srcs = ["query_cli.cc"],
     deps = [
         "//ecclesia/lib/file:cc_embed_interface",
@@ -15,6 +16,9 @@ cc_binary(
         "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:http",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
+        "//ecclesia/lib/redfish/transport:interface",
+        "//ecclesia/lib/redfish/transport:metrical_transport",
+        "//ecclesia/lib/redfish/transport:transport_metrics_cc_proto",
         "//ecclesia/lib/time:clock",
         "@com_google_absl//absl/container:fixed_array",
         "@com_google_absl//absl/flags:flag",

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package ecclesia;
+
+// Message encapsulating Redfish transport metrics.
+message RedfishMetrics {
+  message RequestMetadata {
+    double max_response_time_ms = 1;
+    double min_response_time_ms = 2;
+    uint64 request_count = 3;
+  }
+  // Metrics represents a set of Redfish Request specific metadata.
+  message Metrics {
+    // Maps Request type (GET, PUT, PATCH, DELETE) to metadata for the operation
+    map<string, RequestMetadata> request_type_to_metadata = 1;
+    // Records same metrics as request_type_to_metadata but on transport failure
+    map<string, RequestMetadata> request_type_to_metadata_failures = 2;
+  }
+  // Maps Redfish Resource URI to associated transport metrics.
+  map<string, Metrics> uri_to_metrics_map = 1;
+}

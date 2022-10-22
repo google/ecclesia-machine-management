@@ -29,6 +29,7 @@
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -78,6 +79,10 @@ class FakeRedfishServer {
 
   // Returns a new RedfishInterface connected to the proxy server.
   std::unique_ptr<RedfishInterface> RedfishClientInterface();
+
+  // Returns a new RedfishTransport configured for interfacing with the proxy
+  // server.
+  std::unique_ptr<RedfishTransport> RedfishClientTransport();
 
   // Clear all registered handlers.
   void ClearHandlers() ABSL_LOCKS_EXCLUDED(patch_lock_);
