@@ -123,7 +123,7 @@ void QueryPlanner::QualifyEachSubquery(const RedfishVariant &var,
       DelliciusQuery::Subquery subquery = subquery_handle.GetSubquery();
       // Normalize redfish response per the property requirements in subquery.
       absl::StatusOr<SubqueryDataSet> normalized_data =
-          normalizer->Normalize(var, subquery);
+          normalizer_->Normalize(var, subquery);
       if (normalized_data.ok()) {
         // Populate the response data in subquery output for the given id.
         auto *subquery_output = result.mutable_subquery_output_by_id();
@@ -158,7 +158,7 @@ void QueryPlanner::Dispatch(const RedfishVariant &var,
 }
 
 QueryPlanner::NodeToSubqueryHandles QueryPlanner::DeduplicateExpression(
-    const RedfishVariant &var, std::vector<SubqueryHandle> &subquery_handles,
+    std::vector<SubqueryHandle> &subquery_handles,
     DelliciusQueryResult &result) {
   NodeToSubqueryHandles node_to_subquery;
   for (auto &subquery_handle : subquery_handles) {
@@ -176,7 +176,7 @@ void QueryPlanner::RunRecursive(const RedfishVariant &variant,
                                 std::vector<SubqueryHandle> &subquery_handles,
                                 DelliciusQueryResult &result) {
   NodeToSubqueryHandles node_to_subquery =
-      DeduplicateExpression(variant, subquery_handles, result);
+      DeduplicateExpression(subquery_handles, result);
   if (node_to_subquery.empty()) return;
   Dispatch(variant, node_to_subquery, result);
 }
@@ -196,7 +196,7 @@ void QueryPlanner::Run(const RedfishVariant &variant, const Clock &clock,
 }
 
 QueryPlanner::QueryPlanner(const DelliciusQuery &query, Normalizer *normalizer)
-    : normalizer(normalizer), plan_id_(query.query_id()) {
+    : normalizer_(normalizer), plan_id_(query.query_id()) {
   // Create subquery handles aka subquery plans.
   for (const auto &subquery : query.subquery()) {
     auto subquery_handle = SubqueryHandle(subquery);
