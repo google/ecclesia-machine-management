@@ -43,7 +43,7 @@ struct RedfishRequest {
 // Creates metrics around a single redfish request.
 class RedfishTrace final {
  public:
-  RedfishTrace(const RedfishRequest &request, Clock *clock,
+  RedfishTrace(RedfishRequest request, Clock *clock,
                RedfishMetrics &redfish_metrics)
       : request_(request), clock_(clock), redfish_metrics_(redfish_metrics) {
     start_timestamp_ = clock->Now();
@@ -79,7 +79,7 @@ class RedfishTrace final {
   void RecordError() { has_request_failed_ = true; }
 
  private:
-  const RedfishRequest &request_;
+  RedfishRequest request_;
   Clock *clock_;
   RedfishMetrics &redfish_metrics_;
   absl::Time start_timestamp_;
