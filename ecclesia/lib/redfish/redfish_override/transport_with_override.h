@@ -18,6 +18,7 @@
 #define ECCLESIA_LIB_REDFISH_REDFISH_OVERRIDE_TRANSPORT_WITH_OVERRIDE_H_
 
 #include <memory>
+#include <optional>
 #include <utility>
 
 #include "absl/status/statusor.h"
@@ -33,12 +34,14 @@ namespace ecclesia {
 // RedfishTransportWithOverride with selector file, please use the constructor.
 OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
                                   RedfishTransport *transport);
-// This function returns the policy by BMC's hostname, port and a Chennel
-// credential for gRPC. If this function fails to find an override policy, it'll
-// return an empty policy with some warning log as no policy should not be a
-// blocker.
+// This function returns the policy by BMC's hostname, port(optional) and a
+// Chennel credential for gRPC. If this function fails to find an override
+// policy, it'll return an empty policy with some warning log as no policy
+// should not be a blocker.
+// The `port` argument can be set as std::nullopt if it's not required.
+// Otherwise, the target address will be "{hostname}:{port}."
 OverridePolicy GetOverridePolicy(
-    absl::string_view hostname, int port,
+    absl::string_view hostname, std::optional<int> port,
     const std::shared_ptr<grpc::ChannelCredentials> &creds);
 
 class RedfishTransportWithOverride : public RedfishTransport {

@@ -412,10 +412,11 @@ OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
 }
 
 OverridePolicy GetOverridePolicy(
-    absl::string_view hostname, int port,
+    absl::string_view hostname, std::optional<int> port,
     const std::shared_ptr<grpc::ChannelCredentials> &creds) {
   OverridePolicy policy;
-  std::string service_address = absl::StrCat(hostname, ":", port);
+  std::string service_address(
+      port.has_value() ? absl::StrCat(hostname, ":", *port) : hostname);
   auto client = redfish::v1::RedfishV1::NewStub(
       grpc::CreateChannel(service_address, creds));
   if (client == nullptr) {
