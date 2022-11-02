@@ -218,6 +218,7 @@ DEFINE_REDFISH_PROPERTY(PropertyMembersCount, int, "Members@odata.count");
 DEFINE_REDFISH_PROPERTY(PropertyCapacityMiB, int, "CapacityMiB");
 DEFINE_REDFISH_PROPERTY(PropertyLogicalSizeMiB, int, "LogicalSizeMiB");
 DEFINE_REDFISH_PROPERTY(PropertyManufacturer, std::string, "Manufacturer");
+DEFINE_REDFISH_PROPERTY(PropertyProducer, std::string, "Producer");
 DEFINE_REDFISH_PROPERTY(PropertyEncryptionStatus, std::string,
                         "EncryptionStatus");
 DEFINE_REDFISH_PROPERTY(PropertyPredictedMediaLifeLeftPercent, int,
