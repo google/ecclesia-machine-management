@@ -372,16 +372,6 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
     }
 
     std::optional<std::string> current_uri = node_to_attach.obj->GetUriString();
-    if (!current_uri.has_value()) {
-      LOG(INFO) << "Unable to find URI for object in queue"
-                << node_to_attach.obj->DebugString();
-      continue;
-    }
-    if (visited_uris.contains(*current_uri)) {
-      LOG(INFO) << "Uri found again: " << *current_uri;
-      continue;
-    }
-    visited_uris.insert(*current_uri);
 
     DLOG(INFO) << "Handling node: " << *current_uri << " with parent "
                << (node_to_attach.parent != nullptr
@@ -514,6 +504,9 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
     std::vector<std::unique_ptr<RedfishObject>> downstream_objs =
         FindAllDownstreamsUris(*node_to_attach.obj, *config);
     for (int i = 0; i < downstream_objs.size(); ++i) {
+      std::optional<std::string> uri = downstream_objs[i]->GetUriString();
+      if (!uri.has_value() || visited_uris.contains(*uri)) continue;
+      visited_uris.insert(*uri);
       queue.push(
           {.parent = current_node_ptr, .obj = std::move(downstream_objs[i])});
     }
@@ -525,7 +518,9 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
         DLOG(INFO) << "Cable URI: " << cable_uri;
         std::unique_ptr<RedfishObject> cable_obj =
             redfish_intf->CachedGetUri(cable_uri).AsObject();
-        if (!cable_obj) continue;
+        if (!cable_obj || cable_uri.empty() || visited_uris.contains(cable_uri))
+          continue;
+        visited_uris.insert(cable_uri);
         queue.push({.parent = current_node_ptr, .obj = std::move(cable_obj)});
       }
     }
