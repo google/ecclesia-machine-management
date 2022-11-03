@@ -13,6 +13,7 @@ filegroup(
     name = "sample_queries_out",
     srcs = [
         "query_out/assembly_out.textproto",
+        "query_out/devpath_assembly_out.textproto",
         "query_out/devpath_sensor_out.textproto",
         "query_out/sensor_out.textproto",
     ],
