@@ -172,7 +172,68 @@ TEST_F(RedfishOverrideTest, LoadPolicyInvalidFileTest) {
   EXPECT_THAT(policy, EqualsProto(expected_policy));
 }
 
-TEST_F(RedfishOverrideTest, GetOverridePolicyTest) {
+TEST_F(RedfishOverrideTest, GetOverridePolicyByFileTest) {
+  OverridePolicy policy = GetOverridePolicy(
+      GetTestDataDependencyPath(
+          "lib/redfish/redfish_override/test_policy.binarypb"));
+  OverridePolicy expected_policy = ParseTextProtoOrDie(R"pb(
+    override_content_map_uri: {
+      key: "/expected/result/1"
+      value: {
+        override_field:
+        [ {
+          action_replace: {
+            object_identifier: {
+              individual_object_identifier:
+              [ { field_name: "TestString" }]
+            }
+            override_value: {
+              value: { string_value: "OverrideReplaceByField" }
+            }
+          }
+        }
+          , {
+            action_replace: {
+              object_identifier: {
+                individual_object_identifier:
+                [ { field_name: "TestArray" }
+                  , {
+                    array_field: {
+                      field_name: "TestNumber"
+                      value: { number_value: 1234 }
+                    }
+                  }
+                  , { field_name: "TestNumber" }]
+              }
+              override_value: { value: { number_value: 54321 } }
+            }
+          }
+          , {
+            action_replace: {
+              object_identifier: {
+                individual_object_identifier:
+                [ { field_name: "TestArray" }
+                  , { array_idx: 0 }
+                  , { field_name: "TestStruct" }]
+              }
+              override_value: {
+                value: { string_value: "OverrideReplaceByIndex" }
+              }
+            }
+          }]
+      }
+    }
+  )pb");
+  EXPECT_THAT(policy, EqualsProto(expected_policy));
+}
+
+TEST_F(RedfishOverrideTest, GetOverridePolicyByFileFailedTest) {
+  EXPECT_THAT(GetOverridePolicy(GetTestDataDependencyPath(
+                  "lib/redfish/redfish_override/do_not_exist.binarypb")),
+              EqualsProto(OverridePolicy::default_instance()));
+}
+
+TEST_F(RedfishOverrideTest, GetOverridePolicyByServerTest) {
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "localhost", 0);
   auto port = mockup_server.Port();

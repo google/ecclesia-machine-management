@@ -13,7 +13,7 @@ proto_data(
     ],
     proto_name = "ecclesia.OverridePolicy",
     visibility = [
-        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+        "//visibility:public",
     ],
 )
 

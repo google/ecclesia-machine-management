@@ -29,12 +29,14 @@
 
 namespace ecclesia {
 
-// This function returns the policy by giving it the selector file's path. This
+// Returns the policy by giving it the selector file's path. This
 // is created public for testing purpose, to create an
 // RedfishTransportWithOverride with selector file, please use the constructor.
 OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
                                   RedfishTransport *transport);
-// This function returns the policy by BMC's hostname, port(optional) and a
+// Returns the policy by reading file on the machine directly.
+OverridePolicy GetOverridePolicy(absl::string_view policy_file_path);
+// Returns the policy by BMC's hostname, port(optional) and a
 // Chennel credential for gRPC. If this function fails to find an override
 // policy, it'll return an empty policy with some warning log as no policy
 // should not be a blocker.

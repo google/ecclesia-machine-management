@@ -386,7 +386,7 @@ OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
   absl::Status read_selector = GetBinaryProto(policy_selector_path, &selector);
   if (!read_selector.ok()) {
     LOG(WARNING) << "Read selector file failed: " << read_selector.message();
-    return policy;
+    return OverridePolicy::default_instance();
   }
   std::string policy_file_path;
   for (const auto &policy_selector : selector.policy_selector()) {
@@ -401,12 +401,22 @@ OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
   }
   if (policy_file_path.empty()) {
     LOG(WARNING) << "No matching policy";
-    return policy;
+    return OverridePolicy::default_instance();
   }
   absl::Status read_policy = GetBinaryProto(policy_file_path, &policy);
   if (!read_policy.ok()) {
     LOG(WARNING) << "Read policy file failed: " << read_policy.message();
-    return policy;
+    return OverridePolicy::default_instance();
+  }
+  return policy;
+}
+
+OverridePolicy GetOverridePolicy(absl::string_view policy_file_path) {
+  OverridePolicy policy;
+  absl::Status read_policy = GetBinaryProto(policy_file_path, &policy);
+  if (!read_policy.ok()) {
+    LOG(WARNING) << "Read policy file failed: " << read_policy.message();
+    return OverridePolicy::default_instance();
   }
   return policy;
 }
@@ -421,7 +431,7 @@ OverridePolicy GetOverridePolicy(
       grpc::CreateChannel(service_address, creds));
   if (client == nullptr) {
     LOG(WARNING) << "Override Stub creation failed";
-    return policy;
+    return OverridePolicy::default_instance();
   }
   grpc::ClientContext context;
   redfish::v1::GetOverridePolicyRequest request;
@@ -437,12 +447,13 @@ OverridePolicy GetOverridePolicy(
   auto status = client->GetOverridePolicy(&context, request, &response);
   if (!status.ok()) {
     LOG(WARNING) << "GetOverridePolicy failed: " << status.error_message();
-    return policy;
+    return OverridePolicy::default_instance();
   }
   bool result = google::protobuf::TextFormat::ParseFromString(response.policy(), &policy);
   if (!result) {
     LOG(WARNING) << "Byte is unable to translate to proto "
                  << response.policy();
+    return OverridePolicy::default_instance();
   }
   return policy;
 }
