@@ -44,7 +44,7 @@ resource_to_config {
   key: "Cable"
   value {
     usable_links {
-      singular_links: "DownstreamChassis"
+      array_links: "DownstreamChassis"
       array_links: "DownstreamResources"
       array_links: "DownstreamPorts"
     }
