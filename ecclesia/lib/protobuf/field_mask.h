@@ -35,9 +35,9 @@
 #include <vector>
 
 #include "google/protobuf/field_mask.pb.h"
+#include "absl/strings/string_view.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/message.h"
-#include "absl/strings/string_view.h"
 
 namespace ecclesia {
 namespace ecclesia_field_mask_util {

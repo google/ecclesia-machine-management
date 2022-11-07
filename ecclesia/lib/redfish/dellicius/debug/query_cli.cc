@@ -22,8 +22,6 @@
 #include <utility>
 #include <vector>
 
-#include "google/protobuf/io/zero_copy_stream_impl.h"
-#include "google/protobuf/text_format.h"
 #include "absl/container/fixed_array.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
@@ -52,6 +50,8 @@
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/time/clock.h"
+#include "google/protobuf/io/zero_copy_stream_impl.h"
+#include "google/protobuf/text_format.h"
 
 ABSL_FLAG(bool, devpath_enabled, false, "Boolean to enable devpath extension.");
 ABSL_FLAG(bool, metrics_enabled, false, "Boolean to enable redfish metrics.");

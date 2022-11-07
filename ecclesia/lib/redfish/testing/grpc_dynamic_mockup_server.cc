@@ -22,7 +22,6 @@
 #include <string>
 #include <utility>
 
-#include "google/protobuf/util/json_util.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
@@ -41,6 +40,7 @@
 #include "grpcpp/server_builder.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
+#include "google/protobuf/util/json_util.h"
 
 namespace ecclesia {
 

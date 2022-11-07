@@ -23,7 +23,6 @@
 #include <utility>
 #include <vector>
 
-#include "google/protobuf/text_format.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/functional/function_ref.h"
@@ -41,6 +40,7 @@
 #include "ecclesia/lib/redfish/topology_configs.h"
 #include "ecclesia/lib/redfish/types.h"
 #include "ecclesia/lib/redfish/utils.h"
+#include "google/protobuf/text_format.h"
 
 namespace ecclesia {
 namespace {

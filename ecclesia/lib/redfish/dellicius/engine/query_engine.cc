@@ -18,7 +18,6 @@
 
 #include <memory>
 
-#include "google/protobuf/text_format.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/log.h"
 #include "absl/strings/string_view.h"
@@ -31,6 +30,7 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/time/clock.h"
+#include "google/protobuf/text_format.h"
 
 namespace ecclesia {
 

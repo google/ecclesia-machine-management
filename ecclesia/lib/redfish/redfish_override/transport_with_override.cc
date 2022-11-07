@@ -22,8 +22,6 @@
 #include <string>
 #include <utility>
 
-#include "google/protobuf/message.h"
-#include "google/protobuf/text_format.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -43,6 +41,8 @@
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
 #include "single_include/nlohmann/json.hpp"
+#include "google/protobuf/message.h"
+#include "google/protobuf/text_format.h"
 #include "re2/re2.h"
 
 namespace ecclesia {

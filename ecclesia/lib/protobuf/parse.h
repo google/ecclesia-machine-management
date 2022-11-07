@@ -43,14 +43,14 @@
 #include <string>
 #include <vector>
 
-#include "google/protobuf/io/tokenizer.h"
-#include "google/protobuf/io/zero_copy_stream_impl.h"
-#include "google/protobuf/text_format.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/logging/interfaces.h"
+#include "google/protobuf/io/tokenizer.h"
+#include "google/protobuf/io/zero_copy_stream_impl.h"
+#include "google/protobuf/text_format.h"
 
 namespace ecclesia {
 

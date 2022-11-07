@@ -17,9 +17,9 @@
 #ifndef ECCLESIA_LIB_REDFISH_TO_PROTO_H_
 #define ECCLESIA_LIB_REDFISH_TO_PROTO_H_
 
-#include "google/protobuf/message.h"
 #include "absl/status/status.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "google/protobuf/message.h"
 
 namespace ecclesia {
 

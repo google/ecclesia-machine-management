@@ -21,10 +21,10 @@
 #include <string>
 #include <utility>
 
-#include "google/protobuf/descriptor.h"
-#include "google/protobuf/message.h"
 #include "absl/status/status.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "google/protobuf/descriptor.h"
+#include "google/protobuf/message.h"
 
 namespace ecclesia {
 namespace {

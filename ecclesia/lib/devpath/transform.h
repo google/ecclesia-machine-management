@@ -26,8 +26,8 @@
 #include <optional>
 #include <string>
 
-#include "google/protobuf/message.h"
 #include "absl/strings/string_view.h"
+#include "google/protobuf/message.h"
 
 namespace ecclesia {
 // Generic function for transforming a devpath field. It should expect a devpath

@@ -23,11 +23,11 @@
 #include <vector>
 
 #include "google/protobuf/field_mask.pb.h"
-#include "google/protobuf/descriptor.h"
-#include "google/protobuf/message.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/protobuf/field_mask.h"
+#include "google/protobuf/descriptor.h"
+#include "google/protobuf/message.h"
 
 namespace ecclesia {
 namespace {

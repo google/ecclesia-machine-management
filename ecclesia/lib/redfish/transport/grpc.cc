@@ -26,7 +26,6 @@
 #include <variant>
 
 #include "google/protobuf/struct.pb.h"
-#include "google/protobuf/util/json_util.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -49,6 +48,7 @@
 #include "grpcpp/security/credentials.h"
 #include "grpcpp/support/status.h"
 #include "single_include/nlohmann/json.hpp"
+#include "google/protobuf/util/json_util.h"
 
 namespace ecclesia {
 namespace {
