@@ -42,6 +42,7 @@ package_group(
     packages = [
         "//ecclesia/lib/root_of_trust/...",
         "//ecclesia/mmanager/...",
+        "//ecclesia/node/...",
     ],
 )
 
