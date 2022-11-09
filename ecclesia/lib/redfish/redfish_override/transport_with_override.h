@@ -29,11 +29,6 @@
 
 namespace ecclesia {
 
-// Returns the policy by giving it the selector file's path. This
-// is created public for testing purpose, to create an
-// RedfishTransportWithOverride with selector file, please use the constructor.
-OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
-                                  RedfishTransport *transport);
 // Returns the policy by reading file on the machine directly.
 OverridePolicy GetOverridePolicy(absl::string_view policy_file_path);
 // Returns the policy by BMC's hostname, port(optional) and a
@@ -53,9 +48,6 @@ class RedfishTransportWithOverride : public RedfishTransport {
       OverridePolicy override_policy)
       : redfish_transport_(std::move(redfish_transport)),
         override_policy_(std::move(override_policy)) {}
-  RedfishTransportWithOverride(
-      std::unique_ptr<RedfishTransport> redfish_transport,
-      absl::string_view policy_selector_path);
 
   ~RedfishTransportWithOverride() override = default;
 

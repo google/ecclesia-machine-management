@@ -24,8 +24,6 @@
 
 #include "absl/log/log.h"
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
@@ -33,14 +31,11 @@
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
 #include "ecclesia/lib/redfish/transport/grpc.h"
-#include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/struct_proto_conversion.h"
-#include "ecclesia/lib/redfish/utils.h"
 #include "grpc/grpc_security_constants.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
-#include "single_include/nlohmann/json.hpp"
 #include "google/protobuf/message.h"
 #include "google/protobuf/text_format.h"
 #include "re2/re2.h"
@@ -89,84 +84,6 @@ absl::Status GetBinaryProto(absl::string_view path, google::protobuf::Message *m
   return absl::OkStatus();
 }
 
-bool CheckValue(nlohmann::json &json,
-                const OverrideRequirement::Requirement &requirement, int idx) {
-  const auto &object_identifier = requirement.object_identifier();
-  if (idx == object_identifier.individual_object_identifier_size()) {
-    for (const auto &value : requirement.value()) {
-      if (ValueToJson(value) == json) {
-        return true;
-      }
-    }
-    return false;
-  }
-  if (object_identifier.individual_object_identifier()
-          .Get(idx)
-          .has_field_name()) {
-    if (json.find(object_identifier.individual_object_identifier()
-                      .Get(idx)
-                      .field_name()) != json.end()) {
-      return CheckValue(json[object_identifier.individual_object_identifier()
-                                 .Get(idx)
-                                 .field_name()],
-                        requirement, idx + 1);
-    }
-  } else if (object_identifier.individual_object_identifier()
-                 .Get(idx)
-                 .has_array_field()) {
-    if (!json.is_array()) {
-      return false;
-    }
-    for (auto &iter : json) {
-      if (iter.contains(object_identifier.individual_object_identifier()
-                            .Get(idx)
-                            .array_field()
-                            .field_name()) &&
-          iter[object_identifier.individual_object_identifier()
-                   .Get(idx)
-                   .array_field()
-                   .field_name()] ==
-              ValueToJson(object_identifier.individual_object_identifier()
-                              .Get(idx)
-                              .array_field()
-                              .value())) {
-        return CheckValue(iter, requirement, idx + 1);
-      }
-    }
-  } else if (object_identifier.individual_object_identifier()
-                 .Get(idx)
-                 .has_array_idx()) {
-    if (!json.is_array()) {
-      return false;
-    }
-    if (object_identifier.individual_object_identifier().Get(idx).array_idx() >=
-        json.size()) {
-      return false;
-    }
-    return CheckValue(json[object_identifier.individual_object_identifier()
-                               .Get(idx)
-                               .array_idx()],
-                      requirement, idx + 1);
-  }
-  return false;
-}
-
-bool CheckRequirement(const OverrideRequirement &override_requirement,
-                      RedfishTransport *transport) {
-  for (const auto &requirement : override_requirement.requirement()) {
-    auto get_result = transport->Get(requirement.uri());
-    if (!get_result.ok() ||
-        !std::holds_alternative<nlohmann::json>(get_result->body)) {
-      return false;
-    }
-    if (!CheckValue(std::get<nlohmann::json>(get_result->body), requirement,
-                    0)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 absl::Status JsonReplace(nlohmann::json &json,
                          const OverrideValue &override_value,
                          RedfishTransport *transport) {
@@ -178,7 +95,8 @@ absl::Status JsonReplace(nlohmann::json &json,
     }
     json = replace_json;
     return absl::OkStatus();
-  } else if (override_value.has_override_by_reading()) {
+  }
+  if (override_value.has_override_by_reading()) {
     return absl::UnimplementedError("To be implemented");
   }
   return absl::InvalidArgumentError("Replace Json not found.");
@@ -206,11 +124,13 @@ absl::Status JsonAdd(nlohmann::json &json,
     }
     json[object_identifier.field_name()] = add_json;
     return absl::OkStatus();
-  } else if (object_identifier.has_array_field()) {
+  }
+  if (object_identifier.has_array_field()) {
     return absl::InvalidArgumentError(
         "Please specify a field before adding inside an array type "
         "json");
-  } else if (object_identifier.has_array_idx()) {
+  }
+  if (object_identifier.has_array_idx()) {
     if (!json.is_array()) {
       return absl::InvalidArgumentError("Json is not an array type");
     }
@@ -233,7 +153,8 @@ absl::Status JsonClear(nlohmann::json &json,
   if (object_identifier.has_field_name()) {
     json.erase(json.find(object_identifier.field_name()));
     return absl::OkStatus();
-  } else if (object_identifier.has_array_field()) {
+  }
+  if (object_identifier.has_array_field()) {
     if (!json.is_array()) {
       return absl::InvalidArgumentError("Json is not an array type");
     }
@@ -379,37 +300,6 @@ absl::Status ResultUpdateHelper(const OverrideField &field,
   return absl::OkStatus();
 }
 }  // namespace
-OverridePolicy LoadOverridePolicy(absl::string_view policy_selector_path,
-                                  RedfishTransport *transport) {
-  OverridePolicy policy;
-  OverridePolicySelector selector;
-  absl::Status read_selector = GetBinaryProto(policy_selector_path, &selector);
-  if (!read_selector.ok()) {
-    LOG(WARNING) << "Read selector file failed: " << read_selector.message();
-    return OverridePolicy::default_instance();
-  }
-  std::string policy_file_path;
-  for (const auto &policy_selector : selector.policy_selector()) {
-    if (CheckRequirement(policy_selector.second, transport)) {
-      auto pos = policy_selector_path.find_last_of('/');
-      if (pos == std::string::npos) {
-        continue;
-      }
-      policy_file_path = absl::StrCat(policy_selector_path.substr(0, pos), "/",
-                                      policy_selector.first);
-    }
-  }
-  if (policy_file_path.empty()) {
-    LOG(WARNING) << "No matching policy";
-    return OverridePolicy::default_instance();
-  }
-  absl::Status read_policy = GetBinaryProto(policy_file_path, &policy);
-  if (!read_policy.ok()) {
-    LOG(WARNING) << "Read policy file failed: " << read_policy.message();
-    return OverridePolicy::default_instance();
-  }
-  return policy;
-}
 
 OverridePolicy GetOverridePolicy(absl::string_view policy_file_path) {
   OverridePolicy policy;
@@ -458,12 +348,6 @@ OverridePolicy GetOverridePolicy(
   return policy;
 }
 
-RedfishTransportWithOverride::RedfishTransportWithOverride(
-    std::unique_ptr<RedfishTransport> redfish_transport,
-    absl::string_view policy_selector_path)
-    : redfish_transport_(std::move(redfish_transport)),
-      override_policy_(
-          LoadOverridePolicy(policy_selector_path, redfish_transport_.get())) {}
 
 absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
     absl::string_view path) {

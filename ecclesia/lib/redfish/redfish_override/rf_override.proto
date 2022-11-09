@@ -89,23 +89,3 @@ message OverridePolicy {
   map<string, OverrideContent> override_content_map_uri = 1;
   map<string, OverrideContent> override_content_map_regex = 2;
 }
-
-// An OverrideRequirement is expressed as a list of requirements, where each
-// requirement checks if the actual value in a resource matches ANY of the given
-// values.
-message OverrideRequirement {
-  message Requirement {
-    string uri = 1;
-    ObjectIdentifier object_identifier = 2;
-    // The requirement is met if the actual value matches any of the following
-    // values.
-    repeated google.protobuf.Value value = 3;
-  }
-  repeated Requirement requirement = 1;
-}
-
-// The key is the file name while OverrideRequirement has all the policies
-// requirements
-message OverridePolicySelector {
-  map<string, OverrideRequirement> policy_selector = 1;
-}

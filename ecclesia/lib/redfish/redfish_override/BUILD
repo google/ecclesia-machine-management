@@ -17,19 +17,6 @@ proto_data(
     ],
 )
 
-proto_data(
-    name = "test_selector",
-    src = "redfish_override_policy/test_selector.textproto",
-    out = "test_selector.binarypb",
-    proto_deps = [
-        ":rf_override_proto",
-    ],
-    proto_name = "ecclesia.OverridePolicySelector",
-    visibility = [
-        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
-    ],
-)
-
 cc_library(
     name = "transport_with_override",
     srcs = ["transport_with_override.cc"],
@@ -37,11 +24,9 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":rf_override_cc_proto",
-        "//ecclesia/lib/redfish:utils",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_grpc_proto",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
         "//ecclesia/lib/redfish/transport:grpc",
-        "//ecclesia/lib/redfish/transport:grpc_tls_options",
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:struct_proto_conversion",
         "@com_github_grpc_grpc//:grpc++_codegen_base",
@@ -53,7 +38,6 @@ cc_library(
         "@com_google_absl//absl/strings:str_format",
         "@com_google_protobuf//:protobuf",
         "@com_googlesource_code_re2//:re2",
-        "@com_json//:json",
     ],
 )
 
@@ -62,7 +46,6 @@ cc_test(
     srcs = ["transport_with_override_test.cc"],
     data = [
         ":test_policy",
-        ":test_selector",
         "//ecclesia/redfish_mockups/barebones_session_auth:mockup.shar",
     ],
     deps = [
