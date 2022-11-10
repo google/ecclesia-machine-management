@@ -28,9 +28,7 @@
 #include "absl/functional/function_ref.h"
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
-#include "absl/strings/strip.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
@@ -114,26 +112,6 @@ void FindAllCablesHelper(RedfishInterface *redfish_intf,
       });
 }
 
-struct ResourceTypeAndVersion {
-  const std::string resource_type;
-  const std::string version;
-};
-
-ResourceTypeAndVersion GetResourceTypeAndVersionFromOdataType(
-    const std::optional<std::string> &type) {
-  // Resource type should be of format "#<Resource>.v<version>.<Resource>"
-  if (type.has_value()) {
-    std::vector<std::string> type_parts = absl::StrSplit(*type, '.');
-
-    // Type parts should be 3 parts; the 2nd part should start with "v"
-    absl::string_view version = type_parts[1];
-    if (type_parts.size() == 3 && absl::ConsumePrefix(&version, "v")) {
-      return {.resource_type = type_parts[2], .version = std::string(version)};
-    }
-  }
-  return {};
-}
-
 ResourceConfig GetResourceConfigFromResourceTypeAndVersion(
     const ResourceTypeAndVersion &resource_type_version,
     const TopologyConfig &config) {
@@ -151,10 +129,19 @@ std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
     const RedfishObject &obj, const TopologyConfig &config) {
   std::vector<std::unique_ptr<RedfishObject>> downstream_objs;
 
-  const auto resource_config = GetResourceConfigFromResourceTypeAndVersion(
-      GetResourceTypeAndVersionFromOdataType(
-          obj.GetNodeValue<PropertyOdataType>()),
-      config);
+  ResourceConfig resource_config;
+  if (std::optional<std::string> odata_type =
+          obj.GetNodeValue<PropertyOdataType>();
+      odata_type.has_value()) {
+    if (const std::optional<ResourceTypeAndVersion> type_and_version =
+            GetResourceTypeAndVersionFromOdataType(*odata_type);
+        type_and_version.has_value()) {
+      resource_config = GetResourceConfigFromResourceTypeAndVersion(
+          *type_and_version, config);
+    }
+  } else {
+    return downstream_objs;
+  }
 
   for (const auto &array_attribute :
        resource_config.first_class_attributes().array_attributes()) {
@@ -379,12 +366,14 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
                        : "(None)");
 
     // Get node Resource name
-    const ResourceTypeAndVersion resource_type_version =
+    std::optional<ResourceTypeAndVersion> resource_type_version =
         GetResourceTypeAndVersionFromOdataType(
-            node_to_attach.obj->GetNodeValue<PropertyOdataType>());
-    DLOG(INFO) << "Current node version and type: "
-               << resource_type_version.resource_type << "/"
-               << resource_type_version.version;
+            node_to_attach.obj->GetNodeValue<PropertyOdataType>().value_or(""));
+    if (resource_type_version.has_value()) {
+      DLOG(INFO) << "Current node version and type: "
+                 << resource_type_version->resource_type << "/"
+                 << resource_type_version->version;
+    }
 
     // Getting Location object; Handling special case due to Drive Location
     // attribute deprecation
@@ -484,7 +473,8 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
       }
 
       // Handle cable type separately once node is created
-      if (resource_type_version.resource_type == "Cable") {
+      if (resource_type_version.has_value() &&
+          resource_type_version->resource_type == "Cable") {
         node->type = kCable;
       }
 

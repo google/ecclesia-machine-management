@@ -29,6 +29,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
+#include "ecclesia/lib/redfish/types.h"
 #include "ecclesia/lib/redfish/utils.h"
 
 namespace ecclesia {
@@ -41,6 +42,29 @@ std::optional<std::string> GetDevpathForUri(const NodeTopology &topology,
     return it->second.front()->local_devpath;
   }
   return std::nullopt;
+}
+
+std::optional<std::string> GetDevpathForObjectAndNodeTopology(
+    RedfishObject *obj, const NodeTopology &topology) {
+  if (std::optional<std::string> type_and_version_node_val =
+          obj->GetNodeValue<PropertyOdataType>();
+      type_and_version_node_val.has_value()) {
+    if (std::optional<ResourceTypeAndVersion> type_and_version =
+            GetResourceTypeAndVersionFromOdataType(*type_and_version_node_val);
+        type_and_version.has_value()) {
+      if (type_and_version->resource_type == ResourceManager::Name) {
+        return GetManagerDevpathFromNodeTopology(obj, topology);
+      }
+      if (type_and_version->resource_type == ResourceSensor::Name) {
+        return GetSensorDevpathFromNodeTopology(obj, topology);
+      }
+    }
+  }
+  std::optional<std::string> maybe_uri = obj->GetUriString();
+  if (!maybe_uri.has_value()) {
+    return std::nullopt;
+  }
+  return GetDevpathForUri(topology, *maybe_uri);
 }
 
 std::optional<std::string> GetSensorDevpathFromNodeTopology(

@@ -220,8 +220,22 @@ cc_test(
 
 cc_library(
     name = "types",
+    srcs = ["types.cc"],
     hdrs = ["types.h"],
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "types_test",
+    srcs = ["types_test.cc"],
+    deps = [
+        ":types",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_library(
@@ -401,6 +415,7 @@ cc_library(
     deps = [
         ":interface",
         ":node_topology",
+        ":types",
         "//ecclesia/lib/redfish:utils",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",

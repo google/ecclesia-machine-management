@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/string_view.h"
@@ -31,6 +32,9 @@
 
 namespace ecclesia {
 namespace {
+
+using ::testing::NotNull;
+using ::testing::StrEq;
 
 TEST(GetDevpathForUri, DevpathAvailable) {
   NodeTopology topology;
@@ -112,9 +116,15 @@ TEST(GetSensorDevpathFromNodeTopology, RelatedItemNoDevpath) {
     topology.nodes.push_back(std::move(node));
   }
 
-  auto devpath = GetSensorDevpathFromNodeTopology(json.get(), topology);
-  ASSERT_TRUE(devpath.has_value());
-  EXPECT_EQ(*devpath, test_devpath);
+  std::optional<std::string> sensor_devpath =
+      GetSensorDevpathFromNodeTopology(json.get(), topology);
+  ASSERT_TRUE(sensor_devpath.has_value());
+  EXPECT_EQ(*sensor_devpath, test_devpath);
+
+  std::optional<std::string> obj_devpath =
+      GetDevpathForObjectAndNodeTopology(json.get(), topology);
+  ASSERT_TRUE(obj_devpath.has_value());
+  EXPECT_EQ(*obj_devpath, *sensor_devpath);
 }
 
 TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemUsingSensor) {
@@ -136,15 +146,21 @@ TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemUsingSensor) {
     topology.nodes.push_back(std::move(node));
   }
 
-  auto devpath = GetSensorDevpathFromNodeTopology(json.get(), topology);
-  ASSERT_TRUE(devpath.has_value());
-  EXPECT_EQ(*devpath, test_devpath);
+  auto sensor_devpath = GetSensorDevpathFromNodeTopology(json.get(), topology);
+  ASSERT_TRUE(sensor_devpath.has_value());
+  EXPECT_EQ(*sensor_devpath, test_devpath);
+
+  // Confirm that the generic devpath function also matches.
+  auto obj_devpath = GetDevpathForObjectAndNodeTopology(json.get(), topology);
+  ASSERT_TRUE(obj_devpath.has_value());
+  EXPECT_EQ(*obj_devpath, *sensor_devpath);
 }
 
 TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemUsingChassisDevpath) {
   auto intf = NewJsonMockupInterface(R"json(
     {
-      "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/sensor"
+      "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/sensor",
+      "@odata.type": "#Sensor.v1_0.Sensor"
     }
   )json");
   auto json = intf->GetRoot().AsObject();
@@ -160,15 +176,23 @@ TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemUsingChassisDevpath) {
     topology.nodes.push_back(std::move(node));
   }
 
-  auto devpath = GetSensorDevpathFromNodeTopology(json.get(), topology);
-  ASSERT_TRUE(devpath.has_value());
-  EXPECT_EQ(*devpath, test_devpath);
+  std::optional<std::string> sensor_devpath =
+      GetSensorDevpathFromNodeTopology(json.get(), topology);
+  ASSERT_TRUE(sensor_devpath.has_value());
+  EXPECT_EQ(*sensor_devpath, test_devpath);
+
+  // Confirm that the generic devpath function also matches.
+  std::optional<std::string> obj_devpath =
+      GetDevpathForObjectAndNodeTopology(json.get(), topology);
+  ASSERT_TRUE(obj_devpath.has_value());
+  EXPECT_EQ(*obj_devpath, *sensor_devpath);
 }
 
 TEST(GetSensorDevpathFromNodeTopology, SensorChassisPrefixInvalid) {
   auto intf = NewJsonMockupInterface(R"json(
     {
-      "@odata.id": "/redfish/v1/Systems/system/Sensors/sensor"
+      "@odata.id": "/redfish/v1/Systems/system/Sensors/sensor",
+      "@odata.type": "#Sensor.v1_0.Sensor"
     }
   )json");
   auto json = intf->GetRoot().AsObject();
@@ -184,14 +208,20 @@ TEST(GetSensorDevpathFromNodeTopology, SensorChassisPrefixInvalid) {
     topology.nodes.push_back(std::move(node));
   }
 
-  auto devpath = GetSensorDevpathFromNodeTopology(json.get(), topology);
-  ASSERT_FALSE(devpath.has_value());
+  std::optional<std::string> sensor_devpath =
+      GetSensorDevpathFromNodeTopology(json.get(), topology);
+  EXPECT_FALSE(sensor_devpath.has_value());
+
+  // Confirm that the generic devpath function fails similarly.
+  auto obj_devpath = GetDevpathForObjectAndNodeTopology(json.get(), topology);
+  EXPECT_FALSE(obj_devpath.has_value());
 }
 
 TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemSensorChassisDevpaths) {
   auto intf = NewJsonMockupInterface(R"json(
     {
-      "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/sensor"
+      "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/sensor",
+      "@odata.type": "#Sensor.v1_0.Sensor"
     }
   )json");
   auto json = intf->GetRoot().AsObject();
@@ -207,8 +237,14 @@ TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemSensorChassisDevpaths) {
     topology.nodes.push_back(std::move(node));
   }
 
-  auto devpath = GetSensorDevpathFromNodeTopology(json.get(), topology);
-  ASSERT_FALSE(devpath.has_value());
+  std::optional<std::string> sensor_devpath =
+      GetSensorDevpathFromNodeTopology(json.get(), topology);
+  EXPECT_FALSE(sensor_devpath.has_value());
+
+  // Confirm that the generic devpath function fails similarly.
+  std::optional<std::string> obj_devpath =
+      GetDevpathForObjectAndNodeTopology(json.get(), topology);
+  EXPECT_FALSE(obj_devpath.has_value());
 }
 
 TEST(GetManagerDevpathFromNodeTopology, DevpathByManagerInChassisLink) {
@@ -238,12 +274,19 @@ TEST(GetManagerDevpathFromNodeTopology, DevpathByManagerInChassisLink) {
     topology.nodes.push_back(std::move(node));
   }
 
-  auto devpath = GetManagerDevpathFromNodeTopology(json.get(), topology);
-  ASSERT_NE(devpath, std::nullopt);
+  std::optional<std::string> manager_chassis_devpath =
+      GetManagerDevpathFromNodeTopology(json.get(), topology);
+  ASSERT_TRUE(manager_chassis_devpath.has_value());
 
   // The devpath comes is derived from the chassis being managed, plus
-  //":device:" concatenated by "OpenBmc Manager" converted to "openbmc_manager".
-  ASSERT_EQ(devpath.value(), "/phys/test:device:openbmc_manager");
+  // ":device:" concatenated by "OpenBmc Manager" converted to "openbmc_manager"
+  EXPECT_EQ(*manager_chassis_devpath, "/phys/test:device:openbmc_manager");
+
+  // Confirm that the generic devpath function also matches.
+  std::optional<std::string> obj_devpath =
+      GetDevpathForObjectAndNodeTopology(json.get(), topology);
+  ASSERT_TRUE(obj_devpath.has_value());
+  EXPECT_THAT(*obj_devpath, StrEq(*manager_chassis_devpath));
 }
 
 TEST(GetManagerDevpathFromNodeTopology, DevpathByFallbackPath) {
@@ -266,12 +309,42 @@ TEST(GetManagerDevpathFromNodeTopology, DevpathByFallbackPath) {
     topology.uri_to_associated_node_map[uri].push_back(node.get());
     topology.nodes.push_back(std::move(node));
   }
-  auto devpath = GetManagerDevpathFromNodeTopology(json.get(), topology);
-  ASSERT_NE(devpath, std::nullopt);
+  std::optional<std::string> manager_chassis_devpath =
+      GetManagerDevpathFromNodeTopology(json.get(), topology);
+  ASSERT_TRUE(manager_chassis_devpath.has_value());
+
+  // Confirm that the generic devpath function also matches.
+  std::optional<std::string> obj_devpath =
+      GetDevpathForObjectAndNodeTopology(json.get(), topology);
+  ASSERT_TRUE(obj_devpath.has_value());
+  EXPECT_THAT(*manager_chassis_devpath, StrEq(*obj_devpath));
 
   // The fallback will attempt to find a devpath directly associated with the
   // BMC's URI. If found, the devpath will be used.
-  ASSERT_EQ(devpath.value(), "/phys/test_bmc");
+  EXPECT_THAT(*manager_chassis_devpath, StrEq("/phys/test_bmc"));
+}
+
+TEST(GetDevpathForObjectAndNodeTopology, EmptyIfTypeMissing) {
+  auto intf = NewJsonMockupInterface(R"json(
+    {
+      "@odata.id": "/redfish/v1/Systems/system/Sensors/sensor"
+    }
+  )json");
+  std::unique_ptr<RedfishObject> json = intf->GetRoot().AsObject();
+  ASSERT_THAT(json, NotNull());
+
+  NodeTopology topology;
+  {
+    auto node = std::make_unique<Node>();
+    node->local_devpath = "/phys/test";
+    topology.uri_to_associated_node_map["/redfish/v1/Systems/system"].push_back(
+        node.get());
+    topology.nodes.push_back(std::move(node));
+  }
+
+  std::optional<std::string> obj_devpath =
+      GetDevpathForObjectAndNodeTopology(json.get(), topology);
+  EXPECT_FALSE(obj_devpath.has_value());
 }
 
 }  // namespace
