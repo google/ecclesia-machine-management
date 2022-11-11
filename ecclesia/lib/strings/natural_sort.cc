@@ -32,8 +32,12 @@ int NaturalSortCmp(absl::string_view lhs, absl::string_view rhs) {
     if (absl::ascii_isdigit(lhs[index]) && absl::ascii_isdigit(rhs[index])) {
       // Both have a sequence of numbers so compare by overall value
       size_t lhs_seq_length = 0, rhs_seq_length = 0;
-      while (absl::ascii_isdigit(lhs[index + lhs_seq_length])) lhs_seq_length++;
-      while (absl::ascii_isdigit(rhs[index + rhs_seq_length])) rhs_seq_length++;
+      while (index + lhs_seq_length < lhs.size() &&
+             absl::ascii_isdigit(lhs[index + lhs_seq_length]))
+        lhs_seq_length++;
+      while (index + rhs_seq_length < rhs.size() &&
+             absl::ascii_isdigit(rhs[index + rhs_seq_length]))
+        rhs_seq_length++;
 
       int lhs_num = -1, rhs_num = -1;
       CHECK(absl::SimpleAtoi(lhs.substr(index, lhs_seq_length), &lhs_num) &&
