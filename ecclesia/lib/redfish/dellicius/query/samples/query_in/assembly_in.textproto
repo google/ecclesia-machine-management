@@ -1,7 +1,7 @@
 # proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
 # proto-message: DelliciusQuery
 
-query_id: "AssemblyCollector"
+query_id: "AssemblyCollectorWithPropertyNameNormalization"
 subquery {
   subquery_id: "Memory"
   redpath: "/Systems[*]/Memory[*]"

@@ -1,0 +1,85 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
+# proto-message: DelliciusQueryResult
+
+query_id: "ProcessorCollectorPredicate"
+subquery_output_by_id {
+  key: "PredicateAncestorStringComparisonLeafNull"
+  value {
+    data_sets {
+      properties {
+        name: "Google.ProcessorErrorCounts.Correctable"
+        int64_value: 0
+      }
+      properties {
+        name: "Google.ProcessorErrorCounts.Uncorrectable"
+        int64_value: 0
+      }
+    }
+    data_sets {
+      properties {
+        name: "Google.ProcessorErrorCounts.Correctable"
+        int64_value: 0
+      }
+      properties {
+        name: "Google.ProcessorErrorCounts.Uncorrectable"
+        int64_value: 0
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateAncestorDecimalComparisonLeafNull"
+  value {
+    data_sets {
+      properties {
+        name: "Google.ProcessorErrorCounts.Correctable"
+        int64_value: 0
+      }
+      properties {
+        name: "Google.ProcessorErrorCounts.Uncorrectable"
+        int64_value: 0
+      }
+    }
+    data_sets {
+      properties {
+        name: "Google.ProcessorErrorCounts.Correctable"
+        int64_value: 0
+      }
+      properties {
+        name: "Google.ProcessorErrorCounts.Uncorrectable"
+        int64_value: 0
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateAncestorInt64ComparisonLeafNull"
+  value {
+    data_sets {
+      properties {
+        name: "Google.ProcessorErrorCounts.Correctable"
+        int64_value: 0
+      }
+      properties {
+        name: "Google.ProcessorErrorCounts.Uncorrectable"
+        int64_value: 0
+      }
+    }
+    data_sets {
+      properties {
+        name: "Google.ProcessorErrorCounts.Correctable"
+        int64_value: 0
+      }
+      properties {
+        name: "Google.ProcessorErrorCounts.Uncorrectable"
+        int64_value: 0
+      }
+    }
+  }
+}
+start_timestamp {
+  seconds: 10
+}
+end_timestamp {
+  seconds: 10
+}

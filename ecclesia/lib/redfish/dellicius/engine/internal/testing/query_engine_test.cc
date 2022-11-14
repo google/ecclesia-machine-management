@@ -118,7 +118,9 @@ TEST_F(QueryEngineTest, QueryEngineConcurrentQueries) {
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
   QueryEngine query_engine(config, &clock_, std::move(intf_));
   std::vector<DelliciusQueryResult> response_entries =
-      query_engine.ExecuteQuery({"SensorCollector", "AssemblyCollector"});
+      query_engine.ExecuteQuery(
+          {"SensorCollector",
+           "AssemblyCollectorWithPropertyNameNormalization"});
   DelliciusQueryResult intent_sensor_out =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
   DelliciusQueryResult intent_assembly_out =

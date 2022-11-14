@@ -23,12 +23,15 @@ cc_library(
     ],
     deps = [
         ":interface",
+        "//ecclesia/lib/redfish:devpath",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:topology",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
     ],
 )
 
@@ -48,11 +51,13 @@ cc_library(
         "//ecclesia/lib/time:clock",
         "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_googlesource_code_re2//:re2",
+        "@com_json//:json",
     ],
 )
 

@@ -16,23 +16,58 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/internal/normalizer.h"
 
+#include <memory>
+#include <string>
 #include <utility>
 
 #include "absl/status/statusor.h"
+#include "absl/strings/str_split.h"
+#include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/time/proto.h"
 
 namespace ecclesia {
+
+namespace {
+
+RedfishVariant GetNestedObject(RedfishVariant &&var,
+                               absl::Span<const std::string> nested_nodes) {
+  if (nested_nodes.empty() || !var.AsObject()) {
+    return std::move(var);
+  }
+  RedfishVariant nested_object = var[nested_nodes[0]];
+  return GetNestedObject(std::move(nested_object), nested_nodes.subspan(1));
+}
+
+}  // namespace
 
 absl::StatusOr<SubqueryDataSet> DefaultNormalizer::Normalize(
     const RedfishVariant &var, const DelliciusQuery::Subquery &subquery) const {
   auto data_set_local = SubqueryDataSet();
   for (const auto &property_requirement : subquery.properties()) {
     SubqueryDataSet::Property property;
+    // A property requirement can specify nested nodes like
+    // 'Thresholds.UpperCritical.Reading' or a simple property like 'Name'.
+    // We will split the property name to ensure we process all node names in
+    // the property expression.
+    std::vector<std::string> names;
+    std::string_view node_name = property_requirement.property();
+    if (auto pos = node_name.find("@odata."); pos != std::string::npos) {
+      names = absl::StrSplit(node_name.substr(0, pos), '.', absl::SkipEmpty());
+      names.push_back(std::string(node_name.substr(pos)));
+    } else {
+      names = absl::StrSplit(node_name, '.', absl::SkipEmpty());
+    }
     // Check the redfish payload for the property listed in data model.
-    RedfishVariant payload = var[property_requirement.property()];
+    RedfishVariant payload = var[names[0]];
+    if (names.size() > 1) {
+      payload = GetNestedObject(
+          std::move(payload),
+          absl::Span<const std::string>(&names[1], names.size() - 1));
+    }
     using RedfishProperty = DelliciusQuery::Subquery::RedfishProperty;
     switch (property_requirement.type()) {
       case RedfishProperty::STRING: {
@@ -83,8 +118,9 @@ absl::StatusOr<SubqueryDataSet> DefaultNormalizer::Normalize(
       // application does not provide a name to map the parsed property to.
       if (property_requirement.has_name()) {
         property.set_name(property_requirement.name());
+      } else {
+        property.set_name(property_requirement.property());
       }
-      property.set_name(property_requirement.property());
       *data_set_local.add_properties() = std::move(property);
     }
   }
@@ -100,14 +136,11 @@ absl::StatusOr<SubqueryDataSet> NormalizerDevpathDecorator::Normalize(
   absl::StatusOr<SubqueryDataSet> normalized_data =
       default_normalizer_->Normalize(var, subquery);
   if (!normalized_data.ok()) return normalized_data;
-  std::optional<std::string> odata_id = var.AsObject()->GetUriString();
-  if (odata_id.has_value()) {
-    auto it = topology_.uri_to_associated_node_map.find(odata_id.value());
-    if (it != topology_.uri_to_associated_node_map.end()) {
-      if (!it->second.empty()) {
-        normalized_data.value().set_devpath(it->second[0]->local_devpath);
-        return normalized_data;
-      }
+  if (auto redfish_object = var.AsObject(); redfish_object) {
+    std::optional<std::string> maybe_devpath =
+        GetDevpathForObjectAndNodeTopology(redfish_object.get(), topology_);
+    if (maybe_devpath.has_value()) {
+      normalized_data.value().set_devpath(maybe_devpath.value());
     }
   }
   return normalized_data;

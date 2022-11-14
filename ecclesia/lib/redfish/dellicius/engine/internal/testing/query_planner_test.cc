@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <iterator>
 #include <memory>
 #include <string>
@@ -25,7 +26,9 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/log/log.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/protobuf/parse.h"
@@ -50,7 +53,58 @@ namespace {
 constexpr absl::string_view kQuerySamplesLocation =
     "lib/redfish/dellicius/query/samples";
 
-TEST(QueryPlannerTest, BasicDelliciusInterpreter) {
+class QueryPlannerTestRunner : public ::testing::Test {
+ protected:
+  QueryPlannerTestRunner() = default;
+  void SetTestParams(absl::string_view mockup, absl::Time duration) {
+    server_ = std::make_unique<FakeRedfishServer>(mockup);
+    intf_ = server_->RedfishClientInterface();
+    clock_ = std::make_unique<FakeClock>(duration);
+  }
+
+  void TestQuery(const std::string &query_in_path,
+                 const std::string &query_out_path, Normalizer *normalizer) {
+    CHECK(server_ != nullptr && intf_ != nullptr && clock_ != nullptr)
+        << "Test parameters not set!";
+    DelliciusQueryResult query_result;
+    DelliciusQuery query =
+        ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
+    QueryPlanner qp(query, normalizer);
+    qp.Run(intf_->GetRoot(), *clock_, query_result);
+    DelliciusQueryResult intent_output =
+        ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
+    EXPECT_THAT(intent_output,
+                IgnoringRepeatedFieldOrdering(EqualsProto(query_result)));
+  }
+
+  std::unique_ptr<FakeRedfishServer> server_;
+  std::unique_ptr<FakeClock> clock_;
+  std::unique_ptr<RedfishInterface> intf_;
+};
+
+TEST_F(QueryPlannerTestRunner, CheckPredicatesFilterNodesAsExpected) {
+  std::string sensor_in_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_in/sensor_in_predicates.textproto"));
+  std::string sensor_out_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/sensor_out_predicates.textproto"));
+  SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
+  // Instantiate a passthrough normalizer.
+  DefaultNormalizer default_normalizer;
+  TestQuery(sensor_in_path, sensor_out_path, &default_normalizer);
+}
+
+TEST_F(QueryPlannerTestRunner, CheckPredicatesFilterAncestorNodesAsExpected) {
+  std::string processor_in_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_in/processors_in.textproto"));
+  std::string processor_out_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/processors_out.textproto"));
+  SetTestParams("indus_hmb_cn/mockup.shar", absl::FromUnixSeconds(10));
+  // Instantiate a passthrough normalizer.
+  DefaultNormalizer default_normalizer;
+  TestQuery(processor_in_path, processor_out_path, &default_normalizer);
+}
+
+TEST_F(QueryPlannerTestRunner, BasicDelliciusInterpreter) {
   std::string assembly_in_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_in/assembly_in.textproto"));
   std::string sensor_in_path = GetTestDataDependencyPath(
@@ -59,61 +113,26 @@ TEST(QueryPlannerTest, BasicDelliciusInterpreter) {
       JoinFilePaths(kQuerySamplesLocation, "query_out/assembly_out.textproto"));
   std::string sensor_out_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
-  FakeClock clock(absl::FromUnixSeconds(10));
+  SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer.
   DefaultNormalizer default_normalizer;
-  // Set up context node for dellicius query.
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  auto service_root = intf->GetRoot();
-
   // Query Assembly
-  DelliciusQueryResult result_assembly;
-  DelliciusQuery query_assembly =
-      ParseTextFileAsProtoOrDie<DelliciusQuery>(assembly_in_path);
-  QueryPlanner qp(query_assembly, &default_normalizer);
-  qp.Run(service_root, clock, result_assembly);
-  DelliciusQueryResult intent_output_assembly =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
-  EXPECT_THAT(intent_output_assembly,
-              IgnoringRepeatedFieldOrdering(EqualsProto(result_assembly)));
-
+  TestQuery(assembly_in_path, assembly_out_path, &default_normalizer);
   // Query Sensor
-  DelliciusQueryResult result_sensor;
-  DelliciusQuery query_sensors =
-      ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
-  QueryPlanner qps(query_sensors, &default_normalizer);
-  qps.Run(service_root, clock, result_sensor);
-  DelliciusQueryResult intent_output_sensor =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
-  EXPECT_THAT(intent_output_sensor,
-              IgnoringRepeatedFieldOrdering(EqualsProto(result_sensor)));
+  TestQuery(sensor_in_path, sensor_out_path, &default_normalizer);
 }
 
-TEST(QueryPlannerTest, DefaultNormalizerWithDevpaths) {
+TEST_F(QueryPlannerTestRunner, DefaultNormalizerWithDevpaths) {
   std::string sensor_in_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_in/sensor_in.textproto"));
   std::string sensor_out_path = GetTestDataDependencyPath(JoinFilePaths(
       kQuerySamplesLocation, "query_out/devpath_sensor_out.textproto"));
-  FakeClock clock(absl::FromUnixSeconds(10));
-  // Set up context node for dellicius query.
-  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-  auto service_root = intf->GetRoot();
-
+  SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer with devpath extension.
   NormalizerDevpathDecorator normalizer_devpath_decorator(
-      std::make_unique<DefaultNormalizer>(), intf.get());
+      std::make_unique<DefaultNormalizer>(), intf_.get());
   // Query Sensor
-  DelliciusQueryResult result_sensor;
-  DelliciusQuery query_sensor =
-      ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
-  QueryPlanner qps(query_sensor, &normalizer_devpath_decorator);
-  qps.Run(service_root, clock, result_sensor);
-  DelliciusQueryResult intent_output_sensor =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
-  EXPECT_THAT(intent_output_sensor,
-              IgnoringRepeatedFieldOrdering(EqualsProto(result_sensor)));
+  TestQuery(sensor_in_path, sensor_out_path, &normalizer_devpath_decorator);
 }
 
 TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {

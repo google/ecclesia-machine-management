@@ -1,0 +1,615 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
+# proto-message: DelliciusQueryResult
+
+query_id: "SensorCollectorPredicate"
+subquery_output_by_id {
+  key: "PredicateLastNode"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "Reading"
+        double_value: 60
+      }
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t"
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateNestedPropertyNested"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "@odata.type"
+        string_value: "#Sensor.v1_2_0.Sensor"
+      }
+      properties {
+        name: "Reading"
+        double_value: 60
+      }
+      properties {
+        name: "UpperCriticalThreshold"
+        double_value: 90
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateNodeName"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "Reading"
+        double_value: 60
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "Reading"
+        double_value: 60
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateNodeValueEqualToNumber"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan0"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan1"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan2"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan3"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan4"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan5"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan6"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateNodeValueEqualToString"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan0"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan1"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan2"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan3"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan4"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan5"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan6"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan7"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateNodeValueGreaterThanNumber"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan0"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan1"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan2"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan3"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan4"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan5"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan6"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateNodeValueIndex3"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan3"
+      }
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_fan3_rpm"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateNodeValueLessThanNumber"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_eat_temp"
+      }
+      properties {
+        name: "Reading"
+        double_value: 28
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_latm_temp"
+      }
+      properties {
+        name: "Reading"
+        double_value: 35
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "Reading"
+        double_value: 30
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "Reading"
+        double_value: 30
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "Reading"
+        double_value: 60
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "Reading"
+        double_value: 60
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateNodeValueNotEqualToNumber"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_eat_temp"
+      }
+      properties {
+        name: "Reading"
+        double_value: 28
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_latm_temp"
+      }
+      properties {
+        name: "Reading"
+        double_value: 35
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "Reading"
+        double_value: 30
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "Reading"
+        double_value: 30
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "Reading"
+        double_value: 60
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "Reading"
+        double_value: 60
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateNodeValueNotEqualToString"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_eat_temp"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_latm_temp"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Power"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Power"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateNodeValueEqualToStringWith@Odata."
+  value {
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_fan0_rpm"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_fan1_rpm"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_fan2_rpm"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_fan3_rpm"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_fan4_rpm"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_fan5_rpm"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_fan6_rpm"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_eat_temp"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_latm_temp"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu0_pwmon"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/i_cpu0_t"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t"
+      }
+    }
+  }
+}
+start_timestamp {
+  seconds: 10
+}
+end_timestamp {
+  seconds: 10
+}

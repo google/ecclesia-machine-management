@@ -18,6 +18,7 @@
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_QUERY_PLANNER_H_
 
 #include <algorithm>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -25,7 +26,6 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/functional/function_ref.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -34,80 +34,86 @@
 namespace ecclesia {
 
 // QueryPlanner encapsulates the logic to interpret subqueries, deduplicate
-// redpath path expressions, dispatch an optimum number of redfish resource
-// requests, and return normalized response data for given data model.
+// RedPath path expressions, dispatch an optimum number of redfish resource
+// requests, and return normalized response data per given property
+// specification.
 // Usage:
 //    auto qp = std::make_unique<QueryPlanner>(query, &normalizer);
 //    qp->Run(service_root, Clock::RealClock(), result);
 class QueryPlanner final : public QueryPlannerInterface {
  public:
+  // Provides a subquery level abstraction to traverse RedPath step expressions
+  // and apply predicate expression rules to refine a given node-set.
+  class SubqueryHandle final {
+   public:
+    // Maps Redfish Resource to SubqueryHandle instances that use the mapped
+    // Redfish Resource as context node to query next RedPath Step in their
+    // respective path expressions.
+    using ContextNodeToSubqueryHandles = absl::flat_hash_map<
+        std::string, /* URI for the Redfish Resource serving as context node */
+        std::pair<std::unique_ptr<RedfishObject>, /* Redfish Resource */
+                  std::vector<SubqueryHandle>>>;
+    // Descriptor used in Predicate level filter operation encapsulating
+    // contextual information on node and node-set.
+    struct FilterContext {
+      RedfishVariant node;
+      size_t node_index;
+      size_t node_set_size;
+    };
+    // Encapsulates components of a RedPath Step expression - NodeName and
+    // Predicate
+    struct RedPathStep {
+      std::string node_name;
+      std::string predicate;
+    };
+    SubqueryHandle(const DelliciusQuery::Subquery &subquery,
+                   Normalizer *normalizer);
+    // Processes Redfish Resource filtered by Predicate Expression.
+    // Normalizes the data if iterator has reached end of RedPath, else maps the
+    // the Subquery to the Redfish resource in the given URI to Subquery map to
+    // continue the query operations for next RedPath Step expression using the
+    // filtered Redfish Resource as the context node.
+    void NormalizeOrContinueQuery(
+        const RedfishVariant &node,
+        ContextNodeToSubqueryHandles &context_node_to_sq,
+        DelliciusQueryResult &result);
+    // Filters given node-set using predicate expressions.
+    bool ApplyPredicateRule(const FilterContext &filter_context);
+    // Returns NodeName in next Step expression in RedPath.
+    // Returns Error if SubqueryHandle is not initialized.
+    std::optional<std::string> GetNodeNameFromRedPathStep() const;
+
+   private:
+    DelliciusQuery::Subquery subquery_;
+    Normalizer *normalizer_;
+    // Collection of RedPath Step expressions in a subquery.
+    std::vector<RedPathStep> steps_in_redpath_;
+    std::vector<RedPathStep>::iterator iter_;
+    // Indicates the validity of RedPath within subquery.
+    bool is_redpath_valid_;
+  };
   QueryPlanner(const DelliciusQuery &query, Normalizer *normalizer);
-  //   TODO(b/241784544): Does not handle queries targetting a collection.
-  //   TODO(b/241784544): Does not handle arrays types.
   void Run(const RedfishVariant &variant, const Clock &clock,
            DelliciusQueryResult &result) override;
 
  private:
-  // Defines return values for a filter operation using predicate expressions.
-  enum class PredicateReturnValue {
-    kContinue = 0,  // node-set successfully refined using predicate.
-    kEndOfRedpath,  // node-set successfully refined and end of redpath reached.
-    kEndByPredicate  // node-set cannot be further refined using the predicate.
-  };
-  // Provides a subquery level abstraction to traverse redpath step expressions
-  // and apply predicate expression rules to refine a given node-set.
-  class SubqueryHandle final {
-   public:
-    explicit SubqueryHandle(const DelliciusQuery::Subquery &subquery);
-    DelliciusQuery::Subquery GetSubquery() const { return subquery_; }
-    std::optional<std::string> NextNodeInRedpath() const;
-    // Filters node-set pointed by given redfish variant by invoking the
-    // predicate handler associated with current 'Step' expression in redpath.
-    PredicateReturnValue FilterNodeSet(const RedfishVariant &redfish_variant);
-
-   private:
-    // A redpath step is a pair of NodeTest expression and Predicate.
-    // The alias pairs the qualified name of redfish resource and a callback
-    // implementing predicate.
-    using RedpathStep =
-        std::pair<std::string, absl::FunctionRef<bool(const RedfishVariant &)>>;
-    DelliciusQuery::Subquery subquery_;
-    std::vector<RedpathStep> steps_in_redpath_;
-    std::vector<RedpathStep>::iterator iter_;
-    // Indicates the validity of redpath within subquery.
-    bool is_redpath_valid_;
-  };
-  // NodeToSubqueryHandles associates Redfish resource pointed by NodeTest to
-  // all subquery handles at a certain redpath depth.
+  // NodeToSubqueryHandles associates Redfish resource pointed by NodeName to
+  // all subquery handles at a certain RedPath depth.
   // Example:
-  //    SQ1 Redpath: /Chassis[*]/Processors[*]
-  //    SQ2 Redpath: /Chassis[*]/Systems[*]
+  //    SQ1 RedPath: /Chassis[*]/Processors[*]
+  //    SQ2 RedPath: /Chassis[*]/Systems[*]
   //    NodeToSubqueryHandles at depth 1 : {"Chassis": {SQ1 Handle, SQ2 Handle}}
   using NodeToSubqueryHandles =
       absl::flat_hash_map<std::string, std::vector<SubqueryHandle>>;
-  // Dispatches redfish resource request for each unique redfish resource at a
-  // particular depth in redpath and further refines the output node-set using
-  // filtering expressions from each subquery.
-  void Dispatch(const RedfishVariant &var, NodeToSubqueryHandles &resource_x_sq,
-                DelliciusQueryResult &result);
-  // Invokes predicate handlers from each subquery to further refine the data
-  // that forms the basis of next step expression in each qualified subquery.
-  void QualifyEachSubquery(const RedfishVariant &var,
-                           std::vector<SubqueryHandle> handles,
-                           DelliciusQueryResult &result);
-  // Query plan runner responsible for deduplicating and dispatching Step
-  // expressions recursively (indirect) till all redpaths are processed.
-  void RunRecursive(const RedfishVariant &variant,
-                    std::vector<SubqueryHandle> &subquery_handles,
-                    DelliciusQueryResult &result);
-  // Deduplicates the next NodeTest expression in the redpath of each subquery
-  // and returns NodeTest to SubqueryHandle map.
-  static NodeToSubqueryHandles DeduplicateExpression(
+  // Recursively executes RedPath Step expressions across subqueries.
+  // Dispatches Redfish resource request for each unique NodeName in RedPath
+  // Step expressions across subqueries followed by invoking predicate handlers
+  // from each subquery to further refine the data that forms the context node
+  // of next step expression in each qualified subquery.
+  void ExecuteRedPathStepFromEachSubquery(
+      const RedfishObject *redfish_object,
       std::vector<SubqueryHandle> &subquery_handles,
       DelliciusQueryResult &result);
-  // Callback function encapsulating the logic to normalize redfish response
-  // data for specific data model.
-  Normalizer *normalizer_;
   std::vector<SubqueryHandle> subquery_handles_;
   std::string plan_id_;
 };

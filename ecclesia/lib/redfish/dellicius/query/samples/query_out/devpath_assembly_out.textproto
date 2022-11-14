@@ -1,18 +1,18 @@
 # proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
 # proto-message: DelliciusQueryResult
 
-query_id: "AssemblyCollector"
+query_id: "AssemblyCollectorWithPropertyNameNormalization"
 subquery_output_by_id {
   key: "Chassis"
   value {
     data_sets {
       devpath: "/phys"
       properties: {
-        name: "SerialNumber"
+        name: "serial_number"
         string_value: "MBBQTW194106556"
       }
       properties {
-        name: "PartNumber"
+        name: "part_number"
         string_value: "1043652-02"
       }
     }

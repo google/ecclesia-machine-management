@@ -8,6 +8,7 @@ cc_test(
     data = [
         "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_in",
         "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_out",
+        "//ecclesia/redfish_mockups/indus_hmb_cn:mockup.shar",
         "//ecclesia/redfish_mockups/indus_hmb_shim:mockup.shar",
     ],
     deps = [
@@ -24,13 +25,14 @@ cc_test(
         "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:http",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
-        "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:metrical_transport",
         "//ecclesia/lib/redfish/transport:transport_metrics_cc_proto",
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/time:clock_fake",
         "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/log",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
         "@com_google_googletest//:gtest_main",
     ],
 )

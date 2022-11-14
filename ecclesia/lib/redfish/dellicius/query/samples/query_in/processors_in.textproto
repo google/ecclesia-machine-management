@@ -1,0 +1,33 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "ProcessorCollectorPredicate"
+# Returns 'Correctable' and 'Uncorrectable' error count from Metrics Resource
+# associated with Processor Instance having SerialNumber=0x016b61948b27a116
+subquery {
+  subquery_id: "PredicateAncestorStringComparisonLeafNull"
+  redpath: "/Systems[*]/Processors[SerialNumber=0x016b61948b27a116]/Metrics/Oem"
+  properties { property: "Google.ProcessorErrorCounts.Correctable" type: INT64 }
+  properties { property: "Google.ProcessorErrorCounts.Uncorrectable" type: INT64 }
+}
+# Returns 'Correctable' and 'Uncorrectable' error count from Metrics Resource
+# associated with all Processors in Systems Resource having
+# TotalSystemMemoryGiB=376. This Subquery is meant for testing predicate
+# expression containing relational operator for comparing Decimal Type
+# attributes.
+subquery {
+  subquery_id: "PredicateAncestorDecimalComparisonLeafNull"
+  redpath: "/Systems[MemorySummary.TotalSystemMemoryGiB=376]/Processors[*]/Metrics/Oem"
+  properties { property: "Google.ProcessorErrorCounts.Correctable" type: INT64 }
+  properties { property: "Google.ProcessorErrorCounts.Uncorrectable" type: INT64 }
+}
+# Returns 'Correctable' and 'Uncorrectable' error count from Metrics Resource
+# associated with Processor Instance having MaxSpeedMHz=4000.
+# This Subquery is meant for testing predicate expression containing relational
+# operator for comparing Int64 Type attributes.
+subquery {
+  subquery_id: "PredicateAncestorInt64ComparisonLeafNull"
+  redpath: "/Systems[]/Processors[MaxSpeedMHz=4000]/Metrics/Oem"
+  properties { property: "Google.ProcessorErrorCounts.Correctable" type: INT64 }
+  properties { property: "Google.ProcessorErrorCounts.Uncorrectable" type: INT64 }
+}

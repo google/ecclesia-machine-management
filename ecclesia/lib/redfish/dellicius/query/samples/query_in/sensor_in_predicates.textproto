@@ -1,0 +1,110 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+# Returns Sensor 'Name' and 'ReadingType' value from all Sensors that contain a
+# property 'ReadingType' whose value is EQUAL TO 'Rotational'.
+query_id: "SensorCollectorPredicate"
+subquery {
+  subquery_id: "PredicateNodeValueEqualToString"
+  redpath: "/Chassis[*]/Sensors[ReadingType=Rotational]"
+  properties { property: "Name" type: STRING }
+  properties { property: "ReadingType" type: STRING }
+}
+# Returns Sensor 'Name' and 'ReadingType' value from all Sensors that contain a
+# property 'ReadingType' whose value is NOT EQUAL TO 'Rotational'.
+subquery {
+  subquery_id: "PredicateNodeValueNotEqualToString"
+  redpath: "/Chassis[*]/Sensors[ReadingType!=Rotational]"
+  properties { property: "Name" type: STRING }
+  properties { property: "ReadingType" type: STRING }
+}
+# Returns Sensor 'Name' and 'Reading' value from all Sensors that contain a
+# property 'Reading' whose value is NOT EQUAL TO 16115
+subquery {
+  subquery_id: "PredicateNodeValueNotEqualToNumber"
+  redpath: "/Chassis[*]/Sensors[Reading!=16115]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+}
+# Returns Sensor 'Name' and 'Reading' value from all Sensors that contain a
+# property 'Reading' whose value is EQUAL TO 16115
+subquery {
+  subquery_id: "PredicateNodeValueEqualToNumber"
+  redpath: "/Chassis[*]/Sensors[Reading=16115]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+}
+# Returns Sensor 'Name' and 'Reading' value from all Sensors that contain a
+# property 'Reading' whose value is GREATER THAN 1600
+subquery {
+  subquery_id: "PredicateNodeValueGreaterThanNumber"
+  redpath: "/Chassis[*]/Sensors[Reading>1600]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+}
+# Returns Sensor 'Name' and 'Reading' value from all Sensors that contain a
+# property 'Reading' whose value is LESS THAN 1600
+subquery {
+  subquery_id: "PredicateNodeValueLessThanNumber"
+  redpath: "/Chassis[*]/Sensors[Reading<1600]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+}
+# Returns Sensor 'Name' and 'Reading' value from all Sensors that contain a
+# property named 'Thresholds'
+subquery {
+  subquery_id: "PredicateNodeName"
+  redpath: "/Chassis[*]/Sensors[Thresholds]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+}
+# Returns Sensor 'Name', 'Reading' and '@odata.id' value from the Sensor
+# Resource found at third index number in SensorCollection.
+subquery {
+  subquery_id: "PredicateNodeValueIndex3"
+  redpath: "/Chassis[*]/Sensors[3]"
+  properties { property: "Name" type: STRING }
+  properties { property: "@odata.id" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+}
+# Returns Sensor 'Name', 'Reading' and '@odata.id' value from the Sensor
+# Resource found at last index number in SensorCollection.
+subquery {
+  subquery_id: "PredicateLastNode"
+  redpath: "/Chassis[*]/Sensors[last()]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+  properties { property: "@odata.id" type: STRING }
+}
+# Returns Sensor 'Name' and 'Reading' along with the nested 'Reading' value from
+# 'UpperCritical' object nested in 'Thresholds' object of the Sensor Resource.
+subquery {
+  subquery_id: "PredicateNestedPropertyNested"
+  redpath: "/Chassis[*]/Sensors[Thresholds.UpperCritical.Reading]"
+  properties { property: "Name" type: STRING }
+  properties { property: "@odata.type" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+  properties { name: "UpperCriticalThreshold" property: "Thresholds.UpperCritical.Reading" type: DOUBLE }
+}
+# Returns Sensor 'Name', 'Reading' and '@odata.id' value from the Sensor
+# Resource with type #Sensor.v1_2_0.Sensor
+subquery {
+  subquery_id: "PredicateNodeValueEqualToStringWith@Odata."
+  redpath: "/Chassis[*]/Sensors[@odata.type=#Sensor.v1_2_0.Sensor]"
+  properties { property: "@odata.id" type: STRING }
+}
+# Malformed subquery to ensure that no output is returned when predicate
+# expression contains @odata.id
+subquery {
+  subquery_id: "PredicateNodeValueEqualToStringWith@odata.id"
+  redpath: "/Chassis[*]/Sensors[@odata.id=/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t]"
+  properties { property: "@odata.id" type: STRING }
+}
+# Malformed subquery to ensure that no output is returned when predicate
+# expression contains @odata.id
+subquery {
+  subquery_id: "PredicateNodeNameWith@odata.id"
+  redpath: "/Chassis[*]/Sensors[@odata.id]"
+  properties { property: "@odata.id" type: STRING }
+}
+
