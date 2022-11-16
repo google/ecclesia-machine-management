@@ -49,7 +49,9 @@ class JsonMockupObject : public RedfishObject {
 
   nlohmann::json GetContentAsJson() const override { return json_view_; }
 
-  std::string DebugString() override { return json_view_.dump(/*indent=*/1); }
+  std::string DebugString() const override {
+    return json_view_.dump(/*indent=*/1);
+  }
 
   absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
       GetParams params) override {

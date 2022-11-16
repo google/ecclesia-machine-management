@@ -15,10 +15,13 @@
  */
 
 #include "ecclesia/lib/redfish/types.h"
+
 #include <optional>
 
 #include "absl/strings/str_split.h"
 #include "absl/strings/strip.h"
+#include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/property_definitions.h"
 
 namespace ecclesia {
 
@@ -34,6 +37,17 @@ std::optional<ResourceTypeAndVersion> GetResourceTypeAndVersionFromOdataType(
   if (absl::ConsumePrefix(&version, "v")) {
     return ResourceTypeAndVersion{.resource_type = type_parts[2],
                                   .version = std::string(version)};
+  }
+  return std::nullopt;
+}
+
+// Helper function to get version, type information from `const RedfishObject &`
+std::optional<ResourceTypeAndVersion> GetResourceTypeAndVersionForObject(
+    const RedfishObject &obj) {
+  if (std::optional<std::string> type_and_version_node_val =
+          obj.GetNodeValue<PropertyOdataType>();
+      type_and_version_node_val.has_value()) {
+    return GetResourceTypeAndVersionFromOdataType(*type_and_version_node_val);
   }
   return std::nullopt;
 }

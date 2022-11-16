@@ -21,6 +21,7 @@
 #include <string>
 
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/redfish/interface.h"
 
 namespace ecclesia {
 
@@ -36,6 +37,10 @@ struct ResourceTypeAndVersion {
 // "#<Resource>.v<version>.<Resource>"
 std::optional<ResourceTypeAndVersion> GetResourceTypeAndVersionFromOdataType(
     absl::string_view type);
+
+// Helper function to work with RedfishObject directly.
+std::optional<ResourceTypeAndVersion> GetResourceTypeAndVersionForObject(
+    const RedfishObject &);
 
 }  // namespace ecclesia
 

@@ -130,15 +130,11 @@ std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
   std::vector<std::unique_ptr<RedfishObject>> downstream_objs;
 
   ResourceConfig resource_config;
-  if (std::optional<std::string> odata_type =
-          obj.GetNodeValue<PropertyOdataType>();
-      odata_type.has_value()) {
-    if (const std::optional<ResourceTypeAndVersion> type_and_version =
-            GetResourceTypeAndVersionFromOdataType(*odata_type);
-        type_and_version.has_value()) {
-      resource_config = GetResourceConfigFromResourceTypeAndVersion(
-          *type_and_version, config);
-    }
+  if (const std::optional<ResourceTypeAndVersion> type_and_version =
+          GetResourceTypeAndVersionForObject(obj);
+      type_and_version.has_value()) {
+    resource_config =
+        GetResourceConfigFromResourceTypeAndVersion(*type_and_version, config);
   } else {
     return downstream_objs;
   }
@@ -222,6 +218,7 @@ std::unique_ptr<RedfishObject> FindRootChassisUri(
                           const std::string &upstream_uri) {
                         for (std::unique_ptr<RedfishObject> &downstream_obj :
                              FindAllDownstreamsUris(*cable_json, config)) {
+                          if (!downstream_obj) continue;
                           if (std::optional<std::string> downstream_uri =
                                   downstream_obj->GetUriString();
                               downstream_uri.has_value()) {
@@ -367,8 +364,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
 
     // Get node Resource name
     std::optional<ResourceTypeAndVersion> resource_type_version =
-        GetResourceTypeAndVersionFromOdataType(
-            node_to_attach.obj->GetNodeValue<PropertyOdataType>().value_or(""));
+        GetResourceTypeAndVersionForObject(*node_to_attach.obj);
     if (resource_type_version.has_value()) {
       DLOG(INFO) << "Current node version and type: "
                  << resource_type_version->resource_type << "/"
@@ -390,7 +386,8 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
       auto node = std::make_unique<Node>();
       node->type = kBoard;
       node->local_devpath = std::string(kRootDevpath);
-      auto name = GetConvertedResourceName(node_to_attach.obj.get());
+      std::optional<std::string> name =
+          GetConvertedResourceName(*node_to_attach.obj);
       if (name.has_value()) {
         node->name = *std::move(name);
       } else {
@@ -408,7 +405,8 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
         std::unique_ptr<RedfishObject> new_root =
             redfish_intf->GetRoot({}, ServiceRootUri::kGoogle).AsObject();
         if (new_root != nullptr) {
-          queue.push({.parent = node.get(), .obj = std::move(new_root)});
+          queue.push(
+              AttachingNodes{.parent = node.get(), .obj = std::move(new_root)});
         }
       }
       topology.nodes.push_back(std::move(node));
@@ -446,7 +444,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
       }
 
       auto node = std::make_unique<Node>();
-      auto name = GetConvertedResourceName(node_to_attach.obj.get());
+      auto name = GetConvertedResourceName(*node_to_attach.obj);
       if (!name.has_value()) continue;
       node->name = *std::move(name);
       node->associated_uris.push_back(*current_uri);
@@ -494,6 +492,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
     std::vector<std::unique_ptr<RedfishObject>> downstream_objs =
         FindAllDownstreamsUris(*node_to_attach.obj, *config);
     for (int i = 0; i < downstream_objs.size(); ++i) {
+      if (downstream_objs[i] == nullptr) continue;
       std::optional<std::string> uri = downstream_objs[i]->GetUriString();
       if (!uri.has_value() || visited_uris.contains(*uri)) continue;
       visited_uris.insert(*uri);

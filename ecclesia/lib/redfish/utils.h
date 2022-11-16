@@ -48,17 +48,17 @@ namespace ecclesia {
 //     "ReadingCelsius": 40,
 //     "UpperThresholdCritical": 85
 // }
-inline bool ComponentIsEnabled(RedfishObject *node_obj) {
-  auto status = (*node_obj)[kRfPropertyStatus].AsObject();
+inline bool ObjectIsEnabled(const RedfishObject &node_obj) {
+  std::unique_ptr<RedfishObject> status =
+      node_obj[kRfPropertyStatus].AsObject();
   if (!status) return false;
-  auto state = status->GetNodeValue<PropertyState>();
+  std::optional<std::string> state = status->GetNodeValue<PropertyState>();
   if (!state) return false;
   return *state == "Enabled";
 }
 
-inline bool AssemblyIsEnabled(RedfishObject *assembly_obj) {
-  if (!assembly_obj) return false;
-  auto status = (*assembly_obj)[kRfPropertyStatus].AsObject();
+inline bool AssemblyIsEnabled(const RedfishObject &assembly_obj) {
+  auto status = assembly_obj[kRfPropertyStatus].AsObject();
   // If assembly doesn't report status, treat it as enabled.
   if (!status) return true;
 
@@ -75,10 +75,9 @@ std::optional<std::string> GetResourceType(const RedfishObject *node);
 // A helper function to get "converted" resource name. The name is generally
 // converted from the "Name" property like " ABc XYz "->"abc_xyz". For certain
 // types of resources the name is obtained from other context of the resource.
-std::optional<std::string> GetConvertedResourceName(const RedfishObject *node);
+std::optional<std::string> GetConvertedResourceName(const RedfishObject &node);
 
-
-std::string RedfishTransportBytesToString(const RedfishTransport::bytes& bytes);
+std::string RedfishTransportBytesToString(const RedfishTransport::bytes &bytes);
 
 RedfishTransport::bytes GetBytesFromString(absl::string_view str);
 

@@ -138,7 +138,7 @@ absl::StatusOr<SubqueryDataSet> NormalizerDevpathDecorator::Normalize(
   if (!normalized_data.ok()) return normalized_data;
   if (auto redfish_object = var.AsObject(); redfish_object) {
     std::optional<std::string> maybe_devpath =
-        GetDevpathForObjectAndNodeTopology(redfish_object.get(), topology_);
+        GetDevpathForObjectAndNodeTopology(*redfish_object, topology_);
     if (maybe_devpath.has_value()) {
       normalized_data.value().set_devpath(maybe_devpath.value());
     }

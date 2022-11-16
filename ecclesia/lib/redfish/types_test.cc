@@ -16,7 +16,13 @@
 
 #include "ecclesia/lib/redfish/types.h"
 
+#include <memory>
+
 #include "gtest/gtest.h"
+#include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/test_mockup.h"
+#include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 
 namespace ecclesia {
 
@@ -48,6 +54,54 @@ TEST(TypeAndVersionExtraction, NoValueForEmptyInput) {
   std::optional<ResourceTypeAndVersion> resource_type_and_version =
       GetResourceTypeAndVersionFromOdataType(type_and_version);
   EXPECT_FALSE(resource_type_and_version.has_value());
+}
+
+TEST(GetResourceTypeForObject, CorrectReturnResourceType) {
+  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  std::unique_ptr<RedfishInterface> raw_intf = mockup.RedfishClientInterface();
+  {
+    std::unique_ptr<RedfishObject> redfish_obj =
+        raw_intf->CachedGetUri("/redfish/v1/Systems/system/Memory/0")
+            .AsObject();
+    std::optional<ResourceTypeAndVersion> resource_type =
+        GetResourceTypeAndVersionForObject(*redfish_obj);
+    ASSERT_TRUE(resource_type.has_value());
+    EXPECT_EQ(resource_type->resource_type, "Memory");
+    EXPECT_EQ(resource_type->version, "1_8_0");
+  }
+
+  {
+    std::unique_ptr<RedfishObject> redfish_obj =
+        raw_intf->CachedGetUri("/redfish/v1/Systems/system/Processors/0")
+            .AsObject();
+    std::optional<ResourceTypeAndVersion> resource_type =
+        GetResourceTypeAndVersionForObject(*redfish_obj);
+    ASSERT_TRUE(resource_type.has_value());
+    EXPECT_EQ(resource_type->resource_type, "Processor");
+    EXPECT_EQ(resource_type->version, "1_7_0");
+  }
+
+  {
+    std::unique_ptr<RedfishObject> redfish_obj =
+        raw_intf->CachedGetUri("/redfish/v1/Systems/system/Storage/1")
+            .AsObject();
+    std::optional<ResourceTypeAndVersion> resource_type =
+        GetResourceTypeAndVersionForObject(*redfish_obj);
+    ASSERT_TRUE(resource_type.has_value());
+    EXPECT_EQ(resource_type->resource_type, "Storage");
+    EXPECT_EQ(resource_type->version, "1_7_1");
+  }
+
+  {
+    std::unique_ptr<RedfishObject> redfish_obj =
+        raw_intf->CachedGetUri("/redfish/v1/Systems/system/Storage/1/Drives/0")
+            .AsObject();
+    std::optional<ResourceTypeAndVersion> resource_type =
+        GetResourceTypeAndVersionForObject(*redfish_obj);
+    ASSERT_TRUE(resource_type.has_value());
+    EXPECT_EQ(resource_type->resource_type, "Drive");
+    EXPECT_EQ(resource_type->version, "1_12_0");
+  }
 }
 
 }  // namespace ecclesia

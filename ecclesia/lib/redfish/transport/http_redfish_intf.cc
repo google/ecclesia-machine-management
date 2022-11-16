@@ -357,7 +357,7 @@ class HttpIntfObjectImpl : public RedfishObject {
     return std::get<nlohmann::json>(result_.body);
   }
 
-  std::string DebugString() override {
+  std::string DebugString() const override {
     if (std::holds_alternative<nlohmann::json>(result_.body)) {
       return std::get<nlohmann::json>(result_.body).dump();
     }

@@ -89,7 +89,7 @@ TEST(GetSensorDevpathFromNodeTopology, RelatedItemDevpath) {
     topology.nodes.push_back(std::move(node));
   }
 
-  auto devpath = GetSensorDevpathFromNodeTopology(json.get(), topology);
+  auto devpath = GetSensorDevpathFromNodeTopology(*json, topology);
   ASSERT_TRUE(devpath.has_value());
   EXPECT_EQ(*devpath, test_devpath);
 }
@@ -117,12 +117,12 @@ TEST(GetSensorDevpathFromNodeTopology, RelatedItemNoDevpath) {
   }
 
   std::optional<std::string> sensor_devpath =
-      GetSensorDevpathFromNodeTopology(json.get(), topology);
+      GetSensorDevpathFromNodeTopology(*json, topology);
   ASSERT_TRUE(sensor_devpath.has_value());
   EXPECT_EQ(*sensor_devpath, test_devpath);
 
   std::optional<std::string> obj_devpath =
-      GetDevpathForObjectAndNodeTopology(json.get(), topology);
+      GetDevpathForObjectAndNodeTopology(*json, topology);
   ASSERT_TRUE(obj_devpath.has_value());
   EXPECT_EQ(*obj_devpath, *sensor_devpath);
 }
@@ -146,12 +146,12 @@ TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemUsingSensor) {
     topology.nodes.push_back(std::move(node));
   }
 
-  auto sensor_devpath = GetSensorDevpathFromNodeTopology(json.get(), topology);
+  auto sensor_devpath = GetSensorDevpathFromNodeTopology(*json, topology);
   ASSERT_TRUE(sensor_devpath.has_value());
   EXPECT_EQ(*sensor_devpath, test_devpath);
 
   // Confirm that the generic devpath function also matches.
-  auto obj_devpath = GetDevpathForObjectAndNodeTopology(json.get(), topology);
+  auto obj_devpath = GetDevpathForObjectAndNodeTopology(*json, topology);
   ASSERT_TRUE(obj_devpath.has_value());
   EXPECT_EQ(*obj_devpath, *sensor_devpath);
 }
@@ -177,13 +177,13 @@ TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemUsingChassisDevpath) {
   }
 
   std::optional<std::string> sensor_devpath =
-      GetSensorDevpathFromNodeTopology(json.get(), topology);
+      GetSensorDevpathFromNodeTopology(*json, topology);
   ASSERT_TRUE(sensor_devpath.has_value());
   EXPECT_EQ(*sensor_devpath, test_devpath);
 
   // Confirm that the generic devpath function also matches.
   std::optional<std::string> obj_devpath =
-      GetDevpathForObjectAndNodeTopology(json.get(), topology);
+      GetDevpathForObjectAndNodeTopology(*json, topology);
   ASSERT_TRUE(obj_devpath.has_value());
   EXPECT_EQ(*obj_devpath, *sensor_devpath);
 }
@@ -209,11 +209,11 @@ TEST(GetSensorDevpathFromNodeTopology, SensorChassisPrefixInvalid) {
   }
 
   std::optional<std::string> sensor_devpath =
-      GetSensorDevpathFromNodeTopology(json.get(), topology);
+      GetSensorDevpathFromNodeTopology(*json, topology);
   EXPECT_FALSE(sensor_devpath.has_value());
 
   // Confirm that the generic devpath function fails similarly.
-  auto obj_devpath = GetDevpathForObjectAndNodeTopology(json.get(), topology);
+  auto obj_devpath = GetDevpathForObjectAndNodeTopology(*json, topology);
   EXPECT_FALSE(obj_devpath.has_value());
 }
 
@@ -238,12 +238,12 @@ TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemSensorChassisDevpaths) {
   }
 
   std::optional<std::string> sensor_devpath =
-      GetSensorDevpathFromNodeTopology(json.get(), topology);
+      GetSensorDevpathFromNodeTopology(*json, topology);
   EXPECT_FALSE(sensor_devpath.has_value());
 
   // Confirm that the generic devpath function fails similarly.
   std::optional<std::string> obj_devpath =
-      GetDevpathForObjectAndNodeTopology(json.get(), topology);
+      GetDevpathForObjectAndNodeTopology(*json, topology);
   EXPECT_FALSE(obj_devpath.has_value());
 }
 
@@ -275,7 +275,7 @@ TEST(GetManagerDevpathFromNodeTopology, DevpathByManagerInChassisLink) {
   }
 
   std::optional<std::string> manager_chassis_devpath =
-      GetManagerDevpathFromNodeTopology(json.get(), topology);
+      GetManagerDevpathFromNodeTopology(*json, topology);
   ASSERT_TRUE(manager_chassis_devpath.has_value());
 
   // The devpath comes is derived from the chassis being managed, plus
@@ -284,7 +284,7 @@ TEST(GetManagerDevpathFromNodeTopology, DevpathByManagerInChassisLink) {
 
   // Confirm that the generic devpath function also matches.
   std::optional<std::string> obj_devpath =
-      GetDevpathForObjectAndNodeTopology(json.get(), topology);
+      GetDevpathForObjectAndNodeTopology(*json, topology);
   ASSERT_TRUE(obj_devpath.has_value());
   EXPECT_THAT(*obj_devpath, StrEq(*manager_chassis_devpath));
 }
@@ -310,12 +310,12 @@ TEST(GetManagerDevpathFromNodeTopology, DevpathByFallbackPath) {
     topology.nodes.push_back(std::move(node));
   }
   std::optional<std::string> manager_chassis_devpath =
-      GetManagerDevpathFromNodeTopology(json.get(), topology);
+      GetManagerDevpathFromNodeTopology(*json, topology);
   ASSERT_TRUE(manager_chassis_devpath.has_value());
 
   // Confirm that the generic devpath function also matches.
   std::optional<std::string> obj_devpath =
-      GetDevpathForObjectAndNodeTopology(json.get(), topology);
+      GetDevpathForObjectAndNodeTopology(*json, topology);
   ASSERT_TRUE(obj_devpath.has_value());
   EXPECT_THAT(*manager_chassis_devpath, StrEq(*obj_devpath));
 
@@ -343,7 +343,7 @@ TEST(GetDevpathForObjectAndNodeTopology, EmptyIfTypeMissing) {
   }
 
   std::optional<std::string> obj_devpath =
-      GetDevpathForObjectAndNodeTopology(json.get(), topology);
+      GetDevpathForObjectAndNodeTopology(*json, topology);
   EXPECT_FALSE(obj_devpath.has_value());
 }
 

@@ -473,7 +473,7 @@ class RedfishObject {
   // Returns some implementation specific debug string. This should only be used
   // for logging and debugging and should not be fed into any parsers which
   // make assumptons on the underlying implementation.
-  virtual std::string DebugString() = 0;
+  virtual std::string DebugString() const = 0;
 
   // GetNodeValue is a convenience method which calls GetNode() then GetValue().
   // If the node does not exist or if the value could not be retrieved, nullopt

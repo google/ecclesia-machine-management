@@ -224,6 +224,8 @@ cc_library(
     hdrs = ["types.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":interface",
+        ":property_definitions",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -231,9 +233,15 @@ cc_library(
 cc_test(
     name = "types_test",
     srcs = ["types_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/topology_v2_testing:mockup.shar",
+    ],
     deps = [
+        ":interface",
+        ":test_mockup",
         ":types",
-        "@com_google_absl//absl/strings",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -313,6 +321,7 @@ cc_library(
     deps = [
         ":interface",
         ":property_definitions",
+        ":types",
         "//ecclesia/lib/redfish/transport:interface",
         "@com_google_absl//absl/strings",
     ],

@@ -74,37 +74,6 @@ constexpr absl::string_view kMemoryResource = R"json({
     }
 })json";
 
-TEST(GetResourceType, CorrectReturnResourceType) {
-  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
-  auto raw_intf = mockup.RedfishClientInterface();
-
-  auto redfish_obj =
-      raw_intf->CachedGetUri("/redfish/v1/Systems/system/Memory/0").AsObject();
-  auto resource_type = GetResourceType(redfish_obj.get());
-  ASSERT_TRUE(resource_type.has_value());
-  EXPECT_EQ(*resource_type, "Memory");
-
-  redfish_obj =
-      raw_intf->CachedGetUri("/redfish/v1/Systems/system/Processors/0")
-          .AsObject();
-  resource_type = GetResourceType(redfish_obj.get());
-  ASSERT_TRUE(resource_type.has_value());
-  EXPECT_EQ(*resource_type, "Processor");
-
-  redfish_obj =
-      raw_intf->CachedGetUri("/redfish/v1/Systems/system/Storage/1").AsObject();
-  resource_type = GetResourceType(redfish_obj.get());
-  ASSERT_TRUE(resource_type.has_value());
-  EXPECT_EQ(*resource_type, "Storage");
-
-  redfish_obj =
-      raw_intf->CachedGetUri("/redfish/v1/Systems/system/Storage/1/Drives/0")
-          .AsObject();
-  resource_type = GetResourceType(redfish_obj.get());
-  ASSERT_TRUE(resource_type.has_value());
-  EXPECT_EQ(*resource_type, "Drive");
-}
-
 TEST(GetConvertedResourceName, ConvertedNameFromNameProperty) {
   ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
@@ -114,7 +83,7 @@ TEST(GetConvertedResourceName, ConvertedNameFromNameProperty) {
   auto raw_name = redfish_obj->GetNodeValue<PropertyName>();
   ASSERT_TRUE(raw_name.has_value());
   EXPECT_EQ(*raw_name, " Expansion Child ");
-  auto converted_name = GetConvertedResourceName(redfish_obj.get());
+  auto converted_name = GetConvertedResourceName(*redfish_obj);
   ASSERT_TRUE(converted_name.has_value());
   EXPECT_EQ(*converted_name, "expansion_child");
 
@@ -123,7 +92,7 @@ TEST(GetConvertedResourceName, ConvertedNameFromNameProperty) {
   raw_name = redfish_obj->GetNodeValue<PropertyName>();
   ASSERT_TRUE(raw_name.has_value());
   EXPECT_EQ(*raw_name, "Expansion Tray ");
-  converted_name = GetConvertedResourceName(redfish_obj.get());
+  converted_name = GetConvertedResourceName(*redfish_obj);
   ASSERT_TRUE(converted_name.has_value());
   EXPECT_EQ(*converted_name, "expansion_tray");
 }
@@ -136,7 +105,7 @@ TEST(GetConvertedResourceName, CorrectMemoryResourceName) {
   auto raw_name = redfish_obj->GetNodeValue<PropertyName>();
   ASSERT_TRUE(raw_name.has_value());
   EXPECT_EQ(*raw_name, "DIMM Slot");
-  auto converted_name = GetConvertedResourceName(redfish_obj.get());
+  auto converted_name = GetConvertedResourceName(*redfish_obj);
   ASSERT_TRUE(converted_name.has_value());
   EXPECT_EQ(*converted_name, "ddr5");
 }

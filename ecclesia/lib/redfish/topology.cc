@@ -90,9 +90,9 @@ struct Assembly {
 
 // If this Redfish object has a "Assembly" property, retrieve it and append it
 // to assembly_out.
-void ExtractAssemblyProperties(RedfishObject *obj,
+void ExtractAssemblyProperties(const RedfishObject &obj,
                                std::vector<RedfishVariant> *assembly_out) {
-  auto assembly_node = (*obj)[kRfPropertyAssembly].AsObject();
+  auto assembly_node = obj[kRfPropertyAssembly].AsObject();
   if (!assembly_node) return;
 
   auto assembly_collection =
@@ -101,7 +101,7 @@ void ExtractAssemblyProperties(RedfishObject *obj,
 
   for (auto assembly : *assembly_collection) {
     auto assembly_obj = assembly.AsObject();
-    if (!assembly_obj || !AssemblyIsEnabled(assembly_obj.get())) {
+    if (!assembly_obj || !AssemblyIsEnabled(*assembly_obj)) {
       continue;
     }
     assembly_out->push_back(std::move(assembly));
@@ -114,22 +114,22 @@ void ExtractAssemblyProperties(RedfishObject *obj,
 // * /redfish/v1/Systems/{id}/Processors/{id}/Assembly
 // * /redfish/v1/Systems/{id}/EthernetInterfaces/{id}/Assembly
 // * /redfish/v1/Systems/{id}/Storage/{id}Drives/{id}/Assembly
-void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
+void ExtractAssemblyFromSystemUri(const RedfishObject &root_obj,
                                   std::vector<RedfishVariant> *assembly_out) {
-  auto system_collection = (*root_obj)[kRfPropertySystems].AsIterable();
+  auto system_collection = root_obj[kRfPropertySystems].AsIterable();
   if (!system_collection) return;
 
   for (auto system : *system_collection) {
     auto system_obj = system.AsObject();
     if (!system_obj) continue;
-    ExtractAssemblyProperties(system_obj.get(), assembly_out);
+    ExtractAssemblyProperties(*system_obj, assembly_out);
 
     auto memory_collection = (*system_obj)[kRfPropertyMemory].AsIterable();
     if (memory_collection) {
       for (auto memory : *memory_collection) {
         auto memory_obj = memory.AsObject();
         if (!memory_obj) continue;
-        ExtractAssemblyProperties(memory_obj.get(), assembly_out);
+        ExtractAssemblyProperties(*memory_obj, assembly_out);
       }
     }
 
@@ -139,7 +139,7 @@ void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
       for (auto processor : *processors_collection) {
         auto processor_obj = processor.AsObject();
         if (!processor_obj) continue;
-        ExtractAssemblyProperties(processor_obj.get(), assembly_out);
+        ExtractAssemblyProperties(*processor_obj, assembly_out);
       }
     }
 
@@ -149,7 +149,7 @@ void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
       for (auto ethernet_interface : *ethernet_interfaces_collection) {
         auto ethernet_interface_obj = ethernet_interface.AsObject();
         if (!ethernet_interface_obj) continue;
-        ExtractAssemblyProperties(ethernet_interface_obj.get(), assembly_out);
+        ExtractAssemblyProperties(*ethernet_interface_obj, assembly_out);
       }
     }
 
@@ -163,7 +163,7 @@ void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
           for (auto drive : *drives_collection) {
             auto drive_obj = drive.AsObject();
             if (!drive_obj) continue;
-            ExtractAssemblyProperties(drive_obj.get(), assembly_out);
+            ExtractAssemblyProperties(*drive_obj, assembly_out);
           }
         }
       }
@@ -173,15 +173,15 @@ void ExtractAssemblyFromSystemUri(RedfishObject *root_obj,
 
 // Finds Assembly resources under the Chassis URI by searching hardcoded URIs:
 // * /redfish/v1/chassis/{chassis_id}/Assembly
-void ExtractAssemblyFromChassisUri(RedfishObject *root_obj,
+void ExtractAssemblyFromChassisUri(const RedfishObject &root_obj,
                                    std::vector<RedfishVariant> *assembly_out) {
-  auto chassis_collection = (*root_obj)[kRfPropertyChassis].AsIterable();
+  auto chassis_collection = root_obj[kRfPropertyChassis].AsIterable();
   if (!chassis_collection) return;
 
   for (auto chassis : *chassis_collection) {
     auto chassis_obj = chassis.AsObject();
     if (!chassis_obj) continue;
-    ExtractAssemblyProperties(chassis_obj.get(), assembly_out);
+    ExtractAssemblyProperties(*chassis_obj, assembly_out);
   }
 }
 
@@ -191,8 +191,8 @@ std::vector<RedfishVariant> FindAssemblyPayloads(
   auto root = redfish_intf->GetRoot().AsObject();
   if (!root) return assemblies;
 
-  ExtractAssemblyFromChassisUri(root.get(), &assemblies);
-  ExtractAssemblyFromSystemUri(root.get(), &assemblies);
+  ExtractAssemblyFromChassisUri(*root, &assemblies);
+  ExtractAssemblyFromSystemUri(*root, &assemblies);
 
   return assemblies;
 }
