@@ -84,7 +84,9 @@ py_test(
 py_binary(
     name = "profile_to_descriptor_main",
     srcs = ["profile_to_descriptor_main.py"],
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+    ],
     deps = [
         ":profile_to_descriptor",
         "@com_google_protobuf//:protobuf_python",
