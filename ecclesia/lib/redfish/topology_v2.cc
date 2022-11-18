@@ -356,6 +356,16 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
     }
 
     std::optional<std::string> current_uri = node_to_attach.obj->GetUriString();
+    if (!current_uri.has_value()) {
+      LOG(ERROR) << "Obj lacks URI details for association; obj from parent "
+                 << (node_to_attach.parent == nullptr
+                         ? "(Root)"
+                         : node_to_attach.parent->local_devpath)
+                 << " with Id = "
+                 << node_to_attach.obj->GetNodeValue<PropertyId>().value_or(
+                        "(None)");
+      continue;
+    }
 
     DLOG(INFO) << "Handling node: " << *current_uri << " with parent "
                << (node_to_attach.parent != nullptr
