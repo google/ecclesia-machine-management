@@ -72,7 +72,7 @@ ApifsDirectory::ApifsDirectory(std::string path) : dir_path_(std::move(path)) {}
 
 ApifsDirectory::ApifsDirectory(const ApifsDirectory &directory,
                                std::string path)
-    : dir_path_(JoinFilePaths(directory.dir_path_, path)) {}
+    : dir_path_(JoinFilePaths(directory.dir_path_, std::move(path))) {}
 
 bool ApifsDirectory::Exists() const { return PathExists(dir_path_); }
 
@@ -95,7 +95,7 @@ absl::StatusOr<std::vector<std::string>> ApifsDirectory::ListEntryNames()
 absl::StatusOr<std::vector<std::string>> ApifsDirectory::ListEntryNames(
     std::string path) const {
   return ListEntriesInDir(
-      JoinFilePaths(dir_path_, path),
+      JoinFilePaths(dir_path_, std::move(path)),
       [](absl::string_view entry) { return std::string(entry); });
 }
 
@@ -108,7 +108,7 @@ absl::StatusOr<std::vector<std::string>> ApifsDirectory::ListEntryPaths()
 
 absl::StatusOr<std::vector<std::string>> ApifsDirectory::ListEntryPaths(
     std::string path) const {
-  std::string full_path = JoinFilePaths(dir_path_, path);
+  std::string full_path = JoinFilePaths(dir_path_, std::move(path));
   return ListEntriesInDir(full_path, [&full_path](absl::string_view entry) {
     return JoinFilePaths(full_path, entry);
   });
