@@ -42,6 +42,14 @@ std::unique_ptr<RedfishInterface> NewHttpInterface(
     std::unique_ptr<ecclesia::RedfishTransport> transport,
     RedfishTransportCacheFactory cache_factory,
     RedfishInterface::TrustedEndpoint trusted);
+
+// Constructs a RedfishInterface backed by a Redfish Transport with a cache
+// factory but removes expand support for it.
+std::unique_ptr<RedfishInterface> NewHttpInterfaceWithoutExpand(
+    std::unique_ptr<ecclesia::RedfishTransport> transport,
+    RedfishTransportCacheFactory cache_factory,
+    RedfishInterface::TrustedEndpoint trusted);
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TRANSPORT_HTTP_REDFISH_INTF_H_

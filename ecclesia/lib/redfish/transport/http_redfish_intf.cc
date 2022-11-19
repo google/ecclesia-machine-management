@@ -664,6 +664,11 @@ class HttpRedfishInterface : public RedfishInterface {
     return supported_features_;
   }
 
+  void RemoveExpandSupport() {
+    absl::MutexLock lock(&supported_features_mutex_);
+    remove_expand_support_ = true;
+  }
+
  private:
   // extends uri with query parameters if needed
   std::string GetUriWithQueryParameters(absl::string_view uri,
@@ -725,6 +730,10 @@ class HttpRedfishInterface : public RedfishInterface {
     if (root_object == nullptr) {
       return;
     }
+    if (remove_expand_support_) {
+      supported_features_ = RedfishSupportedFeatures{};
+      return;
+    }
     auto features_json =
         (*root_object)[kProtocolFeaturesSupported][kExpandQuery].AsObject();
     RedfishSupportedFeatures features;
@@ -765,6 +774,8 @@ class HttpRedfishInterface : public RedfishInterface {
 
   std::optional<RedfishSupportedFeatures> supported_features_
       ABSL_GUARDED_BY(supported_features_mutex_);
+  bool remove_expand_support_ ABSL_GUARDED_BY(supported_features_mutex_) =
+      false;
 };
 
 }  // namespace
@@ -783,6 +794,16 @@ std::unique_ptr<RedfishInterface> NewHttpInterface(
     RedfishInterface::TrustedEndpoint trusted) {
   return std::make_unique<HttpRedfishInterface>(
       std::move(transport), std::move(cache_factory), trusted);
+}
+
+std::unique_ptr<RedfishInterface> NewHttpInterfaceWithoutExpand(
+    std::unique_ptr<ecclesia::RedfishTransport> transport,
+    RedfishTransportCacheFactory cache_factory,
+    RedfishInterface::TrustedEndpoint trusted) {
+  auto http_intf = std::make_unique<HttpRedfishInterface>(
+      std::move(transport), std::move(cache_factory), trusted);
+  http_intf->RemoveExpandSupport();
+  return http_intf;
 }
 
 }  // namespace ecclesia
