@@ -18,8 +18,11 @@
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_LOGGED_TRANSPORT_H_
 
 #include <memory>
+#include <optional>
+#include <string>
 #include <utility>
 
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 
@@ -30,6 +33,9 @@ class RedfishLoggedTransport : public RedfishTransport {
  public:
   explicit RedfishLoggedTransport(std::unique_ptr<RedfishTransport> base)
       : base_transport_(std::move(base)) {}
+  explicit RedfishLoggedTransport(std::unique_ptr<RedfishTransport> base,
+                                  absl::string_view context)
+      : base_transport_(std::move(base)), context_(context) {}
 
   absl::string_view GetRootUri() override;
   absl::StatusOr<Result> Get(absl::string_view path) override;
@@ -42,6 +48,11 @@ class RedfishLoggedTransport : public RedfishTransport {
 
  private:
   std::unique_ptr<RedfishTransport> base_transport_;
+  std::optional<std::string> context_;
+
+  void LogMethodDataAndResult(absl::string_view method, absl::string_view path,
+                              std::optional<absl::string_view> data,
+                              const absl::StatusOr<Result>& result) const;
 };
 
 }  // namespace ecclesia

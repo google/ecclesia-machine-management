@@ -17,12 +17,16 @@
 #include "ecclesia/lib/redfish/transport/logged_transport.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/utils.h"
 
 namespace ecclesia {
@@ -37,6 +41,36 @@ std::string PrintResult(const RedfishTransport::bytes &result) {
 
 }  // namespace
 
+void RedfishLoggedTransport::LogMethodDataAndResult(
+    absl::string_view method, absl::string_view path,
+    std::optional<absl::string_view> data,
+    const absl::StatusOr<Result> &result) const {
+  std::string context_string, data_string;
+  if (context_.has_value()) {
+    context_string = absl::StrCat("Context: ", *context_, " ");
+  } else {
+    context_string = "";
+  }
+
+  if (data.has_value()) {
+    data_string = absl::StrCat(", data=", *data);
+  } else {
+    data_string = "";
+  }
+
+  std::string method_info = absl::StrFormat("%s%s(path=%s%s): ", context_string,
+                                            method, path, data_string);
+
+  if (result.ok()) {
+    LOG(INFO) << absl::StrCat(
+        method_info,
+        std::visit([&](const auto &body) { return PrintResult(body); },
+                   result->body));
+  } else {
+    LOG(ERROR) << absl::StrCat(method_info, result.status().message());
+  }
+}
+
 absl::string_view RedfishLoggedTransport::GetRootUri() {
   CHECK(base_transport_ != nullptr);
   return base_transport_->GetRootUri();
@@ -46,60 +80,28 @@ absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Get(
     absl::string_view path) {
   CHECK(base_transport_ != nullptr);
   auto result = base_transport_->Get(path);
-  if (result.ok()) {
-    LOG(INFO) << absl::StrFormat(
-        "Get(path=%s): %s", path,
-        std::visit([&](const auto &body) { return PrintResult(body); },
-                   result->body));
-  } else {
-    LOG(ERROR) << absl::StrFormat("Get(path=%s): %s", path,
-                                  result.status().message());
-  }
+  LogMethodDataAndResult("Get", path, std::nullopt, result);
   return result;
 }
 absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Post(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
   auto result = base_transport_->Post(path, data);
-  if (result.ok()) {
-    LOG(INFO) << absl::StrFormat(
-        "Post(path=%s, data=%s): %s", path, data,
-        std::visit([&](const auto &body) { return PrintResult(body); },
-                   result->body));
-  } else {
-    LOG(ERROR) << absl::StrFormat("Post(path=%s, data=%s): %s", path, data,
-                                  result.status().message());
-  }
+  LogMethodDataAndResult("Post", path, data, result);
   return result;
 }
 absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Patch(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
   auto result = base_transport_->Patch(path, data);
-  if (result.ok()) {
-    LOG(INFO) << absl::StrFormat(
-        "Patch(path=%s, data=%s): %s", path, data,
-        std::visit([&](const auto &body) { return PrintResult(body); },
-                   result->body));
-  } else {
-    LOG(ERROR) << absl::StrFormat("Patch(path=%s, data=%s): %s", path, data,
-                                  result.status().message());
-  }
+  LogMethodDataAndResult("Patch", path, data, result);
   return result;
 }
 absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Delete(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
   auto result = base_transport_->Delete(path, data);
-  if (result.ok()) {
-    LOG(INFO) << absl::StrFormat(
-        "Delete(path=%s, data=%s): %s", path, data,
-        std::visit([&](const auto &body) { return PrintResult(body); },
-                   result->body));
-  } else {
-    LOG(ERROR) << absl::StrFormat("Delete(path=%s, data=%s): %s", path, data,
-                                  result.status().message());
-  }
+  LogMethodDataAndResult("Delete", path, data, result);
   return result;
 }
 }  // namespace ecclesia
