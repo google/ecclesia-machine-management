@@ -8,7 +8,9 @@ cc_library(
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "//ecclesia/lib/status:macros",
         "//ecclesia/lib/time:clock",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
     ],
 )
@@ -25,13 +27,17 @@ cc_library(
         ":interface",
         "//ecclesia/lib/redfish:devpath",
         "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish:node_topology",
         "//ecclesia/lib/redfish:topology",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/time:proto",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
+        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -67,9 +73,10 @@ cc_library(
     visibility = ["//ecclesia/lib/redfish/dellicius:__subpackages__"],
     deps = [
         ":interface",
+        ":normalizer",
+        ":query_planner",
         "//ecclesia/lib/redfish:interface",
-        "//ecclesia/lib/redfish/dellicius/engine/internal:normalizer",
-        "//ecclesia/lib/redfish/dellicius/engine/internal:query_planner",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "@com_google_absl//absl/memory",
     ],
 )

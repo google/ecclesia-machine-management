@@ -32,6 +32,7 @@
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/protobuf/parse.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/factory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/normalizer.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -89,8 +90,8 @@ TEST_F(QueryPlannerTestRunner, CheckPredicatesFilterNodesAsExpected) {
       kQuerySamplesLocation, "query_out/sensor_out_predicates.textproto"));
   SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer.
-  DefaultNormalizer default_normalizer;
-  TestQuery(sensor_in_path, sensor_out_path, &default_normalizer);
+  auto default_normalizer = BuildDefaultNormalizer();
+  TestQuery(sensor_in_path, sensor_out_path, default_normalizer.get());
 }
 
 TEST_F(QueryPlannerTestRunner, CheckPredicatesFilterAncestorNodesAsExpected) {
@@ -100,8 +101,8 @@ TEST_F(QueryPlannerTestRunner, CheckPredicatesFilterAncestorNodesAsExpected) {
       kQuerySamplesLocation, "query_out/processors_out.textproto"));
   SetTestParams("indus_hmb_cn/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer.
-  DefaultNormalizer default_normalizer;
-  TestQuery(processor_in_path, processor_out_path, &default_normalizer);
+  auto default_normalizer = BuildDefaultNormalizer();
+  TestQuery(processor_in_path, processor_out_path, default_normalizer.get());
 }
 
 TEST_F(QueryPlannerTestRunner, BasicDelliciusInterpreter) {
@@ -115,11 +116,11 @@ TEST_F(QueryPlannerTestRunner, BasicDelliciusInterpreter) {
       JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
   SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer.
-  DefaultNormalizer default_normalizer;
+  auto default_normalizer = BuildDefaultNormalizer();
   // Query Assembly
-  TestQuery(assembly_in_path, assembly_out_path, &default_normalizer);
+  TestQuery(assembly_in_path, assembly_out_path, default_normalizer.get());
   // Query Sensor
-  TestQuery(sensor_in_path, sensor_out_path, &default_normalizer);
+  TestQuery(sensor_in_path, sensor_out_path, default_normalizer.get());
 }
 
 TEST_F(QueryPlannerTestRunner, DefaultNormalizerWithDevpaths) {
@@ -129,10 +130,9 @@ TEST_F(QueryPlannerTestRunner, DefaultNormalizerWithDevpaths) {
       kQuerySamplesLocation, "query_out/devpath_sensor_out.textproto"));
   SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer with devpath extension.
-  NormalizerDevpathDecorator normalizer_devpath_decorator(
-      std::make_unique<DefaultNormalizer>(), intf_.get());
+  auto normalizer_with_devpath = BuildDefaultNormalizerWithDevpath(intf_.get());
   // Query Sensor
-  TestQuery(sensor_in_path, sensor_out_path, &normalizer_devpath_decorator);
+  TestQuery(sensor_in_path, sensor_out_path, normalizer_with_devpath.get());
 }
 
 TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
@@ -144,7 +144,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
   // Set up context node for dellicius query.
   FakeRedfishServer server("indus_hmb_shim/mockup.shar");
   // Instantiate a passthrough normalizer.
-  DefaultNormalizer default_normalizer;
+  auto default_normalizer = BuildDefaultNormalizer();
   RedfishMetrics metrics;
   {
     std::unique_ptr<RedfishTransport> base_transport =
@@ -161,7 +161,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
     DelliciusQueryResult result_sensor;
     DelliciusQuery query_sensor =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
-    QueryPlanner qps(query_sensor, &default_normalizer);
+    QueryPlanner qps(query_sensor, default_normalizer.get());
     qps.Run(service_root, clock, result_sensor);
   }
   // For each type of redfish request for each URI, validate that the
@@ -183,7 +183,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
   // Set up context node for dellicius query.
   FakeRedfishServer server("indus_hmb_shim/mockup.shar");
   // Instantiate a passthrough normalizer.
-  DefaultNormalizer default_normalizer;
+  auto default_normalizer = BuildDefaultNormalizer();
   RedfishMetrics metrics;
   {
     std::unique_ptr<RedfishTransport> base_transport =
@@ -200,7 +200,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
     DelliciusQueryResult result_sensor;
     DelliciusQuery query_sensor =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
-    QueryPlanner qps(query_sensor, &default_normalizer);
+    QueryPlanner qps(query_sensor, default_normalizer.get());
     qps.Run(service_root, clock, result_sensor);
   }
   // Validate that no attempt was made by query planner to query redfish service

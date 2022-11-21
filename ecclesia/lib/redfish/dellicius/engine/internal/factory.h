@@ -19,6 +19,7 @@
 
 #include <memory>
 
+#include "absl/memory/memory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/normalizer.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
@@ -30,15 +31,21 @@ namespace ecclesia {
 // Builds normalizer that transparently returns queried redfish property without
 // normalization for client variables or devpaths.
 inline std::unique_ptr<Normalizer> BuildDefaultNormalizer() {
-  return std::make_unique<DefaultNormalizer>();
+  auto normalizer = std::make_unique<Normalizer>();
+  normalizer->AddNormilizer(absl::make_unique<NormalizerImplDefault>());
+  return normalizer;
 }
+
 // Builds normalizer that transparently returns queried redfish property but
 // extends the QueryPlanner to construct devpath for normalized subquery output.
 inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithDevpath(
     RedfishInterface *interface) {
-  return std::make_unique<NormalizerDevpathDecorator>(BuildDefaultNormalizer(),
-                                                      interface);
+  auto normalizer = BuildDefaultNormalizer();
+  normalizer->AddNormilizer(
+      absl::make_unique<NormalizerImplAddDevpath>(interface));
+  return normalizer;
 }
+
 // Builds the default query planner.
 inline std::unique_ptr<QueryPlannerInterface> BuildQueryPlanner(
     const DelliciusQuery &query, Normalizer *normalizer) {

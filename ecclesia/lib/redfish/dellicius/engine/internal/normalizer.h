@@ -17,41 +17,37 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_NORMALIZER_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_NORMALIZER_H_
 
-#include <memory>
-#include <utility>
-
-#include "absl/status/statusor.h"
+#include "absl/status/status.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/topology.h"
 
 namespace ecclesia {
 
 // Populates the Subquery output using property requirements in the subquery.
-class DefaultNormalizer final : public Normalizer {
- public:
+class NormalizerImplDefault final : public Normalizer::ImplInterface {
+ protected:
   // with fallback to default CSDL bundle.
-
-  absl::StatusOr<SubqueryDataSet> Normalize(
-      const RedfishVariant &var,
-      const DelliciusQuery::Subquery &subquery) const override;
+  absl::Status Normalize(const RedfishVariant &var,
+                         const DelliciusQuery::Subquery &subquery,
+                         SubqueryDataSet &data_set) const;
 };
 
-// Decorates provided concrete Normalizer to add devpath to subquery output.
-class NormalizerDevpathDecorator final : public Normalizer {
+// Adds devpath to subquery output.
+class NormalizerImplAddDevpath final : public Normalizer::ImplInterface {
  public:
-  NormalizerDevpathDecorator(
-      std::unique_ptr<Normalizer> default_normalizer, RedfishInterface *service)
-          : default_normalizer_(std::move(default_normalizer)),
-            topology_(CreateTopologyFromRedfish(service)) {}
+  NormalizerImplAddDevpath(RedfishInterface *service)
+      : topology_(CreateTopologyFromRedfish(service)) {}
 
-  absl::StatusOr<SubqueryDataSet> Normalize(
-      const RedfishVariant &var,
-      const DelliciusQuery::Subquery &subquery) const override;
+ protected:
+  absl::Status Normalize(const RedfishVariant &var,
+                         const DelliciusQuery::Subquery &subquery,
+                         SubqueryDataSet &data_set) const override;
+
  private:
-  std::unique_ptr<Normalizer> default_normalizer_;
   NodeTopology topology_;
 };
 

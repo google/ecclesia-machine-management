@@ -16,12 +16,20 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/internal/normalizer.h"
 
-#include <memory>
-#include <string>
-#include <utility>
+#include <stdint.h>
 
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "google/protobuf/timestamp.pb.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_split.h"
+#include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
@@ -44,9 +52,9 @@ RedfishVariant GetNestedObject(RedfishVariant &&var,
 
 }  // namespace
 
-absl::StatusOr<SubqueryDataSet> DefaultNormalizer::Normalize(
-    const RedfishVariant &var, const DelliciusQuery::Subquery &subquery) const {
-  auto data_set_local = SubqueryDataSet();
+absl::Status NormalizerImplDefault::Normalize(
+    const RedfishVariant &var, const DelliciusQuery::Subquery &subquery,
+    SubqueryDataSet &data_set_local) const {
   for (const auto &property_requirement : subquery.properties()) {
     SubqueryDataSet::Property property;
     // A property requirement can specify nested nodes like
@@ -124,26 +132,23 @@ absl::StatusOr<SubqueryDataSet> DefaultNormalizer::Normalize(
       *data_set_local.add_properties() = std::move(property);
     }
   }
-  if (data_set_local.properties().empty()) {
-    return absl::NotFoundError(
-        "Redfish object does not have any of the required properties");
-  }
-  return data_set_local;
+  return absl::OkStatus();
 }
 
-absl::StatusOr<SubqueryDataSet> NormalizerDevpathDecorator::Normalize(
-    const RedfishVariant &var, const DelliciusQuery::Subquery &subquery) const {
-  absl::StatusOr<SubqueryDataSet> normalized_data =
-      default_normalizer_->Normalize(var, subquery);
-  if (!normalized_data.ok()) return normalized_data;
-  if (auto redfish_object = var.AsObject(); redfish_object) {
-    std::optional<std::string> maybe_devpath =
-        GetDevpathForObjectAndNodeTopology(*redfish_object, topology_);
-    if (maybe_devpath.has_value()) {
-      normalized_data.value().set_devpath(maybe_devpath.value());
-    }
+absl::Status NormalizerImplAddDevpath::Normalize(
+    const RedfishVariant &var, const DelliciusQuery::Subquery &subquery,
+    SubqueryDataSet &data_set) const {
+  std::unique_ptr<RedfishObject> redfish_object = var.AsObject();
+  if (redfish_object == nullptr) {
+    return absl::OkStatus();
   }
-  return normalized_data;
+
+  std::optional<std::string> devpath =
+      GetDevpathForObjectAndNodeTopology(*redfish_object, topology_);
+  if (devpath.has_value()) {
+    data_set.set_devpath(*devpath);
+  }
+  return absl::OkStatus();
 }
 
 }  // namespace ecclesia

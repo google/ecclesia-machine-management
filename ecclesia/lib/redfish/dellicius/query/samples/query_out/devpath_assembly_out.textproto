@@ -18,6 +18,17 @@ subquery_output_by_id {
     }
   }
 }
+subquery_output_by_id {
+  key: "Processors"
+  value {
+    data_sets {
+      devpath: "/phys/CPU0"
+    }
+    data_sets {
+      devpath: "/phys/CPU1"
+    }
+  }
+}
 start_timestamp {
   seconds: 10
 }

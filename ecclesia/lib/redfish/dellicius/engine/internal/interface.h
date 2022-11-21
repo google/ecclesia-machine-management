@@ -17,10 +17,16 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_INTERFACE_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_INTERFACE_H_
 
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
@@ -29,10 +35,37 @@ namespace ecclesia {
 // for the property specification in a Dellicius Subquery.
 class Normalizer {
  public:
-  virtual ~Normalizer() = default;
-  virtual absl::StatusOr<SubqueryDataSet> Normalize(
-      const RedfishVariant &variant,
-      const DelliciusQuery::Subquery &query) const = 0;
+  class ImplInterface {
+   public:
+    virtual ~ImplInterface() = default;
+
+    virtual absl::Status Normalize(const RedfishVariant &variant,
+                                   const DelliciusQuery::Subquery &query,
+                                   SubqueryDataSet &data_set) const = 0;
+  };
+
+  // Returns normalized dataset, possibly empty. Normalizers can be nested
+  // and empty dataset on one level can be extended in outer normalizers.
+  absl::StatusOr<SubqueryDataSet> Normalize(
+      const RedfishVariant &variant, const DelliciusQuery::Subquery &query) {
+    if (impl_chain_.empty()) return absl::NotFoundError("No normalizers added");
+    SubqueryDataSet data_set;
+    for (const auto &impl : impl_chain_) {
+      ECCLESIA_RETURN_IF_ERROR(impl->Normalize(variant, query, data_set));
+    }
+    // Return an error if data set is empty - no field and no devpath
+    if (data_set.properties().empty() && !data_set.has_devpath()) {
+      return absl::NotFoundError("Resulting dataset is empty");
+    }
+    return data_set;
+  }
+
+  void AddNormilizer(std::unique_ptr<ImplInterface> impl) {
+    impl_chain_.push_back(std::move(impl));
+  }
+
+ protected:
+  std::vector<std::unique_ptr<ImplInterface>> impl_chain_;
 };
 
 // Provides an interface for executing a query plan instantiated for a Dellicius

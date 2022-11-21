@@ -16,6 +16,7 @@ cc_test(
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:factory",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
         "//ecclesia/lib/redfish/dellicius/engine/internal:normalizer",
         "//ecclesia/lib/redfish/dellicius/engine/internal:query_planner",

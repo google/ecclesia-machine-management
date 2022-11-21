@@ -132,6 +132,25 @@ TEST_F(QueryEngineTest, QueryEngineConcurrentQueries) {
               IgnoringRepeatedFieldOrdering(EqualsProto(response_entries[1])));
 }
 
+TEST_F(QueryEngineTest, QueryEngineEmptyItemDevpath) {
+  std::string assembly_out_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/devpath_assembly_out.textproto"));
+
+  QueryEngineConfiguration config{
+      .flags{.enable_devpath_extension = true,
+             .enable_cached_uri_dispatch = false},
+      .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
+  QueryEngine query_engine(config, &clock_, std::move(intf_));
+  std::vector<DelliciusQueryResult> response_entries =
+      query_engine.ExecuteQuery(
+          {"AssemblyCollectorWithPropertyNameNormalization"});
+  DelliciusQueryResult intent_assembly_out =
+      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
+  EXPECT_EQ(response_entries.size(), 1);
+  EXPECT_THAT(intent_assembly_out,
+              IgnoringRepeatedFieldOrdering(EqualsProto(response_entries[0])));
+}
+
 }  // namespace
 
 }  // namespace ecclesia
