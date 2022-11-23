@@ -114,9 +114,7 @@ TEST(ParseJson, CanParse) {
   EXPECT_EQ(ParseJson(R"({"a": "b"})"), nlohmann::json({{"a", "b"}}));
 }
 
-TEST(ParseJson, WontAbort) {
-  EXPECT_TRUE(ParseJson(",").is_discarded());
-}
+TEST(ParseJson, WontAbort) { EXPECT_TRUE(ParseJson(",").is_discarded()); }
 
 TEST(JsonToString, CanSerialize) {
   EXPECT_EQ(JsonToString(nlohmann::json{{"a", "b"}}), R"({"a":"b"})");
@@ -126,6 +124,15 @@ TEST(JsonToString, CanSerialize) {
 TEST(JsonToString, WontAbort) {
   EXPECT_EQ(JsonToString(nlohmann::json("\xff")),  // This is invalid UTF-8.
             "\"\"");
+}
+
+TEST(TruncateLastUnderScoreAndNumericSuffix, Works) {
+  EXPECT_EQ(TruncateLastUnderScoreAndNumericSuffix("hdmi_cable"), "hdmi_cable");
+  EXPECT_EQ(TruncateLastUnderScoreAndNumericSuffix("resource_1"), "resource");
+  EXPECT_EQ(TruncateLastUnderScoreAndNumericSuffix("resource_1a"),
+            "resource_1a");
+  EXPECT_EQ(TruncateLastUnderScoreAndNumericSuffix("resource_1_2"),
+            "resource_1");
 }
 
 }  // namespace

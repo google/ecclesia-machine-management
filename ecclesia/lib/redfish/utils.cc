@@ -62,6 +62,24 @@ std::optional<std::string> GetConvertedResourceName(const RedfishObject &node) {
   return std::nullopt;
 }
 
+// This function trims the string's suffix of last underscore and the numeric
+// following it, if such a valid suffix is present in the input string.
+std::string TruncateLastUnderScoreAndNumericSuffix(absl::string_view str) {
+  size_t last_underscore_index = str.find_last_of('_');
+  int numeric_value;
+  std::string modified_str;
+  if ((last_underscore_index != std::string::npos) &&
+      (last_underscore_index < (str.length() - 1)) &&
+      absl::SimpleAtoi(
+          std::string(str.substr(last_underscore_index + 1, str.length() - 1)),
+                      &numeric_value)) {
+    modified_str = str.substr(0, last_underscore_index);
+  } else {
+    modified_str = str;
+  }
+  return modified_str;
+}
+
 std::string RedfishTransportBytesToString(
     const RedfishTransport::bytes &bytes) {
   return std::string(bytes.begin(), bytes.end());
