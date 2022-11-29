@@ -200,9 +200,19 @@ std::unique_ptr<RedfishObject> FindRootChassisUri(
   }
 
   // Pop the first available Chassis (guaranteed since iter has Size > 0)
-  std::unique_ptr<RedfishObject> chassis_obj = (*chassis_iter)[0].AsObject();
+  std::unique_ptr<RedfishObject> chassis_obj;
+  for (const auto chassis : *chassis_iter) {
+    if (chassis.status().ok()) {
+      chassis_obj = chassis.AsObject();
+      break;
+    }
+  }
+  if (chassis_obj == nullptr) {
+    DLOG(INFO) << "No valid Chassis in Chassis collection";
+    return nullptr;
+  }
   std::optional<std::string> chassis_uri = chassis_obj->GetUriString();
-  if (chassis_obj == nullptr || !chassis_uri.has_value()) {
+  if (!chassis_uri.has_value()) {
     DLOG(INFO) << "Chassis obj is not valid from Collection";
     return nullptr;
   }
