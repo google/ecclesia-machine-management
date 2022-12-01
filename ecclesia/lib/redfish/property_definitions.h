@@ -99,6 +99,8 @@ inline constexpr char kRfPropertyNvmeSmartCriticalWarnings[] =
     "NVMeSMARTCriticalWarnings";
 inline constexpr char kRfPropertyLinks[] = "Links";
 inline constexpr char kRfPropertyContainedBy[] = "ContainedBy";
+inline constexpr char kRfPropertyDownstreamChassis[] = "DownstreamChassis";
+inline constexpr char kRfPropertyUpstreamChassis[] = "UpstreamChassis";
 inline constexpr char kRfPropertyOriginOfCondition[] = "OriginOfCondition";
 inline constexpr char kRfPropertyPcieDevice[] = "PCIeDevice";
 inline constexpr char kRfPropertyPcieDevices[] = "PCIeDevices";
