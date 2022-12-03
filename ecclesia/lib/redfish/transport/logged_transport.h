@@ -22,6 +22,7 @@
 #include <string>
 #include <utility>
 
+#include "absl/functional/any_invocable.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -34,8 +35,12 @@ class RedfishLoggedTransport : public RedfishTransport {
   explicit RedfishLoggedTransport(std::unique_ptr<RedfishTransport> base)
       : base_transport_(std::move(base)) {}
   explicit RedfishLoggedTransport(std::unique_ptr<RedfishTransport> base,
-                                  absl::string_view context)
-      : base_transport_(std::move(base)), context_(context) {}
+                                  absl::string_view context, bool log_payload,
+                                  bool log_latency)
+      : base_transport_(std::move(base)),
+        context_(context),
+        log_payload_(log_payload),
+        log_latency_(log_latency) {}
 
   absl::string_view GetRootUri() override;
   absl::StatusOr<Result> Get(absl::string_view path) override;
@@ -49,10 +54,13 @@ class RedfishLoggedTransport : public RedfishTransport {
  private:
   std::unique_ptr<RedfishTransport> base_transport_;
   std::optional<std::string> context_;
+  bool log_payload_;
+  bool log_latency_;
 
-  void LogMethodDataAndResult(absl::string_view method, absl::string_view path,
-                              std::optional<absl::string_view> data,
-                              const absl::StatusOr<Result>& result) const;
+  absl::StatusOr<Result> LogMethodDataAndResult(
+      absl::string_view method, absl::string_view path,
+      std::optional<absl::string_view> data,
+      absl::AnyInvocable<absl::StatusOr<Result>()> call_method) const;
 };
 
 }  // namespace ecclesia

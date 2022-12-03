@@ -21,11 +21,15 @@
 #include <string>
 #include <utility>
 
+#include "absl/functional/any_invocable.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/utils.h"
 
@@ -41,11 +45,12 @@ std::string PrintResult(const RedfishTransport::bytes &result) {
 
 }  // namespace
 
-void RedfishLoggedTransport::LogMethodDataAndResult(
+absl::StatusOr<RedfishLoggedTransport::Result>
+RedfishLoggedTransport::LogMethodDataAndResult(
     absl::string_view method, absl::string_view path,
     std::optional<absl::string_view> data,
-    const absl::StatusOr<Result> &result) const {
-  std::string context_string, data_string;
+    absl::AnyInvocable<absl::StatusOr<Result>()> call_method) const {
+  std::string context_string, data_string, latency_string;
   if (context_.has_value()) {
     context_string = absl::StrCat("Context: ", *context_, " ");
   } else {
@@ -58,17 +63,33 @@ void RedfishLoggedTransport::LogMethodDataAndResult(
     data_string = "";
   }
 
-  std::string method_info = absl::StrFormat("%s%s(path=%s%s): ", context_string,
-                                            method, path, data_string);
+  absl::Time start = absl::Now();
+  auto result = call_method();
+  absl::Duration latency = absl::Now() - start;
+
+  if (log_latency_) {
+    latency_string =
+        absl::StrFormat("[Lag: %s]", absl::FormatDuration(latency));
+  } else {
+    latency_string = "";
+  }
+
+  std::string method_info =
+      absl::StrFormat("%s%s(path=%s%s)%s: ", context_string, method, path,
+                      data_string, latency_string);
 
   if (result.ok()) {
     LOG(INFO) << absl::StrCat(
         method_info,
-        std::visit([&](const auto &body) { return PrintResult(body); },
-                   result->body));
+        log_payload_
+            ? std::visit([&](const auto &body) { return PrintResult(body); },
+                         result->body)
+            : "Success");
   } else {
     LOG(ERROR) << absl::StrCat(method_info, result.status().message());
   }
+
+  return result;
 }
 
 absl::string_view RedfishLoggedTransport::GetRootUri() {
@@ -79,29 +100,28 @@ absl::string_view RedfishLoggedTransport::GetRootUri() {
 absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Get(
     absl::string_view path) {
   CHECK(base_transport_ != nullptr);
-  auto result = base_transport_->Get(path);
-  LogMethodDataAndResult("Get", path, std::nullopt, result);
-  return result;
+  return LogMethodDataAndResult("Get", path, std::nullopt,
+                                [&]() { return base_transport_->Get(path); });
 }
 absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Post(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
-  auto result = base_transport_->Post(path, data);
-  LogMethodDataAndResult("Post", path, data, result);
-  return result;
+  return LogMethodDataAndResult(
+      "Post", path, data, [&]() { return base_transport_->Post(path, data); });
 }
 absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Patch(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
-  auto result = base_transport_->Patch(path, data);
-  LogMethodDataAndResult("Patch", path, data, result);
-  return result;
+  return LogMethodDataAndResult("Patch", path, data, [&]() {
+    return base_transport_->Patch(path, data);
+  });
 }
 absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Delete(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
-  auto result = base_transport_->Delete(path, data);
-  LogMethodDataAndResult("Delete", path, data, result);
-  return result;
+  return LogMethodDataAndResult("Delete", path, data, [&]() {
+    return base_transport_->Delete(path, data);
+  });
 }
+
 }  // namespace ecclesia
