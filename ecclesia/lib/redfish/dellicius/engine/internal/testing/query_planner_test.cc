@@ -34,13 +34,11 @@
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/factory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
-#include "ecclesia/lib/redfish/dellicius/engine/internal/normalizer.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
-#include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
@@ -67,11 +65,11 @@ class QueryPlannerTestRunner : public ::testing::Test {
                  const std::string &query_out_path, Normalizer *normalizer) {
     CHECK(server_ != nullptr && intf_ != nullptr && clock_ != nullptr)
         << "Test parameters not set!";
-    DelliciusQueryResult query_result;
     DelliciusQuery query =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
-    QueryPlanner qp(query, normalizer);
-    qp.Run(intf_->GetRoot(), *clock_, query_result);
+    QueryPlanner qp(query, RedPathRedfishQueryParams{}, normalizer);
+    DelliciusQueryResult query_result =
+        qp.Run(intf_->GetRoot(), *clock_, nullptr);
     DelliciusQueryResult intent_output =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
     EXPECT_THAT(intent_output,
@@ -158,11 +156,11 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
     auto service_root = intf->GetRoot();
 
     // Query Sensor
-    DelliciusQueryResult result_sensor;
     DelliciusQuery query_sensor =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
-    QueryPlanner qps(query_sensor, default_normalizer.get());
-    qps.Run(service_root, clock, result_sensor);
+    QueryPlanner qps(query_sensor, RedPathRedfishQueryParams{},
+                     default_normalizer.get());
+    DelliciusQueryResult result_sensor = qps.Run(service_root, clock, nullptr);
   }
   // For each type of redfish request for each URI, validate that the
   // QueryPlanner sends only 1 request.
@@ -197,11 +195,11 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
     auto service_root = intf->GetRoot();
 
     // Query Sensor
-    DelliciusQueryResult result_sensor;
     DelliciusQuery query_sensor =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
-    QueryPlanner qps(query_sensor, default_normalizer.get());
-    qps.Run(service_root, clock, result_sensor);
+    QueryPlanner qps(query_sensor, RedPathRedfishQueryParams{},
+                     default_normalizer.get());
+    DelliciusQueryResult result_sensor = qps.Run(service_root, clock, nullptr);
   }
   // Validate that no attempt was made by query planner to query redfish service
   // Redfish Metrics should indicate 1 failed GET request to service root which

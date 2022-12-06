@@ -8,7 +8,7 @@ as a single JSON document. The query needs an interpreter and dispatcher to
 translate query operations into Redfish resource requests and dispatch over
 specific transport interface.
 Dellicius Query Engine is a logical composition of interpreter, dispatcher and
-normalizer, responsible for batch processing Redpath queries that are wrapped
+normalizer, responsible for batch processing RedPath queries that are wrapped
 with a specific data model within a Dellicius query.
 
 The modular design of the query engine allows it be extended for manipulating,
@@ -20,16 +20,16 @@ for a query.
 A query, uniquely identified in a set of queries by a query id,  is composed of
 one or more subqueries and each subquery has following components:
 
-1. **Redpath**: Query language based on XPath.
+1. **RedPath**: Query language based on XPath.
 
-        <Redpath> ::= "/" <RelativeLocationPath> ;
+        <RedPath> ::= "/" <RelativeLocationPath> ;
         <RelativeLocationPath> ::= [<RelativeLocationPath> "/"] <Step> ;
         <Step> ::= <NodeTest>[<Predicate>] ;
 
     A redpath, based on XPath v1.0,  is a sequence of ‘Step’ expressions.
     A 'Step' expression is composed of 'NodeTest' and 'Predicate'. ‘NodeTest’ is
     the qualified name of Redfish resource and ‘Predicate’ is filter operation
-    to further refine the nodes returned for the NodeTest expression. Redpath
+    to further refine the nodes returned for the NodeTest expression. RedPath
     uses abbreviated syntax where child axis is the default axis that narrows
     the scope of a ‘Step’ expression to children of the context node which is
     the base Redfish resource for any ‘Step’ in the redpath. All redpaths begin
@@ -38,7 +38,7 @@ one or more subqueries and each subquery has following components:
     refine the set of nodes selected by the location step.\
     Example:
 
-        Redpath :- /Chassis[*]/Processor[*]
+        RedPath :- /Chassis[*]/Processor[*]
         Absolute Path :- /Chassis[*]/Processor[*]
         Relative Path :- Chassis[*]/Processor[*] and Processor[*]
         Location Step :- Chassis[*]

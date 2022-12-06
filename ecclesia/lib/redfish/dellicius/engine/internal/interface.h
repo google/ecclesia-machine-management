@@ -17,11 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_INTERFACE_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_INTERFACE_H_
 
-#include <memory>
-#include <utility>
-#include <vector>
-
-#include "absl/status/status.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
@@ -30,6 +26,18 @@
 #include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
+
+// Maps absolute path of a NodeName expr in RedPath to the Expand value.
+using RedPathRedfishQueryParams =
+    absl::flat_hash_map<std::string /* RedPath */, GetParams>;
+
+// A lightweight tracker capturing executed Redpaths in a single Query.
+// It is a key construct used in tuning Redfish Query Parameters.
+// This also serves as a placeholder for any contextual information required
+// around a query operation.
+struct QueryTracker {
+  RedPathRedfishQueryParams redpaths_queried;
+};
 
 // Provides an interface for normalizing a redfish response into SubqueryDataSet
 // for the property specification in a Dellicius Subquery.
@@ -76,10 +84,9 @@ class QueryPlannerInterface {
   // Executes query plan using RedfishVariant as root.
   // The RedfishVariant can be the service root (redfish/v1) or any redfish
   // resource acting as local root for redfish subtree.
-  // If invoked multiple times using the same result object, the datasets shall
-  // be accumulated for each subquery and not replaced.
-  virtual void Run(const RedfishVariant &variant, const Clock &clock,
-                   DelliciusQueryResult &result) = 0;
+  virtual DelliciusQueryResult Run(const RedfishVariant &variant,
+                                   const Clock &clock,
+                                   QueryTracker *tracker) = 0;
 };
 
 }  // namespace ecclesia

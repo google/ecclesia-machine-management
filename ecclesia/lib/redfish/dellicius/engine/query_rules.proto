@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package ecclesia;
+
+// Encapsulates dispatch rules applicable to a RedPath.
+// This houses Redfish Query Parameters identified for RedPath nodes as well as
+// any metadata necessary for effectively dispatching a RedPath Query.
+message RedPathPrefixWithQueryParams {
+  message ExpandConfiguration {
+    enum ExpandType {
+      UNDEFINED = 0;
+      NO_LINKS = 1;
+      ONLY_LINKS = 2;
+      BOTH = 3;
+    }
+    uint64 level = 1;
+    ExpandType type = 2;
+  }
+  string redpath = 1;
+  ExpandConfiguration expand_configuration = 2;
+}
+
+// Message encapsulating RedPath query execution rules for one or more queries.
+message QueryRules {
+  // Collection of RedPath prefixes along with expand configuration.
+  // A redpath query consists of one or more subqueries each having a RedPath
+  // Expression. QueryEngine executes a reduced set of RedPaths after
+  // deduplicating RedPath prefixes across subqueries.
+  // This message encapsulates all the RedPath prefixes executed by query
+  // planner and tuned Redfish Query Params.
+  message RedPathPrefixSetWithQueryParams {
+    repeated RedPathPrefixWithQueryParams redpath_prefix_with_params = 1;
+  }
+  // Maps Unique Query Identifier to tuned Redfish Query Param configuration.
+  map<string, RedPathPrefixSetWithQueryParams> query_id_to_params_rule = 1;
+}

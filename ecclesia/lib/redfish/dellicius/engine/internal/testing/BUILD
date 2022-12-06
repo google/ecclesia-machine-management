@@ -47,6 +47,15 @@ cc_data_library(
     var_name = "kDelliciusQueries",
 )
 
+cc_data_library(
+    name = "test_query_rules_embedded",
+    cc_namespace = "ecclesia",
+    data = [
+        "//ecclesia/lib/redfish/dellicius/engine:sample_query_rules_in",
+    ],
+    var_name = "kQueryRules",
+)
+
 cc_test(
     name = "query_engine_test",
     srcs = ["query_engine_test.cc"],
@@ -56,12 +65,14 @@ cc_test(
     ],
     deps = [
         ":test_queries_embedded",
+        ":test_query_rules_embedded",
         "//ecclesia/lib/file:path",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_config",
+        "//ecclesia/lib/redfish/dellicius/engine:query_rules_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",

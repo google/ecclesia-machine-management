@@ -48,8 +48,10 @@ inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithDevpath(
 
 // Builds the default query planner.
 inline std::unique_ptr<QueryPlannerInterface> BuildQueryPlanner(
-    const DelliciusQuery &query, Normalizer *normalizer) {
-  return std::make_unique<QueryPlanner>(query, normalizer);
+    const DelliciusQuery &query, RedPathRedfishQueryParams query_params,
+    Normalizer *normalizer) {
+  return std::make_unique<QueryPlanner>(query, std::move(query_params),
+                                        normalizer);
 }
 
 }  // namespace ecclesia

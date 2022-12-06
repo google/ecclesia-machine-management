@@ -48,6 +48,9 @@ class QueryEngine final {
     virtual ~QueryEngineIntf() = default;
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
         absl::Span<const absl::string_view> query_ids) = 0;
+    virtual std::vector<DelliciusQueryResult> ExecuteQuery(
+        absl::Span<const absl::string_view> query_ids,
+        QueryTracker &tracker) = 0;
   };
   QueryEngine(const QueryEngineConfiguration &config, const Clock *clock,
               std::unique_ptr<RedfishInterface> intf);
@@ -60,6 +63,10 @@ class QueryEngine final {
   std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids) {
     return engine_impl_->ExecuteQuery(query_ids);
+  }
+  std::vector<DelliciusQueryResult> ExecuteQuery(
+      absl::Span<const absl::string_view> query_ids, QueryTracker &tracker) {
+    return engine_impl_->ExecuteQuery(query_ids, tracker);
   }
 
  private:
