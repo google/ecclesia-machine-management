@@ -18,6 +18,7 @@ bzl_library(
 bzl_library(
     name = "file",
     srcs = ["file.bzl"],
+    visibility = ["//visibility:public"],
 )
 
 bzl_library(
