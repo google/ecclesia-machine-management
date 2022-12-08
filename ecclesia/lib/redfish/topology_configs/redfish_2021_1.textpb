@@ -21,6 +21,7 @@ resource_to_config {
       array_links: "Drives"
       array_links: "Storage"
       array_links: "Processors"
+      array_links: "Switches"
     }
     first_class_attributes {
       collection_attributes: "Memory"

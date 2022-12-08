@@ -172,6 +172,8 @@ inline constexpr char kRfPropertyRootOfTrustCollection[] =
     "RootOfTrustCollection";
 inline constexpr char kRfPropertyRootOfTrustSendCommand[] =
     "#RootOfTrust.SendCommand";
+inline constexpr char kRfPropertySwitches[] = "Switches";
+inline constexpr char kRfPropertyFabrics[] = "Fabrics";
 
 inline constexpr char kRfResourceTypeProcessorMetrics[] = "ProcessorMetrics";
 
@@ -206,6 +208,7 @@ DEFINE_REDFISH_RESOURCE(ResourceAssemblyEntry, "/Assembly#/");
 DEFINE_REDFISH_RESOURCE(ResourceManager, "Manager");
 DEFINE_REDFISH_RESOURCE(ResourceManagerDiagnosticData, "ManagerDiagnosticData");
 DEFINE_REDFISH_RESOURCE(ResourcePcieSlots, "PCIeSlots");
+DEFINE_REDFISH_RESOURCE(ResourceSwitch, "Switch");
 
 // Physical LPU is an abstraction resource concept based on thread-granularity
 // SubProcessor resource. It uses the same Processor resource schema. But the
@@ -366,6 +369,7 @@ DEFINE_REDFISH_PROPERTY(PropertyTotalMemorySizeMiB, int, "TotalMemorySizeMiB");
 DEFINE_REDFISH_PROPERTY(PropertyMetricProperty, std::string, "MetricProperty");
 DEFINE_REDFISH_PROPERTY(PropertyMetricValue, std::string, "MetricValue");
 DEFINE_REDFISH_PROPERTY(PropertyTimestamp, absl::Time, "Timestamp");
+DEFINE_REDFISH_PROPERTY(PropertySwitchType, std::string, "SwitchType");
 
 // ManagerDiagnosticData properties
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");

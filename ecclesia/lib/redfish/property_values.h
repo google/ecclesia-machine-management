@@ -51,6 +51,7 @@ inline constexpr char kPowerStatePoweringOff[] = "PoweringOff";
 inline constexpr char kProcessorTypeAccelerator[] = "Accelerator";
 inline constexpr char kProcessorTypeCpu[] = "CPU";
 inline constexpr char kProcessorTypeGPU[] = "GPU";
+inline constexpr char kSwitchTypeNvLink[] = "NVLink";
 }  // namespace ecclesia
 
 namespace ecclesia {

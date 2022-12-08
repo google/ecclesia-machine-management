@@ -458,4 +458,21 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourcePcieSlots>,
       });
 }
 
+// Switch:
+// "/redfish/v1/Fabrics/{id}/Switches/{id}"
+void Sysmodel::QueryAllResourceInternal(
+    Token<ResourceSwitch> resource_switch /*unused*/,
+    ResultCallback result_callback, const QueryParams &query_params) {
+  auto root = redfish_intf_->GetRoot();
+  root.AsIndexHelper()
+      .Get(kRfPropertyFabrics,
+           {.freshness = query_params.freshness,
+            .expand = RedfishQueryParamExpand({.levels = 1})})
+      .Each()[kRfPropertySwitches]
+      .Each()
+      .Do([&](std::unique_ptr<RedfishObject> &entry) {
+        return result_callback(std::move(entry));
+      });
+}
+
 }  // namespace ecclesia

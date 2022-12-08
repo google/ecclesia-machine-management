@@ -156,6 +156,9 @@ class Sysmodel {
   void QueryAllResourceInternal(Token<ResourcePcieSlots>,
                                 ResultCallback result_callback,
                                 const QueryParams &query_params);
+  void QueryAllResourceInternal(Token<ResourceSwitch>,
+                                ResultCallback result_callback,
+                                const QueryParams &query_params);
   RedfishInterface *redfish_intf_;
 };
 
