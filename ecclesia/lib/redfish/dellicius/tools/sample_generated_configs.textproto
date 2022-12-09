@@ -1,0 +1,235 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/engine/query_rules.proto
+# proto-message: RedPathPrefixSetWithQueryParamsCollection
+
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems"
+    expand_configuration {
+      level: 2
+      type: BOTH
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Chassis"
+    expand_configuration {
+      level: 1
+      type: BOTH
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems"
+    expand_configuration {
+      level: 1
+      type: BOTH
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Chassis"
+    expand_configuration {
+      level: 1
+      type: BOTH
+    }
+  }
+  redpath_prefix_with_params {
+    redpath: "/Systems"
+    expand_configuration {
+      level: 1
+      type: BOTH
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems[*]/Processors"
+    expand_configuration {
+      level: 1
+      type: BOTH
+    }
+  }
+  redpath_prefix_with_params {
+    redpath: "/Chassis"
+    expand_configuration {
+      level: 1
+      type: BOTH
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems[*]/Processors"
+    expand_configuration {
+      level: 1
+      type: BOTH
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems"
+    expand_configuration {
+      level: 3
+      type: BOTH
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems[*]/Processors"
+    expand_configuration {
+      level: 1
+      type: BOTH
+    }
+  }
+  redpath_prefix_with_params {
+    redpath: "/Systems"
+    expand_configuration {
+      level: 1
+      type: BOTH
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems[*]/Processors"
+    expand_configuration {
+      level: 1
+      type: BOTH
+    }
+  }
+  redpath_prefix_with_params {
+    redpath: "/Systems"
+    expand_configuration {
+      level: 1
+      type: BOTH
+    }
+  }
+  redpath_prefix_with_params {
+    redpath: "/Chassis"
+    expand_configuration {
+      level: 1
+      type: BOTH
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems"
+    expand_configuration {
+      level: 2
+      type: NO_LINKS
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Chassis"
+    expand_configuration {
+      level: 1
+      type: NO_LINKS
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems"
+    expand_configuration {
+      level: 1
+      type: NO_LINKS
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems"
+    expand_configuration {
+      level: 1
+      type: NO_LINKS
+    }
+  }
+  redpath_prefix_with_params {
+    redpath: "/Chassis"
+    expand_configuration {
+      level: 1
+      type: NO_LINKS
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Chassis"
+    expand_configuration {
+      level: 1
+      type: NO_LINKS
+    }
+  }
+  redpath_prefix_with_params {
+    redpath: "/Systems[*]/Processors"
+    expand_configuration {
+      level: 1
+      type: NO_LINKS
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems[*]/Processors"
+    expand_configuration {
+      level: 1
+      type: NO_LINKS
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems"
+    expand_configuration {
+      level: 3
+      type: NO_LINKS
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems[*]/Processors"
+    expand_configuration {
+      level: 1
+      type: NO_LINKS
+    }
+  }
+  redpath_prefix_with_params {
+    redpath: "/Systems"
+    expand_configuration {
+      level: 1
+      type: NO_LINKS
+    }
+  }
+}
+redpath_prefix_set_with_params {
+  redpath_prefix_with_params {
+    redpath: "/Systems"
+    expand_configuration {
+      level: 1
+      type: NO_LINKS
+    }
+  }
+  redpath_prefix_with_params {
+    redpath: "/Chassis"
+    expand_configuration {
+      level: 1
+      type: NO_LINKS
+    }
+  }
+  redpath_prefix_with_params {
+    redpath: "/Systems[*]/Processors"
+    expand_configuration {
+      level: 1
+      type: NO_LINKS
+    }
+  }
+}

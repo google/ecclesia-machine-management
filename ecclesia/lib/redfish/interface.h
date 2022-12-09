@@ -125,6 +125,8 @@ class RedfishQueryParamExpand : public GetParamQueryInterface {
 
   size_t levels() const { return levels_; }
 
+  ExpandType type() const { return type_; }
+
  private:
   ExpandType type_;
   size_t levels_;

@@ -20,6 +20,13 @@ message RedPathPrefixWithQueryParams {
   ExpandConfiguration expand_configuration = 2;
 }
 
+// Collection of Prefix Set with QueryParams.
+// This descriptor is mainly used for tuning a prefix set for performance.
+message RedPathPrefixSetWithQueryParamsCollection {
+  repeated QueryRules.RedPathPrefixSetWithQueryParams
+      redpath_prefix_set_with_params = 1;
+}
+
 // Message encapsulating RedPath query execution rules for one or more queries.
 message QueryRules {
   // Collection of RedPath prefixes along with expand configuration.
