@@ -1,14 +1,17 @@
+diff --git a/bazel/grpc_build_system.bzl b/bazel/grpc_build_system.bzl
+index fdfbf94ab4..81823b3c5e 100644
 --- a/bazel/grpc_build_system.bzl
 +++ b/bazel/grpc_build_system.bzl
-@@ -30,7 +30,6 @@
- load("//bazel:cc_grpc_library.bzl", "cc_grpc_library")
+@@ -31,8 +31,6 @@ load("//bazel:cc_grpc_library.bzl", "cc_grpc_library")
  load("//bazel:copts.bzl", "GRPC_DEFAULT_COPTS")
+ load("//bazel:experiments.bzl", "EXPERIMENTS")
  load("@upb//bazel:upb_proto_library.bzl", "upb_proto_library", "upb_proto_reflection_library")
 -load("@build_bazel_rules_apple//apple:ios.bzl", "ios_unit_test")
+-load("@build_bazel_rules_apple//apple/testing/default_runner:ios_test_runner.bzl", "ios_test_runner")
  
  # The set of pollers to test against if a test exercises polling
- POLLERS = ["epollex", "epoll1", "poll"]
-@@ -218,40 +217,6 @@
+ POLLERS = ["epoll1", "poll"]
+@@ -222,46 +220,6 @@ def grpc_proto_library(
          generate_mocks = generate_mocks,
      )
  
@@ -23,41 +26,52 @@
 -      tags: The tags to apply to the test.
 -      **kwargs: All other arguments to apply.
 -    """
--    ios_test_adapter = "//third_party/objective_c/google_toolbox_for_mac:GTM_GoogleTestRunner_GTM_USING_XCTEST"
--
 -    test_lib_ios = name + "_test_lib_ios"
 -    ios_tags = tags + ["manual", "ios_cc_test"]
+-    test_runner = "ios_x86_64_sim_runner_" + name
+-    ios_test_runner(
+-        name = test_runner,
+-        device_type = "iPhone X",
+-    )
 -    if not any([t for t in tags if t.startswith("no_test_ios")]):
 -        native.objc_library(
 -            name = test_lib_ios,
 -            srcs = kwargs.get("srcs"),
 -            deps = kwargs.get("deps"),
 -            copts = kwargs.get("copts"),
+-            data = kwargs.get("data"),
 -            tags = ios_tags,
 -            alwayslink = 1,
 -            testonly = 1,
 -        )
--        ios_test_deps = [ios_test_adapter, ":" + test_lib_ios]
+-        ios_test_deps = [":" + test_lib_ios]
 -        ios_unit_test(
 -            name = name + "_on_ios",
 -            size = kwargs.get("size"),
+-            data = kwargs.get("data"),
 -            tags = ios_tags,
 -            minimum_os_version = "9.0",
+-            runner = test_runner,
 -            deps = ios_test_deps,
 -        )
 -
- def grpc_cc_test(name, srcs = [], deps = [], external_deps = [], args = [], data = [], uses_polling = True, language = "C++", size = "medium", timeout = None, tags = [], exec_compatible_with = [], exec_properties = {}, shard_count = None, flaky = None, copts = [], linkstatic = None):
-     """A cc_test target for use in the gRPC repo.
+ def expand_tests(name, srcs, deps, tags, args, exclude_pollers, uses_polling, uses_event_engine):
+     """Common logic used to parameterize tests for every poller and EventEngine and experiment.
  
-@@ -332,11 +297,6 @@
-     else:
-         # the test behavior doesn't depend on polling, just generate the test
-         native.cc_test(name = name, tags = tags + ["no_uses_polling"], **args)
--    ios_cc_test(
--        name = name,
--        tags = tags,
--        **args
--    )
+@@ -455,16 +413,6 @@ def grpc_cc_test(name, srcs = [], deps = [], external_deps = [], args = [], data
+         "linkstatic": linkstatic,
+     }
  
- def grpc_cc_binary(name, srcs = [], deps = [], external_deps = [], args = [], data = [], language = "C++", testonly = False, linkshared = False, linkopts = [], tags = [], features = []):
-     """Generates a cc_binary for use in the gRPC repo.
+-    if "grpc-fuzzer" not in tags:
+-        ios_cc_test(
+-            name = name,
+-            srcs = srcs,
+-            tags = tags,
+-            deps = core_deps,
+-            args = args,
+-            **test_args
+-        )
+-
+     for poller_config in expand_tests(name, srcs, core_deps, tags, args, exclude_pollers, uses_polling, uses_event_engine):
+         native.cc_test(
+             name = poller_config["name"],

@@ -159,17 +159,16 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             "grpc.visibility.patch",
             # Remove any iOS dependencies
             "grpc.delete_ios.patch",
-            # Patching in commit dbe73c9004e483d24168c220cd589fe1824e72bc
-            # Replacing distutils.sysconfig with sysconfig import
-            "grpc.replace_sysconfig_dbe73c9004e483d24168c220cd589fe1824e72bc.patch",
+            # Workaround for GCC bug
+            "grpc.xds_listener.patch",
         ]
         http_archive(
             name = "com_github_grpc_grpc",
             patches = _make_patch_paths("grpc.patches", patch_files, package_name),
             patch_args = ["-p1"],
-            sha256 = "ca12845fd97777caa2277de31b80c59f2f777bde1e86e116bd21e5e0598c48d4",
-            strip_prefix = "grpc-74d0e3905e9d5a94f592813cb1f137fb60a907b8",
-            urls = ["https://github.com/grpc/grpc/archive/74d0e3905e9d5a94f592813cb1f137fb60a907b8.tar.gz"],
+            sha256 = "b55696fb249669744de3e71acc54a9382bea0dce7cd5ba379b356b12b82d4229",
+            strip_prefix = "grpc-1.51.1",
+            urls = ["https://github.com/grpc/grpc/archive/refs/tags/v1.51.1.tar.gz"],
         )
 
     if not native.existing_rule("bazel_skylib"):

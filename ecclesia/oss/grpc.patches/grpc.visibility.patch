@@ -1,10 +1,12 @@
+diff --git a/BUILD b/BUILD
+index cb6cdc2891..8e587c4c8b 100644
 --- a/BUILD
 +++ b/BUILD
-@@ -4115,7 +4115,6 @@
+@@ -2073,7 +2073,6 @@ grpc_cc_library(
          "include/grpcpp/test/mock_stream.h",
          "include/grpcpp/test/server_context_test_spouse.h",
      ],
 -    visibility = ["@grpc:grpc++_test"],
      deps = [
-         "gpr_base",
          "grpc++",
+         "grpc_base",
