@@ -18,6 +18,7 @@
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_GRPC_TLS_OPTIONS_H_
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "absl/strings/string_view.h"
@@ -48,18 +49,36 @@ class StaticBufferBasedTlsOptions {
   // Authentication options.
   // Uses gRPC InsecureCredentials, via static credentials buffer.
   void SetToInsecure();
+
+  // clients have been updated to set the `crl_directory`.
+
   // Uses gRPC TlsCredentials, via static credentials buffer.
   virtual void SetToTls(absl::string_view root_certs_buffer,
                         absl::string_view key_buffer,
+                        absl::string_view cert_buffer,
+                        std::optional<absl::string_view> crl_directory);
+  virtual void SetToTls(absl::string_view root_certs_buffer,
+                        absl::string_view key_buffer,
                         absl::string_view cert_buffer);
+
   // Uses gRPC TlsCredentials, but skip hostname check, via static credentials
   // buffer.
   virtual void SetToTlsSkipHostname(
       absl::string_view root_certs_buffer, absl::string_view key_buffer,
       absl::string_view cert_buffer,
+      std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier,
+      std::optional<absl::string_view> crl_directory);
+  virtual void SetToTlsSkipHostname(
+      absl::string_view root_certs_buffer, absl::string_view key_buffer,
+      absl::string_view cert_buffer,
       std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier);
+
   // Uses gRPC TlsCredentials, but don't verify server at all, via static
   // credentials buffer.
+  virtual void SetToTlsNotVerifyServer(
+      absl::string_view key_buffer, absl::string_view cert_buffer,
+      std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier,
+      std::optional<absl::string_view> crl_directory);
   virtual void SetToTlsNotVerifyServer(
       absl::string_view key_buffer, absl::string_view cert_buffer,
       std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier);
@@ -80,6 +99,7 @@ class StaticBufferBasedTlsOptions {
   grpc::experimental::IdentityKeyCertPair key_cert_;
   std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier_;
   absl::Duration timeout_;
+  std::optional<std::string> crl_directory_;
 };
 
 // A class that generates gRPC ChannelCredentials for Redfish clients.
@@ -90,20 +110,27 @@ class FileWatcherBasedOptions : public StaticBufferBasedTlsOptions {
   FileWatcherBasedOptions() = default;
   ~FileWatcherBasedOptions() override = default;
 
+  using StaticBufferBasedTlsOptions::SetToTls;
+  using StaticBufferBasedTlsOptions::SetToTlsNotVerifyServer;
+  using StaticBufferBasedTlsOptions::SetToTlsSkipHostname;
+
   // Uses gRPC TlsCredentials.
   void SetToTls(absl::string_view root_certs_path, absl::string_view key_path,
-                absl::string_view cert_path) override;
+                absl::string_view cert_path,
+                std::optional<absl::string_view> crl_directory) override;
+
   // Uses gRPC TlsCredentials, but skip hostname check, via FileWatcher
   void SetToTlsSkipHostname(
       absl::string_view root_certs_path, absl::string_view key_path,
       absl::string_view cert_path,
-      std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier)
-      override;
+      std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier,
+      std::optional<absl::string_view> crl_directory) override;
+
   // Uses gRPC TlsCredentials, but don't verify server at all, via FileWatcher
   void SetToTlsNotVerifyServer(
       absl::string_view key_path, absl::string_view cert_path,
-      std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier)
-      override;
+      std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier,
+      std::optional<absl::string_view> crl_directory) override;
 
  private:
   std::shared_ptr<grpc::experimental::CertificateProviderInterface>

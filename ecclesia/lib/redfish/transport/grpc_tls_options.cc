@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -65,33 +66,63 @@ constexpr unsigned int kRefreshIntervalSec = 0;
 void StaticBufferBasedTlsOptions::SetToInsecure() {
   auth_type_ = AuthType::kInsecure;
 }
-void StaticBufferBasedTlsOptions::SetToTls(absl::string_view root_certs_buffer,
-                                           absl::string_view key_buffer,
-                                           absl::string_view cert_buffer) {
+
+void StaticBufferBasedTlsOptions::SetToTls(
+    absl::string_view root_certs_buffer, absl::string_view key_buffer,
+    absl::string_view cert_buffer,
+    std::optional<absl::string_view> crl_directory) {
   auth_type_ = AuthType::kTlsVerifyServer;
   root_certs_ = root_certs_buffer;
   key_cert_ = {.private_key = std::string(key_buffer),
                .certificate_chain = std::string(cert_buffer)};
+  crl_directory_ = crl_directory;
+}
+
+void StaticBufferBasedTlsOptions::SetToTls(absl::string_view root_certs_buffer,
+                                           absl::string_view key_buffer,
+                                           absl::string_view cert_buffer) {
+  SetToTls(root_certs_buffer, key_buffer, cert_buffer,
+           /*crl_directory=*/std::nullopt);
+}
+
+void StaticBufferBasedTlsOptions::SetToTlsSkipHostname(
+    absl::string_view root_certs_buffer, absl::string_view key_buffer,
+    absl::string_view cert_buffer,
+    std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier,
+    std::optional<absl::string_view> crl_directory) {
+  auth_type_ = AuthType::kTlsVerifyServerSkipHostname;
+  root_certs_ = root_certs_buffer;
+  key_cert_ = {.private_key = std::string(key_buffer),
+               .certificate_chain = std::string(cert_buffer)};
+  cert_verifier_ = std::move(cert_verifier);
+  crl_directory_ = crl_directory;
 }
 
 void StaticBufferBasedTlsOptions::SetToTlsSkipHostname(
     absl::string_view root_certs_buffer, absl::string_view key_buffer,
     absl::string_view cert_buffer,
     std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier) {
-  auth_type_ = AuthType::kTlsVerifyServerSkipHostname;
-  root_certs_ = root_certs_buffer;
+  SetToTlsSkipHostname(root_certs_buffer, key_buffer, cert_buffer,
+                       std::move(cert_verifier),
+                       /*crl_directory=*/std::nullopt);
+}
+
+void StaticBufferBasedTlsOptions::SetToTlsNotVerifyServer(
+    absl::string_view key_buffer, absl::string_view cert_buffer,
+    std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier,
+    std::optional<absl::string_view> crl_directory) {
+  auth_type_ = AuthType::kTlsNotVerifyServer;
   key_cert_ = {.private_key = std::string(key_buffer),
                .certificate_chain = std::string(cert_buffer)};
   cert_verifier_ = std::move(cert_verifier);
+  crl_directory_ = crl_directory;
 }
 
 void StaticBufferBasedTlsOptions::SetToTlsNotVerifyServer(
     absl::string_view key_buffer, absl::string_view cert_buffer,
     std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier) {
-  auth_type_ = AuthType::kTlsNotVerifyServer;
-  key_cert_ = {.private_key = std::string(key_buffer),
-               .certificate_chain = std::string(cert_buffer)};
-  cert_verifier_ = std::move(cert_verifier);
+  SetToTlsNotVerifyServer(key_buffer, cert_buffer, std::move(cert_verifier),
+                          /*crl_directory=*/std::nullopt);
 }
 
 std::shared_ptr<grpc::ChannelCredentials>
@@ -101,6 +132,9 @@ StaticBufferBasedTlsOptions::GetChannelCredentials() const {
       grpc::experimental::TlsChannelCredentialsOptions tls_options;
       tls_options.watch_identity_key_cert_pairs();
       tls_options.watch_root_certs();
+      if (crl_directory_.has_value()) {
+        tls_options.set_crl_directory(*crl_directory_);
+      }
       tls_options.set_certificate_provider(GetCertificateProvider());
       tls_options.set_verify_server_certs(true);
       return grpc::experimental::TlsCredentials(tls_options);
@@ -109,6 +143,9 @@ StaticBufferBasedTlsOptions::GetChannelCredentials() const {
       grpc::experimental::TlsChannelCredentialsOptions tls_options;
       tls_options.watch_identity_key_cert_pairs();
       tls_options.watch_root_certs();
+      if (crl_directory_.has_value()) {
+        tls_options.set_crl_directory(*crl_directory_);
+      }
       tls_options.set_certificate_provider(GetCertificateProvider());
       tls_options.set_certificate_verifier(cert_verifier_);
       tls_options.set_verify_server_certs(true);
@@ -119,6 +156,9 @@ StaticBufferBasedTlsOptions::GetChannelCredentials() const {
       grpc::experimental::TlsChannelCredentialsOptions tls_options;
       tls_options.watch_identity_key_cert_pairs();
       tls_options.watch_root_certs();
+      if (crl_directory_.has_value()) {
+        tls_options.set_crl_directory(*crl_directory_);
+      }
       tls_options.set_certificate_provider(GetCertificateProvider());
       tls_options.set_certificate_verifier(cert_verifier_);
       tls_options.set_verify_server_certs(false);
@@ -162,33 +202,39 @@ StaticBufferBasedTlsOptions::GetCertificateProvider() const {
   return nullptr;
 }
 
-void FileWatcherBasedOptions::SetToTls(absl::string_view root_certs_path,
-                                       absl::string_view key_path,
-                                       absl::string_view cert_path) {
+void FileWatcherBasedOptions::SetToTls(
+    absl::string_view root_certs_path, absl::string_view key_path,
+    absl::string_view cert_path,
+    std::optional<absl::string_view> crl_directory) {
   auth_type_ = AuthType::kTlsVerifyServer;
   root_certs_path_ = root_certs_path;
   key_path_ = key_path;
   cert_path_ = cert_path;
+  crl_directory_ = crl_directory;
 }
 
 void FileWatcherBasedOptions::SetToTlsSkipHostname(
     absl::string_view root_certs_path, absl::string_view key_path,
     absl::string_view cert_path,
-    std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier) {
+    std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier,
+    std::optional<absl::string_view> crl_directory) {
   auth_type_ = AuthType::kTlsVerifyServerSkipHostname;
   root_certs_path_ = root_certs_path;
   key_path_ = key_path;
   cert_path_ = cert_path;
   cert_verifier_ = std::move(cert_verifier);
+  crl_directory_ = crl_directory;
 }
 
 void FileWatcherBasedOptions::SetToTlsNotVerifyServer(
     absl::string_view key_path, absl::string_view cert_path,
-    std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier) {
+    std::shared_ptr<grpc::experimental::CertificateVerifier> cert_verifier,
+    std::optional<absl::string_view> crl_directory) {
   auth_type_ = AuthType::kTlsNotVerifyServer;
   key_path_ = key_path;
   cert_path_ = cert_path;
   cert_verifier_ = std::move(cert_verifier);
+  crl_directory_ = crl_directory;
 }
 
 std::shared_ptr<grpc::experimental::CertificateProviderInterface>
