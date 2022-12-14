@@ -155,11 +155,6 @@ inline constexpr char kRfPropertyFirmwareVersion[] = "FirmwareVersion";
 inline constexpr char kRfPropertyAdditionalDataUri[] = "AdditionalDataURI";
 inline constexpr char kRfPropertyAbsent[] = "Absent";
 
-inline constexpr char kRfPropertyTelemetryService[] = "TelemetryService";
-inline constexpr char kRfPropertyMetricReports[] = "MetricReports";
-inline constexpr char kRfPropertyMetricValues[] = "MetricValues";
-inline constexpr char kRfPropertyMetricProperty[] = "MetricProperty";
-
 inline constexpr char kRfPropertyCertificates[] = "Certificates";
 inline constexpr char kRfPropertySPDM[] = "SPDM";
 inline constexpr char kRfPropertyIdentityAuthentication[] =
@@ -366,9 +361,6 @@ DEFINE_REDFISH_PROPERTY(PropertyAllowableMax, int, "AllowableMax");
 DEFINE_REDFISH_PROPERTY(PropertyAllowableMin, int, "AllowableMin");
 DEFINE_REDFISH_PROPERTY(PropertyECCModeEnabled, bool, "ECCModeEnabled");
 DEFINE_REDFISH_PROPERTY(PropertyTotalMemorySizeMiB, int, "TotalMemorySizeMiB");
-DEFINE_REDFISH_PROPERTY(PropertyMetricProperty, std::string, "MetricProperty");
-DEFINE_REDFISH_PROPERTY(PropertyMetricValue, std::string, "MetricValue");
-DEFINE_REDFISH_PROPERTY(PropertyTimestamp, absl::Time, "Timestamp");
 DEFINE_REDFISH_PROPERTY(PropertySwitchType, std::string, "SwitchType");
 
 // ManagerDiagnosticData properties
