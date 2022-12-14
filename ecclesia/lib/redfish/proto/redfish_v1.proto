@@ -24,16 +24,18 @@ import "google/protobuf/struct.proto";
 message Request {
   string url = 1;
   oneof content_type {
-    google.protobuf.Struct json = 2;
+    google.protobuf.Struct json = 2 [deprecated = true];
     bytes octet_stream = 3;
   }
   map<string, string> headers = 4;
+  string json_str = 5;
 }
 
 message Response {
   oneof content_type {
-    google.protobuf.Struct json = 1;
+    google.protobuf.Struct json = 1 [deprecated = true];
     bytes octet_stream = 3;
+    string json_str = 5;
   }
   uint32 code = 2;
   map<string, string> headers = 4;

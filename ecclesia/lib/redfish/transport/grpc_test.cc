@@ -124,7 +124,8 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
         "Name":"MyChassis"
       }
     ],
-    "Members@odata.count":2.0,"Name":"Chassis Collection"
+    "Members@odata.count":2,
+    "Name":"Chassis Collection"
   })json";
   nlohmann::json expected_get =
       nlohmann::json::parse(expected_get_str, nullptr, false);

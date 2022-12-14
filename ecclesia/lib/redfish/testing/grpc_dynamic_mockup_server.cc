@@ -50,19 +50,14 @@ using ::redfish::v1::Request;
 
 absl::Status SetGrpcResponseAndReturnStatus(RedfishVariant variant,
                                             redfish::v1::Response *response) {
-  absl::Status status = absl::OkStatus();
   if (!variant.httpcode().has_value()) {
     return absl::InternalError("The response doesn't have HTTP code.");
   }
   response->set_code(variant.httpcode().value());
   if (variant.AsObject() != nullptr) {
-    if (absl::Status status = AsAbslStatus(google::protobuf::util::JsonStringToMessage(
-            variant.DebugString(), response->mutable_json()));
-        !status.ok()) {
-      return status;
-    }
+    *response->mutable_json_str() = variant.DebugString();
   }
-  return status;
+  return absl::OkStatus();
 }
 
 }  // namespace
@@ -87,12 +82,8 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Post(
     return itr->second(context, request, response);
   }
 
-  std::string message;
-  absl::Status status = AsAbslStatus(
-      google::protobuf::util::MessageToJsonString(request->json(), &message));
-  if (!status.ok()) {
-    return StatusToGrpcStatus(status);
-  }
+  std::string message = request->json_str();
+
   return StatusToGrpcStatus(SetGrpcResponseAndReturnStatus(
       redfish_intf_->PostUri(request->url(), message), response));
 }
@@ -105,12 +96,8 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Patch(
     return itr->second(context, request, response);
   }
 
-  std::string message;
-  absl::Status status = AsAbslStatus(
-      google::protobuf::util::MessageToJsonString(request->json(), &message));
-  if (!status.ok()) {
-    return StatusToGrpcStatus(status);
-  }
+  std::string message = request->json_str();
+
   return StatusToGrpcStatus(SetGrpcResponseAndReturnStatus(
       redfish_intf_->PatchUri(request->url(), message), response));
 }

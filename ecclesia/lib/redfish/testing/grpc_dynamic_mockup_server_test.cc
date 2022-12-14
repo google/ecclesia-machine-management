@@ -167,6 +167,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPost) {
         value: { string_value: "hi" }
       }
     }
+    json_str: "{\n    \"num\": 1,\n    \"str\": \"hi\"\n  }"
   )pb");
   const google::protobuf::Struct kResponse = ParseTextProtoOrDie(R"pb(
     fields {
@@ -210,6 +211,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPatch) {
         value: { string_value: "hi" }
       }
     }
+    json_str: "{\n    \"num\": 1,\n    \"str\": \"hi\"\n  }"
   )pb");
   const google::protobuf::Struct kResponse = ParseTextProtoOrDie(R"pb(
     fields {

@@ -58,12 +58,18 @@ constexpr absl::string_view kResourceKey = "redfish-resource";
 
 template <typename RpcFunc>
 absl::StatusOr<RedfishTransport::Result> DoRpc(
-    absl::string_view path, std::optional<google::protobuf::Struct> message,
+    absl::string_view path, std::optional<std::string_view> json_str,
     GrpcTransportParams params, RpcFunc rpc) {
   redfish::v1::Request request;
   request.set_url(std::string(path));
-  if (message.has_value()) {
-    *request.mutable_json() = *std::move(message);
+  if (json_str) {
+    *request.mutable_json_str() = *json_str;
+    // to JSON str.
+    ::google::protobuf::Struct request_body;
+    ECCLESIA_RETURN_IF_ERROR(AsAbslStatus(
+        google::protobuf::util::JsonStringToMessage(std::string(*json_str), &request_body,
+                                          google::protobuf::util::JsonParseOptions())));
+    *request.mutable_json() = request_body;
   }
   grpc::ClientContext context;
   context.set_deadline(ToChronoTime(params.clock->Now() + params.timeout));
@@ -78,6 +84,9 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
     ret_result.body = StructToJson(response.json());
   } else if (response.has_octet_stream()) {
     ret_result.body = GetBytesFromString(response.octet_stream());
+  } else if (response.has_json_str()) {
+    ret_result.body =
+        nlohmann::json::parse(response.json_str(), nullptr, false);
   }
   ret_result.code = response.code();
   return ret_result;
@@ -165,11 +174,8 @@ class GrpcRedfishTransport : public RedfishTransport {
   }
   absl::StatusOr<Result> Post(absl::string_view path, absl::string_view data)
       ABSL_LOCKS_EXCLUDED(mutex_) override {
-    ::google::protobuf::Struct request_body;
-    ECCLESIA_RETURN_IF_ERROR(AsAbslStatus(google::protobuf::util::JsonStringToMessage(
-        std::string(data), &request_body, google::protobuf::util::JsonParseOptions())));
     return DoRpc(
-        path, std::move(request_body), params_,
+        path, data, params_,
         [this, path](grpc::ClientContext &context,
                      const redfish::v1::Request &request,
                      ::redfish::v1::Response *response) -> grpc::Status {
@@ -184,11 +190,8 @@ class GrpcRedfishTransport : public RedfishTransport {
   }
   absl::StatusOr<Result> Patch(absl::string_view path, absl::string_view data)
       ABSL_LOCKS_EXCLUDED(mutex_) override {
-    ::google::protobuf::Struct request_body;
-    ECCLESIA_RETURN_IF_ERROR(AsAbslStatus(google::protobuf::util::JsonStringToMessage(
-        std::string(data), &request_body, google::protobuf::util::JsonParseOptions())));
     return DoRpc(
-        path, std::move(request_body), params_,
+        path, data, params_,
         [this, path](grpc::ClientContext &context,
                      const redfish::v1::Request &request,
                      ::redfish::v1::Response *response) -> grpc::Status {
@@ -203,11 +206,8 @@ class GrpcRedfishTransport : public RedfishTransport {
   }
   absl::StatusOr<Result> Delete(absl::string_view path, absl::string_view data)
       ABSL_LOCKS_EXCLUDED(mutex_) override {
-    ::google::protobuf::Struct request_body;
-    ECCLESIA_RETURN_IF_ERROR(AsAbslStatus(google::protobuf::util::JsonStringToMessage(
-        std::string(data), &request_body, google::protobuf::util::JsonParseOptions())));
     return DoRpc(
-        path, std::move(request_body), params_,
+        path, data, params_,
         [this, path](grpc::ClientContext &context,
                      const redfish::v1::Request &request,
                      ::redfish::v1::Response *response) -> grpc::Status {
