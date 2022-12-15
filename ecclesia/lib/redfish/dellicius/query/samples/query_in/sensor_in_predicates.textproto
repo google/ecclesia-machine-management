@@ -93,18 +93,4 @@ subquery {
   redpath: "/Chassis[*]/Sensors[@odata.type=#Sensor.v1_2_0.Sensor]"
   properties { property: "@odata.id" type: STRING }
 }
-# Malformed subquery to ensure that no output is returned when predicate
-# expression contains @odata.id
-subquery {
-  subquery_id: "PredicateNodeValueEqualToStringWith@odata.id"
-  redpath: "/Chassis[*]/Sensors[@odata.id=/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t]"
-  properties { property: "@odata.id" type: STRING }
-}
-# Malformed subquery to ensure that no output is returned when predicate
-# expression contains @odata.id
-subquery {
-  subquery_id: "PredicateNodeNameWith@odata.id"
-  redpath: "/Chassis[*]/Sensors[@odata.id]"
-  properties { property: "@odata.id" type: STRING }
-}
 

@@ -28,91 +28,72 @@
 #include "google/protobuf/timestamp.pb.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/str_split.h"
 #include "absl/time/time.h"
-#include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/time/proto.h"
 
 namespace ecclesia {
 
-namespace {
-
-RedfishVariant GetNestedObject(RedfishVariant &&var,
-                               absl::Span<const std::string> nested_nodes) {
-  if (nested_nodes.empty() || !var.AsObject()) {
-    return std::move(var);
-  }
-  RedfishVariant nested_object = var[nested_nodes[0]];
-  return GetNestedObject(std::move(nested_object), nested_nodes.subspan(1));
-}
-
-}  // namespace
-
 absl::Status NormalizerImplDefault::Normalize(
     const RedfishVariant &var, const DelliciusQuery::Subquery &subquery,
     SubqueryDataSet &data_set_local) const {
   for (const auto &property_requirement : subquery.properties()) {
-    SubqueryDataSet::Property property;
+    SubqueryDataSet::Property property_out;
+    absl::string_view property_name = property_requirement.property();
+
     // A property requirement can specify nested nodes like
     // 'Thresholds.UpperCritical.Reading' or a simple property like 'Name'.
     // We will split the property name to ensure we process all node names in
     // the property expression.
-    std::vector<std::string> names;
-    std::string_view node_name = property_requirement.property();
-    if (auto pos = node_name.find("@odata."); pos != std::string::npos) {
-      names = absl::StrSplit(node_name.substr(0, pos), '.', absl::SkipEmpty());
-      names.push_back(std::string(node_name.substr(pos)));
-    } else {
-      names = absl::StrSplit(node_name, '.', absl::SkipEmpty());
+    absl::StatusOr<nlohmann::json> json_obj =
+        ResolveNodeNameToJsonObj(var, property_name);
+    if (!json_obj.ok()) {
+      // It is not an error if normalizer fails to normalize a property if
+      // required property is not part of Resource attributes.
+      continue;
     }
-    // Check the redfish payload for the property listed in data model.
-    RedfishVariant payload = var[names[0]];
-    if (names.size() > 1) {
-      payload = GetNestedObject(
-          std::move(payload),
-          absl::Span<const std::string>(&names[1], names.size() - 1));
-    }
+
     using RedfishProperty = DelliciusQuery::Subquery::RedfishProperty;
     switch (property_requirement.type()) {
       case RedfishProperty::STRING: {
-        std::string stringvalue;
-        if (payload.GetValue(&stringvalue)) {
-          property.set_string_value(stringvalue);
+        if (json_obj->is_string()) {
+          property_out.set_string_value(json_obj->get<std::string>());
         }
         break;
       }
       case RedfishProperty::BOOLEAN: {
-        bool boolvalue;
-        if (payload.GetValue(&boolvalue)) {
-          property.set_boolean_value(boolvalue);
+        if (json_obj->is_boolean()) {
+          property_out.set_boolean_value(json_obj->get<bool>());
         }
         break;
       }
       case RedfishProperty::DOUBLE: {
-        double doublevalue;
-        if (payload.GetValue(&doublevalue)) {
-          property.set_double_value(doublevalue);
+        if (json_obj->is_number()) {
+          property_out.set_double_value(json_obj->get<double>());
         }
         break;
       }
       case RedfishProperty::INT64: {
-        int64_t intvalue;
-        if (payload.GetValue(&intvalue)) {
-          property.set_int64_value(intvalue);
+        if (json_obj->is_number()) {
+          property_out.set_int64_value(json_obj->get<int64_t>());
         }
         break;
       }
       case RedfishProperty::DATE_TIME_OFFSET: {
         absl::Time timevalue;
-        if (payload.GetValue(&timevalue)) {
+        if (!json_obj->is_string()) {
+          break;
+        }
+        if (absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", json_obj->get<std::string>(),
+                            &timevalue, nullptr)) {
           absl::StatusOr<google::protobuf::Timestamp> timestamp =
               AbslTimeToProtoTime(timevalue);
           if (timestamp.ok()) {
-            *property.mutable_timestamp_value() = std::move(*timestamp);
+            *property_out.mutable_timestamp_value() = std::move(*timestamp);
           }
         }
         break;
@@ -121,15 +102,15 @@ absl::Status NormalizerImplDefault::Normalize(
         break;
       }
     }
-    if (property.value_case()) {
+    if (property_out.value_case()) {
       // By default, name of the queried property is set as name if the client
       // application does not provide a name to map the parsed property to.
       if (property_requirement.has_name()) {
-        property.set_name(property_requirement.name());
+        property_out.set_name(property_requirement.name());
       } else {
-        property.set_name(property_requirement.property());
+        property_out.set_name(property_requirement.property());
       }
-      *data_set_local.add_properties() = std::move(property);
+      *data_set_local.add_properties() = std::move(property_out);
     }
   }
   return absl::OkStatus();

@@ -39,6 +39,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/time/proto.h"
 #include "re2/re2.h"
@@ -110,42 +111,6 @@ bool ApplyStringComparisonFilter(F filter_condition,
   return filter_condition();
 }
 
-// Gets all the node names in the given expression.
-// parent.child.grandchild -> {parent, child, grandchild}
-std::vector<std::string> GetNodeNamesFromChain(absl::string_view node_name) {
-  std::vector<std::string> nodes;
-  if (auto pos = node_name.find("@odata."); pos != std::string::npos) {
-    std::string odata_str = std::string(node_name.substr(pos));
-    if (absl::StrContains(odata_str, "@odata.id")) return nodes;
-    nodes = absl::StrSplit(node_name.substr(0, pos), '.', absl::SkipEmpty());
-    nodes.push_back(std::move(odata_str));
-  } else {
-    nodes = absl::StrSplit(node_name, '.', absl::SkipEmpty());
-  }
-  return nodes;
-}
-
-// Helper function to resolve node_name for nested nodes if any and return json
-// object to be evaluated for required property.
-absl::StatusOr<nlohmann::json> GetJsonObjectFromNodeName(
-    const RedfishVariant &variant, absl::string_view node_name) {
-  std::vector<std::string> node_names = GetNodeNamesFromChain(node_name);
-  if (node_names.empty()) {
-    return absl::InternalError("Cannot parse any node from given NodeName");
-  }
-  nlohmann::json json_obj = variant.AsObject()->GetContentAsJson();
-  // If given expression has multiple nodes, we need to return the json object
-  // associated with the leaf node.
-  for (auto const &name : node_names) {
-    if (!json_obj.contains(name)) {
-      return absl::InternalError(
-          absl::StrFormat("Node %s not found in json object", name));
-    }
-    json_obj = json_obj.at(name);
-  }
-  return json_obj;
-}
-
 // Handler for predicate expressions containing relational operators.
 bool PredicateFilterByNodeComparison(const RedfishVariant &variant,
                                      absl::string_view predicate) {
@@ -154,7 +119,7 @@ bool PredicateFilterByNodeComparison(const RedfishVariant &variant,
   if (RE2::FullMatch(predicate, *kPredicateRegexRelationalOperator, &node_name,
                      &op, &test_value)) {
     double value;
-    auto json_obj = GetJsonObjectFromNodeName(variant, node_name);
+    auto json_obj = ResolveNodeNameToJsonObj(variant, node_name);
     if (!json_obj.ok()) {
       return false;
     }
@@ -199,7 +164,7 @@ bool PredicateFilterByNodeComparison(const RedfishVariant &variant,
 // predicate string.
 bool PredicateFilterByNodeName(const RedfishVariant &variant,
                                absl::string_view predicate) {
-  std::vector<std::string> node_names = GetNodeNamesFromChain(predicate);
+  std::vector<std::string> node_names = SplitNodeNameForNestedNodes(predicate);
   if (node_names.empty()) {
     return false;
   }
