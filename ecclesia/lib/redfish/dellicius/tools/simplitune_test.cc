@@ -36,7 +36,6 @@
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/factory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
-#include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -70,10 +69,11 @@ class SimpliTuneTestRunner : public ::testing::Test {
         << "Test parameters not set!";
     DelliciusQuery query =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
-    QueryPlanner qp(query, RedPathRedfishQueryParams{}, normalizer);
+    auto qp = BuildQueryPlanner(query, RedPathRedfishQueryParams{}, normalizer);
+    ASSERT_TRUE(qp.ok());
     QueryTracker tracker;
     DelliciusQueryResult query_result =
-        qp.Run(intf_->GetRoot(), *clock_, &tracker);
+        (*qp)->Run(intf_->GetRoot(), *clock_, &tracker);
     auto configs = GenerateExpandConfigurations(tracker);
     RedPathPrefixSetWithQueryParamsCollection generated_configs;
     for (const auto &config : configs) {

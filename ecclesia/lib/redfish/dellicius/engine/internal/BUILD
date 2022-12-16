@@ -54,6 +54,7 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:path_util",
+        "//ecclesia/lib/status:macros",
         "//ecclesia/lib/time:clock",
         "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/container:flat_hash_map",
@@ -69,6 +70,7 @@ cc_library(
 
 cc_library(
     name = "factory",
+    srcs = ["factory.cc"],
     hdrs = ["factory.h"],
     visibility = ["//ecclesia/lib/redfish/dellicius:__subpackages__"],
     deps = [
@@ -77,6 +79,13 @@ cc_library(
         ":query_planner",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_googlesource_code_re2//:re2",
     ],
 )

@@ -1,0 +1,39 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "SensorCollectorWithChassisLinks"
+# Returns "SerialNumber" and "PartNumber" for all Chassis Resources
+subquery {
+  subquery_id: "ChassisAssembly"
+  redpath: "/Chassis[*]"
+  properties { property: "SerialNumber" type: STRING }
+  properties { property: "PartNumber" type: STRING }
+}
+# Returns "Manufacturer" and "Model" for all Chassis Resources
+subquery {
+  subquery_id: "ChassisMakeModel"
+  redpath: "/Chassis[*]"
+  properties { property: "Manufacturer" type: STRING }
+  properties { property: "Model" type: STRING }
+}
+
+# Returns Sensor 'Name' and 'Reading' value from all Sensors with ReadingType
+# 'Rotational' and linked with chassis dataset using 'root' Subquery
+subquery {
+  subquery_id: "FanSensorCollector"
+  root_subquery_ids: "ChassisAssembly"
+  redpath: "/Sensors[ReadingType=Rotational]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+}
+# Returns Sensor 'Name' and 'Reading' value from all Sensors with ReadingType
+# 'Temperature' and linked with multiple chassis dataset using 'root' Subquery
+subquery {
+  subquery_id: "ThermalSensorCollector"
+  root_subquery_ids: "ChassisAssembly"
+  root_subquery_ids: "ChassisMakeModel"
+  redpath: "/Sensors[ReadingType=Temperature]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+}
+

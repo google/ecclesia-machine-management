@@ -1,0 +1,229 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
+# proto-message: DelliciusQueryResult
+
+query_id: "SensorCollectorWithChassisLinks"
+subquery_output_by_id {
+  key: "ChassisAssembly"
+  value {
+    data_sets {
+      devpath: "/phys"
+      properties {
+        name: "SerialNumber"
+        string_value: "MBBQTW194106556"
+      }
+      properties {
+        name: "PartNumber"
+        string_value: "1043652-02"
+      }
+      child_subquery_output_by_id {
+        key: "FanSensorCollector"
+        value {
+          data_sets {
+            devpath: "/phys/SYS_FAN0"
+            properties {
+              name: "Name"
+              string_value: "fan0"
+            }
+            properties {
+              name: "Reading"
+              double_value: 16115
+            }
+          }
+          data_sets {
+            devpath: "/phys/SYS_FAN1"
+            properties {
+              name: "Name"
+              string_value: "fan1"
+            }
+            properties {
+              name: "Reading"
+              double_value: 16115
+            }
+          }
+          data_sets {
+            devpath: "/phys/SYS_FAN2/FAN2"
+            properties {
+              name: "Name"
+              string_value: "fan2"
+            }
+            properties {
+              name: "Reading"
+              double_value: 16115
+            }
+          }
+          data_sets {
+            devpath: "/phys/SYS_FAN2/FAN3"
+            properties {
+              name: "Name"
+              string_value: "fan3"
+            }
+            properties {
+              name: "Reading"
+              double_value: 16115
+            }
+          }
+          data_sets {
+            devpath: "/phys/SYS_FAN2/FAN4"
+            properties {
+              name: "Name"
+              string_value: "fan4"
+            }
+            properties {
+              name: "Reading"
+              double_value: 16115
+            }
+          }
+          data_sets {
+            devpath: "/phys/SYS_FAN2/FAN5"
+            properties {
+              name: "Name"
+              string_value: "fan5"
+            }
+            properties {
+              name: "Reading"
+              double_value: 16115
+            }
+          }
+          data_sets {
+            devpath: "/phys/SYS_FAN2/FAN6"
+            properties {
+              name: "Name"
+              string_value: "fan6"
+            }
+            properties {
+              name: "Reading"
+              double_value: 16115
+            }
+          }
+          data_sets {
+            devpath: "/phys/SYS_FAN2/FAN7"
+            properties {
+              name: "Name"
+              string_value: "fan7"
+            }
+          }
+        }
+      }
+      child_subquery_output_by_id {
+        key: "ThermalSensorCollector"
+        value {
+          data_sets {
+            devpath: "/phys/KA0"
+            properties {
+              name: "Name"
+              string_value: "indus_eat_temp"
+            }
+            properties {
+              name: "Reading"
+              double_value: 28
+            }
+          }
+          data_sets {
+            devpath: "/phys/KA2"
+            properties {
+              name: "Name"
+              string_value: "indus_latm_temp"
+            }
+            properties {
+              name: "Reading"
+              double_value: 35
+            }
+          }
+          data_sets {
+            devpath: "/phys/CPU0"
+            properties {
+              name: "Name"
+              string_value: "CPU0"
+            }
+            properties {
+              name: "Reading"
+              double_value: 60
+            }
+          }
+          data_sets {
+            devpath: "/phys/CPU1"
+            properties {
+              name: "Name"
+              string_value: "CPU1"
+            }
+            properties {
+              name: "Reading"
+              double_value: 60
+            }
+          }
+        }
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "ChassisMakeModel"
+  value {
+    data_sets {
+      devpath: "/phys"
+      properties {
+        name: "Manufacturer"
+        string_value: "gmaker"
+      }
+      properties {
+        name: "Model"
+        string_value: "Indus"
+      }
+      child_subquery_output_by_id {
+        key: "ThermalSensorCollector"
+        value {
+          data_sets {
+            devpath: "/phys/KA0"
+            properties {
+              name: "Name"
+              string_value: "indus_eat_temp"
+            }
+            properties {
+              name: "Reading"
+              double_value: 28
+            }
+          }
+          data_sets {
+            devpath: "/phys/KA2"
+            properties {
+              name: "Name"
+              string_value: "indus_latm_temp"
+            }
+            properties {
+              name: "Reading"
+              double_value: 35
+            }
+          }
+          data_sets {
+            devpath: "/phys/CPU0"
+            properties {
+              name: "Name"
+              string_value: "CPU0"
+            }
+            properties {
+              name: "Reading"
+              double_value: 60
+            }
+          }
+          data_sets {
+            devpath: "/phys/CPU1"
+            properties {
+              name: "Name"
+              string_value: "CPU1"
+            }
+            properties {
+              name: "Reading"
+              double_value: 60
+            }
+          }
+        }
+      }
+    }
+  }
+}
+start_timestamp {
+  seconds: 10
+}
+end_timestamp {
+  seconds: 10
+}

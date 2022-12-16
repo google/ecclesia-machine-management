@@ -27,7 +27,12 @@ message DelliciusQuery {
     // the subquery id and it is only at the time of aggregating the output or
     // caching the leaf nodes is when query engine uses the subquery id.
     string subquery_id = 1;
-    // Identifies json object to query and expressions to apply.
+    // Identifies root subquery ids to group related data in a root subquery
+    // response.
+    repeated string root_subquery_ids = 4;
+    // RedPath of the Redfish resource to query relative to Redfish Service
+    // root or relative to RedPath in different subquery as identified by root
+    // field in this proto.
     string redpath = 2;
     repeated RedfishProperty properties = 3;
   }

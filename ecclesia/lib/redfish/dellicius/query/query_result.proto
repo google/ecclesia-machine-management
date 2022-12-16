@@ -24,16 +24,21 @@ message SubqueryDataSet {
   }
   optional string devpath = 1;
   repeated Property properties = 2;
+  // Maps child subquery id to its associated subquery response data.
+  // An important construct to group datasets of different subqueries under
+  // parent subquery.
+  map<string, SubqueryOutput> child_subquery_output_by_id = 3;
+}
+
+message SubqueryOutput {
+  // Describes the status of Subquery abstracting away transport specifics.
+  optional google.rpc.Status status = 1;
+  // Normalised data per subquery based on data model defined in the subquery
+  repeated SubqueryDataSet data_sets = 2;
 }
 
 // Message encapsulating Query result
 message DelliciusQueryResult {
-  message SubqueryOutput {
-    // Describes the status of Subquery abstracting away transport specifics.
-    optional google.rpc.Status status = 1;
-    // Normalised data per subquery based on data model defined in the subquery
-    repeated SubqueryDataSet data_sets = 2;
-  }
   // Identifies the parent query the subquery data associates with.
   string query_id = 1;
   // Maps subquery id to associated subquery response data.

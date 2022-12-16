@@ -27,7 +27,7 @@ subquery {
 # operator for comparing Int64 Type attributes.
 subquery {
   subquery_id: "PredicateAncestorInt64ComparisonLeafNull"
-  redpath: "/Systems[]/Processors[MaxSpeedMHz=4000]/Metrics/Oem"
+  redpath: "/Systems[*]/Processors[MaxSpeedMHz=4000]/Metrics/Oem"
   properties { property: "Google.ProcessorErrorCounts.Correctable" type: INT64 }
   properties { property: "Google.ProcessorErrorCounts.Uncorrectable" type: INT64 }
 }

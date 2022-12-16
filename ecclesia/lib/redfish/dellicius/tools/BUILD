@@ -109,7 +109,6 @@ cc_test(
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/engine/internal:factory",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
-        "//ecclesia/lib/redfish/dellicius/engine/internal:query_planner",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",

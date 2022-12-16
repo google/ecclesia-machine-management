@@ -19,15 +19,20 @@
 
 #include <algorithm>
 #include <functional>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/status/status.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/time/clock.h"
 
@@ -39,7 +44,7 @@ namespace ecclesia {
 // specification.
 // Usage:
 //    auto qp = std::make_unique<QueryPlanner>(
-//        query, query_params, &normalizer);
+//        query, subquery_handles, query_params);
 //    qp->Run(service_root, Clock::RealClock(), &tracker);
 class QueryPlanner final : public QueryPlannerInterface {
  public:
@@ -47,23 +52,49 @@ class QueryPlanner final : public QueryPlannerInterface {
   // and apply predicate expression rules to refine a given node-set.
   class SubqueryHandle final {
    public:
-    SubqueryHandle(const DelliciusQuery::Subquery &subquery,
-                   Normalizer *normalizer);
-    // Parses given Redfish Resource for attributes requested in the subquery
+    using RedPathIterator =
+        std::vector<std::pair<std::string, std::string>>::const_iterator;
+    SubqueryHandle(
+        const DelliciusQuery::Subquery &subquery,
+        std::vector<std::pair<std::string, std::string>> redpath_steps,
+        Normalizer *normalizer)
+        : subquery_(subquery),
+          normalizer_(normalizer),
+          redpath_steps_(std::move(redpath_steps)) {}
+
+    // Parses given Redfish Resource for properties requested in the subquery
     // and prepares dataset to be appended in SubqueryOutput.
-    void PrepareSubqueryOutput(const RedfishVariant &node,
-                               DelliciusQueryResult &result);
-    // Moves the RedPath iterator to next RedPath Step expression.
-    // Returns false if there is no RedPath Step expression to process else true
-    bool LoadNextRedPathStep();
-    // Returns true if 'node' matches the predicate rule. If 'node' is part of a
-    // Redfish Collection or array, 'node_index' must be the 'index' of 'node'
-    // within the Collection or array. 'node_set_size' must be the size of the
-    // Collection or array.
-    bool ApplyPredicateRule(const RedfishVariant &node, size_t node_index,
-                            size_t node_set_size);
-    // Returns NodeName from current RedPath Step expression.
-    std::optional<std::string> GetNodeNameFromRedPathStep() const;
+    absl::StatusOr<SubqueryDataSet *> Normalize(
+        const RedfishVariant &node, DelliciusQueryResult &result,
+        SubqueryDataSet *parent_subquery_dataset);
+
+    void AddChildSubqueryHandle(SubqueryHandle *child_subquery_handle) {
+      child_subquery_handles_.push_back(child_subquery_handle);
+    }
+
+    std::vector<SubqueryHandle *> GetChildSubqueryHandles() const {
+      return child_subquery_handles_;
+    }
+
+    // Returns true if encapsulated subquery does not have a root subquery.
+    bool IsRootSubquery() const {
+      return subquery_.root_subquery_ids().empty();
+    }
+
+    bool HasChildSubqueries() const { return !child_subquery_handles_.empty(); }
+
+    void SetParentSubqueryDataSet(SubqueryDataSet *parent_subquery_data_set) {
+      parent_subquery_data_set_ = parent_subquery_data_set;
+    }
+
+    RedPathIterator GetRedPathIterator() { return redpath_steps_.begin(); }
+
+    bool IsEndOfRedPath(const RedPathIterator &iter) {
+      return (iter != redpath_steps_.end()) &&
+             (next(iter) == redpath_steps_.end());
+    }
+
+    std::string RedPathToString() const { return subquery_.redpath(); }
 
    private:
     DelliciusQuery::Subquery subquery_;
@@ -71,23 +102,45 @@ class QueryPlanner final : public QueryPlannerInterface {
     // Collection of RedPath Step expressions - (NodeName + Predicate) in the
     // RedPath of a Subquery.
     // Eg. /Chassis[*]/Sensors[1] - {(Chassis, *), (Sensors, 1)}
-    std::vector<std::pair<std::string, std::string>> steps_in_redpath_;
-    std::vector<std::pair<std::string, std::string>>::iterator iter_;
-    // Indicates the validity of RedPath within subquery.
-    bool is_redpath_valid_;
+    std::vector<std::pair<std::string, std::string>> redpath_steps_;
+    // Index into RedPath step expressions
+    size_t redpath_step_index_ = 0;
+    std::vector<SubqueryHandle *> child_subquery_handles_;
+    // Dataset of parent subquery to link the current subquery output with.
+    SubqueryDataSet *parent_subquery_data_set_ = nullptr;
+  };
+
+  struct RedPathContext {
+    // Pointer to the SubqueryHandle object the redpath iterator associates with
+    SubqueryHandle *subquery_handle;
+    // Dataset of the root RedPath to which the current RedPath dataset is
+    // linked.
+    SubqueryDataSet *root_redpath_dataset = nullptr;
+    // Iterator configured to iterate over RedPath steps - NodeName and
+    // Predicate pair
+    SubqueryHandle::RedPathIterator redpath_steps_iterator;
   };
 
   // Encapsulates key elements of a query operation.
+  // An execution context is created for each node in Redfish tree during pre
+  // order traversal where each node in the tree acts as the local root for all
+  // redpath iterators.
   struct QueryExecutionContext {
-    // Context node.
+    // Redfish object serving as context node for RedPath expression.
     std::unique_ptr<RedfishObject> redfish_object;
-    // SubqueryHandle instances with the same context node.
-    std::vector<SubqueryHandle> subquery_handles;
-    // Last redpath expression executed by QueryPlanner.
+    // RedPaths to execute with Redfish object as root.
+    std::vector<RedPathContext> redpath_ctx_multiple;
+    // Last RedPath executed to get the Redfish object.
     std::string last_executed_redpath;
   };
+
   QueryPlanner(const DelliciusQuery &query,
-               RedPathRedfishQueryParams query_params, Normalizer *normalizer);
+               std::vector<std::unique_ptr<SubqueryHandle>> subquery_handles,
+               RedPathRedfishQueryParams query_params)
+      : plan_id_(query.query_id()),
+        subquery_handles_(std::move(subquery_handles)),
+        query_params_(std::move(query_params)) {}
+
   DelliciusQueryResult Run(const RedfishVariant &variant, const Clock &clock,
                            QueryTracker *tracker) override;
 
@@ -108,9 +161,11 @@ class QueryPlanner final : public QueryPlannerInterface {
   void ExecuteRedPathStepFromEachSubquery(
       QueryExecutionContext &execution_context, DelliciusQueryResult &result,
       QueryTracker *tracker);
-  std::vector<SubqueryHandle> subquery_handles_;
-  std::string plan_id_;
-  RedPathRedfishQueryParams query_params_;
+  const std::string plan_id_;
+  // Collection of all SubqueryHandle instances including both root and child
+  // handles.
+  std::vector<std::unique_ptr<SubqueryHandle>> subquery_handles_;
+  const RedPathRedfishQueryParams query_params_;
 };
 
 }  // namespace ecclesia

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
-
 #include <algorithm>
 #include <cstdlib>
 #include <iterator>
@@ -23,7 +21,6 @@
 #include <string>
 #include <utility>
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/log.h"
@@ -67,9 +64,10 @@ class QueryPlannerTestRunner : public ::testing::Test {
         << "Test parameters not set!";
     DelliciusQuery query =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
-    QueryPlanner qp(query, RedPathRedfishQueryParams{}, normalizer);
+    auto qp = BuildQueryPlanner(query, RedPathRedfishQueryParams{}, normalizer);
+    ASSERT_TRUE(qp.ok());
     DelliciusQueryResult query_result =
-        qp.Run(intf_->GetRoot(), *clock_, nullptr);
+        (*qp)->Run(intf_->GetRoot(), *clock_, nullptr);
     DelliciusQueryResult intent_output =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
     EXPECT_THAT(intent_output,
@@ -133,6 +131,42 @@ TEST_F(QueryPlannerTestRunner, DefaultNormalizerWithDevpaths) {
   TestQuery(sensor_in_path, sensor_out_path, normalizer_with_devpath.get());
 }
 
+TEST_F(QueryPlannerTestRunner,
+       CheckChildSubqueryOutputCorrectlyGroupsUnderParent) {
+  std::string query_in_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_in/sensor_in_links.textproto"));
+  std::string query_out_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/sensor_out_links.textproto"));
+  SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
+  // Instantiate a passthrough normalizer with devpath extension.
+  auto normalizer_with_devpath = BuildDefaultNormalizerWithDevpath(intf_.get());
+  // Query Sensor
+  TestQuery(query_in_path, query_out_path, normalizer_with_devpath.get());
+}
+
+TEST(QueryPlannerTest, CheckQueryPlannerInitFailsWithInvalidSubqueryLinks) {
+  std::string query_in_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_in/malformed_query_links.textproto"));
+  DelliciusQuery query_sensor =
+      ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
+  auto default_normalizer = BuildDefaultNormalizer();
+  auto qps = BuildQueryPlanner(query_sensor, RedPathRedfishQueryParams{},
+                               default_normalizer.get());
+  EXPECT_FALSE(qps.ok());
+}
+
+TEST(QueryPlannerTest,
+     CheckQueryPlannerInitFailsWithMalforedRedPathsInSubqueries) {
+  std::string query_in_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_in/malformed_query.textproto"));
+  DelliciusQuery query_input_proto =
+      ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
+  auto default_normalizer = BuildDefaultNormalizer();
+  auto qp = BuildQueryPlanner(query_input_proto, RedPathRedfishQueryParams{},
+                              default_normalizer.get());
+  EXPECT_FALSE(qp.ok());
+}
+
 TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
   std::string sensor_in_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_in/sensor_in.textproto"));
@@ -158,9 +192,11 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
     // Query Sensor
     DelliciusQuery query_sensor =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
-    QueryPlanner qps(query_sensor, RedPathRedfishQueryParams{},
-                     default_normalizer.get());
-    DelliciusQueryResult result_sensor = qps.Run(service_root, clock, nullptr);
+    auto qps = BuildQueryPlanner(query_sensor, RedPathRedfishQueryParams{},
+                                 default_normalizer.get());
+    ASSERT_TRUE(qps.ok());
+    DelliciusQueryResult result_sensor =
+        (*qps)->Run(service_root, clock, nullptr);
   }
   // For each type of redfish request for each URI, validate that the
   // QueryPlanner sends only 1 request.
@@ -197,9 +233,12 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
     // Query Sensor
     DelliciusQuery query_sensor =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
-    QueryPlanner qps(query_sensor, RedPathRedfishQueryParams{},
-                     default_normalizer.get());
-    DelliciusQueryResult result_sensor = qps.Run(service_root, clock, nullptr);
+    absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qps =
+        BuildQueryPlanner(query_sensor, RedPathRedfishQueryParams{},
+                          default_normalizer.get());
+    ASSERT_TRUE(qps.ok());
+    DelliciusQueryResult result_sensor =
+        (*qps)->Run(service_root, clock, nullptr);
   }
   // Validate that no attempt was made by query planner to query redfish service
   // Redfish Metrics should indicate 1 failed GET request to service root which

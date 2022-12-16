@@ -111,7 +111,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 
       // Build a query plan if none exists for the query id
       if (id_to_query_plans_.contains(query.query_id())) continue;
-      std::unique_ptr<QueryPlannerInterface> query_planner;
+      absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> query_planner;
       if (auto iter = query_id_to_rules.find(query.query_id());
           iter != query_id_to_rules.end()) {
         query_planner = BuildQueryPlanner(query, std::move(iter->second),
@@ -120,7 +120,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
         query_planner = BuildQueryPlanner(query, RedPathRedfishQueryParams{},
                                           normalizer_.get());
       }
-      id_to_query_plans_.emplace(query.query_id(), std::move(query_planner));
+      if (!query_planner.ok()) continue;
+      id_to_query_plans_.emplace(query.query_id(), std::move(*query_planner));
     }
   }
 

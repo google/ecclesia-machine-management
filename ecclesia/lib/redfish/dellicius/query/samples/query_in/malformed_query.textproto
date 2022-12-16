@@ -1,0 +1,16 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "TestMalformedQuery"
+# Malformed NodeName Expressions
+subquery {
+  subquery_id: "MalformedNodeName"
+  redpath: "/Chass~is/Sensors[1]"
+  properties { property: "@odata.id" type: STRING }
+}
+# Malformed Predicate Expressions
+subquery {
+  subquery_id: "MalformedPredicate"
+  redpath: "/Chassis[/Sensors[*]"
+  properties { property: "@odata.id" type: STRING }
+}

@@ -1,0 +1,23 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "ProcessorCollectorWithInvalidRootLinks"
+# Returns "SerialNumber" and "PartNumber" for all Processors Resource for all
+# Systems
+subquery {
+  subquery_id: "Processors"
+  root_subquery_ids: "ProcessorErrorCounts"
+  redpath: "/Systems[*]/Processors[*]"
+  properties { name: "serial_number" property: "SerialNumber" type: STRING }
+  properties { name: "part_number" property: "PartNumber" type: STRING }
+}
+# Returns 'Correctable' and 'Uncorrectable' error count from Metrics Resource
+# of the Processor instance obtained using the 'root' Subquery.
+subquery {
+  subquery_id: "ProcessorErrorCounts"
+  root_subquery_ids: "Processors"
+  redpath: "/Metrics/Oem"
+  properties { property: "Google.ProcessorErrorCounts.Correctable" type: INT64 }
+  properties { property: "Google.ProcessorErrorCounts.Uncorrectable" type: INT64 }
+}
+
