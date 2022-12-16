@@ -93,4 +93,28 @@ subquery {
   redpath: "/Chassis[*]/Sensors[@odata.type=#Sensor.v1_2_0.Sensor]"
   properties { property: "@odata.id" type: STRING }
 }
+# Returns Sensor 'Name' and 'Reading' value from Sensors that have Name property
+# set as either indus_latm_temp or fan6
+subquery {
+  subquery_id: "PredicateNodeNameLogicalOperatorOr"
+  redpath: "/Chassis[*]/Sensors[Name=indus_latm_temp or Name=fan6]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+}
+# Returns Sensor 'Name' and 'Reading' value from Sensors that have Name property
+# set as indus_latm_temp or Threshold indus_eat_temp with Reading < 1600
+subquery {
+  subquery_id: "PredicateNodeNameLogicalOperatorAnd"
+  redpath: "/Chassis[*]/Sensors[Name=indus_latm_temp and Reading<1600]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+}
+# Returns Sensor 'Name' and 'Reading' value from Sensors that have Name property
+# set as indus_latm_temp or Threshold indus_eat_temp with Reading < 1600
+subquery {
+  subquery_id: "PredicateNodeNameLogicalOperatorChain"
+  redpath: "/Chassis[*]/Sensors[Name=indus_latm_temp or Name=indus_eat_temp and Reading<1600]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+}
 

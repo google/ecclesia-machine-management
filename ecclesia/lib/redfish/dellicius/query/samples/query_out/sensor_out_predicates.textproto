@@ -607,6 +607,71 @@ subquery_output_by_id {
     }
   }
 }
+subquery_output_by_id {
+  key: "PredicateNodeNameLogicalOperatorAnd"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_latm_temp"
+      }
+      properties {
+        name: "Reading"
+        double_value: 35
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateNodeNameLogicalOperatorChain"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_eat_temp"
+      }
+      properties {
+        name: "Reading"
+        double_value: 28
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_latm_temp"
+      }
+      properties {
+        name: "Reading"
+        double_value: 35
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "PredicateNodeNameLogicalOperatorOr"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan6"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_latm_temp"
+      }
+      properties {
+        name: "Reading"
+        double_value: 35
+      }
+    }
+  }
+}
 start_timestamp {
   seconds: 10
 }

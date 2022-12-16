@@ -31,10 +31,10 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -59,6 +59,8 @@ constexpr absl::string_view kPredicateSelectAll = "*";
 constexpr absl::string_view kPredicateSelectLastIndex = "last()";
 constexpr absl::string_view kBinaryOperandTrue = "true";
 constexpr absl::string_view kBinaryOperandFalse = "false";
+constexpr absl::string_view kLogicalOperatorAnd = "and";
+constexpr absl::string_view kLogicalOperatorOr = "or";
 // Supported relational operators
 constexpr std::array<const char *, 6> kRelationsOperators = {
     "<", ">", "!=", ">=", "<=", "="};
@@ -157,28 +159,60 @@ bool ApplyPredicateRule(const RedfishVariant &node, size_t node_index,
                         size_t node_set_size,
                         const SubqueryHandle::RedPathIterator &iter) {
   std::string_view predicate = iter->second;
-  size_t num;
-  // If '[last()]' predicate expression, check if current node at last index.
-  if ((predicate == kPredicateSelectLastIndex &&
-       node_index == node_set_size - 1) ||
-      // If '[Index]' predicate expression, check if current node at given index
-      (absl::SimpleAtoi(predicate, &num) && num == node_index) ||
-      // If '[*]' predicate expression or empty predicate, no filter required.
-      (predicate.empty() || predicate == kPredicateSelectAll)) {
-    return true;
-  }
+  absl::string_view logical_operation = kLogicalOperatorAnd;
+  bool is_filter_success = true;
+  for (absl::string_view expr : absl::StrSplit(predicate, ' ')) {
+    // If expression is a logical operator, capture it and move to next
+    // expression
+    if (expr == kLogicalOperatorAnd || expr == kLogicalOperatorOr) {
+      // A binary operator is parsed only when last operator has been applied.
+      // Since last operator has not been applied and we are seeing another
+      // operator in the expression, it can be considered an invalid expression.
+      if (!logical_operation.empty()) {
+        LOG(ERROR) << "Invalid predicate expression " << predicate;
+        return false;
+      }
+      logical_operation = expr;
+      continue;
+    }
 
-  // Boolean tracking the status of filter operation using predicate expression
-  // rule.
-  bool is_filter_success = false;
-  if (std::any_of(
-          kRelationsOperators.begin(), kRelationsOperators.end(),
-          [&](const char *op) { return absl::StrContains(predicate, op); })) {
-    // Look for predicate expression containing relational operators.
-    is_filter_success = PredicateFilterByNodeComparison(node, predicate);
-  } else {
-    // Filter node-set by NodeName
-    is_filter_success = PredicateFilterByNodeName(node, predicate);
+    // There should always be a logical operation defined for the predicates.
+    // Default logical operation is 'AND' between a predicate expression and
+    // default boolean operand 'true'
+    if (logical_operation.empty()) {
+      LOG(ERROR) << "Invalid predicate expression " << predicate;
+      return false;
+    }
+
+    size_t num;
+    bool single_predicate_result = false;
+    // If '[last()]' predicate expression, check if current node at last index.
+    if ((expr == kPredicateSelectLastIndex &&
+         node_index == node_set_size - 1) ||
+        // If '[Index]' predicate expression, check if current node at given
+        // index
+        (absl::SimpleAtoi(expr, &num) && num == node_index) ||
+        // If '[*]' predicate expression or empty predicate, no filter required.
+        (expr.empty() || expr == kPredicateSelectAll)) {
+      single_predicate_result = true;
+    } else if (std::any_of(kRelationsOperators.begin(),
+                           kRelationsOperators.end(), [&](const char *op) {
+                             return absl::StrContains(expr, op);
+                           })) {
+      // Look for predicate expression containing relational operators.
+      single_predicate_result = PredicateFilterByNodeComparison(node, expr);
+    } else {
+      // Filter node-set by NodeName
+      single_predicate_result = PredicateFilterByNodeName(node, expr);
+    }
+    // Apply logical operation.
+    if (logical_operation == kLogicalOperatorAnd) {
+      is_filter_success &= single_predicate_result;
+    } else {
+      is_filter_success |= single_predicate_result;
+    }
+    // Reset logical operation
+    logical_operation = "";
   }
   return is_filter_success;
 }
