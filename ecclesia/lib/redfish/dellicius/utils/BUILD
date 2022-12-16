@@ -22,3 +22,17 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "parsers",
+    srcs = ["parsers.cc"],
+    hdrs = ["parsers.h"],
+    visibility = ["//ecclesia/lib/redfish:__subpackages__"],
+    deps = [
+        "//ecclesia/lib/file:cc_embed_interface",
+        "//ecclesia/lib/redfish/dellicius/engine:query_rules_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_protobuf//:protobuf",
+    ],
+)

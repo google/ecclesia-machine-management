@@ -29,6 +29,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/time/clock.h"
 #include "google/protobuf/text_format.h"
@@ -36,54 +37,6 @@
 namespace ecclesia {
 
 namespace {
-
-using ExpandConfiguration = RedPathPrefixWithQueryParams::ExpandConfiguration;
-
-absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
-GetQueryRulesFromEmbeddedFiles(const QueryEngineConfiguration &config) {
-  absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
-      parsed_query_rules;
-  // Extract query rules from embedded query files.
-  for (const EmbeddedFile &query_rules_file : config.query_rules) {
-    QueryRules query_rules;
-    // Parse query rules into embedded file object.
-    if (!google::protobuf::TextFormat::ParseFromString(std::string(query_rules_file.data),
-                                             &query_rules))
-      continue;
-    // Extract RedPath prefix to query params map for each query id.
-    for (const auto &[query_id, prefix_set_with_query_params] :
-         query_rules.query_id_to_params_rule()) {
-      RedPathRedfishQueryParams redpath_prefix_to_params;
-      // Iterate over each pair of RedPath prefix and Redfish query parameter
-      // configuration and build the prefix to param mapping in memory.
-      for (const auto &redpath_prefix_with_query_params :
-           prefix_set_with_query_params.redpath_prefix_with_params()) {
-        RedfishQueryParamExpand::ExpandType expand_type;
-        ExpandConfiguration::ExpandType expand_type_in_rule =
-            redpath_prefix_with_query_params.expand_configuration().type();
-        if (expand_type_in_rule == ExpandConfiguration::BOTH) {
-          expand_type = RedfishQueryParamExpand::kBoth;
-        } else if (expand_type_in_rule == ExpandConfiguration::NO_LINKS) {
-          expand_type = RedfishQueryParamExpand::kNotLinks;
-        } else if (expand_type_in_rule == ExpandConfiguration::ONLY_LINKS) {
-          expand_type = RedfishQueryParamExpand::kLinks;
-        } else {
-          break;
-        }
-        GetParams params{.expand = RedfishQueryParamExpand(
-                             {.type = expand_type,
-                              .levels = redpath_prefix_with_query_params
-                                            .expand_configuration()
-                                            .level()})};
-
-        redpath_prefix_to_params[redpath_prefix_with_query_params.redpath()] =
-            params;
-      }
-      parsed_query_rules[query_id] = redpath_prefix_to_params;
-    }
-  }
-  return parsed_query_rules;
-}
 
 class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
  public:
@@ -98,7 +51,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 
     // Parse query rules from embedded proto messages
     absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
-        query_id_to_rules = GetQueryRulesFromEmbeddedFiles(config);
+        query_id_to_rules =
+            ParseQueryRulesFromEmbeddedFiles(config.query_rules);
     // Parse queries from embedded proto messages
     for (const EmbeddedFile &query_file : config.query_files) {
       DelliciusQuery query;
