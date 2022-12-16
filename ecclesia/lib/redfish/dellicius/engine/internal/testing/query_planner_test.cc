@@ -34,7 +34,9 @@
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
+#include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
@@ -126,7 +128,8 @@ TEST_F(QueryPlannerTestRunner, DefaultNormalizerWithDevpaths) {
       kQuerySamplesLocation, "query_out/devpath_sensor_out.textproto"));
   SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer with devpath extension.
-  auto normalizer_with_devpath = BuildDefaultNormalizerWithDevpath(intf_.get());
+  auto topology = CreateTopologyFromRedfish(intf_.get());
+  auto normalizer_with_devpath = BuildDefaultNormalizerWithDevpath(topology);
   // Query Sensor
   TestQuery(sensor_in_path, sensor_out_path, normalizer_with_devpath.get());
 }
@@ -139,7 +142,8 @@ TEST_F(QueryPlannerTestRunner,
       kQuerySamplesLocation, "query_out/sensor_out_links.textproto"));
   SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer with devpath extension.
-  auto normalizer_with_devpath = BuildDefaultNormalizerWithDevpath(intf_.get());
+  auto topology = CreateTopologyFromRedfish(intf_.get());
+  auto normalizer_with_devpath = BuildDefaultNormalizerWithDevpath(topology);
   // Query Sensor
   TestQuery(query_in_path, query_out_path, normalizer_with_devpath.get());
 }

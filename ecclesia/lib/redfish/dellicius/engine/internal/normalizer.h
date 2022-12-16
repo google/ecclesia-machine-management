@@ -23,7 +23,6 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
-#include "ecclesia/lib/redfish/topology.h"
 
 namespace ecclesia {
 
@@ -39,8 +38,8 @@ class NormalizerImplDefault final : public Normalizer::ImplInterface {
 // Adds devpath to subquery output.
 class NormalizerImplAddDevpath final : public Normalizer::ImplInterface {
  public:
-  NormalizerImplAddDevpath(RedfishInterface *service)
-      : topology_(CreateTopologyFromRedfish(service)) {}
+  NormalizerImplAddDevpath(NodeTopology &node_topology)
+      : topology_(node_topology) {}
 
  protected:
   absl::Status Normalize(const RedfishVariant &var,
@@ -48,7 +47,7 @@ class NormalizerImplAddDevpath final : public Normalizer::ImplInterface {
                          SubqueryDataSet &data_set) const override;
 
  private:
-  NodeTopology topology_;
+  NodeTopology &topology_;
 };
 
 }  // namespace ecclesia

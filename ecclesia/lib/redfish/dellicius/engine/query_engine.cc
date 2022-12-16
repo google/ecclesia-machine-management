@@ -31,6 +31,8 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/node_topology.h"
+#include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/time/clock.h"
 #include "google/protobuf/text_format.h"
 
@@ -44,7 +46,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
                   std::unique_ptr<RedfishInterface> intf)
       : clock_(clock), intf_(std::move(intf)) {
     if (config.flags.enable_devpath_extension) {
-      normalizer_ = BuildDefaultNormalizerWithDevpath(intf_.get());
+      topology_ = CreateTopologyFromRedfish(intf_.get());
+      normalizer_ = BuildDefaultNormalizerWithDevpath(topology_);
     } else {
       normalizer_ = BuildDefaultNormalizer();
     }
@@ -111,13 +114,14 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   }
 
  private:
-  // Data normalizer to inject in QueryPlanner for normalizing redfish response
-  // per a given property specification in dellicius subquery.
+  // Data normalizer to inject in QueryPlanner for normalizing redfish
+  // response per a given property specification in dellicius subquery.
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
       id_to_query_plans_;
   const Clock *clock_;
   std::unique_ptr<Normalizer> normalizer_;
   std::unique_ptr<RedfishInterface> intf_;
+  NodeTopology topology_;
 };
 
 }  // namespace

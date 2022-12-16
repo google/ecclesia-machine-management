@@ -16,6 +16,8 @@ cc_test(
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish:node_topology",
+        "//ecclesia/lib/redfish:topology",
         "//ecclesia/lib/redfish/dellicius/engine/internal:factory",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",

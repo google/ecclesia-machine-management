@@ -21,6 +21,8 @@ cc_library(
         ":query_rules_cc_proto",
         "//ecclesia/lib/file:cc_embed_interface",
         "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish:node_topology",
+        "//ecclesia/lib/redfish:topology",
         "//ecclesia/lib/redfish/dellicius/engine/internal:factory",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
