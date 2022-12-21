@@ -141,6 +141,7 @@ inline constexpr char kRfOemPropertyTelemetry[] = "Telemetry";
 inline constexpr char kRfOemPropertyNvmeTelemetry[] = "NvmeTelemetry";
 inline constexpr char kRfOemPropertyTcgOpalSecurityState[] =
     "TcgOpalSecurityState";
+inline constexpr char kRfOemPropertyBareMetalStatus[] = "BareMetalStatus";
 
 inline constexpr char kRfPropertyMediaTypeSsd[] = "SSD";
 inline constexpr char kRfPropertyMemberId[] = "MemberId";
@@ -393,6 +394,7 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyTopologyRepresentation, std::string,
                         "TopologyRepresentation");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyTcgOpalAdditionalDataStoreRawData,
                         std::string, "TcgOpalAdditionalDataStoreRawData");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyBareMetal, std::string, "BareMetal");
 DEFINE_REDFISH_PROPERTY(OemPropertyRootOfTrust, std::string, "RootOfTrust");
 
 // Redfish agent expand support capabilites
