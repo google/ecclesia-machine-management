@@ -17,21 +17,24 @@
 #include "ecclesia/lib/redfish/sysmodel.h"
 
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
-#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
 namespace {
 
 using ::tensorflow::serving::net_http::ServerRequestInterface;
+using ::testing::ElementsAre;
 
 class SysmodelTest : public testing::Test {
  public:
@@ -44,8 +47,8 @@ class SysmodelTest : public testing::Test {
     mockup_server_->EnableExpandGetHandler();
   }
 
-  void SendJsonHttpResponse(ServerRequestInterface *req,
-                            absl::string_view json) {
+  static void SendJsonHttpResponse(ServerRequestInterface *req,
+                                   absl::string_view json) {
     ::tensorflow::serving::net_http::SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(json);
@@ -124,6 +127,69 @@ TEST_F(SysmodelTest, GetResourceDriveExpands) {
       });
   EXPECT_EQ(expand_system_storages_count, 1);
   EXPECT_EQ(expand_chassis_storages_count, 1);
+}
+
+TEST_F(SysmodelTest, GetResourceDriveDoesntReturnDuplicateDrives) {
+  InitServer("topology_v2_testing/mockup.shar");
+  // Inject a Chassis Drive resource that duplicates an existing ComputerSystem
+  // Drive resource.
+  mockup_server_->AddHttpGetHandlerWithData(
+      "/redfish/v1/Chassis/child2/Drives?$expand=.($levels=1)",
+      R"json({
+        "@odata.id": "/redfish/v1/Chassis/child2/Drives",
+        "@odata.type": "#DriveCollection.DriveCollection",
+        "Members": [
+          {
+            "@odata.id": "/redfish/v1/Systems/system/Storage/1/Drives/0"
+          }
+        ],
+        "Members@odata.count": 1,
+        "Name": "Drive Collection"
+      })json");
+
+  std::vector<std::string> returned_uris;
+  sysmodel_->QueryAllResources<ResourceDrive>(
+      [&](std::unique_ptr<RedfishObject> obj) -> RedfishIterReturnValue {
+        std::optional<std::string> uri = obj->GetUriString();
+        if (uri.has_value()) {
+          returned_uris.push_back(*std::move(uri));
+        }
+        return RedfishIterReturnValue::kContinue;
+      });
+  EXPECT_THAT(returned_uris,
+              ElementsAre("/redfish/v1/Systems/system/Storage/1/Drives/0"));
+}
+
+TEST_F(SysmodelTest, GetResourceDriveIncludesDrivesWithoutUris) {
+  InitServer("topology_v2_testing/mockup.shar");
+  // Inject a second drive under a Chassis resource that intentionally is
+  // missing its @odata.id.
+  mockup_server_->AddHttpGetHandlerWithData(
+      "/redfish/v1/Chassis/child2/Drives?$expand=.($levels=1)",
+      R"json({
+        "@odata.id": "/redfish/v1/Chassis/child2/Drives",
+        "@odata.type": "#DriveCollection.DriveCollection",
+        "Members": [
+          {
+            "@odata.type": "#Drive.v1_7_0.Drive",
+            "Id": "test_drive_missing_odata_id"
+          }
+        ],
+        "Members@odata.count": 1,
+        "Name": "Drive Collection"
+      })json");
+
+  int num_resources = 0;
+  int resources_without_uris = 0;
+  sysmodel_->QueryAllResources<ResourceDrive>(
+      [&](std::unique_ptr<RedfishObject> obj) -> RedfishIterReturnValue {
+        num_resources++;
+        std::optional<std::string> uri = obj->GetUriString();
+        if (!uri.has_value()) resources_without_uris++;
+        return RedfishIterReturnValue::kContinue;
+      });
+  EXPECT_EQ(num_resources, 2);
+  EXPECT_EQ(resources_without_uris, 1);
 }
 
 TEST_F(SysmodelTest, GetStorageControllerExpands) {
