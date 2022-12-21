@@ -210,6 +210,7 @@ class RedfishVariant final {
     virtual bool GetValue(bool *val) const = 0;
     virtual bool GetValue(absl::Time *val) const = 0;
     virtual std::string DebugString() const = 0;
+    virtual void PrintDebugString() const {}
   };
 
   // Helper structures used with IndexHelper class
@@ -370,6 +371,11 @@ class RedfishVariant final {
     return ptr_->DebugString();
   }
 
+  void PrintDebugString() const{
+    if (!ptr_) return;
+    ptr_->PrintDebugString();
+  }
+
  private:
   RedfishVariant(std::unique_ptr<ImplIntf> ptr, absl::Status status,
                  std::optional<ecclesia::HttpResponseCode> httpcode)
@@ -476,6 +482,8 @@ class RedfishObject {
   // for logging and debugging and should not be fed into any parsers which
   // make assumptons on the underlying implementation.
   virtual std::string DebugString() const = 0;
+
+  virtual void PrintDebugString() const {}
 
   // GetNodeValue is a convenience method which calls GetNode() then GetValue().
   // If the node does not exist or if the value could not be retrieved, nullopt

@@ -37,9 +37,32 @@ namespace {
 using ::ecclesia::IsStatusFailedPrecondition;
 using ::testing::Eq;
 using ::testing::Ne;
-
 using ::tensorflow::serving::net_http::HTTPStatusCode;
 using ::tensorflow::serving::net_http::ServerRequestInterface;
+
+TEST(RedfishVariant, DebugMsgShouldHaveIndent) {
+  ecclesia::FakeRedfishServer mockup("barebones_session_auth/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+  RedfishVariant chassis = raw_intf->GetRoot();
+
+  EXPECT_EQ(R"({
+ "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+ "@odata.id": "/redfish/v1",
+ "@odata.type": "#ServiceRoot.v1_5_0.ServiceRoot",
+ "Chassis": {
+  "@odata.id": "/redfish/v1/Chassis"
+ },
+ "Id": "RootService",
+ "Links": {
+  "Sessions": {
+   "@odata.id": "/redfish/v1/SessionService/Sessions"
+  }
+ },
+ "Name": "Root Service",
+ "RedfishVersion": "1.6.1"
+})", chassis.DebugString());
+
+}
 
 TEST(RedfishVariant, IndexingOk) {
   ecclesia::FakeRedfishServer mockup("barebones_session_auth/mockup.shar");

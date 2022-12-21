@@ -110,7 +110,7 @@ TEST(HttpRedfishInterfaceMultithreadedTest, NoMultithreadedIssuesOnGet) {
   };
 
   // Create a bunch of threads and make them do the same work.
-  auto thread_factory = GetDefaultThreadFactory();
+  auto *thread_factory = GetDefaultThreadFactory();
   threads.reserve(kThreads);
   for (int i = 0; i < kThreads; ++i) {
     threads.push_back(thread_factory->New(my_getter_func));
@@ -346,7 +346,7 @@ TEST_F(HttpRedfishInterfaceTest, ForEachPropertyTest) {
           std::make_pair("@odata.type", "\"#Chassis.v1_10_0.Chassis\""),
           std::make_pair("Id", "\"chassis\""),
           std::make_pair("Name", "\"chassis\""),
-          std::make_pair("Status", "{\"State\":\"StandbyOffline\"}")));
+          std::make_pair("Status", "{\n \"State\": \"StandbyOffline\"\n}")));
 }
 
 TEST_F(HttpRedfishInterfaceTest, ForEachPropertyTestStop) {

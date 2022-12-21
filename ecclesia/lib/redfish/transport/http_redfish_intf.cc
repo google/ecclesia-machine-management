@@ -221,10 +221,14 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
   }
   std::string DebugString() const override {
     if (std::holds_alternative<nlohmann::json>(result_.body)) {
-      return std::get<nlohmann::json>(result_.body).dump();
+      return std::get<nlohmann::json>(result_.body).dump(1);
     }
     return RedfishTransportBytesToString(
         std::get<RedfishTransport::bytes>(result_.body));
+  }
+
+  void PrintDebugString() const override{
+    LOG(INFO) << "Variant:\n" << DebugString();
   }
 
  private:
@@ -359,10 +363,14 @@ class HttpIntfObjectImpl : public RedfishObject {
 
   std::string DebugString() const override {
     if (std::holds_alternative<nlohmann::json>(result_.body)) {
-      return std::get<nlohmann::json>(result_.body).dump();
+      return std::get<nlohmann::json>(result_.body).dump(1);
     }
     return RedfishTransportBytesToString(
         std::get<RedfishTransport::bytes>(result_.body));
+  }
+
+  void PrintDebugString() const override{
+    LOG(INFO) << "Object:\n" << DebugString();
   }
 
   absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
