@@ -124,6 +124,7 @@ inline constexpr char kRfPropertyCables[] = "Cables";
 inline constexpr char kRfPropertyCableUpstreamResources[] = "UpstreamResources";
 inline constexpr char kRfPropertySlots[] = "Slots";
 inline constexpr char kRfPropertyMemorySummary[] = "MemorySummary";
+inline constexpr char kRfPropertySettingsObject[] = "SettingsObject";
 
 inline constexpr char kRfOemPropertyAssociatedWith[] = "AssociatedWith";
 inline constexpr char kRfOemPropertyAttachedTo[] = "AttachedTo";
@@ -175,6 +176,8 @@ inline constexpr char kRfResourceTypeProcessorMetrics[] = "ProcessorMetrics";
 inline constexpr char kProtocolFeaturesSupported[] =
     "ProtocolFeaturesSupported";
 inline constexpr char kExpandQuery[] = "ExpandQuery";
+
+inline constexpr char kRfAnnotationRedfishSettings[] = "@Redfish.Settings";
 
 DEFINE_REDFISH_RESOURCE(ResourceCertificate, "Certificate");
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
