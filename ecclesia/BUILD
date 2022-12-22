@@ -40,6 +40,7 @@ package_group(
 package_group(
     name = "mmanager_users",
     packages = [
+        "//ecclesia/lib/redfish/...",
         "//ecclesia/lib/root_of_trust/...",
         "//ecclesia/mmanager/...",
         "//ecclesia/node/...",

@@ -414,6 +414,21 @@ cc_library(
     ],
 )
 
+proto_library(
+    name = "health_rollup_proto",
+    srcs = ["health_rollup.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_protobuf//:timestamp_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "health_rollup_cc_proto",
+    visibility = ["//visibility:public"],
+    deps = [":health_rollup_proto"],
+)
+
 cc_library(
     name = "devpath",
     srcs = ["devpath.cc"],
@@ -426,6 +441,42 @@ cc_library(
         "//ecclesia/lib/redfish:utils",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "health_rollup",
+    srcs = ["health_rollup.cc"],
+    hdrs = ["health_rollup.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":health_rollup_cc_proto",
+        ":interface",
+        ":property_definitions",
+        "//ecclesia/lib/time:proto",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+    ],
+)
+
+cc_test(
+    name = "health_rollup_test",
+    srcs = ["health_rollup_test.cc"],
+    deps = [
+        ":health_rollup",
+        ":health_rollup_cc_proto",
+        ":interface",
+        ":property_definitions",
+        "//ecclesia/lib/redfish/testing:json_mockup",
+        "//ecclesia/lib/testing:proto",
+        "//ecclesia/lib/testing:status",
+        "//ecclesia/lib/time:proto",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_protobuf//:protobuf",
     ],
 )
 

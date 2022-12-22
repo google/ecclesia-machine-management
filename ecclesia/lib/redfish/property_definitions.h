@@ -171,6 +171,8 @@ inline constexpr char kRfPropertyRootOfTrustSendCommand[] =
     "#RootOfTrust.SendCommand";
 inline constexpr char kRfPropertySwitches[] = "Switches";
 inline constexpr char kRfPropertyFabrics[] = "Fabrics";
+inline constexpr char kRfPropertyConditions[] = "Conditions";
+inline constexpr char kRfPropertyMessageArgs[] = "MessageArgs";
 
 inline constexpr char kRfResourceTypeProcessorMetrics[] = "ProcessorMetrics";
 
@@ -366,6 +368,10 @@ DEFINE_REDFISH_PROPERTY(PropertyAllowableMin, int, "AllowableMin");
 DEFINE_REDFISH_PROPERTY(PropertyECCModeEnabled, bool, "ECCModeEnabled");
 DEFINE_REDFISH_PROPERTY(PropertyTotalMemorySizeMiB, int, "TotalMemorySizeMiB");
 DEFINE_REDFISH_PROPERTY(PropertySwitchType, std::string, "SwitchType");
+DEFINE_REDFISH_PROPERTY(PropertyHealthRollup, std::string, "HealthRollup");
+DEFINE_REDFISH_PROPERTY(PropertyMessageId, std::string, "MessageId");
+DEFINE_REDFISH_PROPERTY(PropertySeverity, std::string, "Severity");
+DEFINE_REDFISH_PROPERTY(PropertyTimestamp, absl::Time, "Timestamp");
 
 // ManagerDiagnosticData properties
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
