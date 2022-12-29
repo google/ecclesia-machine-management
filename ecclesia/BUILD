@@ -152,5 +152,7 @@ config_setting(
     define_values = {
         "grpc_creds_support": "loas2",
     },
-    visibility = ["//ecclesia/mmanager/__subpackages__"],
+    visibility = [
+        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+    ],
 )
