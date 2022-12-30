@@ -73,6 +73,7 @@ package_group(
     packages = [
         "//ecclesia/mmanager/backends/...",
         "//ecclesia/mmanager/frontends/...",
+        "//ecclesia/mmanager/lib/redfish/queries/...",
         "//ecclesia/mmanager/middles/...",
     ],
 )
