@@ -55,12 +55,20 @@ namespace {
 
 constexpr absl::string_view kTargetKey = "target";
 constexpr absl::string_view kResourceKey = "redfish-resource";
+// Both field name of the Authorization header and the token type are case
+// insensitive
+// References
+// https://www.rfc-editor.org/rfc/rfc7230#section-3.2
+// https://www.rfc-editor.org/rfc/rfc6749#section-5.1
+constexpr absl::string_view kHostHeader = "Host";
 
 template <typename RpcFunc>
 absl::StatusOr<RedfishTransport::Result> DoRpc(
     absl::string_view path, std::optional<std::string_view> json_str,
-    GrpcTransportParams params, RpcFunc rpc) {
+    absl::string_view target_fqdn, GrpcTransportParams params, RpcFunc rpc) {
   redfish::v1::Request request;
+  request.mutable_headers()->insert(
+      {std::string(kHostHeader), std::string(target_fqdn)});
   request.set_url(std::string(path));
   if (json_str) {
     *request.mutable_json_str() = *json_str;
@@ -107,6 +115,9 @@ absl::string_view EndpointToFqdn(absl::string_view endpoint) {
   return endpoint.substr(0, port_pos);
 }
 
+// NOTE: this class is only kept for backward campatibility purpose.
+// DO NOT ADD MORE METADATA.
+// Use HTTP headers instead.
 class GrpcRedfishCredentials : public grpc::MetadataCredentialsPlugin {
  public:
   explicit GrpcRedfishCredentials(absl::string_view target_fqdn,
@@ -159,7 +170,7 @@ class GrpcRedfishTransport : public RedfishTransport {
   absl::StatusOr<Result> Get(absl::string_view path)
       ABSL_LOCKS_EXCLUDED(mutex_) override {
     return DoRpc(
-        path, std::nullopt, params_,
+        path, std::nullopt, fqdn_, params_,
         [this, path](grpc::ClientContext &context,
                      const redfish::v1::Request &request,
                      ::redfish::v1::Response *response) -> grpc::Status {
@@ -175,7 +186,7 @@ class GrpcRedfishTransport : public RedfishTransport {
   absl::StatusOr<Result> Post(absl::string_view path, absl::string_view data)
       ABSL_LOCKS_EXCLUDED(mutex_) override {
     return DoRpc(
-        path, data, params_,
+        path, data, fqdn_, params_,
         [this, path](grpc::ClientContext &context,
                      const redfish::v1::Request &request,
                      ::redfish::v1::Response *response) -> grpc::Status {
@@ -191,7 +202,7 @@ class GrpcRedfishTransport : public RedfishTransport {
   absl::StatusOr<Result> Patch(absl::string_view path, absl::string_view data)
       ABSL_LOCKS_EXCLUDED(mutex_) override {
     return DoRpc(
-        path, data, params_,
+        path, data, fqdn_, params_,
         [this, path](grpc::ClientContext &context,
                      const redfish::v1::Request &request,
                      ::redfish::v1::Response *response) -> grpc::Status {
@@ -207,7 +218,7 @@ class GrpcRedfishTransport : public RedfishTransport {
   absl::StatusOr<Result> Delete(absl::string_view path, absl::string_view data)
       ABSL_LOCKS_EXCLUDED(mutex_) override {
     return DoRpc(
-        path, data, params_,
+        path, data, fqdn_, params_,
         [this, path](grpc::ClientContext &context,
                      const redfish::v1::Request &request,
                      ::redfish::v1::Response *response) -> grpc::Status {

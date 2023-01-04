@@ -288,7 +288,7 @@ TEST(GrpcRedfishTransport, EndpointFqdn) {
   EXPECT_THAT(transport, IsOk());
 }
 
-TEST(GrpcRedfishTransport, GetCorrectResultBody) {
+TEST(GrpcRedfishTransport, GetCorrectResultBodyAndRequestHeaders) {
   GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
                                         "localhost", 0);
   StaticBufferBasedTlsOptions options;
@@ -312,6 +312,11 @@ TEST(GrpcRedfishTransport, GetCorrectResultBody) {
       "/redfish/v1/json_resource",
       [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
           Response *response) {
+        auto it = request->headers().find("Host");
+        EXPECT_NE(it, request->headers().end());
+        if (it != request->headers().end()) {
+          EXPECT_EQ(it->second, "localhost");
+        }
         *response->mutable_json() = json_body_struct;
         response->set_code(200);
         return grpc::Status::OK;

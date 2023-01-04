@@ -168,6 +168,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPost) {
       }
     }
     json_str: "{\n    \"num\": 1,\n    \"str\": \"hi\"\n  }"
+    headers { key: "Host" value: "localhost" }
   )pb");
   const google::protobuf::Struct kResponse = ParseTextProtoOrDie(R"pb(
     fields {
@@ -212,6 +213,7 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPatch) {
       }
     }
     json_str: "{\n    \"num\": 1,\n    \"str\": \"hi\"\n  }"
+    headers { key: "Host" value: "localhost" }
   )pb");
   const google::protobuf::Struct kResponse = ParseTextProtoOrDie(R"pb(
     fields {
