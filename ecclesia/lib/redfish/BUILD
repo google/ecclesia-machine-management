@@ -137,6 +137,22 @@ cc_library(
 )
 
 cc_library(
+    name = "authorizer_enums",
+    srcs = ["authorizer_enums.cc"],
+    hdrs = ["authorizer_enums.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_test(
+    name = "authorizer_enums_test",
+    srcs = ["authorizer_enums_test.cc"],
+    deps = [
+        ":authorizer_enums",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "property_values",
     hdrs = ["property_values.h"],
     visibility = ["//visibility:public"],
