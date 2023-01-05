@@ -32,6 +32,8 @@ namespace ecclesia {
 struct Node {
   // Name property value from the Redfish Component representing this Node.
   std::string name;
+  // Model property value from the Redfish Component representing this Node.
+  std::string model;
   // Local devpath assigned to this Node.
   std::string local_devpath;
   // Node type represents the physical type of this Node.

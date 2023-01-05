@@ -30,8 +30,9 @@
 #include "ecclesia/lib/redfish/types.h"
 
 namespace ecclesia {
-
-std::optional<std::string> GetConvertedResourceName(const RedfishObject &node) {
+namespace {
+template <typename P>
+std::optional<std::string> GetConvertedResourceType(const RedfishObject &node) {
   const std::optional<ResourceTypeAndVersion> resource_type_and_version =
       GetResourceTypeAndVersionForObject(node);
   // Specially get the resource name for certain resource types.
@@ -47,9 +48,8 @@ std::optional<std::string> GetConvertedResourceName(const RedfishObject &node) {
       }
     }
   }
-
-  // Generally get the resource name by directly converting the "Name" property.
-  const auto property_name = node.GetNodeValue<PropertyName>();
+  // Generally get the resource name by directly converting the P property.
+  const auto property_name = node.GetNodeValue<P>();
   if (property_name.has_value()) {
     // Strip the leading and tailing spaces.
     absl::string_view stripped_property_name =
@@ -60,6 +60,16 @@ std::optional<std::string> GetConvertedResourceName(const RedfishObject &node) {
   }
 
   return std::nullopt;
+}
+}  // namespace
+
+std::optional<std::string> GetConvertedResourceName(const RedfishObject &node) {
+  return GetConvertedResourceType<PropertyName>(node);
+}
+
+std::optional<std::string> GetConvertedResourceModel(
+    const RedfishObject &node) {
+  return GetConvertedResourceType<PropertyModel>(node);
 }
 
 // This function trims the string's suffix of last underscore and the numeric

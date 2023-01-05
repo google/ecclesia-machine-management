@@ -37,18 +37,23 @@ using ::testing::Pointwise;
 
 void CheckAgainstTestingMockupFullDevpaths(const NodeTopology &topology) {
   const std::vector<Node> expected_nodes = {
-      Node{"root", "/phys", NodeType::kBoard},
-      Node{"child1", "/phys/C1", NodeType::kBoard},
-      Node{"child2", "/phys/C2", NodeType::kBoard},
-      Node{"ssd", "/phys/SSD", NodeType::kBoard},
-      Node{"cpu", "/phys/CPU", NodeType::kBoard},
-      Node{"memory", "/phys/C1/DIMM", NodeType::kBoard},
-      Node{"dangling_cable", "/phys/C1/QSFP", NodeType::kCable},
-      Node{"expansion_cable", "/phys/C2/HDMI", NodeType::kCable},
-      Node{"controller", "/phys/SSD:device:controller", NodeType::kDevice},
-      Node{"drive", "/phys/SSD:device:drive", NodeType::kDevice},
-      Node{"expansion_tray", "/phys/C2/HDMI/DOWNLINK", NodeType::kBoard},
-      Node{"expansion_child", "/phys/C2/HDMI/DOWNLINK/E1", NodeType::kBoard}};
+      Node{"root", "root", "/phys", NodeType::kBoard},
+      Node{"child1", "child1", "/phys/C1", NodeType::kBoard},
+      Node{"child2", "child2", "/phys/C2", NodeType::kBoard},
+      Node{"ssd", "ssd", "/phys/SSD", NodeType::kBoard},
+      Node{"cpu", "cpu", "/phys/CPU", NodeType::kBoard},
+      Node{"memory", "memory", "/phys/C1/DIMM", NodeType::kBoard},
+      Node{"dangling_cable", "dangling_cable", "/phys/C1/QSFP",
+           NodeType::kCable},
+      Node{"expansion_cable", "expansion_cable", "/phys/C2/HDMI",
+           NodeType::kCable},
+      Node{"controller", "controller", "/phys/SSD:device:controller",
+           NodeType::kDevice},
+      Node{"drive", "drive", "/phys/SSD:device:drive", NodeType::kDevice},
+      Node{"expansion_tray", "expansion_tray", "/phys/C2/HDMI/DOWNLINK",
+           NodeType::kBoard},
+      Node{"expansion_child", "expansion_child", "/phys/C2/HDMI/DOWNLINK/E1",
+           NodeType::kBoard}};
 
   std::vector<Node> actual_nodes;
   actual_nodes.reserve(topology.nodes.size());
@@ -322,10 +327,12 @@ TEST(RawInterfaceTestWithMockup, GoogleRootCoexistsWithRedfishRoot) {
   NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
 
   const std::vector<Node> expected_nodes = {
-      Node{"root", "/phys", NodeType::kBoard},
-      Node{"erot-gpu1", "/phys:device:erot-gpu1", NodeType::kDevice},
-      Node{"erot-gpu2", "/phys:device:erot-gpu2", NodeType::kDevice},
-      Node{"hoth", "/phys:device:hoth", NodeType::kDevice},
+      Node{"root", "root", "/phys", NodeType::kBoard},
+      Node{"erot-gpu1", "erot-gpu1", "/phys:device:erot-gpu1",
+           NodeType::kDevice},
+      Node{"erot-gpu2", "erot-gpu2", "/phys:device:erot-gpu2",
+           NodeType::kDevice},
+      Node{"hoth", "hoth", "/phys:device:hoth", NodeType::kDevice},
   };
 
   std::vector<Node> actual_nodes;
@@ -350,15 +357,19 @@ TEST(RawInterfaceTestWithMockup, UriUnqueryable) {
         });
     NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
     const std::vector<Node> expected_nodes = {
-        Node{"root", "/phys", NodeType::kBoard},
-        Node{"child2", "/phys/C2", NodeType::kBoard},
-        Node{"ssd", "/phys/SSD", NodeType::kBoard},
-        Node{"cpu", "/phys/CPU", NodeType::kBoard},
-        Node{"expansion_cable", "/phys/C2/HDMI", NodeType::kCable},
-        Node{"controller", "/phys/SSD:device:controller", NodeType::kDevice},
-        Node{"drive", "/phys/SSD:device:drive", NodeType::kDevice},
-        Node{"expansion_tray", "/phys/C2/HDMI/DOWNLINK", NodeType::kBoard},
-        Node{"expansion_child", "/phys/C2/HDMI/DOWNLINK/E1", NodeType::kBoard}};
+        Node{"root", "root", "/phys", NodeType::kBoard},
+        Node{"child2", "child2", "/phys/C2", NodeType::kBoard},
+        Node{"ssd", "ssd", "/phys/SSD", NodeType::kBoard},
+        Node{"cpu", "cpu", "/phys/CPU", NodeType::kBoard},
+        Node{"expansion_cable", "expansion_cable", "/phys/C2/HDMI",
+             NodeType::kCable},
+        Node{"controller", "controller", "/phys/SSD:device:controller",
+             NodeType::kDevice},
+        Node{"drive", "drive", "/phys/SSD:device:drive", NodeType::kDevice},
+        Node{"expansion_tray", "expansion_tray", "/phys/C2/HDMI/DOWNLINK",
+             NodeType::kBoard},
+        Node{"expansion_child", "expansion_child", "/phys/C2/HDMI/DOWNLINK/E1",
+             NodeType::kBoard}};
 
     std::vector<Node> actual_nodes;
     actual_nodes.reserve(topology.nodes.size());
@@ -378,9 +389,10 @@ TEST(RawInterfaceTestWithMockup, UriUnqueryable) {
         });
     NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
     const std::vector<Node> expected_nodes = {
-        Node{"child1", "/phys", NodeType::kBoard},
-        Node{"memory", "/phys/DIMM", NodeType::kBoard},
-        Node{"dangling_cable", "/phys/QSFP", NodeType::kCable},
+        Node{"child1", "child1", "/phys", NodeType::kBoard},
+        Node{"memory", "memory", "/phys/DIMM", NodeType::kBoard},
+        Node{"dangling_cable", "dangling_cable", "/phys/QSFP",
+             NodeType::kCable},
     };
     std::vector<Node> actual_nodes;
     actual_nodes.reserve(topology.nodes.size());

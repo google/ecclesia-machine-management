@@ -40,8 +40,9 @@ std::string ToString(NodeType type) {
 }
 
 void PrintTo(const Node &node, std::ostream *os) {
-  *os << absl::StrFormat("\n{name: \"%s\" devpath: \"%s\" type: %s)", node.name,
-                         node.local_devpath, ToString(node.type));
+  *os << absl::StrFormat(
+      "\n{name: \"%s\" model: \"%s\" devpath: \"%s\" type: %s)", node.name,
+      node.model, node.local_devpath, ToString(node.type));
 }
 
 void PrintTo(const std::unique_ptr<Node> &node, std::ostream *os) {

@@ -77,6 +77,10 @@ std::optional<std::string> GetResourceType(const RedfishObject *node);
 // types of resources the name is obtained from other context of the resource.
 std::optional<std::string> GetConvertedResourceName(const RedfishObject &node);
 
+// A helper function to get "converted" resource model. The model will have the
+// same modification as property name.
+std::optional<std::string> GetConvertedResourceModel(const RedfishObject &node);
+
 std::string TruncateLastUnderScoreAndNumericSuffix(absl::string_view str);
 
 std::string RedfishTransportBytesToString(const RedfishTransport::bytes &bytes);

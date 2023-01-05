@@ -56,6 +56,8 @@ constexpr char kPhysicalContextConnector[] = "Connector";
 struct Component {
   // Redfish name property value
   std::string name;
+  // Redfish model property value
+  std::string model;
   // Redfish @odata.id property value is a Redfish URI identifier
   std::string odata_id;
   // Type is used in the devpath generation algorithm.
@@ -82,6 +84,8 @@ struct Component {
 struct Assembly {
   // Redfish name property value
   std::string name;
+  // Redfish model property value
+  std::string model;
   // The constituent components in this Assembly
   std::vector<std::unique_ptr<Component>> components;
   // Redfish @odata.id of all the upstream components.
@@ -281,6 +285,12 @@ std::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
   if (!fru_name.has_value()) return std::nullopt;
   assembly.name = fru_name.value();
 
+  assembly.model = assembly.name;
+  auto fru_model = assembly_payload->GetNodeValue<PropertyModel>();
+  if (fru_model.has_value()) {
+    assembly.model = fru_model.value();
+  }
+
   auto oem = (*assembly_payload)[kRfPropertyOem].AsObject();
   if (!oem) return assembly;
 
@@ -314,6 +324,14 @@ std::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
     auto component_name = component_resource_obj->GetNodeValue<PropertyName>();
     if (!component_name.has_value()) continue;
     component->name = component_name.value();
+
+    // If no model is listed in Redfish object, use name as the fallback.
+    component->model = component->name;
+    auto component_model =
+        component_resource_obj->GetNodeValue<PropertyModel>();
+    if (component_model.has_value()) {
+      component->model = component_model.value();
+    }
 
     // Determine the component type. Assume by default it is a device.
     component->type = NodeType::kDevice;
@@ -401,6 +419,7 @@ NodeTopology CreateNodeTopologyFromAssemblies(
       auto node = std::make_unique<Node>();
 
       node->name = component->name;
+      node->model = component->model;
       node->local_devpath = component->local_devpath;
       node->type = component->type;
       node_topology.devpath_to_node_map[node->local_devpath] = node.get();

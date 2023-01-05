@@ -413,6 +413,13 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
       } else {
         node->name = "root";
       }
+      // If no model is listed in Redfish object, use name as the fallback.
+      node->model = node->name;
+      std::optional<std::string> model =
+          GetConvertedResourceModel(*node_to_attach.obj);
+      if (model.has_value()) {
+        node->model = *std::move(model);
+      }
       node->associated_uris.push_back(*current_uri);
 
       current_node_ptr = node.get();
@@ -467,6 +474,11 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
       auto name = GetConvertedResourceName(*node_to_attach.obj);
       if (!name.has_value()) continue;
       node->name = *std::move(name);
+      node->model = node->name;
+      auto model = GetConvertedResourceModel(*node_to_attach.obj);
+      if (model.has_value()) {
+        node->model = *std::move(model);
+      }
       node->associated_uris.push_back(*current_uri);
       std::string parent_devpath = node_to_attach.parent->local_devpath;
       if (location_type == kLocationTypeEmbedded) {
