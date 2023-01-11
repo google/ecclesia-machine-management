@@ -133,6 +133,8 @@ TEST(TruncateLastUnderScoreAndNumericSuffix, Works) {
             "resource_1a");
   EXPECT_EQ(TruncateLastUnderScoreAndNumericSuffix("resource_1_2"),
             "resource_1");
+  EXPECT_EQ(TruncateLastUnderScoreAndNumericSuffix("resource_"),
+            "resource_");
 }
 
 }  // namespace
