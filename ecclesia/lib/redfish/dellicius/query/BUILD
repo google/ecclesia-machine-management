@@ -1,3 +1,5 @@
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
+
 licenses(["notice"])
 
 proto_library(
@@ -34,6 +36,18 @@ cc_proto_library(
 
 cc_proto_library(
     name = "query_result_cc_proto",
+    visibility = ["//visibility:public"],
+    deps = [":query_result_proto"],
+)
+
+py_proto_library(
+    name = "query_py_pb2",
+    visibility = ["//visibility:public"],
+    deps = [":query_proto"],
+)
+
+py_proto_library(
+    name = "query_result_py_pb2",
     visibility = ["//visibility:public"],
     deps = [":query_result_proto"],
 )
