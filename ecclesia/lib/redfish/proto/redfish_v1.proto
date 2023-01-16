@@ -49,6 +49,14 @@ message GetOverridePolicyResponse {
   bytes policy = 1;
 }
 
+message GetOverridePolicyRequest {}
+
+message GetOverridePolicyResponse {
+  // Contents of the policy file as raw bytes. Encoding is defined by the source
+  // file.
+  bytes policy = 1;
+}
+
 // The dynamic Redfish service definition.
 service RedfishV1 {
   // Sends a GET request
