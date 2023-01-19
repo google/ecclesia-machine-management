@@ -40,6 +40,8 @@ struct Node {
   NodeType type;
   // Associated URIs that provide logical system information to this Node.
   std::vector<std::string> associated_uris;
+  // Whether the Node represents a part can be replaced.
+  bool replaceable;
 };
 
 // NodeTopology represents the collection of Nodes comprising a Redfish backend.

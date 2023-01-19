@@ -405,6 +405,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
       DLOG(INFO) << "Creating root node";
       auto node = std::make_unique<Node>();
       node->type = kBoard;
+      node->replaceable = true;
       node->local_devpath = std::string(kRootDevpath);
       std::optional<std::string> name =
           GetConvertedResourceName(*node_to_attach.obj);
@@ -485,6 +486,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
         node->local_devpath =
             absl::StrCat(parent_devpath, ":device:", node->name);
         node->type = kDevice;
+        node->replaceable = false;
       } else if (location_type == kLocationTypeSlot ||
                  location_type == kLocationTypeConnector ||
                  location_type == kLocationTypeBay ||
@@ -496,6 +498,14 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
         if (!label.has_value()) continue;
         node->local_devpath = absl::StrCat(parent_devpath, "/", *label);
         node->type = kBoard;
+        node->replaceable = true;
+        // Check if the current plugin has Replaceable field and override
+        // existing replaceable value with the provided value
+        if (std::optional<bool> replaceable =
+                node_to_attach.obj->GetNodeValue<PropertyReplaceable>();
+            replaceable.has_value()) {
+          node->replaceable = *replaceable;
+        }
       } else {
         LOG(ERROR) << "Unable to handle location type at URI: " << *current_uri
                    << " of type " << *location_type;
@@ -509,7 +519,9 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
       }
 
       DLOG(INFO) << "Child node created: [" << node->local_devpath << ", "
-                 << node->type << ", " << node->name << "]";
+                 << node->type << ", " << node->name
+                 << ", replaceable: " << (node->replaceable ? "true" : "false")
+                 << "]";
 
       current_node_ptr = node.get();
       topology.uri_to_associated_node_map[*current_uri].push_back(node.get());

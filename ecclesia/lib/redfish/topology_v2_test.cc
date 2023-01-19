@@ -72,7 +72,7 @@ TEST(RawInterfaceTestWithMockup, TestingMockupNodesArePopulated) {
 }
 
 TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
-  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   {
@@ -196,7 +196,7 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
 }
 
 TEST(RawInterfaceTestWithPatchedMockup, TestingMockupBrokenOrCircularLink) {
-  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   {
@@ -266,7 +266,7 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupBrokenOrCircularLink) {
 // This test makes sure the node names from the created topology match
 // expectations.
 TEST(RawInterfaceTestWithMockup, TestingNodeName) {
-  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   const NodeTopology constructed_topology =
@@ -285,7 +285,7 @@ TEST(RawInterfaceTestWithMockup, TestingNodeName) {
 }
 
 TEST(RawInterfaceTestWithMockup, TestingLocationTypes) {
-  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   // Change the LocationType to make sure the topology can be correctly
@@ -321,8 +321,7 @@ TEST(RawInterfaceTestWithMockup, TestingLocationTypes) {
 }
 
 TEST(RawInterfaceTestWithMockup, GoogleRootCoexistsWithRedfishRoot) {
-  ecclesia::FakeRedfishServer mockup(
-      "features/component_integrity/mockup.shar");
+  FakeRedfishServer mockup("features/component_integrity/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
   NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
 
@@ -345,7 +344,7 @@ TEST(RawInterfaceTestWithMockup, GoogleRootCoexistsWithRedfishRoot) {
 }
 
 TEST(RawInterfaceTestWithMockup, UriUnqueryable) {
-  ecclesia::FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
   {
     // If the first Chassis is unqueryable.
@@ -439,5 +438,21 @@ TEST(RawInterfaceTestWithMockup, UriUnqueryable) {
     mockup.ClearHandlers();
   }
 }
+
+TEST(RawInterfaceTestWithMockup, TestingReplaceable) {
+  TestingMockupServer mockup("topology_v2_testing/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+
+  NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
+
+  // Make sure all nodes are created properly
+  CheckAgainstTestingMockupFullDevpaths(topology);
+
+  // Get the expansion child node and check its replaceable field
+  auto it = topology.devpath_to_node_map.find("/phys/C2/HDMI/DOWNLINK/E1");
+  ASSERT_TRUE(it != topology.devpath_to_node_map.end());
+  EXPECT_FALSE(it->second->replaceable);
+}
+
 }  // namespace
 }  // namespace ecclesia
