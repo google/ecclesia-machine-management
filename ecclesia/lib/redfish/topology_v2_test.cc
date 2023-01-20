@@ -22,6 +22,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/functional/function_ref.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
@@ -34,6 +35,9 @@ namespace {
 using ::testing::Contains;
 using ::testing::Not;
 using ::testing::Pointwise;
+
+using NodeTopologyBuilderType =
+    absl::FunctionRef<NodeTopology(RedfishInterface *)>;
 
 void CheckAgainstTestingMockupFullDevpaths(const NodeTopology &topology) {
   const std::vector<Node> expected_nodes = {
@@ -64,14 +68,16 @@ void CheckAgainstTestingMockupFullDevpaths(const NodeTopology &topology) {
   EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
 }
 
-TEST(RawInterfaceTestWithMockup, TestingMockupNodesArePopulated) {
+class TopologyTestRunner
+    : public ::testing::TestWithParam<NodeTopologyBuilderType> {};
+
+TEST_P(TopologyTestRunner, TestingMockupNodesArePopulated) {
   TestingMockupServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
-  CheckAgainstTestingMockupFullDevpaths(
-      CreateTopologyFromRedfishV2(raw_intf.get()));
+  CheckAgainstTestingMockupFullDevpaths(GetParam()(raw_intf.get()));
 }
 
-TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
+TEST_P(TopologyTestRunner, TestingMockupFindingRootChassis) {
   FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
@@ -103,8 +109,7 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
       }
     )json");
 
-    CheckAgainstTestingMockupFullDevpaths(
-        CreateTopologyFromRedfishV2(raw_intf.get()));
+    CheckAgainstTestingMockupFullDevpaths(GetParam()(raw_intf.get()));
 
     mockup.ClearHandlers();
   }
@@ -137,8 +142,7 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
       }
     )json");
 
-    CheckAgainstTestingMockupFullDevpaths(
-        CreateTopologyFromRedfishV2(raw_intf.get()));
+    CheckAgainstTestingMockupFullDevpaths(GetParam()(raw_intf.get()));
 
     mockup.ClearHandlers();
   }
@@ -171,8 +175,7 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
       }
     )json");
 
-    CheckAgainstTestingMockupFullDevpaths(
-        CreateTopologyFromRedfishV2(raw_intf.get()));
+    CheckAgainstTestingMockupFullDevpaths(GetParam()(raw_intf.get()));
 
     mockup.ClearHandlers();
   }
@@ -188,14 +191,14 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupFindingRootChassis) {
       }
     )json");
 
-    auto topology = CreateTopologyFromRedfishV2(raw_intf.get());
+    auto topology = GetParam()(raw_intf.get());
     EXPECT_TRUE(topology.nodes.empty());
 
     mockup.ClearHandlers();
   }
 }
 
-TEST(RawInterfaceTestWithPatchedMockup, TestingMockupBrokenOrCircularLink) {
+TEST_P(TopologyTestRunner, TestingMockupBrokenOrCircularLink) {
   FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
@@ -225,8 +228,7 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupBrokenOrCircularLink) {
       }
     )json");
 
-    CheckAgainstTestingMockupFullDevpaths(
-        CreateTopologyFromRedfishV2(raw_intf.get()));
+    CheckAgainstTestingMockupFullDevpaths(GetParam()(raw_intf.get()));
 
     mockup.ClearHandlers();
   }
@@ -256,8 +258,7 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupBrokenOrCircularLink) {
       }
     )json");
 
-    CheckAgainstTestingMockupFullDevpaths(
-        CreateTopologyFromRedfishV2(raw_intf.get()));
+    CheckAgainstTestingMockupFullDevpaths(GetParam()(raw_intf.get()));
 
     mockup.ClearHandlers();
   }
@@ -265,12 +266,11 @@ TEST(RawInterfaceTestWithPatchedMockup, TestingMockupBrokenOrCircularLink) {
 
 // This test makes sure the node names from the created topology match
 // expectations.
-TEST(RawInterfaceTestWithMockup, TestingNodeName) {
+TEST_P(TopologyTestRunner, TestingNodeName) {
   FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
-  const NodeTopology constructed_topology =
-      CreateTopologyFromRedfishV2(raw_intf.get());
+  const NodeTopology constructed_topology = GetParam()(raw_intf.get());
 
   std::vector<std::string> node_names;
   node_names.reserve(constructed_topology.nodes.size());
@@ -284,46 +284,45 @@ TEST(RawInterfaceTestWithMockup, TestingNodeName) {
   EXPECT_THAT(node_names, Not(Contains(" Expansion Child ")));
 }
 
-TEST(RawInterfaceTestWithMockup, TestingLocationTypes) {
+TEST_P(TopologyTestRunner, TestingLocationTypes) {
   FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
   // Change the LocationType to make sure the topology can be correctly
   // constructed as well.
   mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis/child1", R"json(
-      {
-        "@odata.id": "/redfish/v1/Chassis/child1",
-        "@odata.type": "#Chassis.v1_14_0.Chassis",
-        "ChassisType": "RackMount",
-        "Id": "child1",
-        "Links": {
-          "ContainedBy": {
-            "@odata.id": "/redfish/v1/Chassis/root"
-          }
-        },
-        "Location": {
-          "PartLocation": {
-            "LocationType": "Bay",
-            "ServiceLabel": "C1"
-          }
-        },
-        "Name": "child1",
-        "Memory": {
-          "@odata.id": "/redfish/v1/Systems/system/Memory"
+    {
+      "@odata.id": "/redfish/v1/Chassis/child1",
+      "@odata.type": "#Chassis.v1_14_0.Chassis",
+      "ChassisType": "RackMount",
+      "Id": "child1",
+      "Links": {
+        "ContainedBy": {
+          "@odata.id": "/redfish/v1/Chassis/root"
         }
+      },
+      "Location": {
+        "PartLocation": {
+          "LocationType": "Bay",
+          "ServiceLabel": "C1"
+        }
+      },
+      "Name": "child1",
+      "Memory": {
+        "@odata.id": "/redfish/v1/Systems/system/Memory"
       }
-    )json");
+    }
+  )json");
 
-  CheckAgainstTestingMockupFullDevpaths(
-      CreateTopologyFromRedfishV2(raw_intf.get()));
+  CheckAgainstTestingMockupFullDevpaths(GetParam()(raw_intf.get()));
 
   mockup.ClearHandlers();
 }
 
-TEST(RawInterfaceTestWithMockup, GoogleRootCoexistsWithRedfishRoot) {
+TEST_P(TopologyTestRunner, GoogleRootCoexistsWithRedfishRoot) {
   FakeRedfishServer mockup("features/component_integrity/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
-  NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
+  NodeTopology topology = GetParam()(raw_intf.get());
 
   const std::vector<Node> expected_nodes = {
       Node{"root", "root", "/phys", NodeType::kBoard},
@@ -343,7 +342,7 @@ TEST(RawInterfaceTestWithMockup, GoogleRootCoexistsWithRedfishRoot) {
   EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
 }
 
-TEST(RawInterfaceTestWithMockup, UriUnqueryable) {
+TEST_P(TopologyTestRunner, UriUnqueryable) {
   FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
   {
@@ -354,7 +353,7 @@ TEST(RawInterfaceTestWithMockup, UriUnqueryable) {
           req->ReplyWithStatus(
               ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
         });
-    NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
+    NodeTopology topology = GetParam()(raw_intf.get());
     const std::vector<Node> expected_nodes = {
         Node{"root", "root", "/phys", NodeType::kBoard},
         Node{"child2", "child2", "/phys/C2", NodeType::kBoard},
@@ -386,7 +385,7 @@ TEST(RawInterfaceTestWithMockup, UriUnqueryable) {
           req->ReplyWithStatus(
               ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
         });
-    NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
+    NodeTopology topology = GetParam()(raw_intf.get());
     const std::vector<Node> expected_nodes = {
         Node{"child1", "child1", "/phys", NodeType::kBoard},
         Node{"memory", "memory", "/phys/DIMM", NodeType::kBoard},
@@ -433,17 +432,17 @@ TEST(RawInterfaceTestWithMockup, UriUnqueryable) {
           req->ReplyWithStatus(
               ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
         });
-    NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
+    NodeTopology topology = GetParam()(raw_intf.get());
     EXPECT_TRUE(topology.nodes.empty());
     mockup.ClearHandlers();
   }
 }
 
-TEST(RawInterfaceTestWithMockup, TestingReplaceable) {
+TEST_P(TopologyTestRunner, TestingReplaceable) {
   TestingMockupServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
-  NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
+  NodeTopology topology = GetParam()(raw_intf.get());
 
   // Make sure all nodes are created properly
   CheckAgainstTestingMockupFullDevpaths(topology);
@@ -453,6 +452,9 @@ TEST(RawInterfaceTestWithMockup, TestingReplaceable) {
   ASSERT_TRUE(it != topology.devpath_to_node_map.end());
   EXPECT_FALSE(it->second->replaceable);
 }
+
+INSTANTIATE_TEST_SUITE_P(CoreTopologyTests, TopologyTestRunner,
+                         ::testing::Values(CreateTopologyFromRedfishV2));
 
 }  // namespace
 }  // namespace ecclesia
