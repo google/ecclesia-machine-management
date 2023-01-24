@@ -68,6 +68,7 @@ inline constexpr char kRfPropertyManagers[] = "Managers";
 inline constexpr char kRfPropertyManagerInChassis[] = "ManagerInChassis";
 inline constexpr char kRfPropertyManagerDiagnosticData[] =
     "ManagerDiagnosticData";
+inline constexpr char kRfPropertyBootInfo[] = "BootInfo";
 inline constexpr char kRfPropertyEthernetInterfaces[] = "EthernetInterfaces";
 inline constexpr char kRfPropertyThermal[] = "Thermal";
 inline constexpr char kRfPropertyTemperatures[] = "Temperatures";
@@ -378,6 +379,8 @@ DEFINE_REDFISH_PROPERTY(PropertyTimestamp, absl::Time, "Timestamp");
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
 DEFINE_REDFISH_PROPERTY(PropertyUserPercent, double, "UserPercent");
 DEFINE_REDFISH_PROPERTY(PropertyAvailableBytes, int64_t, "AvailableBytes");
+DEFINE_REDFISH_PROPERTY(PropertyBootCount, int, "BootCount");
+DEFINE_REDFISH_PROPERTY(PropertyCrashCount, int, "CrashCount");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
