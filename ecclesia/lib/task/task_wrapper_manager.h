@@ -20,6 +20,7 @@
 #include <cassert>
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "ecclesia/lib/task/manager.h"
 #include "ecclesia/lib/task/task.h"
@@ -36,7 +37,7 @@ class SingleTaskWrapperManager : public BackgroundTaskManager {
   // Expose the underlying task for tests to use.
   BackgroundTask *WrappedTask() const { return task_.get(); }
 
- private:
+ protected:
   // Handle the task registration. This assumes that only one task (the updater)
   // will be registered. If a second task gets registered this will assert.
   void AddTaskImpl(std::unique_ptr<BackgroundTask> task) override {
@@ -55,6 +56,18 @@ class SingleTaskWrapperManager : public BackgroundTaskManager {
   }
 
   std::unique_ptr<BackgroundTask> task_;
+};
+
+// As extension of the SingleTaskWrapper, this class will run the task provided
+// exactly once. Primarily, this is to allow Machine Manager unit testing to run
+// the Assembly dependent testing.
+class SingleTaskRunnerManager : public SingleTaskWrapperManager {
+ protected:
+  void AddTaskImpl(std::unique_ptr<BackgroundTask> task) override {
+    assert(!task_);
+    task_ = std::move(task);
+    task_->RunOnce();
+  }
 };
 
 }  // namespace ecclesia
