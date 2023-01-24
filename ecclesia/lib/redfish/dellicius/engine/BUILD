@@ -1,3 +1,5 @@
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+
 licenses(["notice"])
 
 cc_library(
@@ -54,4 +56,14 @@ filegroup(
         "sample_query_rules.textproto",
     ],
     visibility = ["//visibility:public"],
+)
+
+bzl_library(
+    name = "redpath_query_bzl",
+    srcs = ["redpath_query.bzl"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//ecclesia/build_defs:embed",
+        "//ecclesia/build_defs:proto",
+    ],
 )

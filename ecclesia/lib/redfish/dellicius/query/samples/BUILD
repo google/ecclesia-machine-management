@@ -1,3 +1,5 @@
+load("//ecclesia/lib/redfish/dellicius/engine:redpath_query.bzl", "redpath_queries")
+
 licenses(["notice"])
 
 filegroup(
@@ -26,4 +28,11 @@ filegroup(
         "query_out/sensor_out_predicates.textproto",
     ],
     visibility = ["//visibility:public"],
+)
+
+redpath_queries(
+    name = "sample_queries_in_rule",
+    srcs = glob(["query_in/**"]),
+    cc_namespace = "ecclesia",
+    var_name = "kSampleQueriesIn",
 )
