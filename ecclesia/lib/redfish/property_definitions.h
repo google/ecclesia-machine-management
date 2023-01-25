@@ -236,7 +236,7 @@ DEFINE_REDFISH_PROPERTY(PropertyEncryptionStatus, std::string,
                         "EncryptionStatus");
 DEFINE_REDFISH_PROPERTY(PropertyPredictedMediaLifeLeftPercent, int,
                         "PredictedMediaLifeLeftPercent");
-
+DEFINE_REDFISH_PROPERTY(PropertyChassisType, std::string, "ChassisType");
 DEFINE_REDFISH_PROPERTY(PropertyVendor, std::string, "Vendor");
 DEFINE_REDFISH_PROPERTY(PropertyMemoryDeviceType, std::string,
                         "MemoryDeviceType");
