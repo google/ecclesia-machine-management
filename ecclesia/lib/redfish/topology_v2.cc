@@ -303,7 +303,7 @@ UriToAttachedCableUris GetUpstreamUriToAttachedCableMap(
       [&](std::unique_ptr<RedfishObject> cable_json,
           const std::string &upstream_uri) {
         if (auto uri = cable_json->GetUriString(); uri.has_value()) {
-          DLOG(INFO) << "Mapping " << upstream_uri << "to cable " << *uri;
+          DLOG(INFO) << "Mapping " << upstream_uri << " to cable " << *uri;
           uri_to_cable_uri[upstream_uri].push_back(*std::move(uri));
         }
         return RedfishIterReturnValue::kContinue;
