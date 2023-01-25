@@ -30,13 +30,35 @@ message DelliciusQuery {
     // Identifies root subquery ids to group related data in a root subquery
     // response.
     repeated string root_subquery_ids = 4;
+    // Identifies parent subquery sets. The output of this subquery will be
+    // associated with each subquery output in the set.
+    repeated string root_subquery_set_ids = 5;
     // RedPath of the Redfish resource to query relative to Redfish Service
     // root or relative to RedPath in different subquery as identified by root
     // field in this proto.
     string redpath = 2;
     repeated RedfishProperty properties = 3;
+    // Identifies property sets.
+    repeated string property_set_ids = 6;
   }
+  // A subquery set allows grouping subqueries to execute a common operation.
+  // For example, this allows having different subqueries share a common group
+  // of root_subquery_ids.
+  message SubquerySet {
+    string set_id = 1;
+    repeated string subquery_ids = 2;
+  }
+  // A property set contains Redfish properties to be queried in the subquery
+  // scope the set is included. This allows a set of properties to be reused
+  // across subqueries.
+  message PropertySet {
+    string set_id = 1;
+    repeated Subquery.RedfishProperty properties = 2;
+  }
+
   // A unique name for identifying this platform-related query.
   string query_id = 1;
   repeated Subquery subquery = 2;
+  repeated SubquerySet subquery_sets = 3;
+  repeated PropertySet property_sets = 4;
 }

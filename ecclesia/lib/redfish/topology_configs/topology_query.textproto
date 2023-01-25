@@ -1,0 +1,171 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "NodeTopologyV2"
+
+############## Definitions #########
+subquery_sets {
+  set_id: "Chassis_Multiple"
+  subquery_ids: "Chassis"
+  subquery_ids: "Contains"
+  subquery_ids: "ContainedBy"
+  subquery_ids: "Cables_Links_DownstreamChassis"
+  subquery_ids: "Cables_Links_UpstreamChassis"
+}
+
+property_sets {
+  set_id: "Identifiers"
+  properties { property: "@odata.id" type: STRING }
+  properties { property: "Name" type: STRING }
+  properties { property: "Model" type: STRING }
+  properties { property: "@odata.type" type: STRING }
+  properties { name: "State" property: "Status.State" type: STRING }
+  properties { name: "LocationType" property: "Location.PartLocation.LocationType" type: STRING }
+  properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+}
+
+property_sets {
+  set_id: "ChassisProperties"
+  properties { name: "ContainedBy" property: "Links.ContainedBy.@odata.id" type: STRING }
+}
+
+property_sets {
+  set_id: "MemoryProperties"
+  properties { property: "MemoryDeviceType" type: STRING }
+}
+
+############## Redfish Queries #############
+
+# Chassis Subtree
+subquery {
+  subquery_id: "Chassis"
+  redpath: "/Chassis[*]"
+  property_set_ids: "Identifiers"
+  property_set_ids: "ChassisProperties"
+}
+
+# Null query - No RedPath expression.
+# Typically used as parent query for aggregating subqueries.
+subquery {
+  subquery_id: "Chassis_Links"
+  root_subquery_ids: "Chassis"
+  redpath: "/Links"
+}
+
+subquery {
+  subquery_id: "ContainedBy"
+  root_subquery_ids: "Chassis_Links"
+  redpath: "/ContainedBy"
+  property_set_ids: "Identifiers"
+}
+
+subquery {
+  subquery_id: "Contains"
+  root_subquery_ids: "Chassis_Links"
+  redpath: "/Contains[*]"
+  property_set_ids: "Identifiers"
+}
+
+subquery {
+  subquery_id: "Processors"
+  root_subquery_ids: "Chassis_Links"
+  redpath: "/Processors[*]"
+  property_set_ids: "Identifiers"
+}
+
+subquery {
+  subquery_id: "Memory"
+  root_subquery_set_ids: "Chassis_Multiple"
+  root_subquery_ids: "Processors"
+  redpath: "/Memory[*]"
+  property_set_ids: "Identifiers"
+  property_set_ids: "MemoryProperties"
+}
+
+subquery {
+  subquery_id: "Storage"
+  root_subquery_ids: "Chassis_Links"
+  redpath: "/Storage[*]"
+  property_set_ids: "Identifiers"
+}
+
+subquery {
+  subquery_id: "StorageControllers"
+  root_subquery_ids: "Storage"
+  redpath: "/StorageControllers[*]"
+  property_set_ids: "Identifiers"
+}
+
+subquery {
+  subquery_id: "Drives"
+  root_subquery_set_ids: "Chassis_Multiple"
+  root_subquery_ids: "Storage"
+  root_subquery_ids: "Chassis_Links"
+  redpath: "/Drives[*]"
+  property_set_ids: "Identifiers"
+}
+
+subquery {
+  subquery_id: "Fans"
+  root_subquery_set_ids: "Chassis_Multiple"
+  redpath: "/ThermalSubsystem/Fans[*]"
+  property_set_ids: "Identifiers"
+}
+
+subquery {
+  subquery_id: "Assemblies"
+  root_subquery_set_ids: "Chassis_Multiple"
+  redpath: "/Assembly/Assemblies[*]"
+  property_set_ids: "Identifiers"
+}
+
+# Cable Subtree
+subquery {
+  subquery_id: "Cables"
+  redpath: "/Cables[*]"
+  property_set_ids: "Identifiers"
+}
+
+subquery {
+  subquery_id: "Cables_Links_UpstreamChassis"
+  root_subquery_ids: "Cables"
+  redpath: "/Links/UpstreamChassis[*]"
+  property_set_ids: "Identifiers"
+}
+
+subquery {
+  subquery_id: "Cables_Links_UpstreamResources"
+  root_subquery_ids: "Cables"
+  redpath: "/Links/UpstreamResources[*]"
+  property_set_ids: "Identifiers"
+}
+
+# For each upstream chassis, we link downstream datasets
+
+subquery {
+  subquery_id: "Cables_Links_DownstreamChassis"
+  root_subquery_ids: "Cables"
+  redpath: "/Links/DownstreamChassis[*]"
+  property_set_ids: "Identifiers"
+}
+
+subquery {
+  subquery_id: "Cables_Links_DownstreamResources"
+  root_subquery_ids: "Cables"
+  redpath: "/Links/DownstreamResources[*]"
+  property_set_ids: "Identifiers"
+}
+
+subquery {
+  subquery_id: "Cables_Links_DownstreamPorts"
+  root_subquery_ids: "Cables"
+  redpath: "/Links/DownstreamPorts[*]"
+  property_set_ids: "Identifiers"
+}
+
+# Root Of Trust
+subquery {
+  subquery_id: "RootOfTrustCollection"
+  redpath: "/RootOfTrustCollection[*]"
+  property_set_ids: "Identifiers"
+}
