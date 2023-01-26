@@ -342,7 +342,9 @@ cc_library(
 proto_library(
     name = "transport_metrics_proto",
     srcs = ["transport_metrics.proto"],
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+    ],
 )
 
 cc_proto_library(
