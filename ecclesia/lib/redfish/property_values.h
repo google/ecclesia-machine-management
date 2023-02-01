@@ -53,6 +53,7 @@ inline constexpr char kProcessorTypeAccelerator[] = "Accelerator";
 inline constexpr char kProcessorTypeCpu[] = "CPU";
 inline constexpr char kProcessorTypeGPU[] = "GPU";
 inline constexpr char kSwitchTypeNvLink[] = "NVLink";
+inline constexpr char kChassisTypeRackMount[] = "RackMount";
 }  // namespace ecclesia
 
 namespace ecclesia {
