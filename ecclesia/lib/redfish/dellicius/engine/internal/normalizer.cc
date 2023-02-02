@@ -28,6 +28,7 @@
 #include "google/protobuf/timestamp.pb.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_replace.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
@@ -108,7 +109,9 @@ absl::Status NormalizerImplDefault::Normalize(
       if (property_requirement.has_name()) {
         property_out.set_name(property_requirement.name());
       } else {
-        property_out.set_name(property_requirement.property());
+        std::string prop_name = property_requirement.property();
+        absl::StrReplaceAll({{"\\.", "."}}, &prop_name);
+        property_out.set_name(prop_name);
       }
       *data_set_local.add_properties() = std::move(property_out);
     }

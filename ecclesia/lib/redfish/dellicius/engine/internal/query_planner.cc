@@ -53,7 +53,7 @@ using SubqueryHandle = QueryPlanner::SubqueryHandle;
 
 // Pattern for predicate formatted with relational operators:
 constexpr LazyRE2 kPredicateRegexRelationalOperator = {
-    "^([a-zA-Z#@][0-9a-zA-Z.]*)(?:(!=|>|<|=|>=|<=))([a-zA-Z0-9._#]+)$"};
+    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=))([a-zA-Z0-9._#]+)$)"};
 
 constexpr absl::string_view kPredicateSelectAll = "*";
 constexpr absl::string_view kPredicateSelectLastIndex = "last()";

@@ -64,7 +64,7 @@ subquery {
   subquery_id: "PredicateNodeValueIndex3"
   redpath: "/Chassis[*]/Sensors[3]"
   properties { property: "Name" type: STRING }
-  properties { property: "@odata.id" type: STRING }
+  properties { property: "@odata\\.id" type: STRING }
   properties { property: "Reading" type: DOUBLE }
 }
 # Returns Sensor 'Name', 'Reading' and '@odata.id' value from the Sensor
@@ -74,7 +74,7 @@ subquery {
   redpath: "/Chassis[*]/Sensors[last()]"
   properties { property: "Name" type: STRING }
   properties { property: "Reading" type: DOUBLE }
-  properties { property: "@odata.id" type: STRING }
+  properties { property: "@odata\\.id" type: STRING }
 }
 # Returns Sensor 'Name' and 'Reading' along with the nested 'Reading' value from
 # 'UpperCritical' object nested in 'Thresholds' object of the Sensor Resource.
@@ -82,7 +82,7 @@ subquery {
   subquery_id: "PredicateNestedPropertyNested"
   redpath: "/Chassis[*]/Sensors[Thresholds.UpperCritical.Reading]"
   properties { property: "Name" type: STRING }
-  properties { property: "@odata.type" type: STRING }
+  properties { property: "@odata\\.type" type: STRING }
   properties { property: "Reading" type: DOUBLE }
   properties { name: "UpperCriticalThreshold" property: "Thresholds.UpperCritical.Reading" type: DOUBLE }
 }
@@ -90,8 +90,8 @@ subquery {
 # Resource with type #Sensor.v1_2_0.Sensor
 subquery {
   subquery_id: "PredicateNodeValueEqualToStringWith@Odata."
-  redpath: "/Chassis[*]/Sensors[@odata.type=#Sensor.v1_2_0.Sensor]"
-  properties { property: "@odata.id" type: STRING }
+  redpath: "/Chassis[*]/Sensors[@odata\\.type=#Sensor.v1_2_0.Sensor]"
+  properties { property: "@odata\\.id" type: STRING }
 }
 # Returns Sensor 'Name' and 'Reading' value from Sensors that have Name property
 # set as either indus_latm_temp or fan6

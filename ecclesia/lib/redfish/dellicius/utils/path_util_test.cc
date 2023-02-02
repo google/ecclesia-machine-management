@@ -29,7 +29,7 @@ TEST(PathUtilTest, CheckNodeNameSplitsAsExpected) {
   // Nested nodes
   {
     std::vector<std::string> result =
-        SplitNodeNameForNestedNodes(" Thresholds.UpperCritical.@odata.id ");
+        SplitNodeNameForNestedNodes(" Thresholds.UpperCritical.@odata\\.id ");
     std::vector<std::string> expected_nodes = {"Thresholds", "UpperCritical",
                                                "@odata.id"};
     EXPECT_EQ(result, expected_nodes);
@@ -106,6 +106,49 @@ TEST(PathUtilTest, CheckNodeNameCorrectlyResolvesToJsonObj) {
   }
 }
 
+TEST(PathUtilTest, CheckNodeNameWithDot) {
+  // No nesting
+  {
+    std::vector<std::string> result =
+        SplitNodeNameForNestedNodes("#LogService\\.ClearLog");
+    std::vector<std::string> expected_nodes = {"#LogService.ClearLog"};
+    EXPECT_EQ(result, expected_nodes);
+  }
+  // Nested nodes
+  {
+    std::vector<std::string> result =
+        SplitNodeNameForNestedNodes("Actions.#Chassis\\.Reset");
+    std::vector<std::string> expected_nodes = {"Actions", "#Chassis.Reset"};
+    EXPECT_EQ(result, expected_nodes);
+  }
+  {
+    std::vector<std::string> result = SplitNodeNameForNestedNodes(
+        "Actions.#Chassis\\.Reset.@Redfish\\.ActionInfo");
+    std::vector<std::string> expected_nodes = {"Actions", "#Chassis.Reset",
+                                               "@Redfish.ActionInfo"};
+    EXPECT_EQ(result, expected_nodes);
+  }
+  {
+    std::vector<std::string> result = SplitNodeNameForNestedNodes(
+        "Actions.#Chassis\\.Reset.@Redfish\\.ActionInfo.@odata\\.id");
+    std::vector<std::string> expected_nodes = {
+        "Actions", "#Chassis.Reset", "@Redfish.ActionInfo", "@odata.id"};
+    EXPECT_EQ(result, expected_nodes);
+  }
+  {
+    std::vector<std::string> result = SplitNodeNameForNestedNodes(
+        "$Actions.#Chassis\\.Reset.@Redfish\\.ActionInfo.@odata\\.id");
+    std::vector<std::string> expected_nodes = {
+        "$Actions", "#Chassis.Reset", "@Redfish.ActionInfo", "@odata.id"};
+    EXPECT_EQ(result, expected_nodes);
+  }
+  {
+    std::vector<std::string> result =
+        SplitNodeNameForNestedNodes("Storage@odata\\.count");
+    std::vector<std::string> expected_nodes = {"Storage@odata.count"};
+    EXPECT_EQ(result, expected_nodes);
+  }
+}
 }  // namespace
 
 }  // namespace ecclesia

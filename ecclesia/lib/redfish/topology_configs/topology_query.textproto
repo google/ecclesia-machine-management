@@ -15,10 +15,10 @@ subquery_sets {
 
 property_sets {
   set_id: "Identifiers"
-  properties { property: "@odata.id" type: STRING }
+  properties { property: "@odata\\.id" type: STRING }
   properties { property: "Name" type: STRING }
   properties { property: "Model" type: STRING }
-  properties { property: "@odata.type" type: STRING }
+  properties { property: "@odata\\.type" type: STRING }
   properties { name: "State" property: "Status.State" type: STRING }
   properties { name: "LocationType" property: "Location.PartLocation.LocationType" type: STRING }
   properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
@@ -26,7 +26,7 @@ property_sets {
 
 property_sets {
   set_id: "ChassisProperties"
-  properties { name: "ContainedBy" property: "Links.ContainedBy.@odata.id" type: STRING }
+  properties { name: "ContainedBy" property: "Links.ContainedBy.@odata\\.id" type: STRING }
 }
 
 property_sets {

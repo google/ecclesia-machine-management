@@ -19,21 +19,23 @@
 #include <memory>
 
 #include "absl/status/status.h"
+#include "absl/strings/str_replace.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
 
 namespace ecclesia {
 
-std::vector<std::string> SplitNodeNameForNestedNodes(absl::string_view expr) {
-  expr = absl::StripAsciiWhitespace(expr);
+std::vector<std::string> SplitNodeNameForNestedNodes(
+    absl::string_view expression) {
+  constexpr absl::string_view kEscapeSequenceMarker = "$$";
+  expression = absl::StripAsciiWhitespace(expression);
+  std::string expr =
+      absl::StrReplaceAll(expression, {{"\\.", kEscapeSequenceMarker}});
   std::vector<std::string> nodes;
-  if (auto pos = expr.find("@odata."); pos != std::string::npos) {
-    std::string odata_str = std::string(expr.substr(pos));
-    nodes = absl::StrSplit(expr.substr(0, pos), '.', absl::SkipEmpty());
-    nodes.push_back(std::move(odata_str));
-  } else {
-    nodes = absl::StrSplit(expr, '.', absl::SkipEmpty());
+  nodes = absl::StrSplit(expr, '.', absl::SkipEmpty());
+  for (auto &node : nodes) {
+    absl::StrReplaceAll({{kEscapeSequenceMarker, "."}}, &node);
   }
   return nodes;
 }

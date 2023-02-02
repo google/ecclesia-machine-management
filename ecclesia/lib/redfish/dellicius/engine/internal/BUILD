@@ -34,6 +34,7 @@ cc_library(
         "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
         "@com_google_protobuf//:protobuf",
     ],

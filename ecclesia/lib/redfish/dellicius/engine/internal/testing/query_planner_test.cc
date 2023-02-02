@@ -262,7 +262,47 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
                 .request_type_to_metadata_size(),
             0);
 }
-
+TEST_F(QueryPlannerTestRunner, QueryWithCompundNodeNames) {
+  std::string chassis_in_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_in/chassis_in.textproto"));
+  std::string chassis_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_out/chassis_out.textproto"));
+  FakeClock clock(absl::FromUnixSeconds(10));
+  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
+  // Instantiate a passthrough normalizer.
+  auto default_normalizer = BuildDefaultNormalizer();
+  server.AddHttpGetHandlerWithData("/redfish/v1/Chassis/chassis", R"json(
+    {
+        "@odata.id": "/redfish/v1/Chassis/chassis",
+        "@odata.type": "#Chassis.v1_17_0.Chassis",
+        "Actions": {
+            "#Chassis.Reset": {
+                "@Redfish.ActionInfo": "/redfish/v1/Chassis/chassis/ResetActionInfo",
+                "target": "/redfish/v1/Chassis/chassis/Actions/Chassis.Reset"
+            }
+        },
+        "Model": "Indus",
+        "Id": "chassis",
+        "Links": {
+            "Storage": [],
+            "Storage@odata.count": 0
+        }
+    }
+  )json");
+  auto raw_intf = server.RedfishClientInterface();
+  DelliciusQuery query =
+      ParseTextFileAsProtoOrDie<DelliciusQuery>(chassis_in_path);
+  absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qp = BuildQueryPlanner(
+      query, RedPathRedfishQueryParams{}, default_normalizer.get());
+  ASSERT_TRUE(qp.ok());
+  DelliciusQueryResult query_result =
+      (*qp)->Run(raw_intf->GetRoot(), clock, nullptr);
+  server.ClearHandlers();
+  DelliciusQueryResult intent_output =
+      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(chassis_out_path);
+  EXPECT_THAT(intent_output,
+              IgnoringRepeatedFieldOrdering(EqualsProto(query_result)));
+}
 }  // namespace
 
 }  // namespace ecclesia

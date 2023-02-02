@@ -24,7 +24,8 @@ namespace ecclesia {
 
 // Gets all the node names in the given expression.
 // parent.child.grandchild -> {parent, child, grandchild}
-std::vector<std::string> SplitNodeNameForNestedNodes(absl::string_view expr);
+std::vector<std::string> SplitNodeNameForNestedNodes(
+    absl::string_view expression);
 
 // Helper function to resolve node_name for nested nodes if any and return json
 // object to be evaluated for required property.
