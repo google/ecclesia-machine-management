@@ -122,10 +122,20 @@ std::optional<std::string> GetSlotDevpathFromNodeTopology(
     auto parent_devpath =
         GetDevpathForUri(topology, absl::StrJoin(uri_parts, "/"));
     if (parent_devpath.has_value()) {
-      const auto slot_location =
+      // The slot_location could be PartLocation property in Location or
+      // PhysicalLocation, because Redfish specification uses "PhysicalLocation"
+      // instead of "Location" in Drives resource post v1.4.
+      auto slot_location =
           obj[kRfPropertyLocation][kRfPropertyPartLocation].AsObject();
+      if (!slot_location) {
+        slot_location =
+            obj[kRfPropertyPhysicalLocation][kRfPropertyPartLocation]
+                .AsObject();
+      }
+
       if (slot_location) {
         auto label = slot_location->GetNodeValue<PropertyServiceLabel>();
+
         if (label.has_value()) {
           return absl::StrCat(*parent_devpath, ":connector:", *label);
         }

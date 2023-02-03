@@ -347,5 +347,75 @@ TEST(GetDevpathForObjectAndNodeTopology, EmptyIfTypeMissing) {
   EXPECT_FALSE(obj_devpath.has_value());
 }
 
+TEST(GetSlotDevpathFromNodeTopology, DevpathFromNodeLocation) {
+  auto intf = NewJsonMockupInterface(R"json(
+    {
+      "@odata.context": "/redfish/v1/$metadata#Drive.Drive",
+      "@odata.id": "/redfish/v1/Chassis/test/Drives/SataDrive_0",
+      "Location": {
+        "PartLocation": {
+            "LocationType": "Slot",
+            "ServiceLabel": "SATA"
+        }
+      }
+    }
+  )json");
+  auto json = intf->GetRoot().AsObject();
+  ASSERT_NE(json, nullptr);
+
+  NodeTopology topology;
+  absl::string_view uri = "test/redfish/v1/Chassis/test",
+                    test_devpath = "/phys";
+  {
+    auto node = std::make_unique<Node>();
+    node->local_devpath = test_devpath;
+    topology.uri_to_associated_node_map[uri].push_back(node.get());
+    topology.nodes.push_back(std::move(node));
+  }
+
+  std::string_view parent_uri =
+                       "test/redfish/v1/Chassis/test/Drives/SataDrive_0",
+                   expect_devpath = "/phys:connector:SATA";
+  std::optional<std::string> slot_devpath =
+      GetSlotDevpathFromNodeTopology(*json, parent_uri, topology);
+  ASSERT_TRUE(slot_devpath.has_value());
+  EXPECT_EQ(*slot_devpath, expect_devpath);
+}
+
+TEST(GetSlotDevpathFromNodeTopology, DevpathFromNodePhysicalLocation) {
+  auto intf = NewJsonMockupInterface(R"json(
+    {
+      "@odata.context": "/redfish/v1/$metadata#Drive.Drive",
+      "@odata.id": "/redfish/v1/Chassis/test/Drives/SataDrive_0",
+      "PhysicalLocation": {
+        "PartLocation": {
+            "LocationType": "Slot",
+            "ServiceLabel": "SATA"
+        }
+      }
+    }
+  )json");
+  auto json = intf->GetRoot().AsObject();
+  ASSERT_NE(json, nullptr);
+
+  NodeTopology topology;
+  absl::string_view uri = "test/redfish/v1/Chassis/test",
+                    test_devpath = "/phys";
+  {
+    auto node = std::make_unique<Node>();
+    node->local_devpath = test_devpath;
+    topology.uri_to_associated_node_map[uri].push_back(node.get());
+    topology.nodes.push_back(std::move(node));
+  }
+
+  std::string_view parent_uri =
+                       "test/redfish/v1/Chassis/test/Drives/SataDrive_0",
+                   expect_devpath = "/phys:connector:SATA";
+  std::optional<std::string> slot_devpath =
+      GetSlotDevpathFromNodeTopology(*json, parent_uri, topology);
+  ASSERT_TRUE(slot_devpath.has_value());
+  EXPECT_EQ(*slot_devpath, expect_devpath);
+}
+
 }  // namespace
 }  // namespace ecclesia
