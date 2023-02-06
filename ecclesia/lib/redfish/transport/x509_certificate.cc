@@ -26,6 +26,7 @@
 #include "absl/base/casts.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -133,7 +134,9 @@ absl::StatusOr<SubjectAltName> GetSubjectAltName(absl::string_view pem) {
       }
       case GEN_DNS: {
         ECCLESIA_ASSIGN_OR_RETURN(std::string dns, Asn1ToUtf8(name->d.dNSName));
-        fqdns.push_back(std::move(dns));
+        if (absl::EndsWith(dns, ".prod.google.com")) {
+          fqdns.push_back(std::move(dns));
+        }
         break;
       }
       default:
