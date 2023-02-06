@@ -3,8 +3,9 @@ This directory houses key modules that implement a layered architecture for
 managing life cycle of a Dellicius Query.
 
 ## Dellicius Query Engine
-Dellicius query is a query language that allows a Redfish service to be accessed
-as a single JSON document. The query needs an interpreter and dispatcher to
+Dellicius query is a proto that encapsulates one or more RedPath expressions and optional property requirements.
+RedPath is a string syntax inspired by XPath1.0 and spec’d in DMTF Client specification to allow a client to specify path to Redfish resources and properties in the Redfish data model. It allows a Redfish client to query Redfish Service as if it were a single JSON document.
+A Dellicius query needs an interpreter and dispatcher to
 translate query operations into Redfish resource requests and dispatch over
 specific transport interface.
 Dellicius Query Engine is a logical composition of interpreter, dispatcher and
@@ -20,20 +21,20 @@ for a query.
 A query, uniquely identified in a set of queries by a query id,  is composed of
 one or more subqueries and each subquery has following components:
 
-1. **RedPath**: Query language based on XPath.
+1. **redpath**: String based on XPath path expression.
 
         <RedPath> ::= "/" <RelativeLocationPath> ;
         <RelativeLocationPath> ::= [<RelativeLocationPath> "/"] <Step> ;
-        <Step> ::= <NodeTest>[<Predicate>] ;
+        <Step> ::= <NodeName>[<Predicate>] ;
 
     A redpath, based on XPath v1.0,  is a sequence of ‘Step’ expressions.
-    A 'Step' expression is composed of 'NodeTest' and 'Predicate'. ‘NodeTest’ is
+    A 'Step' expression is composed of 'NodeName' and 'Predicate'. ‘NodeName’ is
     the qualified name of Redfish resource and ‘Predicate’ is filter operation
-    to further refine the nodes returned for the NodeTest expression. RedPath
+    to further refine the nodes returned for the NodeName expression. RedPath
     uses abbreviated syntax where child axis is the default axis that narrows
     the scope of a ‘Step’ expression to children of the context node which is
     the base Redfish resource for any ‘Step’ in the redpath. All redpaths begin
-    with service root as the context node. 'Node Test' specifies the qualified
+    with service root as the context node. 'NodeName' specifies the qualified
     name of the resource to match with. 'Predicate' is the expression to further
     refine the set of nodes selected by the location step.\
     Example:
@@ -42,68 +43,115 @@ one or more subqueries and each subquery has following components:
         Absolute Path :- /Chassis[*]/Processor[*]
         Relative Path :- Chassis[*]/Processor[*] and Processor[*]
         Location Step :- Chassis[*]
-        Node Test :- Chassis
+        NodeName :- Chassis
         Predicate :- [*]
 
-2. **Property Requirements**:
+2. **properties**:
    Each subquery calls out the properties to be queried
    from the filtered Redfish node-set. An optional normalization specification
-   for mapping properties to specific variables can be specified using the ‘key’
+   for mapping properties to specific variables can be specified using the ‘name’
    attribute.
-3. **Subquery Id**: String field uniquely identifying subquery in a
+3. **subquery_id**: String field uniquely identifying subquery in a
    query.
+4. **root_subquery_ids**: Repeated string attribute, identifying parent subquery relative to which the given subquery has to execute.
 
    Example:-
 
     ```textproto
-    query_id: "AssemblyCollector"
+    query_id: "FirmwareListWithRelatedItem"
     subquery {
-        subquery_id: "Memory"
-        redpath: "/Systems[*]/Memory[*]"
-        properties { key: "serial_number" property: "SerialNumber"}
-        properties { key: "part_number" property: "PartNumber"}
+      subquery_id: "SoftwareInventory"
+      redpath: "/UpdateService/FirmwareInventory[*]"
+      properties { property: "Name" type: STRING }
+      properties { property: "Version" type: STRING }
     }
-
     subquery {
-        subquery_id: "Processors"
-        redpath: "/Systems[*]/Processors[*]"
-        properties { key: "serial_number" property: "SerialNumber"}
-        properties { key: "part_number" property: "PartNumber"}
-    }
-
-    subquery {
-        subquery_id: "Chassis"
-        redpath: "/Chassis[*]"
-        properties { key: "serial_number" property: "SerialNumber"}
-        properties { key: "part_number" property: "PartNumber"}
+      subquery_id: "RelatedItem"
+      root_subquery_ids: "SoftwareInventory"
+      redpath: "/RelatedItem[*]"
+      properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
     }
     ```
 
->'Key' is an optional attribute  in the properties specification within a
-  subquery. The default normalization level is no normalization and data shall
-  transparently be sent to the client with the value of key attribute set to the
-  requested Redfish property name. A Dellicius query does not impose a
-  relationship requirement between the subqueries. Although, performance wise,
-  it is optimal to batch subqueries whose redpaths have common ancestors because
-  the query engine  batch processes the subqueries and dispatches request only
-  for unique resources to avoid redundant GET calls
+5. **name**: Optional attribute in the properties specification within a
+  subquery to normalize a Redfish property value into a given variable name.
+
+  The default normalization level is no normalization and data shall
+  transparently be sent to the client with the value of name attribute set as the
+  requested Redfish property name.
+
+
+  >Performance wise,
+  it is optimal to batch subqueries whose redpaths have common parent RedPath prefix since
+  the query engine batch processes all subqueries and dispatches request only
+  for unique RedPath prefix to avoid redundant GET calls.
 
 
 ### Dellicius Query Result
-Dellicius query output comprises metadata for the query operation that describes
-performance characteristics like query latency and a sequence of subquery
-results.
+Dellicius query output is a collection of subquery results.
 
 Following are the key components of a Dellicius Query Result:
 
-1. **Query Identifier**
-2. **Start Timestamp**: Represents the point in time when a delicious query is received by the query engine.
-3. **End Timestamp**: Represents the point in time when the  last subquery response within a delicious query is processed by the query engine.
-4. **Subquery Output**: Map where key is unique subquery id string and value is collection of data sets. A data set in this context is a subset of properties collected from a Redfish resource per the property specification in the corresponding subquery of a Dellicius query. A data set has following properties:
-    1. **Devpath**: Uniquely identifies the source of the dataset based on the physical topology of the system.
-    2. **Data**: Repeated field capturing the requested property and the identifier.
-        1. **Name**: Identifies the Redfish property parsed for this subquery when the engine is configured for no normalization. Else, represents a variable the Redfish property is mapped to for property level normalization.
-        2. **Value**: Value of requested Redfish property.
+1. **query_id**: Identifies the Dellicius Query for the given output.
+2. **start_timestamp**: Represents the point in time when a delicious query is received by the query engine.
+3. **end_timestamp**: Represents the point in time when the  last subquery response within a delicious query is processed by the query engine.
+4. **subquery_output_by_id**: Map where key is unique subquery id string and value is collection of data sets. A data set in this context is a subset of properties collected from a Redfish resource per the property requirements in the corresponding subquery of a Dellicius query. A data set has following properties:
+    1. **devpath**: Uniquely identifies the source of the dataset based on the physical topology of the system.
+    2. **data**: Repeated field capturing the requested property and the identifier.
+        1. **name**: Identifies the Redfish property parsed for this subquery when the engine is configured for no normalization. Else, represents a variable the Redfish property is mapped to for property level normalization.
+        2. **[type]_value**: Value of requested Redfish property.
+
+```textproto
+query_id: "SensorCollector"
+subquery_output_by_id {
+  key: "Sensors"
+  value {
+    data_set {
+      devpath: "/phys/SYS_FAN0"
+      data {
+        name: "Name"
+        string_value: "fan0"
+      }
+      data {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      data {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      data {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_set {
+      devpath: "/phys/SYS_FAN1"
+      data {
+        name: "Name"
+        string_value: "fan1"
+      }
+      data {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      data {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      data {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+  }
+start_timestamp {
+  seconds: 10
+}
+end_timestamp {
+  seconds: 10
+}
+```
 
 ## Usage
 
