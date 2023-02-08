@@ -60,7 +60,7 @@ qOFbsHcmv8mSUfig0AaTorZQpS8htNtcsCl5HhNgAyCQh+QzvBvesrEz5Cw=
 -----END CERTIFICATE-----
 )";
 
-constexpr unsigned int kRefreshIntervalSec = 0;
+constexpr unsigned int kRefreshIntervalSec = 60;
 }  // namespace
 
 void StaticBufferBasedTlsOptions::SetToInsecure() {
