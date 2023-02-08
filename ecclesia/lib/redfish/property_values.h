@@ -35,6 +35,7 @@ inline constexpr char kReadingUnitPercent[] = "%";
 inline constexpr char kReadingUnitJoules[] = "J";
 inline constexpr char kReadingUnitHertz[] = "Hz";
 inline constexpr char kHealthOk[] = "OK";
+inline constexpr char kLocationTypeSlot[] = "Slot";
 inline constexpr char kStateEnabled[] = "Enabled";
 inline constexpr char kStateDisabled[] = "Disabled";
 inline constexpr char kStateAbsent[] = "Absent";
