@@ -47,7 +47,7 @@ class Normalizer {
    public:
     virtual ~ImplInterface() = default;
 
-    virtual absl::Status Normalize(const RedfishVariant &variant,
+    virtual absl::Status Normalize(const RedfishObject &redfish_object,
                                    const DelliciusQuery::Subquery &query,
                                    SubqueryDataSet &data_set) const = 0;
   };
@@ -55,11 +55,13 @@ class Normalizer {
   // Returns normalized dataset, possibly empty. Normalizers can be nested
   // and empty dataset on one level can be extended in outer normalizers.
   absl::StatusOr<SubqueryDataSet> Normalize(
-      const RedfishVariant &variant, const DelliciusQuery::Subquery &query) {
+      const RedfishObject &redfish_object,
+      const DelliciusQuery::Subquery &query) {
     if (impl_chain_.empty()) return absl::NotFoundError("No normalizers added");
     SubqueryDataSet data_set;
     for (const auto &impl : impl_chain_) {
-      ECCLESIA_RETURN_IF_ERROR(impl->Normalize(variant, query, data_set));
+      ECCLESIA_RETURN_IF_ERROR(
+          impl->Normalize(redfish_object, query, data_set));
     }
     // Return an error if data set is empty - no field and no devpath
     if (data_set.properties().empty() && !data_set.has_devpath()) {

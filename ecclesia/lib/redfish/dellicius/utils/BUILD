@@ -17,6 +17,7 @@ cc_test(
     srcs = ["path_util_test.cc"],
     deps = [
         ":path_util",
+        "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/testing:json_mockup",
         "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_main",

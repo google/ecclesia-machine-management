@@ -62,10 +62,12 @@ class QueryPlanner final : public QueryPlannerInterface {
           normalizer_(normalizer),
           redpath_steps_(std::move(redpath_steps)) {}
 
-    // Parses given Redfish Resource for properties requested in the subquery
-    // and prepares dataset to be appended in SubqueryOutput.
+    // Parses given 'redfish_object' for properties requested in the subquery
+    // and prepares dataset to be appended in 'result'.
+    // When subqueries are linked, the normalized dataset is added to the given
+    // 'parent_subquery_dataset' instead of the 'result'
     absl::StatusOr<SubqueryDataSet *> Normalize(
-        const RedfishVariant &node, DelliciusQueryResult &result,
+        const RedfishObject &redfish_object, DelliciusQueryResult &result,
         SubqueryDataSet *parent_subquery_dataset);
 
     void AddChildSubqueryHandle(SubqueryHandle *child_subquery_handle) {
@@ -121,14 +123,10 @@ class QueryPlanner final : public QueryPlannerInterface {
     SubqueryHandle::RedPathIterator redpath_steps_iterator;
   };
 
-  // Encapsulates key elements of a query operation.
-  // An execution context is created for each node in Redfish tree during pre
-  // order traversal where each node in the tree acts as the local root for all
-  // redpath iterators.
-  struct QueryExecutionContext {
+  struct ContextNode {
     // Redfish object serving as context node for RedPath expression.
     std::unique_ptr<RedfishObject> redfish_object;
-    // RedPaths to execute with Redfish object as root.
+    // RedPaths to execute relative to the Redfish Object as context node.
     std::vector<RedPathContext> redpath_ctx_multiple;
     // Last RedPath executed to get the Redfish object.
     std::string last_executed_redpath;
@@ -159,7 +157,7 @@ class QueryPlanner final : public QueryPlannerInterface {
   // from each subquery to further refine the data that forms the context node
   // of next step expression in each qualified subquery.
   void ExecuteRedPathStepFromEachSubquery(
-      QueryExecutionContext &execution_context, DelliciusQueryResult &result,
+      ContextNode &context_node, DelliciusQueryResult &result,
       QueryTracker *tracker);
   const std::string plan_id_;
   // Collection of all SubqueryHandle instances including both root and child

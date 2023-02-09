@@ -89,14 +89,14 @@ bool ApplyStringComparisonFilter(F filter_condition,
 }
 
 // Handler for predicate expressions containing relational operators.
-bool PredicateFilterByNodeComparison(const RedfishVariant &variant,
+bool PredicateFilterByNodeComparison(const RedfishObject &redfish_object,
                                      absl::string_view predicate) {
   std::string node_name, op, test_value;
   bool ret = false;
   if (RE2::FullMatch(predicate, *kPredicateRegexRelationalOperator, &node_name,
                      &op, &test_value)) {
     double value;
-    auto json_obj = ResolveNodeNameToJsonObj(variant, node_name);
+    auto json_obj = ResolveNodeNameToJsonObj(redfish_object, node_name);
     if (!json_obj.ok()) {
       return false;
     }
@@ -137,15 +137,14 @@ bool PredicateFilterByNodeComparison(const RedfishVariant &variant,
 }
 
 // Handler for '[nodename]'
-// Checks if given Redfish Resource encapsulated in the Variant contains
-// predicate string.
-bool PredicateFilterByNodeName(const RedfishVariant &variant,
+// Checks if given Redfish Resource contains predicate string.
+bool PredicateFilterByNodeName(const RedfishObject &redfish_object,
                                absl::string_view predicate) {
   std::vector<std::string> node_names = SplitNodeNameForNestedNodes(predicate);
   if (node_names.empty()) {
     return false;
   }
-  nlohmann::json leaf = variant.AsObject()->GetContentAsJson();
+  nlohmann::json leaf = redfish_object.GetContentAsJson();
   for (auto const &name : node_names) {
     if (!leaf.contains(name)) {
       return false;
@@ -155,7 +154,7 @@ bool PredicateFilterByNodeName(const RedfishVariant &variant,
   return true;
 }
 
-bool ApplyPredicateRule(const RedfishVariant &node, size_t node_index,
+bool ApplyPredicateRule(const RedfishObject &redfish_object, size_t node_index,
                         size_t node_set_size,
                         const SubqueryHandle::RedPathIterator &iter) {
   std::string_view predicate = iter->second;
@@ -200,10 +199,11 @@ bool ApplyPredicateRule(const RedfishVariant &node, size_t node_index,
                              return absl::StrContains(expr, op);
                            })) {
       // Look for predicate expression containing relational operators.
-      single_predicate_result = PredicateFilterByNodeComparison(node, expr);
+      single_predicate_result =
+          PredicateFilterByNodeComparison(redfish_object, expr);
     } else {
       // Filter node-set by NodeName
-      single_predicate_result = PredicateFilterByNodeName(node, expr);
+      single_predicate_result = PredicateFilterByNodeName(redfish_object, expr);
     }
     // Apply logical operation.
     if (logical_operation == kLogicalOperatorAnd) {
@@ -238,12 +238,11 @@ NodeNameToRedPathContexts DeduplicateNodeNamesAcrossSubqueries(
 
 }  // namespace
 
-// Normalize Redfish response per the property requirements in subquery.
 absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
-    const RedfishVariant &node, DelliciusQueryResult &result,
+    const RedfishObject &redfish_object, DelliciusQueryResult &result,
     SubqueryDataSet *parent_subquery_dataset) {
   ECCLESIA_ASSIGN_OR_RETURN(SubqueryDataSet subquery_dataset,
-                            normalizer_->Normalize(node, subquery_));
+                            normalizer_->Normalize(redfish_object, subquery_));
 
   // Insert normalized data in the parent Subquery dataset if provided.
   // Otherwise, add the dataset in the query result.
@@ -264,36 +263,38 @@ absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
 }
 
 void QueryPlanner::ExecuteRedPathStepFromEachSubquery(
-    QueryExecutionContext &execution_context, DelliciusQueryResult &result,
+    ContextNode &context_node, DelliciusQueryResult &result,
     QueryTracker *tracker) {
-  NodeNameToRedPathContexts node_name_to_redpath_contexts =
-      DeduplicateNodeNamesAcrossSubqueries(
-          std::move(execution_context.redpath_ctx_multiple));
-
-  // Return if the Context Node is invalid or there is no redpath expression
-  // left to process across subqueries.
-  if (execution_context.redfish_object == nullptr ||
-      node_name_to_redpath_contexts.empty()) {
+  // Return if the Context Node does not contain a valid RedfishObject.
+  if (context_node.redfish_object == nullptr) {
     return;
   }
 
-  // Maps RedPath of context node to the execution context. This mapping is used
-  // to aggregate Subqueries operating on same context node along with any
-  // metadata applicable to the context node.
-  absl::flat_hash_map<std::string, QueryExecutionContext>
-      redpath_to_execution_ctx;
+  // First, we will pull NodeName from each RedPath expression across subqueries
+  // and then deduplicate them to get a map between NodeName and RedPaths that
+  // have the NodeName in common.
+  // Recall that in a RedPath "/Chassis[*]/Sensors[*]", RedPath steps are
+  // "Chassis[*]" and "Sensors[*]" and NodeName expressions are "Chassis" and
+  // "Sensors".
+  NodeNameToRedPathContexts node_name_to_redpath_contexts =
+      DeduplicateNodeNamesAcrossSubqueries(
+          std::move(context_node.redpath_ctx_multiple));
 
-  // Track last executed RedPath per indexed node. This differs from
-  // last_executed_path which is either a singleton resource or collection
-  std::string last_executed_index_redpath;
+  // Return if there is no redpath expression left to process across subqueries.
+  if (node_name_to_redpath_contexts.empty()) {
+    return;
+  }
 
-  // We will query NodeName from each NodeName to RedPathContexts pair and
-  // apply predicate expressions from each RedPath to filter the nodes
-  // to produce next set of context nodes where each context node will have a
-  // similar NodeName to RedPath Contexts pairing.
+  // Set of Nodes that are obtained by executing RedPath expressions relative to
+  // Redfish Object encapsulated in given 'context_node'.
+  std::vector<ContextNode> context_nodes;
+
+  // We will query each NodeName in NodeName to RedPath context map created
+  // above and apply predicate expressions from each RedPath to filter the nodes
+  // that produces next set of context nodes.
   for (auto &[node_name, redpath_ctx_multiple] :
        node_name_to_redpath_contexts) {
-    std::string last_executed_redpath = execution_context.last_executed_redpath;
+    std::string last_executed_redpath = context_node.last_executed_redpath;
 
     // Reference to allow capture in the PredicateRunner.
     std::vector<RedPathContext> &redpath_ctx_list_mapped_to_node =
@@ -309,7 +310,7 @@ void QueryPlanner::ExecuteRedPathStepFromEachSubquery(
 
     // Dispatch Redfish Request for the Redfish Resource associated with the
     // NodeName expression.
-    RedfishVariant node_set_as_variant = execution_context.redfish_object->Get(
+    RedfishVariant node_set_as_variant = context_node.redfish_object->Get(
         node_name, get_params_for_redpath);
 
     // Add last executed RedPath to the record.
@@ -339,87 +340,65 @@ void QueryPlanner::ExecuteRedPathStepFromEachSubquery(
     // node for executing next NodeName expression.
     // Example: {"/Chassis[1]" : {SQ1, SQ4, SQ5}},
     //           "/Chassis[4]" : {SQ1, SQ4, SQ9}}
-    auto apply_predicate_from_each_subquery = [&](RedfishVariant node,
+    auto apply_predicate_from_each_subquery = [&](std::unique_ptr<RedfishObject>
+                                                      redfish_object,
                                                   size_t node_index,
                                                   size_t node_set_size) {
+      if (redfish_object == nullptr) return;
+      ContextNode new_context_node = {
+          .redfish_object = std::move(redfish_object),
+          .last_executed_redpath = last_executed_redpath};
       for (auto &redpath_ctx : redpath_ctx_list_mapped_to_node) {
-        // On successfully refining the node-set using predicate,
-        // either prepare subquery response or continue query with
-        // subordinate resources of the refined node-set.
-        if (!ApplyPredicateRule(node, node_index, node_set_size,
+        if (!ApplyPredicateRule(*new_context_node.redfish_object, node_index,
+                                node_set_size,
                                 redpath_ctx.redpath_steps_iterator)) {
           continue;
         }
-
+        // The Redfish object meets the predicate criteria of the RedPath
+        // expression. Now check whether the query needs to continue or we need
+        // to prepare the response if we have reached end of RedPath expression.
         auto &subquery_handle = redpath_ctx.subquery_handle;
         bool is_end_of_redpath =
             subquery_handle->IsEndOfRedPath(redpath_ctx.redpath_steps_iterator);
 
         // If there aren't any child subqueries and all step expressions in the
-        // current SubqueryHandle's RedPath have been processed, we can proceed
-        // to data normalization.
+        // current RedPath context have been processed, we can proceed to data
+        // normalization.
         if (is_end_of_redpath && !subquery_handle->HasChildSubqueries()) {
           subquery_handle
-              ->Normalize(node, result, redpath_ctx.root_redpath_dataset)
+              ->Normalize(*new_context_node.redfish_object, result,
+                          redpath_ctx.root_redpath_dataset)
               .IgnoreError();
         } else {
-          // Prepare for Querying the next step expression in RedPath. The
-          // context node for the next query operation will be the refined
-          // node-set obtained after applying predicate expression.
-          std::unique_ptr<RedfishObject> obj = node.AsObject();
-          // Redfish Object must be valid to serve as context node.
-          if (obj == nullptr) {
-            continue;
-          }
-          auto query_plan_entry =
-              redpath_to_execution_ctx.find(last_executed_index_redpath);
-
-          // We will construct a new execution context using the
-          // filtered Redfish Resource as context node if none exists.
-          if (query_plan_entry == redpath_to_execution_ctx.end()) {
-            QueryExecutionContext new_execution_context;
-            new_execution_context.redfish_object = std::move(obj);
-            new_execution_context.last_executed_redpath = last_executed_redpath;
-            redpath_to_execution_ctx.emplace(last_executed_index_redpath,
-                                             std::move(new_execution_context));
-          }
-
-          // Add all the current subquery handle to the list of Subquery
-          // Handles that share the same context node for their next
-          // redpath expression
-          std::vector<RedPathContext> &redpath_contexts =
-              redpath_to_execution_ctx[last_executed_index_redpath]
-                  .redpath_ctx_multiple;
           if (is_end_of_redpath) {
-            // All RedPath step expressions of current SubqueryHandle have been
-            // processed. We can normalize the data to prepare the subquery
-            // response.
             absl::StatusOr<SubqueryDataSet *> last_normalized_dataset;
             if (last_normalized_dataset = subquery_handle->Normalize(
-                    node, result, redpath_ctx.root_redpath_dataset);
+                    *new_context_node.redfish_object, result,
+                    redpath_ctx.root_redpath_dataset);
                 !last_normalized_dataset.ok()) {
               continue;
             }
 
             // Since this SubqueryHandle has linked child SubqueryHandles,
-            // we will insert all the child Handles in the execution context
-            // to be executed using the new context node.
+            // we will insert all the RedPath contexts in the list tracked for
+            // the new context node.
             for (auto &child_subquery_handle :
                  subquery_handle->GetChildSubqueryHandles()) {
               if (child_subquery_handle == nullptr) continue;
-              redpath_contexts.push_back(
+              new_context_node.redpath_ctx_multiple.push_back(
                   {child_subquery_handle, *last_normalized_dataset,
                    child_subquery_handle->GetRedPathIterator()});
             }
           } else {
-            redpath_contexts.push_back(redpath_ctx);
-            // Load next step expression in RedPath that will query the redfish
-            // object in the new execution context serving as new context
-            // node.
-            ++redpath_contexts.back().redpath_steps_iterator;
+            new_context_node.redpath_ctx_multiple.push_back(redpath_ctx);
+            // Load next step expression in the RedPath that will execute
+            // relative to the new context node.
+            ++new_context_node.redpath_ctx_multiple.back()
+                  .redpath_steps_iterator;
           }
         }
       }
+      context_nodes.push_back(std::move(new_context_node));
     };
 
     // Apply predicate expression rule on each Redfish Resource in collection.
@@ -429,28 +408,26 @@ void QueryPlanner::ExecuteRedPathStepFromEachSubquery(
       node_count = iter->Size();
       // As query planner is iterating over each resource in collection and
       // applying predicate expression from all subquery handles mapped to the
-      // node, from tracker's perspective QueryPlanner is executing [*]. Hence
-      // RedPath expressions in tracker will differ from 'last_executed_redpath'
-      // in execution context which creates context for indexed nodes as well.
+      // node, from tracker's perspective QueryPlanner is executing [*].
       absl::StrAppend(&last_executed_redpath, "[", kPredicateSelectAll, "]");
       if (tracker) {
         tracker->redpaths_queried.insert({last_executed_redpath, GetParams{}});
       }
       for (size_t index = 0; index < node_count; ++index) {
-        absl::StrAppend(&last_executed_index_redpath, "[", index, "]");
-        apply_predicate_from_each_subquery(node_set_as_variant[index], index,
+        RedfishVariant indexed_node = node_set_as_variant[index];
+        if (!indexed_node.status().ok()) continue;
+        apply_predicate_from_each_subquery(indexed_node.AsObject(), index,
                                            node_count);
       }
     } else {
-      absl::StrAppend(&last_executed_index_redpath, "[", 0, "]");
-      apply_predicate_from_each_subquery(std::move(node_set_as_variant), 0,
+      apply_predicate_from_each_subquery(node_set_as_variant.AsObject(), 0,
                                          node_count);
     }
   }
-  // Now, for each new context node obtained after applying Predicates, execute
-  // next RedPath Step expression from the mapped RedPath Iterators in the
-  // execution context.
-  for (auto &[_, qec] : redpath_to_execution_ctx) {
+  // Now, for each new Context node obtained after applying Predicate expression
+  // from all RedPath expressions, execute next RedPath Step expression from
+  // every RedPath context mapped to the context node.
+  for (auto &qec : context_nodes) {
     ExecuteRedPathStepFromEachSubquery(qec, result, tracker);
   }
 }
@@ -465,15 +442,15 @@ DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
   }
   result.set_query_id(plan_id_);
   if (auto obj = variant.AsObject()) {
-    QueryExecutionContext execution_context{.redfish_object = std::move(obj)};
+    ContextNode context_node{.redfish_object = std::move(obj)};
     for (auto &subquery_handle : subquery_handles_) {
       if (subquery_handle && subquery_handle->IsRootSubquery()) {
-        execution_context.redpath_ctx_multiple.push_back(
+        context_node.redpath_ctx_multiple.push_back(
             {subquery_handle.get(), nullptr,
              subquery_handle->GetRedPathIterator()});
       }
     }
-    ExecuteRedPathStepFromEachSubquery(execution_context, result, tracker);
+    ExecuteRedPathStepFromEachSubquery(context_node, result, tracker);
   }
   timestamp = AbslTimeToProtoTime(clock.Now());
   if (timestamp.ok()) {

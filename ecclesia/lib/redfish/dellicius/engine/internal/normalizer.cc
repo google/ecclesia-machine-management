@@ -40,7 +40,8 @@
 namespace ecclesia {
 
 absl::Status NormalizerImplDefault::Normalize(
-    const RedfishVariant &var, const DelliciusQuery::Subquery &subquery,
+    const RedfishObject &redfish_object,
+    const DelliciusQuery::Subquery &subquery,
     SubqueryDataSet &data_set_local) const {
   for (const auto &property_requirement : subquery.properties()) {
     SubqueryDataSet::Property property_out;
@@ -51,7 +52,7 @@ absl::Status NormalizerImplDefault::Normalize(
     // We will split the property name to ensure we process all node names in
     // the property expression.
     absl::StatusOr<nlohmann::json> json_obj =
-        ResolveNodeNameToJsonObj(var, property_name);
+        ResolveNodeNameToJsonObj(redfish_object, property_name);
     if (!json_obj.ok()) {
       // It is not an error if normalizer fails to normalize a property if
       // required property is not part of Resource attributes.
@@ -120,15 +121,10 @@ absl::Status NormalizerImplDefault::Normalize(
 }
 
 absl::Status NormalizerImplAddDevpath::Normalize(
-    const RedfishVariant &var, const DelliciusQuery::Subquery &subquery,
-    SubqueryDataSet &data_set) const {
-  std::unique_ptr<RedfishObject> redfish_object = var.AsObject();
-  if (redfish_object == nullptr) {
-    return absl::OkStatus();
-  }
-
+    const RedfishObject &redfish_object,
+    const DelliciusQuery::Subquery &subquery, SubqueryDataSet &data_set) const {
   std::optional<std::string> devpath =
-      GetDevpathForObjectAndNodeTopology(*redfish_object, topology_);
+      GetDevpathForObjectAndNodeTopology(redfish_object, topology_);
   if (devpath.has_value()) {
     data_set.set_devpath(*devpath);
   }

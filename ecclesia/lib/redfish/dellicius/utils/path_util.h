@@ -30,7 +30,7 @@ std::vector<std::string> SplitNodeNameForNestedNodes(
 // Helper function to resolve node_name for nested nodes if any and return json
 // object to be evaluated for required property.
 absl::StatusOr<nlohmann::json> ResolveNodeNameToJsonObj(
-    const RedfishVariant &variant, absl::string_view node_name);
+    const RedfishObject &redfish_object, absl::string_view node_name);
 
 }  // namespace ecclesia
 

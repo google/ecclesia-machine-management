@@ -16,9 +16,12 @@
 
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 
+#include <memory>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/status/statusor.h"
+#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/testing/json_mockup.h"
 
 namespace ecclesia {
@@ -56,8 +59,11 @@ TEST(PathUtilTest, CheckNodeNameCorrectlyResolvesToJsonObj) {
       }
     )json");
     auto var = mock_interface->GetRoot();
+    ASSERT_TRUE(var.status().ok());
+    std::unique_ptr<RedfishObject> redfish_object = var.AsObject();
+    ASSERT_TRUE(redfish_object != nullptr);
     absl::StatusOr<nlohmann::json> json_out =
-        ResolveNodeNameToJsonObj(var, "Reading");
+        ResolveNodeNameToJsonObj(*redfish_object, "Reading");
     EXPECT_TRUE(json_out.ok());
     EXPECT_EQ(json_out->get<double>(), 90);
   }
@@ -74,8 +80,11 @@ TEST(PathUtilTest, CheckNodeNameCorrectlyResolvesToJsonObj) {
       }
     )json");
     auto var = mock_interface->GetRoot();
-    absl::StatusOr<nlohmann::json> json_out =
-        ResolveNodeNameToJsonObj(var, "Thresholds.UpperCritical.Reading");
+    ASSERT_TRUE(var.status().ok());
+    std::unique_ptr<RedfishObject> redfish_object = var.AsObject();
+    ASSERT_TRUE(redfish_object != nullptr);
+    absl::StatusOr<nlohmann::json> json_out = ResolveNodeNameToJsonObj(
+        *redfish_object, "Thresholds.UpperCritical.Reading");
     EXPECT_TRUE(json_out.ok());
     EXPECT_EQ(json_out->get<double>(), 90);
   }
@@ -84,8 +93,11 @@ TEST(PathUtilTest, CheckNodeNameCorrectlyResolvesToJsonObj) {
   {
     auto mock_interface = NewJsonMockupInterface(R"json({})json");
     auto var = mock_interface->GetRoot();
-    absl::StatusOr<nlohmann::json> json_out =
-        ResolveNodeNameToJsonObj(var, "Thresholds.UpperCritical.Reading");
+    ASSERT_TRUE(var.status().ok());
+    std::unique_ptr<RedfishObject> redfish_object = var.AsObject();
+    ASSERT_TRUE(redfish_object != nullptr);
+    absl::StatusOr<nlohmann::json> json_out = ResolveNodeNameToJsonObj(
+        *redfish_object, "Thresholds.UpperCritical.Reading");
     EXPECT_TRUE(!json_out.ok());
   }
 
@@ -100,8 +112,11 @@ TEST(PathUtilTest, CheckNodeNameCorrectlyResolvesToJsonObj) {
       }
     )json");
     auto var = mock_interface->GetRoot();
-    absl::StatusOr<nlohmann::json> json_out =
-        ResolveNodeNameToJsonObj(var, "Thresholds.UpperCritical.Reading");
+    ASSERT_TRUE(var.status().ok());
+    std::unique_ptr<RedfishObject> redfish_object = var.AsObject();
+    ASSERT_TRUE(redfish_object != nullptr);
+    absl::StatusOr<nlohmann::json> json_out = ResolveNodeNameToJsonObj(
+        *redfish_object, "Thresholds.UpperCritical.Reading");
     EXPECT_TRUE(!json_out.ok());
   }
 }

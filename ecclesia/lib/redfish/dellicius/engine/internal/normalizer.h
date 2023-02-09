@@ -30,7 +30,7 @@ namespace ecclesia {
 class NormalizerImplDefault final : public Normalizer::ImplInterface {
  protected:
   // with fallback to default CSDL bundle.
-  absl::Status Normalize(const RedfishVariant &var,
+  absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
                          SubqueryDataSet &data_set) const;
 };
@@ -42,7 +42,7 @@ class NormalizerImplAddDevpath final : public Normalizer::ImplInterface {
       : topology_(node_topology) {}
 
  protected:
-  absl::Status Normalize(const RedfishVariant &var,
+  absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
                          SubqueryDataSet &data_set) const override;
 

@@ -41,16 +41,12 @@ std::vector<std::string> SplitNodeNameForNestedNodes(
 }
 
 absl::StatusOr<nlohmann::json> ResolveNodeNameToJsonObj(
-    const RedfishVariant &variant, absl::string_view node_name) {
+    const RedfishObject &redfish_object, absl::string_view node_name) {
   std::vector<std::string> node_names = SplitNodeNameForNestedNodes(node_name);
   if (node_names.empty()) {
     return absl::InternalError("Given NodeName is empty or invalid.");
   }
-  std::unique_ptr<RedfishObject> object = variant.AsObject();
-  if (object == nullptr) {
-    return absl::InternalError("Null Redfish object.");
-  }
-  nlohmann::json json_obj = variant.AsObject()->GetContentAsJson();
+  nlohmann::json json_obj = redfish_object.GetContentAsJson();
   // If given expression has multiple nodes, we need to return the json object
   // associated with the leaf node.
   for (auto const &name : node_names) {
