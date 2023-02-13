@@ -334,12 +334,6 @@ void QueryPlanner::ExecuteRedPathStepFromEachSubquery(
     // subquery, we can batch process predicate expressions such that we iterate
     // the node-set once and for each node we apply all the predicate
     // expressions.
-    //
-    // On successful filter, map the subquery with the RedPath. The mapped
-    // subqueries then use the Resource associated with the RedPath as context
-    // node for executing next NodeName expression.
-    // Example: {"/Chassis[1]" : {SQ1, SQ4, SQ5}},
-    //           "/Chassis[4]" : {SQ1, SQ4, SQ9}}
     auto apply_predicate_from_each_subquery = [&](std::unique_ptr<RedfishObject>
                                                       redfish_object,
                                                   size_t node_index,
