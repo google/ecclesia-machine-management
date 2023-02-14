@@ -1,7 +1,5 @@
 # Ecclesia library for handling strings
 
-package(default_applicable_licenses = ["//ecclesia:license"])
-
 licenses(["notice"])
 
 cc_library(

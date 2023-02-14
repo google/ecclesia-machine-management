@@ -3,8 +3,6 @@
 
 load("//ecclesia/redfish_mockups:build_defs.bzl", "redfish_mockup")
 
-package(default_applicable_licenses = ["//ecclesia:license"])
-
 licenses(["notice"])
 
 redfish_mockup(

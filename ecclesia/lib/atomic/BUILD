@@ -2,8 +2,6 @@
 #   Utilities for doing various tasks and functions involving atomic operations
 #   or basic synchronization and sequencing.
 
-package(default_applicable_licenses = ["//ecclesia:license"])
-
 licenses(["notice"])
 
 cc_library(

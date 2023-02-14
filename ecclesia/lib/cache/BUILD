@@ -1,8 +1,6 @@
 # Description:
 #   Helpful utilities for implementing caching systems.
 
-package(default_applicable_licenses = ["//ecclesia:license"])
-
 licenses(["notice"])
 
 cc_library(

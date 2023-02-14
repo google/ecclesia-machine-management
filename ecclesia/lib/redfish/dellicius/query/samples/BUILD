@@ -1,7 +1,5 @@
 load("//ecclesia/lib/redfish/dellicius/engine:redpath_query.bzl", "redpath_queries")
 
-package(default_applicable_licenses = ["//ecclesia:license"])
-
 licenses(["notice"])
 
 filegroup(

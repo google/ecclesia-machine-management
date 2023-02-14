@@ -1,8 +1,6 @@
 # The Raw IPMI modules.  Each is an implementation of just sending an IPMI
 # packet without adding value to it.
 
-package(default_applicable_licenses = ["//ecclesia:license"])
-
 licenses(["notice"])
 
 cc_library(

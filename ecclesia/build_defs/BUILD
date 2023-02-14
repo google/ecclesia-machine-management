@@ -1,7 +1,5 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 
-package(default_applicable_licenses = ["//ecclesia:license"])
-
 licenses(["notice"])
 
 # This file is exported for use by shar_binary rules.

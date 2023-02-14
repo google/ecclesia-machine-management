@@ -1,8 +1,6 @@
 # Description:
 #   Libraries to for supporting the logging of errors and information.
 
-package(default_applicable_licenses = ["//ecclesia:license"])
-
 licenses(["notice"])
 
 cc_library(

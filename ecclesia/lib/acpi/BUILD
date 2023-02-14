@@ -14,8 +14,6 @@
 
 load("@com_google_emboss//:build_defs.bzl", "emboss_cc_library")
 
-package(default_applicable_licenses = ["//ecclesia:license"])
-
 licenses(["notice"])
 
 emboss_cc_library(
