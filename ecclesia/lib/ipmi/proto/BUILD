@@ -1,5 +1,7 @@
 # IPMI-spec derived proto definitions.
 
+package(default_applicable_licenses = ["//ecclesia:license"])
+
 licenses(["notice"])
 
 proto_library(

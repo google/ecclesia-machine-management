@@ -7,6 +7,8 @@ load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 # we are depending on redfishMockupCreator as a tool for creating mockups
 # that are saved in google3 statically.
 
+package(default_applicable_licenses = ["//ecclesia:license"])
+
 licenses(["notice"])
 
 bzl_library(

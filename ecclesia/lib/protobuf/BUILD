@@ -1,5 +1,7 @@
 load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
 
+package(default_applicable_licenses = ["//ecclesia:license"])
+
 licenses(["notice"])
 
 cc_library(

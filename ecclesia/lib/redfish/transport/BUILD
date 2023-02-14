@@ -1,6 +1,8 @@
 # Description:
 # Transport interfaces for Redfish
 
+package(default_applicable_licenses = ["//ecclesia:license"])
+
 licenses(["notice"])
 
 cc_library(

@@ -1,3 +1,5 @@
+package(default_applicable_licenses = ["//ecclesia:license"])
+
 # Description:
 # C++ testing utilities for Ecclesia's Redfish interface
 licenses(["notice"])

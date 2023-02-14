@@ -1,3 +1,5 @@
+package(default_applicable_licenses = ["//ecclesia:license"])
+
 cc_binary(
     name = "query_cli",
     testonly = True,

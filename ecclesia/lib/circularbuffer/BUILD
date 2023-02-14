@@ -1,6 +1,8 @@
 # Description:
 #   Implements a circlularbuffer
 
+package(default_applicable_licenses = ["//ecclesia:license"])
+
 licenses(["notice"])
 
 cc_test(

@@ -1,3 +1,5 @@
+package(default_applicable_licenses = ["//ecclesia:license"])
+
 cc_library(
     name = "path_util",
     srcs = ["path_util.cc"],

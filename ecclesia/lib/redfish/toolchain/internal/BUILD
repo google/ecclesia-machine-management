@@ -3,6 +3,8 @@
 load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
 load("//ecclesia/lib/redfish/toolchain:accessors.bzl", "cc_redfish_accessor_library")
 
+package(default_applicable_licenses = ["//ecclesia:license"])
+
 licenses(["notice"])
 
 proto_library(
