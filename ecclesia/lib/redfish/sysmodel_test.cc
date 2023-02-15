@@ -80,55 +80,6 @@ TEST_F(SysmodelTest, GetResourceSystemExpands) {
   EXPECT_EQ(expanded_request_count, 1);
 }
 
-TEST_F(SysmodelTest, GetResourceStorageExpands) {
-  int expanded_request_count = 0;
-  InitServer("topology_v2_testing/mockup.shar");
-  // Store original json
-  auto storage_json = intf_->CachedGetUri("/redfish/v1/Systems/system/Storage")
-                          .AsObject()
-                          ->DebugString();
-  mockup_server_->AddHttpGetHandler(
-      "/redfish/v1/Systems/system/Storage?$expand=.($levels=1)",
-      [&](ServerRequestInterface *req) {
-        expanded_request_count++;
-        SendJsonHttpResponse(req, storage_json);
-      });
-  sysmodel_->QueryAllResources<ResourceStorage>(
-      [&](std::unique_ptr<RedfishObject>) -> RedfishIterReturnValue {
-        return RedfishIterReturnValue::kStop;
-      });
-  EXPECT_EQ(expanded_request_count, 1);
-}
-
-TEST_F(SysmodelTest, GetResourceDriveExpands) {
-  int expand_system_storages_count = 0;
-  int expand_chassis_storages_count = 0;
-  InitServer("topology_v2_testing/mockup.shar");
-  // Store original json
-  auto storage_json = intf_->CachedGetUri("/redfish/v1/Systems/system/Storage")
-                          .AsObject()
-                          ->DebugString();
-  mockup_server_->AddHttpGetHandler(
-      "/redfish/v1/Systems/system/Storage?$expand=.($levels=2)",
-      [&](ServerRequestInterface *req) {
-        expand_system_storages_count++;
-        SendJsonHttpResponse(req, storage_json);
-      });
-  mockup_server_->AddHttpGetHandler(
-      "/redfish/v1/Chassis/child2/Drives?$expand=.($levels=1)",
-      [&](ServerRequestInterface *req) {
-        expand_chassis_storages_count++;
-        req->WriteResponseString("");
-        req->Reply();
-      });
-  sysmodel_->QueryAllResources<ResourceDrive>(
-      [&](std::unique_ptr<RedfishObject>) -> RedfishIterReturnValue {
-        return RedfishIterReturnValue::kStop;
-      });
-  EXPECT_EQ(expand_system_storages_count, 1);
-  EXPECT_EQ(expand_chassis_storages_count, 1);
-}
-
 TEST_F(SysmodelTest, GetResourceDriveDoesntReturnDuplicateDrives) {
   InitServer("topology_v2_testing/mockup.shar");
   // Inject a Chassis Drive resource that duplicates an existing ComputerSystem
@@ -158,58 +109,6 @@ TEST_F(SysmodelTest, GetResourceDriveDoesntReturnDuplicateDrives) {
       });
   EXPECT_THAT(returned_uris,
               ElementsAre("/redfish/v1/Systems/system/Storage/1/Drives/0"));
-}
-
-TEST_F(SysmodelTest, GetResourceDriveIncludesDrivesWithoutUris) {
-  InitServer("topology_v2_testing/mockup.shar");
-  // Inject a second drive under a Chassis resource that intentionally is
-  // missing its @odata.id.
-  mockup_server_->AddHttpGetHandlerWithData(
-      "/redfish/v1/Chassis/child2/Drives?$expand=.($levels=1)",
-      R"json({
-        "@odata.id": "/redfish/v1/Chassis/child2/Drives",
-        "@odata.type": "#DriveCollection.DriveCollection",
-        "Members": [
-          {
-            "@odata.type": "#Drive.v1_7_0.Drive",
-            "Id": "test_drive_missing_odata_id"
-          }
-        ],
-        "Members@odata.count": 1,
-        "Name": "Drive Collection"
-      })json");
-
-  int num_resources = 0;
-  int resources_without_uris = 0;
-  sysmodel_->QueryAllResources<ResourceDrive>(
-      [&](std::unique_ptr<RedfishObject> obj) -> RedfishIterReturnValue {
-        num_resources++;
-        std::optional<std::string> uri = obj->GetUriString();
-        if (!uri.has_value()) resources_without_uris++;
-        return RedfishIterReturnValue::kContinue;
-      });
-  EXPECT_EQ(num_resources, 2);
-  EXPECT_EQ(resources_without_uris, 1);
-}
-
-TEST_F(SysmodelTest, GetStorageControllerExpands) {
-  int expand_system_storages_count = 0;
-  InitServer("topology_v2_testing/mockup.shar");
-  // Store original json
-  auto storage_json = intf_->CachedGetUri("/redfish/v1/Systems/system/Storage")
-                          .AsObject()
-                          ->DebugString();
-  mockup_server_->AddHttpGetHandler(
-      "/redfish/v1/Systems/system/Storage?$expand=.($levels=2)",
-      [&](ServerRequestInterface *req) {
-        expand_system_storages_count++;
-        SendJsonHttpResponse(req, storage_json);
-      });
-  sysmodel_->QueryAllResources<ResourceStorageController>(
-      [&](std::unique_ptr<RedfishObject>) -> RedfishIterReturnValue {
-        return RedfishIterReturnValue::kStop;
-      });
-  EXPECT_EQ(expand_system_storages_count, 1);
 }
 
 TEST_F(SysmodelTest, GetResourceProcessorExpands) {

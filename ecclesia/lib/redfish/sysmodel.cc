@@ -94,10 +94,10 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceStorage> /*unused*/,
       .Get(kRfPropertySystems,
            {.expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()
-      .Get(kRfPropertyStorage, {.freshness = query_params.freshness,
-                                .auto_adjust_levels = true,
-                                .expand = RedfishQueryParamExpand(
-                                    {.levels = query_params.expand_levels})})
+      .Get(kRfPropertyStorage,
+           {.freshness = query_params.freshness,
+            .auto_adjust_levels = false,
+            .expand = RedfishQueryParamExpand({.levels = 0})})
       .Each()
       .Do([&](std::unique_ptr<RedfishObject> &storage_obj) {
         return result_callback(std::move(storage_obj));
@@ -140,9 +140,8 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceDrive> /*unused*/,
       .Each()
       .Get(kRfPropertyStorage,  // Expand disks+drives
            {.freshness = query_params.freshness,
-            .auto_adjust_levels = true,
-            .expand = RedfishQueryParamExpand(
-                {.levels = query_params.expand_levels})})
+            .auto_adjust_levels = false,
+            .expand = RedfishQueryParamExpand({.levels = 0})})
       .Each()[kRfPropertyDrives]
       .Each()
       .Do([&](std::unique_ptr<RedfishObject> &drive_obj) {
@@ -153,10 +152,10 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceDrive> /*unused*/,
       .Get(kRfPropertyChassis,
            {.expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()
-      .Get(kRfPropertyDrives, {.freshness = query_params.freshness,
-                               .auto_adjust_levels = true,
-                               .expand = RedfishQueryParamExpand(
-                                   {.levels = query_params.expand_levels})})
+      .Get(kRfPropertyDrives,
+           {.freshness = query_params.freshness,
+            .auto_adjust_levels = false,
+            .expand = RedfishQueryParamExpand({.levels = 0})})
       .Each()
       .Do([&](std::unique_ptr<RedfishObject> &drive_obj) {
         return callback_once_per_uri(std::move(drive_obj));
@@ -169,12 +168,14 @@ void Sysmodel::QueryAllResourceInternal(
     Token<ResourceStorageController> /*unused*/, ResultCallback result_callback,
     const QueryParams &query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
-  root[kRfPropertySystems]
+  root.AsIndexHelper()
+      .Get(kRfPropertySystems,
+           {.expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()
-      .Get(kRfPropertyStorage, {.freshness = query_params.freshness,
-                                .auto_adjust_levels = true,
-                                .expand = RedfishQueryParamExpand(
-                                    {.levels = query_params.expand_levels})})
+      .Get(kRfPropertyStorage,
+           {.freshness = query_params.freshness,
+            .auto_adjust_levels = false,
+            .expand = RedfishQueryParamExpand({.levels = 0})})
       .Each()[kRfPropertyStorageControllers]
       .Each()
       .Do([&](std::unique_ptr<RedfishObject> &ctrl_obj) {
