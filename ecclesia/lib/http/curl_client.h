@@ -190,7 +190,7 @@ class CurlHttpClient : public HttpClient {
     // CURLOPT_DNS_CACHE_TIMEOUT, in sec.
     int dns_timeout = 60;
     // CURLOPT_FOLLOWLOCATION
-    bool follow_redirect = false;
+    bool follow_redirect = true;
     // CURLOPT_MAX_RECV_SPEED_LARGE
     int max_recv_speed = -1;
     // CURLOPT_IPRESOLVE
