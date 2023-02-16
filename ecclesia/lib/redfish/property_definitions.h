@@ -39,6 +39,8 @@ inline constexpr char kRfPropertyActions[] = "Actions";
 inline constexpr char kRfPropertyAllowableValues[] = "AllowableValues";
 inline constexpr char kRfPropertyAssemblies[] = "Assemblies";
 inline constexpr char kRfPropertyAssembly[] = "Assembly";
+inline constexpr char kRfPropertyAssociatedMACAddresses[] =
+    "AssociatedMACAddresses";
 inline constexpr char kRfPropertyControllers[] = "Controllers";
 inline constexpr char kRfPropertyChassis[] = "Chassis";
 inline constexpr char kRfPropertyPcieSlots[] = "PCIeSlots";
@@ -55,6 +57,7 @@ inline constexpr char kRfPropertyProtocolOem[] = "OEM";
 inline constexpr char kRfPropertyOem[] = "Oem";
 inline constexpr char kRfPropertyLifeTime[] = "LifeTime";
 inline constexpr char kRfPropertyCurrentPeriod[] = "CurrentPeriod";
+inline constexpr char kRfPropertyCurrentSpeedGbps[] = "CurrentSpeedGbps";
 inline constexpr char kRfPropertyCacheMetricsTotal[] = "CacheMetricsTotal";
 inline constexpr char kRfPropertyProcessors[] = "Processors";
 inline constexpr char kRfPropertySubProcessors[] = "SubProcessors";
@@ -70,12 +73,14 @@ inline constexpr char kRfPropertyManagerDiagnosticData[] =
     "ManagerDiagnosticData";
 inline constexpr char kRfPropertyBootInfo[] = "BootInfo";
 inline constexpr char kRfPropertyEthernetInterfaces[] = "EthernetInterfaces";
+inline constexpr char kRfPropertyEthernet[] = "Ethernet";
 inline constexpr char kRfPropertyThermal[] = "Thermal";
 inline constexpr char kRfPropertyTemperatures[] = "Temperatures";
 inline constexpr char kRfPropertyTemperatureCelsius[] = "TemperatureCelsius";
 inline constexpr char kRfPropertyTemperaturesCount[] =
     "Temperatures@odata.count";
 inline constexpr char kRfPropertyParameters[] = "Parameters";
+inline constexpr char kRfPropertyPorts[] = "Ports";
 inline constexpr char kRfPropertyPower[] = "Power";
 inline constexpr char kRfPropertyPowerLimitWatts[] = "PowerLimitWatts";
 inline constexpr char kRfPropertyPowerState[] = "PowerState";
@@ -100,6 +105,8 @@ inline constexpr char kRfPropertyNvmeControllersProperties[] =
 inline constexpr char kRfPropertyNvmeSmartCriticalWarnings[] =
     "NVMeSMARTCriticalWarnings";
 inline constexpr char kRfPropertyLinks[] = "Links";
+inline constexpr char kRfPropertyLinkState[] = "LinkState";
+inline constexpr char kRfPropertyLinkStatus[] = "LinkStatus";
 inline constexpr char kRfPropertyContainedBy[] = "ContainedBy";
 inline constexpr char kRfPropertyDownstreamChassis[] = "DownstreamChassis";
 inline constexpr char kRfPropertyUpstreamChassis[] = "UpstreamChassis";
