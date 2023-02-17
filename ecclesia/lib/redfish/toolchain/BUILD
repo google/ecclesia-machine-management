@@ -5,5 +5,7 @@ licenses(["notice"])
 bzl_library(
     name = "accessors",
     srcs = ["accessors.bzl"],
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+    ],
 )
