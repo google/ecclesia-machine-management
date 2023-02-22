@@ -58,6 +58,7 @@ cc_library(
         "//ecclesia/lib/http:server",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:test_mockup",
+        "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:http",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
         "//ecclesia/lib/redfish/transport:interface",
@@ -71,6 +72,7 @@ cc_library(
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+        "@com_json//:json",
     ],
 )
 
@@ -82,13 +84,14 @@ cc_test(
     ],
     deps = [
         ":fake_redfish_server",
-        "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:property",
         "//ecclesia/lib/redfish:property_definitions",
-        "@com_google_absl//absl/strings",
+        "//ecclesia/lib/redfish/transport:interface",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
+        "@com_json//:json",
     ],
 )
 

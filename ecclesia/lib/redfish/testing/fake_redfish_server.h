@@ -23,6 +23,7 @@
 
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/types/span.h"
@@ -100,6 +101,11 @@ class FakeRedfishServer {
   // Convenience function to register a GET handler that returns the provided
   // data.
   void AddHttpGetHandlerWithData(std::string uri, absl::Span<const char> data)
+      ABSL_LOCKS_EXCLUDED(patch_lock_);
+
+  // Similar to AddHttpGetHandlerWithData; the handler takes ownership of the
+  // data.
+  void AddHttpGetHandlerWithOwnedData(std::string uri, std::string data)
       ABSL_LOCKS_EXCLUDED(patch_lock_);
 
   struct Config {

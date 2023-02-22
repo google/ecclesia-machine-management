@@ -18,6 +18,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -36,9 +37,11 @@
 #include "ecclesia/lib/http/server.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
+#include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -94,6 +97,20 @@ void FakeRedfishServer::AddHttpGetHandlerWithData(std::string uri,
         req->Reply();
       });
 }
+
+void FakeRedfishServer::AddHttpGetHandlerWithOwnedData(
+    std::string uri, std::string data) {
+    AddHttpGetHandler(
+        std::move(uri),
+        [&, data = std::move(data)]
+        (::tensorflow::serving::net_http::ServerRequestInterface *req) {
+          ::tensorflow::serving::net_http::SetContentType(req,
+                                                          "application/json");
+          req->OverwriteResponseHeader("OData-Version", "4.0");
+          req->WriteResponseString(data);
+          req->Reply();
+        });
+  }
 
 void FakeRedfishServer::HandleHttpGet(
     ::tensorflow::serving::net_http::ServerRequestInterface *req) {

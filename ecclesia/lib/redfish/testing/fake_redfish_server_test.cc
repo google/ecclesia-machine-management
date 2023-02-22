@@ -18,15 +18,17 @@
 
 #include <memory>
 #include <string>
+#include <variant>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/strings/str_cat.h"
+#include "absl/status/statusor.h"
 #include "absl/types/span.h"
-#include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 namespace {
@@ -71,6 +73,16 @@ TEST(PatchableMockupServer, CanGetExpand) {
       redfish_intf->UncachedGetUri("/redfish/v1/Systems/system").AsObject();
   ASSERT_TRUE(system_obj);
   EXPECT_THAT(system_obj->GetNodeValue<PropertyName>(), Eq("Indus"));
+}
+
+TEST(PatchableMockupServer, CanAddHandlerOwningData) {
+  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
+  server.AddHttpGetHandlerWithOwnedData(
+      "/redfish/v1", std::string("\"abc\""));
+  auto transport = server.RedfishClientTransport();
+  auto value = transport->Get("/redfish/v1");
+  ASSERT_TRUE(value.ok());
+  EXPECT_EQ(std::get<nlohmann::json>(value->body), nlohmann::json("abc"));
 }
 
 TEST(PatchableMockupServer, CanPatchDirect) {
