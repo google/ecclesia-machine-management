@@ -41,12 +41,10 @@ cc_test(
     ],
     deps = [
         ":interface",
-        "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/http:codes",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/status",
-        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/public:shared_files",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
@@ -455,7 +453,7 @@ cc_library(
         ":interface",
         ":node_topology",
         ":types",
-        "//ecclesia/lib/redfish:utils",
+        ":utils",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
     ],
@@ -483,17 +481,12 @@ cc_test(
     srcs = ["health_rollup_test.cc"],
     deps = [
         ":health_rollup",
-        ":health_rollup_cc_proto",
         ":interface",
-        ":property_definitions",
         "//ecclesia/lib/redfish/testing:json_mockup",
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
-        "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/time",
         "@com_google_googletest//:gtest_main",
-        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -522,7 +515,7 @@ cc_library(
     hdrs = ["to_proto.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//ecclesia/lib/redfish:interface",
+        ":interface",
         "@com_google_absl//absl/status",
         "@com_google_protobuf//:protobuf",
     ],
