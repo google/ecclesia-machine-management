@@ -61,6 +61,13 @@ std::optional<std::string> GetSlotDevpathFromNodeTopology(
     const RedfishObject &obj, absl::string_view parent_uri,
     const NodeTopology &topology);
 
+// Find the replaceable devpath for a devpath inside a Node Topology. If the
+// devpath itself is replaceable it'll return itself, otherwise it'll return the
+// first parent that is replaceable.
+absl::StatusOr<absl::string_view>
+GetReplaceableDevpathForDevpathAndNodeTopology(absl::string_view devpath,
+                                               const NodeTopology &topology);
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_DEVPATH_H_

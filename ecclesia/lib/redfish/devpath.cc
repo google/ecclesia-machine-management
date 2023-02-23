@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <optional>
+#include <queue>
 #include <string>
 #include <utility>
 #include <vector>
@@ -172,6 +173,33 @@ std::optional<std::string> GetManagerDevpathFromNodeTopology(
   }
 
   return std::nullopt;
+}
+
+absl::StatusOr<absl::string_view>
+GetReplaceableDevpathForDevpathAndNodeTopology(absl::string_view devpath,
+                                               const NodeTopology &topology) {
+  auto node_iter = topology.devpath_to_node_map.find(devpath);
+  if (node_iter == topology.devpath_to_node_map.end()) {
+    return absl::NotFoundError(
+        absl::StrCat("NodeTopology not found through devpath: ", devpath));
+  }
+  Node *node = node_iter->second;
+  std::queue<Node *> node_queue;
+  node_queue.push(node);
+  while (!node_queue.empty() && !node_queue.front()->replaceable) {
+    auto parent_iter = topology.node_to_parents.find(node_queue.front());
+    if (parent_iter != topology.node_to_parents.end()) {
+      for (Node *parent : parent_iter->second) {
+        node_queue.push(parent);
+      }
+    }
+    node_queue.pop();
+  }
+  if (node_queue.empty()) {
+    return absl::NotFoundError(
+        absl::StrCat("No parent is replaceable: ", devpath));
+  }
+  return node_queue.front()->local_devpath;
 }
 
 }  // namespace ecclesia
