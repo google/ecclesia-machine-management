@@ -27,6 +27,7 @@ resource_to_config {
     first_class_attributes {
       collection_attributes: "Memory"
       collection_attributes: "Drives"
+      collection_attributes: "NetworkAdapters"
       singular_attributes: "ThermalSubsystem"
       singular_attributes: "Assembly"
     }
@@ -76,6 +77,15 @@ resource_to_config {
   value {
     first_class_attributes {
       collection_attributes: "Fans"
+    }
+  }
+}
+
+resource_to_config {
+  key: "NetworkAdapter"
+  value {
+    first_class_attributes {
+      collection_attributes: "Ports"
     }
   }
 }
