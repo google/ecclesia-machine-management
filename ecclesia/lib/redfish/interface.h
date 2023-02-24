@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "absl/base/attributes.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
@@ -183,10 +184,10 @@ struct GetParams {
 // Redfish specification can provide clarity on the situations in which one
 // could expect errors and/or payloads.
 //
-// RedfishVariant contains a httpcode member. This field is only populated if a
-// HTTP request was required to produce the RedfishVariant. Some operations
-// which construct a RedfishVariant may not involve HTTP requests (e.g. drilling
-// down into child fields of a payload).
+// RedfishVariant contains httpcode and httpheaders members. These fields are
+// only populated if a HTTP request was required to produce the RedfishVariant.
+// Some operations which construct a RedfishVariant may not involve HTTP
+// requests (e.g. drilling down into child fields of a payload).
 class RedfishVariant final {
  public:
   // Defines the mode used for iterable creation.
@@ -276,21 +277,22 @@ class RedfishVariant final {
 
   // Construct from Status.
   explicit RedfishVariant(absl::Status status)
-      : RedfishVariant(nullptr, std::move(status), absl::nullopt) {}
+      : RedfishVariant(nullptr, std::move(status), absl::nullopt, {}) {}
 
   // Construct from ptr: the Redfish data is valid and there were no errors.
   explicit RedfishVariant(std::unique_ptr<ImplIntf> ptr)
-      : RedfishVariant(std::move(ptr), absl::OkStatus(), absl::nullopt) {}
+      : RedfishVariant(std::move(ptr), absl::OkStatus(), absl::nullopt, {}) {}
 
   // Construct from httpcode + error object. A Status is constructed by
   // converting the provided httpcode.
-  RedfishVariant(std::unique_ptr<ImplIntf> ptr,
-                 ecclesia::HttpResponseCode httpcode)
+  RedfishVariant(
+      std::unique_ptr<ImplIntf> ptr, ecclesia::HttpResponseCode httpcode,
+      const absl::flat_hash_map<std::string, std::string> &httpheaders)
       : RedfishVariant(
             std::move(ptr),
             absl::Status(ecclesia::HttpResponseCodeToCanonical(httpcode),
                          ecclesia::HttpResponseCodeToReasonPhrase(httpcode)),
-            httpcode) {}
+            httpcode, httpheaders) {}
 
   RedfishVariant(const RedfishVariant &) = delete;
   RedfishVariant &operator=(const RedfishVariant &) = delete;
@@ -348,6 +350,12 @@ class RedfishVariant final {
     return httpcode_;
   }
 
+  // Returns the httpheaders, if one is available. See the class-level
+  // docstring for more information.
+  std::optional<absl::flat_hash_map<std::string, std::string>> httpheaders() {
+    return httpheaders_;
+  }
+
   // If the underlying Redfish payload is the provided val type, retrieves the
   // value into val and return true. Otherwise return false.
   bool GetValue(std::string *val) const {
@@ -380,19 +388,25 @@ class RedfishVariant final {
     return ptr_->DebugString();
   }
 
-  void PrintDebugString() const{
+  void PrintDebugString() const {
     if (!ptr_) return;
     ptr_->PrintDebugString();
   }
 
  private:
-  RedfishVariant(std::unique_ptr<ImplIntf> ptr, absl::Status status,
-                 std::optional<ecclesia::HttpResponseCode> httpcode)
-      : ptr_(std::move(ptr)), status_(status), httpcode_(httpcode) {}
+  RedfishVariant(
+      std::unique_ptr<ImplIntf> ptr, absl::Status status,
+      std::optional<ecclesia::HttpResponseCode> httpcode,
+      std::optional<absl::flat_hash_map<std::string, std::string>> httpheaders)
+      : ptr_(std::move(ptr)),
+        status_(status),
+        httpcode_(httpcode),
+        httpheaders_(httpheaders) {}
 
   std::unique_ptr<ImplIntf> ptr_;
   absl::Status status_;
   std::optional<ecclesia::HttpResponseCode> httpcode_;
+  std::optional<absl::flat_hash_map<std::string, std::string>> httpheaders_;
 };
 
 // RedfishIterable provides an interface for accessing properties of either
@@ -477,8 +491,8 @@ class RedfishObject {
 
   // Returns a fresh copy of this RedfishObject. If this RedfishObject was a
   // cached object, this method will re-fetch this object with a GET. If this
-  // RedfishObject was already a fresh instance, a copy of object itself will be
-  // returned. This method will fail to return a valid RedfishVariant if this
+  // RedfishObject was already a fresh instance, a copy of object itself will
+  // be returned. This method will fail to return a valid RedfishVariant if this
   // RedfishObject does not have a string URI.
   virtual absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
       GetParams params = {}) = 0;
@@ -663,7 +677,7 @@ class NullRedfish : public RedfishInterface {
 
 RedfishVariant RedfishVariant::operator[](IndexGetWithArgs property) const {
   if (!status_.ok()) {
-    return RedfishVariant(nullptr, status_, httpcode_);
+    return RedfishVariant(nullptr, status_, httpcode_, httpheaders_);
   }
   if (std::unique_ptr<RedfishObject> obj = AsObject()) {
     return (*obj).Get(property.name, std::move(property.args));
@@ -673,7 +687,7 @@ RedfishVariant RedfishVariant::operator[](IndexGetWithArgs property) const {
 
 RedfishVariant RedfishVariant::operator[](const std::string &property) const {
   if (!status_.ok()) {
-    return RedfishVariant(nullptr, status_, httpcode_);
+    return RedfishVariant(nullptr, status_, httpcode_, httpheaders_);
   }
   if (std::unique_ptr<RedfishObject> obj = AsObject()) {
     return (*obj)[property];
@@ -683,7 +697,7 @@ RedfishVariant RedfishVariant::operator[](const std::string &property) const {
 
 RedfishVariant RedfishVariant::operator[](const size_t index) const {
   if (!status_.ok()) {
-    return RedfishVariant(nullptr, status_, httpcode_);
+    return RedfishVariant(nullptr, status_, httpcode_, httpheaders_);
   }
   if (std::unique_ptr<RedfishIterable> iter = AsIterable()) {
     return (*iter)[index];

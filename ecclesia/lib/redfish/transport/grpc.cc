@@ -97,6 +97,8 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
         nlohmann::json::parse(response.json_str(), nullptr, false);
   }
   ret_result.code = response.code();
+  ret_result.headers = absl::flat_hash_map<std::string, std::string>(
+      response.headers().begin(), response.headers().end());
   return ret_result;
 }
 

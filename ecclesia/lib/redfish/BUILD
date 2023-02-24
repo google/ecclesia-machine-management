@@ -20,6 +20,7 @@ cc_library(
         "//ecclesia/lib/http:codes",
         "//ecclesia/lib/redfish/transport:interface",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/status",

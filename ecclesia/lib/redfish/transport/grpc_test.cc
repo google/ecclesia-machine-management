@@ -48,7 +48,9 @@ namespace ecclesia {
 namespace {
 
 using ::redfish::v1::Response;
+using ::testing::Contains;
 using ::testing::Eq;
+using ::testing::Pair;
 
 TEST(GrpcRedfishTransport, Get) {
   absl::flat_hash_map<std::string, std::string> headers;
@@ -319,6 +321,7 @@ TEST(GrpcRedfishTransport, GetCorrectResultBodyAndRequestHeaders) {
         }
         *response->mutable_json() = json_body_struct;
         response->set_code(200);
+        response->mutable_headers()->insert({"OData-Version", "4.0"});
         return grpc::Status::OK;
       });
   auto result = (*transport)->Get("/redfish/v1/json_resource");
@@ -326,6 +329,7 @@ TEST(GrpcRedfishTransport, GetCorrectResultBodyAndRequestHeaders) {
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
   EXPECT_THAT(std::get<nlohmann::json>(result->body), Eq(json_body));
   EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
 
   // When the gRPC response is returning an octet stream, expect the result body
   // from RedfishTransport Get to be set to bytes.
@@ -336,6 +340,7 @@ TEST(GrpcRedfishTransport, GetCorrectResultBodyAndRequestHeaders) {
           Response *response) {
         *response->mutable_octet_stream() = octet_stream;
         response->set_code(200);
+        response->mutable_headers()->insert({"OData-Version", "4.0"});
         return grpc::Status::OK;
       });
   result = (*transport)->Get("/redfish/v1/octet_stream");
@@ -345,6 +350,7 @@ TEST(GrpcRedfishTransport, GetCorrectResultBodyAndRequestHeaders) {
                   std::get<RedfishTransport::bytes>(result->body)),
               Eq(octet_stream));
   EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
 }
 
 }  // namespace

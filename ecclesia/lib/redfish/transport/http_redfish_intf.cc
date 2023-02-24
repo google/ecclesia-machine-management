@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
@@ -227,7 +228,7 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
         std::get<RedfishTransport::bytes>(result_.body));
   }
 
-  void PrintDebugString() const override{
+  void PrintDebugString() const override {
     LOG(INFO) << "Variant:\n" << DebugString();
   }
 
@@ -259,10 +260,11 @@ absl::StatusOr<std::string> GetObjectUri(const nlohmann::json &json) {
 // If the object is not a reference, returns the current json object as-is.
 // reuse_code will be propagated to the returned RedfishVariant if no GET is
 // performed.
-RedfishVariant ResolveReference(int reuse_code, nlohmann::json json,
-                                RedfishInterface *intf,
-                                RedfishExtendedPath path,
-                                CacheState cache_state, GetParams params = {}) {
+RedfishVariant ResolveReference(
+    int reuse_code, nlohmann::json json,
+    const absl::flat_hash_map<std::string, std::string> &headers,
+    RedfishInterface *intf, RedfishExtendedPath path, CacheState cache_state,
+    GetParams params = {}) {
   auto get_uri = [intf](const RedfishExtendedPath &path, GetParams params) {
     return params.freshness == GetParams::Freshness::kRequired
                ? intf->UncachedGetUri(path.GetFullPath(), std::move(params))
@@ -289,9 +291,10 @@ RedfishVariant ResolveReference(int reuse_code, nlohmann::json json,
                                             ecclesia::RedfishTransport::Result{
                                                 .code = reuse_code,
                                                 .body = std::move(json),
+                                                .headers = headers,
                                             },
                                             cache_state),
-      ecclesia::HttpResponseCodeFromInt(reuse_code));
+      ecclesia::HttpResponseCodeFromInt(reuse_code), headers);
 }
 
 class HttpIntfObjectImpl : public RedfishObject {
@@ -328,9 +331,11 @@ class HttpIntfObjectImpl : public RedfishObject {
                                 ecclesia::RedfishTransport::Result{
                                     .code = result_.code,
                                     .body = nlohmann::json::value_t::discarded,
+                                    .headers = result_.headers,
                                 },
                                 cache_state_),
-                            ecclesia::HttpResponseCodeFromInt(result_.code));
+                            ecclesia::HttpResponseCodeFromInt(result_.code),
+                            result_.headers);
     }
     // Reset expands if requested but not available
     if (params.expand.has_value() &&
@@ -339,7 +344,7 @@ class HttpIntfObjectImpl : public RedfishObject {
              .ok()) {
       params.expand.reset();
     }
-    return ResolveReference(result_.code, itr.value(), intf_,
+    return ResolveReference(result_.code, itr.value(), result_.headers, intf_,
                             std::move(new_path), cache_state_,
                             std::move(params));
   }
@@ -369,7 +374,7 @@ class HttpIntfObjectImpl : public RedfishObject {
         std::get<RedfishTransport::bytes>(result_.body));
   }
 
-  void PrintDebugString() const override{
+  void PrintDebugString() const override {
     LOG(INFO) << "Object:\n" << DebugString();
   }
 
@@ -406,10 +411,11 @@ class HttpIntfObjectImpl : public RedfishObject {
                            ecclesia::RedfishTransport::Result{
                                .code = result_.code,
                                .body = nlohmann::json(items.value()),
+                               .headers = result_.headers,
                            },
                            cache_state_),
-                       ecclesia::HttpResponseCodeFromInt(result_.code))) ==
-          RedfishIterReturnValue::kStop) {
+                       ecclesia::HttpResponseCodeFromInt(result_.code),
+                       result_.headers)) == RedfishIterReturnValue::kStop) {
         break;
       }
     }
@@ -456,7 +462,7 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
     auto retval = json[index];
     RedfishExtendedPath new_path = path_;
     new_path.properties.push_back(index);
-    return ResolveReference(result_.code, json[index], intf_,
+    return ResolveReference(result_.code, json[index], result_.headers, intf_,
                             std::move(new_path), cache_state_);
   }
 
@@ -513,8 +519,8 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
     }
     RedfishExtendedPath new_path = path_;
     new_path.properties.push_back(index);
-    return ResolveReference(result_.code, itr.value()[index], intf_,
-                            std::move(new_path), cache_state_);
+    return ResolveReference(result_.code, itr.value()[index], result_.headers,
+                            intf_, std::move(new_path), cache_state_);
   }
 
  private:
@@ -642,10 +648,11 @@ class HttpRedfishInterface : public RedfishInterface {
         transport_->Post(uri, data);
     if (!result.ok()) return RedfishVariant(result.status());
     int code = result->code;
+    absl::flat_hash_map<std::string, std::string> headers = result->headers;
     return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
                               this, RedfishExtendedPath{std::string(uri)},
                               std::move(*result), kIsFresh),
-                          ecclesia::HttpResponseCodeFromInt(code));
+                          ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
   RedfishVariant PatchUri(
@@ -661,10 +668,11 @@ class HttpRedfishInterface : public RedfishInterface {
         transport_->Patch(uri, data);
     if (!result.ok()) return RedfishVariant(result.status());
     int code = result->code;
+    absl::flat_hash_map<std::string, std::string> headers = result->headers;
     return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
                               this, RedfishExtendedPath{std::string(uri)},
                               std::move(*result), kIsFresh),
-                          ecclesia::HttpResponseCodeFromInt(code));
+                          ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
   std::optional<RedfishSupportedFeatures> SupportedFeatures() const override {
@@ -706,12 +714,14 @@ class HttpRedfishInterface : public RedfishInterface {
     if (json_ptrs.size() < 2) {
       // No pointers, return the payload as-is.
       int code = get_res.result->code;
+      absl::flat_hash_map<std::string, std::string> headers =
+          get_res.result->headers;
       return RedfishVariant(
           std::make_unique<HttpIntfVariantImpl>(
               this, RedfishExtendedPath{.uri = std::string(uri)},
               *std::move(get_res.result),
               get_res.is_fresh ? kIsFresh : kIsCached),
-          ecclesia::HttpResponseCodeFromInt(code));
+          ecclesia::HttpResponseCodeFromInt(code), headers);
     }
     if (!std::holds_alternative<nlohmann::json>(get_res.result->body)) {
       return RedfishVariant(
@@ -721,12 +731,14 @@ class HttpRedfishInterface : public RedfishInterface {
         std::get<nlohmann::json>(get_res.result->body), json_ptrs[1]);
     get_res.result->body = std::move(resolved_ptr);
     int code = get_res.result->code;
+    absl::flat_hash_map<std::string, std::string> headers =
+        get_res.result->headers;
     return RedfishVariant(
         std::make_unique<HttpIntfVariantImpl>(
             this, RedfishExtendedPath{.uri = std::string(uri)},
             *std::move(get_res.result),
             get_res.is_fresh ? kIsFresh : kIsCached),
-        ecclesia::HttpResponseCodeFromInt(code));
+        ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
   void PopuplateSupportedFeatures(const RedfishVariant &root) {

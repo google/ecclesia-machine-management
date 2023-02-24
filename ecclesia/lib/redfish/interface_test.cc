@@ -35,10 +35,13 @@ namespace ecclesia {
 namespace {
 
 using ::ecclesia::IsStatusFailedPrecondition;
-using ::testing::Eq;
-using ::testing::Ne;
 using ::tensorflow::serving::net_http::HTTPStatusCode;
 using ::tensorflow::serving::net_http::ServerRequestInterface;
+using ::testing::Contains;
+using ::testing::Eq;
+using ::testing::Ne;
+using ::testing::Optional;
+using ::testing::Pair;
 
 TEST(RedfishVariant, DebugMsgShouldHaveIndent) {
   ecclesia::FakeRedfishServer mockup("barebones_session_auth/mockup.shar");
@@ -60,8 +63,8 @@ TEST(RedfishVariant, DebugMsgShouldHaveIndent) {
  },
  "Name": "Root Service",
  "RedfishVersion": "1.6.1"
-})", chassis.DebugString());
-
+})",
+            chassis.DebugString());
 }
 
 TEST(RedfishVariant, IndexingOk) {
@@ -72,6 +75,9 @@ TEST(RedfishVariant, IndexingOk) {
   EXPECT_THAT(chassis.status(), ecclesia::IsOk());
   EXPECT_THAT(chassis.httpcode(),
               ecclesia::HttpResponseCode::HTTP_CODE_REQUEST_OK);
+
+  EXPECT_THAT(chassis.httpheaders(),
+              Optional(Contains(Pair("OData-Version", "4.0"))));
   auto obj = chassis.AsObject();
   ASSERT_THAT(obj, Ne(nullptr));
   EXPECT_THAT(obj->GetNodeValue<PropertyName>(), Eq("chassis"));

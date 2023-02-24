@@ -42,8 +42,10 @@
 namespace ecclesia {
 namespace {
 
+using ::testing::Contains;
 using ::testing::Eq;
 using ::testing::Gt;
+using ::testing::Pair;
 
 class HttpRedfishTransportTest : public ::testing::Test {
  protected:
@@ -68,6 +70,7 @@ TEST_F(HttpRedfishTransportTest, CanGet) {
   auto result = transport_->Get("/redfish/v1");
   ASSERT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   nlohmann::json expected =
       nlohmann::json::parse(R"json({
   "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
@@ -111,6 +114,7 @@ TEST_F(HttpRedfishTransportTest, GetInvalidJson) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
   EXPECT_TRUE(std::get<nlohmann::json>(result->body).is_discarded());
 }
@@ -140,6 +144,7 @@ TEST_F(HttpRedfishTransportTest, GetError) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(500));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
   EXPECT_THAT(std::get<nlohmann::json>(result->body), Eq(result_json));
 }
@@ -190,6 +195,7 @@ TEST_F(HttpRedfishTransportTest, CanPost) {
   ASSERT_TRUE(called);
   ASSERT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
   const auto &json = std::get<nlohmann::json>(result->body);
   EXPECT_THAT(json, Eq(result_json))
@@ -219,6 +225,7 @@ TEST_F(HttpRedfishTransportTest, PostInvalidJson) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
   EXPECT_TRUE(std::get<nlohmann::json>(result->body).is_discarded());
 }
@@ -252,6 +259,7 @@ TEST_F(HttpRedfishTransportTest, PostError) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(500));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
   EXPECT_THAT(std::get<nlohmann::json>(result->body), Eq(result_json));
 }
@@ -296,6 +304,7 @@ TEST_F(HttpRedfishTransportTest, CanPatch) {
   ASSERT_TRUE(called);
   ASSERT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
   const auto &json = std::get<nlohmann::json>(result->body);
   EXPECT_THAT(json, Eq(result_json))
@@ -324,6 +333,7 @@ TEST_F(HttpRedfishTransportTest, PatchInvalidJson) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
   EXPECT_TRUE(std::get<nlohmann::json>(result->body).is_discarded());
 }
@@ -356,6 +366,7 @@ TEST_F(HttpRedfishTransportTest, PatchError) {
   ASSERT_TRUE(called);
   EXPECT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(500));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
   EXPECT_THAT(std::get<nlohmann::json>(result->body), Eq(result_json));
 }
@@ -389,6 +400,7 @@ TEST_F(HttpRedfishTransportTest, CanDelete) {
   ASSERT_TRUE(called);
   ASSERT_TRUE(result.ok()) << result.status().message();
   EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
   const auto &json = std::get<nlohmann::json>(result->body);
   EXPECT_THAT(json, Eq(result_json))
