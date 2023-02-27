@@ -28,6 +28,7 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1_grpc_include.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
 #include "ecclesia/lib/redfish/transport/grpc.h"
@@ -317,7 +318,7 @@ OverridePolicy GetOverridePolicy(
   OverridePolicy policy;
   std::string service_address(
       port.has_value() ? absl::StrCat(hostname, ":", *port) : hostname);
-  auto client = redfish::v1::RedfishV1::NewStub(
+  auto client = GrpcRedfishV1::NewStub(
       grpc::CreateChannel(service_address, creds));
   if (client == nullptr) {
     LOG(WARNING) << "Override Stub creation failed";

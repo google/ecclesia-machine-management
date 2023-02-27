@@ -25,6 +25,7 @@
 #include "absl/strings/str_cat.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1_grpc_include.h"
 #include "grpcpp/security/server_credentials.h"
 #include "grpcpp/server.h"
 #include "grpcpp/server_context.h"
@@ -35,7 +36,7 @@ namespace ecclesia {
 // FakeRedfishV1Impl implements the Redfish service according to the callback
 // that users set. It's useful in unit tests.
 // The class is thread compatible.
-class FakeRedfishV1Impl : public ::redfish::v1::RedfishV1::Service {
+class FakeRedfishV1Impl : public GrpcRedfishV1::Service {
  public:
   FakeRedfishV1Impl()
       : callback_(

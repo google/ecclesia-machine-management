@@ -40,7 +40,6 @@ namespace {
 
 using ::google::protobuf::Struct;
 using ::google::protobuf::Value;
-using ::redfish::v1::RedfishV1;
 using ::redfish::v1::Request;
 using ::redfish::v1::Response;
 
@@ -48,7 +47,7 @@ TEST(FakeServerTest, InsecureChannelDefault) {
   GrpcDynamicFakeServer fake_server;
   std::shared_ptr<grpc::Channel> channel = grpc::CreateChannel(
       fake_server.GetHostPort(), grpc::InsecureChannelCredentials());
-  std::unique_ptr<RedfishV1::Stub> stub = RedfishV1::NewStub(channel);
+  std::unique_ptr<GrpcRedfishV1::Stub> stub = GrpcRedfishV1::NewStub(channel);
   grpc::ClientContext context;
   context.set_deadline(absl::ToChronoTime(absl::Now() + absl::Seconds(1)));
   Request request;
@@ -60,7 +59,7 @@ TEST(FakeServerTest, InsecureChannelOk) {
   GrpcDynamicFakeServer fake_server;
   std::shared_ptr<grpc::Channel> channel = grpc::CreateChannel(
       fake_server.GetHostPort(), grpc::InsecureChannelCredentials());
-  std::unique_ptr<RedfishV1::Stub> stub = RedfishV1::NewStub(channel);
+  std::unique_ptr<GrpcRedfishV1::Stub> stub = GrpcRedfishV1::NewStub(channel);
   Value value;
   value.set_string_value("world");
   Struct expected_response;
@@ -86,7 +85,7 @@ TEST(FakeServerTest, InsecureChannelNotOk) {
   GrpcDynamicFakeServer fake_server;
   std::shared_ptr<grpc::Channel> channel = grpc::CreateChannel(
       fake_server.GetHostPort(), grpc::InsecureChannelCredentials());
-  std::unique_ptr<RedfishV1::Stub> stub = RedfishV1::NewStub(channel);
+  std::unique_ptr<GrpcRedfishV1::Stub> stub = GrpcRedfishV1::NewStub(channel);
 
   fake_server.SetCallback(
       [](grpc::ServerContext *context, const Request *request,

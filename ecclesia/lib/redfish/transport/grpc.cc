@@ -37,6 +37,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1_grpc_include.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/struct_proto_conversion.h"
 #include "ecclesia/lib/redfish/utils.h"
@@ -150,13 +151,13 @@ class GrpcRedfishTransport : public RedfishTransport {
   GrpcRedfishTransport(absl::string_view endpoint,
                        const GrpcTransportParams &params,
                        const std::shared_ptr<grpc::ChannelCredentials> &creds)
-      : client_(redfish::v1::RedfishV1::NewStub(
+      : client_(GrpcRedfishV1::NewStub(
             grpc::CreateChannel(std::string(endpoint), creds))),
         params_(std::move(params)),
         fqdn_(EndpointToFqdn(endpoint)) {}
 
   GrpcRedfishTransport(absl::string_view endpoint)
-      : client_(redfish::v1::RedfishV1::NewStub(grpc::CreateChannel(
+      : client_(GrpcRedfishV1::NewStub(grpc::CreateChannel(
             std::string(endpoint), grpc::InsecureChannelCredentials()))),
         params_({}),
         fqdn_(EndpointToFqdn(endpoint)) {}
@@ -236,8 +237,7 @@ class GrpcRedfishTransport : public RedfishTransport {
 
  private:
   absl::Mutex mutex_;
-  std::unique_ptr<::redfish::v1::RedfishV1::Stub> client_
-      ABSL_GUARDED_BY(mutex_);
+  std::unique_ptr<GrpcRedfishV1::Stub> client_ ABSL_GUARDED_BY(mutex_);
   GrpcTransportParams params_;
   std::string fqdn_;
 };

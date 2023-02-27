@@ -33,6 +33,7 @@
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1_grpc_include.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/transport/grpc.h"
 #include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
@@ -73,12 +74,12 @@ class GrpcRedfishMockUpServerTest : public Test {
     }
     std::shared_ptr<grpc::Channel> channel = CreateChannel(
         absl::StrCat("localhost:", *port), grpc::InsecureChannelCredentials());
-    stub_ = ::redfish::v1::RedfishV1::NewStub(channel);
+    stub_ = GrpcRedfishV1::NewStub(channel);
   }
 
   std::unique_ptr<GrpcDynamicMockupServer> mockup_server_;
   std::unique_ptr<RedfishTransport> client_;
-  std::unique_ptr<::redfish::v1::RedfishV1::Stub> stub_;
+  std::unique_ptr<GrpcRedfishV1::Stub> stub_;
 };
 
 // Testing Post, Patch and Get requests. The Patch request can verify the

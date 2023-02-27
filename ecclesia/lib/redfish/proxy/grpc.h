@@ -26,17 +26,17 @@
 #include "ecclesia/lib/logging/interfaces.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1_grpc_include.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
 
 namespace ecclesia {
 
-class RedfishV1GrpcProxy : public redfish::v1::RedfishV1::Service {
+class RedfishV1GrpcProxy : public GrpcRedfishV1::Service {
  public:
   // Define a proxy with the given name that forward requests to the given stub.
   // The name is for use in logging and other debugging and tracing contexts.
-  RedfishV1GrpcProxy(std::string name,
-                     redfish::v1::RedfishV1::StubInterface *stub);
+  RedfishV1GrpcProxy(std::string name, GrpcRedfishV1::StubInterface *stub);
 
   // The name of the proxy service.
   const std::string &name() const { return name_; }
@@ -96,7 +96,7 @@ class RedfishV1GrpcProxy : public redfish::v1::RedfishV1::Service {
 
   std::string name_;
   SequenceNumberGenerator seq_num_generator_;
-  redfish::v1::RedfishV1::StubInterface *stub_;
+  GrpcRedfishV1::StubInterface *stub_;
 };
 
 }  // namespace ecclesia

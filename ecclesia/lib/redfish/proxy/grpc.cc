@@ -25,6 +25,7 @@
 #include "ecclesia/lib/atomic/sequence.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1_grpc_include.h"
 #include "ecclesia/lib/status/rpc.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/server_context.h"
@@ -45,7 +46,7 @@ void ForwardMetadataFromServerContext(grpc::ServerContext &server_context,
 }  // namespace
 
 RedfishV1GrpcProxy::RedfishV1GrpcProxy(
-    std::string name, redfish::v1::RedfishV1::StubInterface *stub)
+    std::string name, GrpcRedfishV1::StubInterface *stub)
     : name_(std::move(name)), stub_(stub) {}
 
 // All of the HTTP handlers are implemented in the exact same way just with

@@ -29,6 +29,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1_grpc_include.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "grpcpp/security/server_credentials.h"
 #include "grpcpp/server.h"
@@ -121,7 +122,7 @@ class GrpcDynamicMockupServer {
   // defined for overwriting the REST operations with custom handlers.
   // By default, if there are no custom handlers for an operation registered,
   // this implementation will forward the REST request to the Redfish mockup.
-  class RedfishV1Impl final : public ::redfish::v1::RedfishV1::Service {
+  class RedfishV1Impl final : public GrpcRedfishV1::Service {
    public:
     explicit RedfishV1Impl(std::unique_ptr<RedfishInterface> redfish_intf)
         : redfish_intf_(std::move(redfish_intf)) {}

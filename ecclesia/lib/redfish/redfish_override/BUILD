@@ -26,6 +26,7 @@ cc_library(
         ":rf_override_cc_proto",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_grpc_proto",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
+        "//ecclesia/lib/redfish/proto:redfish_v1_grpc_include",
         "//ecclesia/lib/redfish/transport:grpc",
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:struct_proto_conversion",

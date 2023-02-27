@@ -23,3 +23,13 @@ cc_grpc_library(
     visibility = ["//ecclesia:redfish_grpc_users"],
     deps = [":redfish_v1_cc_proto"],
 )
+
+# This library is to workaround b/262592754#comment9
+cc_library(
+    name = "redfish_v1_grpc_include",
+    hdrs = ["redfish_v1_grpc_include.h"],
+    visibility = ["//ecclesia:redfish_grpc_users"],
+    deps = [
+        ":redfish_v1_cc_grpc_proto",
+    ],
+)

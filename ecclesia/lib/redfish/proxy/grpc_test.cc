@@ -51,6 +51,12 @@ using ::testing::Return;
 using ::testing::SetArgPointee;
 using ::testing::StrictMock;
 
+#ifdef INTERNAL_GRPC_GEN
+using MockRedfishV1Stub = redfish::v1::grpc_gen::MockRedfishV1Stub;
+#else
+using MockRedfishV1Stub = redfish::v1::MockRedfishV1Stub;
+#endif
+
 // Typed test for all GRPC proxy tests. This is parameterized on the verb being
 // tested, using one of the RedfishXXX objects defined below (e.g. RedfishGet).
 template <typename T>
@@ -68,14 +74,14 @@ class GrpcProxyTest : public ::testing::Test {
     proxy_server_ = builder.BuildAndStart();
   }
 
-  std::unique_ptr<redfish::v1::RedfishV1::Stub> MakeProxyStub() {
+  std::unique_ptr<GrpcRedfishV1::Stub> MakeProxyStub() {
     auto creds = grpc::experimental::LocalCredentials(UDS);
     auto channel =
         grpc::CreateChannel(absl::StrFormat("unix:%s", proxy_uds_), creds);
-    return redfish::v1::RedfishV1::NewStub(channel);
+    return GrpcRedfishV1::NewStub(channel);
   }
 
-  StrictMock<redfish::v1::MockRedfishV1Stub> mock_stub_;
+  StrictMock<MockRedfishV1Stub> mock_stub_;
   RedfishV1GrpcProxy proxy_;
 
   std::string proxy_uds_;
@@ -96,13 +102,13 @@ class GrpcProxyTest : public ::testing::Test {
 #define DEFINE_RPC_TYPE(name)                                              \
   struct Redfish##name {                                                   \
     template <typename... Matchers>                                        \
-    static auto &ExpectMockStubCall(redfish::v1::MockRedfishV1Stub &stub,  \
+    static auto &ExpectMockStubCall(MockRedfishV1Stub &stub,               \
                                     Matchers &&...matchers) {              \
       return EXPECT_CALL(stub, name(std::forward<Matchers>(matchers)...)); \
     }                                                                      \
                                                                            \
     template <typename... Params>                                          \
-    static grpc::Status CallStub(redfish::v1::RedfishV1::Stub &stub,       \
+    static grpc::Status CallStub(GrpcRedfishV1::Stub &stub,                \
                                  Params &&...params) {                     \
       return stub.name(std::forward<Params>(params)...);                   \
     }                                                                      \
