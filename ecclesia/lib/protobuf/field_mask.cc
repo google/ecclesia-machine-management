@@ -16,9 +16,12 @@
 
 #include "ecclesia/lib/protobuf/field_mask.h"
 
+#include <cctype>
+#include <string_view>
 #include <vector>
 
 #include "google/protobuf/field_mask.pb.h"
+#include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/message.h"
@@ -70,6 +73,55 @@ void Subtract(const google::protobuf::Descriptor *descriptor,
 bool TrimMessage(const google::protobuf::FieldMask &mask,
                  google::protobuf::Message *message) {
   return google::protobuf::util::FieldMaskUtil::TrimMessage(mask, message);
+}
+absl::StatusOr<std::string> SnakeCaseToCamelCase(std::string_view input,
+                                                 bool to_lower_case) {
+  // to_lower_case determines if it is UpperCaseCamel or lowerCaseCamel.
+  bool after_underscore = !to_lower_case;
+  std::string output;
+  for (char input_char : input) {
+    if (input_char >= 'A' && input_char <= 'Z') {
+      return absl::InternalError(
+          "The field name must not contain uppercase letters.");
+    }
+    if (after_underscore) {
+      if (input_char >= 'a' && input_char <= 'z') {
+        output.push_back(input_char + 'A' - 'a');
+        after_underscore = false;
+      } else {
+        return absl::InternalError(
+            "The character after a \"_\" must be a lowercase letter");
+      }
+    } else if (input_char == '_') {
+      after_underscore = true;
+    } else {
+      output.push_back(input_char);
+    }
+  }
+  if (after_underscore) {
+    // Trailing "_".
+    return absl::InternalError("Trailing \"_\"");
+  }
+  return output;
+}
+
+absl::StatusOr<std::string> CamelCaseToSnakeCase(std::string_view input,
+                                                 bool to_lower_case) {
+  std::string output;
+  auto *convert = to_lower_case ? [](char c) { return std::tolower(c); }
+                                : [](char c) { return std::toupper(c); };
+
+  for (size_t i = 0; i < input.size(); ++i) {
+    char c = input[i];
+    if (!isalpha(c)) {
+      return absl::InternalError("Contains non-alphabet character");
+    }
+    if (std::isupper(c) && i != 0) {
+      output.push_back('_');
+    }
+    output.push_back(static_cast<char>(convert(c)));
+  }
+  return output;
 }
 
 }  // namespace ecclesia_field_mask_util

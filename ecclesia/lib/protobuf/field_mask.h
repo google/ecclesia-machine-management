@@ -32,9 +32,11 @@
 #ifndef ECCLESIA_LIB_PROTOBUF_FIELD_MASK_H_
 #define ECCLESIA_LIB_PROTOBUF_FIELD_MASK_H_
 
+#include <string>
 #include <vector>
 
 #include "google/protobuf/field_mask.pb.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/message.h"
@@ -68,6 +70,12 @@ void Subtract(const google::protobuf::FieldMask &mask1,
 }
 bool TrimMessage(const google::protobuf::FieldMask &mask,
                  google::protobuf::Message *message);
+
+absl::StatusOr<std::string> SnakeCaseToCamelCase(std::string_view input,
+                                                 bool to_lower_case);
+
+absl::StatusOr<std::string> CamelCaseToSnakeCase(std::string_view input,
+                                                 bool to_lower_case);
 
 }  // namespace ecclesia_field_mask_util
 }  // namespace ecclesia

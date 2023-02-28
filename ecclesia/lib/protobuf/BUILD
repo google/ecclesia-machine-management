@@ -8,6 +8,8 @@ cc_library(
     hdrs = ["field_mask.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_protobuf//:protobuf",
     ],
