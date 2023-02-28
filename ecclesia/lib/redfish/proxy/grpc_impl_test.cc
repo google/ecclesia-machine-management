@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/lib/redfish/proxy/grpc.h"
+#include "ecclesia/lib/redfish/proxy/grpc_impl.h"
 
 #include <memory>
 #include <string>
@@ -30,6 +30,7 @@
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1_mock.grpc.pb.h"
+#include "ecclesia/lib/redfish/proxy/redfish_proxy.h"
 #include "ecclesia/lib/status/rpc.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
@@ -82,7 +83,7 @@ class GrpcProxyTest : public ::testing::Test {
   }
 
   StrictMock<MockRedfishV1Stub> mock_stub_;
-  RedfishV1GrpcProxy proxy_;
+  RedfishProxyGrpcBackend proxy_;
 
   std::string proxy_uds_;
   std::unique_ptr<grpc::Server> proxy_server_;
