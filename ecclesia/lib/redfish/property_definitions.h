@@ -63,6 +63,7 @@ inline constexpr char kRfPropertyProcessors[] = "Processors";
 inline constexpr char kRfPropertySubProcessors[] = "SubProcessors";
 inline constexpr char kRfPropertyMetrics[] = "Metrics";
 inline constexpr char kRfPropertyEnvironmentMetrics[] = "EnvironmentMetrics";
+inline constexpr char kRfPropertyMemoryMetrics[] = "MemoryMetrics";
 inline constexpr char kRfPropertySessions[] = "Sessions";
 inline constexpr char kRfPropertySessionService[] = "SessionService";
 inline constexpr char kRfPropertySystems[] = "Systems";
@@ -381,6 +382,7 @@ DEFINE_REDFISH_PROPERTY(PropertyHealthRollup, std::string, "HealthRollup");
 DEFINE_REDFISH_PROPERTY(PropertyMessageId, std::string, "MessageId");
 DEFINE_REDFISH_PROPERTY(PropertySeverity, std::string, "Severity");
 DEFINE_REDFISH_PROPERTY(PropertyTimestamp, absl::Time, "Timestamp");
+DEFINE_REDFISH_PROPERTY(PropertyBandwidthPercent, double, "BandwidthPercent");
 
 // ManagerDiagnosticData properties
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
