@@ -75,6 +75,7 @@ cc_library(
     name = "redfish_impl",
     srcs = ["redfish_impl.cc"],
     hdrs = ["redfish_impl.h"],
+    visibility = ["//ecclesia:mmanager_frontend_users"],
     deps = [
         ":redfish_proxy",
         "//ecclesia/lib/atomic:sequence",
