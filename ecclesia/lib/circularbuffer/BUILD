@@ -1,6 +1,8 @@
 # Description:
 #   Implements a circlularbuffer
 
+package(default_applicable_licenses = [""])
+
 licenses(["notice"])
 
 cc_test(

@@ -1,5 +1,7 @@
 # A http library that wraps around curl.
 
+package(default_applicable_licenses = [""])
+
 licenses(["notice"])
 
 cc_library(

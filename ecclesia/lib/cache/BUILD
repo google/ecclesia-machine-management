@@ -1,6 +1,8 @@
 # Description:
 #   Helpful utilities for implementing caching systems.
 
+package(default_applicable_licenses = [""])
+
 licenses(["notice"])
 
 cc_library(

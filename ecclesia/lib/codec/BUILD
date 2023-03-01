@@ -4,6 +4,8 @@
 #   decoding text into 6-bit packed ASCII) as well as more basic things like
 #   loading and storing big and little endian integers.
 
+package(default_applicable_licenses = [""])
+
 licenses(["notice"])
 
 cc_library(

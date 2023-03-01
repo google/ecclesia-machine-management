@@ -1,6 +1,8 @@
 # Description:
 #   Libraries to simplify access to API filesystems (e.g. procfs, sysfs).
 
+package(default_applicable_licenses = [""])
+
 licenses(["notice"])
 
 cc_library(

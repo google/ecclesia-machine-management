@@ -1,6 +1,8 @@
 # Description:
 #   Libraries to provide input / output.
 
+package(default_applicable_licenses = [""])
+
 licenses(["notice"])
 
 cc_library(

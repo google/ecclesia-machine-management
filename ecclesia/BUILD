@@ -5,6 +5,8 @@
 #   * public (rarely)
 # If none of these are suitable for you then you may need a new group here.
 
+package(default_applicable_licenses = [""])
+
 licenses(["notice"])
 
 exports_files(["LICENSE"])
