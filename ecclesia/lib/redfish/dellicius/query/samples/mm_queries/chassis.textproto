@@ -1,0 +1,62 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "ChassisCollector"
+subquery: {
+  subquery_id: "GetAllChassis"
+  redpath: "/Chassis[*]"
+  properties { property: "PartNumber" type: STRING }
+  properties { property: "SerialNumber" type: STRING }
+}
+
+# List of streamz metrics covered:
+#   1. machine:/mmanager/port/attached_assembly/devpath
+#   2. machine:/mmanager/port/connection_status
+subquery {
+  subquery_id: "GetAllPCIeSlots"
+  root_subquery_ids: "GetAllChassis"
+  redpath: "/PCIeSlots[*]/Slots[*]"
+  properties: { property: "Id" type: STRING }
+  properties: { name: "StatusState" property: "Status.State" type: STRING }
+  properties: { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+}
+
+subquery {
+  subquery_id: "GetAllAssemblyEntries"
+  root_subquery_ids: "GetAllChassis"
+  redpath: "/Assembly/Assemblies[*]"
+  properties { property: "Name" type: STRING }
+  properties { property: "SerialNumber" type: STRING }
+  properties { property: "PartNumber" type: STRING }
+}
+
+subquery {
+  subquery_id: "GetAllDrives"
+  root_subquery_ids: "GetAllChassis"
+  redpath: "/Drives[*]"
+  properties { property: "Name" type: STRING }
+  properties { property: "MediaType" type: STRING }
+  properties { property: "CapacityBytes" type: INT64 }
+  properties { property: "PartNumber" type: STRING }
+  properties { property: "SerialNumber" type: STRING }
+}
+
+# List of streamz metrics covered:
+#   1. machine:/mmanager/sensor/assembly/devpath
+#   2. machine:/mmanager/sensor/reading
+subquery {
+  subquery_id: "GetAllSensors"
+  root_subquery_ids: "GetAllChassis"
+  redpath: "/Sensors[*]"
+  properties { property: "Name" type: STRING }
+  properties { property: "ReadingType" type: STRING }
+  properties { property: "ReadingUnits" type: STRING }
+  properties { property: "Reading" type: INT64 }
+  properties { property: "ReadingRangeMax" type: DOUBLE }
+  properties { property: "ReadingRangeMin" type: DOUBLE }
+  properties { property: "Status.Health" name: "HealthStatus" type: STRING }
+  properties { property: "Thresholds.UpperCritical.Reading" name: "UpperCriticalThreshold" type: DOUBLE }
+  properties { property: "Thresholds.UpperFatal.Reading" name: "UpperFatalThreshold" type: DOUBLE }
+  properties { property: "Thresholds.LowerCritical.Reading" name: "LowerCriticalThreshold" type: DOUBLE }
+  properties { property: "Location.PartLocation.ServiceLabel" name: "ServiceLabel" type: STRING }
+}

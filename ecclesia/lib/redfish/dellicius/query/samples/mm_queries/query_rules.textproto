@@ -1,0 +1,76 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/engine/query_rules.proto
+# proto-message: QueryRules
+
+query_id_to_params_rule {
+  key: "SystemsCollector"
+  value {
+    redpath_prefix_with_params {
+      redpath: "/Systems[*]/Processors"
+      expand_configuration {
+        level: 6
+        type: BOTH
+      }
+    }
+    redpath_prefix_with_params {
+      redpath: "/Systems[*]/Memory"
+      expand_configuration {
+        level: 2
+        type: BOTH
+      }
+    }
+    redpath_prefix_with_params {
+      redpath: "/Systems[*]/Storage"
+      expand_configuration {
+        level: 1
+        type: BOTH
+      }
+    }
+    redpath_prefix_with_params {
+      redpath: "/Systems[*]/PCIeDevices"
+      expand_configuration {
+        level: 1
+        type: BOTH
+      }
+    }
+  }
+}
+
+query_id_to_params_rule {
+  key: "ChassisCollector"
+  value {
+    redpath_prefix_with_params {
+      redpath: "/Chassis"
+      expand_configuration {
+        level: 1
+        type: BOTH
+      }
+    }
+    redpath_prefix_with_params {
+      redpath: "/Chassis[*]/PCIeSlots"
+      expand_configuration {
+        level: 1
+        type: BOTH
+      }
+    }
+    redpath_prefix_with_params {
+      redpath: "/Chassis[*]/Sensors"
+      expand_configuration {
+        level: 1
+        type: BOTH
+      }
+    }
+  }
+}
+
+query_id_to_params_rule {
+  key: "ManagersCollector"
+  value {
+    redpath_prefix_with_params {
+      redpath: "/Managers"
+      expand_configuration {
+        level: 1
+        type: BOTH
+      }
+    }
+  }
+}

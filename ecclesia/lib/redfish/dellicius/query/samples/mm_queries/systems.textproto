@@ -1,0 +1,144 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "SystemsCollector"
+
+############ Systems Subtree #################
+# List of streamz metrics covered:
+#   1. machine:/mmanager/osdomain/uptime/seconds
+subquery {
+  subquery_id: "GetSystems"
+  redpath: "/Systems[*]"
+  properties { property: "Name" type: STRING }
+  properties { name: "SystemUptime" property: "Oem.Google.SystemUptime" type: INT64 }
+}
+
+############ Memory Subtree #################
+# List of streamz metrics covered:
+#   1. machine:/mmanager/memory/assembly/devpath
+#   2. machine:/mmanager/memory/correctable_errors/count
+#   3. machine:/mmanager/memory/physical_capacity
+#   4. machine:/mmanager/memory/uncertain_correctable_errors/count
+#   5. machine:/mmanager/memory/uncertain_uncorrectable_errors/count
+#   6. machine:/mmanager/memory/uncorrectable_errors/count
+#   7. machine:/mmanager/memory/usable_capacity
+subquery {
+  subquery_id: "GetMemory"
+  root_subquery_ids: "GetSystems"
+  redpath: "/Memory[*]"
+  properties { property: "Name" type: STRING }
+  properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+  properties { name: "PhysicalCapacity" property: "CapacityMiB" type: INT64 }
+  properties { name: "UsableCapacity" property: "CapacityMiB" type: INT64 }
+  properties { property: "PartNumber" type: STRING }
+  properties { property: "SerialNumber" type: STRING }
+}
+subquery {
+  subquery_id: "GetMemoryMetrics"
+  root_subquery_ids: "GetMemory"
+  redpath: "/Metrics"
+  properties { name: "CorrectableECCErrorCount" property: "CurrentPeriod.CorrectableECCErrorCount" type: INT64 }
+  properties { name: "UncorrectableECCErrorCount" property: "CurrentPeriod.UncorrectableECCErrorCount" type: INT64 }
+  properties { name: "IndeterminateCorrectableErrorCount" property: "CurrentPeriod.IndeterminateCorrectableErrorCount" type: INT64 }
+  properties { name: "IndeterminateUncorrectableErrorCount" property: "CurrentPeriod.IndeterminateUncorrectableErrorCount" type: INT64 }
+}
+
+############ Storage Subtree #################
+subquery {
+  subquery_id: "GetAllDrives"
+  root_subquery_ids: "GetSystems"
+  redpath: "/Storage[*]/Drives[*]"
+  properties { property: "MediaType" name: "MediaType" type: STRING }
+  properties { property: "CapacityBytes" name: "CapacityBytes" type: INT64 }
+  properties { property: "PartNumber" type: STRING }
+  properties { property: "SerialNumber" type: STRING }
+  properties { property: "Name" type: STRING }
+}
+
+############ PCIeDevices Subtree #################
+# List of streamz metrics covered:
+#   1. machine:/mmanager/pci/assembly/devpath
+#   2. machine:/mmanager/pci/devpath
+#   3. machine:/mmanager/pci/max_speed
+#   4. machine:/mmanager/pci/max_width
+#   5. machine:/mmanager/pci/speed
+#   6. machine:/mmanager/pci/width
+subquery {
+  subquery_id: "GetPciDevices"
+  root_subquery_ids: "GetSystems"
+  redpath: "/PCIeDevices[*]"
+  properties { name: "LanesInUse" property: "PCIeInterface.LanesInUse" type: INT64 }
+  properties { name: "MaxLanes" property: "PCIeInterface.MaxLanes" type: INT64 }
+  properties { name: "MaxPCIeType" property: "PCIeInterface.MaxPCIeType" type: STRING }
+  properties { name: "PCIeType" property: "PCIeInterface.PCIeType" type: STRING }
+}
+subquery {
+  subquery_id: "GetPciFunctionServiceLabel"
+  root_subquery_ids: "GetPciDevices"
+  redpath: "/PCIeFunctions[*]"
+  properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+}
+
+############ Processors Subtree #################
+# List of streamz metrics covered:
+#   1. machine:/mmanager/physicallpu/cpu/package_devpath
+#   2. machine:/mmanager/physicallpu/lpu_errors/counter
+#   3. machine:/mmanager/physicallpu/microcode
+#   4. machine:/mmanager/physicallpu/socket
+#   5. machine:/mmanager/osdomain/cpu_complex/cpu_type
+#   6. machine:/mmanager/accelerator/gpu/devpath
+subquery {
+  subquery_id: "CpuInfo"
+  root_subquery_ids: "GetSystems"
+  redpath: "/Processors[*]"
+  properties { property: "Name" type: STRING }
+  properties { property: "ProcessorType" type: STRING }
+  properties { property: "Id" type: STRING }
+  properties { property: "PartNumber" type: STRING }
+  properties { property: "SerialNumber" type: STRING }
+  properties { name: "HealthRollup" property: "Status.HealthRollup" type: STRING }
+  properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+  properties { name: "MicrocodeInfo" property: "ProcessorId.MicrocodeInfo" type: STRING }
+  properties { name: "Step" property: "ProcessorId.Step" type: STRING }
+  properties { name: "EffectiveModel" property: "ProcessorId.EffectiveModel" type: STRING }
+  properties { name: "EffectiveFamily" property: "ProcessorId.EffectiveFamily" type: STRING }
+}
+
+# List of streamz metrics covered:
+#   1. machine:/mmanager/osdomain/cpu_complex/board_type
+subquery {
+  subquery_id: "HealthRollupCondtitions"
+  root_subquery_ids: "CpuInfo"
+  redpath: "/Status/Conditions[*]"
+  properties { property: "MessageId" type: STRING }
+}
+
+# List of streamz metrics covered:
+#   1. machine:/mmanager/osdomain/cpu_complex/board_type
+subquery {
+  subquery_id: "BoardType"
+  root_subquery_ids: "CpuInfo"
+  redpath: "/Links/Chassis"
+  properties { property: "Name" type: STRING }
+}
+
+subquery {
+  subquery_id: "ErrorCount"
+  root_subquery_ids: "CpuInfo"
+  redpath: "/Metrics"
+  properties { property: "CorrectableOtherErrorCount" type: INT64 }
+  properties { property: "UncorrectableOtherErrorCount" type: INT64 }
+}
+subquery {
+  subquery_id: "ThreadInfo"
+  root_subquery_ids: "CpuInfo"
+  redpath: "/SubProcessors[*]/SubProcessors[*]"
+  properties { name: "MicrocodeInfo" property: "ProcessorId.MicrocodeInfo" type: STRING }
+}
+subquery {
+  subquery_id: "ErrorCount"
+  root_subquery_ids: "ThreadInfo"
+  redpath: "/Metrics"
+  properties { property: "CorrectableCoreErrorCount" type: INT64 }
+  properties { property: "UncorrectableCoreErrorCount" type: INT64 }
+}

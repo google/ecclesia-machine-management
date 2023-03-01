@@ -38,8 +38,10 @@
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
+#include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/engine/config.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
+#include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -60,6 +62,8 @@ ABSL_FLAG(std::string, hostname, "localhost",
 ABSL_FLAG(int, port, 8000, "Port number of the server.");
 ABSL_FLAG(std::string, input_dir, "",
           "Absolute path to directory containing textproto files for Queries.");
+ABSL_FLAG(std::string, query_rule_location, "",
+          "Absolute path to textproto coontaining rules for Queries.");
 ABSL_FLAG(std::string, transport_metric_output_dir, "",
           "Absolute path to output directory to store transport metrics.");
 ABSL_FLAG(std::vector<std::string>, query_ids, {},
@@ -85,39 +89,48 @@ constexpr absl::string_view kUsage =
 // Identifier for the output metrics file.
 constexpr absl::string_view kMetricOutId = "query_cli_redfish_metrics";
 
-// Defines attributes used to construct EmbeddedFile object from Dellicius Query
 struct DelliciusQueryMetadata {
-  // Captures raw string value of query_id attribute in DelliciusQuery proto.
-  std::string query_id;
-  // Stores parsed DelliciusQuery proto formatted in human readable debug string
-  std::string query_data;
+  struct Query {
+    // Captures raw string value of query_id attribute in DelliciusQuery proto.
+    std::string query_id;
+    // Stores parsed DelliciusQuery proto formatted in human readable debug
+    // string
+    std::string query_data;
+  };
+  struct Rules {
+    std::string rule_id;
+    // Stores parsed QueryRules proto formatted in human readable debug string
+    std::string rule_data;
+  };
+  Rules query_rules;
+  std::vector<Query> queries;
 };
 
-absl::StatusOr<std::vector<DelliciusQueryMetadata>> GetQueriesFromLocation(
-    absl::string_view loc) {
-  std::vector<DelliciusQueryMetadata> metadata;
+absl::StatusOr<DelliciusQueryMetadata> GetQueriesFromLocation(
+    absl::string_view query_dir, absl::string_view rule_location = "") {
+  DelliciusQueryMetadata metadata;
   absl::Status status =
-      WithEachFileInDirectory(loc, [&](absl::string_view dir_entry) {
-        auto query_file_path = JoinFilePaths(loc, dir_entry);
-        std::ifstream input(query_file_path);
-        if (!input) {
-          LOG(ERROR) << "File doesn't exist: " << dir_entry;
-          return;
-        }
-        DelliciusQuery query_in;
-        google::protobuf::io::IstreamInputStream input_stream(&input);
-        if (!google::protobuf::TextFormat::Parse(&input_stream, &query_in)) {
-          LOG(ERROR) << "Cannot parse given textproto";
-          return;
-        }
-        metadata.push_back({.query_id = query_in.query_id(),
-                            .query_data = query_in.DebugString()});
+      WithEachFileInDirectory(query_dir, [&](absl::string_view dir_entry) {
+        auto query_file_path = JoinFilePaths(query_dir, dir_entry);
+        DelliciusQuery query_in =
+            ParseTextFileAsProtoOrDie<DelliciusQuery>(query_file_path);
+        metadata.queries.push_back({.query_id = query_in.query_id(),
+                                    .query_data = query_in.DebugString()});
       });
   if (!status.ok()) return status;
-  if (metadata.empty()) {
+  if (metadata.queries.empty()) {
     return absl::NotFoundError(absl::StrFormat(
-        "Cannot process Dellicius Queries from given location %s", loc));
+        "Cannot process Dellicius Queries from given location %s", query_dir));
   }
+
+  // Populate QueryRules if present.
+  if (rule_location.empty()) {
+    return metadata;
+  }
+
+  QueryRules query_rules =
+      ParseTextFileAsProtoOrDie<QueryRules>(std::string{rule_location});
+  metadata.query_rules.rule_data = query_rules.DebugString();
   return metadata;
 }
 
@@ -125,9 +138,11 @@ int QueryMain(int argc, char **argv) {
   absl::SetProgramUsageMessage(kUsage);
   absl::ParseCommandLine(argc, argv);
   absl::InitializeLog();
+  std::string query_rule_location = absl::GetFlag(FLAGS_query_rule_location);
   // Parse Dellicius Queries from the given directory.
-  absl::StatusOr<std::vector<DelliciusQueryMetadata>> queries_metadata =
-      GetQueriesFromLocation(absl::GetFlag(FLAGS_input_dir));
+  absl::StatusOr<DelliciusQueryMetadata> queries_metadata =
+      GetQueriesFromLocation(absl::GetFlag(FLAGS_input_dir),
+                             query_rule_location);
   if (!queries_metadata.ok()) {
     LOG(ERROR) << queries_metadata.status();
     return -1;
@@ -142,16 +157,23 @@ int QueryMain(int argc, char **argv) {
   // Construct EmbeddedFile objects to be used with DelliciusQueryEngine.
   std::vector<EmbeddedFile> embedded_files;
   std::for_each(
-      queries_metadata->begin(), queries_metadata->end(),
-      [&](DelliciusQueryMetadata &query_id_and_data) {
+      queries_metadata->queries.begin(), queries_metadata->queries.end(),
+      [&](DelliciusQueryMetadata::Query &query_id_and_data) {
         embedded_files.push_back({.name = query_id_and_data.query_id,
                                   .data = query_id_and_data.query_data});
       });
+  EmbeddedFile query_rule_embedded_file;
+  if (!query_rule_location.empty() &&
+      !queries_metadata->query_rules.rule_data.empty()) {
+    query_rule_embedded_file.name = queries_metadata->query_rules.rule_id;
+    query_rule_embedded_file.data = queries_metadata->query_rules.rule_data;
+  }
   // Build QueryEngineConfiguration from command line arguments.
   QueryEngineConfiguration config{
       .flags{.enable_devpath_extension = absl::GetFlag(FLAGS_devpath_enabled),
              .enable_cached_uri_dispatch = false},
-      .query_files{embedded_files}};
+      .query_files{embedded_files},
+      .query_rules{query_rule_embedded_file}};
   // Configure HTTP transport.
   auto curl_http_client = std::make_unique<CurlHttpClient>(
       LibCurlProxy::CreateInstance(), HttpCredential());

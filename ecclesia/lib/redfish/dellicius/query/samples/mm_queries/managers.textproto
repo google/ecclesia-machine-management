@@ -1,0 +1,26 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "ManagersCollector"
+
+# List of streamz metrics covered:
+# 1. machine:/mmanager/osdomain/uptime/seconds
+# 2. machine:/mmanager/managementsubsystem/uptime/seconds
+subquery {
+  subquery_id: "GetBmcAgent"
+  redpath: "/Managers[*]"
+  properties { property: "LastResetTime" type: STRING }
+  properties { property: "DateTime" type: STRING }
+}
+
+# List of streamz metrics covered:
+#   1. machine:/mmanager/managementsubsystem/processor_statistics/kernel_percent
+#   2. machine:/mmanager/managementsubsystem/processor_statistics/user_percent
+subquery {
+  subquery_id: "GetManagerDiagnosticData"
+  root_subquery_ids: "GetBmcAgent"
+  redpath: "/ManagerDiagnosticData"
+  properties { name: "KernelPercent" property: "ProcessorStatistics.KernelPercent" type: DOUBLE }
+  properties { name: "UserPercent" property: "ProcessorStatistics.UserPercent" type: DOUBLE }
+  properties { name: "AvailableBytes" property: "MemoryStatistics.AvailableBytes" type: INT64 }
+}
