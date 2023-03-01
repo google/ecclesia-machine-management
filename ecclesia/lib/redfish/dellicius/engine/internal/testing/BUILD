@@ -1,5 +1,7 @@
 load("//ecclesia/build_defs:embed.bzl", "cc_data_library")
 
+package(default_applicable_licenses = [""])
+
 licenses(["notice"])
 
 cc_test(

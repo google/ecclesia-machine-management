@@ -1,3 +1,5 @@
+package(default_applicable_licenses = [""])
+
 cc_binary(
     name = "query_cli",
     testonly = True,

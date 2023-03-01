@@ -1,5 +1,7 @@
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 
+package(default_applicable_licenses = [""])
+
 licenses(["notice"])
 
 proto_library(
