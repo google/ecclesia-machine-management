@@ -72,8 +72,9 @@ class SimpliTuneTestRunner : public ::testing::Test {
     auto qp = BuildQueryPlanner(query, RedPathRedfishQueryParams{}, normalizer);
     ASSERT_TRUE(qp.ok());
     QueryTracker tracker;
-    DelliciusQueryResult query_result =
-        (*qp)->Run(intf_->GetRoot(), *clock_, &tracker);
+    absl::StatusOr<DelliciusQueryResult> query_result =
+        qp->Run(intf_->GetRoot(), *clock_, &tracker);
+    EXPECT_TRUE(query_result.ok());
     auto configs = GenerateExpandConfigurations(tracker);
     RedPathPrefixSetWithQueryParamsCollection generated_configs;
     for (const auto &config : configs) {

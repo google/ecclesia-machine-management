@@ -22,6 +22,7 @@
 #include "absl/memory/memory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/normalizer.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 
@@ -46,9 +47,16 @@ inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithDevpath(
 }
 
 // Builds the default query planner.
-absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> BuildQueryPlanner(
+inline absl::StatusOr<QueryPlannerInterface> BuildQueryPlanner(
     const DelliciusQuery &query, RedPathRedfishQueryParams query_params,
-    Normalizer *normalizer);
+    Normalizer *normalizer) {
+  auto qp =
+      BuildDefaultQueryPlanner(query, std::move(query_params), normalizer);
+  if (!qp.ok()) {
+    return qp.status();
+  }
+  return QueryPlannerInterface(std::move(*qp));
+}
 
 }  // namespace ecclesia
 

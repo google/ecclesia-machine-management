@@ -28,6 +28,7 @@
 #include "absl/flags/usage.h"
 #include "absl/log/initialize.h"
 #include "absl/log/log.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
@@ -111,19 +112,24 @@ int SimpliTuneMain(int argc, char **argv) {
   const Clock *clock = Clock::RealClock();
   DelliciusQuery query = ParseTextFileAsProtoOrDie<DelliciusQuery>(
       absl::GetFlag(FLAGS_query_path));
-  absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qp = BuildQueryPlanner(
+  absl::StatusOr<QueryPlannerInterface> qp = BuildQueryPlanner(
       query, RedPathRedfishQueryParams{}, default_normalizer.get());
   if (!qp.ok()) {
     LOG(ERROR) << qp.status();
     return -1;
   }
 
-  DelliciusQueryResult query_result = (*qp)->Run(root, *clock, &tracker);
-  LOG(INFO) << query_result.DebugString();
+  absl::StatusOr<DelliciusQueryResult> query_result =
+      qp->Run(root, *clock, &tracker);
+  if (!query_result.ok()) {
+    LOG(ERROR) << query_result.status();
+    return -1;
+  }
+  LOG(INFO) << query_result->DebugString();
   // Latency with no expand
   double min_latency = absl::ToDoubleMilliseconds(
-      AbslTimeFromProtoTime(query_result.end_timestamp()) -
-      AbslTimeFromProtoTime(query_result.start_timestamp()));
+      AbslTimeFromProtoTime(query_result->end_timestamp()) -
+      AbslTimeFromProtoTime(query_result->start_timestamp()));
   size_t config_count = 0;
   LOG(INFO) << "Config #" << config_count << " No Expand Response time (ms) "
             << min_latency;
@@ -155,10 +161,10 @@ int SimpliTuneMain(int argc, char **argv) {
       LOG(ERROR) << qp.status();
       return -1;
     }
-    query_result = (*qp)->Run(root, *clock, nullptr);
+    query_result = qp->Run(root, *clock, nullptr);
     double response_time_ms = absl::ToDoubleMilliseconds(
-        AbslTimeFromProtoTime(query_result.end_timestamp()) -
-        AbslTimeFromProtoTime(query_result.start_timestamp()));
+        AbslTimeFromProtoTime(query_result->end_timestamp()) -
+        AbslTimeFromProtoTime(query_result->start_timestamp()));
     LOG(INFO) << "Response time (ms) " << response_time_ms;
     LOG(INFO) << "\n\n";
     // Mark current configuration as golden if it has lowest latency.

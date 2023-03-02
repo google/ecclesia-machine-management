@@ -17,7 +17,11 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_INTERFACE_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_INTERFACE_H_
 
+#include <memory>
+#include <utility>
+
 #include "absl/container/flat_hash_set.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
@@ -78,17 +82,43 @@ class Normalizer {
   std::vector<std::unique_ptr<ImplInterface>> impl_chain_;
 };
 
-// Provides an interface for executing a query plan instantiated for a Dellicius
-// query.
+// Provides an interface for executing a Dellicius Query plan.
 class QueryPlannerInterface {
  public:
-  virtual ~QueryPlannerInterface() = default;
-  // Executes query plan using RedfishVariant as root.
-  // The RedfishVariant can be the service root (redfish/v1) or any redfish
-  // resource acting as local root for redfish subtree.
-  virtual DelliciusQueryResult Run(const RedfishVariant &variant,
-                                   const Clock &clock,
-                                   QueryTracker *tracker) = 0;
+  // QueryPlannerImpl is provided as the interface for subclasses to be
+  // implemented with the PImpl idiom. This allows QueryPlannerInterface to be
+  // used as value type and save the client from using verbose
+  // std::unique_ptr<QueryPlannerInterface> everywhere.
+  class QueryPlannerImpl {
+   public:
+    virtual ~QueryPlannerImpl() = default;
+    // Executes query plan using RedfishVariant as root.
+    // The RedfishVariant can be the service root (redfish/v1) or any redfish
+    // resource acting as local root for redfish subtree.
+    virtual DelliciusQueryResult Run(const RedfishVariant &variant,
+                                     const Clock &clock,
+                                     QueryTracker *tracker) = 0;
+  };
+
+  absl::StatusOr<DelliciusQueryResult> Run(const RedfishVariant &variant,
+                                           const Clock &clock,
+                                           QueryTracker *tracker) {
+    if (!impl_) {
+      return absl::InternalError("Query plan is null for id");
+    }
+    return impl_->Run(variant, clock, tracker);
+  }
+
+  explicit QueryPlannerInterface(std::unique_ptr<QueryPlannerImpl> impl)
+      : impl_(std::move(impl)) {}
+
+  QueryPlannerInterface(const QueryPlannerInterface &) = delete;
+  QueryPlannerInterface &operator=(const QueryPlannerInterface &) = delete;
+  QueryPlannerInterface(QueryPlannerInterface &&other) = default;
+  QueryPlannerInterface &operator=(QueryPlannerInterface &&other) = default;
+
+ private:
+  std::unique_ptr<QueryPlannerImpl> impl_;
 };
 
 }  // namespace ecclesia

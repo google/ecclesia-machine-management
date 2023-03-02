@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 
 #include <memory>
+#include <utility>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/log.h"
@@ -68,7 +69,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 
       // Build a query plan if none exists for the query id
       if (id_to_query_plans_.contains(query.query_id())) continue;
-      absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> query_planner;
+      absl::StatusOr<QueryPlannerInterface> query_planner;
       if (auto iter = query_id_to_rules.find(query.query_id());
           iter != query_id_to_rules.end()) {
         query_planner = BuildQueryPlanner(query, std::move(iter->second),
@@ -91,13 +92,15 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
         LOG(ERROR) << "Query plan does not exist for id " << query_id;
         continue;
       }
-      if (it->second == nullptr) {
-        LOG(ERROR) << "Query plan is null for id " << query_id;
+
+      absl::StatusOr<DelliciusQueryResult> result_single =
+          it->second.Run(intf_->GetRoot(), *clock_, tracker);
+      if (!result_single.ok()) {
+        LOG(ERROR) << "Query Failed for id: " << query_id
+                   << " Reason: " << result_single.status();
         continue;
       }
-      DelliciusQueryResult result_single =
-          it->second->Run(intf_->GetRoot(), *clock_, tracker);
-      response_entries.push_back(std::move(result_single));
+      response_entries.push_back(std::move(*result_single));
     }
     return response_entries;
   }
@@ -116,8 +119,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
  private:
   // Data normalizer to inject in QueryPlanner for normalizing redfish
   // response per a given property specification in dellicius subquery.
-  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
-      id_to_query_plans_;
+  absl::flat_hash_map<std::string, QueryPlannerInterface> id_to_query_plans_;
   const Clock *clock_;
   std::unique_ptr<Normalizer> normalizer_;
   std::unique_ptr<RedfishInterface> intf_;
