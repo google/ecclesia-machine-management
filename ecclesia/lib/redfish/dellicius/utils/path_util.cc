@@ -16,15 +16,50 @@
 
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 
+#include <cstddef>
 #include <memory>
+#include <optional>
+#include <utility>
 
 #include "absl/status/status.h"
+#include "absl/strings/numbers.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "re2/re2.h"
 
 namespace ecclesia {
+
+namespace {
+
+// Pattern for valid segment within a property path
+// Example:
+//   <VALID> properties { property: "outer.inner[2].child" type: STRING }
+//   <INVALID> properties { property: "outer.inner.2.child" type: STRING }
+//   The second example has segments "outer", "inner", "2" and "child" where "2"
+//   is an invalid segment.
+constexpr LazyRE2 kValidPropertyPathSegment = {
+    "^([a-zA-Z#@][0-9a-zA-Z#@.]+)(?:\\[([0-9]+)\\]|)$"};
+
+std::optional<std::pair<std::string, int>> SplitNodeNameIfArrayType(
+    absl::string_view node_name) {
+  std::string string_index;
+  int index;
+  std::string node_name_stripped;
+  if (!RE2::FullMatch(node_name, *kValidPropertyPathSegment,
+                      &node_name_stripped, &string_index)) {
+    return std::nullopt;
+  }
+
+  if (!absl::SimpleAtoi(string_index, &index)) {
+    return std::nullopt;
+  }
+
+  return std::pair<std::string, int>(node_name_stripped, index);
+}
+
+}  // namespace
 
 std::vector<std::string> SplitNodeNameForNestedNodes(
     absl::string_view expression) {
@@ -49,12 +84,25 @@ absl::StatusOr<nlohmann::json> ResolveNodeNameToJsonObj(
   nlohmann::json json_obj = redfish_object.GetContentAsJson();
   // If given expression has multiple nodes, we need to return the json object
   // associated with the leaf node.
-  for (auto const &name : node_names) {
+  for (auto &name : node_names) {
+    // If name referencing array, split name into array_name and array_index
+    int index = -1;
+    std::optional<std::pair<std::string, int>> name_and_index =
+        SplitNodeNameIfArrayType(name);
+    if (name_and_index.has_value()) {
+      name = name_and_index->first;
+      index = name_and_index->second;
+    }
     if (!json_obj.contains(name)) {
       return absl::InternalError(
           absl::StrFormat("Node %s not found in json object", name));
     }
     json_obj = json_obj.at(name);
+
+    // If we have a valid index, refine further
+    if (index >= 0) {
+      json_obj = json_obj[index];
+    }
   }
   return json_obj;
 }

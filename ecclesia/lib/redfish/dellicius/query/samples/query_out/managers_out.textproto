@@ -1,0 +1,31 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
+# proto-message: DelliciusQueryResult
+
+query_id: "ManagerCollector"
+subquery_output_by_id {
+  key: "GetManagersIdAndResetType"
+  value {
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Managers/ec"
+      }
+      properties {
+        name: "Actions.#Manager.Reset.ResetType@Redfish.AllowableValues[0]"
+        string_value: "PowerCycle"
+      }
+    }
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Managers/ecclesia_agent"
+      }
+    }
+  }
+}
+start_timestamp {
+  seconds: 10
+}
+end_timestamp {
+  seconds: 10
+}

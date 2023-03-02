@@ -6,9 +6,9 @@ filegroup(
     name = "sample_queries_in",
     srcs = [
         "query_in/assembly_in.textproto",
-        "query_in/chassis_in.textproto",
         "query_in/malformed_query.textproto",
         "query_in/malformed_query_links.textproto",
+        "query_in/managers_in.textproto",
         "query_in/processors_in.textproto",
         "query_in/sensor_in.textproto",
         "query_in/sensor_in_links.textproto",
@@ -21,9 +21,9 @@ filegroup(
     name = "sample_queries_out",
     srcs = [
         "query_out/assembly_out.textproto",
-        "query_out/chassis_out.textproto",
         "query_out/devpath_assembly_out.textproto",
         "query_out/devpath_sensor_out.textproto",
+        "query_out/managers_out.textproto",
         "query_out/processors_out.textproto",
         "query_out/sensor_out.textproto",
         "query_out/sensor_out_links.textproto",

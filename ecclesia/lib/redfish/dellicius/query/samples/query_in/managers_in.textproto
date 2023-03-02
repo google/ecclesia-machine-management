@@ -1,0 +1,10 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "ManagerCollector"
+subquery {
+  subquery_id: "GetManagersIdAndResetType"
+  redpath: "/Managers[*]"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "Actions.#Manager\\.Reset.ResetType@Redfish\\.AllowableValues[0]" type: STRING }
+}

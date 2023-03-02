@@ -89,6 +89,27 @@ TEST(PathUtilTest, CheckNodeNameCorrectlyResolvesToJsonObj) {
     EXPECT_EQ(json_out->get<double>(), 90);
   }
 
+  // Multiple nested objects
+  {
+    auto mock_interface = NewJsonMockupInterface(R"json(
+      {
+        "Ethernet": {
+          "AssociatedMACAddresses": [
+              "e4:5e:1b:68:f0:67"
+          ]
+        }
+      }
+    )json");
+    auto var = mock_interface->GetRoot();
+    ASSERT_TRUE(var.status().ok());
+    std::unique_ptr<RedfishObject> redfish_object = var.AsObject();
+    ASSERT_TRUE(redfish_object != nullptr);
+    absl::StatusOr<nlohmann::json> json_out = ResolveNodeNameToJsonObj(
+        *redfish_object, "Ethernet.AssociatedMACAddresses[0]");
+    EXPECT_TRUE(json_out.ok());
+    EXPECT_EQ(json_out->get<std::string>(), "e4:5e:1b:68:f0:67");
+  }
+
   // Null Redfish Object
   {
     auto mock_interface = NewJsonMockupInterface(R"json({})json");
