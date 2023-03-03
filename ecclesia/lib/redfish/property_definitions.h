@@ -69,6 +69,7 @@ inline constexpr char kRfPropertySessionService[] = "SessionService";
 inline constexpr char kRfPropertySystems[] = "Systems";
 inline constexpr char kRfPropertySystemReset[] = "#ComputerSystem.Reset";
 inline constexpr char kRfPropertyManagers[] = "Managers";
+inline constexpr char kRfPropertyManagerReset[] = "#Manager.Reset";
 inline constexpr char kRfPropertyManagerInChassis[] = "ManagerInChassis";
 inline constexpr char kRfPropertyManagerDiagnosticData[] =
     "ManagerDiagnosticData";
