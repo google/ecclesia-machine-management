@@ -117,7 +117,7 @@ std::optional<std::string> GetSlotDevpathFromNodeTopology(
   // So we can resize the parts down to /redfish/v1/Chassis/<chassis-id> which
   // is equivalent to five parts: "", "redfish", "v1", "Chassis",
   // "<chassis-id>"
-  if (uri_parts.size() > 5 && uri_parts[1] == kRfPropertyRedfish &&
+  if (uri_parts.size() >= 5 && uri_parts[1] == kRfPropertyRedfish &&
       uri_parts[2] == kRfPropertyV1 && uri_parts[3] == kRfPropertyChassis) {
     uri_parts.resize(5);
     auto parent_devpath =

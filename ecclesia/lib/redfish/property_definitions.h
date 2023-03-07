@@ -183,6 +183,8 @@ inline constexpr char kRfPropertyRootOfTrustCollection[] =
 inline constexpr char kRfPropertyRootOfTrustSendCommand[] =
     "#RootOfTrust.SendCommand";
 inline constexpr char kRfPropertySwitches[] = "Switches";
+inline constexpr char kRfPropertyEnabled[] = "Enabled";
+inline constexpr char kRfPropertyDisabled[] = "Disabled";
 inline constexpr char kRfPropertyFabrics[] = "Fabrics";
 inline constexpr char kRfPropertyConditions[] = "Conditions";
 inline constexpr char kRfPropertyMessageArgs[] = "MessageArgs";

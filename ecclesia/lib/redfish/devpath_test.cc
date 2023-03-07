@@ -417,5 +417,39 @@ TEST(GetSlotDevpathFromNodeTopology, DevpathFromNodePhysicalLocation) {
   EXPECT_EQ(*slot_devpath, expect_devpath);
 }
 
+TEST(GetSlotDevpathFromNodeTopology, NumberOfParentUriSizeCanEqualToFive) {
+  auto intf = NewJsonMockupInterface(R"json(
+    {
+      "@odata.context": "/redfish/v1/$metadata#Drive.Drive",
+      "@odata.id": "/redfish/v1/Chassis/Tray0_SATA0/Drives/SataDrive_0",
+      "Location": {
+        "PartLocation": {
+            "LocationType": "Slot",
+            "ServiceLabel": "SATA"
+        }
+      }
+    }
+  )json");
+  auto json = intf->GetRoot().AsObject();
+  ASSERT_THAT(json, NotNull());
+
+  NodeTopology topology;
+  absl::string_view uri = "test/redfish/v1/Chassis/Tray0_SATA0";
+  absl::string_view test_devpath = "/phys/PCIE0";
+  {
+    auto node = std::make_unique<Node>();
+    node->local_devpath = test_devpath;
+    topology.uri_to_associated_node_map[uri].push_back(node.get());
+    topology.nodes.push_back(std::move(node));
+  }
+
+  std::string_view parent_uri = "test/redfish/v1/Chassis/Tray0_SATA0";
+  absl::string_view expect_devpath = "/phys/PCIE0:connector:SATA";
+  std::optional<std::string> slot_devpath =
+      GetSlotDevpathFromNodeTopology(*json, parent_uri, topology);
+  ASSERT_TRUE(slot_devpath.has_value());
+  EXPECT_EQ(*slot_devpath, expect_devpath);
+}
+
 }  // namespace
 }  // namespace ecclesia
