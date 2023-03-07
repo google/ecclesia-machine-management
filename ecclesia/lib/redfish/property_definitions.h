@@ -73,6 +73,9 @@ inline constexpr char kRfPropertyManagerReset[] = "#Manager.Reset";
 inline constexpr char kRfPropertyManagerInChassis[] = "ManagerInChassis";
 inline constexpr char kRfPropertyManagerDiagnosticData[] =
     "ManagerDiagnosticData";
+inline constexpr char kRfPropertyDedicatedNetworkPorts[] =
+    "DedicatedNetworkPorts";
+inline constexpr char kRfPropertyNetworking[] = "Networking";
 inline constexpr char kRfPropertyBootInfo[] = "BootInfo";
 inline constexpr char kRfPropertyEthernetInterfaces[] = "EthernetInterfaces";
 inline constexpr char kRfPropertyEthernet[] = "Ethernet";
@@ -218,6 +221,7 @@ DEFINE_REDFISH_RESOURCE(ResourceSoftwareInventory, "SoftwareInventory");
 DEFINE_REDFISH_RESOURCE(ResourceAssemblyEntry, "/Assembly#/");
 DEFINE_REDFISH_RESOURCE(ResourceManager, "Manager");
 DEFINE_REDFISH_RESOURCE(ResourceManagerDiagnosticData, "ManagerDiagnosticData");
+DEFINE_REDFISH_RESOURCE(ResourceDedicatedNetworkPorts, "DedicatedNetworkPorts");
 DEFINE_REDFISH_RESOURCE(ResourcePcieSlots, "PCIeSlots");
 DEFINE_REDFISH_RESOURCE(ResourceSwitch, "Switch");
 
@@ -391,6 +395,10 @@ DEFINE_REDFISH_PROPERTY(PropertyUserPercent, double, "UserPercent");
 DEFINE_REDFISH_PROPERTY(PropertyAvailableBytes, int64_t, "AvailableBytes");
 DEFINE_REDFISH_PROPERTY(PropertyBootCount, int, "BootCount");
 DEFINE_REDFISH_PROPERTY(PropertyCrashCount, int, "CrashCount");
+DEFINE_REDFISH_PROPERTY(PropertyCurrentSpeedGbps, double, "CurrentSpeedGbps");
+DEFINE_REDFISH_PROPERTY(PropertyLinkState, std::string, "LinkState");
+DEFINE_REDFISH_PROPERTY(PropertyRXDiscards, int, "RXDiscards");
+DEFINE_REDFISH_PROPERTY(PropertyTXDiscards, int, "TXDiscards");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
