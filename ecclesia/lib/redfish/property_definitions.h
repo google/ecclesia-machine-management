@@ -91,6 +91,7 @@ inline constexpr char kRfPropertyPowerLimitWatts[] = "PowerLimitWatts";
 inline constexpr char kRfPropertyPowerState[] = "PowerState";
 inline constexpr char kRfPropertyPowerWatts[] = "PowerWatts";
 inline constexpr char kRfPropertyProcessorStatistics[] = "ProcessorStatistics";
+inline constexpr char kRfPropertyTopProcesses[] = "TopProcesses";
 inline constexpr char kRfPropertyVoltages[] = "Voltages";
 inline constexpr char kRfPropertyFans[] = "Fans";
 inline constexpr char kRfPropertySensors[] = "Sensors";
@@ -401,6 +402,9 @@ DEFINE_REDFISH_PROPERTY(PropertyCurrentSpeedGbps, double, "CurrentSpeedGbps");
 DEFINE_REDFISH_PROPERTY(PropertyLinkState, std::string, "LinkState");
 DEFINE_REDFISH_PROPERTY(PropertyRXDiscards, int, "RXDiscards");
 DEFINE_REDFISH_PROPERTY(PropertyTXDiscards, int, "TXDiscards");
+DEFINE_REDFISH_PROPERTY(PropertyRestartCount, int, "RestartCount");
+DEFINE_REDFISH_PROPERTY(PropertyUptimeSeconds, double, "UptimeSeconds");
+DEFINE_REDFISH_PROPERTY(PropertyCommandLine, std::string, "CommandLine");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
