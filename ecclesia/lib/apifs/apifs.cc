@@ -216,6 +216,7 @@ absl::Status ApifsFile::Write(absl::string_view value) const {
 absl::Status ApifsFile::ReadRange(uint64_t offset,
                                   absl::Span<char> value) const {
   int fd = open(path_.c_str(), O_RDONLY);
+
   if (fd < 0) {
     if (errno == ENOENT) {
       return absl::NotFoundError(
@@ -226,11 +227,33 @@ absl::Status ApifsFile::ReadRange(uint64_t offset,
   }
   absl::Cleanup fd_closer = [fd]() { close(fd); };
   // Read data.
-  size_t size = value.size();
-  int rlen = pread(fd, value.data(), size, offset);
-  if (rlen != size) {
+  size_t remaining_length = value.size();
+  char *data = value.data();
+  off_t read_offset = static_cast<off_t>(offset);
+  while (remaining_length > 0) {
+    ssize_t result = pread(fd, data, remaining_length, read_offset);
+    if (result < 0) {
+      const auto read_errno = errno;
+      if (read_errno == EINTR) {
+        continue;  // Retry on EINTR.
+      }
+      return absl::InternalError(absl::StrFormat(
+          "Failure while reading from file at path: %s, errno: %d", path_,
+          read_errno));
+      break;
+    }
+    if (result == 0) {
+      break;  // Nothing left to read
+    }
+    // advance to read next chunk
+    remaining_length -= result;
+    data += result;
+    read_offset += result;
+  }
+  if (remaining_length != 0) {
     return absl::InternalError(absl::StrFormat(
-        "Fail to read %d bytes from offset %#x. rlen: %d", size, offset, rlen));
+      "Specified data length is larger than actual readback length, file path:"
+      " %s, delta: %d", path_, remaining_length));
   }
   return absl::OkStatus();
 }
