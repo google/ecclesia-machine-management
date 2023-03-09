@@ -52,6 +52,7 @@ inline constexpr char kPowerStateOff[] = "Off";
 inline constexpr char kPowerStatePaused[] = "Paused";
 inline constexpr char kPowerStatePoweringOn[] = "PoweringOn";
 inline constexpr char kPowerStatePoweringOff[] = "PoweringOff";
+inline constexpr char kPowerStateGracefulShutdown[] = "GracefulShutdown";
 inline constexpr char kProcessorTypeAccelerator[] = "Accelerator";
 inline constexpr char kProcessorTypeCpu[] = "CPU";
 inline constexpr char kProcessorTypeGPU[] = "GPU";
