@@ -71,7 +71,7 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
   request.mutable_headers()->insert(
       {std::string(kHostHeader), std::string(target_fqdn)});
   request.set_url(std::string(path));
-  if (json_str) {
+  if (json_str && !json_str->empty()) {
     *request.mutable_json_str() = *json_str;
     // to JSON str.
     ::google::protobuf::Struct request_body;

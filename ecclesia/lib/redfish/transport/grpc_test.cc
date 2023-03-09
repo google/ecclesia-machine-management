@@ -174,6 +174,44 @@ TEST(GrpcRedfishTransport, PostPatchGetDelete) {
   EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
 
+  // Send empty post
+  absl::StatusOr<RedfishTransport::Result> empty_post =
+      (*transport)->Post("/redfish/v1/Chassis", "");
+  ASSERT_THAT(empty_post, IsOk());
+  // Expect HTTP 204 (No Content) code and the body is unset (default to
+  // discarded)
+  EXPECT_THAT(empty_post->code, Eq(204));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(empty_post->body));
+  EXPECT_TRUE(std::get<nlohmann::json>(empty_post->body).is_discarded());
+
+  expected_get_str = R"json({
+    "@odata.context":"/redfish/v1/$metadata#ChassisCollection.ChassisCollection",
+    "@odata.id":"/redfish/v1/Chassis",
+    "@odata.type":"#ChassisCollection.ChassisCollection",
+    "Members":[
+      {
+        "@odata.id":"/redfish/v1/Chassis/chassis"
+      },
+      {
+        "@odata.id":"/redfish/v1/Chassis/Member1",
+        "ChassisType":"RackMount",
+        "Id":"Member1",
+        "Name":"MyPatchChassis"
+      },
+      {
+        "@odata.id":"/redfish/v1/Chassis/Member2",
+        "Id":"Member2"
+      }
+    ],
+    "Members@odata.count":3.0,"Name":"Chassis Collection"
+  })json";
+  expected_get = nlohmann::json::parse(expected_get_str, nullptr, false);
+  res_get = (*transport)->Get("/redfish/v1/Chassis");
+  ASSERT_THAT(res_get, IsOk());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
+  EXPECT_THAT(res_get->code, Eq(200));
+
   EXPECT_THAT(
       (*transport)->Delete("/redfish/v1/Chassis/Member1", "{}"),
       internal_status::IsStatusPolyMatcher(absl::StatusCode::kUnimplemented));
