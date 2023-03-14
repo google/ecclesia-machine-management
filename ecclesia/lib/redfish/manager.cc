@@ -93,4 +93,17 @@ absl::StatusOr<google::protobuf::Duration> GetUptimeForManager(
   return uptime_pb;
 }
 
+absl::StatusOr<google::protobuf::Duration> GetServiceRootUptimeForManager(
+    const RedfishObject &mgr_diagnostic_obj) {
+  std::optional<double> uptime_s =
+      mgr_diagnostic_obj.GetNodeValue<PropertyServiceRootUptimeSeconds>();
+  if (!uptime_s.has_value()) {
+    return absl::InternalError(
+        UnableToGetPropertyMessage<PropertyServiceRootUptimeSeconds>());
+  }
+  google::protobuf::Duration uptime_pb;
+  uptime_pb.set_seconds(static_cast<int64_t>(*uptime_s));
+  return uptime_pb;
+}
+
 }  // namespace ecclesia

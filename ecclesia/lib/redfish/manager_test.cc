@@ -62,5 +62,25 @@ TEST(RedfishInterface, GetUptimeForManager) {
   EXPECT_THAT(*uptime, EqualsProto(R"pb(seconds: 974173)pb"));
 }
 
+TEST(RedfishInterface, GetServiceRootUptimeForManager) {
+  TestingMockupServer mockup("features/managers/mockup.shar");
+  std::unique_ptr<RedfishInterface> rf_intf = mockup.RedfishClientInterface();
+
+  absl::StatusOr<std::unique_ptr<RedfishObject>> manager =
+      GetManagerForRoot(rf_intf->GetRoot());
+  ASSERT_TRUE(manager.ok());
+
+  RedfishVariant manager_diagnostics_data =
+      (**manager)[kRfPropertyManagerDiagnosticData];
+  std::unique_ptr<RedfishObject> manager_diagnostic_data_obj =
+      manager_diagnostics_data.AsObject();
+
+  EXPECT_NE(manager_diagnostic_data_obj, nullptr);
+  absl::StatusOr<google::protobuf::Duration> uptime =
+      GetServiceRootUptimeForManager(*manager_diagnostic_data_obj);
+  ASSERT_TRUE(uptime.ok());
+  EXPECT_THAT(*uptime, EqualsProto(R"pb(seconds: 51172)pb"));
+}
+
 }  // namespace
 }  // namespace ecclesia

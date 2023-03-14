@@ -35,6 +35,12 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> GetManagerForRoot(
 absl::StatusOr<google::protobuf::Duration> GetUptimeForManager(
     const RedfishObject &mgr_obj);
 
+// Returns the Service root "uptime" for a Manager resource.  This is different
+// from the Manager resource's uptime.  The service root may be restarted
+// even if the Manager remains up.
+absl::StatusOr<google::protobuf::Duration> GetServiceRootUptimeForManager(
+    const RedfishObject &mgr_diagnostic_obj);
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_MANAGER_H_

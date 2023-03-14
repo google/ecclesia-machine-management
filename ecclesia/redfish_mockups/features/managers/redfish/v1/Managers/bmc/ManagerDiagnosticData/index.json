@@ -1,0 +1,7 @@
+{
+  "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData",
+  "@odata.type": "#ManagerDiagnosticData.v1_2_0.ManagerDiagnosticData",
+  "Id": "ManagerDiagnosticData",
+  "Name": "Manager Diagnostic Data",
+  "ServiceRootUptimeSeconds": 51172.02
+}

@@ -407,6 +407,8 @@ DEFINE_REDFISH_PROPERTY(PropertyTXDiscards, int, "TXDiscards");
 DEFINE_REDFISH_PROPERTY(PropertyRestartCount, int, "RestartCount");
 DEFINE_REDFISH_PROPERTY(PropertyUptimeSeconds, double, "UptimeSeconds");
 DEFINE_REDFISH_PROPERTY(PropertyCommandLine, std::string, "CommandLine");
+DEFINE_REDFISH_PROPERTY(PropertyServiceRootUptimeSeconds, double,
+                        "ServiceRootUptimeSeconds");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");

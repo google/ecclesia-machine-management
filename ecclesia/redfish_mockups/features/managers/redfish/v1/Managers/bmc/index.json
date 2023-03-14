@@ -6,6 +6,9 @@
   "Id": "bmc",
   "LastResetTime": "2022-08-27T06:45:18+00:00",
   "ManagerType": "BMC",
+  "ManagerDiagnosticData": {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData"
+  },
   "Model": "OpenBmc",
   "Name": "OpenBmc Manager",
   "PowerState": "On",
