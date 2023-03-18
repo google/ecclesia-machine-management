@@ -17,9 +17,11 @@
 #ifndef ECCLESIA_LIB_REDFISH_STATUS_H_
 #define ECCLESIA_LIB_REDFISH_STATUS_H_
 
+#include <optional>
 #include <string>
 
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 
 namespace ecclesia {
@@ -31,10 +33,10 @@ inline std::string UnableToGetAsFreshObjectMessage(
   if (!uri.has_value()) {
     return absl::StrCat("Unable to get fresh object for unspecified URI.");
   }
-  return absl::StrCat("Unable to get '", *uri, "' as fresh object.");
+  return absl::StrFormat("Unable to get '%s' as fresh object.", *uri);
 }
-inline std::string UnableToGetAsObjectMessage(absl::string_view property_name) {
-  return absl::StrCat("Unable to get '", property_name, "' as object.");
+inline std::string UnableToGetAsObjectMessage(absl::string_view name_or_uri) {
+  return absl::StrFormat("Unable to get '%s' as object.", name_or_uri);
 }
 inline std::string UnableToGetPropertyMessage(absl::string_view property_name) {
   return absl::StrCat("Unable to get '", property_name, "' property.");
