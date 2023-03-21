@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_TRANSPORT_CACHE_H_
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_CACHE_H_
 
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -27,6 +28,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
+#include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/complexity_tracker/complexity_tracker.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -122,15 +124,133 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
   GetResult UncachedGetInternal(absl::string_view path) override;
 
  private:
-  struct CacheEntry {
-    absl::Time insert_time;
-    absl::StatusOr<RedfishTransport::Result> data;
+  // Each CacheNode owns its own result cache and previous update timestamp.
+  class CacheNode {
+   public:
+    CacheNode(std::string path, RedfishTransport *transport, const Clock &clock,
+              const absl::Duration duration)
+        : path_(std::move(path)),
+          transport_(transport),
+          clock_(&clock),
+          duration_(duration) {}
+
+    struct ResultAndFreshness {
+      absl::StatusOr<RedfishTransport::Result> result;
+      bool is_fresh;
+    };
+
+    ResultAndFreshness CachedRead() {
+      std::unique_ptr<absl::Notification> local_notification = nullptr;
+      {
+        absl::MutexLock mu(&mutex_);
+        // If the cache has a sufficiently recent value, return it.
+        if (clock_->Now() < last_update_time_ + duration_) {
+          return {result_, false};
+        }
+        local_notification = RegisterNotificationIfUpdateInProgress();
+      }
+      // No notification:
+      // This thread is the one responsible for doing the update.
+      if (!local_notification) return DoUpdateAndNotifyOthers();
+      // Otherwise another thread is responsible for doing the update.
+      return WaitForNotificationAndUseCachedResult(*local_notification);
+    }
+
+    ResultAndFreshness UncachedRead() {
+      std::unique_ptr<absl::Notification> local_notification = nullptr;
+      {
+        absl::MutexLock mu(&mutex_);
+        local_notification = RegisterNotificationIfUpdateInProgress();
+      }
+      // No notification:
+      // This thread is the one responsible for doing the update.
+      if (!local_notification) return DoUpdateAndNotifyOthers();
+      // Otherwise another thread is responsible for doing the update.
+      return WaitForNotificationAndUseCachedResult(*local_notification);
+    }
+
+   private:
+    std::unique_ptr<absl::Notification> RegisterNotificationIfUpdateInProgress()
+        ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
+      if (!get_in_progress_) {
+        get_in_progress_ = true;
+        return nullptr;
+      }
+      // Someone is in the middle of doing an update.
+      // Add ourselves to the notification vector.
+      auto notification = std::make_unique<absl::Notification>();
+      notifications_.push_back(notification.get());
+      return notification;
+    }
+
+    ResultAndFreshness DoUpdateAndNotifyOthers()
+        ABSL_LOCKS_EXCLUDED(mutex_) {
+      // transport_->Get() might be slow so do not hold any locks here.
+      auto result = transport_->Get(path_);
+      // If the result was not JSON, set the update time to InfinitePast() to
+      // never cache. However, still update result_ so that we can batch
+      // colliding uncached Gets in case the payload is polled frequently and
+      // has a long latency.
+      absl::Time update_time = absl::InfinitePast();
+      if (result.ok() && std::holds_alternative<nlohmann::json>(result->body)) {
+        update_time = clock_->Now();
+      }
+
+      {
+        // Update the result and notify all waiters.
+        absl::MutexLock mu(&mutex_);
+        result_ = result;
+        last_update_time_ = update_time;
+        for (auto *notification : notifications_) {
+          notification->Notify();
+        }
+        notifications_.clear();
+        get_in_progress_ = false;
+        return {std::move(result), true};
+      }
+    }
+
+    ResultAndFreshness WaitForNotificationAndUseCachedResult(
+        absl::Notification &local_notification)
+        ABSL_LOCKS_EXCLUDED(mutex_) {
+      local_notification.WaitForNotification();
+      {
+        absl::MutexLock mu(&mutex_);
+        return {result_, true};
+      }
+    }
+
+    // The URI associated with this cache.
+    const std::string path_;
+    // The RedfishTransport used to update this cache.
+    RedfishTransport *transport_;
+
+    // The clock used for timekeeping and the duration before new reads will
+    // be made.
+    const Clock *clock_;
+    absl::Duration duration_;
+
+    // The cached result and read timestamp.
+    absl::Mutex mutex_;
+    absl::Time last_update_time_ ABSL_GUARDED_BY(mutex_) =
+        absl::InfinitePast();
+    absl::StatusOr<RedfishTransport::Result> ABSL_GUARDED_BY(
+        mutex_) result_;
+    // The list of notification objects, each instance representing a thread
+    // waiting for an uncached update result.
+    std::vector<absl::Notification *> notifications_
+        ABSL_GUARDED_BY(mutex_);
+    // Set to true if there is an update in progress.
+    bool get_in_progress_ ABSL_GUARDED_BY(mutex_) = false;
   };
+
+  CacheNode &GetCacheNode(absl::string_view path);
+
   RedfishTransport *transport_;
   const Clock *clock_;
   const absl::Duration max_age_;
   absl::Mutex cache_lock_;
-  absl::flat_hash_map<std::string, CacheEntry> cache_
+  absl::flat_hash_map<std::string, std::unique_ptr<CacheNode>> cache_
       ABSL_GUARDED_BY(cache_lock_);
 };
 
