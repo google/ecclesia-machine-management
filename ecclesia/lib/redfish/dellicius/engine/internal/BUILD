@@ -20,7 +20,9 @@ cc_library(
     name = "normalizer",
     srcs = ["normalizer.cc"],
     hdrs = ["normalizer.h"],
-    visibility = ["//ecclesia/lib/redfish/dellicius:__subpackages__"],
+    visibility = [
+        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+    ],
     deps = [
         ":interface",
         "//ecclesia/lib/redfish:devpath",
@@ -42,7 +44,9 @@ cc_library(
     name = "query_planner",
     srcs = ["query_planner.cc"],
     hdrs = ["query_planner.h"],
-    visibility = ["//ecclesia/lib/redfish/dellicius:__subpackages__"],
+    visibility = [
+        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+    ],
     deps = [
         ":interface",
         "//ecclesia/lib/redfish:interface",
