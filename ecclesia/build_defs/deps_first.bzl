@@ -218,15 +218,6 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             urls = ["https://github.com/nelhage/rules_boost/archive/a32cad61d9166d28ed86d0e07c0d9bca8db9cb82.tar.gz"],
         )
 
-    if not native.existing_rule("subpar"):
-        # Subpar, an external equivalent for building .par files.
-        http_archive(
-            name = "subpar",
-            sha256 = "b80297a1b8d38027a86836dbadc22f55dc3ecad56728175381aa6330705ac10f",
-            strip_prefix = "subpar-2.0.0",
-            urls = ["https://github.com/google/subpar/archive/2.0.0.tar.gz"],
-        )
-
     if not native.existing_rule("io_bazel_rules_closure"):
         # TensorFlow depends on "io_bazel_rules_closure" so we need this here.
         # Needs to be kept in sync with the same target in TensorFlow's WORKSPACE file.
@@ -394,6 +385,7 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             "0008-Add-EventService-support.patch",
             "0009-add-link-local-support.patch",
             "0010-add-google-service-root-support.patch",
+            "0012-Fix-import-path-for-py_binary.patch",
         ]
         http_archive(
             name = "redfishMockupServer",
