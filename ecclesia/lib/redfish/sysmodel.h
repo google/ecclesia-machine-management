@@ -96,6 +96,9 @@ class Sysmodel {
   void QueryAllResourceInternal(Token<ResourceStorage>,
                                 ResultCallback result_callback,
                                 const QueryParams &query_params);
+  void QueryAllResourceInternal(Token<ResourceLegacyStorageController>,
+                                ResultCallback result_callback,
+                                const QueryParams &query_params);
   void QueryAllResourceInternal(Token<ResourceStorageController>,
                                 ResultCallback result_callback,
                                 const QueryParams &query_params);

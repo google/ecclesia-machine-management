@@ -110,6 +110,8 @@ inline constexpr char kRfPropertyNvmeControllersProperties[] =
     "NVMeControllerProperties";
 inline constexpr char kRfPropertyNvmeSmartCriticalWarnings[] =
     "NVMeSMARTCriticalWarnings";
+inline constexpr char kRfPropertySATAControllersProperties[] =
+    "SATAControllerProperties";
 inline constexpr char kRfPropertyLinks[] = "Links";
 inline constexpr char kRfPropertyLinkState[] = "LinkState";
 inline constexpr char kRfPropertyLinkStatus[] = "LinkStatus";
@@ -207,6 +209,7 @@ DEFINE_REDFISH_RESOURCE(ResourceComponentIntegrity, "ComponentIntegrity");
 DEFINE_REDFISH_RESOURCE(ResourceMemory, "Memory");
 DEFINE_REDFISH_RESOURCE(ResourceStorage, "Storage");
 DEFINE_REDFISH_RESOURCE(ResourceDrive, "Drive");
+DEFINE_REDFISH_RESOURCE(ResourceLegacyStorageController, "StorageController");
 DEFINE_REDFISH_RESOURCE(ResourceStorageController, "StorageController");
 DEFINE_REDFISH_RESOURCE(ResourceProcessor, "Processor");
 DEFINE_REDFISH_RESOURCE(ResourceEthernetInterface, "EthernetInterface");

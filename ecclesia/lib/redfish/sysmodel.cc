@@ -162,8 +162,29 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceDrive> /*unused*/,
       });
 }
 
-// StorageController:
+// LegacyStorageController:
 // "/redfish/v1/Systems/{id}/Storage/{id}#/StorageControllers/{id}"
+void Sysmodel::QueryAllResourceInternal(
+    Token<ResourceLegacyStorageController> /*unused*/,
+    ResultCallback result_callback, const QueryParams &query_params) {
+  RedfishVariant root = redfish_intf_->GetRoot();
+  root.AsIndexHelper()
+      .Get(kRfPropertySystems,
+           {.expand = RedfishQueryParamExpand({.levels = 1})})
+      .Each()
+      .Get(kRfPropertyStorage,
+           {.freshness = query_params.freshness,
+            .auto_adjust_levels = false,
+            .expand = RedfishQueryParamExpand({.levels = 0})})
+      .Each()[kRfPropertyStorageControllers]
+      .Each()
+      .Do([&](std::unique_ptr<RedfishObject> &ctrl_obj) {
+        return result_callback(std::move(ctrl_obj));
+      });
+}
+
+// StorageController:
+// "​redfish/​v1/​Systems/​{id}/​Storage/​{id}/​Controllers/​{id}"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceStorageController> /*unused*/, ResultCallback result_callback,
     const QueryParams &query_params) {
@@ -176,7 +197,7 @@ void Sysmodel::QueryAllResourceInternal(
            {.freshness = query_params.freshness,
             .auto_adjust_levels = false,
             .expand = RedfishQueryParamExpand({.levels = 0})})
-      .Each()[kRfPropertyStorageControllers]
+      .Each()[kRfPropertyControllers]
       .Each()
       .Do([&](std::unique_ptr<RedfishObject> &ctrl_obj) {
         return result_callback(std::move(ctrl_obj));
