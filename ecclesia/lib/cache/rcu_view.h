@@ -40,6 +40,7 @@
 #include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/cache/rcu_snapshot.h"
 #include "ecclesia/lib/cache/rcu_store.h"
+#include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
 
@@ -130,6 +131,80 @@ class TranslatedRcuView : public RcuView<ToType> {
 
     absl::Mutex mutex;
     RcuSnapshot<ToType> to_snapshot ABSL_GUARDED_BY(mutex);
+  } cache_;
+};
+
+// A similar class as the TranslatedRcuView which provides a ToType view based
+// on FromType, with additional time-based cache rebuild. An internal cache is
+// used to hold the translation until the underlying view emits a change or the
+// cache has been held for longer than the specific "fresh" duration.
+//
+// NOTE: This stores a _reference_ to the RcuStore<T> or RcuView<T> that it
+// wraps. So it is very important that the lifetime of the underlying object
+// exceeds the lifetime of the view.
+template <typename FromType, typename ToType>
+class TimedTranslatedRcuView : public RcuView<ToType> {
+ public:
+  // Construct a translated view. It can be wrapped around either a store or a
+  // view. Note that in both cases it will capture a reference.
+  explicit TimedTranslatedRcuView(const RcuView<FromType> &view,
+                                  const Clock &clock, absl::Duration duration)
+      : view_(view), clock_(&clock), duration_(duration) {}
+  explicit TimedTranslatedRcuView(const RcuStore<FromType> &store,
+                                  const Clock &clock, absl::Duration duration)
+      : wrapped_store_(store),
+        view_(*wrapped_store_),
+        clock_(&clock),
+        duration_(duration) {}
+
+  // Copying these can be dangerous because it stores a reference.
+  TimedTranslatedRcuView(const TimedTranslatedRcuView &other) = delete;
+  TimedTranslatedRcuView &operator=(const TimedTranslatedRcuView &other) =
+      delete;
+
+  // Read will check if the current snapshot is still "fresh". If the underlying
+  // view has a change or the cache has been held for excessive time, it will
+  // rebuild the cache using the subclass Translate function. If the store is
+  // still fresh then the cached snapshot will be returned.
+  RcuSnapshot<ToType> Read() const override {
+    absl::MutexLock ml(&cache_.mutex);
+    if (!cache_.to_snapshot.IsFresh() ||
+        clock_->Now() > cache_.last_update_time + duration_) {
+      auto from_snapshot = view_.Read();
+      ToType new_translation = Translate(*from_snapshot);
+      cache_.to_snapshot = RcuSnapshot<ToType>::CreateDependent(
+          RcuSnapshotDependsOn(from_snapshot), std::move(new_translation));
+      cache_.last_update_time = clock_->Now();
+    }
+    return cache_.to_snapshot;
+  }
+
+  // Subclasses will override this with an implementation which translate the
+  // store's data of type FromType to a view of type ToType.
+  virtual ToType Translate(const FromType &to) const = 0;
+
+ private:
+  // If this translated view is capturing an RcuStore instead of an RcuView then
+  // this provides a direct view that the view_ member will capture. Otherwise
+  // this will be null. This should never be used directly.
+  const std::optional<RcuDirectView<FromType>> wrapped_store_;
+
+  // The underlying view being referenced. When this is constructed on top of a
+  // view this will be that view; when constructed on top of a store it will be
+  // wrapped by wrapped_store_ and that wrapper will be referenced here.
+  const RcuView<FromType> &view_;
+
+  // Clock and duration which are used to determine the time-wise freshness.
+  const Clock *clock_;
+  absl::Duration duration_;
+
+  // Internal cache storing the translation of the ToType view based on store_.
+  mutable struct Cache {
+    Cache() : to_snapshot(RcuSnapshot<ToType>::CreateStale()) {}
+
+    absl::Mutex mutex;
+    RcuSnapshot<ToType> to_snapshot ABSL_GUARDED_BY(mutex);
+    absl::Time last_update_time ABSL_GUARDED_BY(mutex) = absl::InfinitePast();
   } cache_;
 };
 

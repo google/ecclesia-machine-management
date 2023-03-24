@@ -20,8 +20,10 @@
 
 #include "gtest/gtest.h"
 #include "absl/strings/str_cat.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/cache/rcu_snapshot.h"
 #include "ecclesia/lib/cache/rcu_store.h"
+#include "ecclesia/lib/time/clock_fake.h"
 
 namespace ecclesia {
 namespace {
@@ -135,6 +137,85 @@ TEST(TranslatedRcuView, NestedTranslatedView) {
   EXPECT_EQ(*snapshot_48x1, 48);
   EXPECT_EQ(*snapshot_48x2, 96);
   EXPECT_EQ(*snapshot_48x4, 192);
+}
+
+// Test class for translating an int store into a string view.
+class TestTimedTranslatedRcuView
+    : public TimedTranslatedRcuView<int, std::string> {
+ public:
+  using TimedTranslatedRcuView<int, std::string>::TimedTranslatedRcuView;
+  std::string Translate(const int &from) const override {
+    translate_invocations_++;
+    return absl::StrCat(from);
+  }
+
+  int translate_invocations() const { return translate_invocations_; }
+
+ private:
+  // A counter for the number of times Translate has been invoked.
+  mutable int translate_invocations_ = 0;
+};
+
+TEST(TimedTranslatedRcuViewTest, UnderlyingRcuOrTimeInvalidation) {
+  FakeClock clock;
+  RcuStore<int> store(26);
+
+  TestTimedTranslatedRcuView timed_trans_view(store, clock, absl::Seconds(10));
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 0);
+
+  auto snapshot_from_store = store.Read();
+  auto snapshot_from_view = timed_trans_view.Read();
+  EXPECT_EQ(*snapshot_from_store, 26);
+  EXPECT_EQ(*snapshot_from_view, "26");
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 1);
+
+  // No store change and not time-elapsed has not passed the "fresh" duration.
+  // So no translation is needed.
+  snapshot_from_view = timed_trans_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "26");
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 1);
+
+  // Store change triggers a translation.
+  store.Update(62);
+  snapshot_from_view = timed_trans_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "62");
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 2);
+
+  // Excessive long elapsed time also triggers a translation.
+  clock.AdvanceTime(absl::Seconds(12));
+  snapshot_from_view = timed_trans_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "62");
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 3);
+}
+
+TEST(TimedTranslatedRcuViewTest, InfiniteDuration) {
+  FakeClock clock;
+  RcuStore<int> store(26);
+
+  TestTimedTranslatedRcuView timed_trans_view(store, clock,
+                                              absl::InfiniteDuration());
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 0);
+
+  auto snapshot_from_store = store.Read();
+  auto snapshot_from_view = timed_trans_view.Read();
+  EXPECT_EQ(*snapshot_from_store, 26);
+  EXPECT_EQ(*snapshot_from_view, "26");
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 1);
+
+  clock.AdvanceTime(absl::Hours(100));
+  snapshot_from_view = timed_trans_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "26");
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 1);
+
+  clock.AdvanceTime(absl::Hours(10000));
+  snapshot_from_view = timed_trans_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "26");
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 1);
+
+  clock.AdvanceTime(absl::Hours(1000000));
+  snapshot_from_view = timed_trans_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "26");
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 1);
 }
 
 }  // namespace

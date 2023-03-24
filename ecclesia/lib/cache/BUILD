@@ -12,6 +12,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//ecclesia/lib/time:clock",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/synchronization",
     ],
@@ -41,7 +42,9 @@ cc_test(
     srcs = ["rcu_view_test.cc"],
     deps = [
         ":rcu",
+        "//ecclesia/lib/time:clock_fake",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
         "@com_google_googletest//:gtest_main",
     ],
 )
