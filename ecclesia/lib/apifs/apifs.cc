@@ -271,12 +271,35 @@ absl::Status ApifsFile::WriteRange(uint64_t offset,
   }
   absl::Cleanup fd_closer = [fd]() { close(fd); };
   // Write data.
-  size_t size = value.size();
-  int wlen = pwrite(fd, value.data(), size, offset);
-  if (wlen != size) {
-    return absl::InternalError(
-        absl::StrFormat("Failed to write %d bytes to msr %s", size, path_));
+  size_t remaining_length = value.size();
+  const char *data = value.data();
+  off_t write_offset = static_cast<off_t>(offset);
+  while (remaining_length > 0) {
+    ssize_t result = pwrite(fd, data, remaining_length, write_offset);
+    if (result < 0) {
+      const auto write_errno = errno;
+      if (write_errno == EINTR) {
+        continue;  // Retry on EINTR.
+      }
+      return absl::InternalError(absl::StrFormat(
+          "Failure while writing file at path: %s, errno: %d", path_,
+          write_errno));
+      break;
+    }
+    if (result == 0) {
+      break;  // Nothing left to write
+    }
+    // advance to write next chunk
+    remaining_length -= result;
+    data += result;
+    write_offset += result;
   }
+  if (remaining_length != 0) {
+    return absl::InternalError(absl::StrFormat(
+      "Specified data length is larger than actual write length, file path:"
+      " %s, delta: %d", path_, remaining_length));
+  }
+
   return absl::OkStatus();
 }
 
