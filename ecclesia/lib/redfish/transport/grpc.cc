@@ -114,6 +114,10 @@ absl::string_view EndpointToFqdn(absl::string_view endpoint) {
     size_t slash_pos = endpoint.find_last_of('/');
     return endpoint.substr(slash_pos + 1, port_pos - slash_pos - 1);
   }
+  if (absl::StrContains(endpoint, "google:/")) {
+    size_t slash_pos = endpoint.find_last_of('/');
+    return endpoint.substr(slash_pos + 1, endpoint.size() - slash_pos - 1);
+  }
   size_t port_pos = endpoint.find_last_of(':');
   return endpoint.substr(0, port_pos);
 }
