@@ -239,18 +239,6 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
   CacheState cache_state_;
 };
 
-// Returns the URI from Json object or NotFound error
-absl::StatusOr<std::string> GetObjectUri(const nlohmann::json &json) {
-  std::string reference;
-  if (json.is_object()) {
-    if (auto odata = json.find(PropertyOdataId::Name);
-        // Object can be re-read by URI. Store it.
-        odata != json.end() && odata.value().is_string()) {
-      return odata.value().get<std::string>();
-    }
-  }
-  return absl::NotFoundError("Unable to find @odata.id");
-}
 // Helper function for automatically fetching an @odata.id reference using
 // GET. The goal of this function is to help "flatten" a Redfish service's
 // entire Redfish tree to make it appear like a single JSON document.
@@ -686,21 +674,6 @@ class HttpRedfishInterface : public RedfishInterface {
   }
 
  private:
-  // extends uri with query parameters if needed
-  std::string GetUriWithQueryParameters(absl::string_view uri,
-                                        const GetParams &params) {
-    auto query_params = params.GetQueryParams();
-    if (query_params.empty()) {
-      return std::string(uri);
-    }
-    std::string query_str = absl::StrJoin(
-        query_params.begin(), query_params.end(), "&",
-        [](std::string *output, const GetParamQueryInterface *param) {
-          output->append(param->ToString());
-        });
-    return absl::StrCat(uri, "?", query_str);
-  }
-
   // Helper function to resolve JSON pointers after doing a GET.
   RedfishVariant GetUriHelper(
       absl::string_view uri, const GetParams &params,

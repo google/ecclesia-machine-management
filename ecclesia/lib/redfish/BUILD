@@ -355,6 +355,7 @@ cc_test(
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/redfish/testing:json_mockup",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
         "@com_json//:json",

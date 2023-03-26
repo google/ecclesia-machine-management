@@ -21,6 +21,7 @@
 #include <string>
 
 #include "gtest/gtest.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/test_filesystem.h"
@@ -135,6 +136,64 @@ TEST(TruncateLastUnderScoreAndNumericSuffix, Works) {
             "resource_1");
   EXPECT_EQ(TruncateLastUnderScoreAndNumericSuffix("resource_"),
             "resource_");
+}
+
+TEST(GetObjectUri, CanParseUri) {
+  nlohmann::json memory_resource_json = nlohmann::json::parse(kMemoryResource);
+  absl::StatusOr<std::string> uri = GetObjectUri(memory_resource_json);
+  EXPECT_TRUE(uri.ok());
+  EXPECT_EQ(*uri, "/redfish/v1/Systems/system/Memory/dimm0");
+}
+
+TEST(GetObjectUri, ReturnsNotOkWhenUriAbsent) {
+  nlohmann::json json_obj = nlohmann::json::parse(R"json(
+      {
+        "Thresholds": {
+          "UpperCritical": {
+          }
+        }
+      }
+    )json");
+  absl::StatusOr<std::string> uri = GetObjectUri(json_obj);
+  EXPECT_FALSE(uri.ok());
+}
+
+TEST(GetUriWithQueryParameters, CanGetUriWithEmptyParams) {
+  std::string uri =
+      GetUriWithQueryParameters("/redfish/v1/Systems/system/Memory/dimm0", {});
+  EXPECT_EQ(uri, "/redfish/v1/Systems/system/Memory/dimm0");
+}
+
+TEST(GetUriWithQueryParameters, CanGetUriWithParams) {
+  {
+    auto params =
+        GetParams{.expand = RedfishQueryParamExpand(
+                      {.type = RedfishQueryParamExpand::ExpandType::kNotLinks,
+                       .levels = 3})};
+    std::string uri = GetUriWithQueryParameters(
+        "/redfish/v1/Systems/system/Memory/dimm0", params);
+    EXPECT_EQ(uri,
+              "/redfish/v1/Systems/system/Memory/dimm0?$expand=.($levels=3)");
+  }
+  {
+    auto params = GetParams{
+        .expand = RedfishQueryParamExpand(
+            {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 3})};
+    std::string uri = GetUriWithQueryParameters(
+        "/redfish/v1/Systems/system/Memory/dimm0", params);
+    EXPECT_EQ(uri,
+              "/redfish/v1/Systems/system/Memory/dimm0?$expand=*($levels=3)");
+  }
+  {
+    auto params =
+        GetParams{.expand = RedfishQueryParamExpand(
+                      {.type = RedfishQueryParamExpand::ExpandType::kLinks,
+                       .levels = 3})};
+    std::string uri = GetUriWithQueryParameters(
+        "/redfish/v1/Systems/system/Memory/dimm0", params);
+    EXPECT_EQ(uri,
+              "/redfish/v1/Systems/system/Memory/dimm0?$expand=~($levels=3)");
+  }
 }
 
 }  // namespace

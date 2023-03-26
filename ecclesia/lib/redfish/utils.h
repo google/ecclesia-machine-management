@@ -87,6 +87,13 @@ std::string RedfishTransportBytesToString(const RedfishTransport::bytes &bytes);
 
 RedfishTransport::bytes GetBytesFromString(absl::string_view str);
 
+// Returns the URI from Json object or NotFound error
+absl::StatusOr<std::string> GetObjectUri(const nlohmann::json &json);
+
+// extends uri with query parameters if needed
+std::string GetUriWithQueryParameters(absl::string_view uri,
+                                      const GetParams &params);
+
 // Parses a string as JSON and returns a nlohmann::json object. This
 // provides a good set of arguments to nlohmann::json::parse(). Note
 // that by default nlohmann::json::parse() can throw or abort().
@@ -101,11 +108,10 @@ inline nlohmann::json ParseJson(absl::string_view json_str) {
 // UTF-8 bytes are dropped.
 inline std::string JsonToString(const nlohmann::json &data,
                                 const int indent = -1) {
-  return data.dump(
-      indent,
-      /*indent_char=*/' ',
-      /*ensure_ascii=*/false,
-      /*error_handler=*/nlohmann::json::error_handler_t::ignore);
+  return data.dump(indent,
+                   /*indent_char=*/' ',
+                   /*ensure_ascii=*/false,
+                   /*error_handler=*/nlohmann::json::error_handler_t::ignore);
 }
 
 }  // namespace ecclesia

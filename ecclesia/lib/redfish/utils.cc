@@ -18,10 +18,10 @@
 
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <vector>
 
 #include "absl/strings/ascii.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -97,6 +97,34 @@ std::string RedfishTransportBytesToString(
 
 RedfishTransport::bytes GetBytesFromString(absl::string_view str) {
   return RedfishTransport::bytes(str.begin(), str.end());
+}
+
+// Returns the URI from Json object or NotFound error
+absl::StatusOr<std::string> GetObjectUri(const nlohmann::json &json) {
+  std::string reference;
+  if (json.is_object()) {
+    if (auto odata = json.find(PropertyOdataId::Name);
+        // Object can be re-read by URI. Store it.
+        odata != json.end() && odata.value().is_string()) {
+      return odata.value().get<std::string>();
+    }
+  }
+  return absl::NotFoundError("Unable to find @odata.id");
+}
+
+// Extends uri with query parameters if needed
+std::string GetUriWithQueryParameters(absl::string_view uri,
+                                      const GetParams &params) {
+  auto query_params = params.GetQueryParams();
+  if (query_params.empty()) {
+    return std::string(uri);
+  }
+  std::string query_str = absl::StrJoin(
+      query_params.begin(), query_params.end(), "&",
+      [](std::string *output, const GetParamQueryInterface *param) {
+        output->append(param->ToString());
+      });
+  return absl::StrCat(uri, "?", query_str);
 }
 
 }  // namespace ecclesia
