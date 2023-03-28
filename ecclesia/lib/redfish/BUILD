@@ -458,6 +458,7 @@ cc_library(
         ":utils",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
+        "@com_json//:json",
     ],
 )
 

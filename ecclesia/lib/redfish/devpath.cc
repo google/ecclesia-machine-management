@@ -16,7 +16,6 @@
 
 #include "ecclesia/lib/redfish/devpath.h"
 
-#include <memory>
 #include <optional>
 #include <queue>
 #include <string>
@@ -32,6 +31,7 @@
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/types.h"
 #include "ecclesia/lib/redfish/utils.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 
@@ -66,12 +66,18 @@ std::optional<std::string> GetDevpathForObjectAndNodeTopology(
 
 std::optional<std::string> GetSensorDevpathFromNodeTopology(
     const RedfishObject &obj, const NodeTopology &topology) {
-  auto related_uri = obj[kRfPropertyRelatedItem][0].AsObject();
-  if (related_uri != nullptr && related_uri->GetUriString().has_value()) {
-    auto related_devpath =
-        GetDevpathForUri(topology, *related_uri->GetUriString());
-    if (related_devpath.has_value()) {
-      return *related_devpath;
+  nlohmann::json json_obj = obj.GetContentAsJson();
+  if (json_obj.contains(kRfPropertyRelatedItem)) {
+    nlohmann::json related_item_json = json_obj[kRfPropertyRelatedItem];
+    if (related_item_json.is_array() && !related_item_json.empty() &&
+        related_item_json[0].is_object() &&
+        related_item_json[0].contains(PropertyOdataId::Name)) {
+      std::string related_item_uri =
+          related_item_json[0][PropertyOdataId::Name];
+      if (auto related_devpath = GetDevpathForUri(topology, related_item_uri);
+          related_devpath.has_value()) {
+        return *related_devpath;
+      }
     }
   }
   // Fallback to providing devpath for obj
