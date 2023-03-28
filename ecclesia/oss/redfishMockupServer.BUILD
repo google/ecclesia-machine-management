@@ -20,7 +20,7 @@ filegroup(
 )
 
 genrule(
-    name = "redfishMockupServer.par",
+    name = "redfishMockupServer_par",
     srcs = [":redfishMockupServer_zip"],
     outs = ["redfishMockupServer.par"],
     cmd = "echo '#!/usr/bin/env python3' | cat - $(locations :redfishMockupServer_zip) > $@",
