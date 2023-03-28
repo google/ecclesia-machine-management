@@ -412,6 +412,10 @@ DEFINE_REDFISH_PROPERTY(PropertyUptimeSeconds, double, "UptimeSeconds");
 DEFINE_REDFISH_PROPERTY(PropertyCommandLine, std::string, "CommandLine");
 DEFINE_REDFISH_PROPERTY(PropertyServiceRootUptimeSeconds, double,
                         "ServiceRootUptimeSeconds");
+DEFINE_REDFISH_PROPERTY(PropertyResidentSetSizeBytes, int64_t,
+                        "ResidentSetSizeBytes");
+DEFINE_REDFISH_PROPERTY(PropertyUserTimeSeconds, double, "UserTimeSeconds");
+DEFINE_REDFISH_PROPERTY(PropertyKernelTimeSeconds, double, "KernelTimeSeconds");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
