@@ -193,7 +193,9 @@ class RedfishVariant final {
   // Defines the mode used for iterable creation.
   // Setting it to kAllowExpand allows ImplIntf to re-read original RedFish
   // object with expand query parameters, if available
-  enum class IterableMode { kAllowExpand, kDisableExpand };
+  // kDisableAutoResolve is the most restrictive iterable mode in which the
+  // navigation properties are left unresolved.
+  enum class IterableMode { kAllowExpand, kDisableExpand, kDisableAutoResolve };
   // ImplIntf is provided as the interface for subclasses to be implemented with
   // the PImpl idiom.
 

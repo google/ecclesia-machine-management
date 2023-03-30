@@ -918,5 +918,41 @@ TEST_F(HttpRedfishInterfaceTest, PatchHandler) {
   EXPECT_TRUE(called);
 }
 
+TEST_F(HttpRedfishInterfaceTest, GetUnresolvedNavigationProperty) {
+  auto return_json = nlohmann::json::parse(R"json({
+    "@odata.context": "/redfish/v1/$metadata#ChassisCollection.ChassisCollection",
+    "@odata.id": "/redfish/v1/Chassis",
+    "@odata.type": "#ChassisCollection.ChassisCollection",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis"
+        }
+    ],
+    "Members@odata.count": 1,
+    "Name": "Chassis Collection"
+  })json");
+
+  auto result_json = nlohmann::json::parse(R"json({
+    "@odata.id": "/redfish/v1/Chassis/chassis"
+  })json");
+
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis", [&](ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(return_json.dump());
+        req->Reply();
+      });
+
+  auto result = intf_->CachedGetUri("/redfish/v1/Chassis", GetParams{});
+  std::unique_ptr<RedfishObject> obj =
+      (*result.AsIterable(RedfishVariant::IterableMode::kDisableAutoResolve))[0]
+          .AsObject();
+  EXPECT_THAT(obj->GetContentAsJson(), Eq(result_json));
+  std::optional<std::string> odata_id = obj->GetNodeValue<PropertyOdataId>();
+  ASSERT_TRUE(odata_id.has_value());
+  EXPECT_EQ("/redfish/v1/Chassis/chassis", odata_id.value());
+}
+
 }  // namespace
 }  // namespace ecclesia
