@@ -139,7 +139,8 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
         cache_state_(cache_state) {}
   std::unique_ptr<RedfishObject> AsObject() const override;
   std::unique_ptr<RedfishIterable> AsIterable(
-      RedfishVariant::IterableMode mode) const override;
+      RedfishVariant::IterableMode mode,
+      GetParams::Freshness freshness) const override;
   std::optional<RedfishTransport::bytes> AsRaw() const override;
 
   bool GetValue(std::string *val) const override {
@@ -425,12 +426,14 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
                                      RedfishExtendedPath path,
                                      ecclesia::RedfishTransport::Result result,
                                      CacheState cache_state,
-                                     RedfishVariant::IterableMode mode)
+                                     RedfishVariant::IterableMode mode,
+                                     GetParams::Freshness freshness)
       : intf_(intf),
         path_(std::move(path)),
         result_(std::move(result)),
         cache_state_(cache_state),
-        mode_(mode) {}
+        mode_(mode),
+        freshness_(freshness) {}
 
   HttpIntfArrayIterableImpl(const HttpIntfArrayIterableImpl &) = delete;
   HttpIntfObjectImpl &operator=(const HttpIntfArrayIterableImpl &) = delete;
@@ -466,7 +469,8 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
                             result_.headers);
     }
     return ResolveReference(result_.code, json[index], result_.headers, intf_,
-                            std::move(new_path), cache_state_);
+                            std::move(new_path), cache_state_,
+                            GetParams{.freshness = freshness_});
   }
 
  private:
@@ -475,6 +479,7 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
   RedfishVariant::IterableMode mode_;
+  GetParams::Freshness freshness_;
 };
 
 // HttpIntfCollectionIterableImpl implements the RedfishIterable interface
@@ -486,12 +491,13 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
   explicit HttpIntfCollectionIterableImpl(
       RedfishInterface *intf, RedfishExtendedPath path,
       ecclesia::RedfishTransport::Result result, CacheState cache_state,
-      RedfishVariant::IterableMode mode)
+      RedfishVariant::IterableMode mode, GetParams::Freshness freshness)
       : intf_(intf),
         path_(std::move(path)),
         result_(std::move(result)),
         cache_state_(cache_state),
-        mode_(mode) {}
+        mode_(mode),
+        freshness_(freshness) {}
   HttpIntfCollectionIterableImpl(const HttpIntfCollectionIterableImpl &) =
       delete;
   HttpIntfObjectImpl &operator=(const HttpIntfCollectionIterableImpl &) =
@@ -540,7 +546,8 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
                             result_.headers);
     }
     return ResolveReference(result_.code, itr.value()[index], result_.headers,
-                            intf_, std::move(new_path), cache_state_);
+                            intf_, std::move(new_path), cache_state_,
+                            GetParams{.freshness = freshness_});
   }
 
  private:
@@ -549,6 +556,7 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
   RedfishVariant::IterableMode mode_;
+  GetParams::Freshness freshness_;
 };
 
 std::unique_ptr<RedfishObject> HttpIntfVariantImpl::AsObject() const {
@@ -562,7 +570,7 @@ std::unique_ptr<RedfishObject> HttpIntfVariantImpl::AsObject() const {
 }
 
 std::unique_ptr<RedfishIterable> HttpIntfVariantImpl::AsIterable(
-    RedfishVariant::IterableMode mode) const {
+    RedfishVariant::IterableMode mode, GetParams::Freshness freshness) const {
   if (!std::holds_alternative<nlohmann::json>(result_.body)) {
     return nullptr;
   }
@@ -571,13 +579,13 @@ std::unique_ptr<RedfishIterable> HttpIntfVariantImpl::AsIterable(
                                 json.contains(PropertyMembers::Name) &&
                                 json.contains(PropertyMembersCount::Name);
   if (json.is_array()) {
-    return std::make_unique<HttpIntfArrayIterableImpl>(intf_, path_, result_,
-                                                       cache_state_, mode);
+    return std::make_unique<HttpIntfArrayIterableImpl>(
+        intf_, path_, result_, cache_state_, mode, freshness);
   }
   // Check if the object is a Redfish collection.
   if (is_collection_iterable) {
     return std::make_unique<HttpIntfCollectionIterableImpl>(
-        intf_, path_, result_, cache_state_, mode);
+        intf_, path_, result_, cache_state_, mode, freshness);
   }
   return nullptr;
 }

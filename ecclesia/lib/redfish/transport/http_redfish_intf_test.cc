@@ -565,6 +565,75 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetWithOperator) {
               Eq(json_child));
 }
 
+TEST_F(HttpRedfishInterfaceTest, CachedGetWithIterable) {
+  int parent_called_count = 0;
+  int child_called_count = 0;
+  auto json_parent = nlohmann::json::parse(R"json({
+    "@odata.context": "/redfish/v1/$metadata#ChassisCollection.ChassisCollection",
+    "@odata.id": "/redfish/v1/Chassis",
+    "@odata.type": "#ChassisCollection.ChassisCollection",
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/chassis"
+        }
+    ],
+    "Members@odata.count": 1,
+    "Name": "Chassis Collection"
+  })json");
+  auto json_child = nlohmann::json::parse(R"json({
+    "Id": "2",
+    "Name": "MyOtherResource",
+    "Description": "My Other Test Resource"
+  })json");
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis", [&](ServerRequestInterface *req) {
+        parent_called_count++;
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(json_parent.dump());
+        req->Reply();
+      });
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis", [&](ServerRequestInterface *req) {
+        child_called_count++;
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(json_child.dump());
+        req->Reply();
+      });
+
+  // The first GET will need to hit the backend as the cache is empty.
+  auto parent = intf_->CachedGetUri("/redfish/v1/Chassis", GetParams{});
+  EXPECT_THAT(parent_called_count, Eq(1));
+  EXPECT_THAT(nlohmann::json::parse(parent.DebugString(), nullptr, false),
+              Eq(json_parent));
+
+  // Get the child, cache is empty and will increment the child's handler once.
+  auto parent_as_iterable = parent.AsIterable();
+  ASSERT_TRUE(parent_as_iterable);
+  auto child = (*parent_as_iterable)[0];
+  EXPECT_THAT(child_called_count, Eq(1));
+  EXPECT_THAT(nlohmann::json::parse(child.DebugString(), nullptr, false),
+              Eq(json_child));
+
+  // Getting the child again should retrieve the cached result.
+  auto child2 = (*parent_as_iterable)[0];
+  EXPECT_THAT(child_called_count, Eq(1));
+  EXPECT_THAT(nlohmann::json::parse(child2.DebugString(), nullptr, false),
+              Eq(json_child));
+
+  // Getting the child with freshness=kRequired should increment the child's
+  // handler once more .
+  auto parent_as_iterable_with_freshness =
+      parent.AsIterable(RedfishVariant::IterableMode::kAllowExpand,
+                        GetParams::Freshness::kRequired);
+  ASSERT_TRUE(parent_as_iterable_with_freshness);
+  auto child3 = (*parent_as_iterable_with_freshness)[0];
+  EXPECT_THAT(child_called_count, Eq(2));
+  EXPECT_THAT(nlohmann::json::parse(child3.DebugString(), nullptr, false),
+              Eq(json_child));
+}
+
 TEST_F(HttpRedfishInterfaceTest, GetFreshWithGetMethod) {
   int child_called_count = 0;
   auto json_parent = nlohmann::json::parse(R"json({

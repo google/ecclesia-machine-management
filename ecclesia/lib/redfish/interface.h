@@ -204,7 +204,7 @@ class RedfishVariant final {
     virtual ~ImplIntf() {}
     virtual std::unique_ptr<RedfishObject> AsObject() const = 0;
     virtual std::unique_ptr<RedfishIterable> AsIterable(
-        IterableMode mode) const = 0;
+        IterableMode mode, GetParams::Freshness freshness) const = 0;
     virtual std::optional<RedfishTransport::bytes> AsRaw() const = 0;
     virtual bool GetValue(std::string *val) const = 0;
     virtual bool GetValue(int32_t *val) const = 0;
@@ -319,12 +319,13 @@ class RedfishVariant final {
     return ptr_->AsObject();
   }
   std::unique_ptr<RedfishIterable> AsIterable(
-      IterableMode mode = IterableMode::kAllowExpand) const {
+      IterableMode mode = IterableMode::kAllowExpand,
+      GetParams::Freshness freshness = GetParams::Freshness::kOptional) const {
     if (!ptr_) {
       DLOG(INFO) << "RedfishVariant unable to create an Iterable: " << status();
       return nullptr;
     }
-    return ptr_->AsIterable(mode);
+    return ptr_->AsIterable(mode, freshness);
   }
   std::optional<RedfishTransport::bytes> AsRaw() const {
     if (!ptr_) {
