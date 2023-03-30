@@ -106,6 +106,51 @@ TEST(TranslatedRcuView, StoreUpdateAdditionalTranslate) {
   EXPECT_EQ(translated_view.translate_invocations(), 2);
 }
 
+TEST(TranslatedRcuView, UpdateUntilPreconditionMet) {
+  RcuStore<int> store(23);
+
+  // The precondition is only met if the store value is larger than 30.
+  TestTranslatedRcuView translated_view(
+      store, [](const int &from, const std::string &to) { return from > 30; });
+  EXPECT_EQ(translated_view.translate_invocations(), 0);
+
+  auto snapshot_from_store = store.Read();
+  auto snapshot_from_view = translated_view.Read();
+  EXPECT_EQ(*snapshot_from_store, 23);
+  EXPECT_EQ(*snapshot_from_view, "23");
+  EXPECT_EQ(translated_view.translate_invocations(), 1);
+
+  // The second read will invoke translation because the precondition is not
+  // met. And thus the cache needs an update upon read.
+  snapshot_from_view = translated_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "23");
+  EXPECT_EQ(translated_view.translate_invocations(), 2);
+
+  // The third read still invokes translation because the precondition is still
+  // not met yet.
+  snapshot_from_view = translated_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "23");
+  EXPECT_EQ(translated_view.translate_invocations(), 3);
+
+  store.Update(42);
+
+  // A store change triggers a translation.
+  snapshot_from_store = store.Read();
+  snapshot_from_view = translated_view.Read();
+  EXPECT_EQ(*snapshot_from_store, 42);
+  EXPECT_EQ(*snapshot_from_view, "42");
+  EXPECT_EQ(translated_view.translate_invocations(), 4);
+
+  // Precondition was met. Thus any more reads will just hit the cache and won't
+  // invoke translation.
+  snapshot_from_view = translated_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "42");
+  EXPECT_EQ(translated_view.translate_invocations(), 4);
+  snapshot_from_view = translated_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "42");
+  EXPECT_EQ(translated_view.translate_invocations(), 4);
+}
+
 // Test class which does an int -> int translation by multiplying the value by
 // two. Because it is an int -> int translation we can layer multiple copies of
 // this view, allowing us to test nesting.
@@ -169,8 +214,8 @@ TEST(TimedTranslatedRcuViewTest, UnderlyingRcuOrTimeInvalidation) {
   EXPECT_EQ(*snapshot_from_view, "26");
   EXPECT_EQ(timed_trans_view.translate_invocations(), 1);
 
-  // No store change and not time-elapsed has not passed the "fresh" duration.
-  // So no translation is needed.
+  // No store change and time-elapsed has not exceeded the "fresh" duration. So
+  // no translation is needed.
   snapshot_from_view = timed_trans_view.Read();
   EXPECT_EQ(*snapshot_from_view, "26");
   EXPECT_EQ(timed_trans_view.translate_invocations(), 1);
@@ -183,6 +228,40 @@ TEST(TimedTranslatedRcuViewTest, UnderlyingRcuOrTimeInvalidation) {
 
   // Excessive long elapsed time also triggers a translation.
   clock.AdvanceTime(absl::Seconds(12));
+  snapshot_from_view = timed_trans_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "62");
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 3);
+}
+
+TEST(TimedTranslatedRcuViewTest, PreconditionTriggeredCacheInvalidation) {
+  FakeClock clock;
+  RcuStore<int> store(26);
+
+  TestTimedTranslatedRcuView timed_trans_view(
+      store, clock, absl::Seconds(10),
+      [](const int &from, const std::string &to) { return from > 30; });
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 0);
+
+  auto snapshot_from_store = store.Read();
+  auto snapshot_from_view = timed_trans_view.Read();
+  EXPECT_EQ(*snapshot_from_store, 26);
+  EXPECT_EQ(*snapshot_from_view, "26");
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 1);
+
+  // The precondition was not met. So even there's no store change and the
+  // "fresh" time-duration has not expired yet, a translation is still invoked
+  // upon a read.
+  snapshot_from_view = timed_trans_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "26");
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 2);
+
+  // Store change triggers a translation.
+  store.Update(62);
+  snapshot_from_view = timed_trans_view.Read();
+  EXPECT_EQ(*snapshot_from_view, "62");
+  EXPECT_EQ(timed_trans_view.translate_invocations(), 3);
+
+  // The precondition was met. So another read won't trigger a translation.
   snapshot_from_view = timed_trans_view.Read();
   EXPECT_EQ(*snapshot_from_view, "62");
   EXPECT_EQ(timed_trans_view.translate_invocations(), 3);

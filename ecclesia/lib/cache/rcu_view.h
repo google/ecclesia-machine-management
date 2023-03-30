@@ -33,11 +33,13 @@
 #ifndef ECCLESIA_LIB_CACHE_RCU_VIEW_H_
 #define ECCLESIA_LIB_CACHE_RCU_VIEW_H_
 
+#include <functional>
 #include <optional>
 #include <utility>
 
 #include "absl/base/thread_annotations.h"
 #include "absl/synchronization/mutex.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/cache/rcu_snapshot.h"
 #include "ecclesia/lib/cache/rcu_store.h"
 #include "ecclesia/lib/time/clock.h"
@@ -78,7 +80,9 @@ class RcuDirectView final : public RcuView<T> {
 // RcuStore or RcuView of type FromType to a view of type ToType. This
 // implementation allows subclasses to provide a Translate function for creating
 // the ToType view based on FromType. An internal cache is used to hold the
-// translation until the underlying view emits a change notification.
+// translation until the underlying view emits a change notification. It
+// supports an optional precondition function: the cache will be considered
+// stale if the precondition is not met.
 //
 // NOTE: This stores a _reference_ to the RcuStore<T> or RcuView<T> that it
 // wraps. So it is very important that the lifetime of the underlying object
@@ -86,33 +90,51 @@ class RcuDirectView final : public RcuView<T> {
 template <typename FromType, typename ToType>
 class TranslatedRcuView : public RcuView<ToType> {
  public:
+  using CachePreconditionFunc =
+      std::function<bool(const FromType &, const ToType &)>;
   // Construct a translated view. It can be wrapped around either a store or a
   // view. Note that in both cases it will capture a reference.
-  explicit TranslatedRcuView(const RcuView<FromType> &view) : view_(view) {}
+  explicit TranslatedRcuView(const RcuView<FromType> &view)
+      : TranslatedRcuView(
+            view, [](const FromType &, const ToType &) { return true; }) {}
   explicit TranslatedRcuView(const RcuStore<FromType> &store)
-      : wrapped_store_(store), view_(*wrapped_store_) {}
+      : TranslatedRcuView(
+            store, [](const FromType &, const ToType &) { return true; }) {}
+
+  // Construct a translated view with optional precondition.
+  TranslatedRcuView(const RcuView<FromType> &view,
+                    CachePreconditionFunc precondition)
+      : view_(view), precondition_(std::move(precondition)) {}
+  TranslatedRcuView(const RcuStore<FromType> &store,
+                    CachePreconditionFunc precondition)
+      : wrapped_store_(store),
+        view_(*wrapped_store_),
+        precondition_(std::move(precondition)) {}
 
   // Copying these can be dangerous because it stores a reference.
   TranslatedRcuView(const TranslatedRcuView &other) = delete;
   TranslatedRcuView &operator=(const TranslatedRcuView &other) = delete;
 
-  // Read will check if the current snapshot is still fresh. If it is not it
-  // will rebuild the cache using the subclass Translate function. If the store
-  // is still fresh then the cached snapshot will be returned.
+  // Read will check if the precondition is met and the current snapshot is
+  // still fresh. If it is not it will rebuild the cache using the subclass
+  // Translate function. If the precondition was met and the store is still
+  // fresh then the cached snapshot will be returned.
   RcuSnapshot<ToType> Read() const override {
     absl::MutexLock ml(&cache_.mutex);
-    if (!cache_.to_snapshot.IsFresh()) {
-      auto from_snapshot = view_.Read();
+    if (!cache_.precondition_met || !cache_.to_snapshot.IsFresh()) {
+      RcuSnapshot<FromType> from_snapshot = view_.Read();
       ToType new_translation = Translate(*from_snapshot);
       cache_.to_snapshot = RcuSnapshot<ToType>::CreateDependent(
           RcuSnapshotDependsOn(from_snapshot), std::move(new_translation));
+      cache_.precondition_met =
+          precondition_(*from_snapshot, *cache_.to_snapshot);
     }
     return cache_.to_snapshot;
   }
 
   // Subclasses will override this with an implementation which translate the
   // store's data of type FromType to a view of type ToType.
-  virtual ToType Translate(const FromType &to) const = 0;
+  virtual ToType Translate(const FromType &from) const = 0;
 
  private:
   // If this translated view is capturing an RcuStore instead of an RcuView then
@@ -125,12 +147,18 @@ class TranslatedRcuView : public RcuView<ToType> {
   // wrapped by wrapped_store_ and that wrapper will be referenced here.
   const RcuView<FromType> &view_;
 
+  // A functor to determine if the precondition was met in the previous cache.
+  CachePreconditionFunc precondition_;
+
   // Internal cache storing the translation of the ToType view based on store_.
   mutable struct Cache {
-    Cache() : to_snapshot(RcuSnapshot<ToType>::CreateStale()) {}
+    Cache()
+        : to_snapshot(RcuSnapshot<ToType>::CreateStale()),
+          precondition_met(false) {}
 
     absl::Mutex mutex;
     RcuSnapshot<ToType> to_snapshot ABSL_GUARDED_BY(mutex);
+    bool precondition_met ABSL_GUARDED_BY(mutex);
   } cache_;
 };
 
@@ -145,43 +173,65 @@ class TranslatedRcuView : public RcuView<ToType> {
 template <typename FromType, typename ToType>
 class TimedTranslatedRcuView : public RcuView<ToType> {
  public:
+  using CachePreconditionFunc =
+      std::function<bool(const FromType &, const ToType &)>;
   // Construct a translated view. It can be wrapped around either a store or a
   // view. Note that in both cases it will capture a reference.
-  explicit TimedTranslatedRcuView(const RcuView<FromType> &view,
-                                  const Clock &clock, absl::Duration duration)
-      : view_(view), clock_(&clock), duration_(duration) {}
-  explicit TimedTranslatedRcuView(const RcuStore<FromType> &store,
-                                  const Clock &clock, absl::Duration duration)
+  TimedTranslatedRcuView(const RcuView<FromType> &view, const Clock &clock,
+                         absl::Duration duration)
+      : TimedTranslatedRcuView(
+            view, clock, duration,
+            [](const FromType &, const ToType &) { return true; }) {}
+  TimedTranslatedRcuView(const RcuStore<FromType> &store, const Clock &clock,
+                         absl::Duration duration)
+      : TimedTranslatedRcuView(
+            store, clock, duration,
+            [](const FromType &, const ToType &) { return true; }) {}
+
+  TimedTranslatedRcuView(const RcuView<FromType> &view, const Clock &clock,
+                         absl::Duration duration,
+                         CachePreconditionFunc precondition)
+      : view_(view),
+        clock_(&clock),
+        duration_(duration),
+        precondition_(std::move(precondition)) {}
+  TimedTranslatedRcuView(const RcuStore<FromType> &store, const Clock &clock,
+                         absl::Duration duration,
+                         CachePreconditionFunc precondition)
       : wrapped_store_(store),
         view_(*wrapped_store_),
         clock_(&clock),
-        duration_(duration) {}
+        duration_(duration),
+        precondition_(std::move(precondition)) {}
 
   // Copying these can be dangerous because it stores a reference.
   TimedTranslatedRcuView(const TimedTranslatedRcuView &other) = delete;
   TimedTranslatedRcuView &operator=(const TimedTranslatedRcuView &other) =
       delete;
 
-  // Read will check if the current snapshot is still "fresh". If the underlying
-  // view has a change or the cache has been held for excessive time, it will
-  // rebuild the cache using the subclass Translate function. If the store is
-  // still fresh then the cached snapshot will be returned.
+  // Read will check if the current snapshot is still "fresh". If the
+  // precondition was not met or the underlying view has a change or the cache
+  // has been held for excessive time, it will rebuild the cache using the
+  // subclass Translate function. If the store is still fresh then the cached
+  // snapshot will be returned.
   RcuSnapshot<ToType> Read() const override {
     absl::MutexLock ml(&cache_.mutex);
-    if (!cache_.to_snapshot.IsFresh() ||
+    if (!cache_.precondition_met || !cache_.to_snapshot.IsFresh() ||
         clock_->Now() > cache_.last_update_time + duration_) {
       auto from_snapshot = view_.Read();
       ToType new_translation = Translate(*from_snapshot);
       cache_.to_snapshot = RcuSnapshot<ToType>::CreateDependent(
           RcuSnapshotDependsOn(from_snapshot), std::move(new_translation));
       cache_.last_update_time = clock_->Now();
+      cache_.precondition_met =
+          precondition_(*from_snapshot, *cache_.to_snapshot);
     }
     return cache_.to_snapshot;
   }
 
   // Subclasses will override this with an implementation which translate the
   // store's data of type FromType to a view of type ToType.
-  virtual ToType Translate(const FromType &to) const = 0;
+  virtual ToType Translate(const FromType &from) const = 0;
 
  private:
   // If this translated view is capturing an RcuStore instead of an RcuView then
@@ -198,13 +248,20 @@ class TimedTranslatedRcuView : public RcuView<ToType> {
   const Clock *clock_;
   absl::Duration duration_;
 
+  // A functor to determine if the precondition was met in the previous cache.
+  CachePreconditionFunc precondition_;
+
   // Internal cache storing the translation of the ToType view based on store_.
   mutable struct Cache {
-    Cache() : to_snapshot(RcuSnapshot<ToType>::CreateStale()) {}
+    Cache()
+        : to_snapshot(RcuSnapshot<ToType>::CreateStale()),
+          last_update_time(absl::InfinitePast()),
+          precondition_met(false) {}
 
     absl::Mutex mutex;
     RcuSnapshot<ToType> to_snapshot ABSL_GUARDED_BY(mutex);
-    absl::Time last_update_time ABSL_GUARDED_BY(mutex) = absl::InfinitePast();
+    absl::Time last_update_time ABSL_GUARDED_BY(mutex);
+    bool precondition_met ABSL_GUARDED_BY(mutex);
   } cache_;
 };
 

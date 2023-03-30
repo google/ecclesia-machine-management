@@ -15,6 +15,7 @@ cc_library(
         "//ecclesia/lib/time:clock",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
     ],
 )
 
