@@ -16,6 +16,8 @@
 
 #include <algorithm>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -30,6 +32,8 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/match.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
@@ -46,20 +50,21 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
+#include "ecclesia/lib/redfish/transport/grpc.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/time/clock.h"
-#include "google/protobuf/io/zero_copy_stream_impl.h"
-#include "google/protobuf/text_format.h"
 
 ABSL_FLAG(bool, devpath_enabled, false, "Boolean to enable devpath extension.");
 ABSL_FLAG(bool, metrics_enabled, false, "Boolean to enable redfish metrics.");
 ABSL_FLAG(std::string, hostname, "localhost",
           "Hostname of the Redfish server.");
 ABSL_FLAG(int, port, 8000, "Port number of the server.");
+ABSL_FLAG(std::string, transport, "http",
+          "redfish transport can be either http or loas_grpc");
 ABSL_FLAG(std::string, input_dir, "",
           "Absolute path to directory containing textproto files for Queries.");
 ABSL_FLAG(std::string, query_rule_location, "",
@@ -73,6 +78,8 @@ namespace ecclesia {
 
 namespace {
 
+constexpr absl::string_view kDnsPrefix = "dns:///";
+constexpr absl::string_view kLoasGrpc = "loas_grpc";
 constexpr absl::string_view kUsage =
     "A debug tool to Query a given Redfish Service using Dellicius "
     "Queries.\n\nThe tool requires the following at minimum:\n  "
@@ -136,6 +143,7 @@ absl::StatusOr<DelliciusQueryMetadata> GetQueriesFromLocation(
 
 int QueryMain(int argc, char **argv) {
   absl::SetProgramUsageMessage(kUsage);
+
   absl::ParseCommandLine(argc, argv);
   absl::InitializeLog();
   std::string query_rule_location = absl::GetFlag(FLAGS_query_rule_location);
@@ -175,17 +183,23 @@ int QueryMain(int argc, char **argv) {
       .query_files{embedded_files},
       .query_rules{query_rule_embedded_file}};
   // Configure HTTP transport.
-  auto curl_http_client = std::make_unique<CurlHttpClient>(
-      LibCurlProxy::CreateInstance(), HttpCredential());
-  std::unique_ptr<HttpRedfishTransport> base_transport =
-      HttpRedfishTransport::MakeNetwork(
-          std::move(curl_http_client),
-          absl::StrCat(absl::GetFlag(FLAGS_hostname), ":",
-                       absl::GetFlag(FLAGS_port)));
-  RedfishMetrics transport_metrics;
   std::unique_ptr<RedfishInterface> intf;
   std::unique_ptr<NullCache> cache;
-  std::unique_ptr<RedfishTransport> transport = std::move(base_transport);
+  std::unique_ptr<RedfishTransport> transport;
+  std::string target = absl::StrCat(absl::GetFlag(FLAGS_hostname), ":",
+                                    absl::GetFlag(FLAGS_port));
+
+  if (absl::EqualsIgnoreCase(absl::GetFlag(FLAGS_transport), kLoasGrpc)) {
+    return -1;
+  } else {
+    auto curl_http_client = std::make_unique<CurlHttpClient>(
+        LibCurlProxy::CreateInstance(), HttpCredential());
+
+    transport =
+        HttpRedfishTransport::MakeNetwork(std::move(curl_http_client), target);
+  }
+
+  RedfishMetrics transport_metrics;
   {
     if (absl::GetFlag(FLAGS_metrics_enabled)) {
       transport = std::make_unique<MetricalRedfishTransport>(
