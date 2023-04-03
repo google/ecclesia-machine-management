@@ -187,6 +187,20 @@ std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
         });
   }
 
+  for (const auto &array_link_skip :
+       resource_config.usable_links_skip().array_links()) {
+    obj[kRfPropertyLinks][array_link_skip].Each().Do(
+        [&](std::unique_ptr<RedfishObject> &json) {
+          DLOG(INFO) << "Found skipped downstream obj at Links."
+                     << array_link_skip;
+          std::vector<std::unique_ptr<RedfishObject>> tmp_next_level_obj =
+              FindAllDownstreamsUris(*json, config);
+          for (std::unique_ptr<RedfishObject> &next_obj : tmp_next_level_obj) {
+            downstream_objs.push_back(std::move(next_obj));
+          }
+          return RedfishIterReturnValue::kContinue;
+        });
+  }
   return downstream_objs;
 }
 
