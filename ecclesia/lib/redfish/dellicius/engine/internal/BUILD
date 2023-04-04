@@ -10,6 +10,7 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/time:clock",
+        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

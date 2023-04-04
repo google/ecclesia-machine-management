@@ -24,7 +24,7 @@ namespace ecclesia {
 
 absl::StatusOr<std::unique_ptr<QueryPlannerInterface::QueryPlannerImpl>>
 BuildDefaultQueryPlanner(const DelliciusQuery &query,
-                         RedPathRedfishQueryParams query_params,
+                         RedPathRedfishQueryParams redpath_to_query_params,
                          Normalizer *normalizer);
 
 }  // namespace ecclesia

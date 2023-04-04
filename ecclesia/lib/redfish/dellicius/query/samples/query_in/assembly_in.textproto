@@ -14,6 +14,7 @@ subquery {
   redpath: "/Systems[*]/Processors[*]"
   properties { name: "serial_number" property: "SerialNumber" type: STRING }
   properties { name: "part_number" property: "PartNumber" type: STRING }
+  freshness: REQUIRED
 }
 
 subquery {

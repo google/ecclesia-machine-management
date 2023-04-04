@@ -48,10 +48,10 @@ inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithDevpath(
 
 // Builds the default query planner.
 inline absl::StatusOr<QueryPlannerInterface> BuildQueryPlanner(
-    const DelliciusQuery &query, RedPathRedfishQueryParams query_params,
-    Normalizer *normalizer) {
-  auto qp =
-      BuildDefaultQueryPlanner(query, std::move(query_params), normalizer);
+    const DelliciusQuery &query,
+    RedPathRedfishQueryParams redpath_to_query_params, Normalizer *normalizer) {
+  auto qp = BuildDefaultQueryPlanner(query, std::move(redpath_to_query_params),
+                                     normalizer);
   if (!qp.ok()) {
     return qp.status();
   }

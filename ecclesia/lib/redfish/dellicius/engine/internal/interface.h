@@ -20,6 +20,7 @@
 #include <memory>
 #include <utility>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -31,7 +32,7 @@
 
 namespace ecclesia {
 
-// Maps absolute path of a NodeName expr in RedPath to the Expand value.
+// Maps RedPath prefix to the Expand value.
 using RedPathRedfishQueryParams =
     absl::flat_hash_map<std::string /* RedPath */, GetParams>;
 

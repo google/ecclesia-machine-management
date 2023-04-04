@@ -16,25 +16,29 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 
-#include <algorithm>
-#include <array>
 #include <memory>
 #include <string>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/http/cred.pb.h"
+#include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/engine/config.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/testing/test_queries_embedded.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/testing/test_query_rules_embedded.h"
-#include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
-#include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
+#include "ecclesia/lib/redfish/transport/cache.h"
+#include "ecclesia/lib/redfish/transport/http.h"
+#include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
+#include "ecclesia/lib/redfish/transport/metrical_transport.h"
+#include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/time/clock_fake.h"
 
@@ -90,8 +94,7 @@ TEST_F(QueryEngineTest, QueryEngineDevpathConfiguration) {
       kQuerySamplesLocation, "query_out/devpath_sensor_out.textproto"));
 
   QueryEngineConfiguration config{
-      .flags{.enable_devpath_extension = true,
-             .enable_cached_uri_dispatch = false},
+      .flags{.enable_devpath_extension = true},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
   QueryEngine query_engine(config, &clock_, std::move(intf_));
   std::vector<DelliciusQueryResult> response_entries =
@@ -109,8 +112,7 @@ TEST_F(QueryEngineTest, QueryEngineDefaultConfiguration) {
       JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
 
   QueryEngineConfiguration config{
-      .flags{.enable_devpath_extension = false,
-             .enable_cached_uri_dispatch = false},
+      .flags{.enable_devpath_extension = false},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
   QueryEngine query_engine(config, &clock_, std::move(intf_));
   std::vector<DelliciusQueryResult> response_entries =
@@ -128,8 +130,7 @@ TEST_F(QueryEngineTest, QueryEngineWithExpandConfiguration) {
       JoinFilePaths(kQuerySamplesLocation, "query_out/assembly_out.textproto"));
 
   QueryEngineConfiguration config{
-      .flags{.enable_devpath_extension = false,
-             .enable_cached_uri_dispatch = false},
+      .flags{.enable_devpath_extension = false},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
       .query_rules{kQueryRules.begin(), kQueryRules.end()}};
 
@@ -160,8 +161,7 @@ TEST_F(QueryEngineTest, QueryEngineWithExpandConfiguration) {
 
 TEST_F(QueryEngineTest, QueryEngineInvalidQueries) {
   QueryEngineConfiguration config{
-      .flags{.enable_devpath_extension = false,
-             .enable_cached_uri_dispatch = false},
+      .flags{.enable_devpath_extension = false},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
 
   // Invalid Query Id
@@ -178,8 +178,7 @@ TEST_F(QueryEngineTest, QueryEngineConcurrentQueries) {
       JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
 
   QueryEngineConfiguration config{
-      .flags{.enable_devpath_extension = false,
-             .enable_cached_uri_dispatch = false},
+      .flags{.enable_devpath_extension = false},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
   QueryEngine query_engine(config, &clock_, std::move(intf_));
   std::vector<DelliciusQueryResult> response_entries =
@@ -202,8 +201,7 @@ TEST_F(QueryEngineTest, QueryEngineEmptyItemDevpath) {
       kQuerySamplesLocation, "query_out/devpath_assembly_out.textproto"));
 
   QueryEngineConfiguration config{
-      .flags{.enable_devpath_extension = true,
-             .enable_cached_uri_dispatch = false},
+      .flags{.enable_devpath_extension = true},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
   QueryEngine query_engine(config, &clock_, std::move(intf_));
   std::vector<DelliciusQueryResult> response_entries =
@@ -214,6 +212,94 @@ TEST_F(QueryEngineTest, QueryEngineEmptyItemDevpath) {
   EXPECT_EQ(response_entries.size(), 1);
   EXPECT_THAT(intent_assembly_out,
               IgnoringRepeatedFieldOrdering(EqualsProto(response_entries[0])));
+}
+
+TEST_F(QueryEngineTest, QueryEngineWithCacheConfiguration) {
+  auto config = server_.GetConfig();
+  HttpCredential creds;
+  auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
+      ecclesia::LibCurlProxy::CreateInstance(), creds);
+  auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
+      std::move(curl_http_client),
+      absl::StrFormat("%s:%d", config.hostname, config.port));
+  auto cache_factory = [this](RedfishTransport *transport) {
+    return std::make_unique<ecclesia::TimeBasedCache>(transport, &clock_,
+                                                      absl::InfiniteDuration());
+  };
+
+  std::string assembly_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_out/assembly_out.textproto"));
+
+  QueryEngineConfiguration query_engine_configuration{
+      .flags{.enable_devpath_extension = false},
+      .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
+      .query_rules{kQueryRules.begin(), kQueryRules.end()}};
+
+  RedfishMetrics metrics;
+  auto metrical_transport = std::make_unique<MetricalRedfishTransport>(
+      std::move(transport), Clock::RealClock(), metrics);
+
+  auto intf_with_cache = NewHttpInterface(
+      std::move(metrical_transport), cache_factory, RedfishInterface::kTrusted);
+  QueryEngine query_engine(query_engine_configuration, &clock_,
+                           std::move(intf_with_cache));
+  {
+    // Query assemblies
+    std::vector<DelliciusQueryResult> response_entries =
+        query_engine.ExecuteQuery(
+            {"AssemblyCollectorWithPropertyNameNormalization"});
+    DelliciusQueryResult intent_output_assembly =
+        ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
+    EXPECT_EQ(response_entries.size(), 1);
+    EXPECT_THAT(intent_output_assembly, IgnoringRepeatedFieldOrdering(
+                                            EqualsProto(response_entries[0])));
+  }
+  {
+    // Query assemblies again. This time we expect QueryEngine uses cache
+    std::vector<DelliciusQueryResult> response_entries =
+        query_engine.ExecuteQuery(
+            {"AssemblyCollectorWithPropertyNameNormalization"});
+    DelliciusQueryResult intent_output_sensor =
+        ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
+    EXPECT_EQ(response_entries.size(), 1);
+    EXPECT_THAT(intent_output_sensor, IgnoringRepeatedFieldOrdering(
+                                          EqualsProto(response_entries[0])));
+  }
+  {
+    // Query assemblies again.
+    std::vector<DelliciusQueryResult> response_entries =
+        query_engine.ExecuteQuery(
+            {"AssemblyCollectorWithPropertyNameNormalization"});
+    DelliciusQueryResult intent_output_sensor =
+        ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
+    EXPECT_EQ(response_entries.size(), 1);
+    EXPECT_THAT(intent_output_sensor, IgnoringRepeatedFieldOrdering(
+                                          EqualsProto(response_entries[0])));
+  }
+  // We requested Processors 3 times when we executed Assembly query 3 times.
+  // Note we have specified in the query that processors should always be fresh.
+  // So we should expect processors queried 3 times while Systems is queried
+  // once just like all other cached resources.
+  bool traced_processors = false;
+  bool traced_systems = false;
+  for (const auto &uri_x_metric : *metrics.mutable_uri_to_metrics_map()) {
+    if (uri_x_metric.first == "/redfish/v1/Systems/system/Processors/0") {
+      traced_processors = true;
+      for (const auto &metadata :
+           uri_x_metric.second.request_type_to_metadata()) {
+        EXPECT_EQ(metadata.second.request_count(), 3);
+      }
+    }
+    if (uri_x_metric.first == "/redfish/v1/Systems") {
+      traced_systems = true;
+      for (const auto &metadata :
+           uri_x_metric.second.request_type_to_metadata()) {
+        EXPECT_EQ(metadata.second.request_count(), 1);
+      }
+    }
+  }
+  EXPECT_TRUE(traced_processors);
+  EXPECT_TRUE(traced_systems);
 }
 
 }  // namespace

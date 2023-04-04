@@ -6,6 +6,18 @@ package ecclesia;
 message DelliciusQuery {
   // Smallest unit of operation, targeting specific set of resources
   message Subquery {
+    // A RedPath level freshness configuration used to indicate the desired
+    // Redfish object freshness when processing a RedPath prefix. The cache
+    // policy is determined by the cache implementation; this property merely
+    // indicates whether a cached value is acceptable.
+    // Usage:
+    //  OPTIONAL:- Freshness is not required. Cached objects are OK.
+    //  REQUIRED:- Freshness is required.
+    enum Freshness {
+      UNSPECIFIED = 0;
+      OPTIONAL = 1;
+      REQUIRED = 2;
+    }
     // Identifies redfish property to parse along with .
     message RedfishProperty {
       enum PrimitiveType {
@@ -37,6 +49,7 @@ message DelliciusQuery {
     // root or relative to RedPath in different subquery as identified by root
     // field in this proto.
     string redpath = 2;
+    Freshness freshness = 7;
     repeated RedfishProperty properties = 3;
     // Identifies property sets.
     repeated string property_set_ids = 6;
