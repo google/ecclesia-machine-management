@@ -32,7 +32,6 @@
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
-#include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
@@ -174,14 +173,12 @@ class GrpcRedfishTransport : public RedfishTransport {
     return RedfishInterface::ServiceRootToUri(ServiceRootUri::kRedfish);
   }
 
-  absl::StatusOr<Result> Get(absl::string_view path)
-      ABSL_LOCKS_EXCLUDED(mutex_) override {
+  absl::StatusOr<Result> Get(absl::string_view path) override {
     return DoRpc(
         path, std::nullopt, fqdn_, params_,
         [this, path](grpc::ClientContext &context,
                      const redfish::v1::Request &request,
                      ::redfish::v1::Response *response) -> grpc::Status {
-          absl::ReaderMutexLock mu(&mutex_);
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
@@ -190,14 +187,13 @@ class GrpcRedfishTransport : public RedfishTransport {
           return client_->Get(&context, request, response);
         });
   }
-  absl::StatusOr<Result> Post(absl::string_view path, absl::string_view data)
-      ABSL_LOCKS_EXCLUDED(mutex_) override {
+  absl::StatusOr<Result> Post(absl::string_view path,
+                              absl::string_view data) override {
     return DoRpc(
         path, data, fqdn_, params_,
         [this, path](grpc::ClientContext &context,
                      const redfish::v1::Request &request,
                      ::redfish::v1::Response *response) -> grpc::Status {
-          absl::ReaderMutexLock mu(&mutex_);
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
@@ -206,14 +202,13 @@ class GrpcRedfishTransport : public RedfishTransport {
           return client_->Post(&context, request, response);
         });
   }
-  absl::StatusOr<Result> Patch(absl::string_view path, absl::string_view data)
-      ABSL_LOCKS_EXCLUDED(mutex_) override {
+  absl::StatusOr<Result> Patch(absl::string_view path,
+                               absl::string_view data) override {
     return DoRpc(
         path, data, fqdn_, params_,
         [this, path](grpc::ClientContext &context,
                      const redfish::v1::Request &request,
                      ::redfish::v1::Response *response) -> grpc::Status {
-          absl::ReaderMutexLock mu(&mutex_);
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
@@ -222,14 +217,13 @@ class GrpcRedfishTransport : public RedfishTransport {
           return client_->Patch(&context, request, response);
         });
   }
-  absl::StatusOr<Result> Delete(absl::string_view path, absl::string_view data)
-      ABSL_LOCKS_EXCLUDED(mutex_) override {
+  absl::StatusOr<Result> Delete(absl::string_view path,
+                                absl::string_view data) override {
     return DoRpc(
         path, data, fqdn_, params_,
         [this, path](grpc::ClientContext &context,
                      const redfish::v1::Request &request,
                      ::redfish::v1::Response *response) -> grpc::Status {
-          absl::ReaderMutexLock mu(&mutex_);
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
@@ -240,8 +234,7 @@ class GrpcRedfishTransport : public RedfishTransport {
   }
 
  private:
-  absl::Mutex mutex_;
-  std::unique_ptr<GrpcRedfishV1::Stub> client_ ABSL_GUARDED_BY(mutex_);
+  std::unique_ptr<GrpcRedfishV1::Stub> client_;
   GrpcTransportParams params_;
   std::string fqdn_;
 };
