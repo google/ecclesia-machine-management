@@ -119,6 +119,8 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
         clock_(clock),
         max_age_(max_age) {}
 
+  absl::Duration GetCacheTimeout() const { return max_age_; }
+
  protected:
   GetResult CachedGetInternal(absl::string_view path) override;
   GetResult UncachedGetInternal(absl::string_view path) override;
