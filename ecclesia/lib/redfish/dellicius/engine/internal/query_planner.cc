@@ -436,6 +436,10 @@ class QueryPlanner final : public QueryPlannerInterface::QueryPlannerImpl {
         redpath_to_query_params_(
             CombineQueryParams(query, std::move(redpath_to_query_params))) {}
 
+  DelliciusQueryResult Run(const RedfishVariant &variant, const Clock &clock,
+                           QueryTracker *tracker) override;
+
+ private:
   // Recursively executes RedPath Step expressions across subqueries.
   // Dispatches Redfish resource request for each unique NodeName in RedPath
   // Step expressions across subqueries followed by invoking predicate handlers
@@ -444,9 +448,6 @@ class QueryPlanner final : public QueryPlannerInterface::QueryPlannerImpl {
   void ExecuteRedPathStepFromEachSubquery(ContextNode &context_node,
                                           DelliciusQueryResult &result,
                                           QueryTracker *tracker);
-
-  DelliciusQueryResult Run(const RedfishVariant &variant, const Clock &clock,
-                           QueryTracker *tracker) override;
 
   const std::string plan_id_;
   // Collection of all SubqueryHandle instances including both root and child
