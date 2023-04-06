@@ -126,7 +126,8 @@ ResourceConfig GetResourceConfigFromResourceTypeAndVersion(
 // Helper function for finding downstream URIs via Links or first class
 // attributes for a given RedfishObject
 std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
-    const RedfishObject &obj, const TopologyConfig &config) {
+    const RedfishObject &obj, const TopologyConfig &config,
+    absl::flat_hash_set<std::string> &visited_uri) {
   std::vector<std::unique_ptr<RedfishObject>> downstream_objs;
 
   ResourceConfig resource_config;
@@ -193,8 +194,14 @@ std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
         [&](std::unique_ptr<RedfishObject> &json) {
           DLOG(INFO) << "Found skipped downstream obj at Links."
                      << array_link_skip;
+          std::optional<std::string> skip_uri =
+              json->GetUriString();
+          if (!skip_uri.has_value() || visited_uri.contains(*skip_uri)) {
+            return RedfishIterReturnValue::kContinue;
+          }
+          visited_uri.insert(*skip_uri);
           std::vector<std::unique_ptr<RedfishObject>> tmp_next_level_obj =
-              FindAllDownstreamsUris(*json, config);
+              FindAllDownstreamsUris(*json, config, visited_uri);
           for (std::unique_ptr<RedfishObject> &next_obj : tmp_next_level_obj) {
             downstream_objs.push_back(std::move(next_obj));
           }
@@ -240,8 +247,10 @@ std::unique_ptr<RedfishObject> FindRootChassisUri(
   FindAllCablesHelper(redfish_intf, config.cable_linkages(),
                       [&](std::unique_ptr<RedfishObject> cable_json,
                           const std::string &upstream_uri) {
+                        absl::flat_hash_set<std::string> visited_uri;
                         for (std::unique_ptr<RedfishObject> &downstream_obj :
-                             FindAllDownstreamsUris(*cable_json, config)) {
+                             FindAllDownstreamsUris(*cable_json,
+                             config, visited_uri)) {
                           if (!downstream_obj) continue;
                           if (std::optional<std::string> downstream_uri =
                                   downstream_obj->GetUriString();
@@ -548,7 +557,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
     DLOG(INFO) << "Finding Downstream Nodes";
     // For every downstream uri from Resource add it to the queue
     std::vector<std::unique_ptr<RedfishObject>> downstream_objs =
-        FindAllDownstreamsUris(*node_to_attach.obj, *config);
+        FindAllDownstreamsUris(*node_to_attach.obj, *config, visited_uris);
     for (int i = 0; i < downstream_objs.size(); ++i) {
       if (downstream_objs[i] == nullptr) continue;
       std::optional<std::string> uri = downstream_objs[i]->GetUriString();
