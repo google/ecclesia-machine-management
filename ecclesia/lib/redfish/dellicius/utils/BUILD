@@ -26,6 +26,42 @@ cc_test(
 )
 
 cc_library(
+    name = "id_mapper",
+    hdrs = ["id_mapper.h"],
+    visibility = ["//ecclesia/lib/redfish:__subpackages__"],
+    deps = [
+        "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_library(
+    name = "id_mapper_devpath",
+    srcs = ["id_mapper_devpath.cc"],
+    hdrs = ["id_mapper_devpath.h"],
+    visibility = ["//ecclesia/lib/redfish:__subpackages__"],
+    deps = [
+        ":id_mapper",
+        "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "id_mapper_devpath_test",
+    srcs = ["id_mapper_devpath_test.cc"],
+    deps = [
+        ":id_mapper_devpath",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "parsers",
     srcs = ["parsers.cc"],
     hdrs = ["parsers.h"],
