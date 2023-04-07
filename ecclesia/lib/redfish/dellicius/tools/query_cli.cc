@@ -24,15 +24,14 @@
 #include <utility>
 #include <vector>
 
+#include "absl/flags/parse.h"
+#include "absl/log/initialize.h"
 #include "absl/container/fixed_array.h"
 #include "absl/flags/flag.h"
-#include "absl/flags/parse.h"
 #include "absl/flags/usage.h"
-#include "absl/log/initialize.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
@@ -40,18 +39,15 @@
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/file/dir.h"
 #include "ecclesia/lib/file/path.h"
-#include "ecclesia/lib/http/cred.pb.h"
-#include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/engine/config.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/dellicius/tools/redfish_backend.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
-#include "ecclesia/lib/redfish/transport/grpc.h"
-#include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
@@ -78,8 +74,6 @@ namespace ecclesia {
 
 namespace {
 
-constexpr absl::string_view kDnsPrefix = "dns:///";
-constexpr absl::string_view kLoasGrpc = "loas_grpc";
 constexpr absl::string_view kUsage =
     "A debug tool to Query a given Redfish Service using Dellicius "
     "Queries.\n\nThe tool requires the following at minimum:\n  "
@@ -185,28 +179,26 @@ int QueryMain(int argc, char **argv) {
   // Configure HTTP transport.
   std::unique_ptr<RedfishInterface> intf;
   std::unique_ptr<NullCache> cache;
-  std::unique_ptr<RedfishTransport> transport;
   std::string target = absl::StrCat(absl::GetFlag(FLAGS_hostname), ":",
                                     absl::GetFlag(FLAGS_port));
 
-  if (absl::EqualsIgnoreCase(absl::GetFlag(FLAGS_transport), kLoasGrpc)) {
-    return -1;
-  } else {
-    auto curl_http_client = std::make_unique<CurlHttpClient>(
-        LibCurlProxy::CreateInstance(), HttpCredential());
+  absl::StatusOr<std::unique_ptr<RedfishTransport>> transport =
+      CreateRedfishTransport(target, absl::GetFlag((FLAGS_transport)));
 
-    transport =
-        HttpRedfishTransport::MakeNetwork(std::move(curl_http_client), target);
+  if (!transport.ok()) {
+    LOG(ERROR) << "CreateRedfishTransport failed with: "
+               << transport.status().ToString();
+    return -1;
   }
 
   RedfishMetrics transport_metrics;
   {
     if (absl::GetFlag(FLAGS_metrics_enabled)) {
-      transport = std::make_unique<MetricalRedfishTransport>(
-          std::move(transport), Clock::RealClock(), transport_metrics);
+      *transport = std::make_unique<MetricalRedfishTransport>(
+          std::move(*transport), Clock::RealClock(), transport_metrics);
     }
-    cache = std::make_unique<NullCache>(transport.get());
-    intf = NewHttpInterface(std::move(transport), std::move(cache),
+    cache = std::make_unique<NullCache>(transport->get());
+    intf = NewHttpInterface(std::move(*transport), std::move(cache),
                             RedfishInterface::kTrusted);
     if (auto root = intf->GetRoot(); root.AsObject() == nullptr) {
       LOG(ERROR) << "Error connecting to redfish service. "

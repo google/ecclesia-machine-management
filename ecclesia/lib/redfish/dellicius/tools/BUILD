@@ -1,13 +1,40 @@
+cc_library(
+    name = "redfish_backend",
+    srcs = ["redfish_backend.cc"],
+    hdrs = ["redfish_backend.h"],
+    deps = [
+        "//ecclesia/lib/http:cred_cc_proto",
+        "//ecclesia/lib/http:curl_client",
+        "//ecclesia/lib/redfish/transport:grpc",
+        "//ecclesia/lib/redfish/transport:http",
+        "//ecclesia/lib/redfish/transport:interface",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "redfish_backend_test",
+    srcs = ["redfish_backend_test.cc"],
+    deps = [
+        ":redfish_backend",
+        "//ecclesia/lib/redfish/transport:interface",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_binary(
     name = "query_cli",
     testonly = True,
     srcs = ["query_cli.cc"],
     deps = [
+        ":redfish_backend",
         "//ecclesia/lib/file:cc_embed_interface",
         "//ecclesia/lib/file:dir",
         "//ecclesia/lib/file:path",
-        "//ecclesia/lib/http:cred_cc_proto",
-        "//ecclesia/lib/http:curl_client",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
@@ -16,8 +43,6 @@ cc_binary(
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/transport:cache",
-        "//ecclesia/lib/redfish/transport:grpc",
-        "//ecclesia/lib/redfish/transport:http",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:metrical_transport",
