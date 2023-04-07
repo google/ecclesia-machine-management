@@ -320,6 +320,8 @@ DEFINE_REDFISH_PROPERTY(PropertyProcessorIdMicrocode, std::string,
 DEFINE_REDFISH_PROPERTY(PropertyDataSourceUri, std::string, "DataSourceUri");
 DEFINE_REDFISH_PROPERTY(PropertyRedfishActionInfo, std::string,
                         "@Redfish.ActionInfo");
+DEFINE_REDFISH_PROPERTY(PropertyRedfishAllowableValues,
+                        std::vector<std::string>, "@Redfish.AllowableValues");
 DEFINE_REDFISH_PROPERTY(PropertyTarget, std::string, "target");
 DEFINE_REDFISH_PROPERTY(PropertyResponseCode, std::string, "code");
 DEFINE_REDFISH_PROPERTY(PropertyResponseMessage, std::string, "message");
