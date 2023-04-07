@@ -34,6 +34,7 @@ namespace ecclesia {
 namespace {
 
 constexpr absl::string_view kDnsPrefix = "dns:///";
+constexpr absl::string_view kLocalhost = "localhost";
 
 enum class RedfishTransportType {
   kUnknown = 0,
@@ -55,7 +56,7 @@ RedfishTransportType StringToRedfishTransportType(absl::string_view type) {
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<ecclesia::RedfishTransport>>
-CreateRedfishTransport(absl::string_view target, absl::string_view type) {
+CreateRedfishTransport(std::string target, absl::string_view type) {
   RedfishTransportType redfish_backend = StringToRedfishTransportType(type);
   switch (redfish_backend) {
     case RedfishTransportType::kLoasGrpc:

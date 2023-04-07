@@ -18,6 +18,7 @@
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_TOOLS_REDFISH_BACKEND_H_
 
 #include <memory>
+#include <string>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -26,7 +27,7 @@
 namespace ecclesia {
 
 absl::StatusOr<std::unique_ptr<ecclesia::RedfishTransport>>
-CreateRedfishTransport(absl::string_view target, absl::string_view type);
+CreateRedfishTransport(std::string target, absl::string_view type);
 
 }  // namespace ecclesia
 
