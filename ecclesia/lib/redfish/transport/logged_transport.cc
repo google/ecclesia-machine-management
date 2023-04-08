@@ -32,6 +32,7 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/utils.h"
+#include "third_party/json/include/nlohmann/json_fwd.hpp"
 
 namespace ecclesia {
 namespace {
@@ -64,8 +65,14 @@ RedfishLoggedTransport::LogMethodDataAndResult(
   }
 
   absl::Time start = absl::Now();
+  LOG(INFO) << "MACHDOCD_LOG_ @@@ - "
+            << "MRR_Request sent to BMC -  " << path;
   auto result = call_method();
-  absl::Duration latency = absl::Now() - start;
+  absl::Time end = absl::Now();
+  LOG(INFO) << "MACHDOCD_LOG_ @@@ - "
+            << "MRR_Response received from BMC -  " << path << "- timetaken - "
+            << absl::ToInt64Milliseconds(end - start) << " ms";
+  absl::Duration latency = end - start;
 
   if (log_latency_) {
     latency_string =
