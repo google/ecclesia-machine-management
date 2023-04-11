@@ -20,16 +20,13 @@
 #include <string>
 #include <utility>
 
-#include "google/protobuf/struct.pb.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/strings/str_format.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
-#include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
-#include "ecclesia/lib/redfish/proxy/redfish_proxy.h"
 #include "ecclesia/lib/status/rpc.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
@@ -122,7 +119,7 @@ TEST_F(HttpProxyTest, GetTestFail) {
   request.set_json_str("http transport.");
   redfish::v1::Response response;
   grpc::Status status = stub->Get(&context, request, &response);
-  EXPECT_THAT(status.error_code(), grpc::StatusCode::UNIMPLEMENTED);
+  EXPECT_THAT(status.error_code(), grpc::StatusCode::INTERNAL);
 }
 
 TEST_F(HttpProxyTest, PostTest) {
@@ -159,7 +156,7 @@ TEST_F(HttpProxyTest, PostTestFail) {
   request.set_json_str("http transport.");
   redfish::v1::Response response;
   grpc::Status status = stub->Post(&context, request, &response);
-  EXPECT_THAT(status.error_code(), grpc::StatusCode::UNIMPLEMENTED);
+  EXPECT_THAT(status.error_code(), grpc::StatusCode::INTERNAL);
 }
 
 TEST_F(HttpProxyTest, PutTest) {

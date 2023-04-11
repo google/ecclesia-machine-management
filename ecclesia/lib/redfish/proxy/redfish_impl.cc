@@ -21,6 +21,8 @@
 #include <utility>
 
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/atomic/sequence.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
@@ -94,12 +96,15 @@ grpc::Status RedfishProxyRedfishBackend::GetHandler(
   // Get method does not need the RedfishV1 request body information.
   PreCall(seq_num, kGet, *request);
 
-  // Call Redfish transport method.
+  // Call the Redfish transport method.
   absl::StatusOr<RedfishTransport::Result> redfish_result =
       redfish_transport_->Get(request->url());
   if (!redfish_result.ok()) {
-    return grpc::Status(grpc::StatusCode::UNIMPLEMENTED,
-                        "No HTTP response from HTTP backend");
+    return grpc::Status(
+        grpc::StatusCode::INTERNAL,
+        absl::StrFormat(
+            "Backend returns the following error: code: %d message: %s",
+            redfish_result.status().code(), redfish_result.status().message()));
   }
   grpc::Status status(grpc::StatusCode::OK, "HTTP response OK");
 
@@ -116,12 +121,15 @@ grpc::Status RedfishProxyRedfishBackend::PostHandler(
   // Extract RedfishV1 request body information from request
   std::string redfish_data = PreCall(seq_num, kPost, *request);
 
-  // Call Redfish transport method.
+  // Call the Redfish transport method.
   absl::StatusOr<RedfishTransport::Result> redfish_result =
       redfish_transport_->Post(request->url(), redfish_data);
   if (!redfish_result.ok()) {
-    return grpc::Status(grpc::StatusCode::UNIMPLEMENTED,
-                        "No HTTP response from HTTP backend");
+    return grpc::Status(
+        grpc::StatusCode::INTERNAL,
+        absl::StrFormat(
+            "Backend returns the following error: code: %d message: %s",
+            redfish_result.status().code(), redfish_result.status().message()));
   }
   grpc::Status status(grpc::StatusCode::OK, "HTTP response OK");
 
@@ -146,12 +154,15 @@ grpc::Status RedfishProxyRedfishBackend::PatchHandler(
   // Extract RedfishV1 request body information from request
   std::string redfish_data = PreCall(seq_num, kPatch, *request);
 
-  // Call Redfish transport method.
+  // Call the Redfish transport method.
   absl::StatusOr<RedfishTransport::Result> redfish_result =
       redfish_transport_->Patch(request->url(), redfish_data);
   if (!redfish_result.ok()) {
-    return grpc::Status(grpc::StatusCode::UNIMPLEMENTED,
-                        "No HTTP response from HTTP backend");
+    return grpc::Status(
+        grpc::StatusCode::INTERNAL,
+        absl::StrFormat(
+            "Backend returns the following error: code: %d message: %s",
+            redfish_result.status().code(), redfish_result.status().message()));
   }
   grpc::Status status(grpc::StatusCode::OK, "HTTP response OK");
 
@@ -168,12 +179,15 @@ grpc::Status RedfishProxyRedfishBackend::DeleteHandler(
   // Extract RedfishV1 request body information from request
   std::string redfish_data = PreCall(seq_num, kDelete, *request);
 
-  // Call Redfish transport method.
+  // Call the Redfish transport method.
   absl::StatusOr<RedfishTransport::Result> redfish_result =
       redfish_transport_->Delete(request->url(), redfish_data);
   if (!redfish_result.ok()) {
-    return grpc::Status(grpc::StatusCode::UNIMPLEMENTED,
-                        "No HTTP response from HTTP backend");
+    return grpc::Status(
+        grpc::StatusCode::INTERNAL,
+        absl::StrFormat(
+            "Backend returns the following error: code: %d message: %s",
+            redfish_result.status().code(), redfish_result.status().message()));
   }
   grpc::Status status(grpc::StatusCode::OK, "HTTP response OK");
 
