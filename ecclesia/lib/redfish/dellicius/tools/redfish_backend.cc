@@ -27,6 +27,7 @@
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/redfish/transport/grpc.h"
+#include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 
@@ -40,15 +41,18 @@ enum class RedfishTransportType {
   kUnknown = 0,
   kHttp,
   kLoasGrpc,
+  kInsecureGrpc,
 };
 
 RedfishTransportType StringToRedfishTransportType(absl::string_view type) {
   if (absl::EqualsIgnoreCase(type, "http")) {
     return RedfishTransportType::kHttp;
   }
-
   if (absl::EqualsIgnoreCase(type, "loas_grpc")) {
     return RedfishTransportType::kLoasGrpc;
+  }
+  if (absl::EqualsIgnoreCase(type, "insecure_grpc")) {
+    return RedfishTransportType::kInsecureGrpc;
   }
   return RedfishTransportType::kUnknown;
 }
@@ -58,7 +62,15 @@ RedfishTransportType StringToRedfishTransportType(absl::string_view type) {
 absl::StatusOr<std::unique_ptr<ecclesia::RedfishTransport>>
 CreateRedfishTransport(std::string target, absl::string_view type) {
   RedfishTransportType redfish_backend = StringToRedfishTransportType(type);
+
   switch (redfish_backend) {
+    case RedfishTransportType::kInsecureGrpc: {
+      ecclesia::StaticBufferBasedTlsOptions grpc_options;
+      grpc_options.SetToInsecure();
+      return ecclesia::CreateGrpcRedfishTransport(
+          target, ecclesia::GrpcTransportParams(),
+          grpc_options.GetChannelCredentials());
+    } break;
     case RedfishTransportType::kLoasGrpc:
       return absl::UnimplementedError(
           "Loas based credentials is not available");

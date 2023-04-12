@@ -60,7 +60,7 @@ ABSL_FLAG(std::string, hostname, "localhost",
           "Hostname of the Redfish server.");
 ABSL_FLAG(int, port, 8000, "Port number of the server.");
 ABSL_FLAG(std::string, transport, "http",
-          "redfish transport can be either http or loas_grpc");
+          "redfish transport can be either http, loas_grpc, or insecure_grpc");
 ABSL_FLAG(std::string, input_dir, "",
           "Absolute path to directory containing textproto files for Queries.");
 ABSL_FLAG(std::string, query_rule_location, "",

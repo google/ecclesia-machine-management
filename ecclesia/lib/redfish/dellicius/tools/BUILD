@@ -6,6 +6,7 @@ cc_library(
         "//ecclesia/lib/http:cred_cc_proto",
         "//ecclesia/lib/http:curl_client",
         "//ecclesia/lib/redfish/transport:grpc",
+        "//ecclesia/lib/redfish/transport:grpc_tls_options",
         "//ecclesia/lib/redfish/transport:http",
         "//ecclesia/lib/redfish/transport:interface",
         "@com_google_absl//absl/status",

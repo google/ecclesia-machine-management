@@ -38,6 +38,11 @@ TEST(RedfishTransportTest, CreateLoasGrpcTransport) {
   EXPECT_EQ(transport.status().message(),
             "Loas based credentials is not available");
 }
+TEST(RedfishTransportTest, CreateInsecureGrpcTransport) {
+  absl::StatusOr<std::unique_ptr<RedfishTransport>> transport =
+      CreateRedfishTransport("localhost:8000", "insecure_grpc");
+  EXPECT_TRUE(transport.ok());
+}
 TEST(RedfishTransportTest, CreateUnknown) {
   absl::StatusOr<std::unique_ptr<RedfishTransport>> transport =
       CreateRedfishTransport("localhost:8000", "unknown");
