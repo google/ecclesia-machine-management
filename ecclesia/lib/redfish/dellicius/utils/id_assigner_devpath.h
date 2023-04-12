@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_MAPPER_DEVPATH_H_
-#define ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_MAPPER_DEVPATH_H_
+#ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_ASSIGNER_DEVPATH_H_
+#define ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_ASSIGNER_DEVPATH_H_
 
 #include <memory>
 #include <string>
 
 #include "absl/container/flat_hash_map.h"
-#include "ecclesia/lib/redfish/dellicius/utils/id_mapper.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 namespace ecclesia {
 
-// Creates an implementation of the IdentifierMapper which provides an
-// identifier based on a provided static map uses the |devpath| property in the
+// Creates an implementation of the IdAssigner which provides an
+// identifier based on a provided static map using the |devpath| property in the
 // SubqueryDataSet as the mapping input.
-std::unique_ptr<IdentifierMapper<std::string>> NewDevpathIdentifierMapper(
+std::unique_ptr<IdAssigner<std::string>> NewMapBasedDevpathAssigner(
     absl::flat_hash_map<std::string, std::string> map);
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_MAPPER_DEVPATH_H_
+#endif  // ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_ASSIGNER_DEVPATH_H_

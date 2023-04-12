@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/lib/redfish/dellicius/utils/id_mapper_devpath.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner_devpath.h"
 
 #include <string>
 
@@ -27,19 +27,19 @@
 namespace ecclesia {
 namespace {
 
-TEST(IdMapperDevpath, CanMap) {
+TEST(IdDevpath, CanMap) {
   absl::flat_hash_map<std::string, std::string> map;
   map["/fru1"] = "/global/fru1";
   map["/fru2"] = "/global/fru2";
-  auto mapper = NewDevpathIdentifierMapper(std::move(map));
+  auto assigner = NewMapBasedDevpathAssigner(std::move(map));
 
-  EXPECT_THAT(mapper->IdentifierForSubqueryDataSet(ParseTextProtoOrDie(R"pb(
+  EXPECT_THAT(assigner->IdForSubqueryDataSet(ParseTextProtoOrDie(R"pb(
     devpath: "/fru1"
     properties { name: "Name" string_value: "Fru1" }
     properties { name: "Location.ServiceLabel" string_value: "fru1" }
   )pb")),
               IsOkAndHolds("/global/fru1"));
-  EXPECT_THAT(mapper->IdentifierForSubqueryDataSet(ParseTextProtoOrDie(R"pb(
+  EXPECT_THAT(assigner->IdForSubqueryDataSet(ParseTextProtoOrDie(R"pb(
     devpath: "/fru2"
     properties { name: "Name" string_value: "Fru2" }
     properties { name: "Location.ServiceLabel" string_value: "fru2" }
@@ -47,24 +47,24 @@ TEST(IdMapperDevpath, CanMap) {
               IsOkAndHolds("/global/fru2"));
 }
 
-TEST(IdMapperDevpath, CannotMapWithoutDevpathInDataSet) {
+TEST(IdDevpath, CannotMapWithoutDevpathInDataSet) {
   absl::flat_hash_map<std::string, std::string> map;
   map["/fru1"] = "/global/fru1";
-  auto mapper = NewDevpathIdentifierMapper(std::move(map));
+  auto assigner = NewMapBasedDevpathAssigner(std::move(map));
 
-  EXPECT_THAT(mapper->IdentifierForSubqueryDataSet(ParseTextProtoOrDie(R"pb(
+  EXPECT_THAT(assigner->IdForSubqueryDataSet(ParseTextProtoOrDie(R"pb(
     properties { name: "Name" string_value: "Fru1" }
     properties { name: "Location.ServiceLabel" string_value: "fru1" }
   )pb")),
               IsStatusNotFound());
 }
 
-TEST(IdMapperDevpath, CannotMapWithoutMatchingEntry) {
+TEST(IdDevpath, CannotMapWithoutMatchingEntry) {
   absl::flat_hash_map<std::string, std::string> map;
   map["/fru1"] = "/global/fru1";
-  auto mapper = NewDevpathIdentifierMapper(std::move(map));
+  auto assigner = NewMapBasedDevpathAssigner(std::move(map));
 
-  EXPECT_THAT(mapper->IdentifierForSubqueryDataSet(ParseTextProtoOrDie(R"pb(
+  EXPECT_THAT(assigner->IdForSubqueryDataSet(ParseTextProtoOrDie(R"pb(
     devpath: "/fru2"
     properties { name: "Name" string_value: "Fru2" }
     properties { name: "Location.ServiceLabel" string_value: "fru2" }

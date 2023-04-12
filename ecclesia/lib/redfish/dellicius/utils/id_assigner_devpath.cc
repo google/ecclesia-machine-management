@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "ecclesia/lib/redfish/dellicius/utils/id_mapper_devpath.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner_devpath.h"
 
 #include <memory>
 #include <string>
@@ -23,17 +23,17 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
-#include "ecclesia/lib/redfish/dellicius/utils/id_mapper.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 
 namespace ecclesia {
 namespace {
 
-class DevpathIdentifierMapper : public IdentifierMapper<std::string> {
+class MapBasedDevpathAssigner : public IdAssigner<std::string> {
  public:
-  DevpathIdentifierMapper(absl::flat_hash_map<std::string, std::string> map)
+  MapBasedDevpathAssigner(absl::flat_hash_map<std::string, std::string> map)
       : map_(std::move(map)) {}
 
-  virtual absl::StatusOr<std::string> IdentifierForSubqueryDataSet(
+  virtual absl::StatusOr<std::string> IdForSubqueryDataSet(
       SubqueryDataSet data_set) override {
     if (!data_set.has_devpath() || data_set.devpath().empty()) {
       return absl::NotFoundError("");
@@ -51,9 +51,9 @@ class DevpathIdentifierMapper : public IdentifierMapper<std::string> {
 
 }  // namespace
 
-std::unique_ptr<IdentifierMapper<std::string>> NewDevpathIdentifierMapper(
+std::unique_ptr<IdAssigner<std::string>> NewMapBasedDevpathAssigner(
     absl::flat_hash_map<std::string, std::string> map) {
-  return std::make_unique<DevpathIdentifierMapper>(std::move(map));
+  return std::make_unique<MapBasedDevpathAssigner>(std::move(map));
 }
 
 }  // namespace ecclesia

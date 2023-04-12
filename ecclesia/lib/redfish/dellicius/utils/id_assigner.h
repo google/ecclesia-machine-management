@@ -14,26 +14,26 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_MAPPER_H_
-#define ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_MAPPER_H_
+#ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_ASSIGNER_H_
+#define ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_ASSIGNER_H_
 
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 
 namespace ecclesia {
 
-// Generic interface which maps a SubqueryDataSet output to an identifier.
-template <typename IdentifierT>
-class IdentifierMapper {
+// Generic interface which assigns an identifier to a SubqueryDataSet output.
+template <typename IdT>
+class IdAssigner {
  public:
-  virtual ~IdentifierMapper() {}
+  virtual ~IdAssigner() {}
 
-  // Translate the data_set to an identifier. Return absl::NotFoundError if
-  // a translation does not exist.
-  virtual absl::StatusOr<IdentifierT> IdentifierForSubqueryDataSet(
+  // Assign an identifier to the the data_set. Return absl::NotFoundError if a
+  // translation does not exist.
+  virtual absl::StatusOr<IdT> IdForSubqueryDataSet(
       SubqueryDataSet data_set) = 0;
 };
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_MAPPER_H_
+#endif  // ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_ASSIGNER_H_

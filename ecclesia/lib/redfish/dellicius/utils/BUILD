@@ -26,8 +26,8 @@ cc_test(
 )
 
 cc_library(
-    name = "id_mapper",
-    hdrs = ["id_mapper.h"],
+    name = "id_assigner",
+    hdrs = ["id_assigner.h"],
     visibility = ["//ecclesia/lib/redfish:__subpackages__"],
     deps = [
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
@@ -36,12 +36,12 @@ cc_library(
 )
 
 cc_library(
-    name = "id_mapper_devpath",
-    srcs = ["id_mapper_devpath.cc"],
-    hdrs = ["id_mapper_devpath.h"],
+    name = "id_assigner_devpath",
+    srcs = ["id_assigner_devpath.cc"],
+    hdrs = ["id_assigner_devpath.h"],
     visibility = ["//ecclesia/lib/redfish:__subpackages__"],
     deps = [
-        ":id_mapper",
+        ":id_assigner",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status",
@@ -50,10 +50,10 @@ cc_library(
 )
 
 cc_test(
-    name = "id_mapper_devpath_test",
-    srcs = ["id_mapper_devpath_test.cc"],
+    name = "id_assigner_devpath_test",
+    srcs = ["id_assigner_devpath_test.cc"],
     deps = [
-        ":id_mapper_devpath",
+        ":id_assigner_devpath",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/container:flat_hash_map",
