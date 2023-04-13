@@ -16,10 +16,9 @@
 
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_CONFIG_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_CONFIG_H_
+#include <vector>
 
-#include "absl/container/flat_hash_map.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
-#include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 
 namespace ecclesia {
 

@@ -6,11 +6,7 @@ cc_library(
     name = "query_engine_config",
     hdrs = ["config.h"],
     visibility = ["//visibility:public"],
-    deps = [
-        "//ecclesia/lib/file:cc_embed_interface",
-        "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
-        "@com_google_absl//absl/container:flat_hash_map",
-    ],
+    deps = ["//ecclesia/lib/file:cc_embed_interface"],
 )
 
 cc_library(
@@ -20,7 +16,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":query_engine_config",
-        ":query_rules_cc_proto",
         "//ecclesia/lib/file:cc_embed_interface",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:node_topology",
@@ -30,9 +25,13 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:parsers",
+        "//ecclesia/lib/redfish/transport:http_redfish_intf",
+        "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/time:clock",
+        "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
         "@com_google_protobuf//:protobuf",

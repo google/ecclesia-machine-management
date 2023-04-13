@@ -18,9 +18,11 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/file/path.h"
@@ -29,6 +31,7 @@
 #include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/engine/config.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/testing/test_queries_embedded.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/testing/test_query_rules_embedded.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
@@ -37,9 +40,11 @@
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/testing/proto.h"
+#include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/clock_fake.h"
 
 namespace ecclesia {
@@ -84,9 +89,26 @@ class QueryEngineTest : public ::testing::Test {
         clock_(absl::FromUnixSeconds(10)),
         intf_(server_.RedfishClientInterface()) {}
 
+  void SetUp() override {
+    FakeRedfishServer::Config config = server_.GetConfig();
+    HttpCredential creds;
+    auto curl_http_client =
+        std::make_unique<CurlHttpClient>(LibCurlProxy::CreateInstance(), creds);
+    std::string network_endpoint =
+        absl::StrFormat("%s:%d", config.hostname, config.port);
+    transport_ = HttpRedfishTransport::MakeNetwork(std::move(curl_http_client),
+                                                   network_endpoint);
+
+    cache_factory_ = [](RedfishTransport *transport) {
+      return std::make_unique<ecclesia::NullCache>(transport);
+    };
+  }
+
   FakeRedfishServer server_;
   FakeClock clock_;
   std::unique_ptr<RedfishInterface> intf_;
+  std::unique_ptr<RedfishTransport> transport_;
+  RedfishTransportCacheFactory cache_factory_;
 };
 
 TEST_F(QueryEngineTest, QueryEngineDevpathConfiguration) {
@@ -96,7 +118,8 @@ TEST_F(QueryEngineTest, QueryEngineDevpathConfiguration) {
   QueryEngineConfiguration config{
       .flags{.enable_devpath_extension = true},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
-  QueryEngine query_engine(config, &clock_, std::move(intf_));
+  QueryEngine query_engine(config, std::move(transport_), cache_factory_,
+                           &clock_);
   std::vector<DelliciusQueryResult> response_entries =
       query_engine.ExecuteQuery({"SensorCollector"});
 
@@ -114,7 +137,8 @@ TEST_F(QueryEngineTest, QueryEngineDefaultConfiguration) {
   QueryEngineConfiguration config{
       .flags{.enable_devpath_extension = false},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
-  QueryEngine query_engine(config, &clock_, std::move(intf_));
+  QueryEngine query_engine(config, std::move(transport_), cache_factory_,
+                           &clock_);
   std::vector<DelliciusQueryResult> response_entries =
       query_engine.ExecuteQuery({"SensorCollector"});
 
@@ -134,7 +158,8 @@ TEST_F(QueryEngineTest, QueryEngineWithExpandConfiguration) {
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
       .query_rules{kQueryRules.begin(), kQueryRules.end()}};
 
-  QueryEngine query_engine(config, &clock_, std::move(intf_));
+  QueryEngine query_engine(config, std::move(transport_), cache_factory_,
+                           &clock_);
   QueryTracker query_tracker;
   std::vector<DelliciusQueryResult> response_entries =
       query_engine.ExecuteQuery(
@@ -165,7 +190,8 @@ TEST_F(QueryEngineTest, QueryEngineInvalidQueries) {
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
 
   // Invalid Query Id
-  QueryEngine query_engine(config, &clock_, std::move(intf_));
+  QueryEngine query_engine(config, std::move(transport_), cache_factory_,
+                           &clock_);
   std::vector<DelliciusQueryResult> response_entries =
       query_engine.ExecuteQuery({"ThereIsNoSuchId"});
   EXPECT_EQ(response_entries.size(), 0);
@@ -180,7 +206,8 @@ TEST_F(QueryEngineTest, QueryEngineConcurrentQueries) {
   QueryEngineConfiguration config{
       .flags{.enable_devpath_extension = false},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
-  QueryEngine query_engine(config, &clock_, std::move(intf_));
+  QueryEngine query_engine(config, std::move(transport_), cache_factory_,
+                           &clock_);
   std::vector<DelliciusQueryResult> response_entries =
       query_engine.ExecuteQuery(
           {"SensorCollector",
@@ -203,7 +230,8 @@ TEST_F(QueryEngineTest, QueryEngineEmptyItemDevpath) {
   QueryEngineConfiguration config{
       .flags{.enable_devpath_extension = true},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
-  QueryEngine query_engine(config, &clock_, std::move(intf_));
+  QueryEngine query_engine(config, std::move(transport_), cache_factory_,
+                           &clock_);
   std::vector<DelliciusQueryResult> response_entries =
       query_engine.ExecuteQuery(
           {"AssemblyCollectorWithPropertyNameNormalization"});
@@ -239,10 +267,9 @@ TEST_F(QueryEngineTest, QueryEngineWithCacheConfiguration) {
   auto metrical_transport = std::make_unique<MetricalRedfishTransport>(
       std::move(transport), Clock::RealClock(), metrics);
 
-  auto intf_with_cache = NewHttpInterface(
-      std::move(metrical_transport), cache_factory, RedfishInterface::kTrusted);
-  QueryEngine query_engine(query_engine_configuration, &clock_,
-                           std::move(intf_with_cache));
+  QueryEngine query_engine(query_engine_configuration,
+                           std::move(metrical_transport), cache_factory,
+                           &clock_);
   {
     // Query assemblies
     std::vector<DelliciusQueryResult> response_entries =

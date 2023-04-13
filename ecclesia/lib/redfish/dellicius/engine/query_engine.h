@@ -18,12 +18,17 @@
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_QUERY_ENGINE_H_
 
 #include <memory>
+#include <vector>
 
+#include "absl/base/attributes.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/config.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
@@ -52,9 +57,16 @@ class QueryEngine final {
         absl::Span<const absl::string_view> query_ids,
         QueryTracker &tracker) = 0;
   };
+
+  ABSL_DEPRECATED(
+      "Use constructor that accepts CacheFactory and RedfishTransport instead")
   QueryEngine(const QueryEngineConfiguration &config, const Clock *clock,
               std::unique_ptr<RedfishInterface> intf);
 
+  explicit QueryEngine(const QueryEngineConfiguration &config,
+                       std::unique_ptr<RedfishTransport> transport,
+                       const RedfishTransportCacheFactory &cache_factory,
+                       const Clock *clock = Clock::RealClock());
   QueryEngine(const QueryEngine &) = delete;
   QueryEngine &operator=(const QueryEngine &) = delete;
   QueryEngine(QueryEngine &&other) = default;
