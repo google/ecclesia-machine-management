@@ -32,6 +32,7 @@ cc_binary(
     testonly = True,
     srcs = ["query_cli.cc"],
     deps = [
+        ":query_cli_flags",
         ":redfish_backend",
         "//ecclesia/lib/file:cc_embed_interface",
         "//ecclesia/lib/file:dir",
@@ -59,6 +60,7 @@ cc_binary(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -109,6 +111,16 @@ cc_library(
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/strings",
+        "@com_googlesource_code_re2//:re2",
+    ],
+)
+
+cc_library(
+    name = "query_cli_flags",
+    hdrs = ["query_cli_flags.h"],
+    deps = [
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
         "@com_googlesource_code_re2//:re2",
     ],
 )

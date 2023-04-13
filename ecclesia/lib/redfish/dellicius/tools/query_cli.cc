@@ -15,6 +15,8 @@
  */
 
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -35,6 +37,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/file/dir.h"
@@ -45,6 +48,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/dellicius/tools/query_cli_flags.h"
 #include "ecclesia/lib/redfish/dellicius/tools/redfish_backend.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
@@ -56,6 +60,11 @@
 
 ABSL_FLAG(bool, devpath_enabled, false, "Boolean to enable devpath extension.");
 ABSL_FLAG(bool, metrics_enabled, false, "Boolean to enable redfish metrics.");
+ABSL_FLAG(size_t, iteration_count, 1,
+          "Number of times the queries should run.");
+ABSL_FLAG(ecclesia::CachePolicy, cache_policy, {},
+          "Cache policy to use in the format <policy>:<policy_data>. \nAllowed "
+          "arguments are \"no_cache\" or \"time_based:<duration_in_seconds>\"");
 ABSL_FLAG(std::string, hostname, "localhost",
           "Hostname of the Redfish server.");
 ABSL_FLAG(int, port, 8000, "Port number of the server.");
@@ -106,6 +115,19 @@ struct DelliciusQueryMetadata {
   Rules query_rules;
   std::vector<Query> queries;
 };
+
+std::unique_ptr<RedfishCachedGetterInterface> GetRedfishCache(
+    RedfishTransport *redfish_transport) {
+  CachePolicy redfish_cache_policy = absl::GetFlag(FLAGS_cache_policy);
+  if (redfish_cache_policy.type ==
+          CachePolicy::CachePolicytType::kTimeBasedCache &&
+      redfish_cache_policy.cache_duration_seconds.has_value()) {
+    return std::make_unique<TimeBasedCache>(
+        redfish_transport, ecclesia::Clock::RealClock(),
+        absl::Seconds(redfish_cache_policy.cache_duration_seconds.value()));
+  }
+  return std::make_unique<NullCache>(redfish_transport);
+}
 
 absl::StatusOr<DelliciusQueryMetadata> GetQueriesFromLocation(
     absl::string_view query_dir, absl::string_view rule_location = "") {
@@ -178,7 +200,6 @@ int QueryMain(int argc, char **argv) {
       .query_rules{query_rule_embedded_file}};
   // Configure HTTP transport.
   std::unique_ptr<RedfishInterface> intf;
-  std::unique_ptr<NullCache> cache;
   std::string target = absl::StrCat(absl::GetFlag(FLAGS_hostname), ":",
                                     absl::GetFlag(FLAGS_port));
 
@@ -192,22 +213,27 @@ int QueryMain(int argc, char **argv) {
   }
 
   RedfishMetrics transport_metrics;
-  {
-    if (absl::GetFlag(FLAGS_metrics_enabled)) {
-      *transport = std::make_unique<MetricalRedfishTransport>(
-          std::move(*transport), Clock::RealClock(), transport_metrics);
-    }
-    cache = std::make_unique<NullCache>(transport->get());
-    intf = NewHttpInterface(std::move(*transport), std::move(cache),
-                            RedfishInterface::kTrusted);
-    if (auto root = intf->GetRoot(); root.AsObject() == nullptr) {
-      LOG(ERROR) << "Error connecting to redfish service. "
-                 << "Check host configuration";
-      return -1;
-    }
-    // Build QueryEngine
-    QueryEngine query_engine(config, Clock::RealClock(), std::move(intf));
-    // Dispatch Dellicius Queries
+  if (absl::GetFlag(FLAGS_metrics_enabled)) {
+    *transport = std::make_unique<MetricalRedfishTransport>(
+        std::move(*transport), Clock::RealClock(), transport_metrics);
+  }
+
+  std::unique_ptr<RedfishCachedGetterInterface> cache =
+      GetRedfishCache(transport->get());
+
+  intf = NewHttpInterface(std::move(*transport), std::move(cache),
+                          RedfishInterface::kTrusted);
+  if (auto root = intf->GetRoot(); root.AsObject() == nullptr) {
+    LOG(ERROR) << "Error connecting to redfish service. "
+               << "Check host configuration";
+    return -1;
+  }
+
+  // Build QueryEngine
+  QueryEngine query_engine(config, Clock::RealClock(), std::move(intf));
+
+  // Dispatch Dellicius Queries
+  for (size_t i = 0; i < absl::GetFlag(FLAGS_iteration_count); ++i) {
     std::vector<DelliciusQueryResult> response_entries =
         query_engine.ExecuteQuery(absl::FixedArray<absl::string_view>(
             query_ids_provided.begin(), query_ids_provided.end()));
@@ -216,18 +242,25 @@ int QueryMain(int argc, char **argv) {
         response_entries.begin(), response_entries.end(),
         [](auto &entry) { std::cout << entry.DebugString() << std::endl; });
   }
-  if (absl::GetFlag(FLAGS_metrics_enabled)) {
-    std::string output_directory(
-        absl::GetFlag(FLAGS_transport_metric_output_dir));
-    std::ofstream metric_file_stream(
-        JoinFilePaths(output_directory, kMetricOutId), std::ofstream::out);
-    if (metric_file_stream.bad() || !metric_file_stream.is_open()) {
-      LOG(ERROR) << "Error opening output file for storing transport metrics ";
-      return -1;
-    }
-    metric_file_stream << std::setw(2) << transport_metrics.DebugString()
-                       << std::endl;
+
+  if (!absl::GetFlag(FLAGS_metrics_enabled)) {
+    return 0;
   }
+
+  std::string output_directory(
+      absl::GetFlag(FLAGS_transport_metric_output_dir));
+  std::string metric_out_file_location =
+      JoinFilePaths(output_directory, kMetricOutId);
+  std::ofstream metric_file_stream(metric_out_file_location,
+                                   std::ofstream::out | std::ofstream::trunc);
+  if (metric_file_stream.bad() || !metric_file_stream.is_open()) {
+    LOG(ERROR) << "Error opening output file for storing transport metrics ";
+    return -1;
+  }
+  std::cout << "Writing transport metrics in file " << metric_out_file_location
+            << std::endl;
+  metric_file_stream << std::setw(2) << transport_metrics.DebugString()
+                     << std::endl;
   return 0;
 }
 
