@@ -27,6 +27,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
@@ -58,6 +59,12 @@ class QueryEngine final {
         QueryTracker &tracker) = 0;
   };
 
+  // Default RedfishTransportCacheFactory that creates a NullCache (no caching).
+  static std::unique_ptr<RedfishCachedGetterInterface>
+      CreateNullCache(RedfishTransport* transport) {
+        return std::make_unique<ecclesia::NullCache>(transport);
+  }
+
   ABSL_DEPRECATED(
       "Use constructor that accepts CacheFactory and RedfishTransport instead")
   QueryEngine(const QueryEngineConfiguration &config, const Clock *clock,
@@ -65,7 +72,8 @@ class QueryEngine final {
 
   explicit QueryEngine(const QueryEngineConfiguration &config,
                        std::unique_ptr<RedfishTransport> transport,
-                       const RedfishTransportCacheFactory &cache_factory,
+                       const RedfishTransportCacheFactory &cache_factory =
+                        CreateNullCache,
                        const Clock *clock = Clock::RealClock());
   QueryEngine(const QueryEngine &) = delete;
   QueryEngine &operator=(const QueryEngine &) = delete;

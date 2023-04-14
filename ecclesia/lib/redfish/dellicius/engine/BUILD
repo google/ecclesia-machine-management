@@ -25,6 +25,7 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:parsers",
+        "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/time:clock",
