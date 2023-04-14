@@ -30,6 +30,7 @@
 #include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "grpcpp/security/tls_certificate_verifier.h"
 
 namespace ecclesia {
 namespace {
@@ -42,6 +43,7 @@ enum class RedfishTransportType {
   kHttp,
   kLoasGrpc,
   kInsecureGrpc,
+  kMtlsGrpc,
 };
 
 RedfishTransportType StringToRedfishTransportType(absl::string_view type) {
@@ -54,37 +56,47 @@ RedfishTransportType StringToRedfishTransportType(absl::string_view type) {
   if (absl::EqualsIgnoreCase(type, "insecure_grpc")) {
     return RedfishTransportType::kInsecureGrpc;
   }
+  if (absl::EqualsIgnoreCase(type, "mtls_grpc")) {
+    return RedfishTransportType::kMtlsGrpc;
+  }
   return RedfishTransportType::kUnknown;
 }
 
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<ecclesia::RedfishTransport>>
-CreateRedfishTransport(std::string target, absl::string_view type) {
-  RedfishTransportType redfish_backend = StringToRedfishTransportType(type);
+CreateRedfishTransport(const RedfishTransportConfig& config) {
+  RedfishTransportType redfish_backend =
+      StringToRedfishTransportType(config.type);
 
   switch (redfish_backend) {
     case RedfishTransportType::kInsecureGrpc: {
       ecclesia::StaticBufferBasedTlsOptions grpc_options;
       grpc_options.SetToInsecure();
       return ecclesia::CreateGrpcRedfishTransport(
-          target, ecclesia::GrpcTransportParams(),
+          config.GetTarget(), ecclesia::GrpcTransportParams(),
           grpc_options.GetChannelCredentials());
     } break;
-    case RedfishTransportType::kLoasGrpc:
+    case RedfishTransportType::kMtlsGrpc: {
+      return absl::UnimplementedError(
+        "MTLS based credentials is not available");
+    } break;
+    case RedfishTransportType::kLoasGrpc: {
       return absl::UnimplementedError(
           "Loas based credentials is not available");
+    } break;
     case RedfishTransportType::kHttp:
       return HttpRedfishTransport::MakeNetwork(
           std::make_unique<CurlHttpClient>(LibCurlProxy::CreateInstance(),
                                            HttpCredential()),
-          std::string(target));
+          config.GetTarget());
     case RedfishTransportType::kUnknown:
       return absl::InternalError(
-          absl::StrCat("Unknown transport type: ", type));
+          absl::StrCat("Unknown transport type: ", config.type));
   }
 
-  return absl::InternalError(absl::StrCat("Unknown transport type: ", type));
+  return absl::InternalError(
+      absl::StrCat("Unknown transport type: ", config.type));
 }
 
 }  // namespace ecclesia

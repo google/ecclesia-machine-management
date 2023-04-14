@@ -16,7 +16,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -34,7 +33,6 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
@@ -48,8 +46,9 @@
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
-#include "ecclesia/lib/redfish/dellicius/tools/query_cli_flags.h"
+#include "ecclesia/lib/redfish/dellicius/tools/query_flag.pb.h"
 #include "ecclesia/lib/redfish/dellicius/tools/redfish_backend.h"
+#include "ecclesia/lib/redfish/dellicius/tools/transport_cache.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
@@ -58,26 +57,33 @@
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/time/clock.h"
 
-ABSL_FLAG(bool, devpath_enabled, false, "Boolean to enable devpath extension.");
+ABSL_RETIRED_FLAG(bool, devpath_enabled, false,
+                  "Boolean to enable devpath extension.");
+ABSL_RETIRED_FLAG(std::string, hostname, "localhost",
+                  "Hostname of the Redfish server.");
+ABSL_RETIRED_FLAG(int, port, 8000, "Port number of the server.");
+ABSL_RETIRED_FLAG(
+    std::string, transport, "http",
+    "redfish transport can be either http, loas_grpc, or insecure_grpc");
+ABSL_RETIRED_FLAG(
+    std::string, input_dir, "",
+    "Absolute path to directory containing textproto files for Queries.");
+ABSL_RETIRED_FLAG(std::string, query_rule_location, "",
+                  "Absolute path to textproto coontaining rules for Queries.");
+ABSL_RETIRED_FLAG(std::vector<std::string>, query_ids, {},
+                  "List of Identifiers for the Dellicius Queries to execute.");
+
+ABSL_FLAG(
+    std::string, flag_file, "",
+    "Absolute path to the flag file containing the configuration of query_cli");
 ABSL_FLAG(bool, metrics_enabled, false, "Boolean to enable redfish metrics.");
+ABSL_FLAG(std::string, transport_metric_output_dir, "",
+          "Absolute path to output directory to store transport metrics.");
 ABSL_FLAG(size_t, iteration_count, 1,
           "Number of times the queries should run.");
 ABSL_FLAG(ecclesia::CachePolicy, cache_policy, {},
           "Cache policy to use in the format <policy>:<policy_data>. \nAllowed "
           "arguments are \"no_cache\" or \"time_based:<duration_in_seconds>\"");
-ABSL_FLAG(std::string, hostname, "localhost",
-          "Hostname of the Redfish server.");
-ABSL_FLAG(int, port, 8000, "Port number of the server.");
-ABSL_FLAG(std::string, transport, "http",
-          "redfish transport can be either http, loas_grpc, or insecure_grpc");
-ABSL_FLAG(std::string, input_dir, "",
-          "Absolute path to directory containing textproto files for Queries.");
-ABSL_FLAG(std::string, query_rule_location, "",
-          "Absolute path to textproto coontaining rules for Queries.");
-ABSL_FLAG(std::string, transport_metric_output_dir, "",
-          "Absolute path to output directory to store transport metrics.");
-ABSL_FLAG(std::vector<std::string>, query_ids, {},
-          "List of Identifiers for the Dellicius Queries to execute.");
 
 namespace ecclesia {
 
@@ -162,17 +168,25 @@ int QueryMain(int argc, char **argv) {
 
   absl::ParseCommandLine(argc, argv);
   absl::InitializeLog();
-  std::string query_rule_location = absl::GetFlag(FLAGS_query_rule_location);
+
+  std::string flag_file_path = absl::GetFlag(FLAGS_flag_file);
+  if (flag_file_path.empty()) {
+    LOG(ERROR) << "Flag file is empty. Please pass the path to the flag file";
+    return -1;
+  }
+  QueryFlag query_flags = ParseTextFileAsProtoOrDie<QueryFlag>(flag_file_path);
+
   // Parse Dellicius Queries from the given directory.
+  absl::string_view query_rule_location = query_flags.query_rule_location();
   absl::StatusOr<DelliciusQueryMetadata> queries_metadata =
-      GetQueriesFromLocation(absl::GetFlag(FLAGS_input_dir),
-                             query_rule_location);
+      GetQueriesFromLocation(query_flags.input_dir(), query_rule_location);
   if (!queries_metadata.ok()) {
     LOG(ERROR) << queries_metadata.status();
     return -1;
   }
   // Parse DelliciusQuery identifiers for the queries to dispatch.
-  std::vector<std::string> query_ids_provided = absl::GetFlag(FLAGS_query_ids);
+  std::vector<std::string> query_ids_provided(query_flags.query_id().begin(),
+                                              query_flags.query_id().end());
   if (query_ids_provided.empty()) {
     LOG(ERROR) << "Query Identifier list empty. Try again with non-empty set of"
                << "DelliciusQuery Identifiers.";
@@ -194,17 +208,23 @@ int QueryMain(int argc, char **argv) {
   }
   // Build QueryEngineConfiguration from command line arguments.
   QueryEngineConfiguration config{
-      .flags{.enable_devpath_extension = absl::GetFlag(FLAGS_devpath_enabled),
+      .flags{.enable_devpath_extension = query_flags.devpath_enabled(),
              .enable_cached_uri_dispatch = false},
       .query_files{embedded_files},
       .query_rules{query_rule_embedded_file}};
   // Configure HTTP transport.
   std::unique_ptr<RedfishInterface> intf;
-  std::string target = absl::StrCat(absl::GetFlag(FLAGS_hostname), ":",
-                                    absl::GetFlag(FLAGS_port));
+  RedfishTransportConfig transport_config = {
+      .hostname = query_flags.hostname(),
+      .port = query_flags.port(),
+      .type = query_flags.transport(),
+      .cert_chain = query_flags.cert_chain(),
+      .private_key = query_flags.private_key(),
+      .root_cert = query_flags.root_cert(),
+  };
 
   absl::StatusOr<std::unique_ptr<RedfishTransport>> transport =
-      CreateRedfishTransport(target, absl::GetFlag((FLAGS_transport)));
+      CreateRedfishTransport(transport_config);
 
   if (!transport.ok()) {
     LOG(ERROR) << "CreateRedfishTransport failed with: "

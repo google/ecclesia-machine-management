@@ -1,3 +1,17 @@
+proto_library(
+    name = "query_flag_proto",
+    srcs = [
+        "query_flag.proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_proto_library(
+    name = "query_flag_cc_proto",
+    visibility = ["//visibility:public"],
+    deps = [":query_flag_proto"],
+)
+
 cc_library(
     name = "redfish_backend",
     srcs = ["redfish_backend.cc"],
@@ -9,6 +23,7 @@ cc_library(
         "//ecclesia/lib/redfish/transport:grpc_tls_options",
         "//ecclesia/lib/redfish/transport:http",
         "//ecclesia/lib/redfish/transport:interface",
+        "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -18,11 +33,16 @@ cc_library(
 cc_test(
     name = "redfish_backend_test",
     srcs = ["redfish_backend_test.cc"],
+    data = [
+        "//ecclesia/lib/redfish/testing:testing_cert",
+    ],
     deps = [
         ":redfish_backend",
+        "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/redfish/transport:interface",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -32,8 +52,9 @@ cc_binary(
     testonly = True,
     srcs = ["query_cli.cc"],
     deps = [
-        ":query_cli_flags",
+        ":query_flag_cc_proto",
         ":redfish_backend",
+        ":transport_cache",
         "//ecclesia/lib/file:cc_embed_interface",
         "//ecclesia/lib/file:dir",
         "//ecclesia/lib/file:path",
@@ -116,8 +137,8 @@ cc_library(
 )
 
 cc_library(
-    name = "query_cli_flags",
-    hdrs = ["query_cli_flags.h"],
+    name = "transport_cache",
+    hdrs = ["transport_cache.h"],
     deps = [
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",

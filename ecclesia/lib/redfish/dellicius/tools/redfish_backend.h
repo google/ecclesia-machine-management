@@ -21,13 +21,24 @@
 #include <string>
 
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
+#include "absl/strings/str_cat.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 
 namespace ecclesia {
 
+struct RedfishTransportConfig {
+  std::string hostname;
+  int port;
+  std::string type;
+  std::string cert_chain;
+  std::string private_key;
+  std::string root_cert;
+
+  std::string GetTarget() const { return absl::StrCat(hostname, ":", port); }
+};
+
 absl::StatusOr<std::unique_ptr<ecclesia::RedfishTransport>>
-CreateRedfishTransport(std::string target, absl::string_view type);
+CreateRedfishTransport(const RedfishTransportConfig& config);
 
 }  // namespace ecclesia
 
