@@ -24,9 +24,6 @@ resource_to_config {
       array_links: "Switches"
       array_links: "ManagersInChassis"
     }
-    usable_links_skip {
-      array_links: "ComputerSystems"
-    }
     first_class_attributes {
       collection_attributes: "Memory"
       collection_attributes: "Drives"
@@ -53,15 +50,6 @@ resource_to_config {
       array_links: "DownstreamChassis"
       array_links: "DownstreamResources"
       array_links: "DownstreamPorts"
-    }
-  }
-}
-
-resource_to_config {
-  key: "ComputerSystem"
-  value {
-    first_class_attributes {
-      collection_attributes: "Memory"
     }
   }
 }

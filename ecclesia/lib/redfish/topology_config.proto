@@ -41,10 +41,6 @@ message ResourceConfig {
   }
   UsableLinks usable_links = 1;
 
-  // Attributes under the "Links" attribute in Resource that point to associated
-  // resources without creating a node topology.
-  UsableLinks usable_links_skip = 3;
-
   // First class Attributes in Resource that point to associated resources
   message FirstClassAttributes {
     // Attribute is an object that points to a downstream collection
