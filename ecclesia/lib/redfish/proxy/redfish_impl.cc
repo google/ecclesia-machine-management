@@ -71,17 +71,16 @@ void RedfishProxyRedfishBackend::PostCall(
   }
 
   // Extract body information from Redfish transport result.
-  std::string json_str;
   if (std::holds_alternative<nlohmann::json>(redfish_result.body)) {
-    json_str = std::get<nlohmann::json>(redfish_result.body).dump(1);
+    grpc_response->set_json_str(
+        std::get<nlohmann::json>(redfish_result.body).dump(1));
   } else if (std::holds_alternative<RedfishTransport::bytes>(
                  redfish_result.body)) {
-    json_str = RedfishTransportBytesToString(
-        std::get<RedfishTransport::bytes>(redfish_result.body));
+    grpc_response->set_octet_stream(
+        RedfishTransportBytesToString(
+            std::get<RedfishTransport::bytes>(redfish_result.body)));
   }
 
-  // Generate RedfishV1 response from Redfish transport result.
-  *grpc_response->mutable_json_str() = std::move(json_str);
   grpc_response->set_code(redfish_result.code);
   for (const auto &[key, value] : redfish_result.headers) {
     grpc_response->mutable_headers()->insert({key, value});
