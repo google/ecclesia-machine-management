@@ -1,0 +1,14 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/tools/query_flag.proto
+# proto-message: QueryFlag
+
+# This must be run on ACC based on
+# (go/grpc-bmcweb-playbook#zatar-credentials-on-acc-node)
+
+hostname: "host-control-node.localproductionnode.goog"
+port: 443
+cert_chain: "/root/.zatar/cert.pem"
+private_key: "/root/.zatar/key.pem"
+root_cert: "/etc/googlekeys/zatar/trust_bundle.pem"
+transport: "mtls_grpc"
+input_dir: "/data/dellicius_query"
+query_id: "ChassisCollector"

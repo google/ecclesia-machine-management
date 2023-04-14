@@ -1,0 +1,10 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/tools/query_flag.proto
+# proto-message: QueryFlag
+
+# Assuming ssh tunnel is at localhost:8000
+
+hostname: "localhost"
+port: 8000
+input_dir: "/usr/local/google/home/byoshimura/repo"
+query_id: "ChassisCollector"
+transport: "http"

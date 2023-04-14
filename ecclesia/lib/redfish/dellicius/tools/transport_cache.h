@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_TOOLS_QUERY_CLI_FLAGS_H_
-#define ECCLESIA_LIB_REDFISH_DELLICIUS_TOOLS_QUERY_CLI_FLAGS_H_
+#ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_TOOLS_TRANSPORT_CACHE_FLAGS_H_
+#define ECCLESIA_LIB_REDFISH_DELLICIUS_TOOLS_TRANSPORT_CACHE_FLAGS_H_
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
@@ -75,4 +75,4 @@ inline bool AbslParseFlag(absl::string_view text,
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_REDFISH_DELLICIUS_TOOLS_QUERY_CLI_FLAGS_H_
+#endif  // ECCLESIA_LIB_REDFISH_DELLICIUS_TOOLS_TRANSPORT_CACHE_H_
