@@ -92,6 +92,7 @@ inline constexpr char kRfPropertyPowerState[] = "PowerState";
 inline constexpr char kRfPropertyPowerWatts[] = "PowerWatts";
 inline constexpr char kRfPropertyProcessorStatistics[] = "ProcessorStatistics";
 inline constexpr char kRfPropertyTopProcesses[] = "TopProcesses";
+inline constexpr char kRfPropertyBootTimeStatistics[] = "BootTimeStatistics";
 inline constexpr char kRfPropertyVoltages[] = "Voltages";
 inline constexpr char kRfPropertyFans[] = "Fans";
 inline constexpr char kRfPropertySensors[] = "Sensors";
@@ -418,6 +419,12 @@ DEFINE_REDFISH_PROPERTY(PropertyResidentSetSizeBytes, int64_t,
                         "ResidentSetSizeBytes");
 DEFINE_REDFISH_PROPERTY(PropertyUserTimeSeconds, double, "UserTimeSeconds");
 DEFINE_REDFISH_PROPERTY(PropertyKernelTimeSeconds, double, "KernelTimeSeconds");
+DEFINE_REDFISH_PROPERTY(PropertyFirmwareTimeSeconds, double,
+                        "FirmwareTimeSeconds");
+DEFINE_REDFISH_PROPERTY(PropertyLoaderTimeSeconds, double, "LoaderTimeSeconds");
+DEFINE_REDFISH_PROPERTY(PropertyInitrdTimeSeconds, double, "InitrdTimeSeconds");
+DEFINE_REDFISH_PROPERTY(PropertyUserSpaceTimeSeconds, double,
+                        "UserSpaceTimeSeconds");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
