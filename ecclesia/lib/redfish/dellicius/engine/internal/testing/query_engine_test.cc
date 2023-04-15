@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -89,25 +90,14 @@ class QueryEngineTest : public ::testing::Test {
         clock_(absl::FromUnixSeconds(10)),
         intf_(server_.RedfishClientInterface()) {}
 
-  void SetUp() override {
-    FakeRedfishServer::Config config = server_.GetConfig();
-    HttpCredential creds;
-    auto curl_http_client =
-        std::make_unique<CurlHttpClient>(LibCurlProxy::CreateInstance(), creds);
-    std::string network_endpoint =
-        absl::StrFormat("%s:%d", config.hostname, config.port);
-    transport_ = HttpRedfishTransport::MakeNetwork(std::move(curl_http_client),
-                                                   network_endpoint);
-
-    cache_factory_ = [](RedfishTransport *transport) {
-      return std::make_unique<ecclesia::NullCache>(transport);
-    };
+  QueryEngine CreateQueryEngine(const QueryEngineConfiguration &config) {
+    return QueryEngine(config, server_.RedfishClientTransport(),
+                       QueryEngine::CreateNullCache, &clock_);
   }
 
   FakeRedfishServer server_;
   FakeClock clock_;
   std::unique_ptr<RedfishInterface> intf_;
-  std::unique_ptr<RedfishTransport> transport_;
   RedfishTransportCacheFactory cache_factory_;
 };
 
@@ -118,10 +108,9 @@ TEST_F(QueryEngineTest, QueryEngineDevpathConfiguration) {
   QueryEngineConfiguration config{
       .flags{.enable_devpath_extension = true},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
-  QueryEngine query_engine(config, std::move(transport_), cache_factory_,
-                           &clock_);
+
   std::vector<DelliciusQueryResult> response_entries =
-      query_engine.ExecuteQuery({"SensorCollector"});
+      CreateQueryEngine(config).ExecuteQuery({"SensorCollector"});
 
   DelliciusQueryResult intent_output_sensor =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
@@ -137,10 +126,8 @@ TEST_F(QueryEngineTest, QueryEngineDefaultConfiguration) {
   QueryEngineConfiguration config{
       .flags{.enable_devpath_extension = false},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
-  QueryEngine query_engine(config, std::move(transport_), cache_factory_,
-                           &clock_);
   std::vector<DelliciusQueryResult> response_entries =
-      query_engine.ExecuteQuery({"SensorCollector"});
+      CreateQueryEngine(config).ExecuteQuery({"SensorCollector"});
 
   DelliciusQueryResult intent_output_sensor =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
@@ -158,11 +145,9 @@ TEST_F(QueryEngineTest, QueryEngineWithExpandConfiguration) {
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
       .query_rules{kQueryRules.begin(), kQueryRules.end()}};
 
-  QueryEngine query_engine(config, std::move(transport_), cache_factory_,
-                           &clock_);
   QueryTracker query_tracker;
   std::vector<DelliciusQueryResult> response_entries =
-      query_engine.ExecuteQuery(
+      CreateQueryEngine(config).ExecuteQuery(
           {"AssemblyCollectorWithPropertyNameNormalization"}, query_tracker);
   DelliciusQueryResult intent_output_sensor =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
@@ -190,10 +175,8 @@ TEST_F(QueryEngineTest, QueryEngineInvalidQueries) {
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
 
   // Invalid Query Id
-  QueryEngine query_engine(config, std::move(transport_), cache_factory_,
-                           &clock_);
   std::vector<DelliciusQueryResult> response_entries =
-      query_engine.ExecuteQuery({"ThereIsNoSuchId"});
+      CreateQueryEngine(config).ExecuteQuery({"ThereIsNoSuchId"});
   EXPECT_EQ(response_entries.size(), 0);
 }
 
@@ -206,10 +189,8 @@ TEST_F(QueryEngineTest, QueryEngineConcurrentQueries) {
   QueryEngineConfiguration config{
       .flags{.enable_devpath_extension = false},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
-  QueryEngine query_engine(config, std::move(transport_), cache_factory_,
-                           &clock_);
   std::vector<DelliciusQueryResult> response_entries =
-      query_engine.ExecuteQuery(
+      CreateQueryEngine(config).ExecuteQuery(
           {"SensorCollector",
            "AssemblyCollectorWithPropertyNameNormalization"});
   DelliciusQueryResult intent_sensor_out =
@@ -230,10 +211,8 @@ TEST_F(QueryEngineTest, QueryEngineEmptyItemDevpath) {
   QueryEngineConfiguration config{
       .flags{.enable_devpath_extension = true},
       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
-  QueryEngine query_engine(config, std::move(transport_), cache_factory_,
-                           &clock_);
   std::vector<DelliciusQueryResult> response_entries =
-      query_engine.ExecuteQuery(
+      CreateQueryEngine(config).ExecuteQuery(
           {"AssemblyCollectorWithPropertyNameNormalization"});
   DelliciusQueryResult intent_assembly_out =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
