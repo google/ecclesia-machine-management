@@ -1,0 +1,23 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "ServiceRoot"
+subquery {
+  subquery_id: "RedfishVersion"
+  redpath: "/"
+  properties { name: "Uri" property: "@odata\\.id" type: STRING }
+  properties: { name: "RedfishSoftwareVersion" property: "RedfishVersion" type: STRING }
+}
+subquery {
+  subquery_id: "ChassisLinked"
+  root_subquery_ids: "RedfishVersion"
+  redpath: "/Chassis[*]"
+  properties { name: "serial_number" property: "SerialNumber" type: STRING }
+  properties { name: "part_number" property: "PartNumber" type: STRING }
+}
+subquery {
+  subquery_id: "ChassisNotLinked"
+  redpath: "/Chassis[*]"
+  properties { name: "serial_number" property: "SerialNumber" type: STRING }
+  properties { name: "part_number" property: "PartNumber" type: STRING }
+}

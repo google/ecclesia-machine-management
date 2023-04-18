@@ -1,0 +1,55 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
+# proto-message: DelliciusQueryResult
+
+query_id: "ServiceRoot"
+subquery_output_by_id {
+  key: "RedfishVersion"
+  value {
+    data_sets {
+      properties {
+        name: "Uri"
+        string_value: "/redfish/v1"
+      }
+      properties {
+        name: "RedfishSoftwareVersion"
+        string_value: "1.6.1"
+      }
+      child_subquery_output_by_id {
+        key: "ChassisLinked"
+        value {
+          data_sets {
+            properties {
+              name: "serial_number"
+              string_value: "MBBQTW194106556"
+            }
+            properties {
+              name: "part_number"
+              string_value: "1043652-02"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+subquery_output_by_id {
+  key: "ChassisNotLinked"
+  value {
+    data_sets {
+      properties {
+        name: "serial_number"
+        string_value: "MBBQTW194106556"
+      }
+      properties {
+        name: "part_number"
+        string_value: "1043652-02"
+      }
+    }
+  }
+}
+start_timestamp {
+  seconds: 10
+}
+end_timestamp {
+  seconds: 10
+}
