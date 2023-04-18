@@ -28,7 +28,7 @@ cc_test(
 cc_library(
     name = "id_assigner",
     hdrs = ["id_assigner.h"],
-    visibility = ["//ecclesia/lib/redfish:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "@com_google_absl//absl/status:statusor",
@@ -39,7 +39,7 @@ cc_library(
     name = "id_assigner_devpath",
     srcs = ["id_assigner_devpath.cc"],
     hdrs = ["id_assigner_devpath.h"],
-    visibility = ["//ecclesia/lib/redfish:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         ":id_assigner",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
