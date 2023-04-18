@@ -162,6 +162,17 @@ TEST_F(QueryPlannerTestRunner, TestNestedNodeNameInQueryProperty) {
   TestQuery(query_in_path, query_out_path, default_normalizer.get());
 }
 
+TEST_F(QueryPlannerTestRunner, TestServiceRootQuery) {
+  std::string query_in_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_in/service_root_in.textproto"));
+  std::string query_out_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/service_root_out.textproto"));
+  SetTestParams("indus_hmb_cn/mockup.shar", absl::FromUnixSeconds(10));
+  // Instantiate a passthrough normalizer.
+  auto default_normalizer = BuildDefaultNormalizer();
+  TestQuery(query_in_path, query_out_path, default_normalizer.get());
+}
+
 TEST(QueryPlannerTest, CheckQueryPlannerInitFailsWithInvalidSubqueryLinks) {
   std::string query_in_path = GetTestDataDependencyPath(JoinFilePaths(
       kQuerySamplesLocation, "query_in/malformed_query_links.textproto"));
