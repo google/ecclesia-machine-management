@@ -70,11 +70,10 @@ class QueryEngine final {
   QueryEngine(const QueryEngineConfiguration &config, const Clock *clock,
               std::unique_ptr<RedfishInterface> intf);
 
-  explicit QueryEngine(const QueryEngineConfiguration &config,
-                       std::unique_ptr<RedfishTransport> transport,
-                       const RedfishTransportCacheFactory &cache_factory =
-                        CreateNullCache,
-                       const Clock *clock = Clock::RealClock());
+  QueryEngine(const QueryEngineConfiguration &config,
+              std::unique_ptr<RedfishTransport> transport,
+              RedfishTransportCacheFactory cache_factory = CreateNullCache,
+              const Clock *clock = Clock::RealClock());
   QueryEngine(const QueryEngine &) = delete;
   QueryEngine &operator=(const QueryEngine &) = delete;
   QueryEngine(QueryEngine &&other) = default;

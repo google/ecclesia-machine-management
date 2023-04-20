@@ -112,7 +112,7 @@ class NullCache : public RedfishCachedGetterInterface {
 class TimeBasedCache : public RedfishCachedGetterInterface {
  public:
   TimeBasedCache(
-      RedfishTransport *transport, Clock *clock, absl::Duration max_age,
+      RedfishTransport *transport, const Clock *clock, absl::Duration max_age,
       std::optional<const ApiComplexityContextManager *> manager = std::nullopt)
       : RedfishCachedGetterInterface(manager),
         transport_(transport),
