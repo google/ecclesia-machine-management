@@ -32,7 +32,7 @@ namespace ecclesia {
 class MetricalRedfishTransport : public RedfishTransport {
  public:
   explicit MetricalRedfishTransport(std::unique_ptr<RedfishTransport> base,
-                                    Clock *clock,
+                                    const Clock *clock,
                                     RedfishMetrics &transport_metrics)
       : base_transport_(std::move(base)),
         clock_(clock),
@@ -49,7 +49,7 @@ class MetricalRedfishTransport : public RedfishTransport {
 
  private:
   std::unique_ptr<RedfishTransport> base_transport_;
-  Clock *clock_;
+  const Clock *clock_;
   RedfishMetrics &transport_metrics_;
 };
 

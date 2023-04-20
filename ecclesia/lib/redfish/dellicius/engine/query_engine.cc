@@ -90,10 +90,10 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 
   explicit QueryEngineImpl(const QueryEngineConfiguration &config,
                            std::unique_ptr<RedfishTransport> transport,
-                           const RedfishTransportCacheFactory &cache_factory,
+                           RedfishTransportCacheFactory cache_factory,
                            const Clock *clock)
       : clock_(clock), transport_(std::move(transport)) {
-    intf_ = NewHttpInterface(std::move(transport_), cache_factory,
+    intf_ = NewHttpInterface(std::move(transport_), std::move(cache_factory),
                              RedfishInterface::kTrusted);
     if (config.flags.enable_devpath_extension) {
       topology_ = CreateTopologyFromRedfish(intf_.get());
@@ -188,9 +188,9 @@ QueryEngine::QueryEngine(const QueryEngineConfiguration &config,
 
 QueryEngine::QueryEngine(const QueryEngineConfiguration &config,
                          std::unique_ptr<RedfishTransport> transport,
-                         const RedfishTransportCacheFactory &cache_factory,
+                         RedfishTransportCacheFactory cache_factory,
                          const Clock *clock)
     : engine_impl_(std::make_unique<QueryEngineImpl>(
-          config, std::move(transport), cache_factory, clock)) {}
+          config, std::move(transport), std::move(cache_factory), clock)) {}
 
 }  // namespace ecclesia

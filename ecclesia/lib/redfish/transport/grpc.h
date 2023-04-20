@@ -30,7 +30,7 @@ namespace ecclesia {
 
 struct GrpcTransportParams {
   // Clock used for all operations.
-  Clock *clock = Clock::RealClock();
+  const Clock *clock = Clock::RealClock();
   // Timeout used for all operations.
   absl::Duration timeout = absl::Seconds(40);
 };
