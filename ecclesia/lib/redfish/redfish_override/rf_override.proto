@@ -78,6 +78,12 @@ message OverrideField {
     ActionAdd action_add = 2;
     ActionClear action_clear = 3;
   }
+  message ApplyCondition {
+    // This boolean specifies if this override only applies when expand is used.
+    // If true, then the override policy will applied only when expand is used.
+    bool is_expand = 1;
+  }
+  ApplyCondition apply_condition = 4;
 }
 
 // In the override_content_map, the key will be the uri that needs to be

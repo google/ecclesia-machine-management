@@ -24,12 +24,13 @@
 
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
-#include "ecclesia/lib/redfish/proto/redfish_v1_grpc_include.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1_grpc_include.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
 #include "ecclesia/lib/redfish/transport/grpc.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -356,17 +357,22 @@ absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
   if (!get_result.ok()) {
     return get_result;
   }
+  std::string checked_path = std::string(path);
   auto extend_pos = path.find_first_of('?');
   if (extend_pos != std::string::npos) {
-    path = path.substr(0, extend_pos);
+    checked_path = path.substr(0, extend_pos);
   }
   extend_pos = path.find_first_of('#');
   if (extend_pos != std::string::npos) {
-    path = path.substr(0, extend_pos);
+    checked_path = path.substr(0, extend_pos);
   }
-  auto iter = override_policy_.override_content_map_uri().find(path);
+  auto iter = override_policy_.override_content_map_uri().find(checked_path);
   if (iter != override_policy_.override_content_map_uri().end()) {
     for (const auto &field : iter->second.override_field()) {
+      if (field.has_apply_condition() && field.apply_condition().is_expand() &&
+          !absl::StrContains(path, "$expand=")) {
+        continue;
+      }
       auto update_status =
           ResultUpdateHelper(field, *get_result, redfish_transport_.get());
       if (!update_status.ok()) {
@@ -378,10 +384,14 @@ absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
   }
   for (const auto &[uri_regex, override_content] :
        override_policy_.override_content_map_regex()) {
-    if (!RE2::FullMatch(path, uri_regex)) {
+    if (!RE2::FullMatch(checked_path, uri_regex)) {
       continue;
     }
     for (const auto &field : override_content.override_field()) {
+      if (field.has_apply_condition() && field.apply_condition().is_expand() &&
+          !absl::StrContains(path, "$expand=")) {
+        continue;
+      }
       auto update_status =
           ResultUpdateHelper(field, *get_result, redfish_transport_.get());
       if (!update_status.ok()) {
