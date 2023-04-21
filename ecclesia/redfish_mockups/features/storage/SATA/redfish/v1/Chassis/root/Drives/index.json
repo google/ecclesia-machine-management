@@ -1,0 +1,14 @@
+{
+  "@odata.id": "/redfish/v1/Chassis/root/Drives",
+  "@odata.type": "#DriveCollection.DriveCollection",
+  "Members": [
+    {
+      "@odata.id": "/redfish/v1/Chassis/root/Drives/SataDrive_0"
+    },
+    {
+      "@odata.id": "/redfish/v1/Chassis/root/Drives/SataDrive_1"
+    }
+  ],
+  "Members@odata.count": 1,
+  "Name": "Drive Collection"
+}
