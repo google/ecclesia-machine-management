@@ -485,7 +485,7 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
 // HttpIntfCollectionIterableImpl implements the RedfishIterable interface
 // with a JSON object representing a Redfish Collection. The Collection object
 // must be verified before constructing this class. Redfish Collection objects
-// must have "Members@odata.count" and "Members" fields.
+// must have "Members" field which must be an array.
 class HttpIntfCollectionIterableImpl : public RedfishIterable {
  public:
   explicit HttpIntfCollectionIterableImpl(
@@ -505,18 +505,18 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
 
   size_t Size() override {
     const auto &json = std::get<nlohmann::json>(result_.body);
-    // Return size based on Members@odata.count.
-    auto itr = json.find(PropertyMembersCount::Name);
-    if (itr == json.end() || !itr.value().is_number()) return 0;
-    return itr.value().get<size_t>();
+    // Return size based on the number of elements in Members array.
+    auto itr = json.find(PropertyMembers::Name);
+    if (itr == json.end() || !itr.value().is_array()) return 0;
+    return itr.value().size();
   }
 
   bool Empty() override {
     const auto &json = std::get<nlohmann::json>(result_.body);
-    // Determine emptiness by checking Members@odata.count.
-    auto itr = json.find(PropertyMembersCount::Name);
-    if (itr == json.end() || !itr.value().is_number()) return true;
-    return itr.value().get<size_t>() == 0;
+    // Determine emptiness by checking if Members array is empty.
+    auto itr = json.find(PropertyMembers::Name);
+    if (itr == json.end() || !itr.value().is_array()) return true;
+    return itr.value().empty();
   }
 
   RedfishVariant operator[](int index) const override {
@@ -577,7 +577,7 @@ std::unique_ptr<RedfishIterable> HttpIntfVariantImpl::AsIterable(
   const auto &json = std::get<nlohmann::json>(result_.body);
   bool is_collection_iterable = json.is_object() &&
                                 json.contains(PropertyMembers::Name) &&
-                                json.contains(PropertyMembersCount::Name);
+                                json[PropertyMembers::Name].is_array();
   if (json.is_array()) {
     return std::make_unique<HttpIntfArrayIterableImpl>(
         intf_, path_, result_, cache_state_, mode, freshness);
