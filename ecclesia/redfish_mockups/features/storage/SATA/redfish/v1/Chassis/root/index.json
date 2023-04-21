@@ -1,0 +1,10 @@
+{
+    "@odata.id": "/redfish/v1/Chassis/root",
+    "@odata.type": "#Chassis.v1_14_0.Chassis",
+    "ChassisType": "RackMount",
+    "Id": "root",
+    "Name": "drives",
+    "Drives": {
+        "@odata.id": "/redfish/v1/Chassis/root/Drives"
+    }
+}
