@@ -59,7 +59,6 @@ cc_binary(
         "//ecclesia/lib/file:dir",
         "//ecclesia/lib/file:path",
         "//ecclesia/lib/protobuf:parse",
-        "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_config",
         "//ecclesia/lib/redfish/dellicius/engine:query_rules_cc_proto",

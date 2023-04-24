@@ -23,6 +23,7 @@
 
 #include "absl/base/attributes.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -95,6 +96,10 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       : clock_(clock), transport_(std::move(transport)) {
     intf_ = NewHttpInterface(std::move(transport_), std::move(cache_factory),
                              RedfishInterface::kTrusted);
+    CHECK(intf_->GetRoot().AsObject() != nullptr)
+        << "Error connecting to redfish service. "
+        << "Check host configuration";
+
     if (config.flags.enable_devpath_extension) {
       topology_ = CreateTopologyFromRedfish(intf_.get());
       normalizer_ = BuildDefaultNormalizerWithDevpath(topology_);

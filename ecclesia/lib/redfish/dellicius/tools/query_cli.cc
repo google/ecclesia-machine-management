@@ -49,7 +49,6 @@
 #include "ecclesia/lib/redfish/dellicius/tools/query_flag.pb.h"
 #include "ecclesia/lib/redfish/dellicius/tools/redfish_backend.h"
 #include "ecclesia/lib/redfish/dellicius/tools/transport_cache.h"
-#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -213,7 +212,6 @@ int QueryMain(int argc, char **argv) {
       .query_files{embedded_files},
       .query_rules{query_rule_embedded_file}};
   // Configure HTTP transport.
-  std::unique_ptr<RedfishInterface> intf;
   RedfishTransportConfig transport_config = {
       .hostname = query_flags.hostname(),
       .port = query_flags.port(),
@@ -238,19 +236,11 @@ int QueryMain(int argc, char **argv) {
         std::move(*transport), Clock::RealClock(), transport_metrics);
   }
 
-  std::unique_ptr<RedfishCachedGetterInterface> cache =
-      GetRedfishCache(transport->get());
-
-  intf = NewHttpInterface(std::move(*transport), std::move(cache),
-                          RedfishInterface::kTrusted);
-  if (auto root = intf->GetRoot(); root.AsObject() == nullptr) {
-    LOG(ERROR) << "Error connecting to redfish service. "
-               << "Check host configuration";
-    return -1;
-  }
-
   // Build QueryEngine
-  QueryEngine query_engine(config, Clock::RealClock(), std::move(intf));
+  QueryEngine query_engine(config, *std::move(transport),
+                           [](RedfishTransport *transport) {
+                             return GetRedfishCache(transport);
+                           });
 
   // Dispatch Dellicius Queries
   for (size_t i = 0; i < absl::GetFlag(FLAGS_iteration_count); ++i) {
