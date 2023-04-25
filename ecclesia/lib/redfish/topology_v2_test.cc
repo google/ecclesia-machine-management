@@ -68,6 +68,23 @@ void CheckAgainstTestingMockupFullDevpaths(const NodeTopology &topology) {
   EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
 }
 
+void CheckAgainstTestingMultiHostFullDevpaths(const NodeTopology &topology) {
+  const std::vector<Node> expected_nodes = {
+      Node{"multi1", "multi1", "/phys", NodeType::kBoard},
+      Node{"memory_m1", "memory_m1", "/phys/DIMM0", NodeType::kBoard},
+      Node{"cpu_m1", "cpu_m1", "/phys/CPU0", NodeType::kBoard},
+      Node{"memory_m2", "memory_m2", "/phys/DIMM1", NodeType::kBoard},
+      Node{"cpu_m2", "cpu_m2", "/phys/CPU1", NodeType::kBoard}};
+
+  std::vector<Node> actual_nodes;
+  actual_nodes.reserve(topology.nodes.size());
+  for (const auto &node : topology.nodes) {
+    actual_nodes.push_back(*node);
+  }
+
+  EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
+}
+
 TEST(TopologyTestRunner, TestingMockupNodesArePopulated) {
   TestingMockupServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
@@ -474,6 +491,13 @@ TEST(TopologyTestRunner, TestingConfigsOption) {
     actual_nodes.push_back(*node);
   }
   EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
+}
+
+TEST(TopologyTestRunner, TestingMultiHostMockupNodesArePopulated) {
+  TestingMockupServer mockup("topology_v2_multi_host_testing/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+  CheckAgainstTestingMultiHostFullDevpaths(CreateTopologyFromRedfishV2(
+      raw_intf.get(), "redfish_multihost.textpb"));
 }
 
 }  // namespace

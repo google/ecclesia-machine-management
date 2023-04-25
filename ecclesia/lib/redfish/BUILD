@@ -207,6 +207,7 @@ cc_test(
     srcs = ["topology_v2_test.cc"],
     data = [
         "//ecclesia/redfish_mockups/features/component_integrity:mockup.shar",
+        "//ecclesia/redfish_mockups/topology_v2_multi_host_testing:mockup.shar",
         "//ecclesia/redfish_mockups/topology_v2_testing:mockup.shar",
     ],
     deps = [

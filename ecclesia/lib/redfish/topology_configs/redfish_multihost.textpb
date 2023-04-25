@@ -1,0 +1,112 @@
+# proto-file: third_party/ecclesia/lib/redfish/topology_config.proto
+# proto-message: TopologyConfig
+
+# This text proto represents the valid linkages for DMTF Redfish version 2022.3 
+# that handles multi host machine.
+
+find_root_node {
+  chassis_link: "ContainedBy"
+  google_service_root: true
+}
+
+cable_linkages {
+  upstream_links: "UpstreamChassis"
+  upstream_links: "UpstreamResources"
+}
+
+resource_to_config {
+  key: "Chassis"
+  value {
+    usable_links {
+      array_links: "Contains"
+      array_links: "Drives"
+      array_links: "Storage"
+      array_links: "Switches"
+      array_links: "ManagersInChassis"
+    }
+    usable_links_skip {
+      array_links: "ComputerSystems"
+    }
+    first_class_attributes {
+      collection_attributes: "Drives"
+      collection_attributes: "NetworkAdapters"
+      singular_attributes: "ThermalSubsystem"
+      singular_attributes: "Assembly"
+    }
+  }
+}
+
+resource_to_config {
+  key: "Assembly"
+  value {
+    first_class_attributes {
+      array_attributes: "Assemblies"
+    }
+  }
+}
+
+resource_to_config {
+  key: "Cable"
+  value {
+    usable_links {
+      array_links: "DownstreamChassis"
+      array_links: "DownstreamResources"
+      array_links: "DownstreamPorts"
+    }
+  }
+}
+
+resource_to_config {
+  key: "ComputerSystem"
+  value {
+    first_class_attributes {
+      collection_attributes: "Memory"
+      collection_attributes: "Processors"
+    }
+  }
+}
+
+resource_to_config {
+  key: "Processor"
+  value {
+    usable_links: {
+      array_links: "Memory"
+    }
+  }
+}
+
+resource_to_config {
+  key: "Storage"
+  value {
+    first_class_attributes {
+      array_attributes: "StorageControllers"
+      array_attributes: "Drives"
+    }
+  }
+}
+resource_to_config {
+  key: "ThermalSubsystem"
+  value {
+    first_class_attributes {
+      collection_attributes: "Fans"
+    }
+  }
+}
+
+resource_to_config {
+  key: "NetworkAdapter"
+  value {
+    first_class_attributes {
+      collection_attributes: "Ports"
+    }
+  }
+}
+
+resource_to_config {
+  key: "GoogleServiceRoot"
+  value {
+    first_class_attributes {
+      collection_attributes: "RootOfTrustCollection"
+    }
+  }
+}
