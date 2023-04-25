@@ -41,7 +41,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceChassis> /*unused*/,
   root.AsIndexHelper()
       .Get(kRfPropertyChassis, {.freshness = query_params.freshness,
                                 .expand = RedfishQueryParamExpand(
-                                    {.levels = query_params.expand_levels})})
+                                    {.levels = 0})})
       .Each()
       .Do([&](std::unique_ptr<RedfishObject> &chassis_obj) {
         return result_callback(std::move(chassis_obj));

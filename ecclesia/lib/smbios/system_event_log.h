@@ -22,7 +22,7 @@
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/smbios/internal.h"
 #include "ecclesia/lib/smbios/structures.emb.h"
-#include "runtime/cpp/emboss_prelude.h"
+#include "third_party/emboss/runtime/cpp/emboss_prelude.h"
 
 namespace ecclesia {
 
