@@ -185,12 +185,14 @@ cc_test(
     data = [
         "//ecclesia/redfish_mockups/indus_hmb_cn:mockup.shar",
         "//ecclesia/redfish_mockups/indus_hmb_cn_playground:mockup.shar",
+        "//ecclesia/redfish_mockups/topology_v2_testing:mockup.shar",
     ],
     deps = [
         ":node_topology",
         ":test_mockup",
         ":topology",
         ":types",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/redfish/testing:json_mockup",
         "//ecclesia/lib/redfish/testing:node_topology_testing",
         "@com_google_absl//absl/container:flat_hash_map",

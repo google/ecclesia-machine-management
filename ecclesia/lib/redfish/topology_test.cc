@@ -28,6 +28,7 @@
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
+#include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/testing/json_mockup.h"
 #include "ecclesia/lib/redfish/testing/node_topology_testing.h"
 #include "ecclesia/lib/redfish/types.h"
@@ -612,6 +613,75 @@ TEST(RawInterfaceTestWithMockup, HandleAssemblyStateCorrectlly) {
   EXPECT_THAT(actual_devpaths, Not(Contains("/phys/PE2")));
   // Assembly spicy16_inttp reports Status.State as Absent
   EXPECT_THAT(actual_devpaths, Not(Contains("/phys/PE3")));
+}
+
+TEST(RawInterfaceTestWithMockup, TestingConfigsOptionV1Unspecific) {
+  FakeRedfishServer mockup("indus_hmb_cn/mockup.shar");
+  std::string root_metrics_str = R"json({
+    "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+    "@odata.id": "/redfish/v1",
+    "@odata.type": "#ServiceRoot.v1_5_0.ServiceRoot",
+    "Chassis": {
+        "@odata.id": "/redfish/v1/Chassis"
+    },
+    "Id": "RootService",
+    "Name": "Root Service",
+    "RedfishVersion": "1.6.1",
+    "Links" : {
+        "Sessions" : {
+            "@odata.id" : "/redfish/v1/SessionService/Sessions"
+        }
+    },
+    "UpdateService": {
+      "@odata.id": "/redfish/v1/UpdateService"
+    },
+    "Systems": {
+        "@odata.id": "/redfish/v1/Systems"
+    },
+    "Managers": {
+        "@odata.id": "/redfish/v1/Managers"
+    }
+})json";
+  mockup.AddHttpGetHandlerWithData("/redfish/v1", root_metrics_str);
+  auto raw_intf = mockup.RedfishClientInterface();
+  NodeTopology topology = CreateTopologyFromRedfish(
+      raw_intf.get(), "not_exist.textpb", REDFISH_TOPOLOGY_V1);
+
+  for (const auto &pair : topology.devpath_to_node_map) {
+    const absl::string_view devpath = pair.first;
+    ASSERT_THAT(pair.second, Not(IsNull()));
+    EXPECT_THAT(devpath, Eq(pair.second->local_devpath));
+  }
+}
+
+TEST(RawInterfaceTestWithMockup, TestingConfigsOptionV1) {
+  TestingMockupServer mockup("indus_hmb_cn/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+  NodeTopology topology = CreateTopologyFromRedfish(
+      raw_intf.get(), "not_exist.textpb", REDFISH_TOPOLOGY_V2);
+  for (const auto &pair : topology.devpath_to_node_map) {
+    const absl::string_view devpath = pair.first;
+    ASSERT_THAT(pair.second, Not(IsNull()));
+    EXPECT_THAT(devpath, Eq(pair.second->local_devpath));
+  }
+}
+
+TEST(TopologyTestRunner, TestingConfigsOptionV2) {
+  TestingMockupServer mockup("topology_v2_testing/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+
+  NodeTopology topology = CreateTopologyFromRedfish(
+      raw_intf.get(), "redfish_test.textpb");
+  const std::vector<Node> expected_nodes = {
+      Node{"root", "root", "/phys", NodeType::kBoard},
+      Node{"cpu", "cpu", "/phys/CPU", NodeType::kBoard}};
+
+  std::vector<Node> actual_nodes;
+  actual_nodes.reserve(topology.nodes.size());
+  for (const auto &node : topology.nodes) {
+    actual_nodes.push_back(*node);
+  }
+  EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
 }
 
 }  // namespace

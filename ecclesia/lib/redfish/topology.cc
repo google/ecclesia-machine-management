@@ -403,7 +403,7 @@ NodeTopology CreateNodeTopologyFromAssemblies(
     if (assembly.components.empty()) continue;
 
     // Find the "board" component of the assembly and grab its odata ID. This
-    // will be needed to populate the attachedto map for the other components.
+    // will be needed to populate the attached to map for the other components.
     absl::string_view board_odata_id;
     for (const auto &component : assembly.components) {
       if (component->type == kBoard) {
@@ -543,12 +543,10 @@ RedfishNodeTopologyRepresentation GetNodeTopologyReprensentation(
   return REDFISH_TOPOLOGY_UNSPECIFIED;
 }
 
-}  // namespace
-
-NodeTopology CreateTopologyFromRedfish(
+NodeTopology CreateTopologyFromRedfishHelper(
     RedfishInterface *redfish_intf,
-    RedfishNodeTopologyRepresentation
-        default_redfish_topology_reprensentation) {
+    RedfishNodeTopologyRepresentation &default_redfish_topology_reprensentation,
+    std::optional<absl::string_view> topology_config_name) {
   auto redfish_topology_version = GetNodeTopologyReprensentation(redfish_intf);
   // If the Redfish Agent specifies it's using REDFISH_TOPOLOGY_V1, or if it's
   // unspecified in the Redfish Agent but the default topology is
@@ -559,10 +557,30 @@ NodeTopology CreateTopologyFromRedfish(
        default_redfish_topology_reprensentation == REDFISH_TOPOLOGY_V1)) {
     std::vector<Assembly> assemblies =
         CreateAssembliesFromRedfish(redfish_intf);
-    return CreateNodeTopologyFromAssemblies(std::move(assemblies));
+    return CreateNodeTopologyFromAssemblies(assemblies);
   }
-  // Otherwise, use the REDFISH_TOPOLOGY_V2 to create node topology.
+  if (topology_config_name.has_value()) {
+    return CreateTopologyFromRedfishV2(redfish_intf, *topology_config_name);
+  }
   return CreateTopologyFromRedfishV2(redfish_intf);
+}
+}  // namespace
+
+NodeTopology CreateTopologyFromRedfish(
+    RedfishInterface *redfish_intf,
+    RedfishNodeTopologyRepresentation
+        default_redfish_topology_reprensentation) {
+  return CreateTopologyFromRedfishHelper(
+      redfish_intf, default_redfish_topology_reprensentation, std::nullopt);
+}
+
+NodeTopology CreateTopologyFromRedfish(
+    RedfishInterface *redfish_intf, absl::string_view topology_config_name,
+    RedfishNodeTopologyRepresentation
+        default_redfish_topology_reprensentation) {
+  return CreateTopologyFromRedfishHelper(
+      redfish_intf, default_redfish_topology_reprensentation,
+      topology_config_name);
 }
 
 bool NodeTopologiesHaveTheSameNodes(const NodeTopology &n1,

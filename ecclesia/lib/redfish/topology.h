@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_TOPOLOGY_H_
 #define ECCLESIA_LIB_REDFISH_TOPOLOGY_H_
 
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/topology_config.pb.h"
@@ -28,6 +29,10 @@ NodeTopology CreateTopologyFromRedfish(
     RedfishNodeTopologyRepresentation default_redfish_topology_reprensentation =
         REDFISH_TOPOLOGY_UNSPECIFIED);
 
+NodeTopology CreateTopologyFromRedfish(
+    RedfishInterface *redfish_intf, absl::string_view topology_config_name,
+    RedfishNodeTopologyRepresentation default_redfish_topology_reprensentation =
+        REDFISH_TOPOLOGY_UNSPECIFIED);
 // Returns true if both provided NodeTopologies have the same nodes. Nodes are
 // matched by their name, local_devpath, and type fields only. This does not
 // detect changes in the internal maps to nodes.

@@ -43,8 +43,9 @@
 namespace ecclesia {
 namespace {
 
+constexpr absl::string_view kTopologyConfigPrefix = "topology_configs/";
 constexpr absl::string_view kDefaultTopologyConfigName =
-    "topology_configs/redfish_2021_1.textpb";
+    "redfish_2021_1.textpb";
 
 std::optional<TopologyConfig> LoadTopologyConfigFromConfigName(
     absl::string_view config_name) {
@@ -328,16 +329,18 @@ constexpr absl::string_view kLocationTypeBay = "Bay";
 constexpr absl::string_view kLocationTypeSocket = "Socket";
 
 }  // namespace
-
 NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
+  return CreateTopologyFromRedfishV2(redfish_intf, kDefaultTopologyConfigName);
+}
+NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
+                                         absl::string_view config_name) {
   NodeTopology topology;
 
-  DLOG(INFO) << "Loading topology config: " << kDefaultTopologyConfigName;
-  std::optional<TopologyConfig> config =
-      LoadTopologyConfigFromConfigName(kDefaultTopologyConfigName);
+  DLOG(INFO) << "Loading topology config: " << config_name;
+  std::optional<TopologyConfig> config = LoadTopologyConfigFromConfigName(
+      absl::StrCat(kTopologyConfigPrefix, config_name));
   if (!config.has_value()) {
-    LOG(FATAL) << "No valid config found with name: "
-               << kDefaultTopologyConfigName;
+    LOG(FATAL) << "No valid config found with name: " << config_name;
   }
 
   // Find root chassis to build from using config find root chassis
