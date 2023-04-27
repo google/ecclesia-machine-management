@@ -39,8 +39,8 @@
 #include "ecclesia/lib/smbios/system_event_log.h"
 #include "ecclesia/lib/smbios/system_information.h"
 #include "ecclesia/lib/strings/natural_sort.h"
-#include "third_party/emboss/runtime/cpp/emboss_enum_view.h"
-#include "third_party/emboss/runtime/cpp/emboss_prelude.h"
+#include "runtime/cpp/emboss_enum_view.h"
+#include "runtime/cpp/emboss_prelude.h"
 
 namespace ecclesia {
 
