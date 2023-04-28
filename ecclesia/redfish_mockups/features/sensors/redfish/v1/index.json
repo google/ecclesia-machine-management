@@ -4,6 +4,9 @@
     "Chassis": {
         "@odata.id": "/redfish/v1/Chassis"
     },
+    "Systems": {
+        "@odata.id": "/redfish/v1/Systems"
+    },
     "Id": "RootService",
     "Name": "Root Service",
     "RedfishVersion": "1.9.0"
