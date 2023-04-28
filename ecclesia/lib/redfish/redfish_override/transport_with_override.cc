@@ -50,10 +50,6 @@ using IndividualObjectIdentifier = ObjectIdentifier::IndividualObjectIdentifier;
 constexpr absl::string_view kTargetKey = "target";
 constexpr absl::string_view kResourceKey = "redfish-resource";
 
-// This is the Grpc credentials specific for getting override policy through
-// gRPC Redfish BMC.
-// The metadata actually does nothing but using gRPC RPCs it is required. We're
-// adding some reasonable dummy datas in this credential.
 class GrpcCredentialsForOverride : public grpc::MetadataCredentialsPlugin {
  public:
   explicit GrpcCredentialsForOverride(absl::string_view target_fqdn)
