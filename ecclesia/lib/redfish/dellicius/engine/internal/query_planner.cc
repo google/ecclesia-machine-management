@@ -739,7 +739,10 @@ DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
     result.set_query_id(plan_id_);
 
     std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
-    if (!redfish_object) return result;
+    if (!redfish_object) {
+      LOG(ERROR) << "Cannot query service root. Check host configuration.";
+      return result;
+    }
 
     // We will create ContextNode for the RedfishObject relative to which all
     // RedPath expressions will execute.
