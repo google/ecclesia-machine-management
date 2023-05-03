@@ -672,6 +672,21 @@ subquery_output_by_id {
     }
   }
 }
+subquery_output_by_id {
+  key: "PredicatePresenceCheckAndLogicalOperation"
+  value {
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm"
+      }
+      properties {
+        name: "@odata.type"
+        string_value: "#Sensor.v1_2_0.Sensor"
+      }
+    }
+  }
+}
 start_timestamp {
   seconds: 10
 }

@@ -29,6 +29,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
@@ -275,10 +276,15 @@ bool ApplyPredicateRule(const RedfishObject &redfish_object, size_t node_index,
       // Look for predicate expression containing relational operators.
       single_predicate_result =
           PredicateFilterByNodeComparison(redfish_object, expr);
+    } else if (absl::StartsWith(expr, "!")) {
+      // For predicate [!<NodeName>]
+      single_predicate_result =
+          !PredicateFilterByNodeName(redfish_object, expr.substr(1));
     } else {
-      // Filter node-set by NodeName
+      // For predicate[<NodeName>]
       single_predicate_result = PredicateFilterByNodeName(redfish_object, expr);
     }
+
     // Apply logical operation.
     if (logical_operation == kLogicalOperatorAnd) {
       is_filter_success &= single_predicate_result;

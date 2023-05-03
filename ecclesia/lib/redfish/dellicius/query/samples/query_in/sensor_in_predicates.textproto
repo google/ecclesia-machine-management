@@ -117,4 +117,11 @@ subquery {
   properties { property: "Name" type: STRING }
   properties { property: "Reading" type: DOUBLE }
 }
-
+# Returns Sensor '@odata.id"' and '@odata.type"' value from Sensors that don't
+# have 'Thresholds' and 'Health' properties.
+subquery {
+  subquery_id: "PredicatePresenceCheckAndLogicalOperation"
+  redpath: "/Chassis[*]/Sensors[!Thresholds and !Status.Health]"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "@odata\\.type" type: STRING }
+}
