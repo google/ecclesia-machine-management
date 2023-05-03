@@ -40,6 +40,28 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "query_engine_fake",
+    testonly = 1,
+    hdrs = ["query_engine_fake.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":query_engine_cc",
+        ":query_engine_config",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "//ecclesia/lib/redfish/transport:cache",
+        "//ecclesia/lib/redfish/transport:http_redfish_intf",
+        "//ecclesia/lib/redfish/transport:interface",
+        "//ecclesia/lib/redfish/transport:metrical_transport",
+        "//ecclesia/lib/redfish/transport:transport_metrics_cc_proto",
+        "//ecclesia/lib/time:clock_fake",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+    ],
+)
+
 proto_library(
     name = "query_rules_proto",
     srcs = ["query_rules.proto"],
