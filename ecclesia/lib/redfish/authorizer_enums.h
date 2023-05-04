@@ -91,6 +91,7 @@ enum class ResourceEntity : int {
   kFacilityCollection,
   kFan,
   kFanCollection,
+  kGooglegRPCStatistics,
   kGraphicsController,
   kGraphicsControllerCollection,
   kHeater,
