@@ -49,46 +49,6 @@ namespace {
 
 class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
  public:
-  QueryEngineImpl(const QueryEngineConfiguration &config, const Clock *clock,
-                  std::unique_ptr<RedfishInterface> intf)
-      : clock_(clock), intf_(std::move(intf)) {
-    if (config.flags.enable_devpath_extension) {
-      topology_ = CreateTopologyFromRedfish(intf_.get());
-      normalizer_ = BuildDefaultNormalizerWithDevpath(topology_);
-    } else {
-      normalizer_ = BuildDefaultNormalizer();
-    }
-
-    // Parse query rules from embedded proto messages
-    absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
-        query_id_to_rules =
-            ParseQueryRulesFromEmbeddedFiles(config.query_rules);
-    // Parse queries from embedded proto messages
-    for (const EmbeddedFile &query_file : config.query_files) {
-      DelliciusQuery query;
-      if (!google::protobuf::TextFormat::ParseFromString(std::string(query_file.data),
-                                               &query)) {
-        LOG(ERROR) << "Cannot get RedPath query from embedded file "
-                   << query_file.name;
-        continue;
-      }
-
-      // Build a query plan if none exists for the query id
-      if (id_to_query_plans_.contains(query.query_id())) continue;
-      absl::StatusOr<QueryPlannerInterface> query_planner;
-      if (auto iter = query_id_to_rules.find(query.query_id());
-          iter != query_id_to_rules.end()) {
-        query_planner = BuildQueryPlanner(query, std::move(iter->second),
-                                          normalizer_.get());
-      } else {
-        query_planner = BuildQueryPlanner(query, RedPathRedfishQueryParams{},
-                                          normalizer_.get());
-      }
-      if (!query_planner.ok()) continue;
-      id_to_query_plans_.emplace(query.query_id(), *std::move(query_planner));
-    }
-  }
-
   explicit QueryEngineImpl(const QueryEngineConfiguration &config,
                            std::unique_ptr<RedfishTransport> transport,
                            RedfishTransportCacheFactory cache_factory,
@@ -179,14 +139,6 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 };
 
 }  // namespace
-
-ABSL_DEPRECATED(
-    "Use constructor that accepts CacheFactory and RedfishTransport instead")
-QueryEngine::QueryEngine(const QueryEngineConfiguration &config,
-                         const Clock *clock,
-                         std::unique_ptr<RedfishInterface> intf)
-    : engine_impl_(
-          std::make_unique<QueryEngineImpl>(config, clock, std::move(intf))) {}
 
 QueryEngine::QueryEngine(const QueryEngineConfiguration &config,
                          std::unique_ptr<RedfishTransport> transport,

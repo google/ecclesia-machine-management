@@ -65,11 +65,6 @@ class QueryEngine final {
         return std::make_unique<ecclesia::NullCache>(transport);
   }
 
-  ABSL_DEPRECATED(
-      "Use constructor that accepts CacheFactory and RedfishTransport instead")
-  QueryEngine(const QueryEngineConfiguration &config, const Clock *clock,
-              std::unique_ptr<RedfishInterface> intf);
-
   QueryEngine(const QueryEngineConfiguration &config,
               std::unique_ptr<RedfishTransport> transport,
               RedfishTransportCacheFactory cache_factory = CreateNullCache,
