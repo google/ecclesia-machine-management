@@ -75,3 +75,26 @@ cc_library(
         "@com_google_protobuf//:protobuf",
     ],
 )
+
+cc_library(
+    name = "for_each",
+    srcs = ["for_each.cc"],
+    hdrs = ["for_each.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "@com_google_absl//absl/functional:any_invocable",
+    ],
+)
+
+cc_test(
+    name = "for_each_test",
+    srcs = ["for_each_test.cc"],
+    deps = [
+        ":for_each",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
