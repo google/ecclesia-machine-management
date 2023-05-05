@@ -20,7 +20,6 @@
 #include <string>
 #include <utility>
 
-#include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/server_context.h"

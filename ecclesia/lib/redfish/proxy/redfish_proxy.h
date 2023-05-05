@@ -17,10 +17,6 @@
 #ifndef ECCLESIA_LIB_REDFISH_PROXY_REDFISH_PROXY_H_
 #define ECCLESIA_LIB_REDFISH_PROXY_REDFISH_PROXY_H_
 
-#include <string>
-#include <utility>
-
-#include "absl/log/log.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"

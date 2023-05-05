@@ -2,20 +2,6 @@ licenses(["notice"])
 
 cc_library(
     name = "redfish_proxy",
-    hdrs = ["redfish_proxy.h"],
-    visibility = ["//ecclesia:mmanager_frontend_users"],
-    deps = [
-        "//ecclesia/lib/redfish/proto:redfish_v1_cc_grpc_proto",
-        "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
-        "//ecclesia/lib/redfish/proto:redfish_v1_grpc_include",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/strings",
-    ],
-)
-
-cc_library(
-    name = "redfish_proxy_cc",
     srcs = ["redfish_proxy.cc"],
     hdrs = ["redfish_proxy.h"],
     visibility = ["//ecclesia:mmanager_frontend_users"],
@@ -24,7 +10,6 @@ cc_library(
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
         "//ecclesia/lib/redfish/proto:redfish_v1_grpc_include",
         "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/log",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -59,7 +44,6 @@ cc_test(
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_grpc_proto",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
-        "//ecclesia/lib/redfish/proxy:redfish_proxy_cc",
         "//ecclesia/lib/status:rpc",
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
@@ -101,7 +85,6 @@ cc_test(
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_grpc_proto",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
-        "//ecclesia/lib/redfish/proxy:redfish_proxy_cc",
         "//ecclesia/lib/status:rpc",
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
