@@ -23,6 +23,7 @@
 namespace ecclesia {
 
 enum class ResourceEntity : int {
+  // go/keep-sorted start
   kAccelerationFunction = 0,
   kAccelerationFunctionCollection,
   kAccountService,
@@ -43,6 +44,8 @@ enum class ResourceEntity : int {
   kBios,
   kBootOption,
   kBootOptionCollection,
+  kCXLLogicalDevice,
+  kCXLLogicalDeviceCollection,
   kCable,
   kCableCollection,
   kCertificate,
@@ -90,6 +93,9 @@ enum class ResourceEntity : int {
   kFanCollection,
   kGraphicsController,
   kGraphicsControllerCollection,
+  kHeater,
+  kHeaterCollection,
+  kHeaterMetrics,
   kHostInterface,
   kHostInterfaceCollection,
   kJob,
@@ -227,6 +233,7 @@ enum class ResourceEntity : int {
   kVolumeCollection,
   kZone,
   kZoneCollection,
+  // go/keep-sorted end
   kUndefined,
 };
 

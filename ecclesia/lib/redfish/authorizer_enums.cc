@@ -48,6 +48,8 @@ constexpr std::array<std::string_view,
         "Bios",
         "BootOption",
         "BootOptionCollection",
+        "CXLLogicalDevice",
+        "CXLLogicalDeviceCollection",
         "Cable",
         "CableCollection",
         "Certificate",
@@ -95,6 +97,9 @@ constexpr std::array<std::string_view,
         "FanCollection",
         "GraphicsController",
         "GraphicsControllerCollection",
+        "Heater",
+        "HeaterCollection",
+        "HeaterMetrics",
         "HostInterface",
         "HostInterfaceCollection",
         "Job",
@@ -256,12 +261,12 @@ std::string OperationToString(Operation operation) {
 }
 
 ResourceEntity StringToResourceEntity(std::string_view resource) {
-  auto it = std::lower_bound(kEntityNames.begin(),
-                             std::prev(kEntityNames.end()), resource);
-  if (it == std::prev(kEntityNames.end()) || *it != resource) {
+  auto it = std::lower_bound(kEntityNames.cbegin(),
+                             std::prev(kEntityNames.cend()), resource);
+  if (it == std::prev(kEntityNames.cend()) || *it != resource) {
     return ResourceEntity::kUndefined;
   }
-  return static_cast<ResourceEntity>(std::distance(kEntityNames.begin(), it));
+  return static_cast<ResourceEntity>(std::distance(kEntityNames.cbegin(), it));
 }
 
 Operation StringToOperation(std::string_view operation) {
