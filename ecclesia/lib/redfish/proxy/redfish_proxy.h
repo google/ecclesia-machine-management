@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_PROXY_REDFISH_PROXY_H_
 #define ECCLESIA_LIB_REDFISH_PROXY_REDFISH_PROXY_H_
 
+#include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
@@ -57,7 +58,10 @@ class RedfishV1GrpcProxy : public GrpcRedfishV1::Service {
   // This will be called with the server context on every proxy call. If this
   // returns false, then the RPC will be rejected with a "permission denied"
   // error. The default implementation just returns true.
-  virtual bool IsRpcAuthorized(grpc::ServerContext &context) { return true; }
+  virtual absl::Status IsRpcAuthorized(grpc::ServerContext &context) {
+    return absl::OkStatus();
+  }
+
   // Virtual function that subclasses should override to do proxy RPCs
   // implementation on different backend.
   virtual grpc::Status GetHandler(grpc::ClientContext *context,

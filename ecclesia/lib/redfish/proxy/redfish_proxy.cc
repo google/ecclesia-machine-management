@@ -28,9 +28,14 @@
 namespace ecclesia {
 namespace {
 
+using ::grpc::ClientContext;
+using ::grpc::ServerContext;
+using ::redfish::v1::Request;
+using ::redfish::v1::Response;
+
 // Forward metadata values from the client to the server.
-void ForwardMetadataFromServerContext(grpc::ServerContext &server_context,
-                                      grpc::ClientContext &client_context) {
+void ForwardMetadataFromServerContext(ServerContext &server_context,
+                                      ClientContext &client_context) {
   for (const auto &[key, value] : server_context.client_metadata()) {
     client_context.AddMetadata(std::string(key.data(), key.size()),
                                std::string(value.data(), value.size()));
@@ -41,62 +46,62 @@ void ForwardMetadataFromServerContext(grpc::ServerContext &server_context,
 
 // After authentication/authorization and forward the metadata from client to
 // the server, all proxy RPCs will be implemented with handlers.
-grpc::Status RedfishV1GrpcProxy::Get(grpc::ServerContext *context,
-                                     const redfish::v1::Request *request,
-                                     redfish::v1::Response *response) {
-  if (!IsRpcAuthorized(*context)) {
+grpc::Status RedfishV1GrpcProxy::Get(ServerContext *context,
+                                     const Request *request,
+                                     Response *response) {
+  if (IsRpcAuthorized(*context).code() != absl::StatusCode::kOk) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "User is not authorized to call this RPC");
   }
-  auto client_context = grpc::ClientContext::FromServerContext(*context);
+  auto client_context = ClientContext::FromServerContext(*context);
   ForwardMetadataFromServerContext(*context, *client_context);
   grpc::Status status = GetHandler(client_context.get(), request, response);
   return status;
 }
-grpc::Status RedfishV1GrpcProxy::Post(grpc::ServerContext *context,
-                                      const redfish::v1::Request *request,
-                                      redfish::v1::Response *response) {
-  if (!IsRpcAuthorized(*context)) {
+grpc::Status RedfishV1GrpcProxy::Post(ServerContext *context,
+                                      const Request *request,
+                                      Response *response) {
+  if (IsRpcAuthorized(*context).code() != absl::StatusCode::kOk) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "User is not authorized to call this RPC");
   }
-  auto client_context = grpc::ClientContext::FromServerContext(*context);
+  auto client_context = ClientContext::FromServerContext(*context);
   ForwardMetadataFromServerContext(*context, *client_context);
   grpc::Status status = PostHandler(client_context.get(), request, response);
   return status;
 }
-grpc::Status RedfishV1GrpcProxy::Put(grpc::ServerContext *context,
-                                     const redfish::v1::Request *request,
-                                     redfish::v1::Response *response) {
-  if (!IsRpcAuthorized(*context)) {
+grpc::Status RedfishV1GrpcProxy::Put(ServerContext *context,
+                                     const Request *request,
+                                     Response *response) {
+  if (IsRpcAuthorized(*context).code() != absl::StatusCode::kOk) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "User is not authorized to call this RPC");
   }
-  auto client_context = grpc::ClientContext::FromServerContext(*context);
+  auto client_context = ClientContext::FromServerContext(*context);
   ForwardMetadataFromServerContext(*context, *client_context);
   grpc::Status status = PutHandler(client_context.get(), request, response);
   return status;
 }
-grpc::Status RedfishV1GrpcProxy::Patch(grpc::ServerContext *context,
-                                       const redfish::v1::Request *request,
-                                       redfish::v1::Response *response) {
-  if (!IsRpcAuthorized(*context)) {
+grpc::Status RedfishV1GrpcProxy::Patch(ServerContext *context,
+                                       const Request *request,
+                                       Response *response) {
+  if (IsRpcAuthorized(*context).code() != absl::StatusCode::kOk) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "User is not authorized to call this RPC");
   }
-  auto client_context = grpc::ClientContext::FromServerContext(*context);
+  auto client_context = ClientContext::FromServerContext(*context);
   ForwardMetadataFromServerContext(*context, *client_context);
   grpc::Status status = PatchHandler(client_context.get(), request, response);
   return status;
 }
-grpc::Status RedfishV1GrpcProxy::Delete(grpc::ServerContext *context,
-                                        const redfish::v1::Request *request,
-                                        redfish::v1::Response *response) {
-  if (!IsRpcAuthorized(*context)) {
+grpc::Status RedfishV1GrpcProxy::Delete(ServerContext *context,
+                                        const Request *request,
+                                        Response *response) {
+  if (IsRpcAuthorized(*context) != absl::OkStatus()) {
     return grpc::Status(grpc::StatusCode::PERMISSION_DENIED,
                         "User is not authorized to call this RPC");
   }
-  auto client_context = grpc::ClientContext::FromServerContext(*context);
+  auto client_context = ClientContext::FromServerContext(*context);
   ForwardMetadataFromServerContext(*context, *client_context);
   grpc::Status status = DeleteHandler(client_context.get(), request, response);
   return status;
