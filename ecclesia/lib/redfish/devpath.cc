@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
@@ -43,6 +44,17 @@ std::optional<std::string> GetDevpathForUri(const NodeTopology &topology,
     return it->second.front()->local_devpath;
   }
   return std::nullopt;
+}
+
+absl::StatusOr<std::string> GetFirstUriForDevpath(const NodeTopology &topology,
+                                                  absl::string_view devpath) {
+  auto it = topology.devpath_to_node_map.find(devpath);
+  if (it == topology.devpath_to_node_map.end() || !it->second ||
+      it->second->associated_uris.empty()) {
+    return absl::NotFoundError(
+        absl::StrCat("Unable to find a uri for devpath ", devpath));
+  }
+  return it->second->associated_uris[0];
 }
 
 std::optional<std::string> GetDevpathForObjectAndNodeTopology(

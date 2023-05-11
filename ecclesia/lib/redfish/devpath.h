@@ -31,6 +31,11 @@ namespace ecclesia {
 std::optional<std::string> GetDevpathForUri(const NodeTopology &topology,
                                             absl::string_view uri);
 
+// Function to find a main uri which is the RedfishObj's uri that creates the
+// target devpath by searching through NodeTopology
+absl::StatusOr<std::string> GetFirstUriForDevpath(const NodeTopology &topology,
+                                                  absl::string_view devpath);
+
 // Attempts to get a devpath for a Redfish object, handling special cases like
 // Manager and Sensor resources that rely on different properties to resolve a
 // devpath.

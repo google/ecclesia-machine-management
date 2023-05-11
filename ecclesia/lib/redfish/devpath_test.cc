@@ -29,6 +29,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/testing/json_mockup.h"
+#include "ecclesia/lib/testing/status.h"
 
 namespace ecclesia {
 namespace {
@@ -65,6 +66,57 @@ TEST(GetDevpathForUri, DevpathUnavailable) {
 
   auto devpath = GetDevpathForUri(topology, "/redfish/v1/Chassis/not_here");
   EXPECT_FALSE(devpath.has_value());
+}
+
+TEST(GetDevpathForUri, GetUriFromDevpathSuccess) {
+  NodeTopology topology;
+  absl::string_view uri = "/redfish/v1/Chassis/chassis";
+  absl::string_view uri_extra = "/redfish/v1/Test";
+  absl::string_view test_devpath = "/phys/test";
+
+  auto node = std::make_unique<Node>();
+  node->local_devpath = std::string(test_devpath);
+  node->associated_uris.push_back(std::string(uri));
+  node->associated_uris.push_back(std::string(uri_extra));
+  topology.devpath_to_node_map[test_devpath] = node.get();
+
+  EXPECT_THAT(GetFirstUriForDevpath(topology, test_devpath), IsOkAndHolds(uri));
+}
+
+TEST(GetDevpathForUri, GetUriFromDevpathMissingDevpath) {
+  NodeTopology topology;
+  absl::string_view uri = "/redfish/v1/Chassis/chassis";
+  absl::string_view test_devpath = "/phys/test";
+
+  auto node = std::make_unique<Node>();
+  node->local_devpath = std::string(test_devpath);
+  node->associated_uris.push_back(std::string(uri));
+  topology.devpath_to_node_map[test_devpath] = node.get();
+
+  EXPECT_THAT(GetFirstUriForDevpath(topology, "/phys/no_exist"),
+              IsStatusNotFound());
+}
+
+TEST(GetDevpathForUri, GetUriFromDevpathNoNode) {
+  NodeTopology topology;
+  absl::string_view test_devpath = "/phys/test";
+
+  topology.devpath_to_node_map[test_devpath] = nullptr;
+  EXPECT_THAT(GetFirstUriForDevpath(topology, test_devpath),
+              IsStatusNotFound());
+}
+
+TEST(GetDevpathForUri, GetUriFromDevpathNoAssociatedUri) {
+  NodeTopology topology;
+  absl::string_view test_devpath = "/phys/test";
+
+  auto node = std::make_unique<Node>();
+  node->local_devpath = std::string(test_devpath);
+  topology.devpath_to_node_map[test_devpath] = node.get();
+  topology.nodes.push_back(std::move(node));
+
+  EXPECT_THAT(GetFirstUriForDevpath(topology, test_devpath),
+              IsStatusNotFound());
 }
 
 TEST(GetSensorDevpathFromNodeTopology, RelatedItemDevpath) {
