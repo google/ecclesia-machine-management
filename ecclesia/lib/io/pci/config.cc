@@ -17,10 +17,8 @@
 #include "ecclesia/lib/io/pci/config.h"
 
 #include <cstdint>
-#include <optional>
-#include <utility>
+#include <string>
 
-#include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -63,18 +61,21 @@ PcieLinkSpeed NumToPcieLinkSpeed(double speed_gts) {
 }
 
 PcieLinkSpeed PcieGenToLinkSpeed(absl::string_view gen) {
-  static const absl::flat_hash_map<absl::string_view, PcieLinkSpeed>
-      kGenToSpeedMap = {{"Gen1", PcieLinkSpeed::kGen1Speed2500MT},
-                        {"Gen2", PcieLinkSpeed::kGen2Speed5GT},
-                        {"Gen3", PcieLinkSpeed::kGen3Speed8GT},
-                        {"Gen4", PcieLinkSpeed::kGen4Speed16GT},
-                        {"Gen5", PcieLinkSpeed::kGen5Speed32GT}};
-
-  auto itr = kGenToSpeedMap.find(gen);
-  if (itr != kGenToSpeedMap.end()) {
-    return itr->second;
+  if (gen == "Gen1") {
+    return PcieLinkSpeed::kGen1Speed2500MT;
   }
-
+  if (gen == "Gen2") {
+    return PcieLinkSpeed::kGen2Speed5GT;
+  }
+  if (gen == "Gen3") {
+    return PcieLinkSpeed::kGen3Speed8GT;
+  }
+  if (gen == "Gen4") {
+    return PcieLinkSpeed::kGen4Speed16GT;
+  }
+  if (gen == "Gen5") {
+    return PcieLinkSpeed::kGen5Speed32GT;
+  }
   return PcieLinkSpeed::kUnknown;
 }
 
