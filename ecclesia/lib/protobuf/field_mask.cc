@@ -113,7 +113,7 @@ absl::StatusOr<std::string> CamelCaseToSnakeCase(std::string_view input,
 
   for (size_t i = 0; i < input.size(); ++i) {
     char c = input[i];
-    if (!isalpha(c)) {
+    if (!isalpha(c) && !isdigit(c)) {
       return absl::InternalError("Contains non-alphabet character");
     }
     if (std::isupper(c) && i != 0) {
