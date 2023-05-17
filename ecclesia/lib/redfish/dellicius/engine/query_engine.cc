@@ -127,6 +127,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     return ExecuteQuery(query_ids, &tracker);
   }
 
+  const NodeTopology &GetTopology() override { return topology_; }
+
  private:
   // Data normalizer to inject in QueryPlanner for normalizing redfish
   // response per a given property specification in dellicius subquery.

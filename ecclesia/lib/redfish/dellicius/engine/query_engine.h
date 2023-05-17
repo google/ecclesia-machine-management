@@ -27,6 +27,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -57,12 +58,13 @@ class QueryEngine final {
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
         absl::Span<const absl::string_view> query_ids,
         QueryTracker &tracker) = 0;
+    virtual const NodeTopology &GetTopology() = 0;
   };
 
   // Default RedfishTransportCacheFactory that creates a NullCache (no caching).
-  static std::unique_ptr<RedfishCachedGetterInterface>
-      CreateNullCache(RedfishTransport* transport) {
-        return std::make_unique<ecclesia::NullCache>(transport);
+  static std::unique_ptr<RedfishCachedGetterInterface> CreateNullCache(
+      RedfishTransport *transport) {
+    return std::make_unique<ecclesia::NullCache>(transport);
   }
 
   QueryEngine(const QueryEngineConfiguration &config,
@@ -82,6 +84,7 @@ class QueryEngine final {
       absl::Span<const absl::string_view> query_ids, QueryTracker &tracker) {
     return engine_impl_->ExecuteQuery(query_ids, tracker);
   }
+  const NodeTopology &GetTopology() { return engine_impl_->GetTopology(); }
 
  private:
   std::unique_ptr<QueryEngineIntf> engine_impl_;
