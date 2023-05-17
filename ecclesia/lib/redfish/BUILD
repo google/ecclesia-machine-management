@@ -553,6 +553,40 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "host_filter",
+    srcs = ["host_filter.cc"],
+    hdrs = ["host_filter.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":interface",
+        ":sysmodel",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "host_filter_test",
+    srcs = ["host_filter_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/topology_v2_multi_host_testing:mockup.shar",
+        "//ecclesia/redfish_mockups/topology_v2_testing:mockup.shar",
+    ],
+    deps = [
+        ":host_filter",
+        ":interface",
+        ":sysmodel",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 proto_library(
     name = "to_proto_test_proto",
     srcs = ["to_proto_test.proto"],

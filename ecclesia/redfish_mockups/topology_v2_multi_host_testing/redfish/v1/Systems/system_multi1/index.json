@@ -1,8 +1,8 @@
 {
   "@odata.id": "/redfish/v1/Systems/system_multi1",
   "@odata.type": "#ComputerSystem.v1_13_0.ComputerSystem",
-  "Id": "system",
-  "Name": "system",
+  "Id": "system1",
+  "Name": "system1",
   "Processors": {
     "@odata.id": "/redfish/v1/Systems/system_multi1/Processors"
   }, 
