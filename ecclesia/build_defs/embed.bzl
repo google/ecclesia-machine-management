@@ -67,7 +67,7 @@ def cc_data_library(
                   flatten_arg,
                   name,
               ),
-        exec_tools = [cc_embed_label],
+        tools = [cc_embed_label],
     )
 
     # Encapsulate the code an header files into a cc_library.
