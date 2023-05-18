@@ -1,0 +1,34 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
+# proto-message: DelliciusQueryResult
+
+query_id: "GoogleServiceRoot"
+subquery_output_by_id {
+  key: "GetAllRots"
+  value {
+    data_sets {
+      devpath: "/phys:device:hoth"
+      properties {
+        name: "Name"
+        string_value: "Hoth"
+      }
+      properties {
+        name: "State"
+        string_value: "Enabled"
+      }
+      properties {
+        name: "LocationType"
+        string_value: "Embedded"
+      }
+      properties {
+        name: "ServiceLabel"
+        string_value: "Hoth"
+      }
+    }
+  }
+}
+start_timestamp {
+  seconds: 10
+}
+end_timestamp {
+  seconds: 10
+}

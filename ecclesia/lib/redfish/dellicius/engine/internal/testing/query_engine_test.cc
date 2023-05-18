@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 
+#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -47,6 +48,8 @@ using ::testing::UnorderedPointwise;
 constexpr absl::string_view kQuerySamplesLocation =
     "lib/redfish/dellicius/query/samples";
 constexpr absl::string_view kIndusMockup = "indus_hmb_shim/mockup.shar";
+constexpr absl::string_view kComponentIntegrityMockupPath =
+    "features/component_integrity/mockup.shar";
 constexpr absl::Time clock_time = absl::FromUnixSeconds(10);
 
 struct RedPathToQueryParams {
@@ -270,6 +273,25 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
   }
   EXPECT_TRUE(traced_processors);
   EXPECT_TRUE(traced_systems);
+}
+
+TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
+  std::string query_out_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/service_root_google_out.textproto"));
+
+  std::vector<DelliciusQueryResult> response_entries =
+      FakeQueryEngineEnvironment(
+          {.flags{.enable_devpath_extension = true},
+           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
+          kComponentIntegrityMockupPath, clock_time)
+          .GetEngine()
+          .ExecuteQuery({"GoogleServiceRoot"},
+                        QueryEngine::ServiceRootType::kGoogle);
+
+  DelliciusQueryResult intent_query_out =
+      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
+  EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
+                                    EqualsProto(intent_query_out))));
 }
 
 }  // namespace

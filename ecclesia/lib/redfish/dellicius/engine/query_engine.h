@@ -49,13 +49,16 @@ namespace ecclesia {
 //       query_engine.ExecuteQuery({"SensorCollector"});
 class QueryEngine final {
  public:
+  enum class ServiceRootType { kRedfish, kGoogle };
   // Interface for private implementation of Query Engine using PImpl Idiom
   class QueryEngineIntf {
    public:
     virtual ~QueryEngineIntf() = default;
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
+        ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids) = 0;
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
+        ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         QueryTracker &tracker) = 0;
     virtual const NodeTopology &GetTopology() = 0;
@@ -77,12 +80,14 @@ class QueryEngine final {
   QueryEngine &operator=(QueryEngine &&other) = default;
 
   std::vector<DelliciusQueryResult> ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids) {
-    return engine_impl_->ExecuteQuery(query_ids);
+      absl::Span<const absl::string_view> query_ids,
+      ServiceRootType service_root_uri = ServiceRootType::kRedfish) {
+    return engine_impl_->ExecuteQuery(service_root_uri, query_ids);
   }
   std::vector<DelliciusQueryResult> ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids, QueryTracker &tracker) {
-    return engine_impl_->ExecuteQuery(query_ids, tracker);
+      absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
+      ServiceRootType service_root_uri = ServiceRootType::kRedfish) {
+    return engine_impl_->ExecuteQuery(service_root_uri, query_ids, tracker);
   }
   const NodeTopology &GetTopology() { return engine_impl_->GetTopology(); }
 

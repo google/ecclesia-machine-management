@@ -60,6 +60,7 @@ cc_test(
     srcs = ["query_engine_test.cc"],
     data = [
         "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_out",
+        "//ecclesia/redfish_mockups/features/component_integrity:mockup.shar",
         "//ecclesia/redfish_mockups/indus_hmb_shim:mockup.shar",
     ],
     deps = [

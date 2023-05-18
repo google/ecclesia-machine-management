@@ -21,7 +21,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/base/attributes.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
@@ -95,6 +94,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   }
 
   std::vector<DelliciusQueryResult> ExecuteQuery(
+      QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids, QueryTracker *tracker) {
     std::vector<DelliciusQueryResult> response_entries;
     for (const absl::string_view query_id : query_ids) {
@@ -104,8 +104,15 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
         continue;
       }
 
-      absl::StatusOr<DelliciusQueryResult> result_single =
-          it->second.Run(intf_->GetRoot(), *clock_, tracker);
+      absl::StatusOr<DelliciusQueryResult> result_single;
+      if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
+        result_single =
+            it->second.Run(intf_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
+                           *clock_, tracker);
+      } else {
+        result_single = it->second.Run(intf_->GetRoot(), *clock_, tracker);
+      }
+
       if (!result_single.ok()) {
         LOG(ERROR) << "Query Failed for id: " << query_id
                    << " Reason: " << result_single.status();
@@ -117,14 +124,16 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   }
 
   std::vector<DelliciusQueryResult> ExecuteQuery(
+      QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids) override {
-    return ExecuteQuery(query_ids, nullptr);
+    return ExecuteQuery(service_root_uri, query_ids, nullptr);
   }
 
   std::vector<DelliciusQueryResult> ExecuteQuery(
+      QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
       QueryTracker &tracker) override {
-    return ExecuteQuery(query_ids, &tracker);
+    return ExecuteQuery(service_root_uri, query_ids, &tracker);
   }
 
   const NodeTopology &GetTopology() override { return topology_; }
