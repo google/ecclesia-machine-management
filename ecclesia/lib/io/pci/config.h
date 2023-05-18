@@ -49,6 +49,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <type_traits>
 
 #include "absl/status/status.h"
@@ -57,6 +58,7 @@
 #include "ecclesia/lib/io/pci/location.h"
 #include "ecclesia/lib/io/pci/region.h"
 #include "ecclesia/lib/io/pci/signature.h"
+#include "ecclesia/lib/status/macros.h"
 
 namespace ecclesia {
 
@@ -128,13 +130,11 @@ class PciCapability {
   // and return an instance if it does. Otherwise returns a not-OK status.
   template <typename CapabilitySubtype>
   absl::StatusOr<CapabilitySubtype> GetIf() const {
-    auto maybe_capid = CapabilityId();
-    if (!maybe_capid.ok()) return maybe_capid.status();
-    if (*maybe_capid == CapabilitySubtype::kCapabilityId) {
+    ECCLESIA_ASSIGN_OR_RETURN(uint8_t cap_id, CapabilityId());
+    if (cap_id == CapabilitySubtype::kCapabilityId) {
       return CapabilitySubtype(*this);
-    } else {
-      return absl::NotFoundError("capability is not this type");
     }
+    return absl::NotFoundError("Capability is not the requested type.");
   }
 
  protected:
@@ -176,13 +176,11 @@ class PciSubsystemCapability : public PciCapability {
   static constexpr uint8_t kSsvidOffset = 0x04;
   static constexpr uint8_t kSsidOffset = 0x06;
 
-  // Read the subsystem signature.
-  absl::StatusOr<PciSubsystemSignature> SubsystemSignature() const;
-
- private:
-  friend class PciCapability;
   explicit PciSubsystemCapability(const PciCapability &base)
       : PciCapability(base) {}
+
+  // Read the subsystem signature.
+  absl::StatusOr<PciSubsystemSignature> SubsystemSignature() const;
 };
 static_assert(std::is_trivially_destructible_v<PciSubsystemCapability>);
 
@@ -214,6 +212,9 @@ class PciExpressCapability : public PciCapability {
   static constexpr uint8_t kSlotCtrl2Offset = 0x38;
   static constexpr uint8_t kSlotStatus2Offset = 0x3a;
 
+  explicit PciExpressCapability(const PciCapability &base)
+      : PciCapability(base) {}
+
   // Link Capabilities Register info.
 
   struct LinkCapabilities {
@@ -232,17 +233,12 @@ class PciExpressCapability : public PciCapability {
     bool dll_active;
   };
   absl::StatusOr<LinkStatus> ReadLinkStatus() const;
-
- private:
-  friend class PciCapability;
-  explicit PciExpressCapability(const PciCapability &base)
-      : PciCapability(base) {}
 };
 static_assert(std::is_trivially_destructible_v<PciExpressCapability>);
 
 // Provides an iterator implementation that allows capabilities to be iterated
 // over using standard C++ algorithms. The actual value stored in the iterator
-// is a copy of the capabity object itself.
+// is a copy of the capability object itself.
 //
 // When the iterator is default-constructed, it will point at a capability
 // referencing a null region. This default-constructed iterator is also used as
@@ -281,9 +277,9 @@ class PciCapabilityIterator {
   // Incrementing the iterator replaces PciCapability with NextCapability. If
   // getting the next capability fails then we become the default (end) value.
   PciCapabilityIterator &operator++() {
-    auto maybe_next = capability_.NextCapability();
-    if (maybe_next.ok()) {
-      capability_ = *maybe_next;
+    absl::StatusOr<PciCapability> next_cap = capability_.NextCapability();
+    if (next_cap.ok()) {
+      capability_ = *next_cap;
     } else {
       *this = PciCapabilityIterator();
     }
@@ -344,6 +340,8 @@ class PciConfigSpace {
   // Functions to look up the base and subsystem signatures.
   absl::StatusOr<PciBaseSignature> BaseSignature() const;
   absl::StatusOr<PciSubsystemSignature> SubsystemSignature() const;
+  absl::StatusOr<PciSubsystemSignature> SubsystemSignature(
+      uint8_t header_type) const;
 
   // Read the 24-bit class code.
   absl::StatusOr<uint32_t> ClassCode() const;
@@ -362,13 +360,12 @@ class PciConfigSpace {
   // times in an if-else block.
   template <typename ConfgSpaceSubtype>
   absl::StatusOr<ConfgSpaceSubtype> GetIf() const {
-    auto maybe_header_type = HeaderType();
-    if (!maybe_header_type.ok()) return maybe_header_type.status();
-    if (*maybe_header_type == ConfgSpaceSubtype::kHeaderType) {
+    absl::StatusOr<uint8_t> header_type = HeaderType();
+    if (!header_type.ok()) return header_type.status();
+    if (*header_type == ConfgSpaceSubtype::kHeaderType) {
       return ConfgSpaceSubtype(*this);
-    } else {
-      return absl::NotFoundError("config space does not match this type");
     }
+    return absl::NotFoundError("config space does not match this type");
   }
 
   // Helper template that takes two functions, one that handles a type 0 header
@@ -379,6 +376,10 @@ class PciConfigSpace {
   // parameter. The two functions should the return the same type that the
   // template does, or something convertible to it, and the return value will
   // be forwarded back to the caller.
+  template <typename T, typename T0Func, typename T1Func>
+  absl::StatusOr<T> WithSpecificType(T0Func t0_func, T1Func t1_func,
+                                     uint8_t header_type) const;
+
   template <typename T, typename T0Func, typename T1Func>
   absl::StatusOr<T> WithSpecificType(T0Func t0_func, T1Func t1_func) const;
 
@@ -451,10 +452,11 @@ class PciType1ConfigSpace : public PciConfigSpace {
   absl::StatusOr<PciBusNum> SecondaryBusNum() const;
   absl::StatusOr<PciBusNum> SubordinateBusNum() const;
 
- private:
-  friend class PciConfigSpace;
   explicit PciType1ConfigSpace(const PciConfigSpace &base)
       : PciConfigSpace(base) {}
+
+ private:
+  friend class PciConfigSpace;
 
   // Type-specific implementations of generic functions.
   absl::StatusOr<PciSubsystemSignature> SubsystemSignatureImpl() const;
@@ -466,10 +468,8 @@ static_assert(std::is_trivially_destructible_v<PciType1ConfigSpace>);
 // defined after PciConfigSpace.
 template <typename T, typename T0Func, typename T1Func>
 inline absl::StatusOr<T> PciConfigSpace::WithSpecificType(
-    T0Func t0_func, T1Func t1_func) const {
-  auto maybe_header_type = HeaderType();
-  if (!maybe_header_type.ok()) return maybe_header_type.status();
-  switch (*maybe_header_type) {
+    T0Func t0_func, T1Func t1_func, uint8_t header_type) const {
+  switch (header_type) {
     case PciType0ConfigSpace::kHeaderType:
       return t0_func(PciType0ConfigSpace(*this));
     case PciType1ConfigSpace::kHeaderType:

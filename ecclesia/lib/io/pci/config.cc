@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -216,11 +217,19 @@ PciCapabilityIterator PciConfigSpace::Capabilities() const {
   return PciCapabilityIterator(PciCapability(region_, ptr));
 }
 
-absl::StatusOr<PciSubsystemSignature> PciConfigSpace::SubsystemSignature()
-    const {
+absl::StatusOr<PciSubsystemSignature> PciConfigSpace::SubsystemSignature(
+    uint8_t header_type) const {
   return WithSpecificType<PciSubsystemSignature>(
       [](PciType0ConfigSpace type0) { return type0.SubsystemSignatureImpl(); },
-      [](PciType1ConfigSpace type1) { return type1.SubsystemSignatureImpl(); });
+      [](PciType1ConfigSpace type1) { return type1.SubsystemSignatureImpl(); },
+      header_type);
+}
+
+absl::StatusOr<PciSubsystemSignature> PciConfigSpace::SubsystemSignature()
+    const {
+  absl::StatusOr<uint8_t> header_type = HeaderType();
+  if (!header_type.ok()) return header_type.status();
+  return SubsystemSignature(*header_type);
 }
 
 absl::StatusOr<PciSubsystemSignature>
