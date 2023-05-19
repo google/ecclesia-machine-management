@@ -43,7 +43,6 @@ package_group(
         "//ecclesia/lib/redfish/...",
         "//ecclesia/lib/root_of_trust/...",
         "//ecclesia/mmanager/...",
-        "//ecclesia/node/...",
     ],
 )
 
