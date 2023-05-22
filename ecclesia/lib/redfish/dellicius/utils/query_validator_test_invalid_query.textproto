@@ -1,0 +1,12 @@
+# proto-file: path/to/invalid.proto
+# proto-message: InvalidMessage
+
+query_id: "StorageQuery"
+subquery {
+  subquery: "Storage"
+  path: "/Systems[*]/Storage[*]"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "Id" type: STRING }
+  properties { property: "Name" type: STRING }
+  properties { name: "DriveCount" property: "Drives@odata\\.count" type: DOUBLE }
+}

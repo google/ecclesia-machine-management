@@ -61,6 +61,23 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "query_validator_test",
+    srcs = ["query_validator_test.cc"],
+    data = [
+        "query_validator_test_invalid_query.textproto",
+        "query_validator_test_valid_query.textproto",
+    ],
+    deps = [
+        ":query_validator",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/testing:status",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "parsers",
     srcs = ["parsers.cc"],
@@ -96,5 +113,26 @@ cc_test(
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "query_validator",
+    srcs = ["query_validator.cc"],
+    hdrs = ["query_validator.h"],
+    deps = [
+        "//ecclesia/lib/apifs",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/cleanup",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/functional:any_invocable",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+        "@com_google_protobuf//:protobuf",
     ],
 )
