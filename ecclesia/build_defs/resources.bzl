@@ -1,8 +1,11 @@
 """Helper macro for defining resource protos"""
 
+load("//devtools/build_cleaner/skylark:build_defs.bzl", "register_extension_info")
+load("//tools/build_defs/proto/cpp:cc_proto_library.bzl", "cc_proto_library")
+
 _DEFAULT_VISIBILITY = ["//ecclesia:mmanager_users"]
 
-def resource_proto(name, srcs, deps = None):
+def resource_proto(resource, name, srcs, deps = None):
     """Generates a standardized set of proto libraries for a given MManager Resource.
 
     <name>_proto    - proto_library
@@ -26,6 +29,7 @@ def resource_proto(name, srcs, deps = None):
     native.proto_library(
         name = name + "_proto",
         srcs = srcs,
+        exports = ["//platforms/ecclesia/mmanager/service/resource/" + resource + ":" + name + "_proto"],
         deps = deps,
         visibility = _DEFAULT_VISIBILITY,
     )
@@ -35,3 +39,21 @@ def resource_proto(name, srcs, deps = None):
         deps = [":" + name + "_proto"],
         visibility = _DEFAULT_VISIBILITY,
     )
+
+    native.go_proto_library(
+        name = name + "_go_proto",
+        deps = [":" + name + "_proto"],
+        visibility = _DEFAULT_VISIBILITY,
+    )
+
+    native.py_proto_library(
+        name = name + "_py_pb2",
+        api_version = 2,
+        deps = [":" + name + "_proto"],
+        visibility = _DEFAULT_VISIBILITY,
+    )
+
+register_extension_info(
+    extension = resource_proto,
+    label_regex_for_dep = "{extension_name}_proto",
+)

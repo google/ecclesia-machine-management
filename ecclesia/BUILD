@@ -54,10 +54,7 @@ package_group(
 # accessing the service metadata.
 package_group(
     name = "mmanager_metadata_users",
-    packages = [
-        "//ecclesia/mmanager/middles/aggregator/...",
-        "//ecclesia/mmanager/service/...",
-    ],
+    packages = ["//ecclesia/mmanager/middles/aggregator/..."],
 )
 
 # Machine manager shared libraries
@@ -126,10 +123,7 @@ package_group(
 # by code, wherever possible.
 package_group(
     name = "mmanager_resource_library_users",
-    packages = [
-        "//ecclesia/mmanager/mock/...",
-        "//ecclesia/mmanager/service/...",
-    ],
+    packages = ["//ecclesia/mmanager/mock/..."],
 )
 
 # Jinja2 users.
