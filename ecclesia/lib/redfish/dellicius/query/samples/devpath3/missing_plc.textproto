@@ -1,0 +1,106 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "GetResourcesWithNoPartLocationContext"
+######### Query Chassis Subtree #########
+subquery {
+  subquery_id: "GetAllChassis"
+  redpath: "/Chassis[*]"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "Name" type: STRING }
+  properties { property: "Model" type: STRING }
+  properties { property: "@odata\\.type" type: STRING }
+  properties { name: "ContainedBy" property: "Links.ContainedBy.@odata\\.id" type: STRING }
+  properties { name: "State" property: "Status.State" type: STRING }
+  properties { name: "LocationType" property: "Location.PartLocation.LocationType" type: STRING }
+  properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+  properties { name: "PartLocationContext" property: "Location.PartLocationContext" type: STRING }
+}
+## Array Links ##
+subquery {
+  subquery_id: "GetAllProcessorsLinkedWithAllChassis"
+  root_subquery_ids: "GetAllChassis"
+  redpath: "/Links/Processors[!Location.PartLocationContext]"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "Name" type: STRING }
+  properties { property: "Model" type: STRING }
+  properties { property: "@odata\\.type" type: STRING }
+  properties { property: "MemoryDeviceType" type: STRING }
+  properties { name: "State" property: "Status.State" type: STRING }
+  properties { name: "LocationType" property: "Location.PartLocation.LocationType" type: STRING }
+  properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+}
+subquery {
+  subquery_id: "GetAllStorageControllersFromAllStorage"
+  root_subquery_ids: "GetAllChassis"
+  redpath: "/Links/Storage[*]/StorageControllers[!Location.PartLocationContext]"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "Name" type: STRING }
+  properties { property: "Model" type: STRING }
+  properties { property: "@odata\\.type" type: STRING }
+  properties { name: "State" property: "Status.State" type: STRING }
+  properties { name: "LocationType" property: "Location.PartLocation.LocationType" type: STRING }
+  properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+}
+## First Class Attributes ##
+subquery {
+  subquery_id: "GetAllDrives"
+  root_subquery_ids: "GetAllChassis"
+  redpath: "/Drives[!PhysicalLocation.PartLocationContext]"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "Name" type: STRING }
+  properties { property: "Model" type: STRING }
+  properties { property: "@odata\\.type" type: STRING }
+  properties { name: "State" property: "Status.State" type: STRING }
+  properties { name: "LocationType" property: "PhysicalLocation.PartLocation.LocationType" type: STRING }
+  properties { name: "ServiceLabel" property: "PhysicalLocation.PartLocation.ServiceLabel" type: STRING }
+}
+subquery {
+  subquery_id: "GetAllMemory"
+  root_subquery_ids: "GetAllChassis"
+  redpath: "/Memory[!Location.PartLocationContext]"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "Name" type: STRING }
+  properties { property: "Model" type: STRING }
+  properties { property: "@odata\\.type" type: STRING }
+  properties { property: "MemoryDeviceType" type: STRING }
+  properties { name: "State" property: "Status.State" type: STRING }
+  properties { name: "LocationType" property: "Location.PartLocation.LocationType" type: STRING }
+  properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+}
+subquery {
+  subquery_id: "GetAllFansFromAllChassis"
+  root_subquery_ids: "GetAllChassis"
+  redpath: "/ThermalSubsystem/Fans[!Location.PartLocationContext]"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "Name" type: STRING }
+  properties { property: "Model" type: STRING }
+  properties { property: "@odata\\.type" type: STRING }
+  properties { name: "State" property: "Status.State" type: STRING }
+  properties { name: "LocationType" property: "Location.PartLocation.LocationType" type: STRING }
+  properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+}
+subquery {
+  subquery_id: "GetAllAssemblies"
+  root_subquery_ids: "GetAllChassis"
+  redpath: "/Assembly/Assemblies[!Location.PartLocationContext]"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "Name" type: STRING }
+  properties { property: "Model" type: STRING }
+  properties { property: "@odata\\.type" type: STRING }
+  properties { name: "State" property: "Status.State" type: STRING }
+  properties { name: "LocationType" property: "Location.PartLocation.LocationType" type: STRING }
+  properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+}
+######### End of Chassis Subtree #########
+subquery {
+  subquery_id: "GetAllCables"
+  redpath: "/Cables[!Location.PartLocationContext]"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "Name" type: STRING }
+  properties { property: "Model" type: STRING }
+  properties { property: "@odata\\.type" type: STRING }
+  properties { name: "State" property: "Status.State" type: STRING }
+  properties { name: "LocationType" property: "Location.PartLocation.LocationType" type: STRING }
+  properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+}
