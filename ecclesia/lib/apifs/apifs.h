@@ -66,7 +66,7 @@ class ApifsDirectory {
   bool Exists() const;
 
   // Indicates if the given path exists.
-  bool Exists(std::string path) const;
+  bool Exists(absl::string_view path) const;
 
   // Retreive the stat information for a given path.
   absl::StatusOr<struct stat> Stat(std::string path) const;

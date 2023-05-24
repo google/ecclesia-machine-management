@@ -32,6 +32,8 @@
 #include "absl/cleanup/cleanup.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/match.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
@@ -76,9 +78,8 @@ ApifsDirectory::ApifsDirectory(const ApifsDirectory &directory,
 
 bool ApifsDirectory::Exists() const { return PathExists(dir_path_); }
 
-bool ApifsDirectory::Exists(std::string path) const {
-  ApifsDirectory d(*this, std::move(path));
-  return d.Exists();
+bool ApifsDirectory::Exists(absl::string_view path) const {
+  return PathExists(JoinFilePaths(this->dir_path_, path));
 }
 
 absl::StatusOr<struct stat> ApifsDirectory::Stat(std::string path) const {
