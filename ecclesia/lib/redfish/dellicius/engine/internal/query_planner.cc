@@ -232,7 +232,9 @@ bool PredicateFilterByNodeName(const RedfishObject &redfish_object,
 
 bool ApplyPredicateRule(const RedfishObject &redfish_object, size_t node_index,
                         size_t node_set_size, const RedPathIterator &iter) {
-  std::string_view predicate = iter->second;
+  absl::string_view predicate = iter->second;
+  if (predicate.empty()) return false;
+
   absl::string_view logical_operation = kLogicalOperatorAnd;
   bool is_filter_success = true;
   for (absl::string_view expr : absl::StrSplit(predicate, ' ')) {
@@ -266,8 +268,8 @@ bool ApplyPredicateRule(const RedfishObject &redfish_object, size_t node_index,
         // If '[Index]' predicate expression, check if current node at given
         // index
         (absl::SimpleAtoi(expr, &num) && num == node_index) ||
-        // If '[*]' predicate expression or empty predicate, no filter required.
-        (expr.empty() || expr == kPredicateSelectAll)) {
+        // If '[*]' predicate expression, no filter required.
+        (expr == kPredicateSelectAll)) {
       single_predicate_result = true;
     } else if (std::any_of(kRelationsOperators.begin(),
                            kRelationsOperators.end(), [&](const char *op) {
@@ -536,6 +538,19 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
   return redpath_ctx_unresolved;
 }
 
+// Returns a collection of RedPathContext objects that do not have a predicate
+// expression in their step expression.
+std::vector<RedPathContext> FilterRedPathWithNoPredicate(
+    const std::vector<RedPathContext> &redpath_ctx_multiple) {
+  std::vector<RedPathContext> redpath_ctx_no_predicate;
+  for (const auto &redpath_ctx : redpath_ctx_multiple) {
+    if (redpath_ctx.redpath_steps_iterator->second.empty()) {
+      redpath_ctx_no_predicate.push_back(redpath_ctx);
+    }
+  }
+  return redpath_ctx_no_predicate;
+}
+
 using NodeNameToRedPathContexts =
     absl::flat_hash_map<std::string, std::vector<RedPathContext>>;
 
@@ -644,6 +659,28 @@ void ExecuteRedPathStepFromEachSubquery(
       continue;
     }
 
+    // Handle case where RedPath contexts have no predicate expression to
+    // execute in their next step expression.
+    std::vector<RedPathContext> redpath_ctx_no_predicate =
+        FilterRedPathWithNoPredicate(redpath_ctx_multiple);
+    if (!redpath_ctx_no_predicate.empty()) {
+      std::unique_ptr<RedfishObject> node_as_object =
+          node_set_as_variant.AsObject();
+      if (!node_as_object) continue;
+      std::vector<RedPathContext> redpath_ctx_filtered =
+          PopulateResultOrContinueQuery(*node_as_object,
+                                        redpath_ctx_no_predicate, result);
+      ContextNode new_context_node{
+          .redfish_object = std::move(node_as_object),
+          .redpath_ctx_multiple = std::move(redpath_ctx_filtered),
+          .last_executed_redpath = redpath_to_execute};
+      context_nodes.push_back(std::move(new_context_node));
+    }
+
+    if (redpath_ctx_no_predicate.size() == redpath_ctx_multiple.size()) {
+      continue;
+    }
+
     // Initialize count to 1 since we know there is atleast one Redfish node.
     // This node count could be more than 1 if we are dealing with Redfish
     // collection.
@@ -654,14 +691,14 @@ void ExecuteRedPathStepFromEachSubquery(
         redpath_to_query_params,
         absl::StrCat(redpath_to_execute, "[", kPredicateSelectAll, "]"));
 
-    std::unique_ptr<RedfishIterable> node_as_iterable;
-
-    if (node_as_iterable = node_set_as_variant.AsIterable(
+    std::unique_ptr<RedfishIterable> node_as_iterable =
+        node_set_as_variant.AsIterable(
             RedfishVariant::IterableMode::kAllowExpand,
             redpath_params.freshness);
-        !node_as_iterable) {
-      // We now know that the Redfish node is not a collection/array. Lets
-      // access it as a singleton RedfishObject.
+
+    if (node_as_iterable == nullptr) {
+      // We now know that the Redfish node is not a collection/array.
+      // We will access the redfish node as a singleton RedfishObject.
       std::unique_ptr<RedfishObject> node_as_object =
           node_set_as_variant.AsObject();
       if (!node_as_object) continue;

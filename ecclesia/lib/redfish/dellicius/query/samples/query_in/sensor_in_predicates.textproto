@@ -125,3 +125,10 @@ subquery {
   properties { property: "@odata\\.id" type: STRING }
   properties { property: "@odata\\.type" type: STRING }
 }
+# Returns Sensor '@odata.id"' and '@odata.count"' value from Sensors collection
+subquery {
+  subquery_id: "PredicateAbsentForSensorCollection"
+  redpath: "/Chassis[*]/Sensors"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "Members@odata\\.count" type: INT64 }
+}

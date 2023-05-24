@@ -687,6 +687,21 @@ subquery_output_by_id {
     }
   }
 }
+subquery_output_by_id {
+  key: "PredicateAbsentForSensorCollection"
+  value {
+    data_sets {
+      properties {
+        name: "@odata.id"
+        string_value: "/redfish/v1/Chassis/chassis/Sensors"
+      }
+      properties {
+        name: "Members@odata.count"
+        int64_value: 14
+      }
+    }
+  }
+}
 start_timestamp {
   seconds: 10
 }
