@@ -201,6 +201,9 @@ inline constexpr char kProtocolFeaturesSupported[] =
     "ProtocolFeaturesSupported";
 inline constexpr char kExpandQuery[] = "ExpandQuery";
 
+inline constexpr char kRfPropertyTaskPayload[] = "Payload";
+inline constexpr char kRfPropertyTaskHttpHeaders[] = "HttpHeaders";
+
 inline constexpr char kRfAnnotationRedfishSettings[] = "@Redfish.Settings";
 
 DEFINE_REDFISH_RESOURCE(ResourceCertificate, "Certificate");
@@ -451,7 +454,25 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyTcgOpalAdditionalDataStoreRawData,
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyBareMetal, std::string, "BareMetal");
 DEFINE_REDFISH_PROPERTY(OemPropertyRootOfTrust, std::string, "RootOfTrust");
 
-// Redfish agent expand support capabilites
+// Redfish Task properties.
+DEFINE_REDFISH_PROPERTY(PropertyTaskStatus, std::string, "TaskStatus");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStatusOk, std::string, "Ok");
+DEFINE_REDFISH_PROPERTY(PropertyTaskState, std::string, "TaskState");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStateNew, std::string, "New");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStateStarting, std::string, "Starting");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStateRunning, std::string, "Running");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStateSuspended, std::string, "Suspended");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStateInterruped, std::string,
+                        "Interrupted");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStatePending, std::string, "Pending");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStateStopping, std::string, "Stopping");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStateCompleted, std::string, "Completed");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStateException, std::string, "Exception");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStateService, std::string, "Service");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStateCancelling, std::string, "Cancelling");
+DEFINE_REDFISH_PROPERTY(PropertyTaskStateCancelled, std::string, "Cancelled");
+
+// Redfish agent expand support capabilities
 DEFINE_REDFISH_PROPERTY(ExpandQueryExpandAll, bool, "ExpandAll");
 DEFINE_REDFISH_PROPERTY(ExpandQueryLevels, bool, "Levels");
 DEFINE_REDFISH_PROPERTY(ExpandQuerykLinks, bool, "Links");
