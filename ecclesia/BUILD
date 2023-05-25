@@ -63,17 +63,6 @@ package_group(
     packages = ["//ecclesia/mmanager/..."],
 )
 
-# Machine manager backend code.
-package_group(
-    name = "mmanager_backend_users",
-    packages = [
-        "//ecclesia/mmanager/backends/...",
-        "//ecclesia/mmanager/frontends/...",
-        "//ecclesia/mmanager/lib/resource/...",
-        "//ecclesia/mmanager/middles/...",
-    ],
-)
-
 # Machine manager middle layer code.
 package_group(
     name = "mmanager_middle_users",
