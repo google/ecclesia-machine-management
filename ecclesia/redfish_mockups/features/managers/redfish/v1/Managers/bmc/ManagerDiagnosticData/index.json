@@ -3,5 +3,18 @@
   "@odata.type": "#ManagerDiagnosticData.v1_2_0.ManagerDiagnosticData",
   "Id": "ManagerDiagnosticData",
   "Name": "Manager Diagnostic Data",
+  "Oem": {
+    "Google": {
+      "@odata.type": "#GoogleManagerDiagnosticData.v1_0_0.GoogleManagerDiagnosticData",
+      "Latency": {
+        "LatencyAvg": 0.7662186666666666,
+        "LatencyMax": 0.929526,
+        "LatencyMin": 0.683445
+      },
+      "gRPCStatistics": {
+        "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData/Oem/Google/GooglegRPCStatistics"
+      }
+    }
+  },
   "ServiceRootUptimeSeconds": 51172.02
 }
