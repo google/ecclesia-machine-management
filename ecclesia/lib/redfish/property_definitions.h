@@ -161,6 +161,14 @@ inline constexpr char kRfOemPropertyNvmeTelemetry[] = "NvmeTelemetry";
 inline constexpr char kRfOemPropertyTcgOpalSecurityState[] =
     "TcgOpalSecurityState";
 inline constexpr char kRfOemPropertyBareMetalStatus[] = "BareMetalStatus";
+inline constexpr char kRfOemPropertyNvme[] = "NVMe";
+inline constexpr char kRfOemPropertyKnuckleController[] = "KnuckleController";
+inline constexpr char kRfOemPropertyNvmeControllerGetLogPage[] =
+    "#NVMeController.GetLogPage";
+inline constexpr char kRfOemPropertyNvmeControllerIdentify[] =
+    "#NVMeController.Identify";
+inline constexpr char kRfOemPropertyNvmeControllerKnuckleIdentify[] =
+    "#NVMeController.KnuckleIdentify";
 
 inline constexpr char kRfPropertyMediaTypeSsd[] = "SSD";
 inline constexpr char kRfPropertyMemberId[] = "MemberId";
