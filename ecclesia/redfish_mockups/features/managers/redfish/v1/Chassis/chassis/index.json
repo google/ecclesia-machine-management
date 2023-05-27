@@ -1,0 +1,18 @@
+{
+  "@odata.id": "/redfish/v1/Chassis/chassis",
+  "@odata.type": "#Chassis.v1_17_0.Chassis",
+  "ChassisType": "RackMount",
+  "Id": "chassis",
+  "Links": {
+      "ManagedBy": [
+          {
+              "@odata.id": "/redfish/v1/Managers/bmc"
+          }
+      ]
+  },
+  "Status": {
+      "Health": "OK",
+      "HealthRollup": "OK",
+      "State": "Enabled"
+  }
+}

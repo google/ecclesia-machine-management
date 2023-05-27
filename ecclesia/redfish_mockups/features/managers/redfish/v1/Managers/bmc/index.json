@@ -5,18 +5,29 @@
   "Description": "Baseboard Management Controller",
   "Id": "bmc",
   "LastResetTime": "2022-08-27T06:45:18+00:00",
+  "Links": {
+    "ManagerForChassis": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/chassis"
+      }
+    ],
+    "ManagerForChassis@odata.count": 1,
+    "ManagerInChassis": {
+      "@odata.id": "/redfish/v1/Chassis/chassis"
+    }
+  },
   "ManagerType": "BMC",
   "ManagerDiagnosticData": {
-      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData"
+    "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData"
   },
   "Model": "OpenBmc",
   "Name": "OpenBmc Manager",
   "PowerState": "On",
   "ServiceEntryPointUUID": "c0b1b58c-0a56-43bc-b696-e23d8301b2c7",
   "Status": {
-      "Health": "OK",
-      "HealthRollup": "OK",
-      "State": "Enabled"
+    "Health": "OK",
+    "HealthRollup": "OK",
+    "State": "Enabled"
   },
   "UUID": "c704ce4d-bc0e-42b9-ad55-4926704e8538"
 }
