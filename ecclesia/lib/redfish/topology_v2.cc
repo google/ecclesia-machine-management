@@ -530,6 +530,13 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
                 node_to_attach.obj->GetNodeValue<PropertyReplaceable>();
             replaceable.has_value()) {
           node->replaceable = *replaceable;
+        } else if (auto oem_google = (*node_to_attach.obj)[kRfPropertyOem]
+                                                          [kRfOemPropertyGoogle]
+                                                              .AsObject();
+                   oem_google != nullptr) {
+          std::optional<bool> replaceable =
+              oem_google->GetNodeValue<PropertyReplaceable>();
+          if (replaceable.has_value()) node->replaceable = *replaceable;
         }
       } else {
         LOG(ERROR) << "Unable to handle location type at URI: " << *current_uri

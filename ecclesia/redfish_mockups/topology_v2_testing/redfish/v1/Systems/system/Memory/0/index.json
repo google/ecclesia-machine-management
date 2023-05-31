@@ -13,5 +13,10 @@
       "LocationType": "Slot",
       "ServiceLabel": "DIMM"
     }
+  },
+  "Oem": {
+    "Google": {
+      "Replaceable": true
+    }
   }
 }

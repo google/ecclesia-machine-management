@@ -475,6 +475,21 @@ TEST(TopologyTestRunner, TestingReplaceable) {
   EXPECT_FALSE(it->second->replaceable);
 }
 
+TEST(TopologyTestRunner, TestingOemReplaceable) {
+  TestingMockupServer mockup("topology_v2_testing/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+
+  NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
+
+  // Make sure all nodes are created properly
+  CheckAgainstTestingMockupFullDevpaths(topology);
+
+  // Get the memory node and check its replaceable field
+  auto it = topology.devpath_to_node_map.find("/phys/C1/DIMM");
+  ASSERT_TRUE(it != topology.devpath_to_node_map.end());
+  EXPECT_TRUE(it->second->replaceable);
+}
+
 TEST(TopologyTestRunner, TestingConfigsOption) {
   TestingMockupServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
