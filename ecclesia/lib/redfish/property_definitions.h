@@ -346,6 +346,8 @@ DEFINE_REDFISH_PROPERTY(PropertyEntryType, std::string, "EntryType");
 DEFINE_REDFISH_PROPERTY(PropertyOemRecordFormat, std::string,
                         "OemRecordFormat");
 DEFINE_REDFISH_PROPERTY(PropertyMessage, std::string, "Message");
+DEFINE_REDFISH_PROPERTY(PropertyPartLocationContext, std::string,
+                        "PartLocationContext");
 DEFINE_REDFISH_PROPERTY(PropertyVersion, std::string, "Version");
 DEFINE_REDFISH_PROPERTY(PropertyLocationType, std::string, "LocationType");
 DEFINE_REDFISH_PROPERTY(PropertyServiceLabel, std::string, "ServiceLabel");
