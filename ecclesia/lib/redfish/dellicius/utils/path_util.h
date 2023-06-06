@@ -22,6 +22,16 @@
 
 namespace ecclesia {
 
+// Splits a given expression by given delimiter.
+// A delimiter is skipped when escaped using given escape_character.
+// Example:
+//   expression = "Hello\\ world test"
+//   SplitExprByDelimiterWithEscape(expression, " ", '\\')
+//     returns {"Hello\\ world", "test"}
+std::vector<absl::string_view> SplitExprByDelimiterWithEscape(
+    absl::string_view expression, absl::string_view delimiter,
+    char escape_character);
+
 // Gets all the node names in the given expression.
 // parent.child.grandchild -> {parent, child, grandchild}
 std::vector<std::string> SplitNodeNameForNestedNodes(

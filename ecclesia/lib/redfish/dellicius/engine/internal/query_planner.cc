@@ -21,6 +21,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -33,6 +34,7 @@
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_replace.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
@@ -50,13 +52,13 @@ namespace {
 
 // Pattern for predicate formatted with relational operators:
 constexpr LazyRE2 kPredicateRegexRelationalOperator = {
-    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=))([a-zA-Z0-9._#]+)$)"};
+    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=))([a-zA-Z0-9._#\\ ]+)$)"};
 
 // Pattern for location step: NodeName[Predicate]
 constexpr LazyRE2 kLocationStepRegex = {
     "^([a-zA-Z#@][0-9a-zA-Z.]+)(?:\\[(.*?)\\]|)$"};
 
-// All RedPath expressions execute relative to service root indentified by '/'.
+// All RedPath expressions execute relative to service root identified by '/'.
 constexpr absl::string_view kServiceRootNode = "/";
 
 // Known predicate expressions.
@@ -203,7 +205,8 @@ bool PredicateFilterByNodeComparison(const RedfishObject &redfish_object,
       ret = ApplyStringComparisonFilter(condition, op);
     } else {
       // For the property value's type is string.
-      const auto condition = [json_obj, test_value]() {
+      const auto condition = [json_obj, &test_value]() {
+        absl::StrReplaceAll({{"\\", ""}}, &test_value);
         return *json_obj == test_value;
       };
       ret = ApplyStringComparisonFilter(condition, op);
@@ -237,7 +240,9 @@ bool ApplyPredicateRule(const RedfishObject &redfish_object, size_t node_index,
 
   absl::string_view logical_operation = kLogicalOperatorAnd;
   bool is_filter_success = true;
-  for (absl::string_view expr : absl::StrSplit(predicate, ' ')) {
+  std::vector<absl::string_view> expressions =
+      SplitExprByDelimiterWithEscape(predicate, " ", '\\');
+  for (std::string_view expr : expressions) {
     // If expression is a logical operator, capture it and move to next
     // expression
     if (expr == kLogicalOperatorAnd || expr == kLogicalOperatorOr) {

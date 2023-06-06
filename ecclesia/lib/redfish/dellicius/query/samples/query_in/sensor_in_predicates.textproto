@@ -132,3 +132,13 @@ subquery {
   properties { property: "@odata\\.id" type: STRING }
   properties { property: "Members@odata\\.count" type: INT64 }
 }
+
+# Returns Sensor 'Name' and 'Reading' value from all Sensors belonging to
+# chassis that has Name set to 'Indus Chassis' and @odata.type as
+# '#Chassis.v1_6_0.Chassis'.
+subquery {
+  subquery_id: "PredicatetExprWithEscapeCharacters"
+  redpath: "/Chassis[Name=Indus\\ Chassis and @odata\\.type=#Chassis\\.v1_6_0\\.Chassis]/Sensors[*]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: DOUBLE }
+}

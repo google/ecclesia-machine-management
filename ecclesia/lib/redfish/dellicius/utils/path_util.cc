@@ -17,14 +17,15 @@
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 
 #include <cstddef>
-#include <memory>
 #include <optional>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "absl/status/status.h"
+#include "absl/strings/ascii.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_replace.h"
-#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "re2/re2.h"
@@ -61,18 +62,47 @@ std::optional<std::pair<std::string, int>> SplitNodeNameIfArrayType(
 
 }  // namespace
 
+std::vector<absl::string_view> SplitExprByDelimiterWithEscape(
+    absl::string_view expression, absl::string_view delimiter,
+    char escape_character) {
+  std::vector<absl::string_view> split_expressions;
+  expression = absl::StripAsciiWhitespace(expression);
+  if (expression.empty()) return split_expressions;
+
+  size_t start_of_expr = 0;
+  size_t next_separator_at = expression.find(delimiter, 0);
+
+  // If first character itself is the delimiter, skip it. Note if delimiter is
+  // ' ' and is first character then it would have been stripped already by
+  // StripAsciiWhitespace().
+  if (next_separator_at == 0) {
+    next_separator_at = expression.find(delimiter, next_separator_at + 1);
+    ++start_of_expr;
+  }
+
+  while (next_separator_at != std::string::npos) {
+    if (expression[next_separator_at - 1] != escape_character) {
+      split_expressions.push_back(
+          expression.substr(start_of_expr, next_separator_at - start_of_expr));
+      start_of_expr = next_separator_at + 1;
+    }
+    next_separator_at = expression.find(delimiter, next_separator_at + 1);
+  }
+  split_expressions.push_back(expression.substr(start_of_expr));
+  return split_expressions;
+}
+
 std::vector<std::string> SplitNodeNameForNestedNodes(
     absl::string_view expression) {
-  constexpr absl::string_view kEscapeSequenceMarker = "$$";
-  expression = absl::StripAsciiWhitespace(expression);
-  std::string expr =
-      absl::StrReplaceAll(expression, {{"\\.", kEscapeSequenceMarker}});
-  std::vector<std::string> nodes;
-  nodes = absl::StrSplit(expr, '.', absl::SkipEmpty());
-  for (auto &node : nodes) {
-    absl::StrReplaceAll({{kEscapeSequenceMarker, "."}}, &node);
+  std::vector<absl::string_view> node_names =
+      SplitExprByDelimiterWithEscape(expression, ".", '\\');
+  std::vector<std::string> node_names_without_escape = {node_names.begin(),
+                                                        node_names.end()};
+  // Strip escape characters from each expression.
+  for (std::string &node : node_names_without_escape) {
+    absl::StrReplaceAll({{"\\", ""}}, &node);
   }
-  return nodes;
+  return node_names_without_escape;
 }
 
 absl::StatusOr<nlohmann::json> ResolveNodeNameToJsonObj(

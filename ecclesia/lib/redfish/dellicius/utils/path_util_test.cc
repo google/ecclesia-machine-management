@@ -185,6 +185,32 @@ TEST(PathUtilTest, CheckNodeNameWithDot) {
     EXPECT_EQ(result, expected_nodes);
   }
 }
+
+TEST(PathUtilTest, CheckEscapeCharacterParsedAsExpected) {
+  // Escape whitespace characters when using whitespace as delimiter.
+  std::vector<absl::string_view> result = SplitExprByDelimiterWithEscape(
+      "PCI\\ Error\\ and\\ dump and test", " ", '\\');
+  std::vector<absl::string_view> expected_nodes = {"PCI\\ Error\\ and\\ dump",
+                                                   "and", "test"};
+  EXPECT_EQ(result, expected_nodes);
+}
+
+TEST(PathUtilTest, SplitExprWithDelimiterAsFirstCharacter) {
+  // Delimiter as first character.
+  std::vector<absl::string_view> result =
+      SplitExprByDelimiterWithEscape(".PCI\\.Error", ".", '\\');
+  std::vector<absl::string_view> expected_nodes = {"PCI\\.Error"};
+  EXPECT_EQ(result, expected_nodes);
+}
+
+TEST(PathUtilTest, SplitExprWithAllWhitespacesEscaped) {
+  // Nothing to split, all white spaces escaped.
+  std::vector<absl::string_view> result =
+      SplitExprByDelimiterWithEscape("PCI\\ Error\\", " ", '\\');
+  std::vector<absl::string_view> expected_nodes = {"PCI\\ Error\\"};
+  EXPECT_EQ(result, expected_nodes);
+}
+
 }  // namespace
 
 }  // namespace ecclesia

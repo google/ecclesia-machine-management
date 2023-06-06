@@ -702,6 +702,147 @@ subquery_output_by_id {
     }
   }
 }
+subquery_output_by_id {
+  key: "PredicatetExprWithEscapeCharacters"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan0"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan1"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan2"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan3"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan4"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan5"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan6"
+      }
+      properties {
+        name: "Reading"
+        double_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan7"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_eat_temp"
+      }
+      properties {
+        name: "Reading"
+        double_value: 28
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_latm_temp"
+      }
+      properties {
+        name: "Reading"
+        double_value: 35
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "Reading"
+        double_value: 30
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "Reading"
+        double_value: 30
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "Reading"
+        double_value: 60
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "Reading"
+        double_value: 60
+      }
+    }
+  }
+}
 start_timestamp {
   seconds: 10
 }
