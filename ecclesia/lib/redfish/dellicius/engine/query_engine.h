@@ -47,7 +47,7 @@ namespace ecclesia {
 //   QueryEngine query_engine(config, &clock, std::move(intf));
 //   std::vector<DelliciusQueryResult> response_entries =
 //       query_engine.ExecuteQuery({"SensorCollector"});
-class QueryEngine final {
+class QueryEngine {
  public:
   enum class ServiceRootType { kRedfish, kGoogle };
   // Interface for private implementation of Query Engine using PImpl Idiom
