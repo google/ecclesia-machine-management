@@ -85,12 +85,6 @@ package_group(
 # Tests which use the mmanager binary directly.
 package_group(name = "mmanager_binary_tests")
 
-# Machine Manager functest package users.
-package_group(
-    name = "mmanager_functest_users",
-    packages = ["//ecclesia/mmanager/testing/..."],
-)
-
 # Machine manager shared resource libraries
 #
 # The libraries which are visible to this group are intended for the very
