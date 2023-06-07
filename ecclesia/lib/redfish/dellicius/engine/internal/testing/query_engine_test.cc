@@ -230,39 +230,30 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
                                       EqualsProto(intent_output_assembly))));
   }
   {
-    // Query assemblies again. This time we expect QueryEngine uses cache
+    // Query assemblies again. This time we expect QueryEngine uses cache.
     std::vector<DelliciusQueryResult> response_entries =
         query_engine.ExecuteQuery(
             {"AssemblyCollectorWithPropertyNameNormalization"});
-    DelliciusQueryResult intent_output_sensor =
+    DelliciusQueryResult intent_output_assembly =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
     EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
-                                      EqualsProto(intent_output_sensor))));
+                                      EqualsProto(intent_output_assembly))));
   }
   {
-    // Query assemblies again.
+    // Query assemblies again and again we expect QueryEngine to use cache.
     std::vector<DelliciusQueryResult> response_entries =
         query_engine.ExecuteQuery(
             {"AssemblyCollectorWithPropertyNameNormalization"});
-    DelliciusQueryResult intent_output_sensor =
+    DelliciusQueryResult intent_output_assembly =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
     EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
-                                      EqualsProto(intent_output_sensor))));
+                                      EqualsProto(intent_output_assembly))));
   }
-  // We requested Processors 3 times when we executed Assembly query 3 times.
-  // Note we have specified in the query that processors should always be
-  // fresh.  So we should expect processors queried 3 times while Systems is
-  // queried once just like all other cached resources.
-  bool traced_processors = false;
+
   bool traced_systems = false;
+  bool traced_processor_collection = false;
+  bool traced_processors = false;
   for (const auto &uri_x_metric : *metrics.mutable_uri_to_metrics_map()) {
-    if (uri_x_metric.first == "/redfish/v1/Systems/system/Processors/0") {
-      traced_processors = true;
-      for (const auto &metadata :
-           uri_x_metric.second.request_type_to_metadata()) {
-        EXPECT_EQ(metadata.second.request_count(), 3);
-      }
-    }
     if (uri_x_metric.first == "/redfish/v1/Systems") {
       traced_systems = true;
       for (const auto &metadata :
@@ -270,9 +261,32 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
         EXPECT_EQ(metadata.second.request_count(), 1);
       }
     }
+
+    // Note query_rule sample_query_rules.textproto uses level 1 expand at
+    // Processors collection. But the query has freshness = true for the
+    // members in processor collection and not the collection resource. Yet we
+    // see the collection getting fetched fresh each time because the freshness
+    // requirement bubbles up if child redpath is in expand path of parent
+    // redpath.
+    if (uri_x_metric.first == "/redfish/v1/Systems/system/Processors") {
+      traced_processor_collection = true;
+      for (const auto &metadata :
+           uri_x_metric.second.request_type_to_metadata()) {
+        EXPECT_EQ(metadata.second.request_count(), 3);
+      }
+    }
+
+    if (uri_x_metric.first == "/redfish/v1/Systems/system/Processors/0") {
+      traced_processors = true;
+      for (const auto &metadata :
+           uri_x_metric.second.request_type_to_metadata()) {
+        EXPECT_EQ(metadata.second.request_count(), 3);
+      }
+    }
   }
-  EXPECT_TRUE(traced_processors);
   EXPECT_TRUE(traced_systems);
+  EXPECT_TRUE(traced_processor_collection);
+  EXPECT_TRUE(traced_processors);
 }
 
 TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
