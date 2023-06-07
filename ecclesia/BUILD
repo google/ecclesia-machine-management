@@ -74,21 +74,12 @@ package_group(
 )
 
 # Machine manager frontend code.
-package_group(
-    name = "mmanager_frontend_users",
-    packages = ["//ecclesia/mmanager/mock/..."],
-)
+package_group(name = "mmanager_frontend_users")
 
 # Machine manager config code.
 package_group(
     name = "mmanager_config_users",
     packages = ["//ecclesia/mmanager/..."],
-)
-
-# Users of the machine manager mock daemon.
-package_group(
-    name = "mmanager_mock_users",
-    packages = ["//ecclesia/mmanager/mock/..."],
 )
 
 # Tests which use the mmanager binary directly.
@@ -110,10 +101,7 @@ package_group(
 # The default and preferred option for including resource dependencies should
 # always be directly importing only the resource messages explicitly required
 # by code, wherever possible.
-package_group(
-    name = "mmanager_resource_library_users",
-    packages = ["//ecclesia/mmanager/mock/..."],
-)
+package_group(name = "mmanager_resource_library_users")
 
 # Jinja2 users.
 #
