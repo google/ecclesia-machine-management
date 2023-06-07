@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/log.h"
@@ -56,7 +57,7 @@ constexpr LazyRE2 kPredicateRegexRelationalOperator = {
 
 // Pattern for location step: NodeName[Predicate]
 constexpr LazyRE2 kLocationStepRegex = {
-    "^([a-zA-Z#@][0-9a-zA-Z.]+)(?:\\[(.*?)\\]|)$"};
+    "^([a-zA-Z#@][0-9a-zA-Z.]+|)(?:\\[(.*?)\\]|)$"};
 
 // All RedPath expressions execute relative to service root identified by '/'.
 constexpr absl::string_view kServiceRootNode = "/";
@@ -91,7 +92,8 @@ absl::StatusOr<std::vector<RedPathStep>> RedPathToSteps(
        absl::StrSplit(redpath, '/', absl::SkipEmpty())) {
     std::string node_name, predicate;
     if (!RE2::FullMatch(step_expression, *kLocationStepRegex, &node_name,
-                        &predicate)) {
+                        &predicate) ||
+        node_name.empty()) {
       return absl::InvalidArgumentError(
           absl::StrFormat("Cannot parse Step expression %s in RedPath %s",
                           step_expression, redpath));
@@ -99,6 +101,33 @@ absl::StatusOr<std::vector<RedPathStep>> RedPathToSteps(
     steps.push_back({node_name, predicate});
   }
   return steps;
+}
+
+// Returns true if child RedPath is in expand path of parent RedPath.
+bool IsInExpandPath(absl::string_view child_redpath,
+                    absl::string_view parent_redpath,
+                    size_t parent_expand_levels) {
+  size_t expand_levels = 0;
+  // Get the diff expression between the 2 RedPaths
+  // Example diff for paths /Chassis[*] and /Chassis[*]/Sensors[*] would be
+  // /Sensors[*]
+  absl::string_view diff = child_redpath.substr(parent_redpath.length());
+  std::vector<absl::string_view> step_expressions =
+      absl::StrSplit(diff, '/', absl::SkipEmpty());
+  // Now count the possible expand levels in the diff expresion.
+  for (absl::string_view step_expression : step_expressions) {
+    std::string node_name, predicate;
+    if (RE2::FullMatch(step_expression, *kLocationStepRegex, &node_name,
+                       &predicate)) {
+      if (!node_name.empty()) {
+        ++expand_levels;
+      }
+      if (!predicate.empty()) {
+        ++expand_levels;
+      }
+    }
+  }
+  return expand_levels <= parent_expand_levels;
 }
 
 GetParams GetQueryParamsForRedPath(
@@ -140,7 +169,39 @@ RedPathRedfishQueryParams CombineQueryParams(
            GetParams{.freshness = GetParams::Freshness::kRequired}});
     }
   }
-  return redpath_to_query_params;
+
+  // Now we adjust freshness configuration such that if a RedPath expression
+  // has a freshness requirement but is in the expand path of parent RedPath
+  // the freshness requirement bubbles up to the parent RedPath
+  // Example: /Chassis[*]/Sensors, $expand=*($levels=1) will assume the
+  // freshness setting for path /Chassis[*]/Sensors[*].
+  absl::string_view last_redpath_with_expand;
+  GetParams *last_params = nullptr;
+  absl::btree_map<std::string, GetParams> redpaths_to_query_params_ordered{
+      redpath_to_query_params.begin(), redpath_to_query_params.end()};
+  for (auto &[redpath, params] : redpaths_to_query_params_ordered) {
+    if (params.freshness == GetParams::Freshness::kRequired &&
+        // Check if last RedPath is prefix of current RedPath.
+        absl::StartsWith(redpath, last_redpath_with_expand) &&
+        // Check whether last RedPath uses query parameters.
+        last_params != nullptr &&
+        // Check if the RedPath prefix has an expand configuration.
+        last_params->expand.has_value() &&
+        // Check if current RedPath is in expand path of last RedPath.
+        IsInExpandPath(redpath, last_redpath_with_expand,
+                       last_params->expand->levels()) &&
+        // Make sure the last redpath expression is not already fetched fresh.
+        last_params->freshness == GetParams::Freshness::kOptional) {
+      last_params->freshness = GetParams::Freshness::kRequired;
+    }
+
+    if (params.expand.has_value() && params.expand->levels() > 0) {
+      last_redpath_with_expand = redpath;
+      last_params = &params;
+    }
+  }
+  return {redpaths_to_query_params_ordered.begin(),
+          redpaths_to_query_params_ordered.end()};
 }
 
 template <typename F>
@@ -155,8 +216,8 @@ bool ApplyNumberComparisonFilter(const nlohmann::json &obj, F comparator) {
   return comparator(number);
 }
 
-// Helper function is used to ensure the obtained value equal or not equal to a
-// non-number value.
+// Helper function is used to ensure the obtained value equal or not equal to
+// a non-number value.
 template <typename F>
 bool ApplyStringComparisonFilter(F filter_condition,
                                  absl::string_view inequality_string) {
@@ -248,7 +309,8 @@ bool ApplyPredicateRule(const RedfishObject &redfish_object, size_t node_index,
     if (expr == kLogicalOperatorAnd || expr == kLogicalOperatorOr) {
       // A binary operator is parsed only when last operator has been applied.
       // Since last operator has not been applied and we are seeing another
-      // operator in the expression, it can be considered an invalid expression.
+      // operator in the expression, it can be considered an invalid
+      // expression.
       if (!logical_operation.empty()) {
         LOG(ERROR) << "Invalid predicate expression " << predicate;
         return false;
@@ -267,7 +329,8 @@ bool ApplyPredicateRule(const RedfishObject &redfish_object, size_t node_index,
 
     size_t num;
     bool single_predicate_result = false;
-    // If '[last()]' predicate expression, check if current node at last index.
+    // If '[last()]' predicate expression, check if current node at last
+    // index.
     if ((expr == kPredicateSelectLastIndex &&
          node_index == node_set_size - 1) ||
         // If '[Index]' predicate expression, check if current node at given
@@ -373,8 +436,8 @@ struct RedPathContext {
 };
 
 // A ContextNode describes the RedfishObject relative to which one or more
-// RedPath expressions are executed along with metadata necessary for the query
-// operation and tracking.
+// RedPath expressions are executed along with metadata necessary for the
+// query operation and tracking.
 struct ContextNode {
   // Redfish object relative to which RedPath expression executes.
   std::unique_ptr<RedfishObject> redfish_object;
@@ -457,9 +520,10 @@ class SubqueryHandleFactory {
   // Builds SubqueryHandle objects for subqueries linked together in a chain
   // through 'root_subquery_ids' property.
   // Args:
-  //   subquery_id: Identifier of the subquery for which SubqueryHandle is built
-  //   subquery_id_chain: Stores visited ids to help identify loop in chain
-  //   child_subquery_handle: last built subquery handle to link as child node.
+  //   subquery_id: Identifier of the subquery for which SubqueryHandle is
+  //   built subquery_id_chain: Stores visited ids to help identify loop in
+  //   chain child_subquery_handle: last built subquery handle to link as
+  //   child node.
   absl::Status BuildSubqueryHandleChain(
       const std::string &subquery_id,
       absl::flat_hash_set<std::string> &subquery_id_chain,
@@ -493,11 +557,10 @@ std::vector<RedPathContext> ExecutePredicateFromEachSubquery(
 }
 
 // Populates Query Result for the requested properties for fully resolved
-// RedPath expressions or returns RedPath contexts that have unresolved RedPath
-// steps.
-// When full resolved RedPath contexts have child RedPaths contexts linked,
-// first the result is populated and then child RedPath contexts are retrieved
-// and returned.
+// RedPath expressions or returns RedPath contexts that have unresolved
+// RedPath steps. When full resolved RedPath contexts have child RedPaths
+// contexts linked, first the result is populated and then child RedPath
+// contexts are retrieved and returned.
 std::vector<RedPathContext> PopulateResultOrContinueQuery(
     const RedfishObject &redfish_object,
     const std::vector<RedPathContext> &redpath_ctx_multiple,
@@ -526,8 +589,8 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
           !last_normalized_dataset.ok()) {
         continue;
       }
-      // We will insert all the RedPath contexts in the list tracked for the new
-      // context node.
+      // We will insert all the RedPath contexts in the list tracked for the
+      // new context node.
       for (auto &child_subquery_handle :
            subquery_handle->GetChildSubqueryHandles()) {
         if (!child_subquery_handle) continue;
