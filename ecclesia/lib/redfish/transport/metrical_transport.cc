@@ -17,8 +17,6 @@
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 
 #include <memory>
-#include <string>
-#include <utility>
 
 #include "absl/log/check.h"
 #include "absl/status/statusor.h"
@@ -44,16 +42,17 @@ struct RedfishRequest {
 class RedfishTrace final {
  public:
   RedfishTrace(RedfishRequest request, const Clock *clock,
-               RedfishMetrics &redfish_metrics)
+               RedfishMetrics *redfish_metrics)
       : request_(request), clock_(clock), redfish_metrics_(redfish_metrics) {
     start_timestamp_ = clock->Now();
   }
   ~RedfishTrace() {
+    if (redfish_metrics_ == nullptr) return;
     end_timestamp_ = clock_->Now();
     double response_time_ms =
         absl::ToDoubleMilliseconds(end_timestamp_ - start_timestamp_);
     RedfishMetrics::Metrics *uri_metrics =
-        &(*redfish_metrics_.mutable_uri_to_metrics_map())[request_.uri];
+        &(*redfish_metrics_->mutable_uri_to_metrics_map())[request_.uri];
     RedfishMetrics::RequestMetadata *metadata;
     if (!has_request_failed_) {
       metadata =
@@ -81,7 +80,7 @@ class RedfishTrace final {
  private:
   RedfishRequest request_;
   const Clock *clock_;
-  RedfishMetrics &redfish_metrics_;
+  RedfishMetrics *redfish_metrics_;
   absl::Time start_timestamp_;
   absl::Time end_timestamp_;
   // Flag used to populate request metadata for transport failures.

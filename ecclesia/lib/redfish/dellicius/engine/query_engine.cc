@@ -39,6 +39,8 @@
 #include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/redfish/transport/metrical_transport.h"
+#include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/time/clock.h"
 #include "google/protobuf/text_format.h"
 
@@ -52,9 +54,19 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
                            std::unique_ptr<RedfishTransport> transport,
                            RedfishTransportCacheFactory cache_factory,
                            const Clock *clock)
-      : clock_(clock), transport_(std::move(transport)) {
-    intf_ = NewHttpInterface(std::move(transport_), std::move(cache_factory),
-                             RedfishInterface::kTrusted);
+      : clock_(clock) {
+    if (config.flags.enable_transport_metrics) {
+      std::unique_ptr<MetricalRedfishTransport> metrical_transport =
+          std::make_unique<MetricalRedfishTransport>(std::move(transport),
+                                                     clock_, nullptr);
+      metrical_transport_ = metrical_transport.get();
+      intf_ = NewHttpInterface(std::move(metrical_transport),
+                               std::move(cache_factory),
+                               RedfishInterface::kTrusted);
+    } else {
+      intf_ = NewHttpInterface(std::move(transport), std::move(cache_factory),
+                               RedfishInterface::kTrusted);
+    }
 
     if (config.flags.enable_devpath_extension) {
       topology_ = CreateTopologyFromRedfish(intf_.get());
@@ -135,6 +147,16 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       QueryTracker &tracker) override {
     return ExecuteQuery(service_root_uri, query_ids, &tracker);
   }
+  std::vector<DelliciusQueryResult> ExecuteQueryWithMetrics(
+      QueryEngine::ServiceRootType service_root_uri,
+      absl::Span<const absl::string_view> query_ids,
+      RedfishMetrics *transport_metrics) override {
+    // Copies the new transport metrics over the previous metrics.
+    if (metrical_transport_ != nullptr) {
+      metrical_transport_->ResetTrackingMetricsProto(transport_metrics);
+    }
+    return ExecuteQuery(service_root_uri, query_ids, nullptr);
+  }
 
   const NodeTopology &GetTopology() override { return topology_; }
 
@@ -146,7 +168,9 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   std::unique_ptr<Normalizer> normalizer_;
   std::unique_ptr<RedfishInterface> intf_;
   NodeTopology topology_;
-  std::unique_ptr<RedfishTransport> transport_;
+
+  // Used during query metrics collection.
+  MetricalRedfishTransport *metrical_transport_ = nullptr;
 };
 
 }  // namespace

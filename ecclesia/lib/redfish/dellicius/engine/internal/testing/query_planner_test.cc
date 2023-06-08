@@ -211,7 +211,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
     std::unique_ptr<RedfishTransport> base_transport =
         server.RedfishClientTransport();
     auto transport = std::make_unique<MetricalRedfishTransport>(
-        std::move(base_transport), Clock::RealClock(), metrics);
+        std::move(base_transport), Clock::RealClock(), &metrics);
 
     auto cache = std::make_unique<NullCache>(transport.get());
     auto intf = NewHttpInterface(std::move(transport), std::move(cache),
@@ -252,7 +252,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
     std::unique_ptr<RedfishTransport> base_transport =
         std::make_unique<NullTransport>();
     auto transport = std::make_unique<MetricalRedfishTransport>(
-        std::move(base_transport), Clock::RealClock(), metrics);
+        std::move(base_transport), Clock::RealClock(), &metrics);
 
     auto cache = std::make_unique<NullCache>(transport.get());
     auto intf = NewHttpInterface(std::move(transport), std::move(cache),

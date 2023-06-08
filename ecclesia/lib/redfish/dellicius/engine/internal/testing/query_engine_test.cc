@@ -16,8 +16,6 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 
-#include <iostream>
-#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -212,18 +210,19 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
 
   RedfishMetrics metrics;
   FakeQueryEngineEnvironment fake_engine_env(
-      {.flags{.enable_devpath_extension = false},
+      {.flags{.enable_devpath_extension = false,
+              .enable_transport_metrics = true},
        .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
        .query_rules{kQueryRules.begin(), kQueryRules.end()}},
       kIndusMockup, clock_time,
-      FakeQueryEngineEnvironment::CachingMode::kNoExpiration, &metrics);
+      FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
   QueryEngine &query_engine = fake_engine_env.GetEngine();
 
   {
     // Query assemblies
     std::vector<DelliciusQueryResult> response_entries =
-        query_engine.ExecuteQuery(
-            {"AssemblyCollectorWithPropertyNameNormalization"});
+        query_engine.ExecuteQueryWithMetrics(
+            {"AssemblyCollectorWithPropertyNameNormalization"}, &metrics);
     DelliciusQueryResult intent_output_assembly =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
     EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
@@ -306,6 +305,31 @@ TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
   EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
                                     EqualsProto(intent_query_out))));
+}
+
+TEST(QueryEngineTest, QueryEngineTransportMetrics) {
+  RedfishMetrics transport_metrics;
+  FakeQueryEngineEnvironment fake_engine_env(
+      {.flags{.enable_devpath_extension = false,
+              .enable_transport_metrics = true},
+       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
+       .query_rules{kQueryRules.begin(), kQueryRules.end()}},
+      kIndusMockup, clock_time,
+      FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
+  QueryEngine &query_engine = fake_engine_env.GetEngine();
+  std::vector<DelliciusQueryResult> response_entries =
+      query_engine.ExecuteQueryWithMetrics(
+          {"AssemblyCollectorWithPropertyNameNormalization"},
+          &transport_metrics);
+  EXPECT_EQ(transport_metrics.uri_to_metrics_map().size(), 8);
+  RedfishMetrics transport_metrics_2;
+  std::vector<DelliciusQueryResult> response_entries_2 =
+      query_engine.ExecuteQueryWithMetrics({"SensorCollector"},
+                                           &transport_metrics_2);
+  // Run another query to make sure the metrics are cleared per query
+  EXPECT_EQ(transport_metrics_2.uri_to_metrics_map().size(), 15);
+  // Double checking first metric set to make sure it was not overwritten.
+  EXPECT_EQ(transport_metrics.uri_to_metrics_map().size(), 8);
 }
 
 }  // namespace

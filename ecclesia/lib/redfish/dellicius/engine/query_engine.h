@@ -20,17 +20,16 @@
 #include <memory>
 #include <vector>
 
-#include "absl/base/attributes.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/config.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
-#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
@@ -61,6 +60,10 @@ class QueryEngine {
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         QueryTracker &tracker) = 0;
+    virtual std::vector<DelliciusQueryResult> ExecuteQueryWithMetrics(
+        ServiceRootType service_root_uri,
+        absl::Span<const absl::string_view> query_ids,
+        RedfishMetrics *transport_metrics) = 0;
     virtual const NodeTopology &GetTopology() = 0;
   };
 
@@ -88,6 +91,14 @@ class QueryEngine {
       absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
       ServiceRootType service_root_uri = ServiceRootType::kRedfish) {
     return engine_impl_->ExecuteQuery(service_root_uri, query_ids, tracker);
+  }
+  // Transport metrics flag must be true for metrics to be populated.
+  std::vector<DelliciusQueryResult> ExecuteQueryWithMetrics(
+      absl::Span<const absl::string_view> query_ids,
+      RedfishMetrics *transport_metrics,
+      ServiceRootType service_root_uri = ServiceRootType::kRedfish) {
+    return engine_impl_->ExecuteQueryWithMetrics(service_root_uri, query_ids,
+                                                 transport_metrics);
   }
   const NodeTopology &GetTopology() { return engine_impl_->GetTopology(); }
 

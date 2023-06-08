@@ -33,7 +33,7 @@ class MetricalRedfishTransport : public RedfishTransport {
  public:
   explicit MetricalRedfishTransport(std::unique_ptr<RedfishTransport> base,
                                     const Clock *clock,
-                                    RedfishMetrics &transport_metrics)
+                                    RedfishMetrics *transport_metrics)
       : base_transport_(std::move(base)),
         clock_(clock),
         transport_metrics_(transport_metrics) {}
@@ -46,11 +46,16 @@ class MetricalRedfishTransport : public RedfishTransport {
                                absl::string_view data) override;
   absl::StatusOr<Result> Delete(absl::string_view path,
                                 absl::string_view data) override;
+  // Overwrite the current metrics with a new metrics proto. This is used for
+  // collecting metrics over certain intervals.
+  void ResetTrackingMetricsProto(RedfishMetrics *transport_metrics) {
+    transport_metrics_ = transport_metrics;
+  }
 
  private:
   std::unique_ptr<RedfishTransport> base_transport_;
   const Clock *clock_;
-  RedfishMetrics &transport_metrics_;
+  RedfishMetrics *transport_metrics_ = nullptr;
 };
 
 }  // namespace ecclesia

@@ -355,7 +355,6 @@ cc_proto_library(
 
 cc_library(
     name = "metrical_transport",
-    testonly = True,
     srcs = ["metrical_transport.cc"],
     hdrs = ["metrical_transport.h"],
     visibility = ["//visibility:public"],

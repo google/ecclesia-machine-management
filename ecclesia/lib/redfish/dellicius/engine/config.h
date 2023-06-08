@@ -31,6 +31,9 @@ struct QueryEngineConfiguration {
     // nodes of the redfish tree queried. The lifetime of cache is tied to the
     // lifetime of the query engine instance.
     bool enable_cached_uri_dispatch = false;
+    // Instructs Query Engine to use MetricalRedfishTransport which will collect
+    // response time metrics.
+    bool enable_transport_metrics = false;
   };
   Flags flags;
   // available and not passed to QueryEngine through engine configuration.

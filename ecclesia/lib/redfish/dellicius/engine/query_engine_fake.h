@@ -31,8 +31,6 @@
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
-#include "ecclesia/lib/redfish/transport/metrical_transport.h"
-#include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/time/clock_fake.h"
 
 namespace ecclesia {
@@ -51,10 +49,14 @@ namespace ecclesia {
 // Example usage with caching and metrics:
 //   RedfishMetrics metrics;
 //   FakeQueryEngineEnvironment fake_engine_env(
-//           {.flags{.enable_devpath_extension = true},
+//           {.flags{.enable_devpath_extension = true,
+//                   .enable_transport_metrics = true},
 //           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
-//           "indus_hmb_shim/mockup.shar", kNoExpiration, &metrics)
+//           "indus_hmb_shim/mockup.shar", kNoExpiration)
 //   std::unique_ptr<QueryEngine> query_engine = fake_engine_env.GetEngine();
+//   query_engine.ExecuteQueryWithMetrics(
+//             {"SensorCollection"},
+//             &transport_metrics);
 class FakeQueryEngineEnvironment {
  public:
   enum class CachingMode { kNoExpiration, kDisableCaching};
@@ -63,18 +65,10 @@ class FakeQueryEngineEnvironment {
       const QueryEngineConfiguration& config, absl::string_view mockup_name,
       absl::Time clock_time,
       const std::variant<CachingMode, RedfishTransportCacheFactory>&
-          caching_mode = CachingMode::kDisableCaching,
-      RedfishMetrics* metrics = nullptr)
+          caching_mode = CachingMode::kDisableCaching)
       : config_(config), server_(mockup_name), clock_(clock_time) {
-    if (metrics != nullptr) {
-      CHECK_OK(InitializeQueryEngine(
-          std::make_unique<MetricalRedfishTransport>(
-              server_.RedfishClientTransport(), &clock_, *metrics),
-          caching_mode));
-    } else {
-      CHECK_OK(InitializeQueryEngine(server_.RedfishClientTransport(),
-                                     caching_mode));
-    }
+    CHECK_OK(
+        InitializeQueryEngine(server_.RedfishClientTransport(), caching_mode));
   }
   // Disable copy and move constructors.
   FakeQueryEngineEnvironment(const FakeQueryEngineEnvironment&) = delete;
