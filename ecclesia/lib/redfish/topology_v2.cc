@@ -27,6 +27,7 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/functional/function_ref.h"
 #include "absl/log/log.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
@@ -212,12 +213,15 @@ std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
 }
 
 // Helper function to find root chassis from service root
-std::unique_ptr<RedfishObject> FindRootChassisUri(
+absl::StatusOr<std::unique_ptr<RedfishObject>> FindRootChassisUri(
     RedfishInterface *redfish_intf, const TopologyConfig &config) {
-  auto chassis_iter = redfish_intf->GetRoot()[kRfPropertyChassis].AsIterable();
+  auto chassis = redfish_intf->GetRoot()[kRfPropertyChassis];
+  if (!chassis.status().ok()) {
+    return chassis.status();
+  }
+  auto chassis_iter = chassis.AsIterable();
   if (chassis_iter == nullptr || chassis_iter->Size() == 0) {
-    DLOG(INFO) << "No Chassis in Chassis collection";
-    return nullptr;
+    return absl::InternalError("No Chassis in Chassis collection");
   }
 
   // Pop the first available Chassis (guaranteed since iter has Size > 0)
@@ -229,13 +233,11 @@ std::unique_ptr<RedfishObject> FindRootChassisUri(
     }
   }
   if (chassis_obj == nullptr) {
-    DLOG(INFO) << "No valid Chassis in Chassis collection";
-    return nullptr;
+    return absl::InternalError("No valid Chassis in Chassis collection");
   }
   std::optional<std::string> chassis_uri = chassis_obj->GetUriString();
   if (!chassis_uri.has_value()) {
-    DLOG(INFO) << "Chassis obj is not valid from Collection";
-    return nullptr;
+    return absl::InternalError("Chassis obj is not valid from Collection");
   }
 
   const std::string chassis_link = config.find_root_node().chassis_link();
@@ -244,25 +246,24 @@ std::unique_ptr<RedfishObject> FindRootChassisUri(
   // Iterate through cables to find upstream connections
   absl::flat_hash_map<std::string, std::string>
       cable_downstream_to_upstream_map;
-  FindAllCablesHelper(redfish_intf, config.cable_linkages(),
-                      [&](std::unique_ptr<RedfishObject> cable_json,
-                          const std::string &upstream_uri) {
-                        absl::flat_hash_set<std::string> visited_uri;
-                        for (std::unique_ptr<RedfishObject> &downstream_obj :
-                             FindAllDownstreamsUris(*cable_json,
-                             config, visited_uri)) {
-                          if (!downstream_obj) continue;
-                          if (std::optional<std::string> downstream_uri =
-                                  downstream_obj->GetUriString();
-                              downstream_uri.has_value()) {
-                            DLOG(INFO) << "Cable between " << *downstream_uri
-                                       << " and " << upstream_uri;
-                            cable_downstream_to_upstream_map[*downstream_uri] =
-                                upstream_uri;
-                          }
-                        }
-                        return RedfishIterReturnValue::kContinue;
-                      });
+  FindAllCablesHelper(
+      redfish_intf, config.cable_linkages(),
+      [&](std::unique_ptr<RedfishObject> cable_json,
+          const std::string &upstream_uri) {
+        absl::flat_hash_set<std::string> visited_uri;
+        for (std::unique_ptr<RedfishObject> &downstream_obj :
+             FindAllDownstreamsUris(*cable_json, config, visited_uri)) {
+          if (!downstream_obj) continue;
+          if (std::optional<std::string> downstream_uri =
+                  downstream_obj->GetUriString();
+              downstream_uri.has_value()) {
+            DLOG(INFO) << "Cable between " << *downstream_uri << " and "
+                       << upstream_uri;
+            cable_downstream_to_upstream_map[*downstream_uri] = upstream_uri;
+          }
+        }
+        return RedfishIterReturnValue::kContinue;
+      });
 
   DLOG(INFO) << "Checking for upstream Chassis obj for " << *chassis_uri;
   std::unique_ptr<RedfishObject> upstream_chassis_obj =
@@ -304,14 +305,14 @@ std::unique_ptr<RedfishObject> FindRootChassisUri(
   return chassis_obj;
 }
 
-std::unique_ptr<RedfishObject> FindRootNode(RedfishInterface *redfish_intf,
-                                            const TopologyConfig &config) {
+absl::StatusOr<std::unique_ptr<RedfishObject>> FindRootNode(
+    RedfishInterface *redfish_intf, const TopologyConfig &config) {
   const auto &finding_root = config.find_root_node();
   if (finding_root.has_chassis_link()) {
     DLOG(INFO) << "Finding root chassis";
     return FindRootChassisUri(redfish_intf, config);
   }
-  return nullptr;
+  return absl::InternalError("finding_root.has_chassis_link was false.");
 }
 
 using UriToAttachedCableUris =
@@ -364,9 +365,16 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
 
   // Find root chassis to build from using config find root chassis
   DLOG(INFO) << "Starting root node search";
-  auto root_node_uri = FindRootNode(redfish_intf, *config);
-  if (root_node_uri == nullptr) {
-    LOG(ERROR) << "No root node found for devpath generation";
+  auto maybe_root_node_uri = FindRootNode(redfish_intf, *config);
+  if (!maybe_root_node_uri.ok()) {
+    LOG(ERROR) << "No root node found for devpath generation, status: "
+               << maybe_root_node_uri.status();
+    return topology;
+  }
+  if (*maybe_root_node_uri == nullptr) {
+    LOG(ERROR)
+        << "No root node found for devpath generation: maybe_root_node_uri "
+           "was nullptr.";
     return topology;
   }
   // Iterate through all Cables if available
@@ -376,7 +384,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
   DLOG(INFO) << "Cable map completed";
   // Create queue of one item with no parent
   std::queue<AttachingNodes> queue;
-  queue.push({.parent = nullptr, .obj = std::move(root_node_uri)});
+  queue.push({.parent = nullptr, .obj = std::move(*maybe_root_node_uri)});
   absl::flat_hash_set<std::string> visited_uris;
   while (!queue.empty()) {
     AttachingNodes node_to_attach = std::move(queue.front());

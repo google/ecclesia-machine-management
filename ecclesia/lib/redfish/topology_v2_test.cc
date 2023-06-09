@@ -364,100 +364,114 @@ TEST(TopologyTestRunner, GoogleRootCoexistsWithRedfishRoot) {
   EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
 }
 
-TEST(TopologyTestRunner, UriUnqueryable) {
+TEST(TopologyTestRunner, UriUnqueryableFirstChassisBad) {
   FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
-  {
-    // If the first Chassis is unqueryable.
-    mockup.AddHttpGetHandler(
-        "/redfish/v1/Chassis/child1",
-        [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
-          req->ReplyWithStatus(
-              ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-        });
-    NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
-    const std::vector<Node> expected_nodes = {
-        Node{"root", "root", "/phys", NodeType::kBoard},
-        Node{"child2", "child2", "/phys/C2", NodeType::kBoard},
-        Node{"ssd", "ssd", "/phys/SSD", NodeType::kBoard},
-        Node{"cpu", "cpu", "/phys/CPU", NodeType::kBoard},
-        Node{"expansion_cable", "expansion_cable", "/phys/C2/HDMI",
-             NodeType::kCable},
-        Node{"controller", "controller", "/phys/SSD:device:controller",
-             NodeType::kDevice},
-        Node{"drive", "drive", "/phys/SSD:device:drive", NodeType::kDevice},
-        Node{"expansion_tray", "expansion_tray", "/phys/C2/HDMI/DOWNLINK",
-             NodeType::kBoard},
-        Node{"expansion_child", "expansion_child", "/phys/C2/HDMI/DOWNLINK/E1",
-             NodeType::kBoard}};
+  // If the first Chassis is unqueryable.
+  mockup.AddHttpGetHandler(
+      "/redfish/v1/Chassis/child1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
+      });
+  NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
+  const std::vector<Node> expected_nodes = {
+      Node{"root", "root", "/phys", NodeType::kBoard},
+      Node{"child2", "child2", "/phys/C2", NodeType::kBoard},
+      Node{"ssd", "ssd", "/phys/SSD", NodeType::kBoard},
+      Node{"cpu", "cpu", "/phys/CPU", NodeType::kBoard},
+      Node{"expansion_cable", "expansion_cable", "/phys/C2/HDMI",
+           NodeType::kCable},
+      Node{"controller", "controller", "/phys/SSD:device:controller",
+           NodeType::kDevice},
+      Node{"drive", "drive", "/phys/SSD:device:drive", NodeType::kDevice},
+      Node{"expansion_tray", "expansion_tray", "/phys/C2/HDMI/DOWNLINK",
+           NodeType::kBoard},
+      Node{"expansion_child", "expansion_child", "/phys/C2/HDMI/DOWNLINK/E1",
+           NodeType::kBoard}};
 
-    std::vector<Node> actual_nodes;
-    actual_nodes.reserve(topology.nodes.size());
-    for (const auto &node : topology.nodes) {
-      actual_nodes.push_back(*node);
-    }
-    EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
-    mockup.ClearHandlers();
+  std::vector<Node> actual_nodes;
+  actual_nodes.reserve(topology.nodes.size());
+  for (const auto &node : topology.nodes) {
+    actual_nodes.push_back(*node);
   }
-  {
-    // If the root Chassis is unqueryable.
-    mockup.AddHttpGetHandler(
-        "/redfish/v1/Chassis/root",
-        [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
-          req->ReplyWithStatus(
-              ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-        });
-    NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
-    const std::vector<Node> expected_nodes = {
-        Node{"child1", "child1", "/phys", NodeType::kBoard},
-        Node{"memory", "memory", "/phys/DIMM", NodeType::kBoard},
-        Node{"dangling_cable", "dangling_cable", "/phys/QSFP",
-             NodeType::kCable},
-    };
-    std::vector<Node> actual_nodes;
-    actual_nodes.reserve(topology.nodes.size());
-    for (const auto &node : topology.nodes) {
-      actual_nodes.push_back(*node);
-    }
-    EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
-    mockup.ClearHandlers();
+  EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
+}
+
+TEST(TopologyTestRunner, UriUnqueryableRootChassisBad) {
+  FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+  // If the root Chassis is unqueryable.
+  mockup.AddHttpGetHandler(
+      "/redfish/v1/Chassis/root",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
+      });
+  NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
+  const std::vector<Node> expected_nodes = {
+      Node{"child1", "child1", "/phys", NodeType::kBoard},
+      Node{"memory", "memory", "/phys/DIMM", NodeType::kBoard},
+      Node{"dangling_cable", "dangling_cable", "/phys/QSFP", NodeType::kCable},
+  };
+  std::vector<Node> actual_nodes;
+  actual_nodes.reserve(topology.nodes.size());
+  for (const auto &node : topology.nodes) {
+    actual_nodes.push_back(*node);
   }
-  {
-    // If all Chassis are unqueryable.
-    mockup.AddHttpGetHandler(
-        "/redfish/v1/Chassis/root",
-        [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
-          req->ReplyWithStatus(
-              ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-        });
-    mockup.AddHttpGetHandler(
-        "/redfish/v1/Chassis/child1",
-        [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
-          req->ReplyWithStatus(
-              ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-        });
-    mockup.AddHttpGetHandler(
-        "/redfish/v1/Chassis/child2",
-        [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
-          req->ReplyWithStatus(
-              ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-        });
-    mockup.AddHttpGetHandler(
-        "/redfish/v1/Chassis/expansion_tray",
-        [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
-          req->ReplyWithStatus(
-              ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-        });
-    mockup.AddHttpGetHandler(
-        "/redfish/v1/Chassis/expansion_child",
-        [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
-          req->ReplyWithStatus(
-              ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-        });
-    NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
-    EXPECT_TRUE(topology.nodes.empty());
-    mockup.ClearHandlers();
-  }
+  EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
+}
+
+TEST(TopologyTestRunner, UriUnqueryableAllChassisBad) {
+  FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+  // If all Chassis are unqueryable.
+  mockup.AddHttpGetHandler(
+      "/redfish/v1/Chassis/root",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
+      });
+  mockup.AddHttpGetHandler(
+      "/redfish/v1/Chassis/child1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
+      });
+  mockup.AddHttpGetHandler(
+      "/redfish/v1/Chassis/child2",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
+      });
+  mockup.AddHttpGetHandler(
+      "/redfish/v1/Chassis/expansion_tray",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
+      });
+  mockup.AddHttpGetHandler(
+      "/redfish/v1/Chassis/expansion_child",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
+      });
+  NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
+  EXPECT_TRUE(topology.nodes.empty());
+}
+
+TEST(TopologyTestRunner, UriUnqueryableChassisCollectionBad) {
+  FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+  // If Chassis Collection is unqueryable.
+  mockup.AddHttpGetHandler(
+      "/redfish/v1/Chassis",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::UNAUTHORIZED);
+      });
+  NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
+  EXPECT_TRUE(topology.nodes.empty());
 }
 
 TEST(TopologyTestRunner, TestingReplaceable) {
@@ -494,8 +508,8 @@ TEST(TopologyTestRunner, TestingConfigsOption) {
   TestingMockupServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
-  NodeTopology topology = CreateTopologyFromRedfishV2(
-      raw_intf.get(), "redfish_test.textpb");
+  NodeTopology topology =
+      CreateTopologyFromRedfishV2(raw_intf.get(), "redfish_test.textpb");
   const std::vector<Node> expected_nodes = {
       Node{"root", "root", "/phys", NodeType::kBoard},
       Node{"cpu", "cpu", "/phys/CPU", NodeType::kBoard}};
@@ -511,8 +525,8 @@ TEST(TopologyTestRunner, TestingConfigsOption) {
 TEST(TopologyTestRunner, TestingMultiHostMockupNodesArePopulated) {
   TestingMockupServer mockup("topology_v2_multi_host_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
-  CheckAgainstTestingMultiHostFullDevpaths(CreateTopologyFromRedfishV2(
-      raw_intf.get(), "redfish_multihost.textpb"));
+  CheckAgainstTestingMultiHostFullDevpaths(
+      CreateTopologyFromRedfishV2(raw_intf.get(), "redfish_multihost.textpb"));
 }
 
 }  // namespace
