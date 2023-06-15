@@ -26,6 +26,7 @@
 namespace ecclesia {
 namespace {
 
+using ::testing::AllOf;
 using ::testing::Eq;
 using ::testing::Field;
 using ::testing::IsEmpty;
@@ -174,9 +175,10 @@ TEST(RedPathQueryValidationTest, ValidQueryWithDeepQueryWarning) {
       deep_query_validator.ValidateQueryFile(kPathToValidQueryDeepQuery),
       IsOk());
   EXPECT_THAT(deep_query_validator.GetErrors(), IsEmpty());
-  EXPECT_THAT(
-      deep_query_validator.GetWarnings(),
-      ElementsAre(Field(&Warning::type, Eq(Warning::Type::kDeepQuery))));
+  EXPECT_THAT(deep_query_validator.GetWarnings(),
+              ElementsAre(AllOf(
+                  Field(&Warning::type, Eq(Warning::Type::kDeepQuery)),
+                  Field(&Warning::path, Eq(kPathToValidQueryDeepQuery)))));
 }
 
 TEST(RedPathQueryValidationTest, ValidQueryWithDeepRedPathWarning) {
@@ -192,7 +194,9 @@ TEST(RedPathQueryValidationTest, ValidQueryWithDeepRedPathWarning) {
   EXPECT_THAT(deep_redpath_validator.GetErrors(), IsEmpty());
   EXPECT_THAT(
       deep_redpath_validator.GetWarnings(),
-      ElementsAre(Field(&Warning::type, Eq(Warning::Type::kDeepRedPath))));
+      ElementsAre(AllOf(
+        Field(&Warning::type, Eq(Warning::Type::kDeepRedPath)),
+        Field(&Warning::path, Eq(kPathToValidQueryDeepRedPath)))));
 }
 
 TEST(RedPathQueryValidationTest, ValidQueryWithWideBranchingWarning) {
@@ -208,7 +212,9 @@ TEST(RedPathQueryValidationTest, ValidQueryWithWideBranchingWarning) {
   EXPECT_THAT(wide_branching_validator.GetErrors(), IsEmpty());
   EXPECT_THAT(
       wide_branching_validator.GetWarnings(),
-      ElementsAre(Field(&Warning::type, Eq(Warning::Type::kWideBranching))));
+      ElementsAre(AllOf(
+        Field(&Warning::type, Eq(Warning::Type::kWideBranching)),
+        Field(&Warning::path, Eq(kPathToValidQueryWideBranching)))));
 }
 
 TEST(RedPathQueryValidationTest, MixedWarnings) {

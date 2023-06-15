@@ -23,12 +23,10 @@
 
 #include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 
 namespace ecclesia {
 
@@ -56,8 +54,21 @@ class RedPathQueryValidator {
       // Occurs when a query has more than 5 nodes in one Redpath.
       kDeepRedPath
     };
+
+    static absl::string_view GetWarningDescriptor(Type type) {
+      switch (type) {
+        case Type::kWideBranching:
+          return "Wide Branching";
+        case Type::kDeepQuery:
+          return "Deep Query";
+        case Type::kDeepRedPath:
+          return "Deep Redpath";
+      }
+    }
+
     Type type;
     std::string message;
+    std::string path;
   };
 
   // Function alias for the method used to retrieve a RedPath Query message,

@@ -120,12 +120,11 @@ cc_library(
     name = "query_validator",
     srcs = ["query_validator.cc"],
     hdrs = ["query_validator.h"],
+    visibility = ["//ecclesia/lib/redfish/dellicius:__subpackages__"],
     deps = [
         "//ecclesia/lib/apifs",
-        "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/status:macros",
-        "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/functional:any_invocable",
