@@ -33,13 +33,13 @@ TEST(IdDevpath, CanMap) {
   map["/fru2"] = "/global/fru2";
   auto assigner = NewMapBasedDevpathAssigner(std::move(map));
 
-  EXPECT_THAT(assigner->IdForSubqueryDataSet(ParseTextProtoOrDie(R"pb(
+  EXPECT_THAT(assigner->IdForLocalDevpathInDataSet(ParseTextProtoOrDie(R"pb(
     devpath: "/fru1"
     properties { name: "Name" string_value: "Fru1" }
     properties { name: "Location.ServiceLabel" string_value: "fru1" }
   )pb")),
               IsOkAndHolds("/global/fru1"));
-  EXPECT_THAT(assigner->IdForSubqueryDataSet(ParseTextProtoOrDie(R"pb(
+  EXPECT_THAT(assigner->IdForLocalDevpathInDataSet(ParseTextProtoOrDie(R"pb(
     devpath: "/fru2"
     properties { name: "Name" string_value: "Fru2" }
     properties { name: "Location.ServiceLabel" string_value: "fru2" }
@@ -52,7 +52,7 @@ TEST(IdDevpath, CannotMapWithoutDevpathInDataSet) {
   map["/fru1"] = "/global/fru1";
   auto assigner = NewMapBasedDevpathAssigner(std::move(map));
 
-  EXPECT_THAT(assigner->IdForSubqueryDataSet(ParseTextProtoOrDie(R"pb(
+  EXPECT_THAT(assigner->IdForLocalDevpathInDataSet(ParseTextProtoOrDie(R"pb(
     properties { name: "Name" string_value: "Fru1" }
     properties { name: "Location.ServiceLabel" string_value: "fru1" }
   )pb")),
@@ -64,7 +64,7 @@ TEST(IdDevpath, CannotMapWithoutMatchingEntry) {
   map["/fru1"] = "/global/fru1";
   auto assigner = NewMapBasedDevpathAssigner(std::move(map));
 
-  EXPECT_THAT(assigner->IdForSubqueryDataSet(ParseTextProtoOrDie(R"pb(
+  EXPECT_THAT(assigner->IdForLocalDevpathInDataSet(ParseTextProtoOrDie(R"pb(
     devpath: "/fru2"
     properties { name: "Name" string_value: "Fru2" }
     properties { name: "Location.ServiceLabel" string_value: "fru2" }

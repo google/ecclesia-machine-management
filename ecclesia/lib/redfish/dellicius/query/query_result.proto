@@ -22,12 +22,23 @@ message SubqueryDataSet {
       google.protobuf.Timestamp timestamp_value = 7;
     }
   }
+  // Redfish properties identifying the location of a resource.
+  message RedfishLocation {
+    string service_label = 1;
+    string part_location_context = 2;
+  }
+
+  // Local devpath derived using TopologyV2.
   optional string devpath = 1;
+  // Redfish properties queried.
   repeated Property properties = 2;
   // Maps child subquery id to its associated subquery response data.
   // An important construct to group datasets of different subqueries under
   // parent subquery.
   map<string, SubqueryOutput> child_subquery_output_by_id = 3;
+  oneof stable_id {
+    RedfishLocation redfish_location = 4;
+  }
 }
 
 message SubqueryOutput {

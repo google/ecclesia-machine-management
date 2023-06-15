@@ -28,9 +28,13 @@ class IdAssigner {
  public:
   virtual ~IdAssigner() {}
 
-  // Assign an identifier to the the data_set. Return absl::NotFoundError if a
-  // translation does not exist.
-  virtual absl::StatusOr<IdT> IdForSubqueryDataSet(
+  // Assign an identifier based on local devpath in the data_set.
+  // Return absl::NotFoundError if a translation does not exist.
+  virtual absl::StatusOr<IdT> IdForLocalDevpathInDataSet(
+      SubqueryDataSet data_set) = 0;
+  // Assign an identifier based on Redfish location in the data_set.
+  // Return absl::NotFoundError if a translation does not exist.
+  virtual absl::StatusOr<IdT> IdForRedfishLocationInDataSet(
       SubqueryDataSet data_set) = 0;
 };
 

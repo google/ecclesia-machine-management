@@ -33,7 +33,7 @@ class MapBasedDevpathAssigner : public IdAssigner<std::string> {
   MapBasedDevpathAssigner(absl::flat_hash_map<std::string, std::string> map)
       : map_(std::move(map)) {}
 
-  virtual absl::StatusOr<std::string> IdForSubqueryDataSet(
+  virtual absl::StatusOr<std::string> IdForLocalDevpathInDataSet(
       SubqueryDataSet data_set) override {
     if (!data_set.has_devpath() || data_set.devpath().empty()) {
       return absl::NotFoundError("");
@@ -43,6 +43,11 @@ class MapBasedDevpathAssigner : public IdAssigner<std::string> {
       return absl::NotFoundError("");
     }
     return itr->second;
+  }
+
+  virtual absl::StatusOr<std::string> IdForRedfishLocationInDataSet(
+      SubqueryDataSet /*data_set*/) override {
+    return absl::NotFoundError("");
   }
 
  private:
