@@ -57,18 +57,11 @@ package_group(
     packages = ["//ecclesia/mmanager/middles/aggregator/..."],
 )
 
-# Machine manager shared libraries
-package_group(
-    name = "mmanager_library_users",
-    packages = ["//ecclesia/mmanager/..."],
-)
-
 # Machine manager middle layer code.
 package_group(
     name = "mmanager_middle_users",
     packages = [
         "//ecclesia/mmanager/frontends/...",
-        "//ecclesia/mmanager/lib/resource/...",
         "//ecclesia/mmanager/middles/...",
     ],
 )
