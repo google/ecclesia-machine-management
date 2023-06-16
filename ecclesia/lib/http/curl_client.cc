@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <variant>
@@ -37,8 +38,10 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
+#include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "curl/curl.h"
+#include "curl/system.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"
 
@@ -238,8 +241,88 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Patch(
   return HttpMethod(Protocol::kPatch, std::move(request));
 }
 
+absl::Status CurlHttpClient::GetIncremental(
+    std::unique_ptr<HttpRequest> request, IncrementalResponseHandler *handler) {
+  return HttpMethod(Protocol::kGet, std::move(request), handler).status();
+}
+
+absl::Status CurlHttpClient::PostIncremental(
+    std::unique_ptr<HttpRequest> request, IncrementalResponseHandler *handler) {
+  return HttpMethod(Protocol::kPost, std::move(request), handler).status();
+}
+
+absl::Status CurlHttpClient::DeleteIncremental(
+    std::unique_ptr<HttpRequest> request, IncrementalResponseHandler *handler) {
+  return HttpMethod(Protocol::kDelete, std::move(request), handler).status();
+}
+
+absl::Status CurlHttpClient::PatchIncremental(
+    std::unique_ptr<HttpRequest> request, IncrementalResponseHandler *handler) {
+  return HttpMethod(Protocol::kPatch, std::move(request), handler).status();
+}
+
+class ResponseContext {
+ public:
+  ResponseContext(LibCurl *libcurl, CURL *curl,
+                  HttpClient::IncrementalResponseHandler *handler)
+      : libcurl_(libcurl),
+        curl_(curl),
+        handler_(handler),
+        status_(absl::OkStatus()) {}
+  HttpClient::HttpResponse &GetResponse() {
+    if (!response_.has_value()) {
+      uint64_t long_response_code = 0;
+      int returned_code = 0;
+      if (libcurl_->curl_easy_getinfo(curl_, CURLINFO_RESPONSE_CODE,
+                                      &long_response_code) == CURLE_OK) {
+        returned_code = static_cast<int>(long_response_code);
+      }
+      response_ = HttpClient::HttpResponse{
+          .code = returned_code,
+          .body = response_body_,
+          .headers = response_headers_,
+      };
+      if (handler_ != nullptr) {
+        status_ = handler_->OnResponseHeaders(*response_);
+      }
+    }
+    return *response_;
+  }
+
+  void AddHeader(absl::string_view key, absl::string_view value) {
+    response_headers_.try_emplace(key, value);
+  }
+
+  bool IsIncremental() const { return handler_ != nullptr; }
+
+  absl::Status HandleBodyData(absl::string_view data) {
+    if (handler_ == nullptr) {
+      response_body_.append(data);
+    } else if (!IsCancelled()) {
+      status_ = handler_->OnBodyData(data);
+    }
+    return status_;
+  }
+
+  bool IsCancelled() const {
+    return handler_ != nullptr && handler_->IsCancelled();
+  }
+
+  absl::Status status() const { return status_; }
+
+ private:
+  LibCurl *libcurl_;
+  CURL *curl_;
+  HttpClient::IncrementalResponseHandler *handler_;
+  absl::Status status_;
+  std::optional<HttpClient::HttpResponse> response_;
+  std::string response_body_;
+  HttpClient::HttpHeaders response_headers_;
+};
+
 absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
-    Protocol cmd, std::unique_ptr<HttpRequest> request) {
+    Protocol cmd, std::unique_ptr<HttpRequest> request,
+    IncrementalResponseHandler *handler) {
   CURL *curl = libcurl_->curl_easy_init();
   if (!curl) return absl::InternalError("Failed to create curl handle");
   absl::Cleanup curl_cleanup([&]() { libcurl_->curl_easy_cleanup(curl); });
@@ -296,35 +379,40 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
   }
   libcurl_->curl_easy_setopt(curl, CURLOPT_HTTPHEADER, request_headers);
 
-  std::string response_body;
-  HttpHeaders response_headers;
+  ResponseContext context(libcurl_.get(), curl, handler);
 
   libcurl_->curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, BodyCallback);
-  libcurl_->curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_body);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_WRITEDATA, &context);
   libcurl_->curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, HeaderCallback);
-  libcurl_->curl_easy_setopt(curl, CURLOPT_WRITEHEADER, &response_headers);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_WRITEHEADER, &context);
+
+  if (handler != nullptr) {
+    libcurl_->curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION,
+                               ProgressCallback);
+    libcurl_->curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &context);
+  }
 
   CURLcode code = libcurl_->curl_easy_perform(curl);
+  if (!context.status().ok()) {
+    return context.status();
+  }
+  if (code == CURLE_ABORTED_BY_CALLBACK) {
+    return absl::CancelledError();
+  }
   if (code != CURLE_OK) {
     return absl::InternalError(
         absl::StrFormat("cURL failure: %s", curl_easy_strerror(code)));
   }
-  uint64_t long_response_code = 0;
-  int returned_code = 0;
-  if (libcurl_->curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE,
-                                  &long_response_code) == CURLE_OK) {
-    returned_code = static_cast<int>(long_response_code);
+  if (context.IsCancelled()) {
+    return absl::CancelledError();
   }
-
-  return HttpClient::HttpResponse{.code = returned_code,
-                                  .body = response_body,
-                                  .headers = response_headers};
+  return context.GetResponse();
 }
 
 // userp is set through framework over third_CURLOPT_WRITEDATA
 size_t CurlHttpClient::HeaderCallback(const void *data, size_t size,
                                       size_t nmemb, void *userp) {
-  auto *headers = static_cast<HttpHeaders *>(userp);
+  auto *context = static_cast<ResponseContext *>(userp);
   auto str = static_cast<const char *>(data);
 
   if (str[0] != '\r' && str[1] != '\n') {
@@ -333,7 +421,13 @@ size_t CurlHttpClient::HeaderCallback(const void *data, size_t size,
     if (v.size() == 2) {
       absl::StripAsciiWhitespace(&v[0]);
       absl::StripAsciiWhitespace(&v[1]);
-      headers->try_emplace(v[0], v[1]);
+      context->AddHeader(v[0], v[1]);
+    }
+  } else if (context->IsIncremental() && !context->IsCancelled()) {
+    context->GetResponse();
+    if (!context->status().ok()) {
+      // Use CURL_WRITEFUNC_ERROR when it is available
+      return size * nmemb == 0 ? 1 : 0;
     }
   }
 
@@ -343,9 +437,23 @@ size_t CurlHttpClient::HeaderCallback(const void *data, size_t size,
 // userp is set through framework over third_CURLOPT_WRITEHEADER
 size_t CurlHttpClient::BodyCallback(const void *data, size_t size, size_t nmemb,
                                     void *userp) {
-  std::string *body = static_cast<std::string *>(userp);
-  body->append(static_cast<const char *>(data), size * nmemb);
+  auto *context = static_cast<ResponseContext *>(userp);
+  absl::string_view data_str(static_cast<const char *>(data), size * nmemb);
+  absl::Status result = context->HandleBodyData(data_str);
+  if (!result.ok()) {
+    // Use CURL_WRITEFUNC_ERROR when it is available
+    return size * nmemb == 0 ? 1 : 0;
+  }
   return size * nmemb;
+}
+
+int CurlHttpClient::ProgressCallback(void *userp, curl_off_t dltotal,
+                                     curl_off_t dlnow, curl_off_t ultotal,
+                                     curl_off_t ulnow) {
+  auto *context = static_cast<ResponseContext *>(userp);
+  return (context->IsCancelled())
+             ? 1  // Any non-zero value will abort the transfer.
+             : CURL_PROGRESSFUNC_CONTINUE;
 }
 
 ABSL_CONST_INIT absl::Mutex CurlHttpClient::shared_mutex_(absl::kConstInit);
@@ -409,6 +517,11 @@ void CurlHttpClient::SetDefaultCurlOpts(CURL *curl) const {
                                  static_cast<uint32_t>(CURL_IPRESOLVE_V6));
       break;
   }
+
+  libcurl_->curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT,
+                             config_.low_speed_limit);
+  libcurl_->curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME,
+                             config_.low_speed_time);
 
   // Share connections from other curl connections
   libcurl_->curl_easy_setopt(curl, CURLOPT_SHARE, shared_connection_);

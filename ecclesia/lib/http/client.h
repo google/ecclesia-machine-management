@@ -23,6 +23,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
@@ -69,6 +70,14 @@ class HttpClient {
     HttpHeaders headers;
   };
 
+  class IncrementalResponseHandler {
+   public:
+    virtual ~IncrementalResponseHandler() = default;
+    virtual absl::Status OnResponseHeaders(const HttpResponse& response) = 0;
+    virtual absl::Status OnBodyData(absl::string_view data) = 0;
+    virtual bool IsCancelled() const { return false; }
+  };
+
   HttpClient() {}
   virtual ~HttpClient() {}
 
@@ -89,6 +98,26 @@ class HttpClient {
   virtual absl::StatusOr<HttpResponse> Patch(
       std::unique_ptr<HttpRequest> request) {
     return absl::UnimplementedError("Patch not implemented");
+  }
+
+  // These methods pass the response code and headers, followed the response
+  // body in chunks to a handler. This is useful for long running connections
+  // such as SSE.
+  virtual absl::Status GetIncremental(std::unique_ptr<HttpRequest> request,
+                                      IncrementalResponseHandler* handler) {
+    return absl::UnimplementedError("GetIncremental not implemented");
+  }
+  virtual absl::Status PostIncremental(std::unique_ptr<HttpRequest> request,
+                                       IncrementalResponseHandler* handler) {
+    return absl::UnimplementedError("PostIncremental not implemented");
+  }
+  virtual absl::Status DeleteIncremental(std::unique_ptr<HttpRequest> request,
+                                         IncrementalResponseHandler* handler) {
+    return absl::UnimplementedError("DeleteIncremental not implemented");
+  }
+  virtual absl::Status PatchIncremental(std::unique_ptr<HttpRequest> request,
+                                        IncrementalResponseHandler* handler) {
+    return absl::UnimplementedError("PatchIncremental not implemented");
   }
 };
 

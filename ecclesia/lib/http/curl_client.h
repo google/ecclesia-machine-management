@@ -24,9 +24,11 @@
 #include <string>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/synchronization/mutex.h"
 #include "curl/curl.h"
+#include "curl/system.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"
 
@@ -195,6 +197,10 @@ class CurlHttpClient : public HttpClient {
     int max_recv_speed = -1;
     // CURLOPT_IPRESOLVE
     HttpClient::Resolver resolver = Resolver::kIPAny;
+    // CURLOPT_LOW_SPEED_LIMIT (bytes / sec)
+    uint64_t low_speed_limit = 0;  // disabled by default.
+    // CURLOPT_LOW_SPEED_TIME in seconds
+    uint64_t low_speed_time = 0;  // disabled by default.
   };
 
   CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
@@ -217,17 +223,28 @@ class CurlHttpClient : public HttpClient {
       std::unique_ptr<HttpRequest> request) override;
   absl::StatusOr<HttpResponse> Patch(
       std::unique_ptr<HttpRequest> request) override;
+  absl::Status GetIncremental(std::unique_ptr<HttpRequest> request,
+                              IncrementalResponseHandler *handler) override;
+  absl::Status PostIncremental(std::unique_ptr<HttpRequest> request,
+                               IncrementalResponseHandler *handler) override;
+  absl::Status DeleteIncremental(std::unique_ptr<HttpRequest> request,
+                                 IncrementalResponseHandler *handler) override;
+  absl::Status PatchIncremental(std::unique_ptr<HttpRequest> request,
+                                IncrementalResponseHandler *handler) override;
 
   Config GetConfig() const { return config_; }
 
  private:
-  absl::StatusOr<HttpResponse> HttpMethod(Protocol cmd,
-                                          std::unique_ptr<HttpRequest> request);
+  absl::StatusOr<HttpResponse> HttpMethod(
+      Protocol cmd, std::unique_ptr<HttpRequest> request,
+      IncrementalResponseHandler *handler = nullptr);
   void SetDefaultCurlOpts(CURL *curl) const;
   static size_t HeaderCallback(const void *data, size_t size, size_t nmemb,
                                void *userp);
   static size_t BodyCallback(const void *data, size_t size, size_t nmemb,
                              void *userp);
+  static int ProgressCallback(void *userp, curl_off_t dltotal, curl_off_t dlnow,
+                              curl_off_t ultotal, curl_off_t ulnow);
 
   // The following mutex is used to statically lock the CURLSH pointer
   // shared_connection_.
