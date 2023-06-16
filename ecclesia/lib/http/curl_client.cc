@@ -297,7 +297,8 @@ class ResponseContext {
 
   absl::Status HandleBodyData(absl::string_view data) {
     if (handler_ == nullptr) {
-      response_body_.append(data);
+      // Appending absl::string directly is not supported by some toolchains
+      response_body_.append(data.data(), data.size());
     } else if (!IsCancelled()) {
       status_ = handler_->OnBodyData(data);
     }
