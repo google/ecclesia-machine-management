@@ -86,6 +86,9 @@ TEST_F(CurlHttpClientTest, CanGet) {
   "Chassis": {
       "@odata.id": "/redfish/v1/Chassis"
   },
+  "EventService": {
+      "@odata.id": "/redfish/v1/EventService"
+  },
   "Id": "RootService",
   "Links": {
       "Sessions": {
@@ -448,6 +451,9 @@ TEST_F(CurlHttpClientTest, CanGetIncremental) {
   "@odata.type": "#ServiceRoot.v1_5_0.ServiceRoot",
   "Chassis": {
       "@odata.id": "/redfish/v1/Chassis"
+  },
+  "EventService": {
+      "@odata.id": "/redfish/v1/EventService"
   },
   "Id": "RootService",
   "Links": {

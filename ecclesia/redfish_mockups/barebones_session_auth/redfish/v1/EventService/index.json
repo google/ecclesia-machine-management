@@ -1,0 +1,25 @@
+{
+    "@odata.id": "/redfish/v1/EventService",
+    "@odata.type": "#EventService.v1_5_0.EventService",
+    "Actions": {
+        "#EventService.SubmitTestEvent": {
+            "target": "/redfish/v1/EventService/Actions/EventService.SubmitTestEvent"
+        }
+    },
+    "EventFormatTypes": [
+        "Event"
+    ],
+    "Id": "EventService",
+    "Name": "Event Service",
+    "RegistryPrefixes": [
+        "Base"
+    ],
+    "ServerSentEventUri": "/redfish/v1/EventService/Subscriptions/SSE",
+    "ServiceEnabled": true,
+    "Status": {
+        "State": "Enabled"
+    },
+    "Subscriptions": {
+        "@odata.id": "/redfish/v1/EventService/Subscriptions"
+    }
+}

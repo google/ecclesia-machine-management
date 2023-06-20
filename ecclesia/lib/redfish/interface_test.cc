@@ -55,6 +55,9 @@ TEST(RedfishVariant, DebugMsgShouldHaveIndent) {
  "Chassis": {
   "@odata.id": "/redfish/v1/Chassis"
  },
+ "EventService": {
+  "@odata.id": "/redfish/v1/EventService"
+ },
  "Id": "RootService",
  "Links": {
   "Sessions": {
