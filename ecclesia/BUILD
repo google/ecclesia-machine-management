@@ -55,10 +55,7 @@ package_group(
 # be part of the public API and is subject to change is more frequent and less
 # compatible ways. Code outside of the mmanager code itself should not be
 # accessing the service metadata.
-package_group(
-    name = "mmanager_metadata_users",
-    packages = ["//ecclesia/mmanager/middles/aggregator/..."],
-)
+package_group(name = "mmanager_metadata_users")
 
 # Machine manager middle layer code.
 package_group(
