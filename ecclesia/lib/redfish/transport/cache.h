@@ -20,6 +20,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
@@ -30,6 +31,7 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
+#include "absl/types/optional.h"
 #include "ecclesia/lib/complexity_tracker/complexity_tracker.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
@@ -40,7 +42,7 @@ namespace ecclesia {
 // methods to transparently allow subclasses to implement cache implementations.
 class RedfishCachedGetterInterface {
  public:
-  struct GetResult {
+  struct OperationResult {
     // Result of the Redfish GET request.
     absl::StatusOr<RedfishTransport::Result> result;
     // True if the result was fetched from a live service. False if the result
@@ -60,7 +62,7 @@ class RedfishCachedGetterInterface {
   // Returns a result from a GET to a path. May return a cached result depending
   // on an implementation-specific cache policy. May also cause a cache to be
   // updated.
-  GetResult CachedGet(absl::string_view path) {
+  OperationResult CachedGet(absl::string_view path) {
     if (manager_.has_value()) {
       (*manager_)->RecordDownstreamCall(
           ApiComplexityContext::CallType::kCachedRedfish);
@@ -70,7 +72,7 @@ class RedfishCachedGetterInterface {
 
   // Returns a result from a GET to a path. The result should be fetched
   // from a live service and GetResult.is_fresh should be set to true.
-  GetResult UncachedGet(absl::string_view path) {
+  OperationResult UncachedGet(absl::string_view path) {
     if (manager_.has_value()) {
       (*manager_)->RecordDownstreamCall(
           ApiComplexityContext::CallType::kUncachedRedfish);
@@ -78,11 +80,26 @@ class RedfishCachedGetterInterface {
     return UncachedGetInternal(path);
   }
 
+  // Returns a result from a POST to a path and a payload. May return a cached
+  // result depending on an implementation-specific cache policy. May also cause
+  // a cache to be updated.
+  OperationResult CachedPost(absl::string_view path, absl::string_view payload,
+                       absl::Duration duration) {
+    if (manager_.has_value()) {
+      (*manager_)->RecordDownstreamCall(
+          ApiComplexityContext::CallType::kCachedRedfish);
+    }
+    return CachedPostInternal(path, payload, duration);
+  }
+
  protected:
   // Methods implement the cache specific logic for CachedGet and UncachedGet
   // public methods
-  virtual GetResult CachedGetInternal(absl::string_view path) = 0;
-  virtual GetResult UncachedGetInternal(absl::string_view path) = 0;
+  virtual OperationResult CachedGetInternal(absl::string_view path) = 0;
+  virtual OperationResult UncachedGetInternal(absl::string_view path) = 0;
+  virtual OperationResult CachedPostInternal(absl::string_view path,
+                                       absl::string_view payload,
+                                       absl::Duration duration) = 0;
 
  private:
   std::optional<const ApiComplexityContextManager *> manager_;
@@ -100,8 +117,11 @@ class NullCache : public RedfishCachedGetterInterface {
       : RedfishCachedGetterInterface(manager), transport_(transport) {}
 
  protected:
-  GetResult CachedGetInternal(absl::string_view path) override;
-  GetResult UncachedGetInternal(absl::string_view path) override;
+  OperationResult CachedGetInternal(absl::string_view path) override;
+  OperationResult UncachedGetInternal(absl::string_view path) override;
+  OperationResult CachedPostInternal(absl::string_view path,
+                               absl::string_view payload,
+                               absl::Duration duration) override;
 
  private:
   RedfishTransport *transport_;
@@ -117,11 +137,14 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
       : RedfishCachedGetterInterface(manager),
         transport_(transport),
         clock_(clock),
-        max_age_(max_age) {}
+        get_max_age_(max_age) {}
 
  protected:
-  GetResult CachedGetInternal(absl::string_view path) override;
-  GetResult UncachedGetInternal(absl::string_view path) override;
+  OperationResult CachedGetInternal(absl::string_view path) override;
+  OperationResult UncachedGetInternal(absl::string_view path) override;
+  OperationResult CachedPostInternal(absl::string_view path,
+                               absl::string_view payload,
+                               absl::Duration duration) override;
 
  private:
   // Each CacheNode owns its own result cache and previous update timestamp.
@@ -129,7 +152,13 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
    public:
     CacheNode(std::string path, RedfishTransport *transport, const Clock &clock,
               const absl::Duration duration)
+        : CacheNode(std::move(path), std::nullopt, transport, clock, duration) {
+    }
+    CacheNode(std::string path, std::optional<std::string> post_payload,
+              RedfishTransport *transport, const Clock &clock,
+              const absl::Duration duration)
         : path_(std::move(path)),
+          post_payload_(std::move(post_payload)),
           transport_(transport),
           clock_(&clock),
           duration_(duration) {}
@@ -172,8 +201,8 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
    private:
     std::unique_ptr<absl::Notification> RegisterNotificationIfUpdateInProgress()
         ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
-      if (!get_in_progress_) {
-        get_in_progress_ = true;
+      if (!operation_in_progress_) {
+        operation_in_progress_ = true;
         return nullptr;
       }
       // Someone is in the middle of doing an update.
@@ -185,14 +214,25 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
 
     ResultAndFreshness DoUpdateAndNotifyOthers()
         ABSL_LOCKS_EXCLUDED(mutex_) {
-      // transport_->Get() might be slow so do not hold any locks here.
-      auto result = transport_->Get(path_);
-      // If the result was not JSON, set the update time to InfinitePast() to
-      // never cache. However, still update result_ so that we can batch
-      // colliding uncached Gets in case the payload is polled frequently and
-      // has a long latency.
+      // transport_->Get() or Post() might be slow so do not hold any locks
+      // here.
+      absl::StatusOr<RedfishTransport::Result> result;
+      if (post_payload_.has_value()) {
+        result = transport_->Post(path_, *post_payload_);
+      } else {
+        result = transport_->Get(path_);
+      }
+
+      // For successful return, if this is Post operation, we cache the result
+      // no matter what format the body is, otherwise we only cache it if it's
+      // JSON format.
+      // However, we still update result_ so that we can batch colliding
+      // uncached Gets in case the payload is polled frequently and has a long
+      // latency.
       absl::Time update_time = absl::InfinitePast();
-      if (result.ok() && std::holds_alternative<nlohmann::json>(result->body)) {
+      if (result.ok() &&
+          (post_payload_.has_value() ||
+           std::holds_alternative<nlohmann::json>(result->body))) {
         update_time = clock_->Now();
       }
 
@@ -205,7 +245,7 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
           notification->Notify();
         }
         notifications_.clear();
-        get_in_progress_ = false;
+        operation_in_progress_ = false;
         return {std::move(result), true};
       }
     }
@@ -222,6 +262,9 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
 
     // The URI associated with this cache.
     const std::string path_;
+    // The optional POST payload associated with this cache. If this has some
+    // value, it means this is cache from POST.
+    std::optional<std::string> post_payload_;
     // The RedfishTransport used to update this cache.
     RedfishTransport *transport_;
 
@@ -241,17 +284,26 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
     std::vector<absl::Notification *> notifications_
         ABSL_GUARDED_BY(mutex_);
     // Set to true if there is an update in progress.
-    bool get_in_progress_ ABSL_GUARDED_BY(mutex_) = false;
+    bool operation_in_progress_ ABSL_GUARDED_BY(mutex_) = false;
   };
 
-  CacheNode &GetCacheNode(absl::string_view path);
+  CacheNode &RetrieveCacheNode(absl::string_view path)
+      ABSL_LOCKS_EXCLUDED(get_cache_lock_);
+  CacheNode &RetrieveCacheNode(absl::string_view path,
+                               absl::string_view post_payload,
+                               absl::Duration duration)
+      ABSL_LOCKS_EXCLUDED(post_cache_lock_);
 
   RedfishTransport *transport_;
   const Clock *clock_;
-  const absl::Duration max_age_;
-  absl::Mutex cache_lock_;
-  absl::flat_hash_map<std::string, std::unique_ptr<CacheNode>> cache_
-      ABSL_GUARDED_BY(cache_lock_);
+  const absl::Duration get_max_age_;
+  absl::Mutex get_cache_lock_;
+  absl::flat_hash_map<std::string, std::unique_ptr<CacheNode>> get_cache_
+      ABSL_GUARDED_BY(get_cache_lock_);
+  absl::Mutex post_cache_lock_;
+  absl::flat_hash_map<std::pair<std::string, std::string>,
+                      std::unique_ptr<CacheNode>>
+      post_cache_ ABSL_GUARDED_BY(post_cache_lock_);
 };
 
 }  // namespace ecclesia

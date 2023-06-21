@@ -36,7 +36,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
-#include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
@@ -670,6 +669,25 @@ class HttpRedfishInterface : public RedfishInterface {
     return PostUri(uri, KvSpanToJson(kv_span).dump());
   }
 
+  RedfishVariant CachedPostUri(
+      absl::string_view uri,
+      absl::Span<const std::pair<std::string, ValueVariant>> kv_span,
+      absl::Duration duration) override {
+    absl::ReaderMutexLock mu(&transport_mutex_);
+    auto post_result =
+        cache_->CachedPost(uri, KvSpanToJson(kv_span).dump(), duration);
+    if (!post_result.result.ok())
+      return RedfishVariant(post_result.result.status());
+    int code = post_result.result->code;
+    absl::flat_hash_map<std::string, std::string> headers =
+        post_result.result->headers;
+    return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
+                              this, RedfishExtendedPath{std::string(uri)},
+                              *std::move(post_result.result),
+                              post_result.is_fresh ? kIsFresh : kIsCached),
+                          ecclesia::HttpResponseCodeFromInt(code), headers);
+  }
+
   RedfishVariant PostUri(absl::string_view uri,
                          absl::string_view data) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
@@ -718,7 +736,7 @@ class HttpRedfishInterface : public RedfishInterface {
   // Helper function to resolve JSON pointers after doing a GET.
   RedfishVariant GetUriHelper(
       absl::string_view uri, const GetParams &params,
-      ecclesia::RedfishCachedGetterInterface::GetResult get_res) {
+      ecclesia::RedfishCachedGetterInterface::OperationResult get_res) {
     if (!get_res.result.ok()) return RedfishVariant(get_res.result.status());
 
     // Handle JSON pointers if needed. Pointers follow a '#' character at the

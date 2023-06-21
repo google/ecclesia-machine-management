@@ -224,6 +224,13 @@ class JsonMockupMockup : public RedfishInterface {
     return RedfishVariant(
         absl::UnimplementedError("Updates to json_mockup are not supported."));
   }
+  RedfishVariant CachedPostUri(
+      absl::string_view uri,
+      absl::Span<const std::pair<std::string, ValueVariant>> kv_span,
+      absl::Duration duration) override {
+    return RedfishVariant(absl::UnimplementedError(
+        "Cached POST to json_mockup is not supported."));
+  }
   RedfishVariant PostUri(absl::string_view uri,
                          absl::string_view data) override {
     return RedfishVariant(

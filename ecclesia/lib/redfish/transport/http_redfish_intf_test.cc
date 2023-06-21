@@ -409,6 +409,394 @@ TEST_F(HttpRedfishInterfaceTest, CachedGet) {
   }
 }
 
+TEST_F(HttpRedfishInterfaceTest, CachedPostWorkWithJson) {
+  int called_count = 0;
+  auto result_json = nlohmann::json::parse(R"json({
+    "Id": "1",
+    "Name": "MyResource",
+    "Description": "My Test Resource"
+  })json");
+  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface *req) {
+    called_count++;
+    int64_t size;
+    auto buf = req->ReadRequestBytes(&size);
+    ASSERT_THAT(size, Gt(0));
+    auto read_request = nlohmann::json::parse(
+        absl::string_view(buf.get(), size), /*cb=*/nullptr,
+        /*allow_exceptions=*/false);
+    ASSERT_FALSE(read_request.is_discarded());
+    EXPECT_EQ(read_request["key1"], 3);
+    EXPECT_EQ(read_request["key2"], "some value");
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    req->WriteResponseString(result_json.dump());
+    req->Reply();
+  });
+
+  // The first POST will need to hit the backend as the cache is empty.
+  {
+    auto result = intf_->CachedPostUri(
+        "/my/uri", {{"key1", 3}, {"key2", "some value"}}, absl::Minutes(1));
+    EXPECT_THAT(called_count, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json));
+  }
+
+  // The next POST should hit the cache. called_count should not increase.
+  clock_.AdvanceTime(absl::Seconds(1));
+  {
+    auto result = intf_->CachedPostUri(
+        "/my/uri", {{"key1", 3}, {"key2", "some value"}}, absl::Minutes(1));
+    EXPECT_THAT(called_count, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json));
+  }
+
+  // After the age expires, called_count should increase.
+  clock_.AdvanceTime(absl::Minutes(2));
+  {
+    auto result = intf_->CachedPostUri(
+        "/my/uri", {{"key1", 3}, {"key2", "some value"}}, absl::Minutes(1));
+    EXPECT_THAT(called_count, Eq(2));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json));
+  }
+}
+
+TEST_F(HttpRedfishInterfaceTest, CachedPostWorkWithBytes) {
+  int called_count = 0;
+  const char kTestBytes[8] = {
+      0x4d, 0x50, 0x4b, 0x44, 0x30, 0x50, 0x31, 0x35,
+  };
+  std::string test_bytes_str = "MPKD0P15";
+  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface *req) {
+    called_count++;
+    int64_t size;
+    auto buf = req->ReadRequestBytes(&size);
+    ASSERT_THAT(size, Gt(0));
+    auto read_request = nlohmann::json::parse(
+        absl::string_view(buf.get(), size), /*cb=*/nullptr,
+        /*allow_exceptions=*/false);
+    ASSERT_FALSE(read_request.is_discarded());
+    EXPECT_EQ(read_request["key1"], 3);
+    EXPECT_EQ(read_request["key2"], "some value");
+    // Construct the expected response. We don't set any headers here, so
+    // the Redfish transport will treat the body as bytes.
+    req->WriteResponseBytes(kTestBytes, 8);
+    req->Reply();
+  });
+
+  // The first POST will need to hit the backend as the cache is empty.
+  {
+    auto result = intf_->CachedPostUri(
+        "/my/uri", {{"key1", 3}, {"key2", "some value"}}, absl::Minutes(1));
+    EXPECT_THAT(called_count, Eq(1));
+    EXPECT_THAT(result.DebugString(), Eq(test_bytes_str));
+  }
+
+  // The next POST should hit the cache. called_count should not increase.
+  clock_.AdvanceTime(absl::Seconds(1));
+  {
+    auto result = intf_->CachedPostUri(
+        "/my/uri", {{"key1", 3}, {"key2", "some value"}}, absl::Minutes(1));
+    EXPECT_THAT(called_count, Eq(1));
+    EXPECT_THAT(result.DebugString(), Eq(test_bytes_str));
+  }
+
+  // After the age expires, called_count should increase.
+  clock_.AdvanceTime(absl::Minutes(2));
+  {
+    auto result = intf_->CachedPostUri(
+        "/my/uri", {{"key1", 3}, {"key2", "some value"}}, absl::Minutes(1));
+    EXPECT_THAT(called_count, Eq(2));
+    EXPECT_THAT(result.DebugString(), Eq(test_bytes_str));
+  }
+}
+
+TEST_F(HttpRedfishInterfaceTest, CachedPostWorkWithSameUriDifferentPayload) {
+  int called_count_1 = 0, called_count_2 = 0;
+  auto result_json_1 = nlohmann::json::parse(R"json({
+    "Id": "1",
+    "Name": "MyResource",
+    "Description": "My Test Resource"
+  })json");
+  auto result_json_2 = nlohmann::json::parse(R"json({
+    "Id": "2",
+    "Name": "MyResource2",
+    "Description": "My Test Resource2"
+  })json");
+  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface *req) {
+    int64_t size;
+    auto buf = req->ReadRequestBytes(&size);
+    ASSERT_THAT(size, Gt(0));
+    auto read_request = nlohmann::json::parse(
+        absl::string_view(buf.get(), size), /*cb=*/nullptr,
+        /*allow_exceptions=*/false);
+    ASSERT_FALSE(read_request.is_discarded());
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    if (read_request["key"] == 1) {
+      req->WriteResponseString(result_json_1.dump());
+      called_count_1++;
+    } else {
+      req->WriteResponseString(result_json_2.dump());
+      called_count_2++;
+    }
+    req->Reply();
+  });
+
+  // The first POST with key = 1 will need to hit the backend as the cache is
+  // empty.
+  {
+    auto result =
+        intf_->CachedPostUri("/my/uri", {{"key", 1}}, absl::Minutes(1));
+    EXPECT_THAT(called_count_1, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json_1));
+  }
+  // Repeated call will hit cache.
+  clock_.AdvanceTime(absl::Seconds(1));
+  {
+    auto result =
+        intf_->CachedPostUri("/my/uri", {{"key", 1}}, absl::Minutes(1));
+    EXPECT_THAT(called_count_1, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json_1));
+  }
+
+  // The next POST with key = 2 will also hit the backend as payload is
+  // different from last call.
+  clock_.AdvanceTime(absl::Seconds(1));
+  {
+    auto result =
+        intf_->CachedPostUri("/my/uri", {{"key", 2}}, absl::Minutes(1));
+    EXPECT_THAT(called_count_2, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json_2));
+  }
+  // Repeated call will hit cache.
+  clock_.AdvanceTime(absl::Seconds(1));
+  {
+    auto result =
+        intf_->CachedPostUri("/my/uri", {{"key", 2}}, absl::Minutes(1));
+    EXPECT_THAT(called_count_1, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json_2));
+  }
+
+  // After the age expires, both calls should hit the backend and_count should
+  // increase.
+  clock_.AdvanceTime(absl::Minutes(2));
+  {
+    auto result =
+        intf_->CachedPostUri("/my/uri", {{"key", 1}}, absl::Minutes(1));
+    EXPECT_THAT(called_count_1, Eq(2));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json_1));
+  }
+  clock_.AdvanceTime(absl::Seconds(1));
+  {
+    auto result =
+        intf_->CachedPostUri("/my/uri", {{"key", 2}}, absl::Minutes(1));
+    EXPECT_THAT(called_count_2, Eq(2));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json_2));
+  }
+}
+
+TEST_F(HttpRedfishInterfaceTest, CachedGetAndPostWorkTogether) {
+  int get_called_count = 0;
+  auto get_result_json = nlohmann::json::parse(R"json({
+    "Id": "1",
+    "Name": "MyResource",
+    "Description": "My Test Resource"
+  })json");
+  server_->AddHttpGetHandler("/my/get/uri", [&](ServerRequestInterface *req) {
+    get_called_count++;
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    req->WriteResponseString(get_result_json.dump());
+    req->Reply();
+  });
+
+  int post_called_count = 0;
+  auto post_result_json = nlohmann::json::parse(R"json({
+    "Id": "2",
+    "Name": "MyResource",
+    "Description": "My Test Resource"
+  })json");
+  server_->AddHttpPostHandler("/my/post/uri", [&](ServerRequestInterface *req) {
+    post_called_count++;
+    int64_t size;
+    auto buf = req->ReadRequestBytes(&size);
+    ASSERT_THAT(size, Gt(0));
+    auto read_request = nlohmann::json::parse(
+        absl::string_view(buf.get(), size), /*cb=*/nullptr,
+        /*allow_exceptions=*/false);
+    ASSERT_FALSE(read_request.is_discarded());
+    EXPECT_EQ(read_request["key1"], 3);
+    EXPECT_EQ(read_request["key2"], "some value");
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    req->WriteResponseString(post_result_json.dump());
+    req->Reply();
+  });
+
+  // The first GET will need to hit the backend as the cache is empty.
+  {
+    auto result = intf_->CachedGetUri("/my/get/uri", GetParams{});
+    EXPECT_THAT(get_called_count, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(get_result_json));
+  }
+
+  // The next GET should hit the cache. get_called_count should not increase.
+  clock_.AdvanceTime(absl::Seconds(1));
+  {
+    auto result = intf_->CachedGetUri("/my/get/uri", GetParams{});
+    EXPECT_THAT(get_called_count, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(get_result_json));
+  }
+
+  // The first POST will need to hit the backend as the cache is empty.
+  {
+    auto result = intf_->CachedPostUri("/my/post/uri",
+                                       {{"key1", 3}, {"key2", "some value"}},
+                                       absl::Minutes(1));
+    EXPECT_THAT(post_called_count, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(post_result_json));
+  }
+
+  // The next POST should hit the cache. called_count should not increase.
+  clock_.AdvanceTime(absl::Seconds(1));
+  {
+    auto result = intf_->CachedPostUri("/my/post/uri",
+                                       {{"key1", 3}, {"key2", "some value"}},
+                                       absl::Minutes(1));
+    EXPECT_THAT(post_called_count, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(post_result_json));
+  }
+
+  // After the age expires, called_count should increase.
+  clock_.AdvanceTime(absl::Minutes(2));
+  {
+    auto result = intf_->CachedGetUri("/my/get/uri", GetParams{});
+    EXPECT_THAT(get_called_count, Eq(2));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(get_result_json));
+  }
+  clock_.AdvanceTime(absl::Seconds(1));
+  {
+    auto result = intf_->CachedPostUri("/my/post/uri",
+                                       {{"key1", 3}, {"key2", "some value"}},
+                                       absl::Minutes(1));
+    EXPECT_THAT(post_called_count, Eq(2));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(post_result_json));
+  }
+}
+
+TEST_F(HttpRedfishInterfaceTest, CachedGetNotWorkWithBytes) {
+  int called_count = 0;
+  const char kTestBytes[8] = {
+      0x4d, 0x50, 0x4b, 0x44, 0x30, 0x50, 0x31, 0x35,
+  };
+  std::string test_bytes_str = "MPKD0P15";
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
+    called_count++;
+    // Construct the expected response. We don't set any headers here, so
+    // the Redfish transport will treat the body as bytes.
+    req->WriteResponseBytes(kTestBytes, 8);
+    req->Reply();
+  });
+
+  // The first GET will need to hit the backend as the cache is empty.
+  {
+    auto result = intf_->CachedGetUri("/my/uri", GetParams{});
+    EXPECT_THAT(called_count, Eq(1));
+    EXPECT_THAT(result.DebugString(), Eq(test_bytes_str));
+  }
+
+  // Although the cache has not expired, bytes type response will NOT be cached.
+  // The next GET will also hit the backend and called_count should increase.
+  clock_.AdvanceTime(absl::Seconds(1));
+  {
+    auto result = intf_->CachedGetUri("/my/uri", GetParams{});
+    EXPECT_THAT(called_count, Eq(2));
+    EXPECT_THAT(result.DebugString(), Eq(test_bytes_str));
+  }
+}
+
+TEST_F(HttpRedfishInterfaceTest, CachedPostOnlyFirstCallDurationIsValid) {
+  int called_count = 0;
+  auto result_json = nlohmann::json::parse(R"json({
+    "Id": "1",
+    "Name": "MyResource",
+    "Description": "My Test Resource"
+  })json");
+  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface *req) {
+    called_count++;
+    int64_t size;
+    auto buf = req->ReadRequestBytes(&size);
+    ASSERT_THAT(size, Gt(0));
+    auto read_request = nlohmann::json::parse(
+        absl::string_view(buf.get(), size), /*cb=*/nullptr,
+        /*allow_exceptions=*/false);
+    ASSERT_FALSE(read_request.is_discarded());
+    EXPECT_EQ(read_request["key1"], 3);
+    EXPECT_EQ(read_request["key2"], "some value");
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    req->WriteResponseString(result_json.dump());
+    req->Reply();
+  });
+
+  // The first POST will need to hit the backend as the cache is empty.
+  {
+    auto result = intf_->CachedPostUri(
+        "/my/uri", {{"key1", 3}, {"key2", "some value"}}, absl::Minutes(1));
+    EXPECT_THAT(called_count, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json));
+  }
+
+  // The next POST should hit the cache. called_count should not increase.
+  // Use a different duration to try to shorten expiration time.
+  clock_.AdvanceTime(absl::Seconds(1));
+  {
+    auto result = intf_->CachedPostUri(
+        "/my/uri", {{"key1", 3}, {"key2", "some value"}}, absl::Seconds(1));
+    EXPECT_THAT(called_count, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json));
+  }
+
+  // After the second time duration expires and before the first time duration
+  // expires, the cache is still valid as only the duration of first call
+  // counts.
+  clock_.AdvanceTime(absl::Seconds(30));
+  {
+    auto result = intf_->CachedPostUri(
+        "/my/uri", {{"key1", 3}, {"key2", "some value"}}, absl::Minutes(1));
+    EXPECT_THAT(called_count, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json));
+  }
+
+  // // After the true age expires, called_count should increase.
+  clock_.AdvanceTime(absl::Minutes(1));
+  {
+    auto result = intf_->CachedPostUri(
+        "/my/uri", {{"key1", 3}, {"key2", "some value"}}, absl::Minutes(1));
+    EXPECT_THAT(called_count, Eq(2));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json));
+  }
+}
+
 TEST_F(HttpRedfishInterfaceTest, GetWithExpand) {
   server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
     req->OverwriteResponseHeader("OData-Version", "4.0");

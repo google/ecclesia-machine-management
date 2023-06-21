@@ -618,6 +618,18 @@ class RedfishInterface {
   virtual RedfishVariant PostUri(absl::string_view uri,
                                  absl::string_view data) = 0;
 
+  // Post to the given URI and returns cached result.
+  // The caller can specify the max duration for this particular POST operation
+  // (keyed by uri + payload);
+  // Unlike CachedGetUri, we allow each CachedPostUri(keyed by uri + payload) to
+  // configure its own cache max duration, as each POST might have very its own
+  // unique freshessness requirement. Note that only the max duration of first
+  // call to each CachedPostUri has effect.
+  virtual RedfishVariant CachedPostUri(
+      absl::string_view uri,
+      absl::Span<const std::pair<std::string, ValueVariant>> kv_span,
+      absl::Duration duration) = 0;
+
   // Patch to the given URI and returns result.
   virtual RedfishVariant PatchUri(
       absl::string_view uri,
@@ -661,6 +673,12 @@ class NullRedfish : public RedfishInterface {
   RedfishVariant PostUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
+  }
+  RedfishVariant CachedPostUri(
+      absl::string_view uri,
+      absl::Span<const std::pair<std::string, ValueVariant>> kv_span,
+      absl::Duration duration) override {
     return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }
   RedfishVariant PostUri(absl::string_view uri,

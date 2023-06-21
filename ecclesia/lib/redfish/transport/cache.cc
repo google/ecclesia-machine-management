@@ -16,55 +16,82 @@
 
 #include "ecclesia/lib/redfish/transport/cache.h"
 
-#include <variant>
-
 #include "absl/container/flat_hash_map.h"
-#include "absl/log/check.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
-#include "ecclesia/lib/time/clock.h"
-#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 
-RedfishCachedGetterInterface::GetResult NullCache::CachedGetInternal(
+RedfishCachedGetterInterface::OperationResult NullCache::CachedGetInternal(
     absl::string_view path) {
   // Report uncached call as this is nullcache
   return {.result = transport_->Get(path), .is_fresh = true};
 }
 
-RedfishCachedGetterInterface::GetResult NullCache::UncachedGetInternal(
+RedfishCachedGetterInterface::OperationResult NullCache::UncachedGetInternal(
     absl::string_view path) {
   return {.result = transport_->Get(path), .is_fresh = true};
 }
 
-TimeBasedCache::CacheNode &TimeBasedCache::GetCacheNode(
+RedfishCachedGetterInterface::OperationResult NullCache::CachedPostInternal(
+    absl::string_view path, absl::string_view post_payload,
+    absl::Duration duration) {
+  return {.result = transport_->Post(path, post_payload), .is_fresh = true};
+}
+
+TimeBasedCache::CacheNode &TimeBasedCache::RetrieveCacheNode(
     absl::string_view path) {
-  absl::MutexLock mu(&cache_lock_);
-  auto val = cache_.find(path);
-  if (val != cache_.end()) {
+  absl::MutexLock mu(&get_cache_lock_);
+  auto val = get_cache_.find(path);
+  if (val != get_cache_.end()) {
     return *val->second;
   }
-  auto map_return = cache_.insert(
+  auto map_return = get_cache_.insert(
       std::make_pair(std::string(path),
                      std::make_unique<CacheNode>(std::string(path), transport_,
-                                                 *clock_, max_age_)));
+                                                 *clock_, get_max_age_)));
   return *map_return.first->second;
 }
 
-RedfishCachedGetterInterface::GetResult TimeBasedCache::CachedGetInternal(
+TimeBasedCache::CacheNode &TimeBasedCache::RetrieveCacheNode(
+    absl::string_view path, absl::string_view post_payload,
+    absl::Duration duration) {
+  absl::MutexLock mu(&post_cache_lock_);
+  auto key = std::make_pair(std::string(path), std::string(post_payload));
+  auto val = post_cache_.find(key);
+  if (val != post_cache_.end()) {
+    return *val->second;
+  }
+  auto map_return = post_cache_.insert(std::make_pair(
+      std::move(key),
+      std::make_unique<CacheNode>(std::string(path), std::string(post_payload),
+                                  transport_, *clock_, duration)));
+  return *map_return.first->second;
+}
+
+RedfishCachedGetterInterface::OperationResult TimeBasedCache::CachedGetInternal(
     absl::string_view path) {
-  TimeBasedCache::CacheNode &store = GetCacheNode(path);
+  TimeBasedCache::CacheNode &store = RetrieveCacheNode(path);
   auto result = store.CachedRead();
   return {.result = std::move(result.result), .is_fresh = result.is_fresh};
 }
 
-RedfishCachedGetterInterface::GetResult TimeBasedCache::UncachedGetInternal(
-    absl::string_view path) {
-  TimeBasedCache::CacheNode &store = GetCacheNode(path);
+RedfishCachedGetterInterface::OperationResult
+TimeBasedCache::UncachedGetInternal(absl::string_view path) {
+  TimeBasedCache::CacheNode &store = RetrieveCacheNode(path);
   auto result = store.UncachedRead();
+  return {.result = std::move(result.result), .is_fresh = result.is_fresh};
+}
+
+RedfishCachedGetterInterface::OperationResult
+TimeBasedCache::CachedPostInternal(absl::string_view path,
+                                   absl::string_view post_payload,
+                                   absl::Duration duration) {
+  TimeBasedCache::CacheNode &store =
+      RetrieveCacheNode(path, post_payload, duration);
+  auto result = store.CachedRead();
   return {.result = std::move(result.result), .is_fresh = result.is_fresh};
 }
 
