@@ -30,13 +30,21 @@
 namespace ecclesia {
 
 // Returns the policy by reading file on the machine directly.
-OverridePolicy GetOverridePolicy(absl::string_view policy_file_path);
+absl::StatusOr<OverridePolicy> TryGetOverridePolicy(
+    absl::string_view policy_file_path);
 // Returns the policy by BMC's hostname, port(optional) and a
 // Chennel credential for gRPC. If this function fails to find an override
 // policy, it'll return an empty policy with some warning log as no policy
 // should not be a blocker.
 // The `port` argument can be set as std::nullopt if it's not required.
 // Otherwise, the target address will be "{hostname}:{port}."
+absl::StatusOr<OverridePolicy> TryGetOverridePolicy(
+    absl::string_view hostname, std::optional<int> port,
+    const std::shared_ptr<grpc::ChannelCredentials> &creds);
+
+// Same as TryGetOverridePolicy, except returns a default OverridePolicy on
+// failure.
+OverridePolicy GetOverridePolicy(absl::string_view policy_file_path);
 OverridePolicy GetOverridePolicy(
     absl::string_view hostname, std::optional<int> port,
     const std::shared_ptr<grpc::ChannelCredentials> &creds);

@@ -299,27 +299,28 @@ absl::Status ResultUpdateHelper(const OverrideField &field,
 }
 }  // namespace
 
-OverridePolicy GetOverridePolicy(absl::string_view policy_file_path) {
+absl::StatusOr<OverridePolicy> TryGetOverridePolicy(
+    absl::string_view policy_file_path) {
   OverridePolicy policy;
   absl::Status read_policy = GetBinaryProto(policy_file_path, &policy);
   if (!read_policy.ok()) {
-    LOG(WARNING) << "Read policy file failed: " << read_policy.message();
-    return OverridePolicy::default_instance();
+    return absl::FailedPreconditionError(
+        absl::StrCat("Read policy file failed: ", read_policy.message()));
   }
   return policy;
 }
 
-OverridePolicy GetOverridePolicy(
+absl::StatusOr<OverridePolicy> TryGetOverridePolicy(
     absl::string_view hostname, std::optional<int> port,
     const std::shared_ptr<grpc::ChannelCredentials> &creds) {
   OverridePolicy policy;
-  std::string service_address(
-      port.has_value() ? absl::StrCat(hostname, ":", *port) : hostname);
-  auto client = GrpcRedfishV1::NewStub(
-      grpc::CreateChannel(service_address, creds));
+  std::string service_address(port.has_value()
+                                  ? absl::StrCat(hostname, ":", *port)
+                                  : std::string(hostname));
+  auto client =
+      GrpcRedfishV1::NewStub(grpc::CreateChannel(service_address, creds));
   if (client == nullptr) {
-    LOG(WARNING) << "Override Stub creation failed";
-    return OverridePolicy::default_instance();
+    return absl::FailedPreconditionError("Override Stub creation failed");
   }
   grpc::ClientContext context;
   redfish::v1::GetOverridePolicyRequest request;
@@ -334,18 +335,41 @@ OverridePolicy GetOverridePolicy(
 
   auto status = client->GetOverridePolicy(&context, request, &response);
   if (!status.ok()) {
-    LOG(WARNING) << "GetOverridePolicy failed: " << status.error_message();
-    return OverridePolicy::default_instance();
+    return absl::InternalError(
+        absl::StrCat("GetOverridePolicy failed: ", status.error_message()));
   }
   bool result = google::protobuf::TextFormat::ParseFromString(response.policy(), &policy);
   if (!result) {
     LOG(WARNING) << "Byte is unable to translate to proto "
                  << response.policy();
-    return OverridePolicy::default_instance();
+    return absl::InternalError(absl::StrCat(
+        "Byte is unable to translate to proto ", response.policy()));
   }
   return policy;
 }
 
+OverridePolicy GetOverridePolicy(absl::string_view policy_file_path) {
+  absl::StatusOr<OverridePolicy> policy =
+      TryGetOverridePolicy(policy_file_path);
+  if (!policy.ok()) {
+    LOG(WARNING) << "Read policy file failed: " << policy.status().message();
+    return OverridePolicy::default_instance();
+  }
+  return *std::move(policy);
+}
+
+OverridePolicy GetOverridePolicy(
+    absl::string_view hostname, std::optional<int> port,
+    const std::shared_ptr<grpc::ChannelCredentials> &creds) {
+  absl::StatusOr<OverridePolicy> policy =
+      TryGetOverridePolicy(hostname, port, creds);
+  if (!policy.ok()) {
+    LOG(WARNING) << "Remote fetching the policy file failed: "
+                 << policy.status().message();
+    return OverridePolicy::default_instance();
+  }
+  return *std::move(policy);
+}
 
 absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
     absl::string_view path) {
