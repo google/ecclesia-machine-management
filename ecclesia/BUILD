@@ -36,6 +36,9 @@ package_group(
     packages = ["//ecclesia/magent/daemons/..."],
 )
 
+# Machine manager frontend code.
+package_group(name = "mmanager_frontend_users")
+
 # Allowed users of the machine manager API.
 package_group(
     name = "mmanager_users",
@@ -60,14 +63,8 @@ package_group(
 # Machine manager middle layer code.
 package_group(
     name = "mmanager_middle_users",
-    packages = [
-        "//ecclesia/mmanager/frontends/...",
-        "//ecclesia/mmanager/middles/...",
-    ],
+    packages = ["//ecclesia/mmanager/middles/..."],
 )
-
-# Machine manager frontend code.
-package_group(name = "mmanager_frontend_users")
 
 # Machine manager config code.
 package_group(
