@@ -21,6 +21,7 @@
 #include <optional>
 #include <utility>
 
+#include "absl/functional/any_invocable.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
@@ -53,9 +54,17 @@ class RedfishTransportWithOverride : public RedfishTransport {
  public:
   RedfishTransportWithOverride(
       std::unique_ptr<RedfishTransport> redfish_transport,
-      OverridePolicy override_policy)
+      absl::AnyInvocable<absl::StatusOr<OverridePolicy>()> override_policy_cb)
       : redfish_transport_(std::move(redfish_transport)),
-        override_policy_(std::move(override_policy)) {}
+        override_policy_cb_(std::move(override_policy_cb)) {}
+  RedfishTransportWithOverride(
+      std::unique_ptr<RedfishTransport> redfish_transport,
+      OverridePolicy override_policy)
+      : RedfishTransportWithOverride(
+            std::move(redfish_transport),
+            [override_policy = std::move(override_policy)]() {
+              return override_policy;
+            }) {}
 
   ~RedfishTransportWithOverride() override = default;
 
@@ -90,9 +99,14 @@ class RedfishTransportWithOverride : public RedfishTransport {
   }
 
  private:
-  std::unique_ptr<RedfishTransport> redfish_transport_;
+  // If we do not have an override, try to fetch it fresh before calling Get.
+  absl::StatusOr<RedfishTransport::Result> TryApplyingOverride(
+      absl::string_view path, RedfishTransport::Result result);
 
-  const OverridePolicy override_policy_;
+  std::unique_ptr<RedfishTransport> redfish_transport_;
+  bool has_override_policy_ = false;
+  OverridePolicy override_policy_;  // Use a default empty override policy.
+  absl::AnyInvocable<absl::StatusOr<OverridePolicy>()> override_policy_cb_;
 };
 }  // namespace ecclesia
 #endif  // ECCLESIA_LIB_REDFISH_REDFISH_OVERRIDE_TRANSPORT_WITH_OVERRIDE_H_

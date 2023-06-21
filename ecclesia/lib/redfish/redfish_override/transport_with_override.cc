@@ -371,12 +371,23 @@ OverridePolicy GetOverridePolicy(
   return *std::move(policy);
 }
 
-absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
-    absl::string_view path) {
-  auto get_result = redfish_transport_->Get(path);
-  if (!get_result.ok()) {
-    return get_result;
+absl::StatusOr<RedfishTransport::Result>
+RedfishTransportWithOverride::TryApplyingOverride(
+    absl::string_view path, RedfishTransport::Result get_result) {
+  // Try to fetch the override policy.
+  if (!has_override_policy_) {
+    auto override_policy = override_policy_cb_();
+    if (!override_policy.ok()) {
+      LOG(ERROR) << "Unexpectedly unable to retrieve Redfish Override. "
+                    "Returning unedited Redfish response.";
+      return get_result;
+    }
+    has_override_policy_ = true;
+    override_policy_ = *std::move(override_policy);
+    LOG(INFO) << "Applying Redfish override: "
+              << override_policy_.DebugString();
   }
+
   std::string checked_path = std::string(path);
   auto extend_pos = path.find_first_of('?');
   if (extend_pos != std::string::npos) {
@@ -394,7 +405,7 @@ absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
         continue;
       }
       auto update_status =
-          ResultUpdateHelper(field, *get_result, redfish_transport_.get());
+          ResultUpdateHelper(field, get_result, redfish_transport_.get());
       if (!update_status.ok()) {
         LOG(WARNING) << absl::StrFormat(
             "Failed to perform override to uri: %s, failure: %s.", path,
@@ -413,7 +424,7 @@ absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
         continue;
       }
       auto update_status =
-          ResultUpdateHelper(field, *get_result, redfish_transport_.get());
+          ResultUpdateHelper(field, get_result, redfish_transport_.get());
       if (!update_status.ok()) {
         LOG(WARNING) << absl::StrFormat(
             "Failed to perform override to uri: %s, failure: %s.", path,
@@ -421,7 +432,16 @@ absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
       }
     }
   }
-  return *get_result;
+  return get_result;
+}
+
+absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
+    absl::string_view path) {
+  auto get_result = redfish_transport_->Get(path);
+  if (!get_result.ok()) {
+    return get_result;
+  }
+  return TryApplyingOverride(path, *std::move(get_result));
 }
 
 }  // namespace ecclesia

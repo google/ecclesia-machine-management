@@ -22,6 +22,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/test_filesystem.h"
@@ -108,9 +109,8 @@ class RedfishOverrideTest : public ::testing::Test {
 };
 
 TEST_F(RedfishOverrideTest, GetOverridePolicyByFileTest) {
-  OverridePolicy policy = GetOverridePolicy(
-      GetTestDataDependencyPath(
-          "lib/redfish/redfish_override/test_policy.binarypb"));
+  OverridePolicy policy = GetOverridePolicy(GetTestDataDependencyPath(
+      "lib/redfish/redfish_override/test_policy.binarypb"));
   OverridePolicy expected_policy = ParseTextProtoOrDie(R"pb(
     override_content_map_uri: {
       key: "/expected/result/1"
@@ -249,7 +249,8 @@ TEST_F(RedfishOverrideTest, GetReplaceValue) {
     }
   )pb");
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
-      std::move(transport_), policy);
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
 
   absl::string_view expected_get_str = R"json({
     "TestString": "OverrideReplaceByField",
@@ -329,7 +330,8 @@ TEST_F(RedfishOverrideTest, GetExpandReplaceValue) {
     }
   )pb");
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
-      std::move(transport_), policy);
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
 
   absl::string_view expected_get_str = R"json({
     "TestString": "OverrideReplaceByField",
@@ -380,7 +382,8 @@ TEST_F(RedfishOverrideTest, GetReplaceValueRegex) {
     }
   )pb");
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
-      std::move(transport_), policy);
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
 
   absl::string_view expected_get_str = R"json({
     "TestString": "OverrideReplaceByField",
@@ -491,7 +494,8 @@ TEST_F(RedfishOverrideTest, GetAddValue) {
     }
   )pb");
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
-      std::move(transport_), policy);
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
   absl::string_view expected_get_str = R"json({
     "TestArray":[
       {
@@ -572,7 +576,8 @@ TEST_F(RedfishOverrideTest, GetClear) {
     }
   )pb");
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
-      std::move(transport_), policy);
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
   absl::string_view expected_get_str = R"json({
     "TestArray":[
       {"TestStruct":"tests0"},
@@ -612,7 +617,10 @@ TEST_F(RedfishOverrideTest, ReplaceTypeFail) {
     }
   )pb");
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
-      std::move(transport_), replace_policy);
+      std::move(transport_),
+      [&replace_policy]() -> absl::StatusOr<OverridePolicy> {
+        return replace_policy;
+      });
 
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/expected/result/1");
@@ -639,7 +647,8 @@ TEST_F(RedfishOverrideTest, AddArrayFail) {
     }
   )pb");
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
-      std::move(transport_), policy);
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
 
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/expected/result/1");
@@ -665,7 +674,8 @@ TEST_F(RedfishOverrideTest, EmptyIdentifierFail) {
     }
   )pb");
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
-      std::move(transport_), policy);
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
 
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/expected/result/1");
@@ -679,9 +689,7 @@ TEST_F(RedfishOverrideTest, GetExpandExcludeTest) {
       value: {
         override_field:
         [ {
-          apply_condition: {
-            is_expand: true
-          }
+          apply_condition: { is_expand: true }
           action_replace: {
             object_identifier: {
               individual_object_identifier:
@@ -693,9 +701,7 @@ TEST_F(RedfishOverrideTest, GetExpandExcludeTest) {
           }
         }
           , {
-            apply_condition: {
-              is_expand: true
-            }
+            apply_condition: { is_expand: true }
             action_replace: {
               object_identifier: {
                 individual_object_identifier:
@@ -728,7 +734,8 @@ TEST_F(RedfishOverrideTest, GetExpandExcludeTest) {
     }
   )pb");
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
-      std::move(transport_), policy);
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
   {
     absl::string_view expected_get_str_expand = R"json({
       "TestString": "OverrideReplaceByField",
@@ -787,6 +794,169 @@ TEST_F(RedfishOverrideTest, GetExpandExcludeTest) {
                 Eq(expected_get_no_expand));
     EXPECT_THAT(res_get->code, Eq(200));
   }
+}
+
+TEST_F(RedfishOverrideTest, OverrideGottenOnceOnly) {
+  int count = 0;
+  auto rf_override = std::make_unique<RedfishTransportWithOverride>(
+      std::move(transport_), [&count]() -> absl::StatusOr<OverridePolicy> {
+        ++count;
+        return OverridePolicy::default_instance();
+      });
+
+  absl::string_view expected_get_str = R"json({
+    "TestString": "test123",
+    "TestNumber": 123.0,
+    "TestBool": true,
+    "TestArray":[
+      {
+        "TestStruct": "tests0"
+      },
+      {
+        "TestStruct": "tests1"
+      },
+      {
+        "TestStruct": "tests2"
+      },
+      {
+        "TestNumber": 1234.0
+      },
+      "TestArrayString",
+      [ "TestArrayInArray1" ]
+    ]})json";
+  nlohmann::json expected_get =
+      nlohmann::json::parse(expected_get_str, nullptr, false);
+  absl::StatusOr<RedfishTransport::Result> res_get1 =
+      rf_override->Get("/expected/result/1");
+  ASSERT_THAT(res_get1, IsOk());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get1->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get1->body), Eq(expected_get));
+  EXPECT_THAT(res_get1->code, Eq(200));
+  absl::StatusOr<RedfishTransport::Result> res_get2 =
+      rf_override->Get("/expected/result/1");
+  ASSERT_THAT(res_get2, IsOk());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get2->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get2->body), Eq(expected_get));
+  EXPECT_THAT(res_get2->code, Eq(200));
+  EXPECT_THAT(count, Eq(1));
+}
+
+TEST_F(RedfishOverrideTest, FailedGetNoOverride) {
+  int count = 0;
+  auto rf_override = std::make_unique<RedfishTransportWithOverride>(
+      std::move(transport_), [&count]() -> absl::StatusOr<OverridePolicy> {
+        count++;
+        return absl::InternalError("test fail");
+      });
+  EXPECT_CALL(*transport_mock_ptr_, Get(absl::string_view("/my/test/uri")))
+      .WillRepeatedly(Return(absl::InternalError("test fail")));
+  absl::StatusOr<RedfishTransport::Result> res_get =
+      rf_override->Get("/my/test/uri");
+  ASSERT_THAT(res_get, IsStatusInternal());
+  EXPECT_THAT(count, Eq(0));
+}
+
+TEST_F(RedfishOverrideTest, GetReplaceValueFailedOverride) {
+  auto rf_override = std::make_unique<RedfishTransportWithOverride>(
+      std::move(transport_), []() -> absl::StatusOr<OverridePolicy> {
+        return absl::InternalError("test fail");
+      });
+
+  absl::string_view expected_get_str = R"json({
+    "TestString": "test123",
+    "TestNumber": 123.0,
+    "TestBool": true,
+    "TestArray":[
+      {
+        "TestStruct": "tests0"
+      },
+      {
+        "TestStruct": "tests1"
+      },
+      {
+        "TestStruct": "tests2"
+      },
+      {
+        "TestNumber": 1234.0
+      },
+      "TestArrayString",
+      [ "TestArrayInArray1" ]
+    ]})json";
+  nlohmann::json expected_get =
+      nlohmann::json::parse(expected_get_str, nullptr, false);
+  absl::StatusOr<RedfishTransport::Result> res_get =
+      rf_override->Get("/expected/result/1");
+  ASSERT_THAT(res_get, IsOk());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
+  EXPECT_THAT(res_get->code, Eq(200));
+}
+
+TEST_F(RedfishOverrideTest, GetReplaceValueFailedOverrideTryAgain) {
+  OverridePolicy policy = ParseTextProtoOrDie(R"pb(
+    override_content_map_uri: {
+      key: "/expected/result/1"
+      value: {
+        override_field:
+        [ {
+          action_replace: {
+            object_identifier: {
+              individual_object_identifier:
+              [ { field_name: "TestString" }]
+            }
+            override_value: {
+              value: { string_value: "OverrideReplaceByField" }
+            }
+          }
+        }]
+      }
+    }
+  )pb");
+  int count = 0;
+  auto rf_override = std::make_unique<RedfishTransportWithOverride>(
+      std::move(transport_),
+      [&policy, &count]() -> absl::StatusOr<OverridePolicy> {
+        if (count++ == 0) {
+          return absl::InternalError("test fail");
+        }
+        return policy;
+      });
+
+  absl::string_view expected_get_str = R"json({
+    "TestString": "OverrideReplaceByField",
+    "TestNumber": 123.0,
+    "TestBool": true,
+    "TestArray":[
+      {
+        "TestStruct": "tests0"
+      },
+      {
+        "TestStruct": "tests1"
+      },
+      {
+        "TestStruct": "tests2"
+      },
+      {
+        "TestNumber": 1234.0
+      },
+      "TestArrayString",
+      [ "TestArrayInArray1" ]
+    ]})json";
+  nlohmann::json expected_get =
+      nlohmann::json::parse(expected_get_str, nullptr, false);
+  absl::StatusOr<RedfishTransport::Result> res_get1 =
+      rf_override->Get("/expected/result/1");
+  ASSERT_THAT(res_get1, IsOk());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get1->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get1->body), Eq(expected_result1_));
+  EXPECT_THAT(res_get1->code, Eq(200));
+
+  absl::StatusOr<RedfishTransport::Result> res_get2 =
+      rf_override->Get("/expected/result/1");
+  ASSERT_THAT(res_get2, IsOk());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get2->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get2->body), Eq(expected_get));
+  EXPECT_THAT(res_get2->code, Eq(200));
 }
 
 }  // namespace
