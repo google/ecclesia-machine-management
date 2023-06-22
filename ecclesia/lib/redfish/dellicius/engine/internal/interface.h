@@ -86,40 +86,13 @@ class Normalizer {
 // Provides an interface for executing a Dellicius Query plan.
 class QueryPlannerInterface {
  public:
-  // QueryPlannerImpl is provided as the interface for subclasses to be
-  // implemented with the PImpl idiom. This allows QueryPlannerInterface to be
-  // used as value type and save the client from using verbose
-  // std::unique_ptr<QueryPlannerInterface> everywhere.
-  class QueryPlannerImpl {
-   public:
-    virtual ~QueryPlannerImpl() = default;
-    // Executes query plan using RedfishVariant as root.
-    // The RedfishVariant can be the service root (redfish/v1) or any redfish
-    // resource acting as local root for redfish subtree.
-    virtual DelliciusQueryResult Run(const RedfishVariant &variant,
-                                     const Clock &clock,
-                                     QueryTracker *tracker) = 0;
-  };
-
-  absl::StatusOr<DelliciusQueryResult> Run(const RedfishVariant &variant,
-                                           const Clock &clock,
-                                           QueryTracker *tracker) {
-    if (!impl_) {
-      return absl::InternalError("Query plan is null for id");
-    }
-    return impl_->Run(variant, clock, tracker);
-  }
-
-  explicit QueryPlannerInterface(std::unique_ptr<QueryPlannerImpl> impl)
-      : impl_(std::move(impl)) {}
-
-  QueryPlannerInterface(const QueryPlannerInterface &) = delete;
-  QueryPlannerInterface &operator=(const QueryPlannerInterface &) = delete;
-  QueryPlannerInterface(QueryPlannerInterface &&other) = default;
-  QueryPlannerInterface &operator=(QueryPlannerInterface &&other) = default;
-
- private:
-  std::unique_ptr<QueryPlannerImpl> impl_;
+  virtual ~QueryPlannerInterface() = default;
+  // Executes query plan using RedfishVariant as root.
+  // The RedfishVariant can be the service root (redfish/v1) or any redfish
+  // resource acting as local root for redfish subtree.
+  virtual DelliciusQueryResult Run(const RedfishVariant &variant,
+                                   const Clock &clock,
+                                   QueryTracker *tracker) = 0;
 };
 
 }  // namespace ecclesia

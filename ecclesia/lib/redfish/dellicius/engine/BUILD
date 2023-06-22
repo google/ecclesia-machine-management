@@ -15,13 +15,14 @@ cc_library(
     hdrs = ["query_engine.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":factory",
         ":query_engine_config",
         "//ecclesia/lib/file:cc_embed_interface",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:node_topology",
         "//ecclesia/lib/redfish:topology",
-        "//ecclesia/lib/redfish/dellicius/engine/internal:factory",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:query_planner",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:parsers",
@@ -91,5 +92,22 @@ bzl_library(
     deps = [
         "//ecclesia/build_defs:embed",
         "//ecclesia/build_defs:proto",
+    ],
+)
+
+cc_library(
+    name = "factory",
+    hdrs = ["factory.h"],
+    visibility = [
+        "//ecclesia/lib/redfish:__subpackages__",
+        "//platforms/redfish/lib/query_engine:__subpackages__",
+    ],
+    deps = [
+        "//ecclesia/lib/redfish:node_topology",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:normalizer",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
+        "@com_google_absl//absl/memory",
     ],
 )

@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_FACTORY_H_
-#define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_FACTORY_H_
+#ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_FACTORY_H_
+#define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_FACTORY_H_
 
 #include <memory>
 
 #include "absl/memory/memory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/normalizer.h"
-#include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/node_topology.h"
@@ -57,18 +56,6 @@ inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
   return normalizer;
 }
 
-// Builds the default query planner.
-inline absl::StatusOr<QueryPlannerInterface> BuildQueryPlanner(
-    const DelliciusQuery &query,
-    RedPathRedfishQueryParams redpath_to_query_params, Normalizer *normalizer) {
-  auto qp = BuildDefaultQueryPlanner(query, std::move(redpath_to_query_params),
-                                     normalizer);
-  if (!qp.ok()) {
-    return qp.status();
-  }
-  return QueryPlannerInterface(std::move(*qp));
-}
-
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_FACTORY_H_
+#endif  // ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_FACTORY_H_

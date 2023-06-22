@@ -474,7 +474,7 @@ class QueryTimestamp {
 // RedPath path expressions, dispatch an optimum number of redfish resource
 // requests, and return normalized response data per given property
 // specification.
-class QueryPlanner final : public QueryPlannerInterface::QueryPlannerImpl {
+class QueryPlanner final : public QueryPlannerInterface {
  public:
   QueryPlanner(const DelliciusQuery &query,
                std::vector<std::unique_ptr<SubqueryHandle>> subquery_handles,
@@ -978,10 +978,9 @@ SubqueryHandleFactory::GetSubqueryHandles() {
 }  // namespace
 
 // Builds the default query planner.
-absl::StatusOr<std::unique_ptr<QueryPlannerInterface::QueryPlannerImpl>>
-BuildDefaultQueryPlanner(const DelliciusQuery &query,
-                         RedPathRedfishQueryParams redpath_to_query_params,
-                         Normalizer *normalizer) {
+absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> BuildDefaultQueryPlanner(
+    const DelliciusQuery &query,
+    RedPathRedfishQueryParams redpath_to_query_params, Normalizer *normalizer) {
   absl::StatusOr<SubqueryHandleCollection> subquery_handle_collection =
       SubqueryHandleFactory::CreateSubqueryHandles(query, normalizer);
   if (!subquery_handle_collection.ok()) {

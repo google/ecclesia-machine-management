@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-#include <algorithm>
-#include <cstdlib>
-#include <iterator>
+#include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
+
 #include <memory>
 #include <string>
 #include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/container/flat_hash_map.h"
 #include "absl/log/log.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -31,7 +29,7 @@
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/protobuf/parse.h"
-#include "ecclesia/lib/redfish/dellicius/engine/internal/factory.h"
+#include "ecclesia/lib/redfish/dellicius/engine/factory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
@@ -67,11 +65,12 @@ class QueryPlannerTestRunner : public ::testing::Test {
         << "Test parameters not set!";
     DelliciusQuery query =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
-    absl::StatusOr<QueryPlannerInterface> qp =
-        BuildQueryPlanner(query, RedPathRedfishQueryParams{}, normalizer);
+    absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qp =
+        BuildDefaultQueryPlanner(query, RedPathRedfishQueryParams{},
+                                 normalizer);
     ASSERT_TRUE(qp.ok());
     absl::StatusOr<DelliciusQueryResult> query_result =
-        qp->Run(intf_->GetRoot(), *clock_, nullptr);
+        (*qp)->Run(intf_->GetRoot(), *clock_, nullptr);
     ASSERT_TRUE(query_result.ok());
     DelliciusQueryResult intent_output =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
@@ -181,8 +180,9 @@ TEST(QueryPlannerTest, CheckQueryPlannerInitFailsWithInvalidSubqueryLinks) {
   DelliciusQuery query_sensor =
       ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
   auto default_normalizer = BuildDefaultNormalizer();
-  absl::StatusOr<QueryPlannerInterface> qps = BuildQueryPlanner(
-      query_sensor, RedPathRedfishQueryParams{}, default_normalizer.get());
+  absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qps =
+      BuildDefaultQueryPlanner(query_sensor, RedPathRedfishQueryParams{},
+                               default_normalizer.get());
   EXPECT_FALSE(qps.ok());
 }
 
@@ -193,8 +193,9 @@ TEST(QueryPlannerTest,
   DelliciusQuery query_input_proto =
       ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
   auto default_normalizer = BuildDefaultNormalizer();
-  absl::StatusOr<QueryPlannerInterface> qp = BuildQueryPlanner(
-      query_input_proto, RedPathRedfishQueryParams{}, default_normalizer.get());
+  absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qp =
+      BuildDefaultQueryPlanner(query_input_proto, RedPathRedfishQueryParams{},
+                               default_normalizer.get());
   EXPECT_FALSE(qp.ok());
 }
 
@@ -223,11 +224,11 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
     // Query Sensor
     DelliciusQuery query_sensor =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
-    auto qps = BuildQueryPlanner(query_sensor, RedPathRedfishQueryParams{},
-                                 default_normalizer.get());
+    auto qps = BuildDefaultQueryPlanner(
+        query_sensor, RedPathRedfishQueryParams{}, default_normalizer.get());
     ASSERT_TRUE(qps.ok());
     absl::StatusOr<DelliciusQueryResult> result_sensor =
-        qps->Run(service_root, clock, nullptr);
+        (*qps)->Run(service_root, clock, nullptr);
   }
   // For each type of redfish request for each URI, validate that the
   // QueryPlanner sends only 1 request.
@@ -264,11 +265,12 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
     // Query Sensor
     DelliciusQuery query_sensor =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
-    absl::StatusOr<QueryPlannerInterface> qps = BuildQueryPlanner(
-        query_sensor, RedPathRedfishQueryParams{}, default_normalizer.get());
+    absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qps =
+        BuildDefaultQueryPlanner(query_sensor, RedPathRedfishQueryParams{},
+                                 default_normalizer.get());
     ASSERT_TRUE(qps.ok());
     absl::StatusOr<DelliciusQueryResult> result_sensor =
-        qps->Run(service_root, clock, nullptr);
+        (*qps)->Run(service_root, clock, nullptr);
   }
   // Validate that no attempt was made by query planner to query redfish service
   // Redfish Metrics should indicate 1 failed GET request to service root which

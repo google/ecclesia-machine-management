@@ -25,7 +25,7 @@ cc_library(
     srcs = ["normalizer.cc"],
     hdrs = ["normalizer.h"],
     visibility = [
-        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+        "//ecclesia/lib/redfish/dellicius:__subpackages__",
     ],
     deps = [
         ":interface",
@@ -50,7 +50,8 @@ cc_library(
     srcs = ["query_planner.cc"],
     hdrs = ["query_planner.h"],
     visibility = [
-        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+        "//ecclesia/lib/redfish/dellicius:__subpackages__",
+        "//platforms/redfish/lib/query_engine:__subpackages__",
     ],
     deps = [
         ":interface",
@@ -69,23 +70,5 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
         "@com_googlesource_code_re2//:re2",
-    ],
-)
-
-cc_library(
-    name = "factory",
-    hdrs = ["factory.h"],
-    visibility = [
-        "//ecclesia/lib/redfish:__subpackages__",
-        "//platforms/redfish/lib/query_engine:__subpackages__",
-    ],
-    deps = [
-        ":interface",
-        ":normalizer",
-        ":query_planner",
-        "//ecclesia/lib/redfish:node_topology",
-        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
-        "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
-        "@com_google_absl//absl/memory",
     ],
 )

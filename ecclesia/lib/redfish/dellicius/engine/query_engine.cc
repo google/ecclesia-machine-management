@@ -29,8 +29,9 @@
 #include "absl/types/span.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/config.h"
-#include "ecclesia/lib/redfish/dellicius/engine/internal/factory.h"
+#include "ecclesia/lib/redfish/dellicius/engine/factory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
@@ -91,15 +92,14 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 
       // Build a query plan if none exists for the query id
       if (id_to_query_plans_.contains(query.query_id())) continue;
-      absl::StatusOr<QueryPlannerInterface> query_planner;
+      RedPathRedfishQueryParams params{};
       if (auto iter = query_id_to_rules.find(query.query_id());
           iter != query_id_to_rules.end()) {
-        query_planner = BuildQueryPlanner(query, std::move(iter->second),
-                                          normalizer_.get());
-      } else {
-        query_planner = BuildQueryPlanner(query, RedPathRedfishQueryParams{},
-                                          normalizer_.get());
+        params = std::move(iter->second);
       }
+
+      absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> query_planner =
+          BuildDefaultQueryPlanner(query, std::move(params), normalizer_.get());
       if (!query_planner.ok()) continue;
       id_to_query_plans_.emplace(query.query_id(), *std::move(query_planner));
     }
@@ -118,11 +118,11 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 
       absl::StatusOr<DelliciusQueryResult> result_single;
       if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
-        result_single =
-            it->second.Run(intf_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
-                           *clock_, tracker);
+        result_single = it->second->Run(
+            intf_->GetRoot(GetParams{}, ServiceRootUri::kGoogle), *clock_,
+            tracker);
       } else {
-        result_single = it->second.Run(intf_->GetRoot(), *clock_, tracker);
+        result_single = it->second->Run(intf_->GetRoot(), *clock_, tracker);
       }
 
       if (!result_single.ok()) {
@@ -163,7 +163,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
  private:
   // Data normalizer to inject in QueryPlanner for normalizing redfish
   // response per a given property specification in dellicius subquery.
-  absl::flat_hash_map<std::string, QueryPlannerInterface> id_to_query_plans_;
+  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
+      id_to_query_plans_;
   const Clock *clock_;
   std::unique_ptr<Normalizer> normalizer_;
   std::unique_ptr<RedfishInterface> intf_;
