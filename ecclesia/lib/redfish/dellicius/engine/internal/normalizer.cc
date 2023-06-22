@@ -18,7 +18,6 @@
 
 #include <stdint.h>
 
-#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -26,9 +25,12 @@
 #include <vector>
 
 #include "google/protobuf/timestamp.pb.h"
+#include "google/protobuf/descriptor.pb.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_replace.h"
+#include "absl/strings/str_split.h"
+#include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
@@ -36,14 +38,67 @@
 #include "ecclesia/lib/redfish/devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/time/proto.h"
+#include "google/protobuf/descriptor.h"
+#include "google/protobuf/message.h"
 
 namespace ecclesia {
+
+namespace {
+
+const google::protobuf::FieldDescriptor *GetFieldDescriptor(
+    const google::protobuf::Message &message, absl::string_view field_name) {
+  std::vector<absl::string_view> field_path =
+      absl::StrSplit(field_name, '.', absl::SkipEmpty());
+  const google::protobuf::Descriptor *descriptor = message.GetDescriptor();
+  const google::protobuf::FieldDescriptor *field = nullptr;
+  for (const auto &sub_field : field_path) {
+    field = descriptor->FindFieldByName(std::string(sub_field));
+    if (field == nullptr) {
+      continue;
+    }
+    descriptor = field->message_type();
+  }
+  return field;
+}
+
+// Adds Redfish property to subquery based on field options in given subquery.
+// Returns name of the property added to the subquery.
+std::string UpdateSubqueryFromFieldOptions(
+    absl::string_view field_name, const SubqueryDataSet &data_set_local,
+    DelliciusQuery::Subquery &subquery_local) {
+  const google::protobuf::FieldDescriptor *field_descriptor =
+      GetFieldDescriptor(data_set_local, field_name);
+  const auto &properties =
+      field_descriptor->options().GetExtension(query_options).properties();
+  std::string property_label =
+      field_descriptor->options().GetExtension(query_options).label();
+  for (const auto &property : properties) {
+    DelliciusQuery::Subquery::RedfishProperty property_requirement;
+    property_requirement.set_property(property);
+    property_requirement.set_name(property_label);
+    property_requirement.set_type(
+        DelliciusQuery::Subquery::RedfishProperty::STRING);
+    subquery_local.mutable_properties()->Add(std::move(property_requirement));
+  }
+  return property_label;
+}
+
+}  // namespace
 
 absl::Status NormalizerImplDefault::Normalize(
     const RedfishObject &redfish_object,
     const DelliciusQuery::Subquery &subquery,
     SubqueryDataSet &data_set_local) const {
-  for (const auto &property_requirement : subquery.properties()) {
+  // Before mapping observed RedfishProperties to queried properties, we update
+  // the property requirement in subquery to add additional properties to
+  // populate stable id based on Redfish Location.
+  DelliciusQuery::Subquery subquery_local = subquery;
+  std::string service_label = UpdateSubqueryFromFieldOptions(
+      "redfish_location.service_label", data_set_local, subquery_local);
+  std::string part_location_context = UpdateSubqueryFromFieldOptions(
+      "redfish_location.part_location_context", data_set_local, subquery_local);
+
+  for (const auto &property_requirement : subquery_local.properties()) {
     SubqueryDataSet::Property property_out;
     absl::string_view property_name = property_requirement.property();
 
@@ -104,18 +159,36 @@ absl::Status NormalizerImplDefault::Normalize(
         break;
       }
     }
-    if (property_out.value_case()) {
-      // By default, name of the queried property is set as name if the client
-      // application does not provide a name to map the parsed property to.
-      if (property_requirement.has_name()) {
-        property_out.set_name(property_requirement.name());
-      } else {
-        std::string prop_name = property_requirement.property();
-        absl::StrReplaceAll({{"\\.", "."}}, &prop_name);
-        property_out.set_name(prop_name);
-      }
-      *data_set_local.add_properties() = std::move(property_out);
+    if (!property_out.value_case()) {
+      continue;
     }
+
+    // Populate RedfishLocation field in SubqueryDataSet.
+    if (property_requirement.type() == RedfishProperty::STRING &&
+        property_requirement.has_name() &&
+        (property_requirement.name() == service_label ||
+         property_requirement.name() == part_location_context)) {
+      absl::string_view name = property_requirement.name();
+      if (name == service_label) {
+        *data_set_local.mutable_redfish_location()->mutable_service_label() =
+            property_out.string_value();
+      } else if (name == part_location_context) {
+        *data_set_local.mutable_redfish_location()
+             ->mutable_part_location_context() = property_out.string_value();
+      }
+      continue;
+    }
+
+    // By default, name of the queried property is set as name if the client
+    // application does not provide a name to map the parsed property to.
+    if (property_requirement.has_name()) {
+      property_out.set_name(property_requirement.name());
+    } else {
+      std::string prop_name = property_requirement.property();
+      absl::StrReplaceAll({{"\\.", "."}}, &prop_name);
+      property_out.set_name(prop_name);
+    }
+    *data_set_local.add_properties() = std::move(property_out);
   }
   return absl::OkStatus();
 }
@@ -127,6 +200,17 @@ absl::Status NormalizerImplAddDevpath::Normalize(
       GetDevpathForObjectAndNodeTopology(redfish_object, topology_);
   if (devpath.has_value()) {
     data_set.set_devpath(*devpath);
+  }
+  return absl::OkStatus();
+}
+
+absl::Status NormalizerImplAddMachineBarepath::Normalize(
+    const RedfishObject &redfish_object,
+    const DelliciusQuery::Subquery &subquery, SubqueryDataSet &data_set) const {
+  absl::StatusOr<std::string> machine_devpath =
+      id_assigner_.IdForRedfishLocationInDataSet(data_set);
+  if (machine_devpath.ok()) {
+    data_set.mutable_decorators()->set_machine_depvath(machine_devpath.value());
   }
   return absl::OkStatus();
 }

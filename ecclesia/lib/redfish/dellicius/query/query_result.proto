@@ -2,8 +2,10 @@ syntax = "proto3";
 
 package ecclesia;
 
+import "google/protobuf/any.proto";
 import "google/protobuf/timestamp.proto";
 import "google/rpc/status.proto";
+import "google/protobuf/descriptor.proto";
 
 // Encapsulates subset of redfish properties and devpath obtained from a redfish
 // resource.
@@ -22,13 +24,32 @@ message SubqueryDataSet {
       google.protobuf.Timestamp timestamp_value = 7;
     }
   }
+
   // Redfish properties identifying the location of a resource.
   message RedfishLocation {
-    string service_label = 1;
-    string part_location_context = 2;
+    string service_label = 1 [(query_options) = {
+      // QueryEngine adds additional properties to the subquery for internal
+      // use. To differentiate internal properties from user specified ones, the
+      // label is created with trailing and leading underscores.
+      label: "__ServiceLabel__",
+      // A resource can either have PhysicalLocation or Location but not both.
+      // Therefore, only one property from the set below will be mapped to the
+      // label.
+      properties: [
+        "Location.PartLocation.ServiceLabel",
+        "PhysicalLocation.PartLocation.ServiceLabel"
+      ]
+    }];
+    string part_location_context = 2 [(query_options) = {
+      label: "__PartLocationContext__",
+      properties: [
+        "Location.PartLocationContext",
+        "PhysicalLocation.PartLocationContext"
+      ]
+    }];
   }
 
-  // Local devpath derived using TopologyV2.
+  // Local barepath derived using Devpath2 algorithm.
   optional string devpath = 1;
   // Redfish properties queried.
   repeated Property properties = 2;
@@ -39,6 +60,22 @@ message SubqueryDataSet {
   oneof stable_id {
     RedfishLocation redfish_location = 4;
   }
+
+  // Decorator extensions - these properties are not provided by the
+  // RedfishQueryEngine but are rather populated by optional supplemental
+  // libraries which independently mutate the SubqueryDataSet.
+  message DecoratorExtensions {
+    // Any extension provided by a decorator library.
+    repeated google.protobuf.Any extension = 1;
+
+    // Very common extensions can be defined below as first-class members.
+    // The criteria for first-class support are:
+    // * usage by high-throughput applications
+
+    // Machine barepath.
+    optional string machine_depvath = 2;
+  }
+  DecoratorExtensions decorators = 5;
 }
 
 message SubqueryOutput {
@@ -58,4 +95,19 @@ message DelliciusQueryResult {
   google.protobuf.Timestamp start_timestamp = 3;
   // Represents point in time when output for last Dellicus Query is processed.
   google.protobuf.Timestamp end_timestamp = 4;
+}
+
+// Field options used to annotate properties in a subquery output.
+message QueryOptions {
+  // Labels one of the properties in |properties| field.
+  string label = 1;
+  // Lists all aliases for a Redfish Property.
+  // Example:
+  //  {"Location.PartLocationContext", "PhysicalLocation.PartLocationContext"}
+  //  Both properties in the array above represent PartLocationContext.
+  repeated string properties = 2;
+}
+
+extend google.protobuf.FieldOptions {
+  optional QueryOptions query_options = 510245235;
 }

@@ -70,7 +70,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 
     if (config.flags.enable_devpath_extension) {
       topology_ = CreateTopologyFromRedfish(intf_.get());
-      normalizer_ = BuildDefaultNormalizerWithDevpath(topology_);
+      normalizer_ = BuildDefaultNormalizerWithLocalDevpath(topology_);
     } else {
       normalizer_ = BuildDefaultNormalizer();
     }

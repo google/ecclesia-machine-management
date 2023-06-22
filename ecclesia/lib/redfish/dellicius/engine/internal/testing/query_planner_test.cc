@@ -132,7 +132,8 @@ TEST_F(QueryPlannerTestRunner, DefaultNormalizerWithDevpaths) {
   SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer with devpath extension.
   auto topology = CreateTopologyFromRedfish(intf_.get());
-  auto normalizer_with_devpath = BuildDefaultNormalizerWithDevpath(topology);
+  auto normalizer_with_devpath =
+      BuildDefaultNormalizerWithLocalDevpath(topology);
   // Query Sensor
   TestQuery(sensor_in_path, sensor_out_path, normalizer_with_devpath.get());
 }
@@ -146,7 +147,8 @@ TEST_F(QueryPlannerTestRunner,
   SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer with devpath extension.
   auto topology = CreateTopologyFromRedfish(intf_.get());
-  auto normalizer_with_devpath = BuildDefaultNormalizerWithDevpath(topology);
+  auto normalizer_with_devpath =
+      BuildDefaultNormalizerWithLocalDevpath(topology);
   // Query Sensor
   TestQuery(query_in_path, query_out_path, normalizer_with_devpath.get());
 }

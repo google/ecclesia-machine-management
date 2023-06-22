@@ -23,6 +23,9 @@ subquery_output_by_id {
         name: "ServiceLabel"
         string_value: "Hoth"
       }
+      redfish_location {
+        service_label: "Hoth"
+      }
     }
   }
 }

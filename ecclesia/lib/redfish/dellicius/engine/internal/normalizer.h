@@ -21,6 +21,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 
@@ -48,6 +49,22 @@ class NormalizerImplAddDevpath final : public Normalizer::ImplInterface {
 
  private:
   NodeTopology &topology_;
+};
+
+// Adds machine level barepath to subquery output.
+class NormalizerImplAddMachineBarepath final
+    : public Normalizer::ImplInterface {
+ public:
+  NormalizerImplAddMachineBarepath(IdAssigner<std::string> &id_assigner)
+      : id_assigner_(id_assigner) {}
+
+ protected:
+  absl::Status Normalize(const RedfishObject &redfish_object,
+                         const DelliciusQuery::Subquery &subquery,
+                         SubqueryDataSet &data_set) const override;
+
+ private:
+  IdAssigner<std::string> &id_assigner_;
 };
 
 }  // namespace ecclesia

@@ -24,6 +24,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/normalizer.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 
 namespace ecclesia {
@@ -38,11 +39,21 @@ inline std::unique_ptr<Normalizer> BuildDefaultNormalizer() {
 
 // Builds normalizer that transparently returns queried redfish property but
 // extends the QueryPlanner to construct devpath for normalized subquery output.
-inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithDevpath(
+inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithLocalDevpath(
     NodeTopology &node_topology) {
   auto normalizer = BuildDefaultNormalizer();
   normalizer->AddNormilizer(
       absl::make_unique<NormalizerImplAddDevpath>(node_topology));
+  return normalizer;
+}
+
+// Extends default normalizer to populate machine devpaths using Redfish stable
+// identifier.
+inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
+    IdAssigner<std::string> &id_assigner) {
+  auto normalizer = BuildDefaultNormalizer();
+  normalizer->AddNormilizer(
+      absl::make_unique<NormalizerImplAddMachineBarepath>(id_assigner));
   return normalizer;
 }
 
