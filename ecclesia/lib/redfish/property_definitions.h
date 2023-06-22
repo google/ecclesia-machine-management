@@ -214,6 +214,13 @@ inline constexpr char kRfPropertyTaskHttpHeaders[] = "HttpHeaders";
 
 inline constexpr char kRfAnnotationRedfishSettings[] = "@Redfish.Settings";
 
+inline constexpr char kRfPropertyTelemetryService[] = "TelemetryService";
+inline constexpr char kRfPropertyMetricReport[] = "MetricReport";
+inline constexpr char kRfPropertyMetricReportDefinitions[] =
+    "MetricReportDefinitions";
+inline constexpr char kRfPropertyMetricValues[] = "MetricValues";
+inline constexpr char kRfPropertyMetricProperty[] = "MetricProperty";
+
 DEFINE_REDFISH_RESOURCE(ResourceCertificate, "Certificate");
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
 DEFINE_REDFISH_RESOURCE(ResourceChassis, "Chassis");
@@ -312,6 +319,8 @@ DEFINE_REDFISH_PROPERTY(PropertyLowerThresholdCritical, double,
                         "LowerThresholdCritical");
 DEFINE_REDFISH_PROPERTY(PropertyLowerThresholdNonCritical, double,
                         "LowerThresholdNonCritical");
+DEFINE_REDFISH_PROPERTY(PropertyMetricProperty, std::string, "MetricProperty");
+DEFINE_REDFISH_PROPERTY(PropertyMetricValue, std::string, "MetricValue");
 DEFINE_REDFISH_PROPERTY(PropertyState, std::string, "State");
 DEFINE_REDFISH_PROPERTY(PropertyVendorId, std::string, "VendorId");
 DEFINE_REDFISH_PROPERTY(PropertyDeviceId, std::string, "DeviceId");
