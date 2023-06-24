@@ -49,14 +49,6 @@ package_group(
     ],
 )
 
-# Allowed users of the machine manager service metadata.
-#
-# Note that the metadata attached to the service definition is NOT considered to
-# be part of the public API and is subject to change is more frequent and less
-# compatible ways. Code outside of the mmanager code itself should not be
-# accessing the service metadata.
-package_group(name = "mmanager_metadata_users")
-
 # Machine manager middle layer code.
 package_group(
     name = "mmanager_middle_users",
@@ -71,18 +63,6 @@ package_group(
 
 # Tests which use the mmanager binary directly.
 package_group(name = "mmanager_binary_tests")
-
-# Machine manager shared resource libraries
-#
-# The libraries which are visible to this group are intended for the very
-# limited use case where code requires dependencies on ALL resource
-# identifiers or RPC messages, and should not be utilized by clients
-# outside of mmanager.
-#
-# The default and preferred option for including resource dependencies should
-# always be directly importing only the resource messages explicitly required
-# by code, wherever possible.
-package_group(name = "mmanager_resource_library_users")
 
 # Jinja2 users.
 #
