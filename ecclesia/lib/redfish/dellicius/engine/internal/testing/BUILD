@@ -6,6 +6,7 @@ cc_test(
     name = "query_planner_test",
     srcs = ["query_planner_test.cc"],
     data = [
+        "//ecclesia/lib/redfish/dellicius/query/samples:sample_malformed_queries_in",
         "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_in",
         "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_out",
         "//ecclesia/redfish_mockups/indus_hmb_cn:mockup.shar",

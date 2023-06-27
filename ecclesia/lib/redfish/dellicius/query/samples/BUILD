@@ -6,8 +6,6 @@ filegroup(
     name = "sample_queries_in",
     srcs = [
         "query_in/assembly_in.textproto",
-        "query_in/malformed_query.textproto",
-        "query_in/malformed_query_links.textproto",
         "query_in/managers_in.textproto",
         "query_in/processors_in.textproto",
         "query_in/sensor_in.textproto",
@@ -15,6 +13,15 @@ filegroup(
         "query_in/sensor_in_predicates.textproto",
         "query_in/service_root_google_in.textproto",
         "query_in/service_root_in.textproto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "sample_malformed_queries_in",
+    srcs = [
+        "query_in/malformed_query.textproto",
+        "query_in/malformed_query_links.textproto",
     ],
     visibility = ["//visibility:public"],
 )
