@@ -20,9 +20,11 @@
 #include <memory>
 #include <vector>
 
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/config.h"
+#include "ecclesia/lib/redfish/dellicius/engine/factory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/node_topology.h"
@@ -77,6 +79,10 @@ class QueryEngine {
               std::unique_ptr<RedfishTransport> transport,
               RedfishTransportCacheFactory cache_factory = CreateNullCache,
               const Clock *clock = Clock::RealClock());
+
+  explicit QueryEngine(std::unique_ptr<QueryEngineIntf> engine_impl)
+      : engine_impl_(std::move(engine_impl)) {}
+
   QueryEngine(const QueryEngine &) = delete;
   QueryEngine &operator=(const QueryEngine &) = delete;
   QueryEngine(QueryEngine &&other) = default;
@@ -105,6 +111,27 @@ class QueryEngine {
  private:
   std::unique_ptr<QueryEngineIntf> engine_impl_;
 };
+
+// Configuration used by query engine factory to generate query engine instance.
+struct Configuration {
+  // Describes the RedPath queries that engine will be configured
+  // to execute.
+  absl::Span<const EmbeddedFile> query_files;
+  // Transport medium over which Redfish queries are sent to the redfish server.
+  std::unique_ptr<RedfishTransport> transport;
+  // The engine is constructed with a default normalizer which transparently
+  // returns the queried redfish properties unless a normalizer is explicitly
+  // provided (built using the engine/factory.h APIs).
+  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+  // Rules used to configure Redfish query parameter - $expand for
+  // specific RedPath prefixes in given queries.
+  absl::Span<const EmbeddedFile> query_rules = {};
+  RedfishTransportCacheFactory cache_factory = QueryEngine::CreateNullCache;
+  const Clock *clock = Clock::RealClock();
+};
+
+// Rertuns a QueryEngine instance built for the given engine |configuration|.
+absl::StatusOr<QueryEngine> CreateQueryEngine(Configuration configuration);
 
 }  // namespace ecclesia
 

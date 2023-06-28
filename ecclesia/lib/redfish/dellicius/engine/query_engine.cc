@@ -24,7 +24,9 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
@@ -61,16 +63,17 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
           std::make_unique<MetricalRedfishTransport>(std::move(transport),
                                                      clock_, nullptr);
       metrical_transport_ = metrical_transport.get();
-      intf_ = NewHttpInterface(std::move(metrical_transport),
-                               std::move(cache_factory),
-                               RedfishInterface::kTrusted);
+      redfish_interface_ = NewHttpInterface(std::move(metrical_transport),
+                                            std::move(cache_factory),
+                                            RedfishInterface::kTrusted);
     } else {
-      intf_ = NewHttpInterface(std::move(transport), std::move(cache_factory),
-                               RedfishInterface::kTrusted);
+      redfish_interface_ =
+          NewHttpInterface(std::move(transport), std::move(cache_factory),
+                           RedfishInterface::kTrusted);
     }
 
     if (config.flags.enable_devpath_extension) {
-      topology_ = CreateTopologyFromRedfish(intf_.get());
+      topology_ = CreateTopologyFromRedfish(redfish_interface_.get());
       normalizer_ = BuildDefaultNormalizerWithLocalDevpath(topology_);
     } else {
       normalizer_ = BuildDefaultNormalizer();
@@ -92,7 +95,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 
       // Build a query plan if none exists for the query id
       if (id_to_query_plans_.contains(query.query_id())) continue;
-      RedPathRedfishQueryParams params{};
+      RedPathRedfishQueryParams params;
       if (auto iter = query_id_to_rules.find(query.query_id());
           iter != query_id_to_rules.end()) {
         params = std::move(iter->second);
@@ -104,6 +107,22 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       id_to_query_plans_.emplace(query.query_id(), *std::move(query_planner));
     }
   }
+
+  // Constructs QueryEngine to execute queries in the map |id_to_query_plans|.
+  // When a valid |metrical_transport| instance is provided,  QueryEngine is
+  // constructed to trace each query and return associated metrics in the
+  // response.
+  QueryEngineImpl(
+      absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
+          id_to_query_plans,
+      const Clock *clock, std::unique_ptr<Normalizer> normalizer,
+      std::unique_ptr<RedfishInterface> redfish_interface,
+      MetricalRedfishTransport *metrical_transport = nullptr)
+      : id_to_query_plans_(std::move(id_to_query_plans)),
+        clock_(clock),
+        normalizer_(std::move(normalizer)),
+        redfish_interface_(std::move(redfish_interface)),
+        metrical_transport_(metrical_transport) {}
 
   std::vector<DelliciusQueryResult> ExecuteQuery(
       QueryEngine::ServiceRootType service_root_uri,
@@ -119,10 +138,11 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       absl::StatusOr<DelliciusQueryResult> result_single;
       if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
         result_single = it->second->Run(
-            intf_->GetRoot(GetParams{}, ServiceRootUri::kGoogle), *clock_,
-            tracker);
+            redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
+            *clock_, tracker);
       } else {
-        result_single = it->second->Run(intf_->GetRoot(), *clock_, tracker);
+        result_single =
+            it->second->Run(redfish_interface_->GetRoot(), *clock_, tracker);
       }
 
       if (!result_single.ok()) {
@@ -161,13 +181,11 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   const NodeTopology &GetTopology() override { return topology_; }
 
  private:
-  // Data normalizer to inject in QueryPlanner for normalizing redfish
-  // response per a given property specification in dellicius subquery.
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
       id_to_query_plans_;
   const Clock *clock_;
   std::unique_ptr<Normalizer> normalizer_;
-  std::unique_ptr<RedfishInterface> intf_;
+  std::unique_ptr<RedfishInterface> redfish_interface_;
   NodeTopology topology_;
 
   // Used during query metrics collection.
@@ -182,5 +200,48 @@ QueryEngine::QueryEngine(const QueryEngineConfiguration &config,
                          const Clock *clock)
     : engine_impl_(std::make_unique<QueryEngineImpl>(
           config, std::move(transport), std::move(cache_factory), clock)) {}
+
+absl::StatusOr<QueryEngine> CreateQueryEngine(Configuration configuration) {
+  // Parse query rules from embedded proto messages
+  absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
+      query_id_to_rules = ParseQueryRulesFromEmbeddedFiles(
+          {configuration.query_rules.begin(), configuration.query_rules.end()});
+
+  // Parse queries from embedded proto messages
+  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
+      id_to_query_plans;
+  for (const EmbeddedFile &query_file : configuration.query_files) {
+    DelliciusQuery query;
+    if (!google::protobuf::TextFormat::ParseFromString(std::string(query_file.data),
+                                             &query)) {
+      return absl::InvalidArgumentError(absl::StrCat(
+          "Cannot get RedPath query from embedded file ", query_file.name));
+    }
+
+    // Build a query plan if none exists for the query id
+    if (id_to_query_plans.contains(query.query_id())) continue;
+    RedPathRedfishQueryParams params;
+    if (auto iter = query_id_to_rules.find(query.query_id());
+        iter != query_id_to_rules.end()) {
+      params = std::move(iter->second);
+    }
+
+    absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> query_planner =
+        BuildDefaultQueryPlanner(query, std::move(params),
+                                 configuration.normalizer.get());
+    if (!query_planner.ok()) {
+      return absl::InternalError(
+          absl::StrCat("Cannot create query plan due to error: ",
+                       query_planner.status().message()));
+    }
+    id_to_query_plans.insert({query.query_id(), *std::move(query_planner)});
+  }
+  return QueryEngine(std::make_unique<QueryEngineImpl>(
+      std::move(id_to_query_plans), configuration.clock,
+      std::move(configuration.normalizer),
+      NewHttpInterface(std::move(configuration.transport),
+                       std::move(configuration.cache_factory),
+                       RedfishInterface::kTrusted)));
+}
 
 }  // namespace ecclesia

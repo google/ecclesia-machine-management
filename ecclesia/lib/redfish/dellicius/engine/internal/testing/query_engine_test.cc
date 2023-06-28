@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -24,8 +25,11 @@
 #include "gtest/gtest.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "absl/types/span.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/http/cred.pb.h"
+#include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/testing/test_queries_embedded.h"
@@ -33,8 +37,12 @@
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine_fake.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
+#include "ecclesia/lib/redfish/transport/http.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/testing/proto.h"
+#include "ecclesia/lib/time/clock_fake.h"
 
 namespace ecclesia {
 
@@ -330,6 +338,52 @@ TEST(QueryEngineTest, QueryEngineTransportMetrics) {
   EXPECT_EQ(transport_metrics_2.uri_to_metrics_map().size(), 15);
   // Double checking first metric set to make sure it was not overwritten.
   EXPECT_EQ(transport_metrics.uri_to_metrics_map().size(), 8);
+}
+
+absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
+    FakeRedfishServer &server,
+    absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
+    const Clock *clock = Clock::RealClock()) {
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
+  return CreateQueryEngine({.query_files = query_files,
+                            .transport = std::move(transport),
+                            .clock = clock});
+}
+
+TEST(QueryEngineTest, QueryEngineWithDefaultNormalizer) {
+  FakeRedfishServer server(kIndusMockup);
+  FakeClock clock{clock_time};
+  absl::StatusOr<QueryEngine> query_engine =
+      GetDefaultQueryEngine(server, kDelliciusQueries, &clock);
+  EXPECT_TRUE(query_engine.ok());
+
+  DelliciusQueryResult intent_output_sensor =
+      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(
+          GetTestDataDependencyPath(JoinFilePaths(
+              kQuerySamplesLocation, "query_out/sensor_out.textproto")));
+  std::vector<DelliciusQueryResult> response_entries =
+      query_engine->ExecuteQuery({"SensorCollector"});
+  EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
+                                    EqualsProto(intent_output_sensor))));
+}
+
+TEST(QueryEngineTest, TestQueryEngineFactoryForParserError) {
+  FakeRedfishServer server(kIndusMockup);
+  EXPECT_EQ(GetDefaultQueryEngine(server, {{"Test", "{}"}}).status().code(),
+            absl::StatusCode::kInvalidArgument);
+}
+
+TEST(QueryEngineTest, TestQueryEngineFactoryForInvalidQuery) {
+  FakeRedfishServer server(kIndusMockup);
+  EXPECT_EQ(GetDefaultQueryEngine(server, {{"Test", ""}}).status().code(),
+            absl::StatusCode::kInternal);
 }
 
 }  // namespace

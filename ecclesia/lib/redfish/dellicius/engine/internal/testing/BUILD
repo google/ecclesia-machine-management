@@ -48,6 +48,15 @@ cc_data_library(
 )
 
 cc_data_library(
+    name = "test_malformed_queries_embedded",
+    cc_namespace = "ecclesia",
+    data = [
+        "//ecclesia/lib/redfish/dellicius/query/samples:sample_malformed_queries_in",
+    ],
+    var_name = "kMalformedDelliciusQueries",
+)
+
+cc_data_library(
     name = "test_query_rules_embedded",
     cc_namespace = "ecclesia",
     data = [
@@ -69,16 +78,23 @@ cc_test(
         ":test_query_rules_embedded",
         "//ecclesia/lib/file:path",
         "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/http:cred_cc_proto",
+        "//ecclesia/lib/http:curl_client",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_fake",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "//ecclesia/lib/redfish/transport:http",
+        "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:transport_metrics_cc_proto",
         "//ecclesia/lib/testing:proto",
+        "//ecclesia/lib/time:clock_fake",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
+        "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
     ],
 )
