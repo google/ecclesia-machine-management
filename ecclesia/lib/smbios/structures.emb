@@ -11,6 +11,7 @@ enum StructureType:
   GROUP_ASSOCIATIONS                   = 14
   SYSTEM_EVENT_LOG                     = 15
   MEMORY_DEVICE                        = 17
+  MEMORY_DEVICE_MAPPED_ADDRESS         = 20
   SYSTEM_BOOT_INFORMATION              = 32
   IPMI_DEVICE                          = 38
   ONBOARD_DEVICES_EXTENDED_INFORMATION = 41
@@ -487,6 +488,28 @@ struct MemoryDeviceStructure:
       -- In Bytes
 
 
+struct MemoryDeviceMappedAddressStructure:
+  0  [+1]    StructureType  structure_type
+    [requires: this == StructureType.MEMORY_DEVICE_MAPPED_ADDRESS]
+
+  1  [+1]    UInt           length
+  let supports_v2_7 = length >= 0x13
+  2  [+2]    UInt           handle
+  4  [+4]    UInt           starting_address
+  8  [+4]    UInt           ending_address
+    -- When the field value is 0xFFFFFFFF the actual address is stored in the
+    -- Extended Starting and Extended Ending fields
+  12 [+2]    UInt           memory_device_handle
+  14 [+2]    UInt           memory_array_mapped_address_handle
+  16 [+1]    UInt           partition_row_position
+  17 [+1]    UInt           interleave_position
+  18 [+1]    UInt           interleaved_data_depth
+
+  if supports_v2_7:
+    19 [+8]  UInt           extended_starting_address
+    27 [+8]  UInt           extended_ending_address
+
+
 struct SystemBootInformationStructure:
   0  [+1]          StructureType  structure_type
     [requires: this == StructureType.SYSTEM_BOOT_INFORMATION]
@@ -637,42 +660,45 @@ struct SmbiosStructure:
     0 [+ml]  BiosInformationStructure         bios_information
 
   if structure_type == StructureType.SYSTEM_INFORMATION:
-    0 [+ml]  SystemInformationStructure       system_information
+    0 [+ml]  SystemInformationStructure         system_information
 
   if structure_type == StructureType.BASEBOARD_INFORMATION:
-    0 [+ml]  BaseboardInformationStructure    baseboard_information
+    0 [+ml]  BaseboardInformationStructure      baseboard_information
 
   if structure_type == StructureType.PROCESSOR_INFORMATION:
-    0 [+ml]  ProcessorInformationStructure    processor_information
+    0 [+ml]  ProcessorInformationStructure      processor_information
 
   if structure_type == StructureType.PORT_CONNECTOR:
-    0 [+ml]  PortConnectorStructure           port_connector
+    0 [+ml]  PortConnectorStructure             port_connector
 
   if structure_type == StructureType.GROUP_ASSOCIATIONS:
-    0 [+ml]  GroupAssociationsStructure       group_associations
+    0 [+ml]  GroupAssociationsStructure         group_associations
 
   if structure_type == StructureType.SYSTEM_EVENT_LOG:
-    0 [+ml]  SystemEventLogStructure          system_event_log
+    0 [+ml]  SystemEventLogStructure            system_event_log
 
   if structure_type == StructureType.MEMORY_DEVICE:
-    0 [+ml]  MemoryDeviceStructure            memory_device
+    0 [+ml]  MemoryDeviceStructure              memory_device
+
+  if structure_type == StructureType.MEMORY_DEVICE_MAPPED_ADDRESS:
+    0 [+ml]  MemoryDeviceMappedAddressStructure memory_device_mapped_address
 
   if structure_type == StructureType.SYSTEM_BOOT_INFORMATION:
-    0 [+ml]  SystemBootInformationStructure   system_boot_information
+    0 [+ml]  SystemBootInformationStructure     system_boot_information
 
   if structure_type == StructureType.IPMI_DEVICE:
-    0 [+ml]  IpmiDeviceStructure              ipmi_device
+    0 [+ml]  IpmiDeviceStructure                ipmi_device
 
   if structure_type == StructureType.ONBOARD_DEVICES_EXTENDED_INFORMATION:
-    0 [+ml]  OnboardDevicesExtendedStructure  onboard_devices_extended
+    0 [+ml]  OnboardDevicesExtendedStructure    onboard_devices_extended
 
   if structure_type == StructureType.BRIDGE_DEVICE:
-    0 [+ml]  BridgeDeviceStructure            bridge_device
+    0 [+ml]  BridgeDeviceStructure              bridge_device
 
   if structure_type == StructureType.CPU_LINK:
-    0 [+ml]  CpuLinkStructure                 cpu_link
+    0 [+ml]  CpuLinkStructure                   cpu_link
 
   if structure_type == StructureType.LINK_DEVICE:
-    0 [+ml]  LinkDeviceStructure              link_device
+    0 [+ml]  LinkDeviceStructure                link_device
 
-  0 [+ml]    UInt:8[]                         raw_bytes
+  0 [+ml]    UInt:8[]                           raw_bytes

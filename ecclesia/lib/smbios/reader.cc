@@ -34,6 +34,7 @@
 #include "ecclesia/lib/smbios/entry_point.emb.h"
 #include "ecclesia/lib/smbios/internal.h"
 #include "ecclesia/lib/smbios/memory_device.h"
+#include "ecclesia/lib/smbios/memory_device_mapped_address.h"
 #include "ecclesia/lib/smbios/processor_information.h"
 #include "ecclesia/lib/smbios/structures.emb.h"
 #include "ecclesia/lib/smbios/system_event_log.h"
@@ -220,8 +221,21 @@ std::vector<MemoryDevice> SmbiosReader::GetAllMemoryDevices() const {
   return memory_devices;
 }
 
+std::vector<MemoryDeviceMappedAddress>
+SmbiosReader::GetAllMemoryDeviceMappedAddresses() const {
+  std::vector<MemoryDeviceMappedAddress> memory_addresses;
+
+  for (const auto &entry : entries_) {
+    if (entry.GetSmbiosStructureView().structure_type().Read() ==
+        StructureType::MEMORY_DEVICE_MAPPED_ADDRESS) {
+      memory_addresses.emplace_back(&entry);
+    }
+  }
+  return memory_addresses;
+}
+
 std::unique_ptr<SystemEventLog> SmbiosReader::GetSystemEventLog() const {
-  for (auto &entry : entries_) {
+  for (const auto &entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::SYSTEM_EVENT_LOG) {
       return std::make_unique<SystemEventLog>(&entry);
@@ -233,7 +247,7 @@ std::unique_ptr<SystemEventLog> SmbiosReader::GetSystemEventLog() const {
 std::vector<ProcessorInformation> SmbiosReader::GetAllProcessors() const {
   std::vector<ProcessorInformation> processor_information;
 
-  for (auto &entry : entries_) {
+  for (const auto &entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::PROCESSOR_INFORMATION) {
       processor_information.emplace_back(&entry);

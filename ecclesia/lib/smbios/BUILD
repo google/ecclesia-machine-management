@@ -37,6 +37,7 @@ cc_library(
         "bios.h",
         "internal.h",
         "memory_device.h",
+        "memory_device_mapped_address.h",
         "platform_translator.h",
         "processor_information.h",
         "reader.h",

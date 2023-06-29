@@ -27,6 +27,7 @@
 #include "ecclesia/lib/smbios/bios.h"
 #include "ecclesia/lib/smbios/internal.h"
 #include "ecclesia/lib/smbios/memory_device.h"
+#include "ecclesia/lib/smbios/memory_device_mapped_address.h"
 #include "ecclesia/lib/smbios/processor_information.h"
 #include "ecclesia/lib/smbios/system_event_log.h"
 #include "ecclesia/lib/smbios/system_information.h"
@@ -62,6 +63,10 @@ class SmbiosReader {
   // Type 17 (Memory Device)
   // The returned vector is sorted on the device locator string
   std::vector<MemoryDevice> GetAllMemoryDevices() const;
+
+  // Type 20 (Memory Device Mapped Address)
+  std::vector<MemoryDeviceMappedAddress> GetAllMemoryDeviceMappedAddresses()
+      const;
 
   // Type 15 (System Event Log)
   std::unique_ptr<SystemEventLog> GetSystemEventLog() const;
