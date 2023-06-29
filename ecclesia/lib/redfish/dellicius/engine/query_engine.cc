@@ -201,7 +201,7 @@ QueryEngine::QueryEngine(const QueryEngineConfiguration &config,
     : engine_impl_(std::make_unique<QueryEngineImpl>(
           config, std::move(transport), std::move(cache_factory), clock)) {}
 
-absl::StatusOr<QueryEngine> CreateQueryEngine(Configuration configuration) {
+absl::StatusOr<QueryEngine> CreateQueryEngine(QueryEngineParams configuration) {
   // Parse query rules from embedded proto messages
   absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
       query_id_to_rules = ParseQueryRulesFromEmbeddedFiles(

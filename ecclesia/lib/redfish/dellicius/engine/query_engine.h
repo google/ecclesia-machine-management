@@ -113,7 +113,7 @@ class QueryEngine {
 };
 
 // Configuration used by query engine factory to generate query engine instance.
-struct Configuration {
+struct QueryEngineParams {
   // Describes the RedPath queries that engine will be configured
   // to execute.
   absl::Span<const EmbeddedFile> query_files;
@@ -131,7 +131,7 @@ struct Configuration {
 };
 
 // Rertuns a QueryEngine instance built for the given engine |configuration|.
-absl::StatusOr<QueryEngine> CreateQueryEngine(Configuration configuration);
+absl::StatusOr<QueryEngine> CreateQueryEngine(QueryEngineParams configuration);
 
 }  // namespace ecclesia
 
