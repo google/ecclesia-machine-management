@@ -73,8 +73,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     }
 
     if (config.flags.enable_devpath_extension) {
-      topology_ = CreateTopologyFromRedfish(redfish_interface_.get());
-      normalizer_ = BuildDefaultNormalizerWithLocalDevpath(topology_);
+      normalizer_ = BuildDefaultNormalizerWithLocalDevpath(
+          CreateTopologyFromRedfish(redfish_interface_.get()));
     } else {
       normalizer_ = BuildDefaultNormalizer();
     }
@@ -178,7 +178,14 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     return ExecuteQuery(service_root_uri, query_ids, nullptr);
   }
 
-  const NodeTopology &GetTopology() override { return topology_; }
+  const NodeTopology &GetTopology() override {
+    if (absl::StatusOr<const NodeTopology *> topology =
+            normalizer_->GetNodeTopology();
+        topology.ok()) {
+      return **topology;
+    }
+    return default_topology_;
+  }
 
  private:
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
@@ -186,7 +193,9 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   const Clock *clock_;
   std::unique_ptr<Normalizer> normalizer_;
   std::unique_ptr<RedfishInterface> redfish_interface_;
-  NodeTopology topology_;
+  // empty topology to be returned if no normalizers are found with real
+  // topology.
+  NodeTopology default_topology_;
 
   // Used during query metrics collection.
   MetricalRedfishTransport *metrical_transport_ = nullptr;

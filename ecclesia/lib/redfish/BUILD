@@ -218,6 +218,7 @@ cc_test(
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/redfish/testing:node_topology_testing",
         "@com_google_absl//absl/functional:function_ref",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -409,7 +410,6 @@ cc_library(
     deps = [
         ":interface",
         ":node_topology",
-        ":property",
         ":property_definitions",
         ":topology_config_cc_proto",
         ":topology_configs",
@@ -431,6 +431,7 @@ cc_library(
     hdrs = ["node_topology.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":topology_config_cc_proto",
         ":types",
         "@com_google_absl//absl/container:flat_hash_map",
     ],

@@ -27,6 +27,7 @@
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
 
@@ -55,6 +56,10 @@ class Normalizer {
     virtual absl::Status Normalize(const RedfishObject &redfish_object,
                                    const DelliciusQuery::Subquery &query,
                                    SubqueryDataSet &data_set) const = 0;
+
+    virtual absl::StatusOr<const NodeTopology *> GetNodeTopology() const {
+      return absl::UnimplementedError("");
+    }
   };
 
   // Returns normalized dataset, possibly empty. Normalizers can be nested
@@ -77,6 +82,15 @@ class Normalizer {
 
   void AddNormilizer(std::unique_ptr<ImplInterface> impl) {
     impl_chain_.push_back(std::move(impl));
+  }
+
+  absl::StatusOr<const NodeTopology *> GetNodeTopology() {
+    for (auto &impl : impl_chain_) {
+      if (auto topology = impl->GetNodeTopology(); topology.ok()) {
+        return *topology;
+      }
+    }
+    return absl::NotFoundError("Topology not available");
   }
 
  protected:

@@ -9,6 +9,7 @@ cc_library(
     ],
     deps = [
         "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish:node_topology",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/status:macros",

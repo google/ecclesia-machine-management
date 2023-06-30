@@ -39,16 +39,20 @@ class NormalizerImplDefault final : public Normalizer::ImplInterface {
 // Adds devpath to subquery output.
 class NormalizerImplAddDevpath final : public Normalizer::ImplInterface {
  public:
-  NormalizerImplAddDevpath(NodeTopology &node_topology)
-      : topology_(node_topology) {}
+  NormalizerImplAddDevpath(NodeTopology node_topology)
+      : topology_(std::move(node_topology)) {}
 
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
                          SubqueryDataSet &data_set) const override;
 
+  absl::StatusOr<const NodeTopology *> GetNodeTopology() const override {
+    return &topology_;
+  }
+
  private:
-  NodeTopology &topology_;
+  NodeTopology topology_;
 };
 
 // Adds machine level barepath to subquery output.

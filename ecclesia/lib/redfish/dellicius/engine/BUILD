@@ -107,7 +107,6 @@ cc_library(
         "//ecclesia/lib/redfish:node_topology",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
         "//ecclesia/lib/redfish/dellicius/engine/internal:normalizer",
-        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
         "@com_google_absl//absl/memory",
     ],
