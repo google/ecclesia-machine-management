@@ -73,7 +73,7 @@ message SubqueryDataSet {
     // * usage by high-throughput applications
 
     // Machine barepath.
-    optional string machine_depvath = 2;
+    optional string machine_devpath = 2;
   }
   DecoratorExtensions decorators = 5;
 }

@@ -210,7 +210,7 @@ absl::Status NormalizerImplAddMachineBarepath::Normalize(
   absl::StatusOr<std::string> machine_devpath =
       id_assigner_.IdForRedfishLocationInDataSet(data_set);
   if (machine_devpath.ok()) {
-    data_set.mutable_decorators()->set_machine_depvath(machine_devpath.value());
+    data_set.mutable_decorators()->set_machine_devpath(machine_devpath.value());
   }
   return absl::OkStatus();
 }
