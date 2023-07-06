@@ -27,6 +27,7 @@ cc_library(
     hdrs = ["normalizer.h"],
     visibility = [
         "//ecclesia/lib/redfish/dellicius:__subpackages__",
+        "//platforms/gsys/daemon/redfish_server:__subpackages__",
     ],
     deps = [
         ":interface",
