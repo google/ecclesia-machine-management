@@ -55,6 +55,22 @@ inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
   return normalizer;
 }
 
+// Returns a decorated query engine normalizer that has the following
+// normalizers stacked from lower to higher layers of abstraction:
+// default, local devpath, machine devpath.
+//
+// Use this normalizer if you want query engine to construct machine devpath
+// using local devpath.
+inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
+    IdAssigner<std::string> &id_assigner, NodeTopology node_topology) {
+  auto normalizer = BuildDefaultNormalizer();
+  normalizer->AddNormilizer(
+      absl::make_unique<NormalizerImplAddDevpath>(std::move(node_topology)));
+  normalizer->AddNormilizer(
+      absl::make_unique<NormalizerImplAddMachineBarepath>(id_assigner));
+  return normalizer;
+}
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_FACTORY_H_

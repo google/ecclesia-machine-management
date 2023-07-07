@@ -196,6 +196,35 @@ absl::Status NormalizerImplDefault::Normalize(
 absl::Status NormalizerImplAddDevpath::Normalize(
     const RedfishObject &redfish_object,
     const DelliciusQuery::Subquery &subquery, SubqueryDataSet &data_set) const {
+  // Normalizer first tries to populate local devpath using the OEM property
+  // if populated by the redfish server.
+  const google::protobuf::FieldDescriptor *field_descriptor =
+      GetFieldDescriptor(data_set, "devpath");
+  // Since a set of Redfish properties is provided as hint to Normalizer, parse
+  // the RedfishObject for the first Redfish property that matches the hint.
+  if (field_descriptor != nullptr &&
+      field_descriptor->options().HasExtension(query_options)) {
+    const auto &properties =
+        field_descriptor->options().GetExtension(query_options).properties();
+    for (const auto &property : properties) {
+      absl::StatusOr<nlohmann::json> json_obj =
+          ResolveNodeNameToJsonObj(redfish_object, property);
+      if (!json_obj.ok()) {
+        // Property not found!
+        continue;
+      }
+      if (json_obj->is_string()) {
+        data_set.set_devpath(json_obj->get<std::string>());
+        return absl::OkStatus();
+      }
+    }
+  }
+
+  // We reached here which means the redfish server does not implement OEM
+  // Redfish property to surface local devpath or the required property is not
+  // hinted to the normalizer.
+
+  // Derive devpath from Node Topology (URI to local devpath map).
   std::optional<std::string> devpath =
       GetDevpathForObjectAndNodeTopology(redfish_object, topology_);
   if (devpath.has_value()) {
@@ -211,6 +240,18 @@ absl::Status NormalizerImplAddMachineBarepath::Normalize(
       id_assigner_.IdForRedfishLocationInDataSet(data_set);
   if (machine_devpath.ok()) {
     data_set.mutable_decorators()->set_machine_devpath(machine_devpath.value());
+    return absl::OkStatus();
+  }
+
+  // We reach here if we cannot derive machine devpath using Redfish Stable id -
+  // PartLocationContext + ServiceLabel.
+  // We will now try to map a local devpath to machine devpath
+
+  if (!data_set.has_devpath()) return absl::OkStatus();
+  machine_devpath = id_assigner_.IdForLocalDevpathInDataSet(data_set);
+  if (machine_devpath.ok()) {
+    data_set.mutable_decorators()->set_machine_devpath(machine_devpath.value());
+    return absl::OkStatus();
   }
   return absl::OkStatus();
 }

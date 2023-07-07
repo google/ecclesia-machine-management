@@ -49,8 +49,13 @@ message SubqueryDataSet {
     }];
   }
 
-  // Local barepath derived using Devpath2 algorithm.
-  optional string devpath = 1;
+  // Local devpath
+  optional string devpath = 1 [(query_options) = {
+    // The field option serves the purpose of hinting query engine about the
+    // Redfish property that can be parsed, if populated, to get local devpath.
+    label: "__LocalDevpath__",
+    properties: [ "Location.Oem.Google.Devpath" ]
+  }];
   // Redfish properties queried.
   repeated Property properties = 2;
   // Maps child subquery id to its associated subquery response data.
