@@ -1,23 +1,22 @@
-# Dellicius Library
-This directory houses key modules that implement a layered architecture for
-managing life cycle of a Dellicius Query.
+# Redfish Query Library
+Formerly known as Dellicius, this directory houses key modules that implement a layered architecture for managing life cycle of a Redfish Query.
 
-## Dellicius Query Engine
-Dellicius query is a proto that encapsulates one or more RedPath expressions and optional property requirements.
+## Redfish Query Engine
+A Redfish Query is a proto that encapsulates one or more RedPath expressions and optional property requirements.
 RedPath is a string syntax inspired by XPath1.0 and spec’d in DMTF Client specification to allow a client to specify path to Redfish resources and properties in the Redfish data model. It allows a Redfish client to query Redfish Service as if it were a single JSON document.
-A Dellicius query needs an interpreter and dispatcher to
+A Redfish query needs an interpreter and dispatcher to
 translate query operations into Redfish resource requests and dispatch over
 specific transport interface.
-Dellicius Query Engine is a logical composition of interpreter, dispatcher and
+Redfish Query Engine is a logical composition of interpreter, dispatcher and
 normalizer, responsible for batch processing RedPath queries that are wrapped
-with a specific data model within a Dellicius query.
+with a specific data model within a Redfish query.
 
 The modular design of the query engine allows it be extended for manipulating,
 tracing, decorating the Query requests and responses. A key use for extension is
 for constructing devpaths by caching location metadata while traversing the tree
 for a query.
 
-### Dellicius Query
+### Redfish Query
 A query, uniquely identified in a set of queries by a query id,  is composed of
 one or more subqueries and each subquery has following components:
 
@@ -87,15 +86,15 @@ one or more subqueries and each subquery has following components:
   for unique RedPath prefix to avoid redundant GET calls.
 
 
-### Dellicius Query Result
-Dellicius query output is a collection of subquery results.
+### Redfish Query Result
+Redfish query output is a collection of subquery results.
 
-Following are the key components of a Dellicius Query Result:
+Following are the key components of a Redfish Query Result:
 
-1. **query_id**: Identifies the Dellicius Query for the given output.
+1. **query_id**: Identifies the Redfish Query for the given output.
 2. **start_timestamp**: Represents the point in time when a delicious query is received by the query engine.
 3. **end_timestamp**: Represents the point in time when the  last subquery response within a delicious query is processed by the query engine.
-4. **subquery_output_by_id**: Map where key is unique subquery id string and value is collection of data sets. A data set in this context is a subset of properties collected from a Redfish resource per the property requirements in the corresponding subquery of a Dellicius query. A data set has following properties:
+4. **subquery_output_by_id**: Map where key is unique subquery id string and value is collection of data sets. A data set in this context is a subset of properties collected from a Redfish resource per the property requirements in the corresponding subquery of a Redfish query. A data set has following properties:
     1. **devpath**: Uniquely identifies the source of the dataset based on the physical topology of the system.
     2. **data**: Repeated field capturing the requested property and the identifier.
         1. **name**: Identifies the Redfish property parsed for this subquery when the engine is configured for no normalization. Else, represents a variable the Redfish property is mapped to for property level normalization.
