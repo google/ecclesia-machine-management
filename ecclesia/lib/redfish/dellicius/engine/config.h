@@ -22,6 +22,7 @@
 
 namespace ecclesia {
 
+ABSL_DEPRECATED("Use QueryEngineParams instead.")
 struct QueryEngineConfiguration {
   struct Flags {
     // Functionally extends the query engine for building the Node Topology

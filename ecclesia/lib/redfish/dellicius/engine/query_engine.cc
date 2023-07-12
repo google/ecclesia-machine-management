@@ -210,16 +210,19 @@ QueryEngine::QueryEngine(const QueryEngineConfiguration &config,
     : engine_impl_(std::make_unique<QueryEngineImpl>(
           config, std::move(transport), std::move(cache_factory), clock)) {}
 
-absl::StatusOr<QueryEngine> CreateQueryEngine(QueryEngineParams configuration) {
+absl::StatusOr<QueryEngine> CreateQueryEngine(
+    const QueryContext &query_context,
+    std::unique_ptr<RedfishInterface> redfish_interface,
+    std::unique_ptr<Normalizer> normalizer) {
   // Parse query rules from embedded proto messages
   absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
       query_id_to_rules = ParseQueryRulesFromEmbeddedFiles(
-          {configuration.query_rules.begin(), configuration.query_rules.end()});
+          {query_context.query_rules.begin(), query_context.query_rules.end()});
 
   // Parse queries from embedded proto messages
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
       id_to_query_plans;
-  for (const EmbeddedFile &query_file : configuration.query_files) {
+  for (const EmbeddedFile &query_file : query_context.query_files) {
     DelliciusQuery query;
     if (!google::protobuf::TextFormat::ParseFromString(std::string(query_file.data),
                                              &query)) {
@@ -236,8 +239,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(QueryEngineParams configuration) {
     }
 
     absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> query_planner =
-        BuildDefaultQueryPlanner(query, std::move(params),
-                                 configuration.normalizer.get());
+        BuildDefaultQueryPlanner(query, std::move(params), normalizer.get());
     if (!query_planner.ok()) {
       return absl::InternalError(
           absl::StrCat("Cannot create query plan due to error: ",
@@ -246,11 +248,22 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(QueryEngineParams configuration) {
     id_to_query_plans.insert({query.query_id(), *std::move(query_planner)});
   }
   return QueryEngine(std::make_unique<QueryEngineImpl>(
-      std::move(id_to_query_plans), configuration.clock,
-      std::move(configuration.normalizer),
-      NewHttpInterface(std::move(configuration.transport),
-                       std::move(configuration.cache_factory),
-                       RedfishInterface::kTrusted)));
+      std::move(id_to_query_plans), query_context.clock, std::move(normalizer),
+      std::move(redfish_interface)));
+}
+
+absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
+                                              QueryEngineParams configuration) {
+  // Build Redfish interface
+  std::unique_ptr<RedfishInterface> redfish_interface = NewHttpInterface(
+      std::move(configuration.transport),
+      std::move(configuration.cache_factory), RedfishInterface::kTrusted);
+
+  RedfishInterface *redfish_interface_ptr = redfish_interface.get();
+  return CreateQueryEngine(
+      query_context, std::move(redfish_interface),
+      BuildLocalDevpathNormalizer(configuration.stable_id_type,
+                                  redfish_interface_ptr));
 }
 
 }  // namespace ecclesia

@@ -233,27 +233,4 @@ absl::Status NormalizerImplAddDevpath::Normalize(
   return absl::OkStatus();
 }
 
-absl::Status NormalizerImplAddMachineBarepath::Normalize(
-    const RedfishObject &redfish_object,
-    const DelliciusQuery::Subquery &subquery, SubqueryDataSet &data_set) const {
-  absl::StatusOr<std::string> machine_devpath =
-      id_assigner_.IdForRedfishLocationInDataSet(data_set);
-  if (machine_devpath.ok()) {
-    data_set.mutable_decorators()->set_machine_devpath(machine_devpath.value());
-    return absl::OkStatus();
-  }
-
-  // We reach here if we cannot derive machine devpath using Redfish Stable id -
-  // PartLocationContext + ServiceLabel.
-  // We will now try to map a local devpath to machine devpath
-
-  if (!data_set.has_devpath()) return absl::OkStatus();
-  machine_devpath = id_assigner_.IdForLocalDevpathInDataSet(data_set);
-  if (machine_devpath.ok()) {
-    data_set.mutable_decorators()->set_machine_devpath(machine_devpath.value());
-    return absl::OkStatus();
-  }
-  return absl::OkStatus();
-}
-
 }  // namespace ecclesia

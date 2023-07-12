@@ -18,6 +18,7 @@
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_FACTORY_H_
 
 #include <memory>
+#include <utility>
 
 #include "absl/memory/memory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
@@ -47,11 +48,16 @@ inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithLocalDevpath(
 
 // Extends default normalizer to populate machine devpaths using Redfish stable
 // identifier.
-inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
-    IdAssigner<std::string> &id_assigner) {
-  auto normalizer = BuildDefaultNormalizer();
+template <typename LocalIdMapT>
+std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
+    const std::string &server_tag, std::unique_ptr<LocalIdMapT> local_id_map,
+    const IdAssignerFactory<LocalIdMapT> &id_assigner_factory) {
+  if (local_id_map == nullptr) return nullptr;
+  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
   normalizer->AddNormilizer(
-      absl::make_unique<NormalizerImplAddMachineBarepath>(id_assigner));
+      absl::make_unique<NormalizerImplAddMachineBarepath<LocalIdMapT>>(
+          std::move(local_id_map),
+          id_assigner_factory(*local_id_map.get(), server_tag)));
   return normalizer;
 }
 
@@ -61,13 +67,19 @@ inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
 //
 // Use this normalizer if you want query engine to construct machine devpath
 // using local devpath.
-inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
-    IdAssigner<std::string> &id_assigner, NodeTopology node_topology) {
+template <typename LocalIdMapT>
+std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
+    const std::string &server_tag, std::unique_ptr<LocalIdMapT> local_id_map,
+    const IdAssignerFactory<LocalIdMapT> &id_assigner_factory,
+    NodeTopology node_topology) {
+  if (local_id_map == nullptr) return nullptr;
   auto normalizer = BuildDefaultNormalizer();
   normalizer->AddNormilizer(
       absl::make_unique<NormalizerImplAddDevpath>(std::move(node_topology)));
   normalizer->AddNormilizer(
-      absl::make_unique<NormalizerImplAddMachineBarepath>(id_assigner));
+      absl::make_unique<NormalizerImplAddMachineBarepath<LocalIdMapT>>(
+          std::move(local_id_map),
+          id_assigner_factory(*local_id_map.get(), server_tag)));
   return normalizer;
 }
 

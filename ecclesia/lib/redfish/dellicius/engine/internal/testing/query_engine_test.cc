@@ -352,9 +352,8 @@ absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
   std::unique_ptr<RedfishTransport> transport =
       HttpRedfishTransport::MakeNetwork(std::move(http_client),
                                         network_endpoint);
-  return CreateQueryEngine({.query_files = query_files,
-                            .transport = std::move(transport),
-                            .clock = clock});
+  QueryContext query_context{.query_files = query_files, .clock = clock};
+  return CreateQueryEngine(query_context, {.transport = std::move(transport)});
 }
 
 TEST(QueryEngineTest, QueryEngineWithDefaultNormalizer) {

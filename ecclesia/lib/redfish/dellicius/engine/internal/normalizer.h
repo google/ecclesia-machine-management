@@ -17,6 +17,9 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_NORMALIZER_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_NORMALIZER_H_
 
+#include <memory>
+#include <utility>
+
 #include "absl/status/status.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -56,19 +59,44 @@ class NormalizerImplAddDevpath final : public Normalizer::ImplInterface {
 };
 
 // Adds machine level barepath to subquery output.
+template <typename LocalIdMapT>
 class NormalizerImplAddMachineBarepath final
     : public Normalizer::ImplInterface {
  public:
-  NormalizerImplAddMachineBarepath(IdAssigner<std::string> &id_assigner)
-      : id_assigner_(id_assigner) {}
+  NormalizerImplAddMachineBarepath(
+      std::unique_ptr<LocalIdMapT> local_id_map,
+      std::unique_ptr<IdAssigner<std::string>> id_assigner)
+      : local_id_map_(std::move(local_id_map)),
+        id_assigner_(std::move(id_assigner)) {}
 
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
-                         SubqueryDataSet &data_set) const override;
+                         SubqueryDataSet &data_set) const override {
+    absl::StatusOr<std::string> machine_devpath =
+        id_assigner_->IdForRedfishLocationInDataSet(data_set);
+    if (machine_devpath.ok()) {
+      data_set.mutable_decorators()->set_machine_devpath(
+          machine_devpath.value());
+      return absl::OkStatus();
+    }
+
+    // We reach here if we cannot derive machine devpath using Redfish Stable id
+    // - PartLocationContext + ServiceLabel. We will now try to map a local
+    // devpath to machine devpath
+    if (!data_set.has_devpath()) return absl::OkStatus();
+    machine_devpath = id_assigner_->IdForLocalDevpathInDataSet(data_set);
+    if (machine_devpath.ok()) {
+      data_set.mutable_decorators()->set_machine_devpath(
+          machine_devpath.value());
+      return absl::OkStatus();
+    }
+    return absl::OkStatus();
+  }
 
  private:
-  IdAssigner<std::string> &id_assigner_;
+  std::unique_ptr<IdAssigner<std::string>> id_assigner_;
+  std::unique_ptr<LocalIdMapT> local_id_map_;
 };
 
 }  // namespace ecclesia

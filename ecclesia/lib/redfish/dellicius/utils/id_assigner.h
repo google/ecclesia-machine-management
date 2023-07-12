@@ -38,6 +38,13 @@ class IdAssigner {
       SubqueryDataSet data_set) = 0;
 };
 
+// Generic factory type to generate IdAssigner for given local id map and
+// entity_tag
+template <typename LocalIdMapT>
+using IdAssignerFactory =
+    std::function<std::unique_ptr<IdAssigner<std::string>>(
+        const LocalIdMapT &map, std::string entity_tag)>;
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_ID_ASSIGNER_H_
