@@ -493,7 +493,7 @@ struct MemoryDeviceMappedAddressStructure:
     [requires: this == StructureType.MEMORY_DEVICE_MAPPED_ADDRESS]
 
   1  [+1]    UInt           length
-  let supports_v2_7 = length >= 0x13
+  let supports_v2_7 = length >= 0x23
   2  [+2]    UInt           handle
   4  [+4]    UInt           starting_address
   8  [+4]    UInt           ending_address
