@@ -154,7 +154,7 @@ struct GetParams {
 // Its purpose is to force the caller to strictly specify the expected Redfish
 // view to access the underlying Redfish payload internals.
 //
-// RedfishVariant must not be the sole owner of the the Redfish data. Views
+// RedfishVariant must not be the sole owner of the Redfish data. Views
 // created from RedfishVariant are permitted to outlive the RedfishVariant.
 //
 // If the given Redfish getter fails or there is a type mismatch, a null view
