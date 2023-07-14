@@ -54,10 +54,11 @@ std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
     const IdAssignerFactory<LocalIdMapT> &id_assigner_factory) {
   if (local_id_map == nullptr) return nullptr;
   std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+  const LocalIdMapT *local_id_map_ptr = local_id_map.get();
   normalizer->AddNormilizer(
       absl::make_unique<NormalizerImplAddMachineBarepath<LocalIdMapT>>(
           std::move(local_id_map),
-          id_assigner_factory(*local_id_map.get(), server_tag)));
+          id_assigner_factory(*local_id_map_ptr, server_tag)));
   return normalizer;
 }
 
@@ -73,13 +74,14 @@ std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
     const IdAssignerFactory<LocalIdMapT> &id_assigner_factory,
     NodeTopology node_topology) {
   if (local_id_map == nullptr) return nullptr;
+  const LocalIdMapT *local_id_map_ptr = local_id_map.get();
   auto normalizer = BuildDefaultNormalizer();
   normalizer->AddNormilizer(
       absl::make_unique<NormalizerImplAddDevpath>(std::move(node_topology)));
   normalizer->AddNormilizer(
       absl::make_unique<NormalizerImplAddMachineBarepath<LocalIdMapT>>(
           std::move(local_id_map),
-          id_assigner_factory(*local_id_map.get(), server_tag)));
+          id_assigner_factory(*local_id_map_ptr, server_tag)));
   return normalizer;
 }
 
