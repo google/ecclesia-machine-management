@@ -157,7 +157,6 @@ struct QueryEngineParams {
   // id type.
   enum class RedfishStableIdType {
     kRedfishLocation,  // Redfish Standard - PartLocationContext + ServiceLabel
-    kRedfishLocationOem,     // Parsed from OEM object e.g. Oem.Google.Devpath
     kRedfishLocationDerived  // Derived from Redfish topology.
   };
 
@@ -181,8 +180,6 @@ inline std::unique_ptr<Normalizer> BuildLocalDevpathNormalizer(
     case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
       return BuildDefaultNormalizerWithLocalDevpath(
           CreateTopologyFromRedfish(redfish_interface));
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocationOem:
-      return BuildDefaultNormalizerWithLocalDevpath({});
   }
 }
 
@@ -201,9 +198,6 @@ std::unique_ptr<Normalizer> BuildMachineDevpathNormalizer(
       return BuildDefaultNormalizerWithMachineDevpath<LocalIdMapT>(
           server_tag, std::move(local_id_map), id_assigner_factory,
           CreateTopologyFromRedfish(redfish_interface));
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocationOem:
-      return BuildDefaultNormalizerWithMachineDevpath<LocalIdMapT>(
-          server_tag, std::move(local_id_map), id_assigner_factory, {});
   }
 }
 

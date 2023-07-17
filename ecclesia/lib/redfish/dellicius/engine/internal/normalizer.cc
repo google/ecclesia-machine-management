@@ -45,6 +45,8 @@ namespace ecclesia {
 
 namespace {
 
+constexpr absl::string_view kInternalPropertyPrefix = "__";
+
 const google::protobuf::FieldDescriptor *GetFieldDescriptor(
     const google::protobuf::Message &message, absl::string_view field_name) {
   std::vector<absl::string_view> field_path =
@@ -97,6 +99,8 @@ absl::Status NormalizerImplDefault::Normalize(
       "redfish_location.service_label", data_set_local, subquery_local);
   std::string part_location_context = UpdateSubqueryFromFieldOptions(
       "redfish_location.part_location_context", data_set_local, subquery_local);
+  std::string oem_location =
+      UpdateSubqueryFromFieldOptions("devpath", data_set_local, subquery_local);
 
   for (const auto &property_requirement : subquery_local.properties()) {
     SubqueryDataSet::Property property_out;
@@ -166,8 +170,8 @@ absl::Status NormalizerImplDefault::Normalize(
     // Populate RedfishLocation field in SubqueryDataSet.
     if (property_requirement.type() == RedfishProperty::STRING &&
         property_requirement.has_name() &&
-        (property_requirement.name() == service_label ||
-         property_requirement.name() == part_location_context)) {
+        absl::StartsWith(property_requirement.name(),
+                         kInternalPropertyPrefix)) {
       absl::string_view name = property_requirement.name();
       if (name == service_label) {
         *data_set_local.mutable_redfish_location()->mutable_service_label() =
@@ -175,6 +179,8 @@ absl::Status NormalizerImplDefault::Normalize(
       } else if (name == part_location_context) {
         *data_set_local.mutable_redfish_location()
              ->mutable_part_location_context() = property_out.string_value();
+      } else if (name == oem_location) {
+        data_set_local.set_devpath(property_out.string_value());
       }
       continue;
     }
@@ -196,33 +202,10 @@ absl::Status NormalizerImplDefault::Normalize(
 absl::Status NormalizerImplAddDevpath::Normalize(
     const RedfishObject &redfish_object,
     const DelliciusQuery::Subquery &subquery, SubqueryDataSet &data_set) const {
-  // Normalizer first tries to populate local devpath using the OEM property
-  // if populated by the redfish server.
-  const google::protobuf::FieldDescriptor *field_descriptor =
-      GetFieldDescriptor(data_set, "devpath");
-  // Since a set of Redfish properties is provided as hint to Normalizer, parse
-  // the RedfishObject for the first Redfish property that matches the hint.
-  if (field_descriptor != nullptr &&
-      field_descriptor->options().HasExtension(query_options)) {
-    const auto &properties =
-        field_descriptor->options().GetExtension(query_options).properties();
-    for (const auto &property : properties) {
-      absl::StatusOr<nlohmann::json> json_obj =
-          ResolveNodeNameToJsonObj(redfish_object, property);
-      if (!json_obj.ok()) {
-        // Property not found!
-        continue;
-      }
-      if (json_obj->is_string()) {
-        data_set.set_devpath(json_obj->get<std::string>());
-        return absl::OkStatus();
-      }
-    }
+  // Prioritize devpath populated by default normalizer.
+  if (data_set.has_devpath()) {
+    return absl::OkStatus();
   }
-
-  // We reached here which means the redfish server does not implement OEM
-  // Redfish property to surface local devpath or the required property is not
-  // hinted to the normalizer.
 
   // Derive devpath from Node Topology (URI to local devpath map).
   std::optional<std::string> devpath =
