@@ -56,6 +56,9 @@ absl::Status SetGrpcResponseAndReturnStatus(RedfishVariant variant,
   response->set_code(variant.httpcode().value());
   if (variant.AsObject() != nullptr) {
     *response->mutable_json_str() = variant.DebugString();
+  } else if (std::optional<RedfishTransport::bytes> raw = variant.AsRaw();
+             raw != std::nullopt && !raw->empty()) {
+    *response->mutable_octet_stream() = std::string(raw->begin(), raw->end());
   }
   return absl::OkStatus();
 }
