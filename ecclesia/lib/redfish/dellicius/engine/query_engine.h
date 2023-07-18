@@ -28,6 +28,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/config.h"
 #include "ecclesia/lib/redfish/dellicius/engine/factory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -94,6 +95,13 @@ class QueryEngine {
         absl::Span<const absl::string_view> query_ids,
         RedfishMetrics *transport_metrics) = 0;
     virtual const NodeTopology &GetTopology() = 0;
+    // QueryEngineRawInterfacePasskey is just an empty strongly-typed object
+    // that one needs to provide in order to invoke the member function.
+    // We restrict the visibility of QueryEngineRawInterfacePasskey so that
+    // we can understand which users are using raw-interface features which
+    // are not yet available in the query engine.
+    virtual const RedfishInterface *GetRedfishInterface(
+        RedfishInterfacePasskey unused_passkey) = 0;
   };
 
   // Default RedfishTransportCacheFactory that creates a NullCache (no caching).
@@ -135,6 +143,10 @@ class QueryEngine {
                                                  transport_metrics);
   }
   const NodeTopology &GetTopology() { return engine_impl_->GetTopology(); }
+  const RedfishInterface *GetRedfishInterface(
+      RedfishInterfacePasskey unused_passkey) {
+    return engine_impl_->GetRedfishInterface(unused_passkey);
+  }
 
  private:
   std::unique_ptr<QueryEngineIntf> engine_impl_;

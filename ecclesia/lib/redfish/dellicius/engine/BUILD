@@ -22,6 +22,7 @@ cc_library(
         "//ecclesia/lib/redfish:node_topology",
         "//ecclesia/lib/redfish:topology",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:passkey",
         "//ecclesia/lib/redfish/dellicius/engine/internal:query_planner",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",

@@ -85,6 +85,7 @@ cc_test(
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_fake",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:passkey",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/redfish/transport:http",

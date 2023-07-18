@@ -187,6 +187,11 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     return default_topology_;
   }
 
+  const RedfishInterface *GetRedfishInterface(
+      RedfishInterfacePasskey unused_passkey) override {
+    return redfish_interface_.get();
+  }
+
  private:
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
       id_to_query_plans_;

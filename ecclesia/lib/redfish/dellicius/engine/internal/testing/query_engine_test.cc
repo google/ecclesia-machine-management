@@ -32,6 +32,7 @@
 #include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/testing/test_queries_embedded.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/testing/test_query_rules_embedded.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine_fake.h"
@@ -49,6 +50,7 @@ namespace ecclesia {
 namespace {
 
 using ::testing::ElementsAre;
+using ::testing::NotNull;
 using ::testing::UnorderedPointwise;
 
 constexpr absl::string_view kQuerySamplesLocation =
@@ -118,6 +120,21 @@ TEST(QueryEngineTest, QueryEngineDefaultConfiguration) {
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
   EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
                                     EqualsProto(intent_output_sensor))));
+}
+
+TEST(QueryEngineTest, QueryEngineRedfishIntfAccessor) {
+  std::string sensor_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
+  EXPECT_THAT(
+      FakeQueryEngineEnvironment(
+          {.flags{.enable_devpath_extension = false},
+           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
+          kIndusMockup, clock_time)
+          .GetEngine()
+          // Uniform initialization "{}" in place of the passkey will cause
+          // compilation errors.
+          .GetRedfishInterface(RedfishInterfacePasskeyFactory::GetPassKey()),
+      NotNull());
 }
 
 TEST(QueryEngineTest, QueryEngineWithExpandConfiguration) {

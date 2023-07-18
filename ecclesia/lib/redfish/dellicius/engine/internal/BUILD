@@ -73,3 +73,10 @@ cc_library(
         "@com_googlesource_code_re2//:re2",
     ],
 )
+
+cc_library(
+    name = "passkey",
+    hdrs = ["passkey.h"],
+    # We tightly control this visibility for the passkey factory. New clients using the raw RedfishInterface pointer need to add themselves to the redfish_query_engine_raw_intf_users package group.
+    visibility = ["//ecclesia:redfish_query_engine_raw_intf_users"],
+)
