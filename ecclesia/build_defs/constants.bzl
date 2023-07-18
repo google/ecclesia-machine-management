@@ -9,6 +9,7 @@ weight mechanism that something like protocol buffers.
 
 load("@bazel_skylib//lib:types.bzl", "types")
 load(":file.bzl", "write_file")
+load("//third_party/bazel_rules/rules_python/python:py_library.bzl", "py_library")
 
 def constant(
         value,
@@ -143,7 +144,7 @@ def constant_lib(
         content = "\n".join(py_lines),
         out = py_source,
     )
-    native.py_library(
+    py_library(
         name = py_name,
         srcs = [py_source],
         visibility = visibility,
