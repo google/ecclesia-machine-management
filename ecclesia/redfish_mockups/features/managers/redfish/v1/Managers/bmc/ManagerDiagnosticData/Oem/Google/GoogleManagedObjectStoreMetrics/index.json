@@ -1,0 +1,383 @@
+{
+  "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData/Oem/Google/GoogleManagedObjectStoreMetrics",
+    "@odata.type": "#GoogleManagedObjectStoreMetrics.v1_0_0.GoogleManagedObjectStoreMetrics",
+    "ManagedObjects": [
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/0",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 9379,
+      "AgeLastServed": [
+        6484,
+      6794,
+      6994,
+      7121,
+      7260,
+      7539,
+      7685,
+      8254,
+      6529
+      ],
+      "Id": 0,
+      "ObjectPath": "/xyz/openbmc_project/inventory",
+      "RefreshCountDone": 33,
+      "RefreshCountScheduled": 33,
+      "ServiceName": "xyz.openbmc_project.Smbios.MDR_V2"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/1",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 5910,
+      "AgeLastServed": [
+        5069,
+      988,
+      2893,
+      5067,
+      7964,
+      7328,
+      8334,
+      7114,
+      4806
+      ],
+      "Id": 1,
+      "ObjectPath": "/xyz/openbmc_project/sensors",
+      "RefreshCountDone": 31,
+      "RefreshCountScheduled": 31,
+      "ServiceName": "xyz.openbmc_project.DIMMSensor"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/2",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 6297,
+      "AgeLastServed": [
+        47,
+      966,
+      6791,
+      7984,
+      5279,
+      6064,
+      6427,
+      504,
+      3348
+      ],
+      "Id": 2,
+      "ObjectPath": "/xyz/openbmc_project/inventory",
+      "RefreshCountDone": 65,
+      "RefreshCountScheduled": 64,
+      "ServiceName": "com.google.gbmc.peciinventory"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/3",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 8235,
+      "AgeLastServed": [
+        471,
+      3537,
+      5702,
+      9094,
+      7808,
+      8203,
+      9613,
+      8252,
+      5473
+      ],
+      "Id": 3,
+      "ObjectPath": "/xyz/openbmc_project/sensors",
+      "RefreshCountDone": 31,
+      "RefreshCountScheduled": 31,
+      "ServiceName": "xyz.openbmc_project.VirtualSensor"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/4",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 2520,
+      "AgeLastServed": [
+        5435,
+      6243,
+      3043,
+      3136,
+      4125,
+      7927,
+      10281,
+      122,
+      1502
+      ],
+      "Id": 4,
+      "ObjectPath": "/xyz/openbmc_project/inventory",
+      "RefreshCountDone": 32,
+      "RefreshCountScheduled": 32,
+      "ServiceName": "xyz.openbmc_project.EntityManager"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/5",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 6742,
+      "AgeLastServed": [
+        8416,
+      8510,
+      9442,
+      6856,
+      6950,
+      8078,
+      4039,
+      4278,
+      5821
+      ],
+      "Id": 5,
+      "ObjectPath": "/xyz/openbmc_project/sensors",
+      "RefreshCountDone": 31,
+      "RefreshCountScheduled": 31,
+      "ServiceName": "xyz.openbmc_project.PSUSensor"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/6",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 4182,
+      "AgeLastServed": [
+        5236,
+      1227,
+      3016,
+      5172,
+      8043,
+      6420,
+      7338,
+      5637,
+      3192
+      ],
+      "Id": 6,
+      "ObjectPath": "/xyz/openbmc_project/sensors",
+      "RefreshCountDone": 31,
+      "RefreshCountScheduled": 31,
+      "ServiceName": "xyz.openbmc_project.IntelCPUSensor"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/7",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 4768,
+      "AgeLastServed": [
+        10014,
+      9499,
+      8844,
+      8572
+      ],
+      "Id": 7,
+      "ObjectPath": "/xyz/openbmc_project/dump",
+      "RefreshCountDone": 29,
+      "RefreshCountScheduled": 29,
+      "ServiceName": "xyz.openbmc_project.Dump.Manager"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/8",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 1851,
+      "AgeLastServed": [
+        71,
+      236,
+      379,
+      482,
+      559,
+      672,
+      1202,
+      1279,
+      1355
+      ],
+      "Id": 8,
+      "ObjectPath": "/",
+      "RefreshCountDone": 31,
+      "RefreshCountScheduled": 31,
+      "ServiceName": "xyz.openbmc_project.ObjectMapper"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/9",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 8354,
+      "AgeLastServed": [
+        209,
+      8358,
+      8675,
+      8753,
+      8831,
+      5578,
+      6162,
+      6428,
+      6587
+      ],
+      "Id": 9,
+      "ObjectPath": "/xyz/openbmc_project/sensors",
+      "RefreshCountDone": 31,
+      "RefreshCountScheduled": 31,
+      "ServiceName": "xyz.openbmc_project.HwmonTempSensor"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/10",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 8050,
+      "AgeLastServed": [
+        7760,
+      8942,
+      8138,
+      9566,
+      387,
+      8142,
+      9182,
+      5521,
+      6971
+      ],
+      "Id": 10,
+      "ObjectPath": "/xyz/openbmc_project/sensors",
+      "RefreshCountDone": 31,
+      "RefreshCountScheduled": 31,
+      "ServiceName": "xyz.openbmc_project.FanSensor"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/11",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 7646,
+      "AgeLastServed": [
+        5237,
+      1867,
+      3875,
+      6049,
+      9425,
+      8767,
+      10180,
+      8731,
+      6493
+      ],
+      "Id": 11,
+      "ObjectPath": "/xyz/openbmc_project/sensors",
+      "RefreshCountDone": 31,
+      "RefreshCountScheduled": 31,
+      "ServiceName": "xyz.openbmc_project.ADCSensor"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/12",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 7595,
+      "AgeLastServed": [
+        5273,
+      1917,
+      3939,
+      6096,
+      9457,
+      8801,
+      10208,
+      8767,
+      6506
+      ],
+      "Id": 12,
+      "ObjectPath": "/xyz/openbmc_project/sensors",
+      "RefreshCountDone": 31,
+      "RefreshCountScheduled": 31,
+      "ServiceName": "xyz.openbmc_project.ExternalSensor"
+    },
+    {
+      "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData#/ManagedObjects/13",
+      "@odata.type": "#GoogleManagedObjectMetrics.v1_0_0.GoogleManagedObjectMetrics",
+      "Age": 7226,
+      "AgeLastServed": [
+        5371,
+      1580,
+      3539,
+      5691,
+      9028,
+      8722,
+      9554,
+      8448,
+      6233
+      ],
+      "Id": 13,
+      "ObjectPath": "/xyz/openbmc_project/sensors",
+      "RefreshCountDone": 31,
+      "RefreshCountScheduled": 31,
+      "ServiceName": "xyz.openbmc_project.MCUTempSensor"
+    }
+  ],
+  "ManagedObjectsAgeHistograms": {
+    "AgeBuckets": [
+    {
+      "Count": 0,
+      "Start": 0
+    },
+    {
+      "Count": 1,
+      "Start": 1000
+    },
+    {
+      "Count": 1,
+      "Start": 2000
+    },
+    {
+      "Count": 0,
+      "Start": 3000
+    },
+    {
+      "Count": 2,
+      "Start": 4000
+    },
+    {
+      "Count": 1,
+      "Start": 5000
+    },
+    {
+      "Count": 2,
+      "Start": 6000
+    },
+    {
+      "Count": 3,
+      "Start": 7000
+    },
+    {
+      "Count": 3,
+      "Start": 8000
+    },
+    {
+      "Count": 1,
+      "Start": 9000
+    },
+    {
+      "Count": 0,
+      "Start": 10000
+    },
+    {
+      "Count": 0,
+      "Start": 11000
+    },
+    {
+      "Count": 0,
+      "Start": 12000
+    },
+    {
+      "Count": 0,
+      "Start": 13000
+    },
+    {
+      "Count": 0,
+      "Start": 14000
+    },
+    {
+      "Count": 0,
+      "Start": 15000
+    },
+    {
+      "Count": 0,
+      "Start": 16000
+    },
+    {
+      "Count": 0,
+      "Start": 17000
+    },
+    {
+      "Count": 0,
+      "Start": 18000
+    },
+    {
+      "Count": 0,
+      "Start": 19000
+    }
+    ],
+    "AgeMax": 9379,
+    "LastServedCount": 121,
+    "LastServedMax": 10281
+  }
+}
+

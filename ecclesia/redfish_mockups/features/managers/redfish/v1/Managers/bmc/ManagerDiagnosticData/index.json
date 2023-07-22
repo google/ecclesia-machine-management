@@ -13,6 +13,9 @@
       },
       "gRPCStatistics": {
         "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData/Oem/Google/GooglegRPCStatistics"
+      },
+      "GoogleManagedObjectStoreMetrics": {
+        "@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData/Oem/Google/GoogleManagedObjectStoreMetrics"
       }
     }
   },
