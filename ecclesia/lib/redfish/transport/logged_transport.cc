@@ -19,14 +19,12 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <utility>
 
 #include "absl/functional/any_invocable.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
@@ -50,17 +48,16 @@ RedfishLoggedTransport::LogMethodDataAndResult(
     absl::string_view method, absl::string_view path,
     std::optional<absl::string_view> data,
     absl::AnyInvocable<absl::StatusOr<Result>()> call_method) const {
-  std::string context_string, data_string, latency_string;
+  std::string message;
   if (context_.has_value()) {
-    context_string = absl::StrCat("Context: ", *context_, " ");
-  } else {
-    context_string = "";
+    absl::StrAppend(&message, "(Context=", *context_, ") ");
   }
 
+  absl::StrAppend(&message, "(Method=", method, ") ");
+  absl::StrAppend(&message, "(Path=", path, ") ");
+
   if (data.has_value()) {
-    data_string = absl::StrCat(", data=", *data);
-  } else {
-    data_string = "";
+    absl::StrAppend(&message, "(Data=", *data, ") ");
   }
 
   absl::Time start = absl::Now();
@@ -68,25 +65,19 @@ RedfishLoggedTransport::LogMethodDataAndResult(
   absl::Duration latency = absl::Now() - start;
 
   if (log_latency_) {
-    latency_string =
-        absl::StrFormat("[Lag: %s]", absl::FormatDuration(latency));
-  } else {
-    latency_string = "";
+    absl::StrAppend(&message, "[Lag=", absl::FormatDuration(latency), "] ");
   }
-
-  std::string method_info =
-      absl::StrFormat("%s%s(path=%s%s)%s: ", context_string, method, path,
-                      data_string, latency_string);
 
   if (result.ok()) {
     LOG(INFO) << absl::StrCat(
-        method_info,
+        message,
         log_payload_
             ? std::visit([&](const auto &body) { return PrintResult(body); },
                          result->body)
-            : "Success");
+            : " Success");
   } else {
-    LOG(ERROR) << absl::StrCat(method_info, result.status().message());
+    LOG(WARNING) << absl::StrCat(message,
+                                 " Error: ", result.status().message());
   }
 
   return result;

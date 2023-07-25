@@ -34,6 +34,7 @@ class RedfishLoggedTransport : public RedfishTransport {
  public:
   explicit RedfishLoggedTransport(std::unique_ptr<RedfishTransport> base)
       : base_transport_(std::move(base)) {}
+
   explicit RedfishLoggedTransport(std::unique_ptr<RedfishTransport> base,
                                   absl::string_view context, bool log_payload,
                                   bool log_latency)
@@ -54,8 +55,8 @@ class RedfishLoggedTransport : public RedfishTransport {
  private:
   std::unique_ptr<RedfishTransport> base_transport_;
   std::optional<std::string> context_;
-  bool log_payload_;
-  bool log_latency_;
+  bool log_payload_ = false;
+  bool log_latency_ = true;
 
   absl::StatusOr<Result> LogMethodDataAndResult(
       absl::string_view method, absl::string_view path,
