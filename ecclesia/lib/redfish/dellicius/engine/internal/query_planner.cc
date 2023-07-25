@@ -44,7 +44,6 @@
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/status/macros.h"
-#include "ecclesia/lib/time/proto.h"
 #include "re2/re2.h"
 
 namespace ecclesia {
@@ -447,29 +446,6 @@ struct ContextNode {
   std::string last_executed_redpath;
 };
 
-// RAII style wrapper to timestamp query.
-class QueryTimestamp {
- public:
-  QueryTimestamp(DelliciusQueryResult &result, const Clock &clock)
-      : result(result), clock(clock) {
-    auto timestamp = AbslTimeToProtoTime(clock.Now());
-    if (timestamp.ok()) {
-      *result.mutable_start_timestamp() = *std::move(timestamp);
-    }
-  }
-
-  ~QueryTimestamp() {
-    auto timestamp = AbslTimeToProtoTime(clock.Now());
-    if (timestamp.ok()) {
-      *result.mutable_end_timestamp() = *std::move(timestamp);
-    }
-  }
-
- private:
-  DelliciusQueryResult &result;
-  const Clock &clock;
-};
-
 // QueryPlanner encapsulates the logic to interpret subqueries, deduplicate
 // RedPath path expressions, dispatch an optimum number of redfish resource
 // requests, and return normalized response data per given property
@@ -844,54 +820,51 @@ DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
                                        const Clock &clock,
                                        QueryTracker *tracker) {
   DelliciusQueryResult result;
-  {
-    auto start_query_timer = QueryTimestamp(result, clock);
 
-    result.set_query_id(plan_id_);
+  result.set_query_id(plan_id_);
 
-    std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
-    if (!redfish_object) {
-      LOG(ERROR) << "Cannot query service root. Check host configuration.";
-      return result;
-    }
-
-    // We will create ContextNode for the RedfishObject relative to which all
-    // RedPath expressions will execute.
-    ContextNode context_node{.redfish_object = std::move(redfish_object)};
-
-    // Now we create RedPathContext for each RedPath across subqueries and map
-    // them to the ContextNode.
-    for (auto &subquery_handle : subquery_handles_) {
-      // Only consider subqueries that have RedPath expressions to execute
-      // relative to service root. This step filters out any child subqueries
-      // which execute relative to other subqueries.
-      if (!subquery_handle || !subquery_handle->IsRootSubquery()) continue;
-
-      // A context node can usually have multiple RedPath expressions mapped.
-      // Let's instantiate the RedPathContext list with the one RedPath in the
-      // subquery.
-      RedPathIterator path_iter = subquery_handle->GetRedPathIterator();
-      std::vector<RedPathContext> redpath_ctx_multiple = {
-          {subquery_handle.get(), nullptr, path_iter}};
-      // A special case where properties need to be queried from service root
-      // itself.
-      if (path_iter->first.empty()) {
-        redpath_ctx_multiple = PopulateResultOrContinueQuery(
-            *context_node.redfish_object, redpath_ctx_multiple, result);
-      }
-      // Update ContextNode with RedPath contexts created for the subquery.
-      context_node.redpath_ctx_multiple.insert(
-          context_node.redpath_ctx_multiple.end(), redpath_ctx_multiple.begin(),
-          redpath_ctx_multiple.end());
-    }
-
-    // Return if there are no RedPath contexts to execute.
-    if (context_node.redpath_ctx_multiple.empty()) return result;
-
-    // Recursively execute each RedPath step across subqueries.
-    ExecuteRedPathStepFromEachSubquery(redpath_to_query_params_, context_node,
-                                       result, tracker);
+  std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
+  if (!redfish_object) {
+    LOG(ERROR) << "Cannot query service root. Check host configuration.";
+    return result;
   }
+
+  // We will create ContextNode for the RedfishObject relative to which all
+  // RedPath expressions will execute.
+  ContextNode context_node{.redfish_object = std::move(redfish_object)};
+
+  // Now we create RedPathContext for each RedPath across subqueries and map
+  // them to the ContextNode.
+  for (auto &subquery_handle : subquery_handles_) {
+    // Only consider subqueries that have RedPath expressions to execute
+    // relative to service root. This step filters out any child subqueries
+    // which execute relative to other subqueries.
+    if (!subquery_handle || !subquery_handle->IsRootSubquery()) continue;
+
+    // A context node can usually have multiple RedPath expressions mapped.
+    // Let's instantiate the RedPathContext list with the one RedPath in the
+    // subquery.
+    RedPathIterator path_iter = subquery_handle->GetRedPathIterator();
+    std::vector<RedPathContext> redpath_ctx_multiple = {
+        {subquery_handle.get(), nullptr, path_iter}};
+    // A special case where properties need to be queried from service root
+    // itself.
+    if (path_iter->first.empty()) {
+      redpath_ctx_multiple = PopulateResultOrContinueQuery(
+          *context_node.redfish_object, redpath_ctx_multiple, result);
+    }
+    // Update ContextNode with RedPath contexts created for the subquery.
+    context_node.redpath_ctx_multiple.insert(
+        context_node.redpath_ctx_multiple.end(), redpath_ctx_multiple.begin(),
+        redpath_ctx_multiple.end());
+  }
+
+  // Return if there are no RedPath contexts to execute.
+  if (context_node.redpath_ctx_multiple.empty()) return result;
+
+  // Recursively execute each RedPath step across subqueries.
+  ExecuteRedPathStepFromEachSubquery(redpath_to_query_params_, context_node,
+                                     result, tracker);
   return result;
 }
 

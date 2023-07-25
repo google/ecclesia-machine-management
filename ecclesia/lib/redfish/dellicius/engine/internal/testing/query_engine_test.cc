@@ -86,6 +86,25 @@ void VerifyTrackedPathWithParamsMatchExpected(
               UnorderedPointwise(RedPathExpandConfigsEq(), expected_configs));
 }
 
+void VerifyQueryResults(std::vector<DelliciusQueryResult> actual_entries,
+                        std::vector<DelliciusQueryResult> expected_entries,
+                        bool check_timestamps = false) {
+  auto remove_timestamps = [](std::vector<DelliciusQueryResult> &entries) {
+    for (DelliciusQueryResult &entry : entries) {
+      entry.clear_start_timestamp();
+      entry.clear_end_timestamp();
+    }
+  };
+
+  if (!check_timestamps) {
+    remove_timestamps(actual_entries);
+    remove_timestamps(expected_entries);
+  }
+
+  EXPECT_THAT(actual_entries,
+              UnorderedElementsAreArrayOfProtos(expected_entries));
+}
+
 TEST(QueryEngineTest, QueryEngineDevpathConfiguration) {
   std::string sensor_out_path = GetTestDataDependencyPath(JoinFilePaths(
       kQuerySamplesLocation, "query_out/devpath_sensor_out.textproto"));
@@ -100,8 +119,9 @@ TEST(QueryEngineTest, QueryEngineDevpathConfiguration) {
 
   DelliciusQueryResult intent_output_sensor =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
-  EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
-                                    EqualsProto(intent_output_sensor))));
+
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_output_sensor)});
 }
 
 TEST(QueryEngineTest, QueryEngineDefaultConfiguration) {
@@ -118,8 +138,9 @@ TEST(QueryEngineTest, QueryEngineDefaultConfiguration) {
 
   DelliciusQueryResult intent_output_sensor =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
-  EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
-                                    EqualsProto(intent_output_sensor))));
+
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_output_sensor)});
 }
 
 TEST(QueryEngineTest, QueryEngineRedfishIntfAccessor) {
@@ -154,8 +175,9 @@ TEST(QueryEngineTest, QueryEngineWithExpandConfiguration) {
 
   DelliciusQueryResult intent_output_sensor =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
-  EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
-                                    EqualsProto(intent_output_sensor))));
+
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_output_sensor)});
 
   std::vector<RedPathToQueryParams> tracked_configs;
   tracked_configs.reserve(query_tracker.redpaths_queried.size());
@@ -204,11 +226,10 @@ TEST(QueryEngineTest, QueryEngineConcurrentQueries) {
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
   DelliciusQueryResult intent_assembly_out =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
-  EXPECT_THAT(
-      response_entries,
-      ElementsAre(
-          IgnoringRepeatedFieldOrdering(EqualsProto(intent_sensor_out)),
-          IgnoringRepeatedFieldOrdering(EqualsProto(intent_assembly_out))));
+
+  VerifyQueryResults(
+      std::move(response_entries),
+      {std::move(intent_sensor_out), std::move(intent_assembly_out)});
 }
 
 TEST(QueryEngineTest, QueryEngineEmptyItemDevpath) {
@@ -225,8 +246,9 @@ TEST(QueryEngineTest, QueryEngineEmptyItemDevpath) {
 
   DelliciusQueryResult intent_assembly_out =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
-  EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
-                                    EqualsProto(intent_assembly_out))));
+
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_assembly_out)});
 }
 
 TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
@@ -250,8 +272,9 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
             {"AssemblyCollectorWithPropertyNameNormalization"}, &metrics);
     DelliciusQueryResult intent_output_assembly =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
-    EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
-                                      EqualsProto(intent_output_assembly))));
+
+    VerifyQueryResults(std::move(response_entries),
+                       {std::move(intent_output_assembly)});
   }
   {
     // Query assemblies again. This time we expect QueryEngine uses cache.
@@ -260,8 +283,8 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
             {"AssemblyCollectorWithPropertyNameNormalization"});
     DelliciusQueryResult intent_output_assembly =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
-    EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
-                                      EqualsProto(intent_output_assembly))));
+    VerifyQueryResults(std::move(response_entries),
+                       {std::move(intent_output_assembly)});
   }
   {
     // Query assemblies again and again we expect QueryEngine to use cache.
@@ -270,8 +293,8 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
             {"AssemblyCollectorWithPropertyNameNormalization"});
     DelliciusQueryResult intent_output_assembly =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
-    EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
-                                      EqualsProto(intent_output_assembly))));
+    VerifyQueryResults(std::move(response_entries),
+                       {std::move(intent_output_assembly)});
   }
 
   bool traced_systems = false;
@@ -328,8 +351,8 @@ TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
 
   DelliciusQueryResult intent_query_out =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
-  EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
-                                    EqualsProto(intent_query_out))));
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_query_out)});
 }
 
 TEST(QueryEngineTest, QueryEngineTransportMetrics) {
@@ -386,8 +409,8 @@ TEST(QueryEngineTest, QueryEngineWithDefaultNormalizer) {
               kQuerySamplesLocation, "query_out/sensor_out.textproto")));
   std::vector<DelliciusQueryResult> response_entries =
       query_engine->ExecuteQuery({"SensorCollector"});
-  EXPECT_THAT(response_entries, ElementsAre(IgnoringRepeatedFieldOrdering(
-                                    EqualsProto(intent_output_sensor))));
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_output_sensor)});
 }
 
 TEST(QueryEngineTest, TestQueryEngineFactoryForParserError) {

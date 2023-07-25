@@ -60,7 +60,8 @@ class QueryPlannerTestRunner : public ::testing::Test {
   }
 
   void TestQuery(const std::string &query_in_path,
-                 const std::string &query_out_path, Normalizer *normalizer) {
+                 const std::string &query_out_path, Normalizer *normalizer,
+                 bool check_timestamp = false) {
     CHECK(server_ != nullptr && intf_ != nullptr && clock_ != nullptr)
         << "Test parameters not set!";
     DelliciusQuery query =
@@ -74,6 +75,12 @@ class QueryPlannerTestRunner : public ::testing::Test {
     ASSERT_TRUE(query_result.ok());
     DelliciusQueryResult intent_output =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
+    if (!check_timestamp) {
+      intent_output.clear_start_timestamp();
+      intent_output.clear_end_timestamp();
+      query_result.value().clear_start_timestamp();
+      query_result.value().clear_end_timestamp();
+    }
     EXPECT_THAT(intent_output, IgnoringRepeatedFieldOrdering(
                                    EqualsProto(query_result.value())));
   }

@@ -61,7 +61,6 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:path_util",
         "//ecclesia/lib/status:macros",
-        "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",

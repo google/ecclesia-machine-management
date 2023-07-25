@@ -23,6 +23,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/check.h"
+#include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -45,11 +46,36 @@
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/time/clock.h"
+#include "ecclesia/lib/time/proto.h"
 #include "google/protobuf/text_format.h"
 
 namespace ecclesia {
 
 namespace {
+
+// RAII style wrapper to timestamp query.
+class QueryTimestamp {
+ public:
+  QueryTimestamp(DelliciusQueryResult *result, const Clock *clock)
+      : result_(*ABSL_DIE_IF_NULL(result)),
+        clock_(*ABSL_DIE_IF_NULL(clock)),
+        start_time_(clock_.Now()) {}
+
+  ~QueryTimestamp() {
+    auto set_time = [](absl::Time time, google::protobuf::Timestamp &field) {
+      if (auto timestamp = AbslTimeToProtoTime(time); timestamp.ok()) {
+        field = *std::move(timestamp);
+      }
+    };
+    set_time(start_time_, *result_.mutable_start_timestamp());
+    set_time(clock_.Now(), *result_.mutable_end_timestamp());
+  }
+
+ private:
+  DelliciusQueryResult &result_;
+  const Clock &clock_;
+  absl::Time start_time_;
+};
 
 class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
  public:
@@ -135,22 +161,20 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
         continue;
       }
 
-      absl::StatusOr<DelliciusQueryResult> result_single;
-      if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
-        result_single = it->second->Run(
-            redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
-            *clock_, tracker);
-      } else {
-        result_single =
-            it->second->Run(redfish_interface_->GetRoot(), *clock_, tracker);
+      DelliciusQueryResult result_single;
+      {
+        auto query_timer = QueryTimestamp(&result_single, clock_);
+        if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
+          result_single = it->second->Run(
+              redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
+              *clock_, tracker);
+        } else {
+          result_single =
+              it->second->Run(redfish_interface_->GetRoot(), *clock_, tracker);
+        }
       }
 
-      if (!result_single.ok()) {
-        LOG(ERROR) << "Query Failed for id: " << query_id
-                   << " Reason: " << result_single.status();
-        continue;
-      }
-      response_entries.push_back(std::move(*result_single));
+      response_entries.push_back(std::move(result_single));
     }
     return response_entries;
   }
