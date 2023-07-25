@@ -1,7 +1,7 @@
 # proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
 # proto-message: DelliciusQuery
 
-query_id: "GetPartLocationContextFromAll"
+query_id: "GetServiceLabelFromAll"
 ######### Query Chassis Subtree #########
 subquery {
   subquery_id: "GetAllChassis"
@@ -20,7 +20,7 @@ subquery {
 subquery {
   subquery_id: "GetAllProcessorsLinkedWithAllChassis"
   root_subquery_ids: "GetAllChassis"
-  redpath: "/Links/Processors[Location.PartLocationContext]"
+  redpath: "/Links/Processors[Location.PartLocation.ServiceLabel]"
   properties { property: "@odata\\.id" type: STRING }
   properties { property: "Name" type: STRING }
   properties { property: "Model" type: STRING }
@@ -34,7 +34,7 @@ subquery {
 subquery {
   subquery_id: "GetAllStorageControllersFromAllStorage"
   root_subquery_ids: "GetAllChassis"
-  redpath: "/Links/Storage[*]/StorageControllers[Location.PartLocationContext]"
+  redpath: "/Links/Storage[*]/StorageControllers[Location.PartLocation.ServiceLabel]"
   properties { property: "@odata\\.id" type: STRING }
   properties { property: "Name" type: STRING }
   properties { property: "Model" type: STRING }
@@ -48,7 +48,7 @@ subquery {
 subquery {
   subquery_id: "GetAllDrives"
   root_subquery_ids: "GetAllChassis"
-  redpath: "/Drives[PhysicalLocation.PartLocationContext]"
+  redpath: "/Drives[PhysicalLocation.ServiceLabel]"
   properties { property: "@odata\\.id" type: STRING }
   properties { property: "Name" type: STRING }
   properties { property: "Model" type: STRING }
@@ -61,7 +61,7 @@ subquery {
 subquery {
   subquery_id: "GetAllMemory"
   root_subquery_ids: "GetAllChassis"
-  redpath: "/Memory[Location.PartLocationContext]"
+  redpath: "/Memory[Location.PartLocation.ServiceLabel]"
   properties { property: "@odata\\.id" type: STRING }
   properties { property: "Name" type: STRING }
   properties { property: "Model" type: STRING }
@@ -75,7 +75,7 @@ subquery {
 subquery {
   subquery_id: "GetAllFansFromAllChassis"
   root_subquery_ids: "GetAllChassis"
-  redpath: "/ThermalSubsystem/Fans[Location.PartLocationContext]"
+  redpath: "/ThermalSubsystem/Fans[Location.PartLocation.ServiceLabel]"
   properties { property: "@odata\\.id" type: STRING }
   properties { property: "Name" type: STRING }
   properties { property: "Model" type: STRING }
@@ -88,7 +88,7 @@ subquery {
 subquery {
   subquery_id: "GetAllAssemblies"
   root_subquery_ids: "GetAllChassis"
-  redpath: "/Assembly/Assemblies[Location.PartLocationContext]"
+  redpath: "/Assembly/Assemblies[Location.PartLocation.ServiceLabel]"
   properties { property: "@odata\\.id" type: STRING }
   properties { property: "Name" type: STRING }
   properties { property: "Model" type: STRING }
@@ -101,7 +101,7 @@ subquery {
 ######### End of Chassis Subtree #########
 subquery {
   subquery_id: "GetAllCables"
-  redpath: "/Cables[Location.PartLocationContext]"
+  redpath: "/Cables[Location.PartLocation.ServiceLabel]"
   properties { property: "@odata\\.id" type: STRING }
   properties { property: "Name" type: STRING }
   properties { property: "Model" type: STRING }

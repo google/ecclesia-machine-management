@@ -1,4 +1,5 @@
 load("//ecclesia/lib/redfish/dellicius/engine:redpath_query.bzl", "redpath_queries")
+load("//ecclesia/build_defs:embed.bzl", "cc_data_library")
 
 licenses(["notice"])
 
@@ -40,6 +41,22 @@ filegroup(
         "query_out/service_root_google_out.textproto",
         "query_out/service_root_out.textproto",
     ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "devpath3_queries_in",
+    srcs = glob(["devpath3/**"]),
+    visibility = ["//visibility:public"],
+)
+
+cc_data_library(
+    name = "devpath3_queries_embedded",
+    cc_namespace = "ecclesia",
+    data = [
+        ":devpath3_queries_in",
+    ],
+    var_name = "kDevpath3Queries",
     visibility = ["//visibility:public"],
 )
 

@@ -1,0 +1,20 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: ecclesia.DelliciusQuery
+
+query_id: "GetMoboChassis"
+subquery {
+  subquery_id: "ChassisMobo"
+  redpath: "/Chassis[!Links.ContainedBy]"
+  properties {
+    property: "@odata\\.id"
+    type: STRING
+  }
+  properties {
+    property: "Name"
+    type: STRING
+  }
+  properties {
+    property: "Model"
+    type: STRING
+  }
+}
