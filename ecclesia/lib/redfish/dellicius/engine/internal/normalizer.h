@@ -21,6 +21,7 @@
 #include <utility>
 
 #include "absl/status/status.h"
+#include "absl/strings/match.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
@@ -73,8 +74,20 @@ class NormalizerImplAddMachineBarepath final
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
                          SubqueryDataSet &data_set) const override {
+    // Root devpath is assigned to the root Chassis, to do this we need to track
+    // if the resource is Chassis type and has no redfish location.
+    bool is_root = false;
+    std::string resource_type;
+    redfish_object["@odata.type"].GetValue(&resource_type);
+    if (absl::StrContains(resource_type, "#Chassis.") &&
+        (!data_set.has_redfish_location() ||
+         (data_set.redfish_location().service_label().empty() &&
+          data_set.redfish_location().part_location_context().empty()))) {
+      is_root = true;
+    }
+
     absl::StatusOr<std::string> machine_devpath =
-        id_assigner_->IdForRedfishLocationInDataSet(data_set);
+        id_assigner_->IdForRedfishLocationInDataSet(data_set, is_root);
     if (machine_devpath.ok()) {
       data_set.mutable_decorators()->set_machine_devpath(
           machine_devpath.value());

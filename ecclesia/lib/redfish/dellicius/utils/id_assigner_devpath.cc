@@ -46,7 +46,7 @@ class MapBasedDevpathAssigner : public IdAssigner<std::string> {
   }
 
   virtual absl::StatusOr<std::string> IdForRedfishLocationInDataSet(
-      SubqueryDataSet /*data_set*/) override {
+      SubqueryDataSet /*data_set*/, bool /*is_root*/) override {
     return absl::NotFoundError("");
   }
 

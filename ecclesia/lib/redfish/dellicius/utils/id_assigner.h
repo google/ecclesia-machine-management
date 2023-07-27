@@ -35,7 +35,7 @@ class IdAssigner {
   // Assign an identifier based on Redfish location in the data_set.
   // Return absl::NotFoundError if a translation does not exist.
   virtual absl::StatusOr<IdT> IdForRedfishLocationInDataSet(
-      SubqueryDataSet data_set) = 0;
+      SubqueryDataSet data_set, bool is_root = false) = 0;
 };
 
 // Generic factory type to generate IdAssigner for given local id map and
