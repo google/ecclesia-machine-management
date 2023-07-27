@@ -211,8 +211,12 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     return default_topology_;
   }
 
-  const RedfishInterface *GetRedfishInterface(
+  absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) override {
+    if (redfish_interface_ == nullptr) {
+      return absl::InternalError(
+          "QueryEngine contains uninitialized RedfishInterface");
+    }
     return redfish_interface_.get();
   }
 

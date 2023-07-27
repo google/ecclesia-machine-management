@@ -49,8 +49,6 @@ namespace ecclesia {
 
 namespace {
 
-using ::testing::ElementsAre;
-using ::testing::NotNull;
 using ::testing::UnorderedPointwise;
 
 constexpr absl::string_view kQuerySamplesLocation =
@@ -146,7 +144,7 @@ TEST(QueryEngineTest, QueryEngineDefaultConfiguration) {
 TEST(QueryEngineTest, QueryEngineRedfishIntfAccessor) {
   std::string sensor_out_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
-  EXPECT_THAT(
+  EXPECT_TRUE(
       FakeQueryEngineEnvironment(
           {.flags{.enable_devpath_extension = false},
            .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
@@ -154,8 +152,8 @@ TEST(QueryEngineTest, QueryEngineRedfishIntfAccessor) {
           .GetEngine()
           // Uniform initialization "{}" in place of the passkey will cause
           // compilation errors.
-          .GetRedfishInterface(RedfishInterfacePasskeyFactory::GetPassKey()),
-      NotNull());
+          .GetRedfishInterface(RedfishInterfacePasskeyFactory::GetPassKey())
+          .ok());
 }
 
 TEST(QueryEngineTest, QueryEngineWithExpandConfiguration) {

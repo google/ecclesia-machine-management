@@ -100,7 +100,7 @@ class QueryEngine {
     // We restrict the visibility of QueryEngineRawInterfacePasskey so that
     // we can understand which users are using raw-interface features which
     // are not yet available in the query engine.
-    virtual const RedfishInterface *GetRedfishInterface(
+    virtual absl::StatusOr<RedfishInterface *> GetRedfishInterface(
         RedfishInterfacePasskey unused_passkey) = 0;
   };
 
@@ -143,7 +143,7 @@ class QueryEngine {
                                                  transport_metrics);
   }
   const NodeTopology &GetTopology() { return engine_impl_->GetTopology(); }
-  const RedfishInterface *GetRedfishInterface(
+  absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) {
     return engine_impl_->GetRedfishInterface(unused_passkey);
   }
