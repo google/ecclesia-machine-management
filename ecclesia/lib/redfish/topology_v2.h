@@ -30,6 +30,12 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf);
 NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
                                          absl::string_view config_name);
 
+// Function to create NodeTopology based on go/redfish-devpath2 design
+//
+// This function will find a root node and uses the redfish linkages to find
+// nodes and assign devpaths based on the Location.PartLocation attribute
+NodeTopology CreateTopologyFromRedfishV2_5(RedfishInterface *redfish_intf);
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TOPOLOGY_V2_H_
