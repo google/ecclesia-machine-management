@@ -31,9 +31,11 @@ cc_test(
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/time:clock_fake",
         "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
+        "@com_google_googleapis//google/rpc:code_cc_proto",
         "@com_google_googletest//:gtest_main",
     ],
 )

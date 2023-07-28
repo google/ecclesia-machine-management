@@ -100,6 +100,8 @@ message DelliciusQueryResult {
   google.protobuf.Timestamp start_timestamp = 3;
   // Represents point in time when output for last Dellicus Query is processed.
   google.protobuf.Timestamp end_timestamp = 4;
+  // Describes the status of the QueryResult as a whole.
+  optional google.rpc.Status status = 5;
 }
 
 // Field options used to annotate properties in a subquery output.

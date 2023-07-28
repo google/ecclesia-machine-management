@@ -1,0 +1,10 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "SensorCollectionCollector"
+subquery {
+  subquery_id: "Sensors"
+  redpath: "/Chassis[*]/Sensors"
+  properties { property: "Name" type: STRING }
+  properties { property: "Members@odata\\.count" type: INT64 }
+}

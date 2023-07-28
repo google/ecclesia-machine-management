@@ -25,6 +25,8 @@
 #include <utility>
 #include <vector>
 
+#include "google/rpc/code.pb.h"
+#include "google/rpc/status.pb.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -411,6 +413,8 @@ class SubqueryHandle final {
 
   std::string RedPathToString() const { return subquery_.redpath(); }
 
+  std::string GetSubqueryId() const { return subquery_.subquery_id(); }
+
  private:
   DelliciusQuery::Subquery subquery_;
   Normalizer *normalizer_;
@@ -497,8 +501,10 @@ class SubqueryHandleFactory {
   // through 'root_subquery_ids' property.
   // Args:
   //   subquery_id: Identifier of the subquery for which SubqueryHandle is
-  //   built subquery_id_chain: Stores visited ids to help identify loop in
-  //   chain child_subquery_handle: last built subquery handle to link as
+  //   built.
+  //   subquery_id_chain: Stores visited ids to help identify loop in
+  //   chain.
+  //   child_subquery_handle: last built subquery handle to link as
   //   child node.
   absl::Status BuildSubqueryHandleChain(
       const std::string &subquery_id,
@@ -636,6 +642,37 @@ ContextNode ExecutePredicateExpression(const int node_index,
   context_node.redpath_ctx_multiple = std::move(redpath_ctx_filtered);
   return context_node;
 }
+void PopulateSubqueryErrorStatus(
+    const absl::Status &node_variant_status,
+    const std::vector<RedPathContext> &redpath_ctx_multiple,
+    DelliciusQueryResult &result, absl::string_view node_name,
+    absl::string_view last_executed_redpath) {
+  ::google::rpc::Code error_code = ::google::rpc::Code::INTERNAL;
+  // If the resource is not found, that isn't an error. Queries are generic
+  // and it is okay to query data that isn't present.
+  if (node_variant_status.code() == absl::StatusCode::kNotFound) {
+    return;
+  }
+  if (node_variant_status.code() == absl::StatusCode::kDeadlineExceeded) {
+    error_code = ::google::rpc::Code::DEADLINE_EXCEEDED;
+  } else if (node_variant_status.code() == absl::StatusCode::kUnauthenticated) {
+    error_code = ::google::rpc::Code::UNAUTHENTICATED;
+  }
+  // If the Get fails for the node name, mark the failure status in the
+  // relevant subqueries.
+  for (const auto &redpath_ctx : redpath_ctx_multiple) {
+    ::google::rpc::Status *subquery_status =
+        (*result.mutable_subquery_output_by_id())[redpath_ctx.subquery_handle
+                                                      ->GetSubqueryId()]
+            .mutable_status();
+    subquery_status->set_code(error_code);
+    subquery_status->set_message(
+        absl::StrCat("Cannot resolve NodeName ", node_name,
+                     " to valid Redfish object at path", last_executed_redpath,
+                     ". Redfish Request failled with error: ",
+                     node_variant_status.ToString()));
+  }
+}
 
 // Recursively executes RedPath Step expressions across subqueries.
 // Dispatches Redfish resource request for each unique NodeName in RedPath
@@ -695,6 +732,9 @@ void ExecuteRedPathStepFromEachSubquery(
 
     // If NodeName does not resolve to a valid Redfish Resource, skip it!
     if (!node_set_as_variant.status().ok()) {
+      PopulateSubqueryErrorStatus(node_set_as_variant.status(),
+                                  redpath_ctx_multiple, result, node_name,
+                                  context_node.last_executed_redpath);
       // It is not considered an error to not find requested nodes in the query.
       // So here we just log and skip the iteration.
       DLOG(INFO) << "Cannot resolve NodeName " << node_name
@@ -725,7 +765,7 @@ void ExecuteRedPathStepFromEachSubquery(
       continue;
     }
 
-    // Initialize count to 1 since we know there is atleast one Redfish node.
+    // Initialize count to 1 since we know there is at least one Redfish node.
     // This node count could be more than 1 if we are dealing with Redfish
     // collection.
     size_t node_count = 1;
@@ -769,7 +809,15 @@ void ExecuteRedPathStepFromEachSubquery(
       // If we are dealing with RedfishCollection, get collection member as
       // RedfishObject.
       RedfishVariant indexed_node = (*node_as_iterable)[node_index];
-      if (!indexed_node.status().ok()) continue;
+      if (!indexed_node.status().ok()) {
+        PopulateSubqueryErrorStatus(indexed_node.status(), redpath_ctx_multiple,
+                                    result, node_name, redpath_to_execute);
+        DLOG(INFO)
+            << "Cannot resolve NodeName " << node_name
+            << " to valid Redfish object when executing collection redpath "
+            << redpath_to_execute;
+        continue;
+      }
       std::unique_ptr<RedfishObject> indexed_node_as_object =
           indexed_node.AsObject();
       if (!indexed_node_as_object) continue;
@@ -821,13 +869,17 @@ DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
                                        QueryTracker *tracker) {
   DelliciusQueryResult result;
 
-  result.set_query_id(plan_id_);
-
-  std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
-  if (!redfish_object) {
-    LOG(ERROR) << "Cannot query service root. Check host configuration.";
-    return result;
-  }
+    result.set_query_id(plan_id_);
+    std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
+    if (!redfish_object) {
+      LOG(ERROR) << "Cannot query service root. Check host configuration.";
+      result.mutable_status()->set_code(
+          ::google::rpc::Code::FAILED_PRECONDITION);
+      result.mutable_status()->set_message(absl::StrCat(
+          "Cannot query service root for query with id: ", plan_id_,
+          ". Check host configuration."));
+      return result;
+    }
 
   // We will create ContextNode for the RedfishObject relative to which all
   // RedPath expressions will execute.
