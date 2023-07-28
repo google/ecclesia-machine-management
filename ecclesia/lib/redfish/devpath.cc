@@ -25,6 +25,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_join.h"
+#include "absl/strings/str_replace.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -162,6 +163,12 @@ std::optional<std::string> GetSlotDevpathFromNodeTopology(
     }
   }
   return std::nullopt;
+}
+
+std::optional<std::string> GetDevpathFromSlotDevpath(
+    absl::string_view slot_devpath) {
+  if (!absl::StrContains(slot_devpath, ":connector:")) return std::nullopt;
+  return absl::StrReplaceAll(slot_devpath, {{":connector:", "/"}});
 }
 
 std::optional<std::string> GetManagerDevpathFromNodeTopology(
