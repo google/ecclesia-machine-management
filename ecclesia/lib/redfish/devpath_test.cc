@@ -503,5 +503,20 @@ TEST(GetSlotDevpathFromNodeTopology, NumberOfParentUriSizeCanEqualToFive) {
   EXPECT_EQ(*slot_devpath, expect_devpath);
 }
 
+TEST(GetDevpathFromSlotDevpath, WrongSlotDevpath) {
+  absl::string_view wrong_slot_devpath = "/phys/PCIE0/sas@0";
+  auto result = GetDevpathFromSlotDevpath(wrong_slot_devpath);
+  ASSERT_FALSE(result.has_value());
+}
+
+TEST(GetDevpathFromSlotDevpath, DevpathSuccess) {
+  absl::string_view slot_devpath = "/phys/PCIE0:connector:sas@0";
+  absl::string_view expect_devpath = "/phys/PCIE0/sas@0";
+  auto result = GetDevpathFromSlotDevpath(slot_devpath);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(*result, expect_devpath);
+}
+
 }  // namespace
 }  // namespace ecclesia
