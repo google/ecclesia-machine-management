@@ -113,7 +113,7 @@ class QueryEngine {
   ABSL_DEPRECATED("Use QueryEngine factory methods instead.")
   QueryEngine(const QueryEngineConfiguration &config,
               std::unique_ptr<RedfishTransport> transport,
-              RedfishTransportCacheFactory cache_factory = CreateNullCache,
+              RedfishTransportCacheFactory cache_factory = NullCache::Create,
               const Clock *clock = Clock::RealClock());
 
   explicit QueryEngine(std::unique_ptr<QueryEngineIntf> engine_impl)
@@ -175,7 +175,7 @@ struct QueryEngineParams {
   // Transport medium over which Redfish queries are sent to the redfish server.
   std::unique_ptr<RedfishTransport> transport;
   // Generates cache used by query engine, default set to Null cache (no cache).
-  RedfishTransportCacheFactory cache_factory = QueryEngine::CreateNullCache;
+  RedfishTransportCacheFactory cache_factory = NullCache::Create;
   // Optional attribute to uniquely identify redfish server where necessary.
   std::string entity_tag;
   // Type of stable identifier to use in query result

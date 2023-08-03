@@ -94,8 +94,7 @@ class FakeQueryEngineEnvironment {
             &clock_);
       } else if (mode == CachingMode::kDisableCaching) {
         query_engine_ = std::make_unique<QueryEngine>(
-            config_, std::move(transport), QueryEngine::CreateNullCache,
-            &clock_);
+            config_, std::move(transport), NullCache::Create, &clock_);
       }
       return absl::OkStatus();
     }

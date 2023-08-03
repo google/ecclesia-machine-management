@@ -109,6 +109,11 @@ class RedfishCachedGetterInterface {
 // UncachedGet.
 class NullCache : public RedfishCachedGetterInterface {
  public:
+  static std::unique_ptr<RedfishCachedGetterInterface> Create(
+      RedfishTransport *transport) {
+    return std::make_unique<NullCache>(transport, std::nullopt);
+  }
+
   explicit NullCache(RedfishTransport *transport)
       : NullCache(transport, std::nullopt) {}
 
@@ -131,6 +136,12 @@ class NullCache : public RedfishCachedGetterInterface {
 // last fetched within a max_age_ window.
 class TimeBasedCache : public RedfishCachedGetterInterface {
  public:
+  static std::unique_ptr<RedfishCachedGetterInterface> Create(
+      RedfishTransport *transport, absl::Duration max_age) {
+    return std::make_unique<TimeBasedCache>(transport, Clock::RealClock(),
+                                            max_age);
+  }
+
   TimeBasedCache(
       RedfishTransport *transport, const Clock *clock, absl::Duration max_age,
       std::optional<const ApiComplexityContextManager *> manager = std::nullopt)
