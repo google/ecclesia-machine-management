@@ -104,12 +104,6 @@ class QueryEngine {
         RedfishInterfacePasskey unused_passkey) = 0;
   };
 
-  // Default RedfishTransportCacheFactory that creates a NullCache (no caching).
-  static std::unique_ptr<RedfishCachedGetterInterface> CreateNullCache(
-      RedfishTransport *transport) {
-    return std::make_unique<ecclesia::NullCache>(transport);
-  }
-
   ABSL_DEPRECATED("Use QueryEngine factory methods instead.")
   QueryEngine(const QueryEngineConfiguration &config,
               std::unique_ptr<RedfishTransport> transport,
