@@ -161,12 +161,20 @@ RedPathRedfishQueryParams CombineQueryParams(
     if (subquery.freshness() != DelliciusQuery::Subquery::REQUIRED) {
       continue;
     }
-    auto iter = redpath_to_query_params.find(subquery.redpath());
+
+    absl::string_view redpath_str = subquery.redpath();
+    std::string redpath_formatted = std::string(redpath_str);
+    if (!absl::StartsWith(redpath_str, "/")) {
+      redpath_formatted = "/";
+      absl::StrAppend(&redpath_formatted, redpath_str);
+    }
+
+    auto iter = redpath_to_query_params.find(redpath_formatted);
     if (iter != redpath_to_query_params.end()) {
       iter->second.freshness = GetParams::Freshness::kRequired;
     } else {
       redpath_to_query_params.insert(
-          {subquery.redpath(),
+          {redpath_formatted,
            GetParams{.freshness = GetParams::Freshness::kRequired}});
     }
   }
