@@ -18,11 +18,15 @@
 
 #include <memory>
 #include <optional>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-#include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/health_rollup.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -145,7 +149,11 @@ absl::StatusOr<HealthRollup::ResourceEvent> ExtractResourceEventFromMessageArgs(
 }
 }  // namespace
 
-absl::StatusOr<HealthRollup> ExtractHealthRollup(const RedfishObject &obj) {
+absl::StatusOr<HealthRollup> ExtractHealthRollup(
+    const RedfishObject &obj,
+    absl::AnyInvocable<std::optional<std::string>(const RedfishObject &)>
+        devpath_resolver) {
+  std::optional<std::string> resource_uri = obj.GetUriString();
   HealthRollup health_rollup;
   std::unique_ptr<RedfishObject> status_obj = obj[kRfPropertyStatus].AsObject();
   if (!status_obj)
@@ -197,9 +205,32 @@ absl::StatusOr<HealthRollup> ExtractHealthRollup(const RedfishObject &obj) {
                  << proto_timestamp.status().message();
     }
 
+    // Fetch origin of condition devpath if OriginOfCondition URI differs from
+    // current resource URI, resolving from current URI otherwise.
+    if (resource_uri.has_value()) {
+      if (std::unique_ptr<RedfishObject> condition_origin_obj =
+              (*condition_obj)[kRfPropertyOriginOfCondition].AsObject();
+          (condition_origin_obj != nullptr) &&
+          condition_origin_obj->GetUriString().value_or("") != *resource_uri) {
+        std::optional<std::string> origin_devpath =
+            devpath_resolver(*condition_origin_obj);
+        if (!origin_devpath.has_value()) continue;
+        *resource_event->mutable_origin_devpath() = *std::move(origin_devpath);
+      } else {
+        std::optional<std::string> current_devpath = devpath_resolver(obj);
+        if (!current_devpath.has_value()) continue;
+        *resource_event->mutable_origin_devpath() = *std::move(current_devpath);
+      }
+    }
+
     *health_rollup.add_resource_events() = *std::move(resource_event);
   }
   return health_rollup;
+}
+
+absl::StatusOr<HealthRollup> ExtractHealthRollup(const RedfishObject &obj) {
+  return ExtractHealthRollup(
+      obj, [](const RedfishObject &unused) { return std::nullopt; });
 }
 
 }  // namespace ecclesia

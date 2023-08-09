@@ -20,6 +20,8 @@
 #include <optional>
 #include <string>
 
+#include "absl/functional/any_invocable.h"
+#include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/health_rollup.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 
@@ -29,6 +31,15 @@ namespace ecclesia {
 // Timestamp) for each Condition in the Status payload of the provided
 // RedfishObject.
 absl::StatusOr<HealthRollup> ExtractHealthRollup(const RedfishObject &obj);
+
+// An overloaded version of `ExtractHealthRollup` for which the caller may
+// provide a devpath resolver callback, to be called either on the
+// `RedfishObject` pointed to by the OriginOfCondition property (if present), or
+// the `RedfishObject` containing the Conditions array (if absent).
+absl::StatusOr<HealthRollup> ExtractHealthRollup(
+    const RedfishObject &obj,
+    absl::AnyInvocable<std::optional<std::string>(const RedfishObject &)>
+        devpath_resolver);
 
 }  // namespace ecclesia
 

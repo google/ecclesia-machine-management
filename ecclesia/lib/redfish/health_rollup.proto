@@ -12,12 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Protobuffers for describing a Redfish topology configuration.
-//
-// These messages are used for constructing the NodeTopology. The Version 2
-// topology library uses the proto messages to query all of the required
-// resources based on resource type
-
 syntax = "proto3";
 
 package ecclesia;
@@ -66,6 +60,9 @@ message HealthRollup {
     string severity = 4;
     // Time at which the event was detected.
     google.protobuf.Timestamp timestamp = 5;
+    // Repair path for event origin (if present)
+    optional string origin_devpath = 6
+        ;
   }
   // Multiple conditions may be present for a given resource.
   repeated ResourceEvent resource_events = 1;
