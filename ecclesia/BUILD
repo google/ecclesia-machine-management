@@ -67,9 +67,7 @@ package_group(name = "mmanager_binary_tests")
 # Query Engine users that need access to the raw RedfishInterface pointer.
 package_group(
     name = "redfish_query_engine_raw_intf_users",
-    packages = [
-        "//ecclesia/lib/redfish/dellicius/engine/...",
-    ],
+    packages = ["//ecclesia/lib/redfish/dellicius/engine/..."],
 )
 
 # Jinja2 users.
