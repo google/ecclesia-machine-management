@@ -161,6 +161,7 @@ inline constexpr char kRfOemPropertyNvmeTelemetry[] = "NvmeTelemetry";
 inline constexpr char kRfOemPropertyTcgOpalSecurityState[] =
     "TcgOpalSecurityState";
 inline constexpr char kRfOemPropertyBareMetalStatus[] = "BareMetalStatus";
+inline constexpr char kRfOemPropertyNerfStatus[] = "NERFStatus";
 inline constexpr char kRfOemPropertyNvme[] = "NVMe";
 inline constexpr char kRfOemPropertyKnuckleController[] = "KnuckleController";
 inline constexpr char kRfOemPropertyNvmeControllerGetLogPage[] =
@@ -471,6 +472,7 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyTopologyRepresentation, std::string,
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyTcgOpalAdditionalDataStoreRawData,
                         std::string, "TcgOpalAdditionalDataStoreRawData");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyBareMetal, std::string, "BareMetal");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyNerf, std::string, "NERF");
 DEFINE_REDFISH_PROPERTY(OemPropertyRootOfTrust, std::string, "RootOfTrust");
 
 // Redfish Task properties.
