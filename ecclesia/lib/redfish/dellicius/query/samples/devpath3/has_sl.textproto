@@ -34,7 +34,7 @@ subquery {
 subquery {
   subquery_id: "GetAllStorageControllersFromAllStorage"
   root_subquery_ids: "GetAllChassis"
-  redpath: "/Links/Storage[*]/StorageControllers[Location.PartLocation.ServiceLabel]"
+  redpath: "/Links/Storage[*]/Controllers[Location.PartLocation.ServiceLabel]"
   properties { property: "@odata\\.id" type: STRING }
   properties { property: "Name" type: STRING }
   properties { property: "Model" type: STRING }
@@ -48,7 +48,7 @@ subquery {
 subquery {
   subquery_id: "GetAllDrives"
   root_subquery_ids: "GetAllChassis"
-  redpath: "/Drives[PhysicalLocation.ServiceLabel]"
+  redpath: "/Drives[PhysicalLocation.PartLocationContext or PhysicalLocation.PartLocation.ServiceLabel]"
   properties { property: "@odata\\.id" type: STRING }
   properties { property: "Name" type: STRING }
   properties { property: "Model" type: STRING }

@@ -5,6 +5,7 @@ cc_library(
     hdrs = ["interface.h"],
     visibility = [
         "//ecclesia/lib/redfish:__subpackages__",
+        "//platforms/gbmc/mtest:__subpackages__",
         "//platforms/redfish/lib/query_engine:__subpackages__",
     ],
     deps = [
