@@ -880,13 +880,11 @@ DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
     result.set_query_id(plan_id_);
     std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
     if (!redfish_object) {
-      LOG(ERROR) << "Cannot query service root. Check host configuration.";
-      result.mutable_status()->set_code(
-          ::google::rpc::Code::FAILED_PRECONDITION);
-      result.mutable_status()->set_message(absl::StrCat(
-          "Cannot query service root for query with id: ", plan_id_,
-          ". Check host configuration."));
-      return result;
+    result.mutable_status()->set_code(::google::rpc::Code::FAILED_PRECONDITION);
+    result.mutable_status()->set_message(
+        absl::StrCat("Cannot query service root for query with id: ", plan_id_,
+                     ". Check host configuration."));
+    return result;
     }
 
   // We will create ContextNode for the RedfishObject relative to which all
