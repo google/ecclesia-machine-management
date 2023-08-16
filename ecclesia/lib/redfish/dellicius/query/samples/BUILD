@@ -29,18 +29,7 @@ filegroup(
 
 filegroup(
     name = "sample_queries_out",
-    srcs = [
-        "query_out/assembly_out.textproto",
-        "query_out/devpath_assembly_out.textproto",
-        "query_out/devpath_sensor_out.textproto",
-        "query_out/managers_out.textproto",
-        "query_out/processors_out.textproto",
-        "query_out/sensor_out.textproto",
-        "query_out/sensor_out_links.textproto",
-        "query_out/sensor_out_predicates.textproto",
-        "query_out/service_root_google_out.textproto",
-        "query_out/service_root_out.textproto",
-    ],
+    srcs = glob(["query_out/**"]),
     visibility = ["//visibility:public"],
 )
 
