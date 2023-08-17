@@ -1,0 +1,14 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "GetRootOfTrusts"
+subquery {
+  subquery_id: "GetAllRots"
+  redpath: "/RootOfTrustCollection[*]"
+  properties { property: "@odata\\.id" type: STRING }
+  properties { property: "Name" type: STRING }
+  properties { property: "Model" type: STRING }
+  properties { name: "State" property: "Status.State" type: STRING }
+  properties { name: "LocationType" property: "Location.PartLocation.LocationType" type: STRING }
+  properties { name: "ServiceLabel" property: "Location.PartLocation.ServiceLabel" type: STRING }
+}
