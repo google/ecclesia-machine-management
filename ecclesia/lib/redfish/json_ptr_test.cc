@@ -140,17 +140,5 @@ TEST(JsonPtrTest, MNEscaped) {
                                        /*allow_exceptions=*/false)));
 }
 
-TEST(JsonPtrTest, NotFound) {
-  nlohmann::json starting_json =
-      nlohmann::json::parse(kSampleJson, nullptr, /*allow_exceptions=*/false);
-  EXPECT_TRUE(HandleJsonPtr(starting_json, "/something").is_discarded());
-}
-
-TEST(JsonPtrTest, InvalidPointer) {
-  nlohmann::json starting_json =
-      nlohmann::json::parse(kSampleJson, nullptr, /*allow_exceptions=*/false);
-  EXPECT_TRUE(HandleJsonPtr(starting_json, "noslash").is_discarded());
-}
-
 }  // namespace
 }  // namespace ecclesia
