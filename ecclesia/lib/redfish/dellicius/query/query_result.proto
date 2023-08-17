@@ -54,7 +54,10 @@ message SubqueryDataSet {
     // The field option serves the purpose of hinting query engine about the
     // Redfish property that can be parsed, if populated, to get local devpath.
     label: "__LocalDevpath__",
-    properties: [ "Location.Oem.Google.Devpath" ]
+    properties: [
+      "Location.Oem.Google.Devpath",
+      "PhysicalLocation.Oem.Google.Devpath"
+    ]
   }];
   // Redfish properties queried.
   repeated Property properties = 2;
