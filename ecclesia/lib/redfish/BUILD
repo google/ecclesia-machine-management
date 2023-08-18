@@ -58,8 +58,6 @@ cc_library(
     hdrs = [
         "json_ptr.h",
     ],
-    copts = ["-fexceptions"],  # Needed for nlohmann::json's json_ptr.
-    features = ["-use_header_modules"],  # Incompatible with -fexceptions.
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/strings",

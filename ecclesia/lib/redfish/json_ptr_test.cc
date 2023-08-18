@@ -25,7 +25,7 @@ namespace {
 
 using testing::Eq;
 
-// Sample JSON taken from https://datatracker.ietf.org/doc/html/rfc6901
+// Sample JSON based on example in https://datatracker.ietf.org/doc/html/rfc6901
 // Note that backslash characters are escaped by the json::parse function,
 // so "i\\\\j" is stored as a key "i\\j" and "k\\\"l" as "k\"l".
 constexpr char kSampleJson[] = R"json({
@@ -38,7 +38,11 @@ constexpr char kSampleJson[] = R"json({
     "i\\\\j": 5,
     "k\\\"l": 6,
     " ": 7,
-    "m~n": 8
+    "m~n": 8,
+    "o": {
+      "p": ["p0", "p1"],
+      "q": 9
+    }
   })json";
 
 TEST(JsonPtrTest, WholeDocument) {
@@ -64,6 +68,20 @@ TEST(JsonPtrTest, FooAccess) {
   EXPECT_THAT(HandleJsonPtr(starting_json, "/foo/1"),
               Eq(nlohmann::json::parse(R"json("baz")json", nullptr,
                                        /*allow_exceptions=*/false)));
+}
+
+TEST(JsonPtrTest, FooAccessOutOfBounds) {
+  nlohmann::json starting_json =
+      nlohmann::json::parse(kSampleJson, nullptr, /*allow_exceptions=*/false);
+  EXPECT_TRUE(HandleJsonPtr(starting_json, "/foo/2").is_discarded());
+  EXPECT_TRUE(HandleJsonPtr(starting_json, "/foo/-1").is_discarded());
+}
+
+TEST(JsonPtrTest, FooAccessNotANumber) {
+  nlohmann::json starting_json =
+      nlohmann::json::parse(kSampleJson, nullptr, /*allow_exceptions=*/false);
+  EXPECT_TRUE(HandleJsonPtr(starting_json, "/foo/").is_discarded());
+  EXPECT_TRUE(HandleJsonPtr(starting_json, "/foo/stringkey").is_discarded());
 }
 
 TEST(JsonPtrTest, Empty) {
@@ -138,6 +156,70 @@ TEST(JsonPtrTest, MNEscaped) {
   EXPECT_THAT(HandleJsonPtr(starting_json, "/m~0n"),
               Eq(nlohmann::json::parse("8", nullptr,
                                        /*allow_exceptions=*/false)));
+}
+
+TEST(JsonPtrTest, O) {
+  nlohmann::json starting_json =
+      nlohmann::json::parse(kSampleJson, nullptr, /*allow_exceptions=*/false);
+  EXPECT_THAT(HandleJsonPtr(starting_json, "/o"),
+              Eq(nlohmann::json::parse(R"json({
+      "p": ["p0", "p1"],
+      "q": 9
+    })json",
+                                       nullptr,
+                                       /*allow_exceptions=*/false)));
+}
+
+TEST(JsonPtrTest, OP) {
+  nlohmann::json starting_json =
+      nlohmann::json::parse(kSampleJson, nullptr, /*allow_exceptions=*/false);
+  EXPECT_THAT(HandleJsonPtr(starting_json, "/o/p"),
+              Eq(nlohmann::json::parse(R"json(["p0", "p1"])json", nullptr,
+                                       /*allow_exceptions=*/false)));
+}
+
+TEST(JsonPtrTest, OPArray) {
+  nlohmann::json starting_json =
+      nlohmann::json::parse(kSampleJson, nullptr, /*allow_exceptions=*/false);
+  EXPECT_THAT(HandleJsonPtr(starting_json, "/o/p/0"),
+              Eq(nlohmann::json::parse("\"p0\"", nullptr,
+                                       /*allow_exceptions=*/false)));
+  EXPECT_THAT(HandleJsonPtr(starting_json, "/o/p/1"),
+              Eq(nlohmann::json::parse("\"p1\"", nullptr,
+                                       /*allow_exceptions=*/false)));
+}
+
+TEST(JsonPtrTest, OPArrayBoundsOutOfBounds) {
+  nlohmann::json starting_json =
+      nlohmann::json::parse(kSampleJson, nullptr, /*allow_exceptions=*/false);
+  EXPECT_TRUE(HandleJsonPtr(starting_json, "/o/p/-1").is_discarded());
+  EXPECT_TRUE(HandleJsonPtr(starting_json, "/o/p/2").is_discarded());
+}
+
+TEST(JsonPtrTest, OQ) {
+  nlohmann::json starting_json =
+      nlohmann::json::parse(kSampleJson, nullptr, /*allow_exceptions=*/false);
+  EXPECT_THAT(HandleJsonPtr(starting_json, "/o/q"),
+              Eq(nlohmann::json::parse("9")));
+}
+
+TEST(JsonPtrTest, NotFound) {
+  nlohmann::json starting_json =
+      nlohmann::json::parse(kSampleJson, nullptr, /*allow_exceptions=*/false);
+  EXPECT_TRUE(HandleJsonPtr(starting_json, "/something").is_discarded());
+}
+
+TEST(JsonPtrTest, InvalidPointer) {
+  nlohmann::json starting_json =
+      nlohmann::json::parse(kSampleJson, nullptr, /*allow_exceptions=*/false);
+  EXPECT_TRUE(HandleJsonPtr(starting_json, "noslash").is_discarded());
+}
+
+TEST(JsonPtrTest, InvalidEscape) {
+  nlohmann::json starting_json =
+      nlohmann::json::parse(kSampleJson, nullptr, /*allow_exceptions=*/false);
+  EXPECT_TRUE(HandleJsonPtr(starting_json, "/a~2").is_discarded());
+  EXPECT_TRUE(HandleJsonPtr(starting_json, "/a~0").is_discarded());
 }
 
 }  // namespace
