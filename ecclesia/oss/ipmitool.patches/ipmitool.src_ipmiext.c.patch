@@ -1,9 +1,0 @@
---- src/ipmiext.c	2021-08-12 21:33:06.000000000 -0700
-+++ src/ipmiext.c	2021-07-09 09:05:08.000000000 -0700
-@@ -0,0 +1,6 @@
-+// Global file because these are used by plugins/serial/serial_terminal.c and
-+// lib/ipmi_sdr.c
-+
-+int csv_output = 0;
-+int verbose = 0;
-+
