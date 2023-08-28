@@ -138,7 +138,7 @@
 @@ -1231,8 +1284,9 @@
  			uint8_t event_type, int numeric_fmt)
  {
- 	/* iceblink - don't print some event status fields - CVS rev1.53 */
+ 	/* don't print some event status fields - CVS rev1.53 */
 +#ifndef NDEBUG
  	return 0;
 -
