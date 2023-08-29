@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/transport/grpc.h"
 
 #include <cctype>
+#include <chrono>
 #include <cstddef>
 #include <map>
 #include <memory>
@@ -153,9 +154,8 @@ class GrpcRedfishTransport : public RedfishTransport {
   //   endpoint: e.g. "dns:///localhost:80", "unix:///var/run/my.socket"
   GrpcRedfishTransport(absl::string_view endpoint,
                        const GrpcTransportParams &params,
-                       const std::shared_ptr<grpc::ChannelCredentials> &creds)
-      : client_(GrpcRedfishV1::NewStub(
-            grpc::CreateChannel(std::string(endpoint), creds))),
+                       const std::shared_ptr<grpc::Channel> &channel)
+      : client_(GrpcRedfishV1::NewStub(channel)),
         params_(std::move(params)),
         fqdn_(EndpointToFqdn(endpoint)) {}
 
@@ -271,8 +271,18 @@ absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
     absl::string_view endpoint, const GrpcTransportParams &params,
     const std::shared_ptr<grpc::ChannelCredentials> &creds) {
   ECCLESIA_RETURN_IF_ERROR(ValidateEndpoint(endpoint));
-  return std::make_unique<GrpcRedfishTransport>(std::string(endpoint), params,
-                                                creds);
+  auto channel = grpc::CreateChannel(std::string(endpoint), creds);
+  std::optional<absl::Duration> timeout = params.wait_for_connected_timeout;
+  if (timeout.has_value()) {
+    std::chrono::system_clock::time_point deadline =
+        ToChronoTime(params.clock->Now() + *timeout);
+    if (!channel->WaitForConnected(deadline)) {
+      return absl::DeadlineExceededError(
+          absl::StrCat("Channel did not become healthy within ",
+                       absl::FormatDuration(*timeout)));
+    }
+  }
+  return std::make_unique<GrpcRedfishTransport>(endpoint, params, channel);
 }
 
 }  // namespace ecclesia

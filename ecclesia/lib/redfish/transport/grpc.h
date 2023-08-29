@@ -18,12 +18,14 @@
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_GRPC_H_
 
 #include <memory>
+#include <optional>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
+#include "grpcpp/channel.h"
 #include "grpcpp/security/credentials.h"
 
 namespace ecclesia {
@@ -33,6 +35,8 @@ struct GrpcTransportParams {
   const Clock *clock = Clock::RealClock();
   // Timeout used for all operations.
   absl::Duration timeout = absl::Seconds(40);
+  // Timeout used to wait for channel to be connected.
+  std::optional<absl::Duration> wait_for_connected_timeout = std::nullopt;
 };
 
 absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
