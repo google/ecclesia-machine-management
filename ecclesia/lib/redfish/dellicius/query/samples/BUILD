@@ -12,6 +12,7 @@ filegroup(
         "query_in/sensor_in.textproto",
         "query_in/sensor_in_links.textproto",
         "query_in/sensor_in_predicates.textproto",
+        "query_in/sensor_in_template.textproto",
         "query_in/service_root_google_in.textproto",
         "query_in/service_root_in.textproto",
     ],

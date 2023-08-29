@@ -1,0 +1,53 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
+# proto-message: DelliciusQueryResult
+
+query_id: "SensorCollectorTemplate"
+subquery_output_by_id {
+  key: "Sensors"
+  value {
+    data_sets {
+      devpath: "/phys/CPU0"
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "Cel"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 60
+      }
+    }
+    data_sets {
+      devpath: "/phys/CPU1"
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "Cel"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 60
+      }
+    }
+  }
+}
+start_timestamp {
+  seconds: 10
+}
+end_timestamp {
+  seconds: 10
+}

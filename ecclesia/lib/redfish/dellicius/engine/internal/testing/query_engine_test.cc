@@ -18,14 +18,19 @@
 
 #include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/http/cred.pb.h"
@@ -37,12 +42,14 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/testing/test_query_rules_embedded.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine_fake.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/testing/proto.h"
+#include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/clock_fake.h"
 
 namespace ecclesia {
@@ -349,6 +356,95 @@ TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
 
   DelliciusQueryResult intent_query_out =
       ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_query_out)});
+}
+
+TEST(QueryEngineTest, QueryEngineTestTemplatedQuery) {
+  std::string query_out_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/sensor_out_template.textproto"));
+
+  // Build the argument map.
+  QueryVariables::VariableValue val1, val2, val3;
+  val1.set_name("Type");
+  val1.set_value("Temperature");
+  val2.set_name("Units");
+  val2.set_value("Cel");
+  val3.set_name("Threshold");
+  val3.set_value("40");
+  QueryVariableSet test_args = QueryVariableSet();
+  QueryVariables args1 = QueryVariables();
+  *args1.add_values() = val1;
+  *args1.add_values() = val2;
+  *args1.add_values() = val3;
+  test_args["SensorCollectorTemplate"] = args1;
+
+  std::vector<DelliciusQueryResult> response_entries =
+      FakeQueryEngineEnvironment(
+          {.flags{.enable_devpath_extension = true},
+           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
+          kIndusMockup, clock_time)
+          .GetEngine()
+          .ExecuteQuery({"SensorCollectorTemplate"},
+                        QueryEngine::ServiceRootType::kRedfish, test_args);
+
+  DelliciusQueryResult intent_query_out =
+      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_query_out)});
+}
+
+TEST(QueryEngineTest, QueryEngineTestTemplatedUnfilledVars) {
+  std::string query_out_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/sensor_out_template_full.textproto"));
+
+  QueryVariables::VariableValue val1, val2;
+  val1.set_name("Units");
+  val1.set_value("Cel");
+  // Type and units will remain unset
+  QueryVariableSet test_args = QueryVariableSet();
+  QueryVariables args1 = QueryVariables();
+  *args1.add_values() = val1;
+  // Pass in an empty value to make sure it doesn't mess up the variable
+  // substitution.
+  *args1.add_values() = val2;
+  test_args["SensorCollectorTemplate"] = args1;
+
+  std::vector<DelliciusQueryResult> response_entries =
+      FakeQueryEngineEnvironment(
+          {.flags{.enable_devpath_extension = true},
+           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
+          kIndusMockup, clock_time)
+          .GetEngine()
+          .ExecuteQuery({"SensorCollectorTemplate"},
+                        QueryEngine::ServiceRootType::kRedfish, test_args);
+
+  // Since some of the variables are unfilled only sensors with a unit of "Cel"
+  // will be returned. All other parts of the predicate are ignored.
+  DelliciusQueryResult intent_query_out =
+      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_query_out)});
+}
+
+TEST(QueryEngineTest, QueryEngineTestTemplatedNoVars) {
+  std::string query_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
+  std::vector<DelliciusQueryResult> response_entries =
+      FakeQueryEngineEnvironment(
+          {.query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
+          kIndusMockup, clock_time)
+          .GetEngine()
+          .ExecuteQuery({"SensorCollectorTemplate"},
+                        QueryEngine::ServiceRootType::kRedfish);
+
+  // Since all variables are unfilled the entire predicate will be replaced with
+  // "select all". Therefore the whole set of sensors should be returned.
+  DelliciusQueryResult intent_query_out =
+      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
+  // Changing the query ID in the expected result so a whole new output file
+  // doesn't need made.
+  *intent_query_out.mutable_query_id() = "SensorCollectorTemplate";
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_query_out)});
 }

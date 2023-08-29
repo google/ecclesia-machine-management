@@ -88,15 +88,17 @@ class QueryEngine {
     virtual ~QueryEngineIntf() = default;
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
         ServiceRootType service_root_uri,
-        absl::Span<const absl::string_view> query_ids) = 0;
+        absl::Span<const absl::string_view> query_ids,
+        const QueryVariableSet &query_arguments) = 0;
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
         ServiceRootType service_root_uri,
-        absl::Span<const absl::string_view> query_ids,
-        QueryTracker &tracker) = 0;
+        absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
+        const QueryVariableSet &query_arguments) = 0;
     virtual std::vector<DelliciusQueryResult> ExecuteQueryWithMetrics(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
-        RedfishMetrics *transport_metrics) = 0;
+        RedfishMetrics *transport_metrics,
+        const QueryVariableSet &query_arguments) = 0;
     virtual const NodeTopology &GetTopology() = 0;
     // QueryEngineRawInterfacePasskey is just an empty strongly-typed object
     // that one needs to provide in order to invoke the member function.
@@ -123,21 +125,26 @@ class QueryEngine {
 
   std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri = ServiceRootType::kRedfish) {
-    return engine_impl_->ExecuteQuery(service_root_uri, query_ids);
+      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
+      const QueryVariableSet &query_arguments = {}) {
+    return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
+                                      query_arguments);
   }
   std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
-      ServiceRootType service_root_uri = ServiceRootType::kRedfish) {
-    return engine_impl_->ExecuteQuery(service_root_uri, query_ids, tracker);
+      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
+      const QueryVariableSet &query_arguments = {}) {
+    return engine_impl_->ExecuteQuery(service_root_uri, query_ids, tracker,
+                                      query_arguments);
   }
   // Transport metrics flag must be true for metrics to be populated.
   std::vector<DelliciusQueryResult> ExecuteQueryWithMetrics(
       absl::Span<const absl::string_view> query_ids,
       RedfishMetrics *transport_metrics,
-      ServiceRootType service_root_uri = ServiceRootType::kRedfish) {
-    return engine_impl_->ExecuteQueryWithMetrics(service_root_uri, query_ids,
-                                                 transport_metrics);
+      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
+      const QueryVariableSet &query_arguments = {}) {
+    return engine_impl_->ExecuteQueryWithMetrics(
+        service_root_uri, query_ids, transport_metrics, query_arguments);
   }
   const NodeTopology &GetTopology() { return engine_impl_->GetTopology(); }
   absl::StatusOr<RedfishInterface *> GetRedfishInterface(

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package ecclesia;
+
+message QueryVariables {
+  message VariableValue {
+    string name = 1;
+    string value = 2;
+  }
+  repeated VariableValue values = 1;
+}

@@ -16,6 +16,8 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
 
+#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstring>
 #include <functional>
@@ -39,6 +41,7 @@
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
@@ -46,9 +49,11 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/status/macros.h"
+#include "ecclesia/lib/time/clock.h"
 #include "re2/re2.h"
 
 namespace ecclesia {
@@ -434,6 +439,59 @@ bool ApplyPredicateRule(const RedfishObject &redfish_object, size_t node_index,
   return is_filter_success;
 }
 
+// If there is an unpopulated variable the predicate cannot be completely
+// invalidated in case there are other conditions in the predicate with
+// populated variables. To facilitate this we need to break down the predicate
+// and remove only the condition with the unpopulated variable. The input
+// predicate has already been substituted with the variable values provided. Any
+// remaining variables (string prefixed with $) are to be removed.
+//
+// Example:
+//
+// [ReadingType=$Type and ReadingUnits=$Units and Reading>$Threshold]
+//        Variable Map: Type = Temperature, Threshold = 50
+//
+//  After processing this predicate will resolve to:
+//
+// [ReadingType=Temperature and Reading>50]
+//
+std::string InvalidateUnpopulatedVariables(absl::string_view predicate) {
+  std::vector<absl::string_view> expressions =
+      SplitExprByDelimiterWithEscape(predicate, " ", '\\');
+  // For a single expression, just return the select all token.
+  if (expressions.size() == 1) {
+    return std::string(kPredicateSelectAll);
+  }
+  std::vector<absl::string_view> new_expressions;
+  bool skip_next = false;
+  int index = 0;
+  for (absl::string_view expr : expressions) {
+    if (skip_next) {
+      skip_next = false;
+      index++;
+      continue;
+    }
+    if (absl::StrContains(expr, '$')) {
+      if (index == expressions.size() - 1) {
+        // Since this is the last expression we need to remove the logical
+        // operator seen before. If nothing has been added to the list of new
+        // expressions, return select all. This means that no variables have
+        // been populated.
+        if (new_expressions.empty()) return std::string(kPredicateSelectAll);
+        new_expressions.pop_back();
+      } else {
+        // the next element is the logical operator, skip it to remove from
+        // predicate.
+        skip_next = true;
+      }
+    } else {
+      new_expressions.push_back(expr);
+    }
+    index++;
+  }
+  return absl::StrJoin(new_expressions, " ");
+}
+
 // Provides a subquery level abstraction to traverse RedPath step expressions
 // and apply predicate expression rules to refine a given node-set.
 class SubqueryHandle final {
@@ -468,6 +526,33 @@ class SubqueryHandle final {
 
   void SetParentSubqueryDataSet(SubqueryDataSet *parent_subquery_data_set) {
     parent_subquery_data_set_ = parent_subquery_data_set;
+  }
+
+  void SubstituteVariables(const QueryVariables &variables) {
+    std::vector<std::pair<std::string, std::string>> new_redpath_steps;
+    std::vector<std::pair<std::string, std::string>> replacements;
+    // Build the list of replacements that will be passed into StrReplaceAll.
+    for (const auto &value : variables.values()) {
+      if (value.name().empty()) continue;
+      std::string result;
+      std::string variable_name = absl::StrCat("$", value.name());
+      replacements.push_back(std::make_pair(variable_name, value.value()));
+    }
+    // Go through all of the redpath steps
+    for (const auto &pair : redpath_steps_) {
+      std::pair<std::string, std::string> new_pair = pair;
+      new_pair.second = absl::StrReplaceAll(new_pair.second, replacements);
+      // If after the variable replacement there is still an unfilled variable,
+      // remove the predicate step. This will be equivalent to a match-all/*.
+      if (absl::StrContains(new_pair.second, '$')) {
+        LOG(WARNING) << "Unmatched variable within predicate: "
+                     << new_pair.first << "[" << new_pair.second << "]"
+                     << ". Removing predicate step.";
+        new_pair.second = InvalidateUnpopulatedVariables(new_pair.second);
+      }
+      new_redpath_steps.push_back(new_pair);
+    }
+    redpath_steps_ = new_redpath_steps;
   }
 
   RedPathIterator GetRedPathIterator() { return redpath_steps_.begin(); }
@@ -531,7 +616,8 @@ class QueryPlanner final : public QueryPlannerInterface {
             CombineQueryParams(query, std::move(redpath_to_query_params))) {}
 
   DelliciusQueryResult Run(const RedfishVariant &variant, const Clock &clock,
-                           QueryTracker *tracker) override;
+                           QueryTracker *tracker,
+                           const QueryVariables &variables) override;
 
  private:
   const std::string plan_id_;
@@ -932,7 +1018,8 @@ absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
 
 DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
                                        const Clock &clock,
-                                       QueryTracker *tracker) {
+                                       QueryTracker *tracker,
+                                       const QueryVariables &query_variables) {
   DelliciusQueryResult result;
 
     result.set_query_id(plan_id_);
@@ -952,6 +1039,10 @@ DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
   // Now we create RedPathContext for each RedPath across subqueries and map
   // them to the ContextNode.
   for (auto &subquery_handle : subquery_handles_) {
+    // Substitute any variables with their values provided by the query
+    // engine.
+    subquery_handle->SubstituteVariables(query_variables);
+
     // Only consider subqueries that have RedPath expressions to execute
     // relative to service root. This step filters out any child subqueries
     // which execute relative to other subqueries.

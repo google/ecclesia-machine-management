@@ -1,0 +1,12 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "SensorCollectorTemplate"
+subquery {
+  subquery_id: "Sensors"
+  redpath: "/Chassis[*]/Sensors[ReadingType=$Type and ReadingUnits=$Units and Reading>$Threshold]"
+  properties { property: "Name" type: STRING }
+  properties { property: "ReadingType" type: STRING }
+  properties { property: "ReadingUnits" type: STRING }
+  properties { property: "Reading" type: INT64 }
+}

@@ -29,6 +29,14 @@ proto_library(
     ],
 )
 
+proto_library(
+    name = "query_variables_proto",
+    srcs = [
+        "query_variables.proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 cc_proto_library(
     name = "query_cc_proto",
     visibility = ["//visibility:public"],
@@ -39,6 +47,12 @@ cc_proto_library(
     name = "query_result_cc_proto",
     visibility = ["//visibility:public"],
     deps = [":query_result_proto"],
+)
+
+cc_proto_library(
+    name = "query_variables_cc_proto",
+    visibility = ["//visibility:public"],
+    deps = [":query_variables_proto"],
 )
 
 py_proto_library(
@@ -53,4 +67,10 @@ py_proto_library(
     name = "query_result_py_pb2",
     visibility = ["//visibility:public"],
     deps = [":query_result_proto"],
+)
+
+py_proto_library(
+    name = "query_variables_py_pb2",
+    visibility = ["//visibility:public"],
+    deps = [":query_variables_proto"],
 )

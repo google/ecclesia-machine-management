@@ -16,13 +16,17 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
 #include "google/rpc/code.pb.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -40,9 +44,11 @@
 #include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/testing/proto.h"
+#include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/clock_fake.h"
 
 namespace ecclesia {
@@ -148,7 +154,7 @@ class QueryPlannerTestRunner : public ::testing::Test {
                                  normalizer);
     ASSERT_TRUE(qp.ok());
     absl::StatusOr<DelliciusQueryResult> query_result =
-        (*qp)->Run(intf_->GetRoot(), *clock_, nullptr);
+        (*qp)->Run(intf_->GetRoot(), *clock_, nullptr, {});
     ASSERT_TRUE(query_result.ok());
     DelliciusQueryResult intent_output =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
@@ -310,7 +316,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
         query_sensor, RedPathRedfishQueryParams{}, default_normalizer.get());
     ASSERT_TRUE(qps.ok());
     absl::StatusOr<DelliciusQueryResult> result_sensor =
-        (*qps)->Run(service_root, clock, nullptr);
+        (*qps)->Run(service_root, clock, nullptr, {});
   }
   // For each type of redfish request for each URI, validate that the
   // QueryPlanner sends only 1 request.
@@ -352,7 +358,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
                                  default_normalizer.get());
     ASSERT_TRUE(qps.ok());
     absl::StatusOr<DelliciusQueryResult> result_sensor =
-        (*qps)->Run(service_root, clock, nullptr);
+        (*qps)->Run(service_root, clock, nullptr, {});
     ASSERT_TRUE(result_sensor.ok());
     EXPECT_THAT((*result_sensor).status().code(),
                 Eq(::google::rpc::Code::FAILED_PRECONDITION));
@@ -407,7 +413,7 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulated) {
   // Run the query and ensure the subquery responses has the status populated
   // with the right error.
   absl::StatusOr<DelliciusQueryResult> query_result =
-      (*qp)->Run(mock_context_node, *clock_, nullptr);
+      (*qp)->Run(mock_context_node, *clock_, nullptr, {});
   ASSERT_TRUE(query_result.ok());
   for (const auto &[id, subquery_output] :
        query_result.value().subquery_output_by_id()) {
@@ -465,7 +471,7 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulatedCollectionResource) {
   // Run the query and ensure the subquery responses has the status populated
   // with the right error.
   absl::StatusOr<DelliciusQueryResult> query_result =
-      (*qp)->Run(mock_context_node, *clock_, nullptr);
+      (*qp)->Run(mock_context_node, *clock_, nullptr, {});
   ASSERT_TRUE(query_result.ok());
   for (const auto &[id, subquery_output] :
        query_result.value().subquery_output_by_id()) {
