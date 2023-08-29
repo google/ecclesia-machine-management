@@ -486,6 +486,7 @@ absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
   std::unique_ptr<RedfishTransport> transport =
       HttpRedfishTransport::MakeNetwork(std::move(http_client),
                                         network_endpoint);
+
   QueryContext query_context{.query_files = query_files, .clock = clock};
   return CreateQueryEngine(query_context, {.transport = std::move(transport)});
 }
@@ -518,7 +519,6 @@ TEST(QueryEngineTest, TestQueryEngineFactoryForInvalidQuery) {
   EXPECT_EQ(GetDefaultQueryEngine(server, {{"Test", ""}}).status().code(),
             absl::StatusCode::kInternal);
 }
-
 }  // namespace
 
 }  // namespace ecclesia

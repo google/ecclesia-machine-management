@@ -53,6 +53,8 @@ message DelliciusQuery {
     repeated RedfishProperty properties = 3;
     // Identifies property sets.
     repeated string property_set_ids = 6;
+    // Limit query result size
+    optional int32 max_size_in_bytes = 8;
   }
   // A subquery set allows grouping subqueries to execute a common operation.
   // For example, this allows having different subqueries share a common group

@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_QUERY_ENGINE_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_QUERY_ENGINE_H_
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -78,6 +79,7 @@ namespace ecclesia {
 //  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
 //     query_context, std::move(redfish_interface),
 //     std::move(my_custom_normalizer));
+
 class QueryEngine {
  public:
   enum class ServiceRootType { kRedfish, kGoogle };
@@ -86,14 +88,26 @@ class QueryEngine {
   class QueryEngineIntf {
    public:
     virtual ~QueryEngineIntf() = default;
+    virtual void ExecuteQuery(
+        ServiceRootType service_root_uri,
+        absl::Span<const absl::string_view> query_ids,
+        const QueryVariableSet &query_arguments,
+        absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback) = 0;
+    virtual void ExecuteQuery(
+        ServiceRootType service_root_uri,
+        absl::Span<const absl::string_view> query_ids,
+        const QueryVariableSet &query_arguments,
+        absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback,
+        QueryTracker &tracker) = 0;
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments) = 0;
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
         ServiceRootType service_root_uri,
-        absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
-        const QueryVariableSet &query_arguments) = 0;
+        absl::Span<const absl::string_view> query_ids,
+        const QueryVariableSet &query_arguments,
+        QueryTracker &tracker) = 0;
     virtual std::vector<DelliciusQueryResult> ExecuteQueryWithMetrics(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
@@ -123,6 +137,23 @@ class QueryEngine {
   QueryEngine(QueryEngine &&other) = default;
   QueryEngine &operator=(QueryEngine &&other) = default;
 
+  // The callback will be called when SubqueryOutput exceeds the max_size_limit
+  // in the query
+  void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
+      absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback,
+      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
+                   const QueryVariableSet &query_arguments = {}) {
+    return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
+                                      query_arguments, callback);
+  }
+  void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
+      absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback,
+      QueryTracker &tracker,
+      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
+      const QueryVariableSet &query_arguments = {}) {
+    return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
+                    query_arguments, callback, tracker);
+  }
   std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri = ServiceRootType::kRedfish,
@@ -134,8 +165,8 @@ class QueryEngine {
       absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
       ServiceRootType service_root_uri = ServiceRootType::kRedfish,
       const QueryVariableSet &query_arguments = {}) {
-    return engine_impl_->ExecuteQuery(service_root_uri, query_ids, tracker,
-                                      query_arguments);
+    return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
+                                      query_arguments, tracker);
   }
   // Transport metrics flag must be true for metrics to be populated.
   std::vector<DelliciusQueryResult> ExecuteQueryWithMetrics(

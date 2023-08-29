@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -112,6 +113,14 @@ class QueryPlannerInterface {
   virtual DelliciusQueryResult Run(const RedfishVariant &variant,
                                    const Clock &clock, QueryTracker *tracker,
                                    const QueryVariables &variables) = 0;
+  // Executes query plan using RedfishVariant as root and calls the client
+  // callback with results.
+  // The RedfishVariant can be the service root (redfish/v1) or any redfish
+  // resource acting as local root for redfish subtree.
+  virtual void Run(const RedfishVariant &variant,
+                   const Clock &clock, QueryTracker *tracker,
+                   const QueryVariables &variables,
+                   absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback) = 0;
 };
 
 }  // namespace ecclesia

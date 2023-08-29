@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/functional/function_ref.h"
 #include "absl/log/check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
@@ -155,9 +156,10 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 
   std::vector<DelliciusQueryResult> ExecuteQuery(
       QueryEngine::ServiceRootType service_root_uri,
-      absl::Span<const absl::string_view> query_ids, QueryTracker *tracker,
-      const QueryVariableSet &query_arguments) {
+      absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments, QueryTracker *tracker) {
     std::vector<DelliciusQueryResult> response_entries;
+
     for (const absl::string_view query_id : query_ids) {
       auto it = id_to_query_plans_.find(query_id);
       if (it == id_to_query_plans_.end()) {
@@ -182,22 +184,70 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       }
       response_entries.push_back(std::move(result_single));
     }
+
     return response_entries;
+  }
+
+  void ExecuteQuery(
+      QueryEngine::ServiceRootType service_root_uri,
+      absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments,
+      absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback,
+      QueryTracker *tracker) {
+    for (const absl::string_view query_id : query_ids) {
+      auto it = id_to_query_plans_.find(query_id);
+      if (it == id_to_query_plans_.end()) {
+        LOG(ERROR) << "Query plan does not exist for id " << query_id;
+        continue;
+      }
+      QueryVariables vars = QueryVariables();
+      auto it_vars = query_arguments.find(query_id);
+      if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
+
+      if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
+        it->second->Run(
+            redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
+            *clock_, tracker, vars, callback);
+      } else {
+        it->second->Run(redfish_interface_->GetRoot(), *clock_, tracker,
+                        vars, callback);
+      }
+    }
+  }
+
+  void ExecuteQuery(
+        QueryEngine::ServiceRootType service_root_uri,
+        absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments,
+        absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback) override {
+    ExecuteQuery(service_root_uri, query_ids, query_arguments, callback, nullptr);
+  }
+
+  void ExecuteQuery(
+        QueryEngine::ServiceRootType service_root_uri,
+        absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments,
+        absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback,
+        QueryTracker &tracker
+        ) override {
+    ExecuteQuery(service_root_uri, query_ids, query_arguments, callback, &tracker);
   }
 
   std::vector<DelliciusQueryResult> ExecuteQuery(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
       const QueryVariableSet &query_arguments = {}) override {
-    return ExecuteQuery(service_root_uri, query_ids, nullptr, query_arguments);
+    return ExecuteQuery(service_root_uri, query_ids, query_arguments, nullptr);
   }
 
   std::vector<DelliciusQueryResult> ExecuteQuery(
       QueryEngine::ServiceRootType service_root_uri,
-      absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
-      const QueryVariableSet &query_arguments = {}) override {
-    return ExecuteQuery(service_root_uri, query_ids, &tracker, query_arguments);
+      absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments,
+      QueryTracker &tracker) override {
+    return ExecuteQuery(service_root_uri, query_ids, query_arguments, &tracker);
   }
+
   std::vector<DelliciusQueryResult> ExecuteQueryWithMetrics(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
@@ -207,7 +257,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     if (metrical_transport_ != nullptr) {
       metrical_transport_->ResetTrackingMetricsProto(transport_metrics);
     }
-    return ExecuteQuery(service_root_uri, query_ids, nullptr, query_arguments);
+    return ExecuteQuery(service_root_uri, query_ids, query_arguments, nullptr);
   }
 
   const NodeTopology &GetTopology() override {

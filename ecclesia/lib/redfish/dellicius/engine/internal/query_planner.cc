@@ -34,6 +34,7 @@
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/functional/function_ref.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -54,6 +55,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
+#include "ecclesia/lib/time/proto.h"
 #include "re2/re2.h"
 
 namespace ecclesia {
@@ -94,6 +96,14 @@ constexpr absl::string_view kRedfishDatetimeNoOffset = "%Y-%m-%dT%H:%M:%E6S";
 using RedPathStep = std::pair<std::string, std::string>;
 using RedPathIterator =
     std::vector<std::pair<std::string, std::string>>::const_iterator;
+
+// Set the Timestamp object from the given clock
+void SetTime(const Clock &clock, google::protobuf::Timestamp &field) {
+  auto time = clock.Now();
+  if (auto timestamp = AbslTimeToProtoTime(time); timestamp.ok()) {
+    field = *std::move(timestamp);
+  }
+}
 
 // Creates RedPathStep objects from the given RedPath string.
 absl::StatusOr<std::vector<RedPathStep>> RedPathToSteps(
@@ -509,7 +519,8 @@ class SubqueryHandle final {
   // 'parent_subquery_dataset' instead of the 'result'
   absl::StatusOr<SubqueryDataSet *> Normalize(
       const RedfishObject &redfish_object, DelliciusQueryResult &result,
-      SubqueryDataSet *parent_subquery_dataset);
+      SubqueryDataSet *parent_subquery_dataset,
+      const std::function<bool(const DelliciusQueryResult &result)>& callback = nullptr);
 
   void AddChildSubqueryHandle(SubqueryHandle *child_subquery_handle) {
     child_subquery_handles_.push_back(child_subquery_handle);
@@ -566,6 +577,13 @@ class SubqueryHandle final {
 
   std::string GetSubqueryId() const { return subquery_.subquery_id(); }
 
+  // The client wants the subquery terminated
+  void TerminateSubquery() {
+    terminate_subquery_ = true;
+  }
+
+  bool IsSubqueryTerminated() const { return terminate_subquery_; }
+
  private:
   DelliciusQuery::Subquery subquery_;
   Normalizer *normalizer_;
@@ -576,6 +594,8 @@ class SubqueryHandle final {
   std::vector<SubqueryHandle *> child_subquery_handles_;
   // Dataset of parent subquery to link the current subquery output with.
   SubqueryDataSet *parent_subquery_data_set_ = nullptr;
+  // Terminate the subquery if the response size limit is reached.
+  bool terminate_subquery_ = false;
 };
 
 struct RedPathContext {
@@ -587,6 +607,8 @@ struct RedPathContext {
   // Iterator configured to iterate over RedPath steps - NodeName and
   // Predicate pair
   RedPathIterator redpath_steps_iterator;
+  // Callback to send the subquery results to the client
+  std::function<bool(const DelliciusQueryResult& result)> callback = nullptr;
 };
 
 // A ContextNode describes the RedfishObject relative to which one or more
@@ -615,10 +637,20 @@ class QueryPlanner final : public QueryPlannerInterface {
         redpath_to_query_params_(
             CombineQueryParams(query, std::move(redpath_to_query_params))) {}
 
-  DelliciusQueryResult Run(const RedfishVariant &variant, const Clock &clock,
+  DelliciusQueryResult Run(const RedfishVariant &variant,
+                           const Clock &clock,
                            QueryTracker *tracker,
-                           const QueryVariables &variables) override;
+                          const QueryVariables &variables) override;
 
+  void Run(const RedfishVariant &variant, const Clock &clock,
+      QueryTracker *tracker, const QueryVariables &variables,
+      absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback) override;
+
+  void ProcessSubqueries(const RedfishVariant &variant,
+            QueryTracker *tracker,
+            const QueryVariables &variables,
+            std::function<bool(const DelliciusQueryResult &result)> callback,
+            DelliciusQueryResult &result);
  private:
   const std::string plan_id_;
   // Collection of all SubqueryHandle instances including both root and child
@@ -703,6 +735,11 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
   if (redpath_ctx_multiple.empty()) return redpath_ctx_unresolved;
   for (const auto &redpath_ctx : redpath_ctx_multiple) {
     const auto &subquery_handle = redpath_ctx.subquery_handle;
+    if (subquery_handle->IsSubqueryTerminated()) {
+      LOG(WARNING) << "Subquery already terminated, skipping.";
+      continue;
+    }
+
     bool is_end_of_redpath =
         subquery_handle->IsEndOfRedPath(redpath_ctx.redpath_steps_iterator);
     // If there aren't any child subqueries and all step expressions in the
@@ -710,7 +747,7 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
     // result for requested properties.
     if (is_end_of_redpath && !subquery_handle->HasChildSubqueries()) {
       subquery_handle
-          ->Normalize(redfish_object, result, redpath_ctx.root_redpath_dataset)
+          ->Normalize(redfish_object, result, redpath_ctx.root_redpath_dataset, redpath_ctx.callback)
           .IgnoreError();
       continue;
     }
@@ -719,7 +756,7 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
     if (is_end_of_redpath) {
       absl::StatusOr<SubqueryDataSet *> last_normalized_dataset;
       if (last_normalized_dataset = subquery_handle->Normalize(
-              redfish_object, result, redpath_ctx.root_redpath_dataset);
+              redfish_object, result, redpath_ctx.root_redpath_dataset, redpath_ctx.callback);
           !last_normalized_dataset.ok()) {
         continue;
       }
@@ -730,7 +767,7 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
         if (!child_subquery_handle) continue;
         redpath_ctx_unresolved.push_back(
             {child_subquery_handle, *last_normalized_dataset,
-             child_subquery_handle->GetRedPathIterator()});
+             child_subquery_handle->GetRedPathIterator(), redpath_ctx.callback});
       }
       continue;
     }
@@ -836,7 +873,7 @@ void ExecuteRedPathStepFromEachSubquery(
     ContextNode &context_node, DelliciusQueryResult &result,
     QueryTracker *tracker) {
   // Return if the Context Node does not contain a valid RedfishObject.
-  if (!context_node.redfish_object) {
+  if (!context_node.redfish_object || context_node.redpath_ctx_multiple.empty()) {
     return;
   }
 
@@ -994,7 +1031,8 @@ void ExecuteRedPathStepFromEachSubquery(
 
 absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
     const RedfishObject &redfish_object, DelliciusQueryResult &result,
-    SubqueryDataSet *parent_subquery_dataset) {
+    SubqueryDataSet *parent_subquery_dataset,
+    const std::function<bool(const DelliciusQueryResult &result)>& callback) {
   ECCLESIA_ASSIGN_OR_RETURN(SubqueryDataSet subquery_dataset,
                             normalizer_->Normalize(redfish_object, subquery_));
 
@@ -1009,6 +1047,20 @@ absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
         *parent_subquery_dataset
              ->mutable_child_subquery_output_by_id())[subquery_.subquery_id()];
   }
+
+  // Check if size limit would be honored on appending the normalized data to the result
+  if (subquery_.has_max_size_in_bytes() && callback != nullptr) {
+    size_t result_bytes = result.ByteSizeLong() + subquery_dataset.ByteSizeLong();
+    if (result_bytes > subquery_.max_size_in_bytes()) {
+      bool should_continue = callback(result);
+      subquery_output->Clear();
+      if (!should_continue) {
+        TerminateSubquery();
+        return nullptr;
+      }
+    }
+  }
+
   auto *dataset = subquery_output->mutable_data_sets()->Add();
   if (dataset != nullptr) {
     *dataset = std::move(subquery_dataset);
@@ -1016,21 +1068,18 @@ absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
   return dataset;
 }
 
-DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
-                                       const Clock &clock,
-                                       QueryTracker *tracker,
-                                       const QueryVariables &query_variables) {
-  DelliciusQueryResult result;
-
-    result.set_query_id(plan_id_);
-    std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
-    if (!redfish_object) {
+void QueryPlanner::ProcessSubqueries(const RedfishVariant &variant,
+      QueryTracker *tracker, const QueryVariables &query_variables,
+      const std::function<bool(const DelliciusQueryResult &result)> callback,
+      DelliciusQueryResult &result) {
+  std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
+  if (!redfish_object) {
     result.mutable_status()->set_code(::google::rpc::Code::FAILED_PRECONDITION);
     result.mutable_status()->set_message(
-        absl::StrCat("Cannot query service root for query with id: ", plan_id_,
-                     ". Check host configuration."));
-    return result;
-    }
+      absl::StrCat("Cannot query service root for query with id: ", result.query_id(),
+                   ". Check host configuration."));
+    return;
+  }
 
   // We will create ContextNode for the RedfishObject relative to which all
   // RedPath expressions will execute.
@@ -1053,7 +1102,7 @@ DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
     // subquery.
     RedPathIterator path_iter = subquery_handle->GetRedPathIterator();
     std::vector<RedPathContext> redpath_ctx_multiple = {
-        {subquery_handle.get(), nullptr, path_iter}};
+        {subquery_handle.get(), nullptr, path_iter, callback}};
     // A special case where properties need to be queried from service root
     // itself.
     if (path_iter->first.empty()) {
@@ -1066,13 +1115,32 @@ DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
         redpath_ctx_multiple.end());
   }
 
-  // Return if there are no RedPath contexts to execute.
-  if (context_node.redpath_ctx_multiple.empty()) return result;
-
   // Recursively execute each RedPath step across subqueries.
   ExecuteRedPathStepFromEachSubquery(redpath_to_query_params_, context_node,
                                      result, tracker);
+}
+
+DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
+                                       const Clock &clock,
+                                       QueryTracker *tracker,
+                                      const QueryVariables &query_variables) {
+  DelliciusQueryResult result;
+  result.set_query_id(plan_id_);
+  ProcessSubqueries(variant, tracker, query_variables, nullptr, result);
   return result;
+}
+
+void QueryPlanner::Run(const RedfishVariant &variant,
+                      const Clock &clock, QueryTracker *tracker,
+                      const QueryVariables &query_variables,
+                      absl::FunctionRef<bool(
+                          const DelliciusQueryResult& result)> callback) {
+  DelliciusQueryResult result;
+  result.set_query_id(plan_id_);
+  SetTime(clock, *result.mutable_start_timestamp());
+  ProcessSubqueries(variant, tracker, query_variables, callback, result);
+  SetTime(clock, *result.mutable_end_timestamp());
+  callback(result);
 }
 
 absl::Status SubqueryHandleFactory::BuildSubqueryHandleChain(
