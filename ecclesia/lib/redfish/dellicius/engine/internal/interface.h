@@ -117,10 +117,10 @@ class QueryPlannerInterface {
   // callback with results.
   // The RedfishVariant can be the service root (redfish/v1) or any redfish
   // resource acting as local root for redfish subtree.
-  virtual void Run(const RedfishVariant &variant,
-                   const Clock &clock, QueryTracker *tracker,
-                   const QueryVariables &variables,
-                   absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback) = 0;
+  virtual void Run(
+      const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
+      const QueryVariables &variables,
+      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback) = 0;
 };
 
 }  // namespace ecclesia

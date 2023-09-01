@@ -59,7 +59,7 @@ namespace ecclesia {
 //             &transport_metrics);
 class FakeQueryEngineEnvironment {
  public:
-  enum class CachingMode { kNoExpiration, kDisableCaching};
+  enum class CachingMode { kNoExpiration, kDisableCaching };
 
   explicit FakeQueryEngineEnvironment(
       const QueryEngineConfiguration& config, absl::string_view mockup_name,

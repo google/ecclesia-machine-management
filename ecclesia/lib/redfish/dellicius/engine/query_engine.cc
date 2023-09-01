@@ -192,7 +192,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
       const QueryVariableSet &query_arguments,
-      absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback,
+      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
       QueryTracker *tracker) {
     for (const absl::string_view query_id : query_ids) {
       auto it = id_to_query_plans_.find(query_id);
@@ -209,28 +209,29 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
             redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
             *clock_, tracker, vars, callback);
       } else {
-        it->second->Run(redfish_interface_->GetRoot(), *clock_, tracker,
-                        vars, callback);
+        it->second->Run(redfish_interface_->GetRoot(), *clock_, tracker, vars,
+                        callback);
       }
     }
   }
 
-  void ExecuteQuery(
-        QueryEngine::ServiceRootType service_root_uri,
-        absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments,
-        absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback) override {
-    ExecuteQuery(service_root_uri, query_ids, query_arguments, callback, nullptr);
+  void ExecuteQuery(QueryEngine::ServiceRootType service_root_uri,
+                    absl::Span<const absl::string_view> query_ids,
+                    const QueryVariableSet &query_arguments,
+                    absl::FunctionRef<bool(const DelliciusQueryResult &result)>
+                        callback) override {
+    ExecuteQuery(service_root_uri, query_ids, query_arguments, callback,
+                 nullptr);
   }
 
   void ExecuteQuery(
-        QueryEngine::ServiceRootType service_root_uri,
-        absl::Span<const absl::string_view> query_ids,
+      QueryEngine::ServiceRootType service_root_uri,
+      absl::Span<const absl::string_view> query_ids,
       const QueryVariableSet &query_arguments,
-        absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback,
-        QueryTracker &tracker
-        ) override {
-    ExecuteQuery(service_root_uri, query_ids, query_arguments, callback, &tracker);
+      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
+      QueryTracker &tracker) override {
+    ExecuteQuery(service_root_uri, query_ids, query_arguments, callback,
+                 &tracker);
   }
 
   std::vector<DelliciusQueryResult> ExecuteQuery(
@@ -243,8 +244,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   std::vector<DelliciusQueryResult> ExecuteQuery(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments,
-      QueryTracker &tracker) override {
+      const QueryVariableSet &query_arguments, QueryTracker &tracker) override {
     return ExecuteQuery(service_root_uri, query_ids, query_arguments, &tracker);
   }
 

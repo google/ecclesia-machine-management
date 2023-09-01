@@ -92,12 +92,13 @@ class QueryEngine {
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments,
-        absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback) = 0;
+        absl::FunctionRef<bool(const DelliciusQueryResult &result)>
+            callback) = 0;
     virtual void ExecuteQuery(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments,
-        absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback,
+        absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
         QueryTracker &tracker) = 0;
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
         ServiceRootType service_root_uri,
@@ -106,8 +107,7 @@ class QueryEngine {
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
-        const QueryVariableSet &query_arguments,
-        QueryTracker &tracker) = 0;
+        const QueryVariableSet &query_arguments, QueryTracker &tracker) = 0;
     virtual std::vector<DelliciusQueryResult> ExecuteQueryWithMetrics(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
@@ -139,20 +139,22 @@ class QueryEngine {
 
   // The callback will be called when SubqueryOutput exceeds the max_size_limit
   // in the query
-  void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
-      absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback,
+  void ExecuteQuery(
+      absl::Span<const absl::string_view> query_ids,
+      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
       ServiceRootType service_root_uri = ServiceRootType::kRedfish,
-                   const QueryVariableSet &query_arguments = {}) {
+      const QueryVariableSet &query_arguments = {}) {
     return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
                                       query_arguments, callback);
   }
-  void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
-      absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback,
+  void ExecuteQuery(
+      absl::Span<const absl::string_view> query_ids,
+      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
       QueryTracker &tracker,
       ServiceRootType service_root_uri = ServiceRootType::kRedfish,
       const QueryVariableSet &query_arguments = {}) {
     return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
-                    query_arguments, callback, tracker);
+                                      query_arguments, callback, tracker);
   }
   std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
