@@ -114,6 +114,7 @@ class QueryEngine {
         RedfishMetrics *transport_metrics,
         const QueryVariableSet &query_arguments) = 0;
     virtual const NodeTopology &GetTopology() = 0;
+    virtual std::vector<std::string> GetQueryIds() const = 0;
     // QueryEngineRawInterfacePasskey is just an empty strongly-typed object
     // that one needs to provide in order to invoke the member function.
     // We restrict the visibility of QueryEngineRawInterfacePasskey so that
@@ -183,6 +184,9 @@ class QueryEngine {
   absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) {
     return engine_impl_->GetRedfishInterface(unused_passkey);
+  }
+  std::vector<std::string> GetQueryIds() const {
+    return engine_impl_->GetQueryIds();
   }
 
  private:

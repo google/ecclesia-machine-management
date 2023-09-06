@@ -269,6 +269,15 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     return default_topology_;
   }
 
+  std::vector<std::string> GetQueryIds() const override {
+    std::vector<std::string> keys;
+    keys.reserve(id_to_query_plans_.size());
+    for (const auto &[query_id, plan] : id_to_query_plans_) {
+      keys.push_back(query_id);
+    }
+    return keys;
+  }
+
   absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) override {
     if (redfish_interface_ == nullptr) {
