@@ -1,4 +1,7 @@
 # Presubmit check for validating modified and new redpath query files.
+
+licenses(["notice"])
+
 cc_test(
     name = "query_validation_presubmit",
     srcs = ["query_validation_presubmit_main.cc"],
