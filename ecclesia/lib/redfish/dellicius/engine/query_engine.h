@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "absl/base/attributes.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -34,6 +35,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
@@ -79,6 +81,9 @@ namespace ecclesia {
 //  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
 //     query_context, std::move(redfish_interface),
 //     std::move(my_custom_normalizer));
+
+// A set of populated variables for 1 to many queries.
+using QueryVariableSet = absl::flat_hash_map<std::string, QueryVariables>;
 
 class QueryEngine {
  public:

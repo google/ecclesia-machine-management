@@ -40,9 +40,6 @@ namespace ecclesia {
 using RedPathRedfishQueryParams =
     absl::flat_hash_map<std::string /* RedPath */, GetParams>;
 
-// A set of populated variables for 1 to many queries.
-using QueryVariableSet = absl::flat_hash_map<std::string, QueryVariables>;
-
 // A lightweight tracker capturing executed Redpaths in a single Query.
 // It is a key construct used in tuning Redfish Query Parameters.
 // This also serves as a placeholder for any contextual information required
