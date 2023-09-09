@@ -224,6 +224,12 @@ class JsonMockupMockup : public RedfishInterface {
     return RedfishVariant(
         absl::UnimplementedError("Updates to json_mockup are not supported."));
   }
+  RedfishVariant DeleteUri(
+      absl::string_view uri,
+      absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
+    return RedfishVariant(
+        absl::UnimplementedError("Deletes to json_mockup are not supported."));
+  }
   RedfishVariant CachedPostUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span,
@@ -235,6 +241,11 @@ class JsonMockupMockup : public RedfishInterface {
                          absl::string_view data) override {
     return RedfishVariant(
         absl::UnimplementedError("Updates to json_mockup are not supported."));
+  }
+  RedfishVariant DeleteUri(absl::string_view uri,
+                           absl::string_view data) override {
+    return RedfishVariant(
+        absl::UnimplementedError("Deletes to json_mockup are not supported."));
   }
   RedfishVariant PatchUri(
       absl::string_view uri,

@@ -618,6 +618,15 @@ class RedfishInterface {
   virtual RedfishVariant PostUri(absl::string_view uri,
                                  absl::string_view data) = 0;
 
+  // Delete to the given URI and returns result.
+  virtual RedfishVariant DeleteUri(
+      absl::string_view uri,
+      absl::Span<const std::pair<std::string, ValueVariant>> kv_span) = 0;
+
+  // Delete to the given URI and returns result.
+  virtual RedfishVariant DeleteUri(absl::string_view uri,
+                                   absl::string_view data) = 0;
+
   // Post to the given URI and returns cached result.
   // The caller can specify the max duration for this particular POST operation
   // (keyed by uri + payload);
@@ -675,6 +684,11 @@ class NullRedfish : public RedfishInterface {
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
     return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }
+  RedfishVariant DeleteUri(
+      absl::string_view uri,
+      absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
+  }
   RedfishVariant CachedPostUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span,
@@ -683,6 +697,10 @@ class NullRedfish : public RedfishInterface {
   }
   RedfishVariant PostUri(absl::string_view uri,
                          absl::string_view data) override {
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
+  }
+  RedfishVariant DeleteUri(absl::string_view uri,
+                           absl::string_view data) override {
     return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }
   RedfishVariant PatchUri(

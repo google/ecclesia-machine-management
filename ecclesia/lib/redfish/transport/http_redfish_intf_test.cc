@@ -1298,6 +1298,38 @@ TEST_F(HttpRedfishInterfaceTest, PostHandler) {
   EXPECT_TRUE(called);
 }
 
+TEST_F(HttpRedfishInterfaceTest, DeleteHandler) {
+  auto result_json = nlohmann::json::parse(R"json({
+    "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
+    "@odata.id": "/redfish/v1/Chassis/1",
+    "@odata.type": "#Chassis.v1_10_0.Chassis",
+    "Id": "chassis",
+    "Name": "Name",
+    "Status": {
+        "State": "StandbyOffline"
+    }
+})json");
+  bool called = false;
+  server_->AddHttpDeleteHandler(
+      "/redfish/v1/Chassis/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        called = true;
+        // Construct the success message.
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(result_json.dump());
+        req->Reply();
+      });
+
+  RedfishVariant result = intf_->DeleteUri("/redfish/v1/Chassis/1", "");
+  ASSERT_TRUE(called);
+  EXPECT_THAT(result.httpcode(), Eq(200));
+  EXPECT_THAT(result.httpheaders().value(),
+              testing::Contains(testing::Pair("OData-Version", "4.0")));
+  ASSERT_TRUE(result.status().ok()) << result.status().message();
+}
+
 TEST_F(HttpRedfishInterfaceTest, PatchHandler) {
   bool called = false;
   server_->AddHttpPatchHandler("/my/uri", [&](ServerRequestInterface *req) {

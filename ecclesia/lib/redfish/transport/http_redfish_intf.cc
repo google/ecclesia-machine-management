@@ -702,6 +702,26 @@ class HttpRedfishInterface : public RedfishInterface {
                           ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
+  RedfishVariant DeleteUri(
+      absl::string_view uri,
+      absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
+    return DeleteUri(uri, KvSpanToJson(kv_span).dump());
+  }
+
+  RedfishVariant DeleteUri(absl::string_view uri,
+                           absl::string_view data) override {
+    absl::ReaderMutexLock mu(&transport_mutex_);
+    absl::StatusOr<ecclesia::RedfishTransport::Result> result =
+        transport_->Delete(uri, data);
+    if (!result.ok()) return RedfishVariant(result.status());
+    int code = result->code;
+    absl::flat_hash_map<std::string, std::string> headers = result->headers;
+    return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
+                              this, RedfishExtendedPath{std::string(uri)},
+                              std::move(*result), kIsFresh),
+                          ecclesia::HttpResponseCodeFromInt(code), headers);
+  }
+
   RedfishVariant PatchUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
