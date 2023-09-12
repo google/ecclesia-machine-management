@@ -22,6 +22,8 @@ proto_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        ":query_errors_proto",
+        "//ecclesia/lib/redfish/transport:transport_metrics_proto",
         "@com_google_googleapis//google/rpc:status_proto",
         "@com_google_protobuf//:any_proto",
         "@com_google_protobuf//:descriptor_proto",
@@ -35,6 +37,21 @@ proto_library(
         "query_variables.proto",
     ],
     visibility = ["//visibility:public"],
+)
+
+proto_library(
+    name = "query_errors_proto",
+    srcs = [
+        "query_errors.proto",
+    ],
+    visibility = ["//visibility:public"],
+    deps = ["@com_google_googleapis//google/rpc:status_proto"],
+)
+
+cc_proto_library(
+    name = "query_errors_cc_proto",
+    visibility = ["//visibility:public"],
+    deps = [":query_errors_proto"],
 )
 
 cc_proto_library(

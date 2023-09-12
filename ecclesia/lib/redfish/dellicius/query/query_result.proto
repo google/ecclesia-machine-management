@@ -6,6 +6,8 @@ import "google/protobuf/any.proto";
 import "google/protobuf/timestamp.proto";
 import "google/rpc/status.proto";
 import "google/protobuf/descriptor.proto";
+import "third_party/ecclesia/lib/redfish/dellicius/query/query_errors.proto";
+import "third_party/ecclesia/lib/redfish/transport/transport_metrics.proto";
 
 // Encapsulates subset of redfish properties and devpath obtained from a redfish
 // resource.
@@ -105,6 +107,10 @@ message DelliciusQueryResult {
   google.protobuf.Timestamp end_timestamp = 4;
   // Describes the status of the QueryResult as a whole.
   optional google.rpc.Status status = 5;
+  // Summary of the errors that occurred in the subqueries.
+  optional QueryErrors query_errors = 6;
+  // Metrics collected with MetricalRedfishTransport, if used.
+  optional RedfishMetrics redfish_metrics = 7;
 }
 
 // Field options used to annotate properties in a subquery output.

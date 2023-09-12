@@ -30,6 +30,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/match.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/file/path.h"
@@ -38,6 +39,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/factory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_errors.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
@@ -297,30 +299,33 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
   FakeRedfishServer server("indus_hmb_shim/mockup.shar");
   // Instantiate a passthrough normalizer.
   auto default_normalizer = BuildDefaultNormalizer();
+
+  // Create metrical transport and issue queries.
+  std::unique_ptr<RedfishTransport> base_transport =
+      server.RedfishClientTransport();
   RedfishMetrics metrics;
-  {
-    std::unique_ptr<RedfishTransport> base_transport =
-        server.RedfishClientTransport();
-    auto transport = std::make_unique<MetricalRedfishTransport>(
-        std::move(base_transport), Clock::RealClock(), &metrics);
+  auto transport = std::make_unique<MetricalRedfishTransport>(
+      std::move(base_transport), Clock::RealClock(), &metrics);
+  auto cache = std::make_unique<NullCache>(transport.get());
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+  auto service_root = intf->GetRoot();
 
-    auto cache = std::make_unique<NullCache>(transport.get());
-    auto intf = NewHttpInterface(std::move(transport), std::move(cache),
-                                 RedfishInterface::kTrusted);
-    auto service_root = intf->GetRoot();
+  // Query Sensor
+  DelliciusQuery query_sensor =
+      ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
+  auto qps = BuildDefaultQueryPlanner(query_sensor, RedPathRedfishQueryParams{},
+                                      default_normalizer.get());
+  ASSERT_TRUE(qps.ok());
+  DelliciusQueryResult result_sensor =
+      (*qps)->Run(service_root, clock, nullptr, {}, &metrics);
 
-    // Query Sensor
-    DelliciusQuery query_sensor =
-        ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
-    auto qps = BuildDefaultQueryPlanner(
-        query_sensor, RedPathRedfishQueryParams{}, default_normalizer.get());
-    ASSERT_TRUE(qps.ok());
-    absl::StatusOr<DelliciusQueryResult> result_sensor =
-        (*qps)->Run(service_root, clock, nullptr, {});
-  }
+  // Metrics should be auto-populated in the query result.
+  ASSERT_TRUE(result_sensor.has_redfish_metrics());
   // For each type of redfish request for each URI, validate that the
   // QueryPlanner sends only 1 request.
-  for (const auto &uri_x_metric : *metrics.mutable_uri_to_metrics_map()) {
+  for (const auto &uri_x_metric :
+       *result_sensor.mutable_redfish_metrics()->mutable_uri_to_metrics_map()) {
     for (const auto &metadata :
          uri_x_metric.second.request_type_to_metadata()) {
       EXPECT_EQ(metadata.second.request_count(), 1);
@@ -338,31 +343,34 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
   FakeRedfishServer server("indus_hmb_shim/mockup.shar");
   // Instantiate a passthrough normalizer.
   auto default_normalizer = BuildDefaultNormalizer();
+
+  // Create metrical transport and issue queries.
+  std::unique_ptr<RedfishTransport> base_transport =
+      std::make_unique<NullTransport>();
   RedfishMetrics metrics;
-  {
-    std::unique_ptr<RedfishTransport> base_transport =
-        std::make_unique<NullTransport>();
-    auto transport = std::make_unique<MetricalRedfishTransport>(
-        std::move(base_transport), Clock::RealClock(), &metrics);
+  auto transport = std::make_unique<MetricalRedfishTransport>(
+      std::move(base_transport), Clock::RealClock(), &metrics);
 
-    auto cache = std::make_unique<NullCache>(transport.get());
-    auto intf = NewHttpInterface(std::move(transport), std::move(cache),
-                                 RedfishInterface::kTrusted);
-    auto service_root = intf->GetRoot();
+  auto cache = std::make_unique<NullCache>(transport.get());
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+  auto service_root = intf->GetRoot();
 
-    // Query Sensor
-    DelliciusQuery query_sensor =
-        ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
-    absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qps =
-        BuildDefaultQueryPlanner(query_sensor, RedPathRedfishQueryParams{},
-                                 default_normalizer.get());
-    ASSERT_TRUE(qps.ok());
-    absl::StatusOr<DelliciusQueryResult> result_sensor =
-        (*qps)->Run(service_root, clock, nullptr, {});
-    ASSERT_TRUE(result_sensor.ok());
-    EXPECT_THAT((*result_sensor).status().code(),
-                Eq(::google::rpc::Code::FAILED_PRECONDITION));
-  }
+  // Query Sensor
+  DelliciusQuery query_sensor =
+      ParseTextFileAsProtoOrDie<DelliciusQuery>(sensor_in_path);
+  absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qps =
+      BuildDefaultQueryPlanner(query_sensor, RedPathRedfishQueryParams{},
+                               default_normalizer.get());
+  ASSERT_TRUE(qps.ok());
+  absl::StatusOr<DelliciusQueryResult> result_sensor =
+      (*qps)->Run(service_root, clock, nullptr, {}, &metrics);
+  ASSERT_TRUE(result_sensor.ok());
+  EXPECT_THAT((*result_sensor).status().code(),
+              Eq(::google::rpc::Code::FAILED_PRECONDITION));
+
+  // Metrics should be auto-populated in the query result.
+  ASSERT_TRUE(result_sensor->has_redfish_metrics());
   // Validate that no attempt was made by query planner to query redfish service
   // Redfish Metrics should indicate 1 failed GET request to service root which
   // is sent before running the query planner.
@@ -419,6 +427,16 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulated) {
        query_result.value().subquery_output_by_id()) {
     EXPECT_THAT(subquery_output.status().code(),
                 Eq(::google::rpc::Code::DEADLINE_EXCEEDED));
+  }
+  // Validate Error Summary in DelliciusQueryResult
+  EXPECT_THAT(query_result->query_errors().subquery_id_to_error_summary(),
+              testing::SizeIs(1));
+  for (const auto &[subquery_id, subquery_error] :
+       query_result->query_errors().subquery_id_to_error_summary()) {
+    EXPECT_THAT(subquery_error.node_name(), Eq("Chassis"));
+    EXPECT_TRUE(
+        absl::StrContains(query_result->query_errors().overall_error_summary(),
+                          "DEADLINE_EXCEEDED error occurred"));
   }
 }
 

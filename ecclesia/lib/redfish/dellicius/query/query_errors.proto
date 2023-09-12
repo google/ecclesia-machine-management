@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package ecclesia;
+
+import "google/rpc/status.proto";
+
+message SubqueryErrorSummary {
+  optional string node_name = 1;
+  optional string last_executed_redpath = 2;
+  optional google.rpc.Status status = 3;
+  optional string error_message = 4;
+}
+
+message QueryErrors {
+  // Maps SubqueryId to its error summary
+  map<string, SubqueryErrorSummary> subquery_id_to_error_summary = 1;
+  // Human readable string summarizing all errors that occurred.
+  // Example error summary:
+  /**
+  DEADLINE_EXCEEDED error occurred for subquery Sensors when processing node:
+  Chassis
+  UNAUTHENTICATED error occurred for subquery Processors when processing node:
+  Processors
+  **/
+  optional string overall_error_summary = 2;
+}

@@ -43,6 +43,7 @@
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/time/clock.h"
 
@@ -113,7 +114,10 @@ class QueryEngine {
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments, QueryTracker &tracker) = 0;
-    virtual std::vector<DelliciusQueryResult> ExecuteQueryWithMetrics(
+
+    ABSL_DEPRECATED(
+        "Create QueryEngine With Feature Flag enabling redfish metrics Instead")
+    virtual std::vector<DelliciusQueryResult> ExecuteQueryWithAggregatedMetrics(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         RedfishMetrics *transport_metrics,
@@ -177,12 +181,15 @@ class QueryEngine {
                                       query_arguments, tracker);
   }
   // Transport metrics flag must be true for metrics to be populated.
-  std::vector<DelliciusQueryResult> ExecuteQueryWithMetrics(
+
+  ABSL_DEPRECATED(
+      "Create QueryEngine With Feature Flag enabling redfish metrics Instead")
+  std::vector<DelliciusQueryResult> ExecuteQueryWithAggregatedMetrics(
       absl::Span<const absl::string_view> query_ids,
       RedfishMetrics *transport_metrics,
       ServiceRootType service_root_uri = ServiceRootType::kRedfish,
       const QueryVariableSet &query_arguments = {}) {
-    return engine_impl_->ExecuteQueryWithMetrics(
+    return engine_impl_->ExecuteQueryWithAggregatedMetrics(
         service_root_uri, query_ids, transport_metrics, query_arguments);
   }
   const NodeTopology &GetTopology() { return engine_impl_->GetTopology(); }
@@ -218,6 +225,12 @@ struct QueryEngineParams {
     kRedfishLocationDerived  // Derived from Redfish topology.
   };
 
+  struct FeatureFlags {
+    // Creates a query engine using metrical transport. When enabled,
+    // DelliciusQueryResult will have RedfishMetrics object populated.
+    bool enable_redfish_metrics;
+  };
+
   // Transport medium over which Redfish queries are sent to the redfish server.
   std::unique_ptr<RedfishTransport> transport;
   // Generates cache used by query engine, default set to Null cache (no cache).
@@ -227,6 +240,8 @@ struct QueryEngineParams {
   // Type of stable identifier to use in query result
   QueryEngineParams::RedfishStableIdType stable_id_type =
       QueryEngineParams::RedfishStableIdType::kRedfishLocation;
+  // Captures toggleable features controlled by the user.
+  FeatureFlags feature_flags;
 };
 
 inline std::unique_ptr<Normalizer> BuildLocalDevpathNormalizer(
@@ -262,10 +277,14 @@ std::unique_ptr<Normalizer> BuildMachineDevpathNormalizer(
 // Creates query engine to execute queries in given |query_context| over the
 // |redfish_interface| provided.
 // Caller can optionally provide a |normalizer| for the queried data.
+// Caller can provide their own metrical transport to populate redfish metrics;
+// one is constructed and passed to this method when using QueryEngineParams
+// with the enable_redfish_metrics feature flag enabled.
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context,
     std::unique_ptr<RedfishInterface> redfish_interface,
-    std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer());
+    std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer(),
+    MetricalRedfishTransport *metrical_transport = nullptr);
 
 // Build query engine based on given |configuration| to execute queries in
 // |query_context|.

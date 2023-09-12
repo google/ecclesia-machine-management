@@ -22,6 +22,7 @@ cc_test(
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
         "//ecclesia/lib/redfish/dellicius/engine/internal:query_planner",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/query:query_errors_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/redfish/transport:cache",
@@ -40,7 +41,6 @@ cc_test(
         "@com_google_absl//absl/time",
         "@com_google_googleapis//google/rpc:code_cc_proto",
         "@com_google_googletest//:gtest_main",
-        "@com_json//:json",
     ],
 )
 

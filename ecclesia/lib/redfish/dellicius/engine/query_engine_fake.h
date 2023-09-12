@@ -34,7 +34,7 @@
 #include "ecclesia/lib/time/clock_fake.h"
 
 namespace ecclesia {
-// Class that encapsualtes all the boilerplate needed for creating and using
+// Class that encapsulates all the boilerplate needed for creating and using
 // an ecclesia::QueryEngine for unit tests. Can be initialized with simple
 // caching or no caching.
 //
@@ -46,17 +46,16 @@ namespace ecclesia {
 //           "indus_hmb_shim/mockup.shar")
 //        .GetEngine().ExecuteQuery(....)
 //
-// Example usage with caching and metrics:
-//   RedfishMetrics metrics;
+// Example usage with caching and metrics (metrics populated in redfish_metrics
+// field of resultant DelliciusQueryResult):
 //   FakeQueryEngineEnvironment fake_engine_env(
 //           {.flags{.enable_devpath_extension = true,
 //                   .enable_transport_metrics = true},
 //           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
 //           "indus_hmb_shim/mockup.shar", kNoExpiration)
 //   std::unique_ptr<QueryEngine> query_engine = fake_engine_env.GetEngine();
-//   query_engine.ExecuteQueryWithMetrics(
-//             {"SensorCollection"},
-//             &transport_metrics);
+//   query_engine.ExecuteQuery(
+//             {"SensorCollection"});
 class FakeQueryEngineEnvironment {
  public:
   enum class CachingMode { kNoExpiration, kDisableCaching };

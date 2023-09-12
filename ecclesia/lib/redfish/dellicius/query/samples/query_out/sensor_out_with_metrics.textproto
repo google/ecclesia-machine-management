@@ -1,0 +1,424 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
+# proto-message: DelliciusQueryResult
+
+query_id: "SensorCollector"
+subquery_output_by_id {
+  key: "Sensors"
+  value {
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan0"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan1"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan2"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan3"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan4"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan5"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan6"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "fan7"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_eat_temp"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "Cel"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 28
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "indus_latm_temp"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "Cel"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 35
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Power"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "W"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 30
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Power"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "W"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 30
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "Cel"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 60
+      }
+    }
+    data_sets {
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "Cel"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 60
+      }
+    }
+  }
+}
+redfish_metrics {
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/i_cpu0_t"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu0_pwmon"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/indus_eat_temp"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan0_rpm"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan1_rpm"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan2_rpm"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan3_rpm"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan4_rpm"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan5_rpm"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan6_rpm"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis/Sensors/indus_latm_temp"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+}

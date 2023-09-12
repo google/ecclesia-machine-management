@@ -39,6 +39,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_errors.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
@@ -154,7 +155,11 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
         redfish_interface_(std::move(redfish_interface)),
         metrical_transport_(metrical_transport) {}
 
-  std::vector<DelliciusQueryResult> ExecuteQuery(
+  // If a metrical transport is in use, the metrics for all the queries will be
+  // aggregated in its RedfishMetrics object. Invoked from
+  // ExecuteQueryWithAggregatedMetrics. In the case a normal redfish transport
+  // is in use, executes the query normally.
+  std::vector<DelliciusQueryResult> ExecuteQueryForAggregatedMetrics(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
       const QueryVariableSet &query_arguments, QueryTracker *tracker) {
@@ -188,12 +193,76 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     return response_entries;
   }
 
+  // Executes queries and provides transport metrics for each
+  // DelliciusQueryResult, and populates the redfish_metrics field in each
+  // result.
+  std::vector<DelliciusQueryResult> ExecuteQueryWithMetricsPerResult(
+      QueryEngine::ServiceRootType service_root_uri,
+      absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments, QueryTracker *tracker) {
+    std::vector<DelliciusQueryResult> response_entries;
+    RedfishMetrics *metrics = nullptr;
+    // In the case no RedfishMetrics Object is provided, we have to construct
+    // one to use for populating the DelliciusQueryResult.
+    RedfishMetrics local_metrics;
+    if (metrical_transport_ != nullptr) {
+      metrics = &local_metrics;
+      metrical_transport_->ResetTrackingMetricsProto(metrics);
+    }
+    for (const absl::string_view query_id : query_ids) {
+      auto it = id_to_query_plans_.find(query_id);
+      if (it == id_to_query_plans_.end()) {
+        LOG(ERROR) << "Query plan does not exist for id " << query_id;
+        continue;
+      }
+      QueryVariables vars = QueryVariables();
+      auto it_vars = query_arguments.find(query_id);
+      if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
+
+      DelliciusQueryResult result_single;
+      {
+        auto query_timer = QueryTimestamp(&result_single, clock_);
+        if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
+          result_single = it->second->Run(
+              redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
+              *clock_, tracker, vars, metrics);
+        } else {
+          result_single = it->second->Run(redfish_interface_->GetRoot(),
+                                          *clock_, tracker, vars, metrics);
+        }
+      }
+      response_entries.push_back(std::move(result_single));
+    }
+
+    return response_entries;
+  }
+
+  // Executes Queries based on query_ids; auto-collects metrics into resultant
+  // DelliciusQueryResults if QueryEngine was constructed with a metrical
+  // transport.
+  std::vector<DelliciusQueryResult> ExecuteQuery(
+      QueryEngine::ServiceRootType service_root_uri,
+      absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments, QueryTracker *tracker) {
+    // Execution for aggregated metrics is the same as no metrics desired.
+    if (metrical_transport_ == nullptr) {
+      return ExecuteQueryForAggregatedMetrics(service_root_uri, query_ids,
+                                              query_arguments, tracker);
+    }
+    return ExecuteQueryWithMetricsPerResult(service_root_uri, query_ids,
+                                            query_arguments, tracker);
+  }
+
   void ExecuteQuery(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
       const QueryVariableSet &query_arguments,
       absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
       QueryTracker *tracker) {
+    RedfishMetrics metrics;
+    if (metrical_transport_ != nullptr) {
+      metrical_transport_->ResetTrackingMetricsProto(&metrics);
+    }
     for (const absl::string_view query_id : query_ids) {
       auto it = id_to_query_plans_.find(query_id);
       if (it == id_to_query_plans_.end()) {
@@ -248,7 +317,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     return ExecuteQuery(service_root_uri, query_ids, query_arguments, &tracker);
   }
 
-  std::vector<DelliciusQueryResult> ExecuteQueryWithMetrics(
+  std::vector<DelliciusQueryResult> ExecuteQueryWithAggregatedMetrics(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
       RedfishMetrics *transport_metrics,
@@ -257,7 +326,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     if (metrical_transport_ != nullptr) {
       metrical_transport_->ResetTrackingMetricsProto(transport_metrics);
     }
-    return ExecuteQuery(service_root_uri, query_ids, query_arguments, nullptr);
+    return ExecuteQueryForAggregatedMetrics(service_root_uri, query_ids,
+                                            query_arguments, nullptr);
   }
 
   const NodeTopology &GetTopology() override {
@@ -313,7 +383,8 @@ QueryEngine::QueryEngine(const QueryEngineConfiguration &config,
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context,
     std::unique_ptr<RedfishInterface> redfish_interface,
-    std::unique_ptr<Normalizer> normalizer) {
+    std::unique_ptr<Normalizer> normalizer,
+    MetricalRedfishTransport *metrical_transport) {
   // Parse query rules from embedded proto messages
   absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
       query_id_to_rules = ParseQueryRulesFromEmbeddedFiles(
@@ -349,21 +420,34 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
   }
   return QueryEngine(std::make_unique<QueryEngineImpl>(
       std::move(id_to_query_plans), query_context.clock, std::move(normalizer),
-      std::move(redfish_interface)));
+      std::move(redfish_interface), metrical_transport));
 }
 
 absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
                                               QueryEngineParams configuration) {
-  // Build Redfish interface
-  std::unique_ptr<RedfishInterface> redfish_interface = NewHttpInterface(
-      std::move(configuration.transport),
-      std::move(configuration.cache_factory), RedfishInterface::kTrusted);
-
+  std::unique_ptr<RedfishInterface> redfish_interface;
+  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
+  // Build Redfish interface and metrical transport if desired.
+  if (configuration.feature_flags.enable_redfish_metrics) {
+    std::unique_ptr<MetricalRedfishTransport> metrical_transport =
+        std::make_unique<MetricalRedfishTransport>(
+            std::move(configuration.transport), ecclesia::Clock::RealClock(),
+            nullptr);
+    metrical_transport_ptr = metrical_transport.get();
+    redfish_interface = NewHttpInterface(std::move(metrical_transport),
+                                         std::move(configuration.cache_factory),
+                                         RedfishInterface::kTrusted);
+  } else {
+    redfish_interface = NewHttpInterface(std::move(configuration.transport),
+                                         std::move(configuration.cache_factory),
+                                         RedfishInterface::kTrusted);
+  }
   RedfishInterface *redfish_interface_ptr = redfish_interface.get();
   return CreateQueryEngine(
       query_context, std::move(redfish_interface),
       BuildLocalDevpathNormalizer(configuration.stable_id_type,
-                                  redfish_interface_ptr));
+                                  redfish_interface_ptr),
+      metrical_transport_ptr);
 }
 
 }  // namespace ecclesia

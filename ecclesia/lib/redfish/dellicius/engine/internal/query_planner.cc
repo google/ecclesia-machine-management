@@ -47,8 +47,10 @@
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_errors.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
@@ -638,12 +640,13 @@ class QueryPlanner final : public QueryPlannerInterface {
 
   DelliciusQueryResult Run(const RedfishVariant &variant, const Clock &clock,
                            QueryTracker *tracker,
-                           const QueryVariables &variables) override;
+                           const QueryVariables &variables,
+                           RedfishMetrics *metrics = nullptr) override;
 
   void Run(const RedfishVariant &variant, const Clock &clock,
            QueryTracker *tracker, const QueryVariables &variables,
-           absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback)
-      override;
+           absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
+           RedfishMetrics *metrics = nullptr) override;
 
   void ProcessSubqueries(
       const RedfishVariant &variant, QueryTracker *tracker,
@@ -837,8 +840,8 @@ ContextNode ExecutePredicateExpression(const int node_index,
 void PopulateSubqueryErrorStatus(
     const absl::Status &node_variant_status,
     const std::vector<RedPathContext> &redpath_ctx_multiple,
-    DelliciusQueryResult &result, absl::string_view node_name,
-    absl::string_view last_executed_redpath) {
+    DelliciusQueryResult &result, const std::string &node_name,
+    const std::string &last_executed_redpath) {
   ::google::rpc::Code error_code = ::google::rpc::Code::INTERNAL;
   // If the resource is not found, that isn't an error. Queries are generic
   // and it is okay to query data that isn't present.
@@ -863,6 +866,20 @@ void PopulateSubqueryErrorStatus(
                      " to valid Redfish object at path", last_executed_redpath,
                      ". Redfish Request failled with error: ",
                      node_variant_status.ToString()));
+
+    // Add the current subquery error to the DelliciusQueryResult error summary.
+    SubqueryErrorSummary error_summary;
+    error_summary.set_node_name(node_name);
+    error_summary.set_last_executed_redpath(last_executed_redpath);
+    *error_summary.mutable_status() = *subquery_status;
+    error_summary.set_error_message(std::string(node_variant_status.message()));
+    QueryErrors *errors = result.mutable_query_errors();
+    (*errors->mutable_subquery_id_to_error_summary())
+        [redpath_ctx.subquery_handle->GetSubqueryId()] = error_summary;
+    errors->mutable_overall_error_summary()->append(absl::StrCat(
+        ::google::rpc::Code_Name(error_code), " error occurred for subquery ",
+        redpath_ctx.subquery_handle->GetSubqueryId(),
+        " when processing node: ", node_name, "\n"));
   }
 }
 
@@ -1037,6 +1054,7 @@ absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
     const RedfishObject &redfish_object, DelliciusQueryResult &result,
     SubqueryDataSet *parent_subquery_dataset,
     const std::function<bool(const DelliciusQueryResult &result)> &callback) {
+  auto id = subquery_.subquery_id();
   ECCLESIA_ASSIGN_OR_RETURN(SubqueryDataSet subquery_dataset,
                             normalizer_->Normalize(redfish_object, subquery_));
 
@@ -1130,22 +1148,30 @@ void QueryPlanner::ProcessSubqueries(
 DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
                                        const Clock &clock,
                                        QueryTracker *tracker,
-                                       const QueryVariables &query_variables) {
+                                       const QueryVariables &query_variables,
+                                       RedfishMetrics *metrics) {
   DelliciusQueryResult result;
   result.set_query_id(plan_id_);
   ProcessSubqueries(variant, tracker, query_variables, nullptr, result);
+  if (metrics != nullptr) {
+    *result.mutable_redfish_metrics() = *metrics;
+  }
   return result;
 }
 
 void QueryPlanner::Run(
     const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
     const QueryVariables &query_variables,
-    absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback) {
+    absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
+    RedfishMetrics *metrics) {
   DelliciusQueryResult result;
   result.set_query_id(plan_id_);
   SetTime(clock, *result.mutable_start_timestamp());
   ProcessSubqueries(variant, tracker, query_variables, callback, result);
   SetTime(clock, *result.mutable_end_timestamp());
+  if (metrics != nullptr) {
+    *result.mutable_redfish_metrics() = *metrics;
+  }
   callback(result);
 }
 
