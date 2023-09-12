@@ -6,8 +6,8 @@ import "google/protobuf/any.proto";
 import "google/protobuf/timestamp.proto";
 import "google/rpc/status.proto";
 import "google/protobuf/descriptor.proto";
-import "third_party/ecclesia/lib/redfish/dellicius/query/query_errors.proto";
-import "third_party/ecclesia/lib/redfish/transport/transport_metrics.proto";
+import "ecclesia/lib/redfish/dellicius/query/query_errors.proto";
+import "ecclesia/lib/redfish/transport/transport_metrics.proto";
 
 // Encapsulates subset of redfish properties and devpath obtained from a redfish
 // resource.
