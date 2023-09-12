@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "absl/functional/any_invocable.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -104,12 +105,20 @@ absl::StatusOr<HealthRollup::ResourceEvent> ExtractResourceEventFromMessageArgs(
   // All supported message types have two message args.  If support is added
   // for messages with additional args, the error will have to be on a
   // per-message type basis.
-  if (std::unique_ptr<RedfishIterable> message_args_itr =
-          message_args.AsIterable();
-      !message_args_itr || message_args_itr->Size() != 2) {
+  std::unique_ptr<RedfishIterable> message_args_itr = message_args.AsIterable();
+  if (message_args_itr == nullptr) {
+    return absl::FailedPreconditionError("MessageArgs is not iterable.");
+  }
+  if (message_args_itr->Size() < 2) {
     return absl::FailedPreconditionError(
-        "Condition contains an unsupported number of MessageArgs or is not "
-        "iterable.");
+        "Condition contains too few MessageArgs.");
+  }
+  // If there are extra args, just use the first two, but log a warning. Fewer
+  // than two means an event cannot be extracted.
+  if (message_args_itr->Size() > 2) {
+    LOG_FIRST_N(WARNING, 10)
+        << "Condition contains a noncompliant number of message args, size: "
+        << message_args_itr->Size();
   }
 
   // Parse by message type per ResourceEvent definitions for supported types.
@@ -187,7 +196,13 @@ absl::StatusOr<HealthRollup> ExtractHealthRollup(
     absl::StatusOr<HealthRollup::ResourceEvent> resource_event =
         ExtractResourceEventFromMessageArgs(condition[kRfPropertyMessageArgs],
                                             *message_registry_and_type);
-    if (!resource_event.ok()) return resource_event.status();
+    if (!resource_event.ok()) {
+      LOG_FIRST_N(WARNING, 10)
+          << "Extracting resource event from args failed on URI "
+          << resource_uri.value_or("")
+          << " with message: " << resource_event.status().message();
+      continue;
+    }
     absl::StatusOr<std::string> severity =
         GetSeverityForCondition(*condition_obj);
     if (severity.ok()) {

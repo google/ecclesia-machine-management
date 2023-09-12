@@ -76,7 +76,7 @@ TEST(HealthRollup, HealthRollupPresentButNoConditions) {
     "Status": {
       "State": "Enabled",
       "Health": "Critical",
-      "HealthRollup": "Critical" 
+      "HealthRollup": "Critical"
     }
   })json");
   std::unique_ptr<RedfishObject> obj = intf->GetRoot().AsObject();
@@ -166,7 +166,8 @@ TEST(HealthRollup, UnrecognizedResourceEventType) {
   ASSERT_NE(obj, nullptr);
 
   absl::StatusOr<HealthRollup> health_rollup = ExtractHealthRollup(*obj);
-  EXPECT_THAT(health_rollup.status(), IsStatusInternal());
+  ASSERT_TRUE(health_rollup.status().ok());
+  EXPECT_THAT(*health_rollup, EqualsProto(R"pb()pb"));
 }
 
 TEST(HealthRollup, UnrecognizedMessageTypeFormat) {
@@ -191,7 +192,7 @@ TEST(HealthRollup, UnrecognizedMessageTypeFormat) {
   EXPECT_THAT(health_rollup.status(), IsStatusInternal());
 }
 
-TEST(HealthRollup, UnsupportedNumberOfMessageArgs) {
+TEST(HealthRollup, UnsupportedNumberOfMessageArgsTooFew) {
   std::unique_ptr<RedfishInterface> intf = NewJsonMockupInterface(R"json({
     "Status": {
       "State": "Enabled",
@@ -201,7 +202,7 @@ TEST(HealthRollup, UnsupportedNumberOfMessageArgs) {
         {
           "MessageId": "ResourceEvent.1.0.ResourceErrorsDetected",
           "Message": "The resource property Foo has an unsupported event message of type Bar with additional arg 3.14159.",
-          "MessageArgs": ["Foo", "Bar", 3.14159]
+          "MessageArgs": ["Foo"]
         }
       ]
     }
@@ -210,7 +211,48 @@ TEST(HealthRollup, UnsupportedNumberOfMessageArgs) {
   ASSERT_NE(obj, nullptr);
 
   absl::StatusOr<HealthRollup> health_rollup = ExtractHealthRollup(*obj);
-  EXPECT_THAT(health_rollup.status(), IsStatusFailedPrecondition());
+  ASSERT_TRUE(health_rollup.status().ok());
+  EXPECT_THAT(*health_rollup, EqualsProto(R"pb()pb"));
+}
+
+TEST(HealthRollup, UnsupportedNumberOfMessageArgsTooMany) {
+  std::unique_ptr<RedfishInterface> intf = NewJsonMockupInterface(R"json({
+    "Status": {
+      "State": "Enabled",
+      "Health": "Critical",
+      "HealthRollup": "Critical",
+      "Conditions": [
+        {
+          "MessageId": "ResourceEvent.1.0.ResourceErrorsDetected",
+          "Message": "The resource property Foo has an unsupported event message of type Bar with additional arg 3.14159.",
+          "MessageArgs": ["Foo", "Bar", "Extra", "Superfluous", "Supernumerary"]
+        },
+        {
+          "MessageId": "ResourceEvent.1.0.ResourceErrorsDetected",
+          "Message": "The resource property Baz has detected errors of type Qux.",
+          "MessageArgs": ["Baz", "Qux"]
+        }
+      ]
+    }
+  })json");
+  std::unique_ptr<RedfishObject> obj = intf->GetRoot().AsObject();
+  ASSERT_NE(obj, nullptr);
+
+  // Too many should just ignore the extra fields.
+  absl::StatusOr<HealthRollup> health_rollup = ExtractHealthRollup(*obj);
+  ASSERT_TRUE(health_rollup.status().ok());
+  EXPECT_THAT(*health_rollup, EqualsProto(R"pb(resource_events {
+                                                 errors_detected {
+                                                   resource_identifier: "Foo"
+                                                   error_type: "Bar"
+                                                 }
+                                               }
+                                               resource_events {
+                                                 errors_detected {
+                                                   resource_identifier: "Baz"
+                                                   error_type: "Qux"
+                                                 }
+                                               })pb"));
 }
 
 TEST(HealthRollup, SingleStateChangeEvent) {
