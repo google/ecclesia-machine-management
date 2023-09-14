@@ -27,6 +27,13 @@ message SubqueryDataSet {
     }
   }
 
+  message RawData {
+    oneof value {
+      string string_value = 3;  // base64 encoded string
+      bytes bytes_value = 4;
+    }
+  }
+
   // Redfish properties identifying the location of a resource.
   message RedfishLocation {
     string service_label = 1 [(query_options) = {
@@ -63,6 +70,8 @@ message SubqueryDataSet {
   }];
   // Redfish properties queried.
   repeated Property properties = 2;
+  // raw data of the queried property
+  optional RawData raw_data = 6;
 
   // Maps child subquery id to its associated subquery response data.
   // An important construct to group datasets of different subqueries under

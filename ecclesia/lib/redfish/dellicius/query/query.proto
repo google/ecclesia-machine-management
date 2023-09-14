@@ -61,6 +61,21 @@ message DelliciusQuery {
     Freshness freshness = 7;
     repeated RedfishProperty properties = 3;
 
+    message RawData {
+      enum Type {
+        NONE = 0;
+        BYTES = 1;
+        STRING = 2;
+      }
+      Type type = 1;
+    }
+
+    oneof verbs {
+      // TODO (Malini): Make properties mutually exclusive to fetch_raw_data
+      // GET raw data
+      RawData fetch_raw_data = 13;
+    }
+
     // Identifies property sets.
     repeated string property_set_ids = 6;
     // Limit query result size
