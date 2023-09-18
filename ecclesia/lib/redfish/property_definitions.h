@@ -442,6 +442,8 @@ DEFINE_REDFISH_PROPERTY(PropertyResidentSetSizeBytes, int64_t,
                         "ResidentSetSizeBytes");
 DEFINE_REDFISH_PROPERTY(PropertyUserTimeSeconds, double, "UserTimeSeconds");
 DEFINE_REDFISH_PROPERTY(PropertyKernelTimeSeconds, double, "KernelTimeSeconds");
+DEFINE_REDFISH_PROPERTY(PropertyNFileDescriptors, int64_t,
+                        "NFileDescriptors");
 DEFINE_REDFISH_PROPERTY(PropertyFirmwareTimeSeconds, double,
                         "FirmwareTimeSeconds");
 DEFINE_REDFISH_PROPERTY(PropertyLoaderTimeSeconds, double, "LoaderTimeSeconds");
