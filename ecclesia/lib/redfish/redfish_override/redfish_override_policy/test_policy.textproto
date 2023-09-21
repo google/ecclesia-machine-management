@@ -1,4 +1,4 @@
-# proto-file: third_party/ecclesia/lib/redfish/redfish_override/rf_override.proto
+# proto-file: ecclesia/lib/redfish/redfish_override/rf_override.proto
 # proto-message: OverridePolicy
 
 override_content_map_uri: {

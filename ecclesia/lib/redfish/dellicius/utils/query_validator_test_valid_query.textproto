@@ -1,4 +1,4 @@
-# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-file: ecclesia/lib/redfish/dellicius/query/query.proto
 # proto-message: ecclesia.DelliciusQuery
 
 query_id: "CablesCollection"

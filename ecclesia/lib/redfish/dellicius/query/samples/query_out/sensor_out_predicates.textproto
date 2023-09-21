@@ -1,4 +1,4 @@
-# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_result.proto
+# proto-file: ecclesia/lib/redfish/dellicius/query/query_result.proto
 # proto-message: DelliciusQueryResult
 
 query_id: "SensorCollectorPredicate"
