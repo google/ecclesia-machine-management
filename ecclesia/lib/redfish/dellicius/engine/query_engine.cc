@@ -133,7 +133,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       }
 
       absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> query_planner =
-          BuildDefaultQueryPlanner(query, std::move(params), normalizer_.get());
+          BuildDefaultQueryPlanner(query, std::move(params), normalizer_.get(),
+                                  redfish_interface_.get());
       if (!query_planner.ok()) continue;
       id_to_query_plans_.emplace(query.query_id(), *std::move(query_planner));
     }
@@ -410,7 +411,8 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
     }
 
     absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> query_planner =
-        BuildDefaultQueryPlanner(query, std::move(params), normalizer.get());
+        BuildDefaultQueryPlanner(query, std::move(params), normalizer.get(),
+                                redfish_interface.get());
     if (!query_planner.ok()) {
       return absl::InternalError(
           absl::StrCat("Cannot create query plan due to error: ",

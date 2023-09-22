@@ -63,6 +63,7 @@ message SubqueryDataSet {
   }];
   // Redfish properties queried.
   repeated Property properties = 2;
+
   // Maps child subquery id to its associated subquery response data.
   // An important construct to group datasets of different subqueries under
   // parent subquery.

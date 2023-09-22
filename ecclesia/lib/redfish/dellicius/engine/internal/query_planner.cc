@@ -63,6 +63,7 @@
 namespace ecclesia {
 
 namespace {
+using ecclesia::RedfishInterface;
 
 // Pattern for predicate formatted with relational operators:
 constexpr LazyRE2 kPredicateRegexRelationalOperator = {
@@ -98,6 +99,19 @@ constexpr absl::string_view kRedfishDatetimeNoOffset = "%Y-%m-%dT%H:%M:%E6S";
 using RedPathStep = std::pair<std::string, std::string>;
 using RedPathIterator =
     std::vector<std::pair<std::string, std::string>>::const_iterator;
+
+// Fetch a Redfish resource using the redfish_interface
+ecclesia::RedfishVariant FetchUri(RedfishInterface *redfish_interface,
+                                  absl::string_view uri,
+                                  ecclesia::GetParams params = {}) {
+  if (redfish_interface == nullptr) {
+    return RedfishVariant(absl::InternalError("Null redfish interface"));
+  }
+
+  return params.freshness == ecclesia::GetParams::Freshness::kRequired
+           ? redfish_interface->UncachedGetUri(uri, std::move(params))
+           : redfish_interface->CachedGetUri(uri, std::move(params));
+}
 
 // Set the Timestamp object from the given clock
 void SetTime(const Clock &clock, google::protobuf::Timestamp &field) {
@@ -505,7 +519,8 @@ std::string InvalidateUnpopulatedVariables(absl::string_view predicate) {
 }
 
 // Provides a subquery level abstraction to traverse RedPath step expressions
-// and apply predicate expression rules to refine a given node-set.
+// and apply predicate expression rules to refine a given node-set or fetch a
+// Redfish object directly using uri_reference_redpath.
 class SubqueryHandle final {
  public:
   SubqueryHandle(const DelliciusQuery::Subquery &subquery,
@@ -533,8 +548,11 @@ class SubqueryHandle final {
     return child_subquery_handles_;
   }
 
-  // Returns true if encapsulated subquery does not have a root subquery.
+  // Returns true if the encapsulated subquery does not have a root_subquery_id
+  // set.
   bool IsRootSubquery() const { return subquery_.root_subquery_ids().empty(); }
+
+  bool IsChildSubquery() const { return !IsRootSubquery(); }
 
   bool HasChildSubqueries() const { return !child_subquery_handles_.empty(); }
 
@@ -576,12 +594,29 @@ class SubqueryHandle final {
            (next(iter) == redpath_steps_.end());
   }
 
-  std::string RedPathToString() const { return subquery_.redpath(); }
+  bool HasRedPath() const { return subquery_.has_redpath(); }
+  std::string RedPathToString() const {
+    if (HasRedPath()) { return subquery_.redpath(); }
+    return "";
+  }
+
+  bool HasUriReferenceRedpath() const {
+    return subquery_.has_uri_reference_redpath();
+  }
+  std::string UriReferenceRedpathToString() const {
+    if (HasUriReferenceRedpath()) { return subquery_.uri_reference_redpath(); }
+    return "";
+  }
+  absl::string_view UriReferenceRedpath() const {
+    return subquery_.uri_reference_redpath();
+  }
 
   std::string GetSubqueryId() const { return subquery_.subquery_id(); }
 
-  // The client wants the subquery terminated
-  void TerminateSubquery() { terminate_subquery_ = true; }
+  // Terminates redpath step traversal in a subquery.
+  void TerminateSubquery() {
+    terminate_subquery_ = true;
+  }
 
   bool IsSubqueryTerminated() const { return terminate_subquery_; }
 
@@ -606,19 +641,19 @@ struct RedPathContext {
   // linked.
   SubqueryDataSet *root_redpath_dataset = nullptr;
   // Iterator configured to iterate over RedPath steps - NodeName and
-  // Predicate pair
+  // Predicate pair - irrelevant for uri_reference_redpath.
   RedPathIterator redpath_steps_iterator;
-  // Callback to send the subquery results to the client
-  std::function<bool(const DelliciusQueryResult &result)> callback = nullptr;
+  // Client callback to send the subquery results
+  std::function<bool(const DelliciusQueryResult& result)> callback = nullptr;
 };
 
 // A ContextNode describes the RedfishObject relative to which one or more
-// RedPath expressions are executed along with metadata necessary for the
-// query operation and tracking.
+// RedPath expressions or uri_reference_redpath is executed along with metadata
+// necessary for the query operation and tracking.
 struct ContextNode {
   // Redfish object relative to which RedPath expression executes.
   std::unique_ptr<RedfishObject> redfish_object;
-  // RedPaths to execute relative to the Redfish Object.
+  // RedPath contexts to execute relative to the Redfish Object.
   std::vector<RedPathContext> redpath_ctx_multiple;
   // Last RedPath executed to get the Redfish object.
   std::string last_executed_redpath;
@@ -631,12 +666,14 @@ struct ContextNode {
 class QueryPlanner final : public QueryPlannerInterface {
  public:
   QueryPlanner(const DelliciusQuery &query,
-               std::vector<std::unique_ptr<SubqueryHandle>> subquery_handles,
-               RedPathRedfishQueryParams redpath_to_query_params)
+    std::vector<std::unique_ptr<SubqueryHandle>> subquery_handles,
+    RedPathRedfishQueryParams redpath_to_query_params,
+    RedfishInterface *redfish_interface = nullptr)
       : plan_id_(query.query_id()),
         subquery_handles_(std::move(subquery_handles)),
         redpath_to_query_params_(
-            CombineQueryParams(query, std::move(redpath_to_query_params))) {}
+            CombineQueryParams(query, std::move(redpath_to_query_params))),
+        redfish_interface_(redfish_interface) {}
 
   DelliciusQueryResult Run(const RedfishVariant &variant, const Clock &clock,
                            QueryTracker *tracker,
@@ -648,11 +685,19 @@ class QueryPlanner final : public QueryPlannerInterface {
            absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
            RedfishMetrics *metrics = nullptr) override;
 
-  void ProcessSubqueries(
-      const RedfishVariant &variant, QueryTracker *tracker,
-      const QueryVariables &variables,
-      std::function<bool(const DelliciusQueryResult &result)> callback,
-      DelliciusQueryResult &result);
+  void ProcessSubqueries(const RedfishVariant &variant,
+          const QueryVariables &variables,
+          std::function<bool(const DelliciusQueryResult &result)> callback,
+          DelliciusQueryResult &result,
+          QueryTracker *tracker);
+
+  RedfishVariant FetchUriReference(const ContextNode &context_node,
+          const std::string &node_name,
+          DelliciusQueryResult &result,
+          QueryTracker *tracker) const;
+
+  RedfishVariant FetchUri(absl::string_view uri,
+                QueryTracker *tracker = nullptr) const;
 
  private:
   const std::string plan_id_;
@@ -660,6 +705,7 @@ class QueryPlanner final : public QueryPlannerInterface {
   // handles.
   std::vector<std::unique_ptr<SubqueryHandle>> subquery_handles_;
   const RedPathRedfishQueryParams redpath_to_query_params_;
+  RedfishInterface *redfish_interface_;
 };
 
 using SubqueryHandleCollection = std::vector<std::unique_ptr<SubqueryHandle>>;
@@ -743,8 +789,12 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
       continue;
     }
 
-    bool is_end_of_redpath =
-        subquery_handle->IsEndOfRedPath(redpath_ctx.redpath_steps_iterator);
+    bool is_end_of_redpath = subquery_handle->HasUriReferenceRedpath();
+    if (subquery_handle->HasRedPath()) {
+      is_end_of_redpath = subquery_handle->IsEndOfRedPath(
+          redpath_ctx.redpath_steps_iterator);
+    }
+
     // If there aren't any child subqueries and all step expressions in the
     // current RedPath context have been processed, we can populate the query
     // result for requested properties.
@@ -778,7 +828,9 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
       continue;
     }
     redpath_ctx_unresolved.push_back(redpath_ctx);
-    ++redpath_ctx_unresolved.back().redpath_steps_iterator;
+    if (subquery_handle->HasRedPath()) {
+      ++redpath_ctx_unresolved.back().redpath_steps_iterator;
+    }
   }
   return redpath_ctx_unresolved;
 }
@@ -789,8 +841,10 @@ std::vector<RedPathContext> FilterRedPathWithNoPredicate(
     const std::vector<RedPathContext> &redpath_ctx_multiple) {
   std::vector<RedPathContext> redpath_ctx_no_predicate;
   for (const auto &redpath_ctx : redpath_ctx_multiple) {
-    if (redpath_ctx.redpath_steps_iterator->second.empty()) {
-      redpath_ctx_no_predicate.push_back(redpath_ctx);
+    if (redpath_ctx.subquery_handle->HasRedPath()) {
+      if (redpath_ctx.redpath_steps_iterator->second.empty()) {
+        redpath_ctx_no_predicate.push_back(redpath_ctx);
+      }
     }
   }
   return redpath_ctx_no_predicate;
@@ -799,17 +853,23 @@ std::vector<RedPathContext> FilterRedPathWithNoPredicate(
 using NodeNameToRedPathContexts =
     absl::flat_hash_map<std::string, std::vector<RedPathContext>>;
 
-// Deduplicates the next NodeName expression in the RedPath of each subquery
-// and returns NodeName to Subquery Iterators map. This is to ensure Redfish
-// Request is sent out once but the dataset obtained can be processed per
-// Subquery using the mapped RedPathContext objects.
+// Deduplicates the next NodeName expression in the RedPath/UriReference
+// of each subquery and returns NodeName to Subquery Iterators map. This is to
+// ensure Redfish Request is sent out once but the dataset obtained can be
+// processed per Subquery using the mapped RedPathContext objects.
 NodeNameToRedPathContexts DeduplicateNodeNamesAcrossSubqueries(
     std::vector<RedPathContext> &&redpath_context_multiple) {
   NodeNameToRedPathContexts node_to_redpath_contexts;
   for (auto &&redpath_context : redpath_context_multiple) {
-    // Pair resource name and those RedPaths that have this resource as next
-    // NodeName.
-    std::string node_name = redpath_context.redpath_steps_iterator->first;
+    // Pair resource name and those RedPaths/UriReference that have this
+    // resource as next NodeName.
+    std::string node_name;
+    if (redpath_context.subquery_handle->HasUriReferenceRedpath()) {
+      node_name =
+          redpath_context.subquery_handle->UriReferenceRedpathToString();
+    } else if (redpath_context.subquery_handle->HasRedPath()) {
+      node_name = redpath_context.redpath_steps_iterator->first;
+    }
     node_to_redpath_contexts[node_name].push_back(redpath_context);
   }
   return node_to_redpath_contexts;
@@ -837,20 +897,19 @@ ContextNode ExecutePredicateExpression(const int node_index,
   context_node.redpath_ctx_multiple = std::move(redpath_ctx_filtered);
   return context_node;
 }
+
 void PopulateSubqueryErrorStatus(
     const absl::Status &node_variant_status,
     const std::vector<RedPathContext> &redpath_ctx_multiple,
     DelliciusQueryResult &result, const std::string &node_name,
     const std::string &last_executed_redpath) {
   ::google::rpc::Code error_code = ::google::rpc::Code::INTERNAL;
-  // If the resource is not found, that isn't an error. Queries are generic
-  // and it is okay to query data that isn't present.
-  if (node_variant_status.code() == absl::StatusCode::kNotFound) {
-    return;
-  }
-  if (node_variant_status.code() == absl::StatusCode::kDeadlineExceeded) {
+  absl::StatusCode code = node_variant_status.code();
+  if (code == absl::StatusCode::kNotFound) {
+    error_code = ::google::rpc::Code::NOT_FOUND;
+  } else if (code == absl::StatusCode::kDeadlineExceeded) {
     error_code = ::google::rpc::Code::DEADLINE_EXCEEDED;
-  } else if (node_variant_status.code() == absl::StatusCode::kUnauthenticated) {
+  } else if (code == absl::StatusCode::kUnauthenticated) {
     error_code = ::google::rpc::Code::UNAUTHENTICATED;
   }
   // If the Get fails for the node name, mark the failure status in the
@@ -863,8 +922,8 @@ void PopulateSubqueryErrorStatus(
     subquery_status->set_code(error_code);
     subquery_status->set_message(
         absl::StrCat("Cannot resolve NodeName ", node_name,
-                     " to valid Redfish object at path", last_executed_redpath,
-                     ". Redfish Request failled with error: ",
+                     " to valid Redfish object at path ", last_executed_redpath,
+                     ". Redfish Request failed with error: ",
                      node_variant_status.ToString()));
 
     // Add the current subquery error to the DelliciusQueryResult error summary.
@@ -883,13 +942,22 @@ void PopulateSubqueryErrorStatus(
   }
 }
 
+// Returns true if any RedPathContexts have a UriReferenceRedpath.
+bool HasUriReferenceRedpath(
+    const std::vector<RedPathContext> &redpath_ctx_multiple) {
+  for (auto &&redpath_context : redpath_ctx_multiple) {
+    if (redpath_context.subquery_handle->HasUriReferenceRedpath()) return true;
+  }
+  return false;
+}
+
 // Recursively executes RedPath Step expressions across subqueries.
 // Dispatches Redfish resource request for each unique NodeName in RedPath
 // Step expressions across subqueries followed by invoking predicate handlers
 // from each subquery to further refine the data that forms the context node
 // of next step expression in each qualified subquery.
 void ExecuteRedPathStepFromEachSubquery(
-    const RedPathRedfishQueryParams &redpath_to_query_params,
+    QueryPlanner *qp, const RedPathRedfishQueryParams &redpath_to_query_params,
     ContextNode &context_node, DelliciusQueryResult &result,
     QueryTracker *tracker) {
   // Return if the Context Node does not contain a valid RedfishObject.
@@ -921,6 +989,7 @@ void ExecuteRedPathStepFromEachSubquery(
   // nodes that produces next set of context nodes.
   for (auto &[node_name, redpath_ctx_multiple] :
        node_name_to_redpath_contexts) {
+    // redpath expression handling begins
     std::string redpath_to_execute =
         absl::StrCat(context_node.last_executed_redpath, "/", node_name);
 
@@ -929,10 +998,19 @@ void ExecuteRedPathStepFromEachSubquery(
     auto get_params_for_redpath =
         GetQueryParamsForRedPath(redpath_to_query_params, redpath_to_execute);
 
-    // Dispatch Redfish Request for the Redfish Resource associated with the
-    // NodeName expression.
-    RedfishVariant node_set_as_variant =
+    RedfishVariant node_set_as_variant(absl::OkStatus());
+
+    if (HasUriReferenceRedpath(redpath_ctx_multiple)) {
+      // Resolve the nested node in the Uri_Reference_Redpath expression
+      // and the fetch the resolved Uri.
+      node_set_as_variant = qp->FetchUriReference(context_node, node_name,
+                                result, tracker);
+    } else {
+      // Dispatch Redfish Request for the Redfish Resource associated with the
+      // NodeName expression.
+      node_set_as_variant =
         context_node.redfish_object->Get(node_name, get_params_for_redpath);
+    }
 
     // Add the last executed RedPath to the record.
     if (tracker) {
@@ -1045,7 +1123,7 @@ void ExecuteRedPathStepFromEachSubquery(
   // expression from all RedPath expressions, execute next RedPath Step
   // expression from every RedPath context mapped to the context node.
   for (auto &new_context_node : context_nodes) {
-    ExecuteRedPathStepFromEachSubquery(redpath_to_query_params,
+    ExecuteRedPathStepFromEachSubquery(qp, redpath_to_query_params,
                                        new_context_node, result, tracker);
   }
 }
@@ -1069,7 +1147,6 @@ absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
         *parent_subquery_dataset
              ->mutable_child_subquery_output_by_id())[subquery_.subquery_id()];
   }
-
   // Check if size limit would be honored on appending the normalized data to
   // the result
   if (subquery_.has_max_size_in_bytes() && callback != nullptr) {
@@ -1093,10 +1170,10 @@ absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
 }
 
 void QueryPlanner::ProcessSubqueries(
-    const RedfishVariant &variant, QueryTracker *tracker,
+    const RedfishVariant &variant,
     const QueryVariables &query_variables,
     const std::function<bool(const DelliciusQueryResult &result)> callback,
-    DelliciusQueryResult &result) {
+    DelliciusQueryResult &result, QueryTracker *tracker) {
   std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
   if (!redfish_object) {
     result.mutable_status()->set_code(::google::rpc::Code::FAILED_PRECONDITION);
@@ -1120,7 +1197,7 @@ void QueryPlanner::ProcessSubqueries(
     // Only consider subqueries that have RedPath expressions to execute
     // relative to service root. This step filters out any child subqueries
     // which execute relative to other subqueries.
-    if (!subquery_handle || !subquery_handle->IsRootSubquery()) continue;
+    if (!subquery_handle || subquery_handle->IsChildSubquery()) continue;
 
     // A context node can usually have multiple RedPath expressions mapped.
     // Let's instantiate the RedPathContext list with the one RedPath in the
@@ -1128,21 +1205,22 @@ void QueryPlanner::ProcessSubqueries(
     RedPathIterator path_iter = subquery_handle->GetRedPathIterator();
     std::vector<RedPathContext> redpath_ctx_multiple = {
         {subquery_handle.get(), nullptr, path_iter, callback}};
-    // A special case where properties need to be queried from service root
-    // itself.
+
     if (path_iter->first.empty()) {
-      redpath_ctx_multiple = PopulateResultOrContinueQuery(
-          *context_node.redfish_object, redpath_ctx_multiple, result);
+      // A special case where properties need to be queried from service root
+      // itself.
+        redpath_ctx_multiple = PopulateResultOrContinueQuery(
+            *context_node.redfish_object, redpath_ctx_multiple, result);
     }
     // Update ContextNode with RedPath contexts created for the subquery.
     context_node.redpath_ctx_multiple.insert(
-        context_node.redpath_ctx_multiple.end(), redpath_ctx_multiple.begin(),
-        redpath_ctx_multiple.end());
+      context_node.redpath_ctx_multiple.end(), redpath_ctx_multiple.begin(),
+      redpath_ctx_multiple.end());
   }
 
   // Recursively execute each RedPath step across subqueries.
-  ExecuteRedPathStepFromEachSubquery(redpath_to_query_params_, context_node,
-                                     result, tracker);
+  ExecuteRedPathStepFromEachSubquery(this, redpath_to_query_params_,
+                                     context_node, result, tracker);
 }
 
 DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
@@ -1152,7 +1230,7 @@ DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
                                        RedfishMetrics *metrics) {
   DelliciusQueryResult result;
   result.set_query_id(plan_id_);
-  ProcessSubqueries(variant, tracker, query_variables, nullptr, result);
+  ProcessSubqueries(variant, query_variables, nullptr, result, tracker);
   if (metrics != nullptr) {
     *result.mutable_redfish_metrics() = *metrics;
   }
@@ -1167,12 +1245,67 @@ void QueryPlanner::Run(
   DelliciusQueryResult result;
   result.set_query_id(plan_id_);
   SetTime(clock, *result.mutable_start_timestamp());
-  ProcessSubqueries(variant, tracker, query_variables, callback, result);
+  ProcessSubqueries(variant, query_variables, callback, result, tracker);
   SetTime(clock, *result.mutable_end_timestamp());
   if (metrics != nullptr) {
     *result.mutable_redfish_metrics() = *metrics;
   }
   callback(result);
+}
+
+// Fetch the Redfish object at the given URI_Reference_Redpath.
+// The uri_reference_redpath is a non-navigational property and cannot be
+// obtained by uri links. It is a nested node that's resolved using the
+// redfish tree in the context_node.
+RedfishVariant QueryPlanner::FetchUriReference(
+          const ContextNode &context_node,
+          const std::string &node_name,
+          DelliciusQueryResult &result,
+          QueryTracker *tracker) const
+{
+  const RedfishObject &redfish_object = *(context_node.redfish_object);
+  // normalize the redpath format to nested node format
+  std::string normalized_node_name = absl::StrReplaceAll(
+        node_name, {{"/", "."}});
+  // resolve the nest node represented in the normalized_node_name
+  absl::StatusOr<nlohmann::json> json_obj =
+        ResolveNodeNameToJsonObj(redfish_object, normalized_node_name);
+  if (!json_obj.ok()) {
+    return RedfishVariant(absl::NotFoundError(absl::StrCat
+          ("Failed to resolve NodeName: ", normalized_node_name)));
+  }
+
+  std::string uri = json_obj->get<std::string>();
+  return FetchUri(uri, tracker);
+}
+
+// Fetch the redfish object at "uri"
+RedfishVariant QueryPlanner::FetchUri(absl::string_view uri,
+                            QueryTracker *tracker) const
+{
+  // Get QueryRule configured for the RedPath expression we are about to
+  // execute.
+  auto get_params_for_redpath =
+      GetQueryParamsForRedPath(redpath_to_query_params_, uri);
+
+  // Dispatch Redfish Request to fetch the Redfish Resource associated with the
+  // Uri.
+  RedfishVariant node_set_as_variant = ecclesia::FetchUri(redfish_interface_,
+                                            uri, get_params_for_redpath);
+  // Add the last executed uri to the record.
+  if (tracker) {
+    std::string uri_str = std::string(uri);
+    tracker->redpaths_queried.insert({uri_str, get_params_for_redpath});
+  }
+
+  // Propagate a more useful message to the client.
+  if (!node_set_as_variant.status().ok() &&
+      absl::IsNotFound(node_set_as_variant.status())) {
+    return RedfishVariant(absl::NotFoundError(absl::StrCat("Failed to fetch "
+        "uri: ", uri, " Error: ", node_set_as_variant.status().message())));
+  }
+
+  return node_set_as_variant;
 }
 
 absl::Status SubqueryHandleFactory::BuildSubqueryHandleChain(
@@ -1201,15 +1334,23 @@ absl::Status SubqueryHandleFactory::BuildSubqueryHandleChain(
     }
     return absl::OkStatus();
   }
-  // Create a new SubqueryHandle.
-  absl::StatusOr<std::vector<RedPathStep>> steps =
-      RedPathToSteps(subquery.redpath());
-  if (!steps.ok()) {
-    LOG(ERROR) << "Cannot create SubqueryHandle for " << subquery_id;
-    return steps.status();
-  }
-  auto new_subquery_handle = std::make_unique<SubqueryHandle>(
+
+  std::unique_ptr<SubqueryHandle> new_subquery_handle;
+  if (subquery.has_redpath()) {
+    // Create a new SubqueryHandle.
+    absl::StatusOr<std::vector<RedPathStep>> steps =
+          RedPathToSteps(subquery.redpath());
+    if (!steps.ok()) {
+      LOG(ERROR) << "Cannot create SubqueryHandle for " << subquery_id;
+      return steps.status();
+    }
+    new_subquery_handle = std::make_unique<SubqueryHandle>(
       subquery, (std::move(steps)).value(), normalizer_);
+  } else {
+    new_subquery_handle = std::make_unique<SubqueryHandle>(
+      subquery, std::vector<RedPathStep>(), normalizer_);
+  }
+
   // Raw pointer used to link SubqueryHandle with parent subquery if any.
   SubqueryHandle *new_subquery_handle_ptr = new_subquery_handle.get();
   // Link the given child SubqueryHandle.
@@ -1259,8 +1400,9 @@ SubqueryHandleFactory::GetSubqueryHandles() {
 
 // Builds the default query planner.
 absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> BuildDefaultQueryPlanner(
-    const DelliciusQuery &query,
-    RedPathRedfishQueryParams redpath_to_query_params, Normalizer *normalizer) {
+  const DelliciusQuery &query,
+  RedPathRedfishQueryParams redpath_to_query_params, Normalizer *normalizer,
+  ecclesia::RedfishInterface *redfish_interface) {
   absl::StatusOr<SubqueryHandleCollection> subquery_handle_collection =
       SubqueryHandleFactory::CreateSubqueryHandles(query, normalizer);
   if (!subquery_handle_collection.ok()) {
@@ -1268,7 +1410,8 @@ absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> BuildDefaultQueryPlanner(
   }
   return std::make_unique<QueryPlanner>(query,
                                         *std::move(subquery_handle_collection),
-                                        std::move(redpath_to_query_params));
+                                        std::move(redpath_to_query_params),
+                                        redfish_interface);
 }
 
 }  // namespace ecclesia

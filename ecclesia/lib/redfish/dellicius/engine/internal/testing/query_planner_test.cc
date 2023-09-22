@@ -153,7 +153,7 @@ class QueryPlannerTestRunner : public ::testing::Test {
         ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
     absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qp =
         BuildDefaultQueryPlanner(query, RedPathRedfishQueryParams{},
-                                 normalizer);
+                                 normalizer, nullptr);
     ASSERT_TRUE(qp.ok());
     absl::StatusOr<DelliciusQueryResult> query_result =
         (*qp)->Run(intf_->GetRoot(), *clock_, nullptr, {});

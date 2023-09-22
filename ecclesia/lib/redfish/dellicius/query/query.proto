@@ -45,12 +45,20 @@ message DelliciusQuery {
     // Identifies parent subquery sets. The output of this subquery will be
     // associated with each subquery output in the set.
     repeated string root_subquery_set_ids = 5;
-    // RedPath of the Redfish resource to query relative to Redfish Service
-    // root or relative to RedPath in different subquery as identified by root
-    // field in this proto.
-    string redpath = 2;
+    oneof resource {
+      // RedPath of the Redfish resource to query relative to Redfish Service
+      // root or relative to RedPath in different subquery as identified by root
+      // field in this proto.
+      string redpath = 2;
+      // A uri reference is a nested node that is not a navigational
+      // resource and hence is not a regular redpath. It points to a URI that
+      // gives additional information about a resource. Once the reference
+      // is resolved, the URI is fetched and used to process the subquery.
+      string uri_reference_redpath = 10;
+    }
     Freshness freshness = 7;
     repeated RedfishProperty properties = 3;
+
     // Identifies property sets.
     repeated string property_set_ids = 6;
     // Limit query result size
