@@ -297,10 +297,22 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
     std::unique_ptr<LocalIdMapT> local_id_map,
     const IdAssignerFactory<LocalIdMapT> &id_assigner_factory) {
-  // Build Redfish interface
-  std::unique_ptr<RedfishInterface> redfish_interface = NewHttpInterface(
-      std::move(engine_params.transport),
-      std::move(engine_params.cache_factory), RedfishInterface::kTrusted);
+  std::unique_ptr<RedfishInterface> redfish_interface;
+  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
+  if (engine_params.feature_flags.enable_redfish_metrics) {
+    std::unique_ptr<MetricalRedfishTransport> metrical_transport =
+        std::make_unique<MetricalRedfishTransport>(
+            std::move(engine_params.transport), ecclesia::Clock::RealClock(),
+            nullptr);
+    metrical_transport_ptr = metrical_transport.get();
+    redfish_interface = NewHttpInterface(std::move(metrical_transport),
+                                         std::move(engine_params.cache_factory),
+                                         RedfishInterface::kTrusted);
+  } else {
+    redfish_interface = NewHttpInterface(std::move(engine_params.transport),
+                                         std::move(engine_params.cache_factory),
+                                         RedfishInterface::kTrusted);
+  }
 
   if (redfish_interface == nullptr)
     return absl::InternalError("Can't create redfish interface");
@@ -309,7 +321,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
       std::move(local_id_map), id_assigner_factory, redfish_interface.get());
 
   return CreateQueryEngine(query_context, std::move(redfish_interface),
-                           std::move(normalizer));
+                           std::move(normalizer), metrical_transport_ptr);
 }
 
 }  // namespace ecclesia
