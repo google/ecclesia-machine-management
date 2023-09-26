@@ -24,6 +24,7 @@ cc_library(
     hdrs = ["rpc.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//net/grpc/no_envelope:grpc++_google_resolver",
         "@com_github_grpc_grpc//:grpc++",
         "@com_github_grpc_grpc//:grpc++_public_hdrs",
         "@com_google_absl//absl/status",
