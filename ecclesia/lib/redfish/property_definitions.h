@@ -133,6 +133,7 @@ inline constexpr char kRfPropertyDownstreamPcieFunctions[] =
 inline constexpr char kRfPropertyPciLocation[] = "PciLocation";
 inline constexpr char kRfPropertyId[] = "Id";
 inline constexpr char kRfPropertyLogServices[] = "LogServices";
+inline constexpr char kRfPropertyRelatedLogEntries[] = "RelatedLogEntries";
 inline constexpr char kRfPropertyEntries[] = "Entries";
 inline constexpr char kRfPropertyClearLog[] = "ClearLog";
 inline constexpr char kRfPropertyMembers[] = "Members";
@@ -402,6 +403,8 @@ DEFINE_REDFISH_PROPERTY(PropertyCorrectableOtherErrorCount, int,
                         "CorrectableOtherErrorCount");
 DEFINE_REDFISH_PROPERTY(PropertyUncorrectableOtherErrorCount, int,
                         "UncorrectableOtherErrorCount");
+DEFINE_REDFISH_PROPERTY(PropertyDiagnosticData, std::string,
+                        "DiagnosticData");
 DEFINE_REDFISH_PROPERTY(PropertyAdditionalDataURI, std::string,
                         "AdditionalDataURI");
 DEFINE_REDFISH_PROPERTY(PropertyCreatedTime, std::string, "Created");
