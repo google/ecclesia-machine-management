@@ -55,6 +55,8 @@ message DelliciusQuery {
       // gives additional information about a resource. Once the reference
       // is resolved, the URI is fetched and used to process the subquery.
       string uri_reference_redpath = 10;
+      // Absolute uri served by the Redfish service.
+      string uri = 11;
     }
     Freshness freshness = 7;
     repeated RedfishProperty properties = 3;
