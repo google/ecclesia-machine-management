@@ -83,7 +83,7 @@ class Normalizer {
     return data_set;
   }
 
-  void AddNormilizer(std::unique_ptr<ImplInterface> impl) {
+  void AddNormalizer(std::unique_ptr<ImplInterface> impl) {
     impl_chain_.push_back(std::move(impl));
   }
 

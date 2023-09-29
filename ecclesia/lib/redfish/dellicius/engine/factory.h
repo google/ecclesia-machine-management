@@ -32,7 +32,7 @@ namespace ecclesia {
 // normalization for client variables or devpaths.
 inline std::unique_ptr<Normalizer> BuildDefaultNormalizer() {
   auto normalizer = std::make_unique<Normalizer>();
-  normalizer->AddNormilizer(absl::make_unique<NormalizerImplDefault>());
+  normalizer->AddNormalizer(absl::make_unique<NormalizerImplDefault>());
   return normalizer;
 }
 
@@ -41,7 +41,7 @@ inline std::unique_ptr<Normalizer> BuildDefaultNormalizer() {
 inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithLocalDevpath(
     NodeTopology node_topology) {
   auto normalizer = BuildDefaultNormalizer();
-  normalizer->AddNormilizer(
+  normalizer->AddNormalizer(
       absl::make_unique<NormalizerImplAddDevpath>(std::move(node_topology)));
   return normalizer;
 }
@@ -55,7 +55,7 @@ std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
   if (local_id_map == nullptr) return nullptr;
   std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
   const LocalIdMapT *local_id_map_ptr = local_id_map.get();
-  normalizer->AddNormilizer(
+  normalizer->AddNormalizer(
       absl::make_unique<NormalizerImplAddMachineBarepath<LocalIdMapT>>(
           std::move(local_id_map),
           id_assigner_factory(*local_id_map_ptr, server_tag)));
@@ -76,9 +76,9 @@ std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
   if (local_id_map == nullptr) return nullptr;
   const LocalIdMapT *local_id_map_ptr = local_id_map.get();
   auto normalizer = BuildDefaultNormalizer();
-  normalizer->AddNormilizer(
+  normalizer->AddNormalizer(
       absl::make_unique<NormalizerImplAddDevpath>(std::move(node_topology)));
-  normalizer->AddNormilizer(
+  normalizer->AddNormalizer(
       absl::make_unique<NormalizerImplAddMachineBarepath<LocalIdMapT>>(
           std::move(local_id_map),
           id_assigner_factory(*local_id_map_ptr, server_tag)));
