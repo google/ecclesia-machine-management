@@ -241,7 +241,7 @@ struct QueryEngineParams {
   QueryEngineParams::RedfishStableIdType stable_id_type =
       QueryEngineParams::RedfishStableIdType::kRedfishLocation;
   // Captures toggleable features controlled by the user.
-  FeatureFlags feature_flags;
+  FeatureFlags feature_flags = {.enable_redfish_metrics = false};
 };
 
 inline std::unique_ptr<Normalizer> BuildLocalDevpathNormalizer(
