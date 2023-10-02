@@ -17,7 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_QUERY_ENGINE_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_QUERY_ENGINE_H_
 
-#include <functional>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
@@ -25,6 +25,7 @@
 
 #include "absl/base/attributes.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -88,7 +89,7 @@ using QueryVariableSet = absl::flat_hash_map<std::string, QueryVariables>;
 
 class QueryEngine {
  public:
-  enum class ServiceRootType { kRedfish, kGoogle };
+  enum class ServiceRootType : uint8_t { kRedfish, kGoogle };
 
   // Interface for private implementation of Query Engine using PImpl Idiom
   class QueryEngineIntf {
@@ -220,7 +221,7 @@ struct QueryEngineParams {
   // Stable id types used to configure engine for an appropriate normalizer that
   // decorates the query result with desired stable
   // id type.
-  enum class RedfishStableIdType {
+  enum class RedfishStableIdType : uint8_t {
     kRedfishLocation,  // Redfish Standard - PartLocationContext + ServiceLabel
     kRedfishLocationDerived  // Derived from Redfish topology.
   };
@@ -228,7 +229,7 @@ struct QueryEngineParams {
   struct FeatureFlags {
     // Creates a query engine using metrical transport. When enabled,
     // DelliciusQueryResult will have RedfishMetrics object populated.
-    bool enable_redfish_metrics;
+    bool enable_redfish_metrics = false;
   };
 
   // Transport medium over which Redfish queries are sent to the redfish server.
@@ -241,7 +242,7 @@ struct QueryEngineParams {
   QueryEngineParams::RedfishStableIdType stable_id_type =
       QueryEngineParams::RedfishStableIdType::kRedfishLocation;
   // Captures toggleable features controlled by the user.
-  FeatureFlags feature_flags = {.enable_redfish_metrics = false};
+  FeatureFlags feature_flags;
 };
 
 inline std::unique_ptr<Normalizer> BuildLocalDevpathNormalizer(
