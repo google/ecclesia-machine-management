@@ -222,6 +222,7 @@ class PciExpressCapability : public PciCapability {
     PcieLinkWidth max_width;
     // The link supports data link layer active reporting.
     bool dll_active_capable;
+    uint8_t port_number;
   };
   absl::StatusOr<LinkCapabilities> ReadLinkCapabilities() const;
 

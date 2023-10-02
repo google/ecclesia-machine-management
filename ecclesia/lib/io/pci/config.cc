@@ -172,6 +172,8 @@ PciExpressCapability::ReadLinkCapabilities() const {
   link_caps.max_width =
       static_cast<PcieLinkWidth>(ExtractBits(link_caps_val, BitRange(9, 4)));
   link_caps.dll_active_capable = ExtractBits(link_caps_val, BitRange(20));
+  link_caps.port_number =
+      static_cast<uint8_t>(ExtractBits(link_caps_val, BitRange(31, 24)));
   return link_caps;
 }
 
