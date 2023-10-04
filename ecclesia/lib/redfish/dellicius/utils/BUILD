@@ -135,3 +135,32 @@ cc_library(
         "@com_google_protobuf//:protobuf",
     ],
 )
+
+cc_library(
+    name = "join",
+    srcs = ["join.cc"],
+    hdrs = ["join.h"],
+    visibility = ["//ecclesia/lib/redfish/dellicius:__subpackages__"],
+    deps = [
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "join_test",
+    srcs = ["join_test.cc"],
+    deps = [
+        ":join",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
