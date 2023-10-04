@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package ecclesia;
+
+import "google/protobuf/timestamp.proto";
+
+message QueryResult {
+  // Query Id
+  string query_id = 1;
+  // List of errors encountered for this query
+  Status status = 2;
+  // Statistics associated with this query
+  Statistics stats = 3;
+  // Query Result Data
+  QueryResultData data = 4;
+}
+
+message QueryResultData {
+  // Unordered map of dynamically typed values.
+  map<string, QueryValue> fields = 1;
+}
+
+message QueryValue {
+  // The kind of value.
+  oneof kind {
+    int64 int_value = 1;
+    // Represents a double value.
+    double double_value = 2;
+    // Represents a string value.
+    string string_value = 3;
+    // Represents a boolean value.
+    bool bool_value = 4;
+    // Represents a timestamp value.
+    google.protobuf.Timestamp timestamp_value = 5;
+    // Represents a structured value.
+    QueryResultData subquery_value = 6;
+    // Represents a repeated `Value`.
+    ListValue list_value = 7;
+    // Represents an identifier.
+    Identifier identifier = 8;
+  }
+}
+
+message ListValue {
+  // Repeated field of dynamically typed values.
+  repeated QueryValue values = 1;
+}
+
+message Identifier {
+  // Node-level devpath
+  optional string local_devpath = 1;
+  // Machine-level devpath
+  optional string machine_devpath = 2;
+}
+
+message Statistics {
+  // Start time of the query
+  google.protobuf.Timestamp start_time = 1;
+  // End time of the query
+  google.protobuf.Timestamp end_time = 2;
+  // Count of requests made to the server
+  int64 num_requests = 3;
+  // Total payload size
+  int64 payload_size = 4;
+  // Number of cache hits
+  int64 num_cache_hits = 5;
+  // Number of cache misses
+  int64 num_cache_misses = 6;
+}
+
+message Status {
+  // List of errors encountered for this query
+  repeated string errors = 1;
+}

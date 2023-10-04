@@ -1,0 +1,443 @@
+/*
+ * Copyright 2023 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
+
+#include <cstdint>
+#include <string>
+#include <utility>
+
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include "absl/container/flat_hash_set.h"
+#include "absl/strings/string_view.h"
+#include "ecclesia/lib/protobuf/parse.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/testing/proto.h"
+
+namespace ecclesia {
+namespace {
+
+using ::testing::IsEmpty;
+
+class QueryValueBuilderTest : public testing::Test {
+ protected:
+  QueryValueBuilderTest() : builder_(&value_) {
+    EXPECT_EQ(value_.kind_case(), QueryValue::KindCase::KIND_NOT_SET);
+  }
+
+  QueryValue value_;
+  QueryValueBuilder builder_;
+};
+
+TEST_F(QueryValueBuilderTest, BooleanTest) {
+  builder_ = true;
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kBoolValue);
+  ASSERT_EQ(value_.bool_value(), true);
+
+  builder_ = false;
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kBoolValue);
+  ASSERT_EQ(value_.bool_value(), false);
+}
+
+TEST_F(QueryValueBuilderTest, IntegerTest) {
+  builder_ = static_cast<int64_t>(10);
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kIntValue);
+  ASSERT_EQ(value_.int_value(), 10);
+}
+
+TEST_F(QueryValueBuilderTest, DoubleTest) {
+  builder_ = static_cast<double>(3.14);
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kDoubleValue);
+  ASSERT_DOUBLE_EQ(value_.double_value(), 3.14);
+}
+
+TEST_F(QueryValueBuilderTest, TimestampTest) {
+  google::protobuf::Timestamp ts = ParseTextProtoOrDie(R"pb(
+    seconds: 10
+    nanos: 1000
+  )pb");
+  builder_ = std::move(ts);
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kTimestampValue);
+  ASSERT_THAT(value_.timestamp_value(), EqualsProto("seconds: 10 nanos: 1000"));
+}
+
+TEST_F(QueryValueBuilderTest, StringTest) {
+  builder_ = "testing";
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kStringValue);
+  ASSERT_EQ(value_.string_value(), "testing");
+}
+
+TEST_F(QueryValueBuilderTest, IdentifierTest) {
+  Identifier id = ParseTextProtoOrDie(R"pb(local_devpath: "/phys/"
+                                           machine_devpath: "/phys/PE0")pb");
+  builder_ = std::move(id);
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kIdentifier);
+  ASSERT_THAT(value_.identifier(),
+              EqualsProto(R"pb(local_devpath: "/phys/"
+                               machine_devpath: "/phys/PE0")pb"));
+}
+
+TEST_F(QueryValueBuilderTest, ListTest) {
+  builder_.append("value1");
+  builder_.append(static_cast<int64_t>(100));
+  builder_.append(3.25);
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kListValue);
+  ASSERT_THAT(value_.list_value(),
+              EqualsProto(R"pb(values { string_value: "value1" }
+                               values { int_value: 100 }
+                               values { double_value: 3.25 })pb"));
+}
+
+TEST_F(QueryValueBuilderTest, QueryResultDataTest) {
+  builder_["value"] = "value1";
+  builder_["list_value"].append(static_cast<int64_t>(100));
+  builder_["list_value"].append(3.25);
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kSubqueryValue);
+  ASSERT_THAT(value_.subquery_value(),
+              EqualsProto(R"pb(fields {
+                                 key: "list_value"
+                                 value {
+                                   list_value {
+                                     values { int_value: 100 }
+                                     values { double_value: 3.25 }
+                                   }
+                                 }
+                               }
+                               fields {
+                                 key: "value"
+                                 value { string_value: "value1" }
+                               })pb"));
+}
+
+TEST(QueryResultDataBuilder, SmokeTest) {
+  QueryResultData data;
+  QueryResultDataBuilder builder(&data);
+  builder["name"] = "dimm0";
+  builder["speed"] = static_cast<int64_t>(3200);
+  builder["metrics"]["uncorrectable"] = static_cast<int64_t>(10);
+  builder["metrics"]["correctable"] = static_cast<int64_t>(10);
+  builder["related_items"]["links"].append("link1");
+  builder["related_items"]["links"].append("link2");
+
+  Identifier id = ParseTextProtoOrDie(R"pb(local_devpath: "/phys/"
+                                           machine_devpath: "/phys/PE0")pb");
+  builder["identifier"] = std::move(id);
+  ASSERT_THAT(data,
+              EqualsProto(R"pb(fields {
+                                 key: "identifier"
+                                 value {
+                                   identifier {
+                                     local_devpath: "/phys/"
+                                     machine_devpath: "/phys/PE0"
+                                   }
+                                 }
+                               }
+                               fields {
+                                 key: "metrics"
+                                 value {
+                                   subquery_value {
+                                     fields {
+                                       key: "correctable"
+                                       value { int_value: 10 }
+                                     }
+                                     fields {
+                                       key: "uncorrectable"
+                                       value { int_value: 10 }
+                                     }
+                                   }
+                                 }
+                               }
+                               fields {
+                                 key: "name"
+                                 value { string_value: "dimm0" }
+                               }
+                               fields {
+                                 key: "related_items"
+                                 value {
+                                   subquery_value {
+                                     fields {
+                                       key: "links"
+                                       value {
+                                         list_value {
+                                           values { string_value: "link1" }
+                                           values { string_value: "link2" }
+                                         }
+                                       }
+                                     }
+                                   }
+                                 }
+                               }
+                               fields {
+                                 key: "speed"
+                                 value { int_value: 3200 }
+                               })pb"));
+}
+
+TEST(QueryValueReaderTest, BooleanTest) {
+  QueryValue data = ParseTextProtoOrDie(R"pb(bool_value: true)pb");
+  QueryValueReader reader(&data);
+  ASSERT_EQ(reader.kind(), QueryValue::KindCase::kBoolValue);
+  ASSERT_TRUE(reader.bool_value());
+
+  data = ParseTextProtoOrDie(R"pb(bool_value: false)pb");
+  ASSERT_EQ(reader.kind(), QueryValue::KindCase::kBoolValue);
+  ASSERT_FALSE(reader.bool_value());
+}
+
+TEST(QueryValueReaderTest, IntegerTest) {
+  QueryValue data = ParseTextProtoOrDie(R"pb(int_value: 10)pb");
+  QueryValueReader reader(&data);
+  ASSERT_EQ(reader.kind(), QueryValue::KindCase::kIntValue);
+  ASSERT_EQ(reader.int_value(), 10);
+}
+
+TEST(QueryValueReaderTest, DoubleTest) {
+  QueryValue data = ParseTextProtoOrDie(R"pb(double_value: 3.14)pb");
+  QueryValueReader reader(&data);
+  ASSERT_EQ(reader.kind(), QueryValue::KindCase::kDoubleValue);
+  ASSERT_DOUBLE_EQ(reader.double_value(), 3.14);
+}
+
+TEST(QueryValueReaderTest, TimestampTest) {
+  QueryValue data =
+      ParseTextProtoOrDie(R"pb(timestamp_value { seconds: 10 nanos: 1000 })pb");
+  QueryValueReader reader(&data);
+  ASSERT_EQ(reader.kind(), QueryValue::KindCase::kTimestampValue);
+  ASSERT_THAT(reader.timestamp_value(), EqualsProto("seconds: 10 nanos: 1000"));
+}
+
+TEST(QueryValueReaderTest, StringTest) {
+  QueryValue data = ParseTextProtoOrDie(R"pb(string_value: "testing")pb");
+  QueryValueReader reader(&data);
+  ASSERT_EQ(reader.kind(), QueryValue::KindCase::kStringValue);
+  ASSERT_THAT(reader.string_value(), "testing");
+}
+
+TEST(QueryValueReaderTest, IdentifierTest) {
+  QueryValue data = ParseTextProtoOrDie(R"pb(identifier {
+                                               local_devpath: "/phys/"
+                                               machine_devpath: "/phys/PE0"
+                                             })pb");
+  QueryValueReader reader(&data);
+  ASSERT_EQ(reader.kind(), QueryValue::KindCase::kIdentifier);
+  ASSERT_THAT(reader.identifier(),
+              EqualsProto(R"pb(local_devpath: "/phys/"
+                               machine_devpath: "/phys/PE0")pb"));
+}
+
+TEST(QueryValueReaderTest, ListTest) {
+  QueryValue data = ParseTextProtoOrDie(R"pb(list_value {
+                                               values { string_value: "value1" }
+                                               values { int_value: 100 }
+                                               values { double_value: 3.25 }
+                                             })pb");
+  QueryValueReader reader(&data);
+  ASSERT_EQ(reader.kind(), QueryValue::KindCase::kListValue);
+  ASSERT_EQ(reader.size(), 3);
+  ASSERT_THAT(reader[0].kind(), QueryValue::KindCase::kStringValue);
+  ASSERT_EQ(reader[0].string_value(), "value1");
+  ASSERT_THAT(reader[1].kind(), QueryValue::KindCase::kIntValue);
+  ASSERT_EQ(reader[1].int_value(), 100);
+  ASSERT_THAT(reader[2].kind(), QueryValue::KindCase::kDoubleValue);
+  ASSERT_DOUBLE_EQ(reader[2].double_value(), 3.25);
+}
+
+TEST(QueryValueReaderTest, ListRangeBasedLoopTest) {
+  QueryValue data = ParseTextProtoOrDie(R"pb(list_value {
+                                               values { string_value: "value1" }
+                                               values { string_value: "value2" }
+                                               values { string_value: "value3" }
+                                             })pb");
+  QueryValueReader reader(&data);
+
+  absl::flat_hash_set<std::string> expected_values = {"value1", "value2",
+                                                      "value3"};
+  for (const QueryValue& list_item : reader.list_values()) {
+    ASSERT_TRUE(expected_values.contains(list_item.string_value()));
+    expected_values.erase(list_item.string_value());
+  }
+  ASSERT_THAT(expected_values, IsEmpty());
+}
+
+TEST(QueryValueReaderTest, ListOutOfBoundsCheck) {
+  QueryValue data = ParseTextProtoOrDie(R"pb(list_value {
+                                               values { string_value: "value1" }
+                                               values { int_value: 100 }
+                                             })pb");
+  QueryValueReader reader(&data);
+  ASSERT_EQ(reader.kind(), QueryValue::KindCase::kListValue);
+  ASSERT_EQ(reader.size(), 2);
+  ASSERT_DEATH(reader[2], "");
+}
+
+TEST(QueryValueReaderTest, SizeOnNonListDataType) {
+  QueryValue data = ParseTextProtoOrDie(R"pb(string_value: "testing")pb");
+  QueryValueReader reader(&data);
+  ASSERT_EQ(reader.kind(), QueryValue::KindCase::kStringValue);
+  ASSERT_DEATH(reader.size(), "");
+}
+
+TEST(QueryValueReaderTest, SubqueryValueTest) {
+  QueryValue data =
+      ParseTextProtoOrDie(R"pb(subquery_value {
+                                 fields {
+                                   key: "list_value"
+                                   value {
+                                     list_value {
+                                       values { int_value: 100 }
+                                       values { double_value: 3.25 }
+                                     }
+                                   }
+                                 }
+                                 fields {
+                                   key: "value"
+                                   value { string_value: "value1" }
+                                 }
+                               })pb");
+  QueryValueReader reader(&data);
+  ASSERT_EQ(reader.kind(), QueryValue::KindCase::kSubqueryValue);
+  ASSERT_TRUE(reader.Has("list_value"));
+  ASSERT_TRUE(reader.Has("value"));
+  ASSERT_EQ(reader["value"].string_value(), "value1");
+}
+
+TEST(QueryResultDataReaderTest, SmokeTest) {
+  QueryResultData data = ParseTextProtoOrDie(
+      R"pb(fields {
+             key: "Sensors"
+             value {
+               list_value {
+                 values {
+                   subquery_value {
+                     fields {
+                       key: "Name"
+                       value { string_value: "indus_eat_temp" }
+                     }
+                     fields {
+                       key: "Reading"
+                       value { int_value: 28 }
+                     }
+                     fields {
+                       key: "ReadingType"
+                       value { string_value: "Temperature" }
+                     }
+                     fields {
+                       key: "ReadingUnits"
+                       value { string_value: "Cel" }
+                     }
+                   }
+                 }
+                 values {
+                   subquery_value {
+                     fields {
+                       key: "Name"
+                       value { string_value: "indus_latm_temp" }
+                     }
+                     fields {
+                       key: "Reading"
+                       value { int_value: 35 }
+                     }
+                     fields {
+                       key: "ReadingType"
+                       value { string_value: "Temperature" }
+                     }
+                     fields {
+                       key: "ReadingUnits"
+                       value { string_value: "Cel" }
+                     }
+                   }
+                 }
+                 values {
+                   subquery_value {
+                     fields {
+                       key: "Name"
+                       value { string_value: "CPU0" }
+                     }
+                     fields {
+                       key: "Reading"
+                       value { int_value: 60 }
+                     }
+                     fields {
+                       key: "ReadingType"
+                       value { string_value: "Temperature" }
+                     }
+                     fields {
+                       key: "ReadingUnits"
+                       value { string_value: "Cel" }
+                     }
+                   }
+                 }
+                 values {
+                   subquery_value {
+                     fields {
+                       key: "Name"
+                       value { string_value: "CPU1" }
+                     }
+                     fields {
+                       key: "Reading"
+                       value { int_value: 60 }
+                     }
+                     fields {
+                       key: "ReadingType"
+                       value { string_value: "Temperature" }
+                     }
+                     fields {
+                       key: "ReadingUnits"
+                       value { string_value: "Cel" }
+                     }
+                   }
+                 }
+               }
+             }
+           })pb");
+  QueryResultDataReader reader(&data);
+
+  static constexpr absl::string_view kSensorTag = "Sensors";
+  static constexpr absl::string_view kNameTag = "Name";
+  static constexpr absl::string_view kReadingTag = "Reading";
+
+  ASSERT_TRUE(reader.Has(kSensorTag));
+  ASSERT_EQ(reader[kSensorTag].kind(), QueryValue::KindCase::kListValue);
+  ASSERT_EQ(reader[kSensorTag].size(), 4);
+
+  for (const auto& item : reader[kSensorTag].list_values()) {
+    QueryValueReader item_reader(&item);
+    ASSERT_TRUE(item_reader.Has(kNameTag));
+    ASSERT_TRUE(item_reader.Has(kReadingTag));
+
+    ASSERT_TRUE(item_reader.Has("ReadingType"));
+    ASSERT_EQ(item_reader["ReadingType"].string_value(), "Temperature");
+
+    ASSERT_TRUE(item_reader.Has("ReadingUnits"));
+    ASSERT_EQ(item_reader["ReadingUnits"].string_value(), "Cel");
+  }
+
+  ASSERT_EQ(reader[kSensorTag][0][kNameTag].string_value(), "indus_eat_temp");
+  ASSERT_EQ(reader[kSensorTag][0][kReadingTag].int_value(), 28);
+
+  ASSERT_EQ(reader[kSensorTag][1][kNameTag].string_value(), "indus_latm_temp");
+  ASSERT_EQ(reader[kSensorTag][1][kReadingTag].int_value(), 35);
+
+  ASSERT_EQ(reader[kSensorTag][2][kNameTag].string_value(), "CPU0");
+  ASSERT_EQ(reader[kSensorTag][2][kReadingTag].int_value(), 60);
+
+  ASSERT_EQ(reader[kSensorTag][3][kNameTag].string_value(), "CPU1");
+  ASSERT_EQ(reader[kSensorTag][3][kReadingTag].int_value(), 60);
+}
+
+}  // namespace
+}  // namespace ecclesia
