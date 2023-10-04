@@ -64,6 +64,7 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/query:query_errors_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/utils:join",
         "//ecclesia/lib/redfish/dellicius/utils:path_util",
         "//ecclesia/lib/redfish/transport:transport_metrics_cc_proto",
         "//ecclesia/lib/status:macros",

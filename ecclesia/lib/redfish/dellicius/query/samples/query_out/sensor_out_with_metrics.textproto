@@ -257,6 +257,28 @@ subquery_output_by_id {
 }
 redfish_metrics {
   uri_to_metrics_map {
+    key: "/redfish/v1/Chassis"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis/chassis"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
     key: "/redfish/v1/Chassis/chassis/Sensors"
     value {
       request_type_to_metadata {

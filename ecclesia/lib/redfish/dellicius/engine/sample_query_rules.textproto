@@ -34,3 +34,16 @@ query_id_to_params_rule {
     }
   }
 }
+
+query_id_to_params_rule {
+  key: "Thermal"
+  value {
+    redpath_prefix_with_params {
+      redpath: "/Chassis"
+      expand_configuration {
+        level: 2
+        type: NO_LINKS
+      }
+    }
+  }
+}

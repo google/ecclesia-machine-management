@@ -30,18 +30,7 @@ redfish_metrics {
     }
   }
   uri_to_metrics_map {
-    key: "/redfish/v1/Chassis"
-    value {
-      request_type_to_metadata {
-        key: "GET"
-        value {
-          request_count: 1
-        }
-      }
-    }
-  }
-  uri_to_metrics_map {
-    key: "/redfish/v1/Chassis/chassis"
+    key: "/redfish/v1/Chassis?$expand=.($levels=1)"
     value {
       request_type_to_metadata {
         key: "GET"
@@ -74,29 +63,7 @@ redfish_metrics {
     }
   }
   uri_to_metrics_map {
-    key: "/redfish/v1/Systems/system/Processors"
-    value {
-      request_type_to_metadata {
-        key: "GET"
-        value {
-          request_count: 1
-        }
-      }
-    }
-  }
-  uri_to_metrics_map {
-    key: "/redfish/v1/Systems/system/Processors/0"
-    value {
-      request_type_to_metadata {
-        key: "GET"
-        value {
-          request_count: 1
-        }
-      }
-    }
-  }
-  uri_to_metrics_map {
-    key: "/redfish/v1/Systems/system/Processors/1"
+    key: "/redfish/v1/Systems/system/Processors?$expand=~($levels=1)"
     value {
       request_type_to_metadata {
         key: "GET"

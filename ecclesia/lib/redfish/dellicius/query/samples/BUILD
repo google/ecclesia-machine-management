@@ -15,6 +15,7 @@ filegroup(
         "query_in/sensor_in_template.textproto",
         "query_in/service_root_google_in.textproto",
         "query_in/service_root_in.textproto",
+        "query_in/thermal_in.textproto",
     ],
     visibility = ["//visibility:public"],
 )

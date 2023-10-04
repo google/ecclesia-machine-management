@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -63,6 +64,7 @@ using ::testing::UnorderedPointwise;
 constexpr absl::string_view kQuerySamplesLocation =
     "lib/redfish/dellicius/query/samples";
 constexpr absl::string_view kIndusMockup = "indus_hmb_shim/mockup.shar";
+constexpr absl::string_view kIndusHmbCnMockup = "indus_hmb_cn/mockup.shar";
 constexpr absl::string_view kComponentIntegrityMockupPath =
     "features/component_integrity/mockup.shar";
 constexpr absl::Time clock_time = absl::FromUnixSeconds(10);
@@ -322,7 +324,6 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
 
   bool traced_systems = false;
   bool traced_processor_collection = false;
-  bool traced_processors = false;
   for (const auto &uri_x_metric : *metrics.mutable_uri_to_metrics_map()) {
     if (uri_x_metric.first == "/redfish/v1/Systems") {
       traced_systems = true;
@@ -338,100 +339,67 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
     // see the collection getting fetched fresh each time because the freshness
     // requirement bubbles up if child redpath is in expand path of parent
     // redpath.
-    if (uri_x_metric.first == "/redfish/v1/Systems/system/Processors") {
+    if (uri_x_metric.first ==
+        "/redfish/v1/Systems/system/Processors?$expand=~($levels=1)") {
       traced_processor_collection = true;
       for (const auto &metadata :
            uri_x_metric.second.request_type_to_metadata()) {
         EXPECT_EQ(metadata.second.request_count(), 3);
       }
     }
-
-    if (uri_x_metric.first == "/redfish/v1/Systems/system/Processors/0") {
-      traced_processors = true;
-      for (const auto &metadata :
-           uri_x_metric.second.request_type_to_metadata()) {
-        EXPECT_EQ(metadata.second.request_count(), 3);
-      }
-    }
   }
   EXPECT_TRUE(traced_systems);
   EXPECT_TRUE(traced_processor_collection);
-  EXPECT_TRUE(traced_processors);
 }
 
 // Tests that when transport metrics are enabled per DelliciusQueryResult,
 // the metrics are independent of other DelliciusQueryResults.
 TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
-  std::string assembly_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation, "query_out/assembly_out.textproto"));
-
   // Create QueryEngine with transport metrics
   FakeQueryEngineEnvironment fake_engine_env(
       {.flags{.enable_devpath_extension = false,
               .enable_transport_metrics = true},
        .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
        .query_rules{kQueryRules.begin(), kQueryRules.end()}},
-      kIndusMockup, clock_time,
+      kIndusHmbCnMockup, clock_time,
       FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
   QueryEngine &query_engine = fake_engine_env.GetEngine();
   // Hold all the metrics collected from each query execution to validate later.
-  RedfishMetrics metrics_first, metrics_cached, metrics_cached_again;
+  RedfishMetrics metrics_first, metrics_cached;
   {
-    // Query assemblies
+    // On first query, thermal subsystem won't be queried explicitly since
+    // chassis level 2 expand will return thermal objects. Here we expect to see
+    // only 1 expand URI dispatched.
     std::vector<DelliciusQueryResult> response_entries =
-        query_engine.ExecuteQuery(
-            {"AssemblyCollectorWithPropertyNameNormalization"});
+        query_engine.ExecuteQuery({"Thermal"});
     ASSERT_THAT(response_entries, Not(IsEmpty()));
     metrics_first = response_entries.back().redfish_metrics();
   }
   {
-    // Query assemblies again. This time we expect QueryEngine uses cache.
+    // Query again. This time all resources upto Thermal should be served from
+    // cache. All Thermal objects will be freshly queried.
     std::vector<DelliciusQueryResult> response_entries =
-        query_engine.ExecuteQuery(
-            {"AssemblyCollectorWithPropertyNameNormalization"});
+        query_engine.ExecuteQuery({"Thermal"});
     ASSERT_THAT(response_entries, Not(IsEmpty()));
     metrics_cached = response_entries.back().redfish_metrics();
   }
-  {
-    // Query assemblies again and again we expect QueryEngine to use cache.
-    std::vector<DelliciusQueryResult> response_entries =
-        query_engine.ExecuteQuery(
-            {"AssemblyCollectorWithPropertyNameNormalization"});
-    ASSERT_THAT(response_entries, Not(IsEmpty()));
-    metrics_cached_again = response_entries.back().redfish_metrics();
-  }
 
-  bool traced_systems = false;
-  bool traced_processor_collection = false;
-  bool traced_processors = false;
-  for (const auto &uri_x_metric : metrics_first.uri_to_metrics_map()) {
-    if (uri_x_metric.first == "/redfish/v1/Systems") {
-      traced_systems = true;
-      for (const auto &metadata :
-           uri_x_metric.second.request_type_to_metadata()) {
-        EXPECT_EQ(metadata.second.request_count(), 1);
-      }
-    }
-  }
-  // Note query_rule sample_query_rules.textproto uses level 1 expand at
-  // Processors collection. But the query has freshness = true for the
-  // members in processor collection and not the collection resource. Yet we
-  // see the collection getting fetched fresh each time because the freshness
-  // requirement bubbles up if child redpath is in expand path of parent
-  // redpath. Hence, we expect to see the query to the processors uris in
-  // all 3 of the metrics collected.
-  for (const RedfishMetrics &metrics :
-       {metrics_first, metrics_cached, metrics_cached_again}) {
+  size_t traced_chassis_expand = 0;
+  size_t traced_thermal = 0;
+
+  for (const RedfishMetrics &metrics : {metrics_first, metrics_cached}) {
     for (const auto &uri_x_metric : metrics.uri_to_metrics_map()) {
-      if (uri_x_metric.first == "/redfish/v1/Systems/system/Processors") {
-        traced_processor_collection = true;
+      if (uri_x_metric.first == "/redfish/v1/Chassis?$expand=.($levels=2)") {
+        ++traced_chassis_expand;
         for (const auto &metadata :
              uri_x_metric.second.request_type_to_metadata()) {
           EXPECT_EQ(metadata.second.request_count(), 1);
         }
       }
-      if (uri_x_metric.first == "/redfish/v1/Systems/system/Processors/0") {
-        traced_processors = true;
+
+      if (uri_x_metric.first ==
+          "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/0") {
+        ++traced_thermal;
         for (const auto &metadata :
              uri_x_metric.second.request_type_to_metadata()) {
           EXPECT_EQ(metadata.second.request_count(), 1);
@@ -439,9 +407,8 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
       }
     }
   }
-  EXPECT_TRUE(traced_systems);
-  EXPECT_TRUE(traced_processor_collection);
-  EXPECT_TRUE(traced_processors);
+  EXPECT_EQ(traced_chassis_expand, 1);
+  EXPECT_EQ(traced_thermal, 1);
 }
 
 TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
@@ -566,15 +533,15 @@ TEST(QueryEngineTest, QueryEngineAggregatedTransportMetrics) {
       query_engine.ExecuteQueryWithAggregatedMetrics(
           {"AssemblyCollectorWithPropertyNameNormalization"},
           &transport_metrics);
-  EXPECT_EQ(transport_metrics.uri_to_metrics_map().size(), 8);
+  EXPECT_EQ(transport_metrics.uri_to_metrics_map().size(), 5);
   RedfishMetrics transport_metrics_2;
   std::vector<DelliciusQueryResult> response_entries_2 =
       query_engine.ExecuteQueryWithAggregatedMetrics({"SensorCollector"},
                                                      &transport_metrics_2);
   // Run another query to make sure the metrics are cleared per query
-  EXPECT_EQ(transport_metrics_2.uri_to_metrics_map().size(), 15);
+  EXPECT_EQ(transport_metrics_2.uri_to_metrics_map().size(), 17);
   // Double checking first metric set to make sure it was not overwritten.
-  EXPECT_EQ(transport_metrics.uri_to_metrics_map().size(), 8);
+  EXPECT_EQ(transport_metrics.uri_to_metrics_map().size(), 5);
 }
 
 TEST(QueryEngineTest, QueryEngineTransportMetricsInResult) {

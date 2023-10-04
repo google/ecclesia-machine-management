@@ -66,6 +66,7 @@ class FakeQueryEngineEnvironment {
       const std::variant<CachingMode, RedfishTransportCacheFactory>&
           caching_mode = CachingMode::kDisableCaching)
       : config_(config), server_(mockup_name), clock_(clock_time) {
+    server_.EnableExpandGetHandler();
     CHECK_OK(
         InitializeQueryEngine(server_.RedfishClientTransport(), caching_mode));
   }

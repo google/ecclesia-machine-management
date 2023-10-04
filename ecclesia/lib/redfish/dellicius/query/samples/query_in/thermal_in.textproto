@@ -1,0 +1,16 @@
+# proto-file: ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: ecclesia.DelliciusQuery
+
+query_id: "Thermal"
+subquery {
+  subquery_id: "Chassis"
+  redpath: "/Chassis[*]"
+  properties: { name: "Uri" property: "@odata\\.id" type: STRING }
+}
+subquery {
+  subquery_id: "Temperatures"
+  root_subquery_ids: "Chassis"
+  redpath: "/Thermal/Temperatures[*]"
+  freshness: REQUIRED
+  properties { name: "Uri" property: "@odata\\.id" type: STRING }
+}
