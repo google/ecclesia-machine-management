@@ -18,9 +18,11 @@
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_NORMALIZER_H_
 
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/match.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -64,9 +66,8 @@ template <typename LocalIdMapT>
 class NormalizerImplAddMachineBarepath final
     : public Normalizer::ImplInterface {
  public:
-  NormalizerImplAddMachineBarepath(
-      std::unique_ptr<LocalIdMapT> local_id_map,
-      std::unique_ptr<IdAssigner<std::string>> id_assigner)
+  NormalizerImplAddMachineBarepath(std::unique_ptr<LocalIdMapT> local_id_map,
+                                   std::unique_ptr<IdAssigner> id_assigner)
       : local_id_map_(std::move(local_id_map)),
         id_assigner_(std::move(id_assigner)) {}
 
@@ -108,7 +109,7 @@ class NormalizerImplAddMachineBarepath final
   }
 
  private:
-  std::unique_ptr<IdAssigner<std::string>> id_assigner_;
+  std::unique_ptr<IdAssigner> id_assigner_;
   std::unique_ptr<LocalIdMapT> local_id_map_;
 };
 

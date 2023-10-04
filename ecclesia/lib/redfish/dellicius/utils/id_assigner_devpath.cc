@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
@@ -28,7 +29,7 @@
 namespace ecclesia {
 namespace {
 
-class MapBasedDevpathAssigner : public IdAssigner<std::string> {
+class MapBasedDevpathAssigner : public IdAssigner {
  public:
   MapBasedDevpathAssigner(absl::flat_hash_map<std::string, std::string> map)
       : map_(std::move(map)) {}
@@ -56,7 +57,7 @@ class MapBasedDevpathAssigner : public IdAssigner<std::string> {
 
 }  // namespace
 
-std::unique_ptr<IdAssigner<std::string>> NewMapBasedDevpathAssigner(
+std::unique_ptr<IdAssigner> NewMapBasedDevpathAssigner(
     absl::flat_hash_map<std::string, std::string> map) {
   return std::make_unique<MapBasedDevpathAssigner>(std::move(map));
 }

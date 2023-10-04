@@ -22,12 +22,13 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
+
 namespace ecclesia {
 
 // Creates an implementation of the IdAssigner which provides an
 // identifier based on a provided static map using the |devpath| property in the
 // SubqueryDataSet as the mapping input.
-std::unique_ptr<IdAssigner<std::string>> NewMapBasedDevpathAssigner(
+std::unique_ptr<IdAssigner> NewMapBasedDevpathAssigner(
     absl::flat_hash_map<std::string, std::string> map);
 
 }  // namespace ecclesia
