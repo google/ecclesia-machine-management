@@ -47,6 +47,8 @@
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_errors.pb.h"
@@ -55,11 +57,11 @@
 #include "ecclesia/lib/redfish/dellicius/utils/join.h"
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/proto.h"
 #include "re2/re2.h"
+#include "absl/strings/escaping.h"
 
 namespace ecclesia {
 
@@ -648,14 +650,20 @@ class SubqueryHandle final {
     return "";
   }
 
+  bool HasFetchRawData() const { return subquery_.has_fetch_raw_data(); }
+  const DelliciusQuery::Subquery::RawData & GetFetchRawData() const {
+    return subquery_.fetch_raw_data();
+  }
+
   bool HasUri() const { return subquery_.has_uri(); }
   std::string UriToString() const {
-    if (HasUri()) {
-      return subquery_.uri();
-    }
+    if (HasUri()) { return subquery_.uri(); }
     return "";
   }
-  absl::string_view GetUri() const { return subquery_.uri(); }
+  absl::string_view GetUri() const {
+    if (HasUri()) { return subquery_.uri(); }
+    return "";
+  }
 
   bool HasUriReferenceRedpath() const {
     return subquery_.has_uri_reference_redpath();
@@ -841,7 +849,6 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
   for (const auto &redpath_ctx : redpath_ctx_multiple) {
     const auto &subquery_handle = redpath_ctx.subquery_handle;
     if (subquery_handle->IsSubqueryTerminated()) {
-      LOG(WARNING) << "Subquery already terminated, skipping.";
       continue;
     }
 
@@ -1007,6 +1014,49 @@ void PopulateSubqueryErrorStatus(
   }
 }
 
+void PopulateRawData(std::optional<RedfishTransport::bytes> raw_data,
+                    const std::vector<RedPathContext> &redpath_ctx_multiple,
+                    DelliciusQueryResult &result) {
+  if (!raw_data.has_value()) return;
+  for (const auto &redpath_ctx : redpath_ctx_multiple) {
+    const auto &subquery_handle = redpath_ctx.subquery_handle;
+    if (subquery_handle->IsSubqueryTerminated() ||
+        !subquery_handle->HasFetchRawData()) {
+      continue;
+    }
+
+    // Insert raw data in the parent Subquery dataset if provided.
+    // Otherwise, add the raw data to the query result.
+    const auto subquery_id = subquery_handle->GetSubqueryId();
+    SubqueryOutput *subquery_output = nullptr;
+    if (!redpath_ctx.root_redpath_dataset) {
+      subquery_output =
+        &(*result.mutable_subquery_output_by_id())[subquery_id];
+    } else {
+      subquery_output =
+          &(*redpath_ctx.root_redpath_dataset->
+            mutable_child_subquery_output_by_id())[subquery_id];
+    }
+
+    SubqueryDataSet::RawData raw_data_out;
+    const auto &fetch_raw_data = subquery_handle->GetFetchRawData();
+    std::string raw_str(raw_data.value().begin(), raw_data.value().end());
+    if (fetch_raw_data.type() == DelliciusQuery::Subquery::RawData::BYTES) {
+      raw_data_out.set_bytes_value(raw_str);
+    } else if (fetch_raw_data.type() ==
+               DelliciusQuery::Subquery::RawData::STRING) {
+      // Encode bytes to a printable format.
+      std::string base64_str = absl::Base64Escape(raw_str);
+      raw_data_out.set_string_value(base64_str);
+    }
+
+    auto *dataset = subquery_output->mutable_data_sets()->Add();
+    if (dataset != nullptr) {
+      *dataset->mutable_raw_data() = std::move(raw_data_out);
+    }
+  }
+}
+
 // Returns true if any RedPathContexts have a UriReferenceRedpath.
 bool HasUriReferenceRedpath(
     const std::vector<RedPathContext> &redpath_ctx_multiple) {
@@ -1061,7 +1111,9 @@ void ExecuteRedPathStepFromEachSubquery(
   // above and apply predicate expressions from each RedPath to filter the
   // nodes that produces next set of context nodes.
   for (auto &[node_name, redpath_ctx_multiple] :
-       node_name_to_redpath_contexts) {
+           node_name_to_redpath_contexts) {
+    if (redpath_ctx_multiple.empty()) continue;
+
     // redpath expression handling begins
     std::string redpath_to_execute =
         absl::StrCat(context_node.last_executed_redpath, "/", node_name);
@@ -1116,7 +1168,14 @@ void ExecuteRedPathStepFromEachSubquery(
       std::unique_ptr<RedfishObject> node_as_object =
           GetRedfishObjectWithFreshness(node_set_as_variant,
                                         get_params_for_redpath);
-      if (!node_as_object) continue;
+      if (!node_as_object) {
+        // Return raw data if client asked for it.
+        std::optional<RedfishTransport::bytes> node_as_raw =
+          node_set_as_variant.AsRaw();
+        PopulateRawData(node_as_raw, redpath_ctx_no_predicate, result);
+        continue;
+      }
+
       std::vector<RedPathContext> redpath_ctx_filtered =
           PopulateResultOrContinueQuery(*node_as_object,
                                         redpath_ctx_no_predicate, result);

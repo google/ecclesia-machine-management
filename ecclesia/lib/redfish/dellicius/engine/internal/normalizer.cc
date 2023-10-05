@@ -63,6 +63,7 @@ const google::protobuf::FieldDescriptor *GetFieldDescriptor(
   return field;
 }
 
+
 // Adds Redfish property to subquery based on field options in given subquery.
 // Returns name of the property added to the subquery.
 std::string UpdateSubqueryFromFieldOptions(
@@ -105,7 +106,6 @@ absl::Status NormalizerImplDefault::Normalize(
   for (const auto &property_requirement : subquery_local.properties()) {
     SubqueryDataSet::Property property_out;
     absl::string_view property_name = property_requirement.property();
-
     // A property requirement can specify nested nodes like
     // 'Thresholds.UpperCritical.Reading' or a simple property like 'Name'.
     // We will split the property name to ensure we process all node names in
@@ -196,6 +196,7 @@ absl::Status NormalizerImplDefault::Normalize(
     }
     *data_set_local.add_properties() = std::move(property_out);
   }
+
   return absl::OkStatus();
 }
 
