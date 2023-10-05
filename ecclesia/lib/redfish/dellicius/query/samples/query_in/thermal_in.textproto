@@ -4,7 +4,7 @@
 query_id: "Thermal"
 subquery {
   subquery_id: "Chassis"
-  redpath: "/Chassis[*]"
+  redpath: "/Chassis[Id=chassis]"
   properties: { name: "Uri" property: "@odata\\.id" type: STRING }
 }
 subquery {

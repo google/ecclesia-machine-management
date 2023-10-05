@@ -240,7 +240,13 @@ RedPathRedfishQueryParams CombineQueryParams(
         LOG(ERROR) << "Subquery not found for id: " << subquery_id;
         return {};
       }
-      absl::string_view redpath_str = iter->second.redpath();
+      std::string redpath_str = iter->second.redpath();
+
+      // Convert all predicates in RedPath to [*].
+      // This is done because engine fetches all members in a collection before
+      // applying a predicate expression to filter, which internally is [*]
+      // operation.
+      RE2::GlobalReplace(&redpath_str, "\\[(.*?)\\]", "[*]");
       if (!absl::StartsWith(redpath_str, "/")) {
         absl::StrAppend(&redpath_prefix, "/", redpath_str);
       } else {
