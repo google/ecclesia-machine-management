@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -35,11 +36,17 @@ namespace ecclesia {
 
 // Populates the Subquery output using property requirements in the subquery.
 class NormalizerImplDefault final : public Normalizer::ImplInterface {
+ public:
+  NormalizerImplDefault();
+
  protected:
   // with fallback to default CSDL bundle.
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
                          SubqueryDataSet &data_set) const;
+
+ private:
+  std::vector<DelliciusQuery::Subquery::RedfishProperty> additional_properties_;
 };
 
 // Adds devpath to subquery output.

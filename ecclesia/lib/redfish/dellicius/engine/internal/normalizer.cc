@@ -29,7 +29,6 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_replace.h"
-#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -37,166 +36,155 @@
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/proto.h"
-#include "google/protobuf/descriptor.h"
-#include "google/protobuf/message.h"
 
 namespace ecclesia {
 
 namespace {
 
-constexpr absl::string_view kInternalPropertyPrefix = "__";
+constexpr absl::string_view kServiceLabel = "__ServiceLabel__";
+constexpr absl::string_view kPartLocationContext = "__PartLocationContext__";
+constexpr absl::string_view kLocalDevpath = "__LocalDevpath__";
 
-const google::protobuf::FieldDescriptor *GetFieldDescriptor(
-    const google::protobuf::Message &message, absl::string_view field_name) {
-  std::vector<absl::string_view> field_path =
-      absl::StrSplit(field_name, '.', absl::SkipEmpty());
-  const google::protobuf::Descriptor *descriptor = message.GetDescriptor();
-  const google::protobuf::FieldDescriptor *field = nullptr;
-  for (const auto &sub_field : field_path) {
-    field = descriptor->FindFieldByName(std::string(sub_field));
-    if (field == nullptr) {
-      continue;
+std::vector<DelliciusQuery::Subquery::RedfishProperty>
+GetAdditionalProperties() {
+  std::vector<DelliciusQuery::Subquery::RedfishProperty> result;
+  auto add_property = [&](absl::string_view name,
+                          std::vector<std::string> properties) {
+    for (std::string &property : properties) {
+      DelliciusQuery::Subquery::RedfishProperty new_prop;
+      new_prop.set_name(std::string(name));
+      new_prop.set_property(std::move(property));
+      new_prop.set_type(DelliciusQuery::Subquery::RedfishProperty::STRING);
+      result.push_back(std::move(new_prop));
     }
-    descriptor = field->message_type();
-  }
-  return field;
+  };
+
+  add_property(kServiceLabel, {"Location.PartLocation.ServiceLabel",
+                               "PhysicalLocation.PartLocation.ServiceLabel"});
+  add_property(kPartLocationContext, {"Location.PartLocationContext",
+                                      "PhysicalLocation.PartLocationContext"});
+  add_property(kLocalDevpath, {"Location.Oem.Google.Devpath",
+                               "PhysicalLocation.Oem.Google.Devpath"});
+
+  return result;
 }
 
+absl::StatusOr<SubqueryDataSet::Property> GetPropertyFromRedfishObject(
+    const RedfishObject &redfish_object,
+    const DelliciusQuery::Subquery::RedfishProperty &property) {
+  // A property requirement can specify nested nodes like
+  // 'Thresholds.UpperCritical.Reading' or a simple property like 'Name'.
+  // We will split the property name to ensure we process all node names in
+  // the property expression.
+  ECCLESIA_ASSIGN_OR_RETURN(
+      nlohmann::json json_obj,
+      ResolveNodeNameToJsonObj(redfish_object, property.property()));
 
-// Adds Redfish property to subquery based on field options in given subquery.
-// Returns name of the property added to the subquery.
-std::string UpdateSubqueryFromFieldOptions(
-    absl::string_view field_name, const SubqueryDataSet &data_set_local,
-    DelliciusQuery::Subquery &subquery_local) {
-  const google::protobuf::FieldDescriptor *field_descriptor =
-      GetFieldDescriptor(data_set_local, field_name);
-  const auto &properties =
-      field_descriptor->options().GetExtension(query_options).properties();
-  std::string property_label =
-      field_descriptor->options().GetExtension(query_options).label();
-  for (const auto &property : properties) {
-    DelliciusQuery::Subquery::RedfishProperty property_requirement;
-    property_requirement.set_property(property);
-    property_requirement.set_name(property_label);
-    property_requirement.set_type(
-        DelliciusQuery::Subquery::RedfishProperty::STRING);
-    subquery_local.mutable_properties()->Add(std::move(property_requirement));
+  using RedfishProperty = DelliciusQuery::Subquery::RedfishProperty;
+
+  SubqueryDataSet::Property property_out;
+  switch (property.type()) {
+    case RedfishProperty::STRING: {
+      if (json_obj.is_string()) {
+        property_out.set_string_value(json_obj.get<std::string>());
+      }
+      break;
+    }
+    case RedfishProperty::BOOLEAN: {
+      if (json_obj.is_boolean()) {
+        property_out.set_boolean_value(json_obj.get<bool>());
+      }
+      break;
+    }
+    case RedfishProperty::DOUBLE: {
+      if (json_obj.is_number()) {
+        property_out.set_double_value(json_obj.get<double>());
+      }
+      break;
+    }
+    case RedfishProperty::INT64: {
+      if (json_obj.is_number()) {
+        property_out.set_int64_value(json_obj.get<int64_t>());
+      }
+      break;
+    }
+    case RedfishProperty::DATE_TIME_OFFSET: {
+      absl::Time timevalue;
+      if (!json_obj.is_string()) {
+        break;
+      }
+      if (absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", json_obj.get<std::string>(),
+                          &timevalue, nullptr)) {
+        absl::StatusOr<google::protobuf::Timestamp> timestamp =
+            AbslTimeToProtoTime(timevalue);
+        if (timestamp.ok()) {
+          *property_out.mutable_timestamp_value() = std::move(*timestamp);
+        }
+      }
+      break;
+    }
+    default: {
+      break;
+    }
   }
-  return property_label;
+  if (!property_out.value_case()) {
+    return absl::InvalidArgumentError("Invalid property type");
+  }
+  return property_out;
 }
 
 }  // namespace
+
+NormalizerImplDefault::NormalizerImplDefault()
+    : additional_properties_(GetAdditionalProperties()) {}
 
 absl::Status NormalizerImplDefault::Normalize(
     const RedfishObject &redfish_object,
     const DelliciusQuery::Subquery &subquery,
     SubqueryDataSet &data_set_local) const {
-  // Before mapping observed RedfishProperties to queried properties, we update
-  // the property requirement in subquery to add additional properties to
-  // populate stable id based on Redfish Location.
-  DelliciusQuery::Subquery subquery_local = subquery;
-  std::string service_label = UpdateSubqueryFromFieldOptions(
-      "redfish_location.service_label", data_set_local, subquery_local);
-  std::string part_location_context = UpdateSubqueryFromFieldOptions(
-      "redfish_location.part_location_context", data_set_local, subquery_local);
-  std::string oem_location =
-      UpdateSubqueryFromFieldOptions("devpath", data_set_local, subquery_local);
-
-  for (const auto &property_requirement : subquery_local.properties()) {
-    SubqueryDataSet::Property property_out;
-    absl::string_view property_name = property_requirement.property();
-    // A property requirement can specify nested nodes like
-    // 'Thresholds.UpperCritical.Reading' or a simple property like 'Name'.
-    // We will split the property name to ensure we process all node names in
-    // the property expression.
-    absl::StatusOr<nlohmann::json> json_obj =
-        ResolveNodeNameToJsonObj(redfish_object, property_name);
-    if (!json_obj.ok()) {
-      // It is not an error if normalizer fails to normalize a property if
-      // required property is not part of Resource attributes.
+  for (const DelliciusQuery::Subquery::RedfishProperty &property :
+       subquery.properties()) {
+    auto property_out = GetPropertyFromRedfishObject(redfish_object, property);
+    // It is not an error if normalizer fails to normalize a property if
+    // required property is not part of Resource attributes.
+    if (!property_out.ok()) {
       continue;
     }
-
-    using RedfishProperty = DelliciusQuery::Subquery::RedfishProperty;
-    switch (property_requirement.type()) {
-      case RedfishProperty::STRING: {
-        if (json_obj->is_string()) {
-          property_out.set_string_value(json_obj->get<std::string>());
-        }
-        break;
-      }
-      case RedfishProperty::BOOLEAN: {
-        if (json_obj->is_boolean()) {
-          property_out.set_boolean_value(json_obj->get<bool>());
-        }
-        break;
-      }
-      case RedfishProperty::DOUBLE: {
-        if (json_obj->is_number()) {
-          property_out.set_double_value(json_obj->get<double>());
-        }
-        break;
-      }
-      case RedfishProperty::INT64: {
-        if (json_obj->is_number()) {
-          property_out.set_int64_value(json_obj->get<int64_t>());
-        }
-        break;
-      }
-      case RedfishProperty::DATE_TIME_OFFSET: {
-        absl::Time timevalue;
-        if (!json_obj->is_string()) {
-          break;
-        }
-        if (absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", json_obj->get<std::string>(),
-                            &timevalue, nullptr)) {
-          absl::StatusOr<google::protobuf::Timestamp> timestamp =
-              AbslTimeToProtoTime(timevalue);
-          if (timestamp.ok()) {
-            *property_out.mutable_timestamp_value() = std::move(*timestamp);
-          }
-        }
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    if (!property_out.value_case()) {
-      continue;
-    }
-
-    // Populate RedfishLocation field in SubqueryDataSet.
-    if (property_requirement.type() == RedfishProperty::STRING &&
-        property_requirement.has_name() &&
-        absl::StartsWith(property_requirement.name(),
-                         kInternalPropertyPrefix)) {
-      absl::string_view name = property_requirement.name();
-      if (name == service_label) {
-        *data_set_local.mutable_redfish_location()->mutable_service_label() =
-            property_out.string_value();
-      } else if (name == part_location_context) {
-        *data_set_local.mutable_redfish_location()
-             ->mutable_part_location_context() = property_out.string_value();
-      } else if (name == oem_location) {
-        data_set_local.set_devpath(property_out.string_value());
-      }
-      continue;
-    }
-
     // By default, name of the queried property is set as name if the client
     // application does not provide a name to map the parsed property to.
-    if (property_requirement.has_name()) {
-      property_out.set_name(property_requirement.name());
+    if (property.has_name()) {
+      property_out->set_name(property.name());
     } else {
-      std::string prop_name = property_requirement.property();
+      std::string prop_name = property.property();
       absl::StrReplaceAll({{"\\.", "."}}, &prop_name);
-      property_out.set_name(prop_name);
+      property_out->set_name(std::move(prop_name));
     }
-    *data_set_local.add_properties() = std::move(property_out);
+    *data_set_local.add_properties() = std::move(*property_out);
   }
 
+  // We add additional properties to populate stable id based on Redfish
+  // Location.
+  for (const DelliciusQuery::Subquery::RedfishProperty &property :
+       additional_properties_) {
+    auto property_out = GetPropertyFromRedfishObject(redfish_object, property);
+    if (!property_out.ok()) {
+      continue;
+    }
+    absl::string_view name = property.name();
+    if (name == kServiceLabel) {
+      *data_set_local.mutable_redfish_location()->mutable_service_label() =
+          std::move(*property_out->mutable_string_value());
+    } else if (name == kPartLocationContext) {
+      *data_set_local.mutable_redfish_location()
+           ->mutable_part_location_context() =
+          std::move(*property_out->mutable_string_value());
+    } else if (name == kLocalDevpath) {
+      *data_set_local.mutable_devpath() =
+          std::move(*property_out->mutable_string_value());
+    }
+  }
   return absl::OkStatus();
 }
 
