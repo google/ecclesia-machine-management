@@ -327,6 +327,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
 
 // Creates query engine for machine devpath DecoratorExtensions.
 template <typename LocalIdMapT>
+ABSL_DEPRECATED("Create QueryEngine by passing the IdAssigner object instead.")
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
     std::unique_ptr<LocalIdMapT> local_id_map,
@@ -357,6 +358,11 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
   return CreateQueryEngine(query_context, std::move(redfish_interface),
                            std::move(normalizer), metrical_transport_ptr);
 }
+
+// Creates query engine for machine devpath decorator extensions.
+absl::StatusOr<QueryEngine> CreateQueryEngine(
+    const QueryContext &query_context, QueryEngineParams engine_params,
+    std::unique_ptr<IdAssigner> id_assigner);
 
 }  // namespace ecclesia
 

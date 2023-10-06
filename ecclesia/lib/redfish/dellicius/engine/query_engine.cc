@@ -44,6 +44,7 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_errors.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
@@ -60,6 +61,19 @@
 namespace ecclesia {
 
 namespace {
+
+std::unique_ptr<Normalizer> GetMachineDevpathNormalizer(
+    QueryEngineParams::RedfishStableIdType stable_id_type,
+    std::unique_ptr<IdAssigner> id_assigner,
+    RedfishInterface *redfish_interface) {
+  switch (stable_id_type) {
+    case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
+      return BuildNormalizerWithMachineDevpath(std::move(id_assigner));
+    case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
+      return BuildNormalizerWithMachineDevpath(
+          std::move(id_assigner), CreateTopologyFromRedfish(redfish_interface));
+  }
+}
 
 // RAII style wrapper to timestamp query.
 class QueryTimestamp {
@@ -490,6 +504,36 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
       BuildLocalDevpathNormalizer(configuration.stable_id_type,
                                   redfish_interface_ptr),
       metrical_transport_ptr);
+}
+
+absl::StatusOr<QueryEngine> CreateQueryEngine(
+    const QueryContext &query_context, QueryEngineParams engine_params,
+    std::unique_ptr<IdAssigner> id_assigner) {
+  std::unique_ptr<RedfishInterface> redfish_interface;
+  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
+  if (engine_params.feature_flags.enable_redfish_metrics) {
+    std::unique_ptr<MetricalRedfishTransport> metrical_transport =
+        std::make_unique<MetricalRedfishTransport>(
+            std::move(engine_params.transport), ecclesia::Clock::RealClock(),
+            nullptr);
+    metrical_transport_ptr = metrical_transport.get();
+    redfish_interface = NewHttpInterface(std::move(metrical_transport),
+                                         std::move(engine_params.cache_factory),
+                                         RedfishInterface::kTrusted);
+  } else {
+    redfish_interface = NewHttpInterface(std::move(engine_params.transport),
+                                         std::move(engine_params.cache_factory),
+                                         RedfishInterface::kTrusted);
+  }
+
+  if (redfish_interface == nullptr)
+    return absl::InternalError("Can't create redfish interface");
+  std::unique_ptr<Normalizer> normalizer = GetMachineDevpathNormalizer(
+      engine_params.stable_id_type, std::move(id_assigner),
+      redfish_interface.get());
+
+  return CreateQueryEngine(query_context, std::move(redfish_interface),
+                           std::move(normalizer), metrical_transport_ptr);
 }
 
 }  // namespace ecclesia

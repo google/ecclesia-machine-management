@@ -25,6 +25,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
@@ -44,7 +45,10 @@
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine_fake.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner_devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -148,6 +152,28 @@ absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
 
   QueryContext query_context{.query_files = query_files, .clock = clock};
   return CreateQueryEngine(query_context, {.transport = std::move(transport)});
+}
+
+absl::StatusOr<QueryEngine> GetQueryEngineWithIdAssigner(
+    FakeRedfishServer &server, std::unique_ptr<IdAssigner> id_assigner,
+    absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
+    const Clock *clock = Clock::RealClock()) {
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
+
+  QueryContext query_context{.query_files = query_files, .clock = clock};
+  return CreateQueryEngine(
+      query_context,
+      {.transport = std::move(transport),
+       .stable_id_type =
+           QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived},
+      std::move(id_assigner));
 }
 
 TEST(QueryEngineTest, QueryEngineDevpathConfiguration) {
@@ -609,6 +635,27 @@ TEST(QueryEngineTest, QueryEngineWithDefaultNormalizer) {
               kQuerySamplesLocation, "query_out/sensor_out.textproto")));
   std::vector<DelliciusQueryResult> response_entries =
       query_engine->ExecuteQuery({"SensorCollector"});
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_output_sensor)});
+}
+
+TEST(QueryEngineTest, QueryEngineWithIdAssigner) {
+  FakeRedfishServer server(kIndusMockup);
+  FakeClock clock{clock_time};
+
+  absl::flat_hash_map<std::string, std::string> devpath_map = {};
+  auto id_assigner = NewMapBasedDevpathAssigner(devpath_map);
+
+  absl::StatusOr<QueryEngine> query_engine = GetQueryEngineWithIdAssigner(
+      server, std::move(id_assigner), kDelliciusQueries, &clock);
+  EXPECT_TRUE(query_engine.ok());
+
+  QueryResult intent_output_sensor = ParseTextFileAsProtoOrDie<QueryResult>(
+      GetTestDataDependencyPath(JoinFilePaths(
+          kQuerySamplesLocation,
+          "query_out/devpath_assembly_out_translated.textproto")));
+  std::vector<QueryResult> response_entries = query_engine->ExecuteRedpathQuery(
+      {"AssemblyCollectorWithPropertyNameNormalization"});
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_output_sensor)});
 }

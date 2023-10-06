@@ -18,6 +18,7 @@
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_FACTORY_H_
 
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "absl/memory/memory.h"
@@ -62,6 +63,19 @@ std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
   return normalizer;
 }
 
+// Extends default normalizer to populate machine devpaths using Redfish stable
+// identifier.
+inline std::unique_ptr<Normalizer> BuildNormalizerWithMachineDevpath(
+    std::unique_ptr<IdAssigner> id_assigner) {
+  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+  // Templatized based on int since the map is not being used and will be a part
+  // of the id assigner.
+  normalizer->AddNormalizer(
+      absl::make_unique<NormalizerImplAddMachineBarepath<int>>(
+          nullptr, std::move(id_assigner)));
+  return normalizer;
+}
+
 // Returns a decorated query engine normalizer that has the following
 // normalizers stacked from lower to higher layers of abstraction:
 // default, local devpath, machine devpath.
@@ -82,6 +96,20 @@ std::unique_ptr<Normalizer> BuildDefaultNormalizerWithMachineDevpath(
       absl::make_unique<NormalizerImplAddMachineBarepath<LocalIdMapT>>(
           std::move(local_id_map),
           id_assigner_factory(*local_id_map_ptr, server_tag)));
+  return normalizer;
+}
+
+// Extends default normalizer to populate machine devpaths using Redfish stable
+// identifier.
+inline std::unique_ptr<Normalizer> BuildNormalizerWithMachineDevpath(
+    std::unique_ptr<IdAssigner> id_assigner, NodeTopology node_topology) {
+  std::unique_ptr<Normalizer> normalizer =
+      BuildDefaultNormalizerWithLocalDevpath(std::move(node_topology));
+  // Templatized based on int since the map is not being used and will be a part
+  // of the id assigner.
+  normalizer->AddNormalizer(
+      absl::make_unique<NormalizerImplAddMachineBarepath<int>>(
+          nullptr, std::move(id_assigner)));
   return normalizer;
 }
 
