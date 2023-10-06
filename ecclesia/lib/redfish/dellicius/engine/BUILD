@@ -30,6 +30,8 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
         "//ecclesia/lib/redfish/dellicius/utils:parsers",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:converter",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
         "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
         "//ecclesia/lib/redfish/transport:interface",

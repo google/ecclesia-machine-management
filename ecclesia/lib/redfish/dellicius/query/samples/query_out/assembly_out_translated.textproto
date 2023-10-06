@@ -1,0 +1,37 @@
+# proto-file: ecclesia/lib/redfish/redpath/definitions/query_result/query_result.proto
+# proto-message: ecclesia.QueryResult
+
+query_id: "AssemblyCollectorWithPropertyNameNormalization"
+stats {
+  start_time {
+    seconds: 10
+  }
+  end_time {
+    seconds: 10
+  }
+}
+data {
+  fields {
+    key: "Chassis"
+    value {
+      list_value {
+        values {
+          subquery_value {
+            fields {
+              key: "part_number"
+              value {
+                string_value: "1043652-02"
+              }
+            }
+            fields {
+              key: "serial_number"
+              value {
+                string_value: "MBBQTW194106556"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

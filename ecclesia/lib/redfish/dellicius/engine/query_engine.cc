@@ -16,6 +16,8 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 
+#include <algorithm>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <utility>
@@ -45,6 +47,7 @@
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
 #include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -254,6 +257,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
                                             query_arguments, tracker);
   }
 
+  // Main method for ExecuteQuery with callback with entry point into the
+  // QueryPlanner.
   void ExecuteQuery(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
@@ -285,6 +290,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     }
   }
 
+  // ExecuteQuery Methods involving calling user supplied callback when
+  // the SubqueryOutput is too large.
   void ExecuteQuery(QueryEngine::ServiceRootType service_root_uri,
                     absl::Span<const absl::string_view> query_ids,
                     const QueryVariableSet &query_arguments,
@@ -304,6 +311,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
                  &tracker);
   }
 
+  // ExecuteQuery methods returning results to user.
   std::vector<DelliciusQueryResult> ExecuteQuery(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
@@ -318,6 +326,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     return ExecuteQuery(service_root_uri, query_ids, query_arguments, &tracker);
   }
 
+  // Deprecated API that writes metrics to user supplied RedfishMetrics object.
   std::vector<DelliciusQueryResult> ExecuteQueryWithAggregatedMetrics(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
@@ -329,6 +338,37 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     }
     return ExecuteQueryForAggregatedMetrics(service_root_uri, query_ids,
                                             query_arguments, nullptr);
+  }
+
+  // Translates vector of  DelliciusQueryResult to new QueryResult format.
+  static std::vector<QueryResult> TranslateLegacyResults(
+      const std::vector<DelliciusQueryResult> &legacy_results) {
+    std::vector<QueryResult> translated_results;
+    std::transform(legacy_results.begin(), legacy_results.end(),
+                   std::back_inserter(translated_results),
+                   [](const DelliciusQueryResult &result) {
+                     return ToQueryResult(result);
+                   });
+    return translated_results;
+  }
+
+  // Executes Redpath query and returns results in updated QueryResult format.
+  std::vector<QueryResult> ExecuteRedpathQuery(
+      QueryEngine::ServiceRootType service_root_uri,
+      absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments = {}) override {
+    return TranslateLegacyResults(
+        ExecuteQuery(service_root_uri, query_ids, query_arguments));
+  }
+
+  // Executes Redpath query and returns results in updated QueryResult format,
+  // with a tracker.
+  std::vector<QueryResult> ExecuteRedpathQuery(
+      QueryEngine::ServiceRootType service_root_uri,
+      absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments, QueryTracker &tracker) override {
+    return TranslateLegacyResults(
+        ExecuteQuery(service_root_uri, query_ids, query_arguments, tracker));
   }
 
   const NodeTopology &GetTopology() override {

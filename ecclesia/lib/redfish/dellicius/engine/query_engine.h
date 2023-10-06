@@ -40,6 +40,7 @@
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
@@ -95,23 +96,36 @@ class QueryEngine {
   class QueryEngineIntf {
    public:
     virtual ~QueryEngineIntf() = default;
+    ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
     virtual void ExecuteQuery(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments,
         absl::FunctionRef<bool(const DelliciusQueryResult &result)>
             callback) = 0;
+    ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
     virtual void ExecuteQuery(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments,
         absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
         QueryTracker &tracker) = 0;
+    ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments) = 0;
+    ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
+        ServiceRootType service_root_uri,
+        absl::Span<const absl::string_view> query_ids,
+        const QueryVariableSet &query_arguments, QueryTracker &tracker) = 0;
+
+    virtual std::vector<QueryResult> ExecuteRedpathQuery(
+        ServiceRootType service_root_uri,
+        absl::Span<const absl::string_view> query_ids,
+        const QueryVariableSet &query_arguments) = 0;
+    virtual std::vector<QueryResult> ExecuteRedpathQuery(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments, QueryTracker &tracker) = 0;
@@ -150,6 +164,7 @@ class QueryEngine {
 
   // The callback will be called when SubqueryOutput exceeds the max_size_limit
   // in the query
+  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   void ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
       absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
@@ -158,6 +173,7 @@ class QueryEngine {
     return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
                                       query_arguments, callback);
   }
+  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   void ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
       absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
@@ -167,6 +183,7 @@ class QueryEngine {
     return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
                                       query_arguments, callback, tracker);
   }
+  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri = ServiceRootType::kRedfish,
@@ -174,12 +191,28 @@ class QueryEngine {
     return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
                                       query_arguments);
   }
+  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
       ServiceRootType service_root_uri = ServiceRootType::kRedfish,
       const QueryVariableSet &query_arguments = {}) {
     return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
                                       query_arguments, tracker);
+  }
+  std::vector<QueryResult> ExecuteRedpathQuery(
+      absl::Span<const absl::string_view> query_ids,
+      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
+      const QueryVariableSet &query_arguments = {}) {
+    return engine_impl_->ExecuteRedpathQuery(service_root_uri, query_ids,
+                                             query_arguments);
+  }
+
+  std::vector<QueryResult> ExecuteRedpathQuery(
+      absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
+      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
+      const QueryVariableSet &query_arguments = {}) {
+    return engine_impl_->ExecuteRedpathQuery(service_root_uri, query_ids,
+                                             query_arguments, tracker);
   }
   // Transport metrics flag must be true for metrics to be populated.
 

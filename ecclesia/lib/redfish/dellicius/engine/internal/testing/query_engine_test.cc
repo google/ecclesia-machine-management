@@ -114,6 +114,25 @@ void VerifyQueryResults(std::vector<DelliciusQueryResult> actual_entries,
               UnorderedElementsAreArrayOfProtos(expected_entries));
 }
 
+void VerifyQueryResults(std::vector<QueryResult> actual_entries,
+                        std::vector<QueryResult> expected_entries,
+                        bool check_timestamps = false) {
+  auto remove_timestamps = [](std::vector<QueryResult> &entries) {
+    for (QueryResult &entry : entries) {
+      entry.mutable_stats()->clear_start_time();
+      entry.mutable_stats()->clear_end_time();
+    }
+  };
+
+  if (!check_timestamps) {
+    remove_timestamps(actual_entries);
+    remove_timestamps(expected_entries);
+  }
+
+  EXPECT_THAT(actual_entries,
+              UnorderedElementsAreArrayOfProtos(expected_entries));
+}
+
 absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
     FakeRedfishServer &server,
     absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
@@ -604,6 +623,49 @@ TEST(QueryEngineTest, TestQueryEngineFactoryForInvalidQuery) {
   FakeRedfishServer server(kIndusMockup);
   EXPECT_EQ(GetDefaultQueryEngine(server, {{"Test", ""}}).status().code(),
             absl::StatusCode::kInternal);
+}
+
+TEST(QueryEngineTest, QueryEngineWithTranslation) {
+  std::string assembly_out_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/assembly_out_translated.textproto"));
+
+  FakeQueryEngineEnvironment fake_engine_env(
+      {.flags{.enable_devpath_extension = false,
+              .enable_transport_metrics = false},
+       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
+       .query_rules{kQueryRules.begin(), kQueryRules.end()}},
+      kIndusMockup, clock_time,
+      FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
+  QueryEngine &query_engine = fake_engine_env.GetEngine();
+
+  // Validate first query result with metrics.
+  std::vector<QueryResult> response_entries = query_engine.ExecuteRedpathQuery(
+      {"AssemblyCollectorWithPropertyNameNormalization"});
+  QueryResult intent_output_assembly =
+      ParseTextFileAsProtoOrDie<QueryResult>(assembly_out_path);
+  VerifyQueryResults(response_entries, {intent_output_assembly});
+}
+
+TEST(QueryEngineTest, QueryEngineWithTranslationAndLocalDevpath) {
+  std::string assembly_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation,
+                    "query_out/devpath_sensor_out_translated.textproto"));
+
+  FakeQueryEngineEnvironment fake_engine_env(
+      {.flags{.enable_devpath_extension = true,
+              .enable_transport_metrics = false},
+       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
+       .query_rules{kQueryRules.begin(), kQueryRules.end()}},
+      kIndusMockup, clock_time,
+      FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
+  QueryEngine &query_engine = fake_engine_env.GetEngine();
+
+  // Validate first query result with metrics.
+  std::vector<QueryResult> response_entries =
+      query_engine.ExecuteRedpathQuery({"SensorCollector"});
+  QueryResult intent_output_assembly =
+      ParseTextFileAsProtoOrDie<QueryResult>(assembly_out_path);
+  VerifyQueryResults(response_entries, {intent_output_assembly});
 }
 }  // namespace
 
