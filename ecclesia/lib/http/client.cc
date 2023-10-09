@@ -40,7 +40,7 @@ std::string GetHttpMethodName(ecclesia::Protocol protocol) {
   return "GET";
 }
 
-nlohmann::json HttpClient::HttpResponse::GetBodyJson() {
+nlohmann::json HttpClient::HttpResponse::GetBodyJson() const {
   return nlohmann::json::parse(body, nullptr, /*allow_exceptions=*/false);
 }
 

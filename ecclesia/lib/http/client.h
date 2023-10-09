@@ -62,8 +62,7 @@ class HttpClient {
 
   // Http response that contains http status code, header and body
   struct HttpResponse {
-    // The unique_ptr returned outlives the HttpResponse.
-    nlohmann::json GetBodyJson();
+    nlohmann::json GetBodyJson() const;
 
     int code = 0;
     std::string body;
