@@ -16,7 +16,12 @@
 
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
 
+#include <string>
+
 #include "absl/container/flat_hash_map.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/str_format.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
@@ -26,7 +31,7 @@ namespace ecclesia {
 
 using ExpandConfiguration = RedPathPrefixWithQueryParams::ExpandConfiguration;
 
-absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
+absl::StatusOr<absl::flat_hash_map<std::string, RedPathRedfishQueryParams>>
 ParseQueryRulesFromEmbeddedFiles(
     const std::vector<EmbeddedFile> &embedded_query_rules) {
   absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
@@ -36,8 +41,10 @@ ParseQueryRulesFromEmbeddedFiles(
     QueryRules query_rules;
     // Parse query rules into embedded file object.
     if (!google::protobuf::TextFormat::ParseFromString(std::string(embedded_rule.data),
-                                             &query_rules))
-      continue;
+                                             &query_rules)) {
+      return absl::InternalError(
+          absl::StrFormat("Invalid query rule:\n%s", embedded_rule.data));
+    }
     // Extract RedPath prefix to query params map for each query id.
     for (const auto &[query_id, prefix_set_with_query_params] :
          query_rules.query_id_to_params_rule()) {

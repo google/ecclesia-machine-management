@@ -16,6 +16,8 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 
+#include <sys/stat.h>
+
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -54,6 +56,7 @@
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/testing/proto.h"
+#include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/clock_fake.h"
 
@@ -140,6 +143,7 @@ void VerifyQueryResults(std::vector<QueryResult> actual_entries,
 absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
     FakeRedfishServer &server,
     absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
+    absl::Span<const EmbeddedFile> query_rules = kQueryRules,
     const Clock *clock = Clock::RealClock()) {
   FakeRedfishServer::Config config = server.GetConfig();
   auto http_client = std::make_unique<CurlHttpClient>(
@@ -150,7 +154,8 @@ absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
       HttpRedfishTransport::MakeNetwork(std::move(http_client),
                                         network_endpoint);
 
-  QueryContext query_context{.query_files = query_files, .clock = clock};
+  QueryContext query_context{
+      .query_files = query_files, .query_rules = query_rules, .clock = clock};
   return CreateQueryEngine(query_context, {.transport = std::move(transport)});
 }
 
@@ -626,7 +631,7 @@ TEST(QueryEngineTest, QueryEngineWithDefaultNormalizer) {
   FakeRedfishServer server(kIndusMockup);
   FakeClock clock{clock_time};
   absl::StatusOr<QueryEngine> query_engine =
-      GetDefaultQueryEngine(server, kDelliciusQueries, &clock);
+      GetDefaultQueryEngine(server, kDelliciusQueries, kQueryRules, &clock);
   EXPECT_TRUE(query_engine.ok());
 
   DelliciusQueryResult intent_output_sensor =
@@ -714,6 +719,25 @@ TEST(QueryEngineTest, QueryEngineWithTranslationAndLocalDevpath) {
       ParseTextFileAsProtoOrDie<QueryResult>(assembly_out_path);
   VerifyQueryResults(response_entries, {intent_output_assembly});
 }
+
+TEST(QueryEngineTest, MalformedQueryRulesFailEngineConstruction) {
+  constexpr absl::string_view kQueryRuleStr = R"pb(
+    query_id_to_params_rule { key: "Assembly"
+                              value {
+                                redpath_prefix_with_params {
+                                  redpath: "/Systems"
+                                  expand_configuration { level: 1 type: BOTH }
+                                }
+                              })pb";
+
+  const std::vector<EmbeddedFile> query_rules = {
+      {.name = "query_rules.pb", .data = kQueryRuleStr}};
+
+  FakeRedfishServer server(kIndusMockup);
+  EXPECT_THAT(GetDefaultQueryEngine(server, kDelliciusQueries, query_rules),
+              IsStatusInternal());
+}
+
 }  // namespace
 
 }  // namespace ecclesia

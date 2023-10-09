@@ -18,12 +18,13 @@
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_PARSERS_H_
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/status/statusor.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 
 namespace ecclesia {
 
-absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
+absl::StatusOr<absl::flat_hash_map<std::string, RedPathRedfishQueryParams>>
 ParseQueryRulesFromEmbeddedFiles(
     const std::vector<EmbeddedFile> &embedded_query_rules);
 

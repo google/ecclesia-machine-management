@@ -54,6 +54,7 @@
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
+#include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/proto.h"
 #include "google/protobuf/text_format.h"
@@ -128,9 +129,15 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     }
 
     // Parse query rules from embedded proto messages
-    absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
+    absl::StatusOr<absl::flat_hash_map<std::string, RedPathRedfishQueryParams>>
         query_id_to_rules =
             ParseQueryRulesFromEmbeddedFiles(config.query_rules);
+    if (!query_id_to_rules.ok()) {
+      LOG(ERROR) << query_id_to_rules.status();
+      query_id_to_rules =
+          absl::flat_hash_map<std::string, RedPathRedfishQueryParams>();
+    }
+
     // Parse queries from embedded proto messages
     for (const EmbeddedFile &query_file : config.query_files) {
       DelliciusQuery query;
@@ -144,8 +151,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       // Build a query plan if none exists for the query id
       if (id_to_query_plans_.contains(query.query_id())) continue;
       RedPathRedfishQueryParams params;
-      if (auto iter = query_id_to_rules.find(query.query_id());
-          iter != query_id_to_rules.end()) {
+      if (auto iter = query_id_to_rules->find(query.query_id());
+          iter != query_id_to_rules->end()) {
         params = std::move(iter->second);
       }
 
@@ -441,9 +448,10 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
     std::unique_ptr<Normalizer> normalizer,
     MetricalRedfishTransport *metrical_transport) {
   // Parse query rules from embedded proto messages
-  absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
-      query_id_to_rules = ParseQueryRulesFromEmbeddedFiles(
-          {query_context.query_rules.begin(), query_context.query_rules.end()});
+  ECCLESIA_ASSIGN_OR_RETURN(
+      auto query_id_to_rules,
+      ParseQueryRulesFromEmbeddedFiles({query_context.query_rules.begin(),
+                                        query_context.query_rules.end()}));
 
   // Parse queries from embedded proto messages
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>

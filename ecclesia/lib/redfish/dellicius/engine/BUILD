@@ -37,6 +37,7 @@ cc_library(
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:metrical_transport",
         "//ecclesia/lib/redfish/transport:transport_metrics_cc_proto",
+        "//ecclesia/lib/status:macros",
         "//ecclesia/lib/time:clock",
         "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/base:core_headers",
