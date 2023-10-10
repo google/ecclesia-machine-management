@@ -2,7 +2,10 @@ proto_library(
     name = "query_result_proto",
     srcs = ["query_result.proto"],
     visibility = ["//visibility:public"],
-    deps = ["@com_google_protobuf//:timestamp_proto"],
+    deps = [
+        "//ecclesia/lib/redfish/transport:transport_metrics_proto",
+        "@com_google_protobuf//:timestamp_proto",
+    ],
 )
 
 cc_proto_library(
@@ -48,6 +51,7 @@ cc_library(
         ":query_result",
         ":query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "//ecclesia/lib/redfish/transport:transport_metrics_cc_proto",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",

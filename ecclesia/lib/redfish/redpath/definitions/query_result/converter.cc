@@ -29,6 +29,7 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "single_include/nlohmann/json.hpp"
 #include "re2/re2.h"
 
@@ -164,6 +165,10 @@ QueryResult ToQueryResult(const ecclesia::DelliciusQueryResult& result_in) {
   }
   if (result_in.has_end_timestamp()) {
     *result.mutable_stats()->mutable_end_time() = result_in.end_timestamp();
+  }
+  if (result_in.has_redfish_metrics()) {
+    *result.mutable_stats()->mutable_redfish_metrics() =
+        result_in.redfish_metrics();
   }
   QueryResultData data;
   QueryResultDataBuilder builder(&data);

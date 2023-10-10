@@ -3,6 +3,7 @@ syntax = "proto3";
 package ecclesia;
 
 import "google/protobuf/timestamp.proto";
+import "ecclesia/lib/redfish/transport/transport_metrics.proto";
 
 message QueryResult {
   // Query Id
@@ -66,6 +67,8 @@ message Statistics {
   int64 num_cache_hits = 5;
   // Number of cache misses
   int64 num_cache_misses = 6;
+  // Metrics collected when using MetricalRedfishTransport
+  optional RedfishMetrics redfish_metrics = 7;
 }
 
 message Status {

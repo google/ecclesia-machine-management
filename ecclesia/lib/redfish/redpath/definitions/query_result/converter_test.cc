@@ -482,6 +482,185 @@ TEST(QueryResultDataConverterTest, PartialDataVerification) {
   )json"))));
 }
 
+TEST(QueryResultDataConverterTest, DataVerificationWithMetrics) {
+  ecclesia::DelliciusQueryResult legacy_result = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "AssemblyCollectorWithPropertyNameNormalization"
+        subquery_output_by_id {
+          key: "Chassis"
+          value {
+            data_sets {
+              devpath: "/phys"
+              properties {
+                name: "serial_number"
+                string_value: "MBBQTW194106556"
+              }
+              properties { name: "part_number" string_value: "1043652-02" }
+            }
+          }
+        }
+        subquery_output_by_id {
+          key: "Processors"
+          value {
+            data_sets { devpath: "/phys/CPU0" }
+            data_sets { devpath: "/phys/CPU1" }
+          }
+        }
+        redfish_metrics {
+          uri_to_metrics_map {
+            key: "/redfish/v1"
+            value {
+              request_type_to_metadata {
+                key: "GET"
+                value { request_count: 1 }
+              }
+            }
+          }
+          uri_to_metrics_map {
+            key: "/redfish/v1/Chassis"
+            value {
+              request_type_to_metadata {
+                key: "GET"
+                value { request_count: 1 }
+              }
+            }
+          }
+          uri_to_metrics_map {
+            key: "/redfish/v1/Chassis/chassis"
+            value {
+              request_type_to_metadata {
+                key: "GET"
+                value { request_count: 1 }
+              }
+            }
+          }
+          uri_to_metrics_map {
+            key: "/redfish/v1/Systems"
+            value {
+              request_type_to_metadata {
+                key: "GET"
+                value { request_count: 1 }
+              }
+            }
+          }
+          uri_to_metrics_map {
+            key: "/redfish/v1/Systems/system"
+            value {
+              request_type_to_metadata {
+                key: "GET"
+                value { request_count: 1 }
+              }
+            }
+          }
+          uri_to_metrics_map {
+            key: "/redfish/v1/Systems/system/Processors"
+            value {
+              request_type_to_metadata {
+                key: "GET"
+                value { request_count: 1 }
+              }
+            }
+          }
+          uri_to_metrics_map {
+            key: "/redfish/v1/Systems/system/Processors/0"
+            value {
+              request_type_to_metadata {
+                key: "GET"
+                value { request_count: 1 }
+              }
+            }
+          }
+          uri_to_metrics_map {
+            key: "/redfish/v1/Systems/system/Processors/1"
+            value {
+              request_type_to_metadata {
+                key: "GET"
+                value { request_count: 1 }
+              }
+            }
+          }
+        }
+      )pb");
+
+  QueryResult result = ToQueryResult(legacy_result);
+  Statistics expected_stats = ParseTextProtoOrDie(R"pb(
+    redfish_metrics {
+      uri_to_metrics_map {
+        key: "/redfish/v1"
+        value {
+          request_type_to_metadata {
+            key: "GET"
+            value { request_count: 1 }
+          }
+        }
+      }
+      uri_to_metrics_map {
+        key: "/redfish/v1/Chassis"
+        value {
+          request_type_to_metadata {
+            key: "GET"
+            value { request_count: 1 }
+          }
+        }
+      }
+      uri_to_metrics_map {
+        key: "/redfish/v1/Chassis/chassis"
+        value {
+          request_type_to_metadata {
+            key: "GET"
+            value { request_count: 1 }
+          }
+        }
+      }
+      uri_to_metrics_map {
+        key: "/redfish/v1/Systems"
+        value {
+          request_type_to_metadata {
+            key: "GET"
+            value { request_count: 1 }
+          }
+        }
+      }
+      uri_to_metrics_map {
+        key: "/redfish/v1/Systems/system"
+        value {
+          request_type_to_metadata {
+            key: "GET"
+            value { request_count: 1 }
+          }
+        }
+      }
+      uri_to_metrics_map {
+        key: "/redfish/v1/Systems/system/Processors"
+        value {
+          request_type_to_metadata {
+            key: "GET"
+            value { request_count: 1 }
+          }
+        }
+      }
+      uri_to_metrics_map {
+        key: "/redfish/v1/Systems/system/Processors/0"
+        value {
+          request_type_to_metadata {
+            key: "GET"
+            value { request_count: 1 }
+          }
+        }
+      }
+      uri_to_metrics_map {
+        key: "/redfish/v1/Systems/system/Processors/1"
+        value {
+          request_type_to_metadata {
+            key: "GET"
+            value { request_count: 1 }
+          }
+        }
+      }
+    }
+  )pb");
+  EXPECT_THAT(result.stats(), EqualsProto(expected_stats));
+}
 TEST(ConvertToJsonTest, IntegerTest) {
   QueryValue value;
   value.set_int_value(12345);
