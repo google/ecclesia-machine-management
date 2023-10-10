@@ -16,13 +16,17 @@ cc_proto_library(
 
 cc_library(
     name = "query_result",
+    srcs = ["query_result.cc"],
     hdrs = ["query_result.h"],
     visibility = ["//visibility:public"],
     deps = [
         ":query_result_cc_proto",
+        "//ecclesia/lib/status:macros",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/log:die_if_null",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_protobuf//:protobuf",
     ],
@@ -36,7 +40,9 @@ cc_test(
         ":query_result_cc_proto",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/testing:proto",
+        "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],

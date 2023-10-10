@@ -23,10 +23,12 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/testing/proto.h"
+#include "ecclesia/lib/testing/status.h"
 
 namespace ecclesia {
 namespace {
@@ -313,6 +315,46 @@ TEST(QueryValueReaderTest, SubqueryValueTest) {
   ASSERT_TRUE(reader.Has("list_value"));
   ASSERT_TRUE(reader.Has("value"));
   ASSERT_EQ(reader["value"].string_value(), "value1");
+
+  ASSERT_THAT(reader.Get("NewTag"), IsStatusNotFound());
+  absl::StatusOr<QueryValueReader> value_reader = reader.Get("list_value");
+  ASSERT_THAT(value_reader, IsOk());
+  ASSERT_EQ(value_reader->size(), 2);
+}
+
+TEST(QueryValueReaderTest, SubqueryGetValueTest) {
+  QueryValue data = ParseTextProtoOrDie(R"pb(
+    subquery_value {
+      fields {
+        key: "bool_val"
+        value { bool_value: true }
+      }
+      fields {
+        key: "double_val"
+        value { double_value: 3.14 }
+      }
+      fields {
+        key: "int_val"
+        value { int_value: 42 }
+      }
+      fields {
+        key: "str_val"
+        value { string_value: "abcd" }
+      }
+    })pb");
+
+  QueryValueReader reader(&data);
+  ASSERT_THAT(reader.GetBoolValue("bool_val"), IsOkAndHolds(true));
+  ASSERT_THAT(reader.GetBoolValue("bool_val_invalid"), IsStatusNotFound());
+
+  ASSERT_THAT(reader.GetDoubleValue("double_val"), IsOkAndHolds(3.14));
+  ASSERT_THAT(reader.GetDoubleValue("double_val_invalid"), IsStatusNotFound());
+
+  ASSERT_THAT(reader.GetIntValue("int_val"), IsOkAndHolds(42));
+  ASSERT_THAT(reader.GetIntValue("int_val_invalid"), IsStatusNotFound());
+
+  ASSERT_THAT(reader.GetStringValue("str_val"), IsOkAndHolds("abcd"));
+  ASSERT_THAT(reader.GetStringValue("str_val_invalid"), IsStatusNotFound());
 }
 
 TEST(QueryResultDataReaderTest, SmokeTest) {
@@ -437,6 +479,11 @@ TEST(QueryResultDataReaderTest, SmokeTest) {
 
   ASSERT_EQ(reader[kSensorTag][3][kNameTag].string_value(), "CPU1");
   ASSERT_EQ(reader[kSensorTag][3][kReadingTag].int_value(), 60);
+
+  ASSERT_THAT(reader.Get("NewTag"), IsStatusNotFound());
+  absl::StatusOr<QueryValueReader> value_reader = reader.Get(kSensorTag);
+  ASSERT_THAT(value_reader, IsOk());
+  ASSERT_EQ(value_reader->size(), 4);
 }
 
 }  // namespace

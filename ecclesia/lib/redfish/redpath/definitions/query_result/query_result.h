@@ -25,6 +25,8 @@
 #include "absl/log/check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
+#include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 
@@ -165,6 +167,26 @@ class QueryValueReader {
            query_value_.subquery_value().fields().contains(key);
   }
 
+  // Returns a QueryValueReader for the underlying subquery result for the given
+  // key; or an error if the key is not found.
+  absl::StatusOr<QueryValueReader> Get(absl::string_view key) const;
+
+  // Returns the string value for a given key; returns error if the key is not
+  // present.
+  absl::StatusOr<std::string> GetStringValue(absl::string_view key) const;
+
+  // Returns the int value for a given key; returns error if the key is not
+  // present.
+  absl::StatusOr<int64_t> GetIntValue(absl::string_view key) const;
+
+  // Returns the double value for a given key; returns error if the key is not
+  // present.
+  absl::StatusOr<double> GetDoubleValue(absl::string_view key) const;
+
+  // Returns the boolean value for a given key; returns error if the key is not
+  // present.
+  absl::StatusOr<bool> GetBoolValue(absl::string_view key) const;
+
   // Returns a QueryValueReader for the underlying subquery result.
   QueryValueReader operator[](absl::string_view key) const {
     CHECK(query_value_.has_subquery_value());
@@ -237,6 +259,10 @@ class QueryResultDataReader {
   bool Has(absl::string_view key) const {
     return query_result_.fields().contains(key);
   }
+
+  // Returns a QueryValueReader for the given key; or an error if the key is not
+  // found.
+  absl::StatusOr<QueryValueReader> Get(absl::string_view key) const;
 
  private:
   const QueryResultData& query_result_;
