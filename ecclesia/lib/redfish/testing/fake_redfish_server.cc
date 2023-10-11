@@ -98,19 +98,19 @@ void FakeRedfishServer::AddHttpGetHandlerWithData(std::string uri,
       });
 }
 
-void FakeRedfishServer::AddHttpGetHandlerWithOwnedData(
-    std::string uri, std::string data) {
-    AddHttpGetHandler(
-        std::move(uri),
-        [&, data = std::move(data)]
-        (::tensorflow::serving::net_http::ServerRequestInterface *req) {
-          ::tensorflow::serving::net_http::SetContentType(req,
-                                                          "application/json");
-          req->OverwriteResponseHeader("OData-Version", "4.0");
-          req->WriteResponseString(data);
-          req->Reply();
-        });
-  }
+void FakeRedfishServer::AddHttpGetHandlerWithOwnedData(std::string uri,
+                                                       std::string data) {
+  AddHttpGetHandler(
+      std::move(uri),
+      [&, data = std::move(data)](
+          ::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(data);
+        req->Reply();
+      });
+}
 
 void FakeRedfishServer::HandleHttpGet(
     ::tensorflow::serving::net_http::ServerRequestInterface *req) {
@@ -179,6 +179,13 @@ void FakeRedfishServer::AddHttpPatchHandler(std::string uri,
 
 void FakeRedfishServer::AddHttpPostHandler(std::string uri,
                                            HandlerFunc handler) {
+  absl::MutexLock mu(&patch_lock_);
+  http_post_handlers_[uri] = std::move(handler);
+}
+
+void FakeRedfishServer::AddHttpPostHandlerWithData(absl::string_view uri,
+                                                   absl::string_view data,
+                                                   HandlerFunc handler) {
   absl::MutexLock mu(&patch_lock_);
   http_post_handlers_[uri] = std::move(handler);
 }

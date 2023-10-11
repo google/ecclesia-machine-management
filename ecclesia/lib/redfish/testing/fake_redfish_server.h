@@ -108,6 +108,12 @@ class FakeRedfishServer {
   void AddHttpGetHandlerWithOwnedData(std::string uri, std::string data)
       ABSL_LOCKS_EXCLUDED(patch_lock_);
 
+  // Allows POST Handler to accept "data". It is passed to post request along
+  // with URI.
+  void AddHttpPostHandlerWithData(absl::string_view uri, absl::string_view data,
+                                  HandlerFunc handler)
+      ABSL_LOCKS_EXCLUDED(patch_lock_);
+
   struct Config {
     std::string hostname;
     int port;
