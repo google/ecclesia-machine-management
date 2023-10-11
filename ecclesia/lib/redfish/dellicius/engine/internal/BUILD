@@ -72,6 +72,7 @@ cc_library(
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/time:clock",
         "//ecclesia/lib/time:proto",
+        "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",

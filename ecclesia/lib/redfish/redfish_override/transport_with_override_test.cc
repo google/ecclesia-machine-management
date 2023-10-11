@@ -193,8 +193,8 @@ TEST_F(RedfishOverrideTest, GetOverridePolicyByServerTest) {
            })pb";
   mockup_server.AddOverridePolicy(policy_str);
   StaticBufferBasedTlsOptions options;
-  OverridePolicy get_policy = GetOverridePolicy(
-      "localhost", port.value(), options.GetChannelCredentials());
+  OverridePolicy get_policy =
+      GetOverridePolicy("localhost", port, options.GetChannelCredentials());
   OverridePolicy expected_policy = ParseTextProtoOrDie(policy_str);
   EXPECT_THAT(get_policy, EqualsProto(expected_policy));
 }

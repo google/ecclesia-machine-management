@@ -31,6 +31,7 @@
 
 #include "google/rpc/code.pb.h"
 #include "google/rpc/status.pb.h"
+#include "absl/base/attributes.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -592,7 +593,8 @@ class SubqueryHandle final {
     child_subquery_handles_.push_back(child_subquery_handle);
   }
 
-  std::vector<SubqueryHandle *> GetChildSubqueryHandles() const {
+  const std::vector<SubqueryHandle *> &GetChildSubqueryHandles() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
     return child_subquery_handles_;
   }
 
