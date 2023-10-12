@@ -438,6 +438,9 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulated) {
         absl::StrContains(query_result->query_errors().overall_error_summary(),
                           "DEADLINE_EXCEEDED error occurred"));
   }
+  // Ensure the top level QueryResult status also reflects the error.
+  EXPECT_THAT(query_result->status().code(),
+              Eq(::google::rpc::Code::DEADLINE_EXCEEDED));
 }
 
 TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulatedCollectionResource) {
@@ -496,6 +499,97 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulatedCollectionResource) {
     EXPECT_THAT(subquery_output.status().code(),
                 Eq(::google::rpc::Code::UNAUTHENTICATED));
   }
+  // Ensure the top level QueryResult status also reflects the error.
+  EXPECT_THAT(query_result->status().code(),
+              Eq(::google::rpc::Code::UNAUTHENTICATED));
+}
+
+TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorHaltsExecution) {
+  // The assembly query has two root subqueries, This tests that only one of
+  // them should execute. After encountering an error on the first Subquery, the
+  // execution will halt, and there will be no more calls to the mock
+  // RedfishObject. If execution doesn't halt, this test should fail with an
+  // error related to calls to the mock RedfishObject not being defined.
+  std::string query_in_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_in/assembly_in.textproto"));
+  SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
+  // Instantiate a passthrough normalizer with devpath extension.
+  auto normalizer_with_devpath = BuildDefaultNormalizerWithLocalDevpath(
+      CreateTopologyFromRedfish(intf_.get()));
+  // Create Query Planner.
+  DelliciusQuery query =
+      ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
+  absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qp =
+      BuildDefaultQueryPlanner(query, RedPathRedfishQueryParams{},
+                               normalizer_with_devpath.get());
+  ASSERT_TRUE(qp.ok());
+  // Create mock RedfishVariant to return deadline exceeded error when Systems
+  // is queried.
+  std::unique_ptr<MockableGetRedfishObject> mock_rf_obj =
+      std::make_unique<MockableGetRedfishObject>();
+  // Mock any GET call to return error once. The QueryPlanner builds a map from
+  // the node name to redpath context, and iterates over it to issue GETs.
+  // Therefore the order is indeterminate and we can't just mock the exact
+  // behavior for a GET to a specific node, when we expect execution to abort
+  // before another node is requested.
+  EXPECT_CALL(*mock_rf_obj, Get(AnyGetParams(_), AnyGetParams(_)))
+      .WillOnce(Return(ByMove(
+          RedfishVariant(absl::DeadlineExceededError("deadline exceeded")))));
+  // Create context node that will return the mocked Redfish Object.
+  std::unique_ptr<MockableObjectRedfishVariantImpl> mock_context_node_variant =
+      std::make_unique<MockableObjectRedfishVariantImpl>("test");
+  EXPECT_CALL(*mock_context_node_variant, AsObject())
+      .WillOnce(Return(ByMove(std::move(mock_rf_obj))));
+  RedfishVariant mock_context_node(std::move(mock_context_node_variant));
+  // Run the query and ensure the status is populated. Runs with
+  // execution_mode = kFailOnFirstError by default.
+  absl::StatusOr<DelliciusQueryResult> query_result =
+      (*qp)->Run(mock_context_node, *clock_, nullptr, {});
+  ASSERT_TRUE(query_result.ok());
+  EXPECT_THAT(query_result->status().code(),
+              Eq(::google::rpc::Code::DEADLINE_EXCEEDED));
+}
+
+TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorDoesntHaltExecutionIfDesired) {
+  std::string query_in_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_in/assembly_in.textproto"));
+  SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
+  // Instantiate a passthrough normalizer with devpath extension.
+  auto normalizer_with_devpath = BuildDefaultNormalizerWithLocalDevpath(
+      CreateTopologyFromRedfish(intf_.get()));
+  // Create Query Planner.
+  DelliciusQuery query =
+      ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
+  absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qp =
+      BuildDefaultQueryPlanner(query, RedPathRedfishQueryParams{},
+                               normalizer_with_devpath.get());
+  ASSERT_TRUE(qp.ok());
+  // Create mock RedfishVariant to return deadline exceeded error when Systems
+  // is queried.
+  std::unique_ptr<MockableGetRedfishObject> mock_rf_obj =
+      std::make_unique<MockableGetRedfishObject>();
+  // Since query execution should NOT halt, expect both subqueries are
+  // executed, even though they return errors.
+  EXPECT_CALL(*mock_rf_obj, Get("Systems", AnyGetParams(_)))
+      .WillRepeatedly(Return(ByMove(
+          RedfishVariant(absl::DeadlineExceededError("deadline exceeded")))));
+  EXPECT_CALL(*mock_rf_obj, Get("Chassis", AnyGetParams(_)))
+      .WillRepeatedly(Return(ByMove(
+          RedfishVariant(absl::DeadlineExceededError("deadline exceeded")))));
+  // Create context node that will return the mocked Redfish Object.
+  std::unique_ptr<MockableObjectRedfishVariantImpl> mock_context_node_variant =
+      std::make_unique<MockableObjectRedfishVariantImpl>("test");
+  EXPECT_CALL(*mock_context_node_variant, AsObject())
+      .WillOnce(Return(ByMove(std::move(mock_rf_obj))));
+  RedfishVariant mock_context_node(std::move(mock_context_node_variant));
+  // Run query with execution_mode=kContinueOnSubqueryErrors; ensure the status
+  // is populated.
+  absl::StatusOr<DelliciusQueryResult> query_result = (*qp)->Run(
+      mock_context_node, *clock_, nullptr, {}, nullptr,
+      QueryPlannerInterface::ExecutionMode::kContinueOnSubqueryErrors);
+  ASSERT_TRUE(query_result.ok());
+  EXPECT_THAT(query_result->status().code(),
+              Eq(::google::rpc::Code::DEADLINE_EXCEEDED));
 }
 
 }  // namespace

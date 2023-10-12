@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_INTERFACE_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_INTERFACE_H_
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
@@ -103,15 +104,20 @@ class Normalizer {
 // Provides an interface for executing a Dellicius Query plan.
 class QueryPlannerInterface {
  public:
+  enum class ExecutionMode : std::uint8_t {
+    kFailOnFirstError,
+    kContinueOnSubqueryErrors
+  };
+
   virtual ~QueryPlannerInterface() = default;
   // Executes query plan using RedfishVariant as root.
   // The RedfishVariant can be the service root (redfish/v1) or any redfish
   // resource acting as local root for redfish subtree. If metrical transport
   // provided, populates the DelliciusQueryResult with transport metrics.
-  virtual DelliciusQueryResult Run(const RedfishVariant &variant,
-                                   const Clock &clock, QueryTracker *tracker,
-                                   const QueryVariables &variables,
-                                   RedfishMetrics *metrics = nullptr) = 0;
+  virtual DelliciusQueryResult Run(
+      const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
+      const QueryVariables &variables, RedfishMetrics *metrics = nullptr,
+      ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError) = 0;
   // Executes query plan using RedfishVariant as root and calls the client
   // callback with results.
   // The RedfishVariant can be the service root (redfish/v1) or any redfish

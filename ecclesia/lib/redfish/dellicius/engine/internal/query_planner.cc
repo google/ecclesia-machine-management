@@ -39,6 +39,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/escaping.h"
 #include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
@@ -48,8 +49,6 @@
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
-#include "ecclesia/lib/redfish/transport/interface.h"
-#include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_errors.pb.h"
@@ -58,11 +57,12 @@
 #include "ecclesia/lib/redfish/dellicius/utils/join.h"
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/proto.h"
 #include "re2/re2.h"
-#include "absl/strings/escaping.h"
 
 namespace ecclesia {
 
@@ -742,10 +742,10 @@ class QueryPlanner final : public QueryPlannerInterface {
             CombineQueryParams(query, std::move(redpath_to_query_params))),
         redfish_interface_(redfish_interface) {}
 
-  DelliciusQueryResult Run(const RedfishVariant &variant, const Clock &clock,
-                           QueryTracker *tracker,
-                           const QueryVariables &variables,
-                           RedfishMetrics *metrics = nullptr) override;
+  DelliciusQueryResult Run(
+      const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
+      const QueryVariables &variables, RedfishMetrics *metrics = nullptr,
+      ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError) override;
 
   void Run(const RedfishVariant &variant, const Clock &clock,
            QueryTracker *tracker, const QueryVariables &variables,
@@ -755,7 +755,8 @@ class QueryPlanner final : public QueryPlannerInterface {
   void ProcessSubqueries(
       const RedfishVariant &variant, const QueryVariables &variables,
       std::function<bool(const DelliciusQueryResult &result)> callback,
-      DelliciusQueryResult &result, QueryTracker *tracker);
+      DelliciusQueryResult &result, QueryTracker *tracker,
+      ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError);
 
   RedfishVariant FetchUriReference(const ContextNode &context_node,
                                    absl::string_view node_name,
@@ -972,19 +973,31 @@ ContextNode ExecutePredicateExpression(const int node_index,
   return context_node;
 }
 
-void PopulateSubqueryErrorStatus(
+// Populates the result with the subquery error status that occurs and returns
+// the status code.
+::google::rpc::Code PopulateSubqueryErrorStatus(
     const absl::Status &node_variant_status,
     const std::vector<RedPathContext> &redpath_ctx_multiple,
     DelliciusQueryResult &result, const std::string &node_name,
     const std::string &last_executed_redpath) {
   ::google::rpc::Code error_code = ::google::rpc::Code::INTERNAL;
   absl::StatusCode code = node_variant_status.code();
+  std::string error_message = absl::StrCat(
+      "Cannot resolve NodeName ", node_name,
+      " to valid Redfish object at path ", last_executed_redpath,
+      ". Redfish Request failed with error: ", node_variant_status.ToString());
   if (code == absl::StatusCode::kNotFound) {
     error_code = ::google::rpc::Code::NOT_FOUND;
-  } else if (code == absl::StatusCode::kDeadlineExceeded) {
-    error_code = ::google::rpc::Code::DEADLINE_EXCEEDED;
-  } else if (code == absl::StatusCode::kUnauthenticated) {
-    error_code = ::google::rpc::Code::UNAUTHENTICATED;
+  } else {
+    // Unless the error is NOT_FOUND, we want to propagate it up to QueryResult.
+    if (code == absl::StatusCode::kDeadlineExceeded) {
+      error_code = ::google::rpc::Code::DEADLINE_EXCEEDED;
+    }
+    if (code == absl::StatusCode::kUnauthenticated) {
+      error_code = ::google::rpc::Code::UNAUTHENTICATED;
+    }
+    result.mutable_status()->set_code(error_code);
+    result.mutable_status()->set_message(error_message);
   }
   // If the Get fails for the node name, mark the failure status in the
   // relevant subqueries.
@@ -994,11 +1007,7 @@ void PopulateSubqueryErrorStatus(
                                                       ->GetSubqueryId()]
             .mutable_status();
     subquery_status->set_code(error_code);
-    subquery_status->set_message(
-        absl::StrCat("Cannot resolve NodeName ", node_name,
-                     " to valid Redfish object at path ", last_executed_redpath,
-                     ". Redfish Request failed with error: ",
-                     node_variant_status.ToString()));
+    subquery_status->set_message(error_message);
 
     // Add the current subquery error to the DelliciusQueryResult error summary.
     SubqueryErrorSummary error_summary;
@@ -1014,6 +1023,7 @@ void PopulateSubqueryErrorStatus(
         redpath_ctx.subquery_handle->GetSubqueryId(),
         " when processing node: ", node_name, "\n"));
   }
+  return error_code;
 }
 
 void PopulateRawData(std::optional<RedfishTransport::bytes> raw_data,
@@ -1084,7 +1094,9 @@ bool HasUri(const std::vector<RedPathContext> &redpath_ctx_multiple) {
 void ExecuteRedPathStepFromEachSubquery(
     QueryPlanner *qp, const RedPathRedfishQueryParams &redpath_to_query_params,
     ContextNode &context_node, DelliciusQueryResult &result,
-    QueryTracker *tracker) {
+    QueryTracker *tracker,
+    QueryPlanner::ExecutionMode execution_mode =
+        QueryPlanner::ExecutionMode::kFailOnFirstError) {
   // Return if the Context Node does not contain a valid RedfishObject.
   if (!context_node.redfish_object ||
       context_node.redpath_ctx_multiple.empty()) {
@@ -1139,6 +1151,7 @@ void ExecuteRedPathStepFromEachSubquery(
     } else {
       // Dispatch Redfish Request for the Redfish Resource associated with the
       // NodeName expression.
+      std::string n = node_name;
       node_set_as_variant =
           context_node.redfish_object->Get(node_name, get_params_for_redpath);
     }
@@ -1149,17 +1162,29 @@ void ExecuteRedPathStepFromEachSubquery(
           {redpath_to_execute, get_params_for_redpath});
     }
 
-    // If NodeName does not resolve to a valid Redfish Resource, skip it!
+    // If NodeName does not resolve to a valid Redfish Resource, populate
+    // error status and if it the error is just due to data not being present,
+    // we can skip it. Halt the execution if intended to fail on first error.
     if (!node_set_as_variant.status().ok()) {
-      PopulateSubqueryErrorStatus(node_set_as_variant.status(),
-                                  redpath_ctx_multiple, result, node_name,
-                                  context_node.last_executed_redpath);
-      // It is not considered an error to not find requested nodes in the query.
-      // So here we just log and skip the iteration.
-      DLOG(INFO) << "Cannot resolve NodeName " << node_name
-                 << " to valid Redfish object at path "
-                 << context_node.last_executed_redpath;
-      continue;
+      if (PopulateSubqueryErrorStatus(node_set_as_variant.status(),
+                                      redpath_ctx_multiple, result, node_name,
+                                      context_node.last_executed_redpath) ==
+          ::google::rpc::Code::NOT_FOUND) {
+        // It is not considered an error to not find requested nodes in the
+        // query. So here we just log and skip the iteration if that is the
+        // case. For other errors, we halt execution unless explicitly running
+        // with execution_mode = kContinueOnSubqueryErrors.
+        DLOG(INFO) << "Cannot resolve NodeName " << node_name
+                   << " to valid Redfish object at path "
+                   << context_node.last_executed_redpath;
+        continue;
+      }
+      if (execution_mode == QueryPlanner::ExecutionMode::kFailOnFirstError) {
+        LOG(ERROR) << "Halting Query Execution early due to failure when "
+                      "querying node name: "
+                   << node_name << ".";
+        return;
+      }
     }
 
     // Handle case where RedPath contexts have no predicate expression to
@@ -1263,7 +1288,8 @@ void ExecuteRedPathStepFromEachSubquery(
   // expression from every RedPath context mapped to the context node.
   for (auto &new_context_node : context_nodes) {
     ExecuteRedPathStepFromEachSubquery(qp, redpath_to_query_params,
-                                       new_context_node, result, tracker);
+                                       new_context_node, result, tracker,
+                                       execution_mode);
   }
 }
 
@@ -1311,7 +1337,8 @@ absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
 void QueryPlanner::ProcessSubqueries(
     const RedfishVariant &variant, const QueryVariables &query_variables,
     const std::function<bool(const DelliciusQueryResult &result)> callback,
-    DelliciusQueryResult &result, QueryTracker *tracker) {
+    DelliciusQueryResult &result, QueryTracker *tracker,
+    ExecutionMode execution_mode) {
   std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
   if (!redfish_object) {
     result.mutable_status()->set_code(::google::rpc::Code::FAILED_PRECONDITION);
@@ -1358,17 +1385,20 @@ void QueryPlanner::ProcessSubqueries(
 
   // Recursively execute each RedPath step across subqueries.
   ExecuteRedPathStepFromEachSubquery(this, redpath_to_query_params_,
-                                     context_node, result, tracker);
+                                     context_node, result, tracker,
+                                     execution_mode);
 }
 
 DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
                                        const Clock &clock,
                                        QueryTracker *tracker,
                                        const QueryVariables &query_variables,
-                                       RedfishMetrics *metrics) {
+                                       RedfishMetrics *metrics,
+                                       ExecutionMode execution_mode) {
   DelliciusQueryResult result;
   result.set_query_id(plan_id_);
-  ProcessSubqueries(variant, query_variables, nullptr, result, tracker);
+  ProcessSubqueries(variant, query_variables, nullptr, result, tracker,
+                    execution_mode);
   if (metrics != nullptr) {
     *result.mutable_redfish_metrics() = *metrics;
   }
