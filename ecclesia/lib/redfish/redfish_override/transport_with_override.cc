@@ -21,10 +21,11 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 
+#include "absl/container/flat_hash_set.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
-#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
@@ -255,12 +256,8 @@ absl::Status FindObjectAndAct(nlohmann::json &json,
 }
 // Updating the result by the specific OverrideField
 absl::Status ResultUpdateHelper(const OverrideField &field,
-                                RedfishTransport::Result &result,
+                                nlohmann::json &json,
                                 RedfishTransport *transport) {
-  if (!std::holds_alternative<nlohmann::json>(result.body)) {
-    return absl::InternalError("Result body is not storing JSON");
-  }
-  auto &json = std::get<nlohmann::json>(result.body);
   switch (field.Action_case()) {
     case OverrideField::kActionReplace: {
       auto result_check =
@@ -294,6 +291,65 @@ absl::Status ResultUpdateHelper(const OverrideField &field,
     }
     default:
       return absl::InvalidArgumentError("No action specified");
+  }
+  return absl::OkStatus();
+}
+
+absl::Status ResultExpandUpdateHelper(
+    const OverridePolicy &override_policy, nlohmann::json *json,
+    RedfishTransport *transport,
+    absl::flat_hash_set<nlohmann::json *> &visited_json) {
+  if (visited_json.contains(json)) {
+    return absl::OkStatus();
+  }
+  visited_json.insert(json);
+  // If Json size equals 1, it either means that it is a Redfish object with
+  // odata.id or a value, skipping these kind of json result.
+  if (json->size() == 1) {
+    return absl::OkStatus();
+  }
+  // Only check overrides when json object includes odata.id, which is a
+  // complete Redfish object.
+  if (json->contains("@odata.id")) {
+    std::string checked_path = json->at("@odata.id");
+    auto iter = override_policy.override_content_map_uri().find(checked_path);
+    if (iter != override_policy.override_content_map_uri().end()) {
+      for (const auto &field : iter->second.override_field()) {
+        if (field.has_apply_condition() &&
+            field.apply_condition().is_expand()) {
+          continue;
+        }
+        auto update_status = ResultUpdateHelper(field, *json, transport);
+        if (!update_status.ok()) {
+          DLOG(WARNING) << absl::StrFormat(
+              "Failed to perform override to uri: %s, failure: %s.",
+              checked_path, update_status.message());
+        }
+      }
+    }
+    for (const auto &[uri_regex, override_content] :
+         override_policy.override_content_map_regex()) {
+      if (!RE2::FullMatch(checked_path, uri_regex)) {
+        continue;
+      }
+      for (const auto &field : override_content.override_field()) {
+        auto update_status = ResultUpdateHelper(field, *json, transport);
+        if (!update_status.ok()) {
+          DLOG(WARNING) << absl::StrFormat(
+              "Failed to perform override to uri: %s, failure: %s.",
+              checked_path, update_status.message());
+        }
+      }
+    }
+  }
+
+  for (nlohmann::json &subjson : *json) {
+    if (absl::Status status = ResultExpandUpdateHelper(
+            override_policy, &subjson, transport, visited_json);
+        !status.ok()) {
+      return absl::InternalError(
+          absl::StrCat("Applying expand failed: ", status.message()));
+    }
   }
   return absl::OkStatus();
 }
@@ -374,6 +430,10 @@ OverridePolicy GetOverridePolicy(
 absl::StatusOr<RedfishTransport::Result>
 RedfishTransportWithOverride::TryApplyingOverride(
     absl::string_view path, RedfishTransport::Result get_result) {
+  if (!std::holds_alternative<nlohmann::json>(get_result.body)) {
+    return get_result;
+  }
+  auto &json = std::get<nlohmann::json>(get_result.body);
   // Try to fetch the override policy.
   if (!has_override_policy_) {
     auto override_policy = override_policy_cb_();
@@ -397,40 +457,11 @@ RedfishTransportWithOverride::TryApplyingOverride(
   if (extend_pos != std::string::npos) {
     checked_path = path.substr(0, extend_pos);
   }
-  auto iter = override_policy_.override_content_map_uri().find(checked_path);
-  if (iter != override_policy_.override_content_map_uri().end()) {
-    for (const auto &field : iter->second.override_field()) {
-      if (field.has_apply_condition() && field.apply_condition().is_expand() &&
-          !absl::StrContains(path, "$expand=")) {
-        continue;
-      }
-      auto update_status =
-          ResultUpdateHelper(field, get_result, redfish_transport_.get());
-      if (!update_status.ok()) {
-        LOG(WARNING) << absl::StrFormat(
-            "Failed to perform override to uri: %s, failure: %s.", path,
-            update_status.message());
-      }
-    }
-  }
-  for (const auto &[uri_regex, override_content] :
-       override_policy_.override_content_map_regex()) {
-    if (!RE2::FullMatch(checked_path, uri_regex)) {
-      continue;
-    }
-    for (const auto &field : override_content.override_field()) {
-      if (field.has_apply_condition() && field.apply_condition().is_expand() &&
-          !absl::StrContains(path, "$expand=")) {
-        continue;
-      }
-      auto update_status =
-          ResultUpdateHelper(field, get_result, redfish_transport_.get());
-      if (!update_status.ok()) {
-        LOG(WARNING) << absl::StrFormat(
-            "Failed to perform override to uri: %s, failure: %s.", path,
-            update_status.message());
-      }
-    }
+  absl::flat_hash_set<nlohmann::json *> visited_json;
+  if (auto status = ResultExpandUpdateHelper(
+          override_policy_, &json, redfish_transport_.get(), visited_json);
+      !status.ok()) {
+    LOG(WARNING) << "Override apply failed: " << status;
   }
   return get_result;
 }

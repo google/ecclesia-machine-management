@@ -32,6 +32,7 @@ cc_library(
         "//ecclesia/lib/redfish/transport:struct_proto_conversion",
         "@com_github_grpc_grpc//:grpc",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/functional:any_invocable",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/status",

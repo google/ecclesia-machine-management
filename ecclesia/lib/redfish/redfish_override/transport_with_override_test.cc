@@ -47,6 +47,7 @@ class RedfishOverrideTest : public ::testing::Test {
     transport_ = std::make_unique<RedfishTransportMock>();
     transport_mock_ptr_ = transport_.get();
     expected_result1_ = nlohmann::json::parse(R"json({
+    "@odata.id": "/expected/result/1",
     "TestString": "test123",
     "TestNumber": 123.0,
     "TestBool": true,
@@ -61,13 +62,14 @@ class RedfishOverrideTest : public ::testing::Test {
         "TestStruct": "tests2"
       },
       {
-        "TestNumber": 1234.0 
+        "TestNumber": 1234.0
       },
       "TestArrayString",
       [ "TestArrayInArray1" ]
     ]})json",
                                               nullptr, false);
     expected_result2_ = nlohmann::json::parse(R"json({
+    "@odata.id": "/expected/result/2",
     "TestString": "test456",
     "TestNumber": 456.0,
     "TestBool": false,
@@ -83,15 +85,83 @@ class RedfishOverrideTest : public ::testing::Test {
         "TestStruct":"tests2"
       },
       {
-        "TestNumber": 4567.0 
+        "TestNumber": 4567.0
       },
       "TestArrayString2",
       [ "TestArrayInArray2" ]
     ]})json",
                                               nullptr, false);
+    expected_collection_ = nlohmann::json::parse(R"json({
+    "@odata.id": "/expected/result",
+    "Members": [
+      {
+        "@odata.id": "/expected/result/1"
+      },
+      {
+        "@odata.id": "/expected/result/2"
+      }
+    ]
+    })json",
+                                                 nullptr, false);
+    expected_collection_expand_ = nlohmann::json::parse(R"json(
+    {
+      "@odata.id": "/expected/result",
+      "Members": [
+        {
+          "@odata.id": "/expected/result/1",
+          "TestString": "test123",
+          "TestNumber": 123.0,
+          "TestBool": true,
+          "TestArray":[
+            {
+              "TestStruct": "tests0"
+            },
+            {
+              "TestStruct": "tests1"
+            },
+            {
+              "TestStruct": "tests2"
+            },
+            {
+              "TestNumber": 1234.0
+            },
+            "TestArrayString",
+            [ "TestArrayInArray1" ]
+          ]
+        },
+        {
+          "@odata.id": "/expected/result/2",
+          "TestString": "test456",
+          "TestNumber": 456.0,
+          "TestBool": false,
+          "TestArray":[
+            56789.0,
+            {
+              "TestStruct":"tests0"
+            },
+            {
+              "TestStruct":"tests1"
+            },
+            {
+              "TestStruct":"tests2"
+            },
+            {
+              "TestNumber": 4567.0
+            },
+            "TestArrayString2",
+            [ "TestArrayInArray2" ]
+          ]
+        }
+      ]
+    })json",
+                                                        nullptr, false);
+
     absl::string_view uri1 = "/expected/result/1";
     absl::string_view uri2 = "/expected/result/2";
     absl::string_view uri1_expand = "/expected/result/1?$expand=.($levels=1)";
+    absl::string_view uri_collection = "/expected/result";
+    absl::string_view uri_collection_expand =
+        "/expected/result?$expand=.($levels=1)";
     EXPECT_CALL(*transport_mock_ptr_, Get(uri1))
         .WillRepeatedly(Return(
             RedfishTransport::Result{.code = 200, .body = expected_result1_}));
@@ -101,11 +171,19 @@ class RedfishOverrideTest : public ::testing::Test {
     EXPECT_CALL(*transport_mock_ptr_, Get(uri1_expand))
         .WillRepeatedly(Return(
             RedfishTransport::Result{.code = 200, .body = expected_result1_}));
+    EXPECT_CALL(*transport_mock_ptr_, Get(uri_collection))
+        .WillRepeatedly(Return(RedfishTransport::Result{
+            .code = 200, .body = expected_collection_}));
+    EXPECT_CALL(*transport_mock_ptr_, Get(uri_collection_expand))
+        .WillRepeatedly(Return(RedfishTransport::Result{
+            .code = 200, .body = expected_collection_expand_}));
   }
   std::unique_ptr<RedfishTransportMock> transport_;
   RedfishTransportMock *transport_mock_ptr_;
   nlohmann::json expected_result1_;
   nlohmann::json expected_result2_;
+  nlohmann::json expected_collection_;
+  nlohmann::json expected_collection_expand_;
 };
 
 TEST_F(RedfishOverrideTest, GetOverridePolicyByFileTest) {
@@ -253,6 +331,7 @@ TEST_F(RedfishOverrideTest, GetReplaceValue) {
       [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
 
   absl::string_view expected_get_str = R"json({
+    "@odata.id": "/expected/result/1",
     "TestString": "OverrideReplaceByField",
     "TestNumber": 123.0,
     "TestBool": true,
@@ -334,6 +413,7 @@ TEST_F(RedfishOverrideTest, GetExpandReplaceValue) {
       [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
 
   absl::string_view expected_get_str = R"json({
+    "@odata.id": "/expected/result/1",
     "TestString": "OverrideReplaceByField",
     "TestNumber": 123.0,
     "TestBool": true,
@@ -386,6 +466,7 @@ TEST_F(RedfishOverrideTest, GetReplaceValueRegex) {
       [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
 
   absl::string_view expected_get_str = R"json({
+    "@odata.id": "/expected/result/1",
     "TestString": "OverrideReplaceByField",
     "TestNumber": 123.0,
     "TestBool": true,
@@ -497,6 +578,7 @@ TEST_F(RedfishOverrideTest, GetAddValue) {
       std::move(transport_),
       [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
   absl::string_view expected_get_str = R"json({
+    "@odata.id": "/expected/result/1",
     "TestArray":[
       {
         "TestStruct": "tests0"
@@ -579,6 +661,7 @@ TEST_F(RedfishOverrideTest, GetClear) {
       std::move(transport_),
       [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
   absl::string_view expected_get_str = R"json({
+    "@odata.id": "/expected/result/2",
     "TestArray":[
       {"TestStruct":"tests0"},
       {"TestStruct":"tests1"},
@@ -682,120 +765,6 @@ TEST_F(RedfishOverrideTest, EmptyIdentifierFail) {
   EXPECT_THAT(res_get, IsOk());
 }
 
-TEST_F(RedfishOverrideTest, GetExpandExcludeTest) {
-  OverridePolicy policy = ParseTextProtoOrDie(R"pb(
-    override_content_map_uri: {
-      key: "/expected/result/1"
-      value: {
-        override_field:
-        [ {
-          apply_condition: { is_expand: true }
-          action_replace: {
-            object_identifier: {
-              individual_object_identifier:
-              [ { field_name: "TestString" }]
-            }
-            override_value: {
-              value: { string_value: "OverrideReplaceByField" }
-            }
-          }
-        }
-          , {
-            apply_condition: { is_expand: true }
-            action_replace: {
-              object_identifier: {
-                individual_object_identifier:
-                [ { field_name: "TestArray" }
-                  , {
-                    array_field: {
-                      field_name: "TestNumber"
-                      value: { number_value: 1234 }
-                    }
-                  }
-                  , { field_name: "TestNumber" }]
-              }
-              override_value: { value: { number_value: 54321 } }
-            }
-          }
-          , {
-            action_replace: {
-              object_identifier: {
-                individual_object_identifier:
-                [ { field_name: "TestArray" }
-                  , { array_idx: 0 }
-                  , { field_name: "TestStruct" }]
-              }
-              override_value: {
-                value: { string_value: "OverrideReplaceByIndex" }
-              }
-            }
-          }]
-      }
-    }
-  )pb");
-  auto rf_override = std::make_unique<RedfishTransportWithOverride>(
-      std::move(transport_),
-      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
-  {
-    absl::string_view expected_get_str_expand = R"json({
-      "TestString": "OverrideReplaceByField",
-      "TestNumber": 123.0,
-      "TestBool": true,
-      "TestArray":[
-        {"TestStruct":"OverrideReplaceByIndex"},
-        {
-          "TestStruct":"tests1"
-        },
-        {
-          "TestStruct": "tests2"
-        },
-        {
-          "TestNumber": 54321.0
-        },
-        "TestArrayString",
-        [ "TestArrayInArray1" ]
-      ]})json";
-    nlohmann::json expected_get_expand =
-        nlohmann::json::parse(expected_get_str_expand, nullptr, false);
-    absl::StatusOr<RedfishTransport::Result> res_get =
-        rf_override->Get("/expected/result/1?$expand=.($levels=1)");
-    ASSERT_THAT(res_get, IsOk());
-    ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
-    EXPECT_THAT(std::get<nlohmann::json>(res_get->body),
-                Eq(expected_get_expand));
-    EXPECT_THAT(res_get->code, Eq(200));
-  }
-  {
-    absl::string_view expected_get_str_no_expand = R"json({
-      "TestString": "test123",
-      "TestNumber": 123.0,
-      "TestBool": true,
-      "TestArray":[
-        {"TestStruct":"OverrideReplaceByIndex"},
-        {
-          "TestStruct":"tests1"
-        },
-        {
-          "TestStruct": "tests2"
-        },
-        {
-          "TestNumber": 1234.0
-        },
-        "TestArrayString",
-        [ "TestArrayInArray1" ]
-      ]})json";
-    nlohmann::json expected_get_no_expand =
-        nlohmann::json::parse(expected_get_str_no_expand, nullptr, false);
-    absl::StatusOr<RedfishTransport::Result> res_get =
-        rf_override->Get("/expected/result/1");
-    ASSERT_THAT(res_get, IsOk());
-    ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
-    EXPECT_THAT(std::get<nlohmann::json>(res_get->body),
-                Eq(expected_get_no_expand));
-    EXPECT_THAT(res_get->code, Eq(200));
-  }
-}
-
 TEST_F(RedfishOverrideTest, OverrideGottenOnceOnly) {
   int count = 0;
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
@@ -805,6 +774,7 @@ TEST_F(RedfishOverrideTest, OverrideGottenOnceOnly) {
       });
 
   absl::string_view expected_get_str = R"json({
+    "@odata.id": "/expected/result/1",
     "TestString": "test123",
     "TestNumber": 123.0,
     "TestBool": true,
@@ -863,6 +833,7 @@ TEST_F(RedfishOverrideTest, GetReplaceValueFailedOverride) {
       });
 
   absl::string_view expected_get_str = R"json({
+    "@odata.id": "/expected/result/1",
     "TestString": "test123",
     "TestNumber": 123.0,
     "TestBool": true,
@@ -923,6 +894,7 @@ TEST_F(RedfishOverrideTest, GetReplaceValueFailedOverrideTryAgain) {
       });
 
   absl::string_view expected_get_str = R"json({
+    "@odata.id": "/expected/result/1",
     "TestString": "OverrideReplaceByField",
     "TestNumber": 123.0,
     "TestBool": true,
@@ -957,6 +929,118 @@ TEST_F(RedfishOverrideTest, GetReplaceValueFailedOverrideTryAgain) {
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get2->body));
   EXPECT_THAT(std::get<nlohmann::json>(res_get2->body), Eq(expected_get));
   EXPECT_THAT(res_get2->code, Eq(200));
+}
+TEST_F(RedfishOverrideTest, GetReplaceValueUsingExpand) {
+  OverridePolicy policy = ParseTextProtoOrDie(R"pb(
+    override_content_map_uri: {
+      key: "/expected/result/1"
+      value: {
+        override_field:
+        [ {
+          action_replace: {
+            object_identifier: {
+              individual_object_identifier:
+              [ { field_name: "TestString" }]
+            }
+            override_value: {
+              value: { string_value: "OverrideReplaceByField" }
+            }
+          }
+        }
+          , {
+            action_replace: {
+              object_identifier: {
+                individual_object_identifier:
+                [ { field_name: "TestArray" }
+                  , {
+                    array_field: {
+                      field_name: "TestNumber"
+                      value: { number_value: 1234 }
+                    }
+                  }
+                  , { field_name: "TestNumber" }]
+              }
+              override_value: { value: { number_value: 54321 } }
+            }
+          }
+          , {
+            action_replace: {
+              object_identifier: {
+                individual_object_identifier:
+                [ { field_name: "TestArray" }
+                  , { array_idx: 0 }
+                  , { field_name: "TestStruct" }]
+              }
+              override_value: {
+                value: { string_value: "OverrideReplaceByIndex" }
+              }
+            }
+          }]
+      }
+    }
+  )pb");
+  auto rf_override = std::make_unique<RedfishTransportWithOverride>(
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
+
+  absl::string_view expected_get_str = R"json({
+      "@odata.id": "/expected/result",
+      "Members": [
+        {
+          "@odata.id": "/expected/result/1",
+          "TestString": "OverrideReplaceByField",
+          "TestNumber": 123.0,
+          "TestBool": true,
+          "TestArray":[
+            {
+              "TestStruct": "OverrideReplaceByIndex"
+            },
+            {
+              "TestStruct": "tests1"
+            },
+            {
+              "TestStruct": "tests2"
+            },
+            {
+              "TestNumber": 54321.0
+            },
+            "TestArrayString",
+            [ "TestArrayInArray1" ]
+          ]
+        },
+        {
+          "@odata.id": "/expected/result/2",
+          "TestString": "test456",
+          "TestNumber": 456.0,
+          "TestBool": false,
+          "TestArray":[
+            56789.0,
+            {
+              "TestStruct":"tests0"
+            },
+            {
+              "TestStruct":"tests1"
+            },
+            {
+              "TestStruct":"tests2"
+            },
+            {
+              "TestNumber": 4567.0
+            },
+            "TestArrayString2",
+            [ "TestArrayInArray2" ]
+          ]
+        }
+      ]
+    })json";
+  nlohmann::json expected_get =
+      nlohmann::json::parse(expected_get_str, nullptr, false);
+  absl::StatusOr<RedfishTransport::Result> res_get =
+      rf_override->Get("/expected/result?$expand=.($levels=1)");
+  ASSERT_THAT(res_get, IsOk());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
+  EXPECT_THAT(res_get->code, Eq(200));
 }
 
 }  // namespace

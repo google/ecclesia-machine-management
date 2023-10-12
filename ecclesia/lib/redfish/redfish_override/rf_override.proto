@@ -79,9 +79,10 @@ message OverrideField {
     ActionClear action_clear = 3;
   }
   message ApplyCondition {
-    // This boolean specifies if this override only applies when expand is used.
-    // If true, then the override policy will applied only when expand is used.
-    bool is_expand = 1;
+    // This ia a legacy flag that only applies an override when expand was used.
+    // For now all the rules with this flag will be ignored as override function
+    // will support expand.
+    bool is_expand = 1 [deprecated = true];
   }
   ApplyCondition apply_condition = 4;
 }
