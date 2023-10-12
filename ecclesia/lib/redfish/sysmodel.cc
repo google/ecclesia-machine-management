@@ -39,9 +39,9 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceChassis> /*unused*/,
                                         const QueryParams &query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
-      .Get(kRfPropertyChassis, {.freshness = query_params.freshness,
-                                .expand = RedfishQueryParamExpand(
-                                    {.levels = 0})})
+      .Get(kRfPropertyChassis,
+           {.freshness = query_params.freshness,
+            .expand = RedfishQueryParamExpand({.levels = 0})})
       .Each()
       .Do([&](std::unique_ptr<RedfishObject> &chassis_obj) {
         return result_callback(std::move(chassis_obj));
@@ -256,6 +256,14 @@ void Sysmodel::QueryAllResourceInternal(
       .Get(kRfPropertySystems,
            {.freshness = query_params.freshness,
             .expand = RedfishQueryParamExpand({.levels = 1})})
+      .Each()[kRfPropertyEthernetInterfaces]
+      .Each()
+      .Do([&](std::unique_ptr<RedfishObject> &eth_obj) {
+        return result_callback(std::move(eth_obj));
+      });
+
+  root.AsIndexHelper()
+      .Get(kRfPropertyManagers)
       .Each()[kRfPropertyEthernetInterfaces]
       .Each()
       .Do([&](std::unique_ptr<RedfishObject> &eth_obj) {
