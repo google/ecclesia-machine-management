@@ -5,6 +5,11 @@ package ecclesia;
 import "google/protobuf/timestamp.proto";
 import "ecclesia/lib/redfish/transport/transport_metrics.proto";
 
+message QueryIdToResult {
+  // Map of query id to the Query Result
+  map<string, QueryResult> results = 1;
+}
+
 message QueryResult {
   // Query Id
   string query_id = 1;

@@ -121,11 +121,11 @@ void VerifyQueryResults(std::vector<DelliciusQueryResult> actual_entries,
               UnorderedElementsAreArrayOfProtos(expected_entries));
 }
 
-void VerifyQueryResults(std::vector<QueryResult> actual_entries,
-                        std::vector<QueryResult> expected_entries,
+void VerifyQueryResults(QueryIdToResult actual_entries,
+                        QueryIdToResult expected_entries,
                         bool check_timestamps = false) {
-  auto remove_timestamps = [](std::vector<QueryResult> &entries) {
-    for (QueryResult &entry : entries) {
+  auto remove_timestamps = [](QueryIdToResult &entries) {
+    for (auto &[query_id, entry] : *entries.mutable_results()) {
       entry.mutable_stats()->clear_start_time();
       entry.mutable_stats()->clear_end_time();
     }
@@ -136,8 +136,7 @@ void VerifyQueryResults(std::vector<QueryResult> actual_entries,
     remove_timestamps(expected_entries);
   }
 
-  EXPECT_THAT(actual_entries,
-              UnorderedElementsAreArrayOfProtos(expected_entries));
+  EXPECT_THAT(actual_entries, EqualsProto(expected_entries));
 }
 
 absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
@@ -655,14 +654,15 @@ TEST(QueryEngineTest, QueryEngineWithIdAssigner) {
       server, std::move(id_assigner), kDelliciusQueries, &clock);
   EXPECT_TRUE(query_engine.ok());
 
-  QueryResult intent_output_sensor = ParseTextFileAsProtoOrDie<QueryResult>(
-      GetTestDataDependencyPath(JoinFilePaths(
-          kQuerySamplesLocation,
-          "query_out/devpath_assembly_out_translated.textproto")));
-  std::vector<QueryResult> response_entries = query_engine->ExecuteRedpathQuery(
+  QueryIdToResult intent_output_sensor =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(
+          GetTestDataDependencyPath(JoinFilePaths(
+              kQuerySamplesLocation,
+              "query_out/devpath_assembly_out_translated.textproto")));
+  QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"AssemblyCollectorWithPropertyNameNormalization"});
   VerifyQueryResults(std::move(response_entries),
-                     {std::move(intent_output_sensor)});
+                     std::move(intent_output_sensor));
 }
 
 TEST(QueryEngineTest, TestQueryEngineFactoryForParserError) {
@@ -691,15 +691,15 @@ TEST(QueryEngineTest, QueryEngineWithTranslation) {
   QueryEngine &query_engine = fake_engine_env.GetEngine();
 
   // Validate first query result with metrics.
-  std::vector<QueryResult> response_entries = query_engine.ExecuteRedpathQuery(
+  QueryIdToResult response_entries = query_engine.ExecuteRedpathQuery(
       {"AssemblyCollectorWithPropertyNameNormalization"});
-  QueryResult intent_output_assembly =
-      ParseTextFileAsProtoOrDie<QueryResult>(assembly_out_path);
-  VerifyQueryResults(response_entries, {intent_output_assembly});
+  QueryIdToResult intent_output_assembly =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(assembly_out_path);
+  VerifyQueryResults(response_entries, intent_output_assembly);
 }
 
 TEST(QueryEngineTest, QueryEngineWithTranslationAndLocalDevpath) {
-  std::string assembly_out_path = GetTestDataDependencyPath(
+  std::string sensor_out_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation,
                     "query_out/devpath_sensor_out_translated.textproto"));
 
@@ -713,11 +713,11 @@ TEST(QueryEngineTest, QueryEngineWithTranslationAndLocalDevpath) {
   QueryEngine &query_engine = fake_engine_env.GetEngine();
 
   // Validate first query result with metrics.
-  std::vector<QueryResult> response_entries =
+  QueryIdToResult response_entries =
       query_engine.ExecuteRedpathQuery({"SensorCollector"});
-  QueryResult intent_output_assembly =
-      ParseTextFileAsProtoOrDie<QueryResult>(assembly_out_path);
-  VerifyQueryResults(response_entries, {intent_output_assembly});
+  QueryIdToResult intent_output_assembly =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(sensor_out_path);
+  VerifyQueryResults(response_entries, intent_output_assembly);
 }
 
 TEST(QueryEngineTest, MalformedQueryRulesFailEngineConstruction) {

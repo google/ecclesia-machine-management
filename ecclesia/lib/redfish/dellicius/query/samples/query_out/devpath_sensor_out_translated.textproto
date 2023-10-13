@@ -1,507 +1,512 @@
 # proto-file: ecclesia/lib/redfish/redpath/definitions/query_result/query_result.proto
-# proto-message: ecclesia.QueryResult
+# proto-message: ecclesia.QueryIdToResult
 
-query_id: "SensorCollector"
-stats {
-}
-data {
-  fields {
-    key: "Sensors"
-    value {
-      list_value {
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "fan0"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 16115
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Rotational"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "RPM"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/SYS_FAN0"
+results: {
+  key: "SensorCollector"
+  value: {
+    query_id: "SensorCollector"
+    stats {
+    }
+    data {
+      fields {
+        key: "Sensors"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "fan0"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 16115
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Rotational"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "RPM"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/SYS_FAN0"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "fan1"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 16115
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Rotational"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "RPM"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/SYS_FAN1"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "fan1"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 16115
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Rotational"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "RPM"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/SYS_FAN1"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "fan2"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 16115
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Rotational"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "RPM"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/SYS_FAN2/FAN2"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "fan2"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 16115
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Rotational"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "RPM"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/SYS_FAN2/FAN2"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "fan3"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 16115
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Rotational"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "RPM"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/SYS_FAN2/FAN3"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "fan3"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 16115
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Rotational"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "RPM"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/SYS_FAN2/FAN3"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "fan4"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 16115
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Rotational"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "RPM"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/SYS_FAN2/FAN4"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "fan4"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 16115
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Rotational"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "RPM"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/SYS_FAN2/FAN4"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "fan5"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 16115
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Rotational"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "RPM"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/SYS_FAN2/FAN5"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "fan5"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 16115
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Rotational"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "RPM"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/SYS_FAN2/FAN5"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "fan6"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 16115
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Rotational"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "RPM"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/SYS_FAN2/FAN6"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "fan6"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 16115
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Rotational"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "RPM"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/SYS_FAN2/FAN6"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "fan7"
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Rotational"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "RPM"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/SYS_FAN2/FAN7"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "fan7"
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Rotational"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "RPM"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/SYS_FAN2/FAN7"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "indus_eat_temp"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 28
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Temperature"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "Cel"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/KA0"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "indus_eat_temp"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 28
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Temperature"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "Cel"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/KA0"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "indus_latm_temp"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 35
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Temperature"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "Cel"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/KA2"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "indus_latm_temp"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 35
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Temperature"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "Cel"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/KA2"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "CPU0"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 30
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Power"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "W"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/CPU0"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "CPU0"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 30
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Power"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "W"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/CPU0"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "CPU1"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 30
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Power"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "W"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/CPU1"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "CPU1"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 30
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Power"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "W"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/CPU1"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "CPU0"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 60
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Temperature"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "Cel"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/CPU0"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "CPU0"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 60
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Temperature"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "Cel"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/CPU0"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-        values {
-          subquery_value {
-            fields {
-              key: "Name"
-              value {
-                string_value: "CPU1"
-              }
-            }
-            fields {
-              key: "Reading"
-              value {
-                int_value: 60
-              }
-            }
-            fields {
-              key: "ReadingType"
-              value {
-                string_value: "Temperature"
-              }
-            }
-            fields {
-              key: "ReadingUnits"
-              value {
-                string_value: "Cel"
-              }
-            }
-            fields {
-              key: "_id_"
-              value {
-                identifier {
-                  local_devpath: "/phys/CPU1"
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "CPU1"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 60
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Temperature"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "Cel"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/CPU1"
+                    }
+                  }
                 }
               }
             }

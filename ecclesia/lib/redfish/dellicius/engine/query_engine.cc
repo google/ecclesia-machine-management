@@ -49,6 +49,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -263,7 +264,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   }
 
   // Executes Queries based on query_ids; auto-collects metrics into resultant
-  // DelliciusQueryResults if QueryEngine was constructed with a metrical
+  // DelliciusQueryIdToResult if QueryEngine was constructed with a metrical
   // transport.
   std::vector<DelliciusQueryResult> ExecuteQuery(
       QueryEngine::ServiceRootType service_root_uri,
@@ -362,19 +363,19 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   }
 
   // Translates vector of  DelliciusQueryResult to new QueryResult format.
-  static std::vector<QueryResult> TranslateLegacyResults(
+  static QueryIdToResult TranslateLegacyResults(
       const std::vector<DelliciusQueryResult> &legacy_results) {
-    std::vector<QueryResult> translated_results;
-    std::transform(legacy_results.begin(), legacy_results.end(),
-                   std::back_inserter(translated_results),
-                   [](const DelliciusQueryResult &result) {
-                     return ToQueryResult(result);
-                   });
+    QueryIdToResult translated_results;
+    std::for_each(legacy_results.begin(), legacy_results.end(),
+                  [&](const DelliciusQueryResult &result) {
+                    translated_results.mutable_results()->insert(
+                        {result.query_id(), ToQueryResult(result)});
+                  });
     return translated_results;
   }
 
   // Executes Redpath query and returns results in updated QueryResult format.
-  std::vector<QueryResult> ExecuteRedpathQuery(
+  QueryIdToResult ExecuteRedpathQuery(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
       const QueryVariableSet &query_arguments = {}) override {
@@ -384,7 +385,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 
   // Executes Redpath query and returns results in updated QueryResult format,
   // with a tracker.
-  std::vector<QueryResult> ExecuteRedpathQuery(
+  QueryIdToResult ExecuteRedpathQuery(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
       const QueryVariableSet &query_arguments, QueryTracker &tracker) override {

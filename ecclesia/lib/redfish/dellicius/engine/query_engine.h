@@ -121,11 +121,11 @@ class QueryEngine {
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments, QueryTracker &tracker) = 0;
 
-    virtual std::vector<QueryResult> ExecuteRedpathQuery(
+    virtual QueryIdToResult ExecuteRedpathQuery(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments) = 0;
-    virtual std::vector<QueryResult> ExecuteRedpathQuery(
+    virtual QueryIdToResult ExecuteRedpathQuery(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments, QueryTracker &tracker) = 0;
@@ -199,7 +199,8 @@ class QueryEngine {
     return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
                                       query_arguments, tracker);
   }
-  std::vector<QueryResult> ExecuteRedpathQuery(
+
+  QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri = ServiceRootType::kRedfish,
       const QueryVariableSet &query_arguments = {}) {
@@ -207,7 +208,7 @@ class QueryEngine {
                                              query_arguments);
   }
 
-  std::vector<QueryResult> ExecuteRedpathQuery(
+  QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
       ServiceRootType service_root_uri = ServiceRootType::kRedfish,
       const QueryVariableSet &query_arguments = {}) {
