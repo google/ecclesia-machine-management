@@ -1344,7 +1344,8 @@ void QueryPlanner::ProcessSubqueries(
     result.mutable_status()->set_code(::google::rpc::Code::FAILED_PRECONDITION);
     result.mutable_status()->set_message(absl::StrCat(
         "Cannot query service root for query with id: ", result.query_id(),
-        ". Check host configuration."));
+        ", Error: ",
+        variant.status().ToString(absl::StatusToStringMode::kWithEverything)));
     return;
   }
 
