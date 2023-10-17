@@ -25,6 +25,23 @@ message SubqueryDataSet {
       bool boolean_value = 6;
       google.protobuf.Timestamp timestamp_value = 7;
     }
+
+    message PropertyValue {
+      oneof value {
+        string string_value = 1;
+        double double_value = 2;
+        int64 int64_value = 3;
+        bool boolean_value = 4;
+        google.protobuf.Timestamp timestamp_value = 5;
+      }
+    }
+    message PropertyCollection {
+      repeated PropertyValue values = 1;
+    }
+    oneof property_value {
+      PropertyValue primitive_value = 8;
+      PropertyCollection collection_value = 9;
+    }
   }
 
   message RawData {

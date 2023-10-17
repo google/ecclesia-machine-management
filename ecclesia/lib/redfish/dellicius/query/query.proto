@@ -20,6 +20,13 @@ message DelliciusQuery {
     }
     // Identifies redfish property to parse along with .
     message RedfishProperty {
+      // Refers to the Type of property element in the Redfish spec:
+      // https://www.dmtf.org/sites/default/files/standards/documents/DSP0266_1.19.0.pdf#page=130
+      enum PropertyElementType {
+        UNSPECIFIED = 0;
+        PRIMITIVE = 1;
+        COLLECTION_PRIMITIVE = 2;
+      }
       enum PrimitiveType {
         UNDEFINED = 0;
         BOOLEAN = 1;
@@ -28,10 +35,12 @@ message DelliciusQuery {
         DOUBLE = 4;
         DATE_TIME_OFFSET = 5;
       }
+
       string property = 1;
       // Named attribute to which queried property in response data is mapped.
       optional string name = 2;
       PrimitiveType type = 3;
+      PropertyElementType property_element_type = 4;
     }
     // Uniquely identifies the subquery. It is the responsibility of client
     // application to use a unique string else the subquery output will be
