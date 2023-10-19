@@ -93,6 +93,7 @@ enum class ResourceEntity : int {
   kFanCollection,
   kGoogleErrorCounter,
   kGoogleErrorCounterCollection,
+  kGoogleManagedObjectStoreMetrics,
   kGoogleRasService,
   kGooglegRPCStatistics,
   kGraphicsController,
