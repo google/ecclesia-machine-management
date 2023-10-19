@@ -482,6 +482,57 @@ TEST(QueryResultDataConverterTest, PartialDataVerification) {
   )json"))));
 }
 
+TEST(QueryResultDataConverterTest, ConvertLegacyResultWithArrayProperty) {
+  ecclesia::DelliciusQueryResult legacy_result = ParseTextProtoOrDie(
+      R"pb(query_id: "PCIErrorLogSingleEntry"
+           subquery_output_by_id {
+             key: "PCIErrorLog"
+             value {
+               data_sets {
+                 properties { name: "DiagnosticDataType" string_value: "CPER" }
+                 properties {
+                   name: "MessageArgs"
+                   collection_value {
+                     values: { string_value: "0000:16:01.2" }
+                     values: { string_value: "CE" }
+                   }
+                 }
+               }
+             }
+           })pb");
+
+  QueryResult result = ToQueryResult(legacy_result);
+  ASSERT_THAT(result,
+              EqualsProto(
+                  R"pb(query_id: "PCIErrorLogSingleEntry"
+                       data {
+                         fields {
+                           key: "PCIErrorLog"
+                           value {
+                             list_value {
+                               values {
+                                 subquery_value {
+                                   fields {
+                                     key: "DiagnosticDataType"
+                                     value { string_value: "CPER" }
+                                   }
+                                   fields {
+                                     key: "MessageArgs"
+                                     value {
+                                       list_value {
+                                         values { string_value: "0000:16:01.2" }
+                                         values { string_value: "CE" }
+                                       }
+                                     }
+                                   }
+                                 }
+                               }
+                             }
+                           }
+                         }
+                       })pb"));
+}
+
 TEST(QueryResultDataConverterTest, DataVerificationWithMetrics) {
   ecclesia::DelliciusQueryResult legacy_result = ParseTextProtoOrDie(
       R"pb(

@@ -107,6 +107,21 @@ void AddChildSubQuery(QueryResultDataBuilder& builder,
         value_builder[property.name()] = property.boolean_value();
       } else if (property.has_timestamp_value()) {
         value_builder[property.name()] = property.timestamp_value();
+      } else if (property.has_collection_value()) {
+        QueryValueBuilder list_value_builder = value_builder[property.name()];
+        for (const auto& value : property.collection_value().values()) {
+          if (value.has_string_value()) {
+            list_value_builder.append(value.string_value());
+          } else if (value.has_int64_value()) {
+            list_value_builder.append(value.int64_value());
+          } else if (value.has_double_value()) {
+            list_value_builder.append(value.double_value());
+          } else if (value.has_boolean_value()) {
+            list_value_builder.append(value.boolean_value());
+          } else if (value.has_timestamp_value()) {
+            list_value_builder.append(value.timestamp_value());
+          }
+        }
       }
     }
     for (const auto& [child_subquery_id, child_subquery_output] :
