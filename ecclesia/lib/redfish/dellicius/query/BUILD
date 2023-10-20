@@ -86,3 +86,39 @@ py_proto_library(
     visibility = ["//visibility:public"],
     deps = [":query_variables_proto"],
 )
+
+cc_library(
+    name = "builder",
+    srcs = ["builder.cc"],
+    hdrs = ["builder.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//ecclesia/lib/file:path",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_binary(
+    name = "query_spec_generator",
+    srcs = ["query_spec_generator.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":builder",
+        ":query_cc_proto",
+        "//ecclesia/lib/file:path",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/types:span",
+        "@com_google_protobuf//:protobuf",
+    ],
+)

@@ -39,6 +39,11 @@ bzl_library(
 )
 
 bzl_library(
+    name = "redpath_query",
+    srcs = ["redpath_query.bzl"],
+)
+
+bzl_library(
     name = "proto",
     srcs = ["proto.bzl"],
     visibility = ["//visibility:public"],
