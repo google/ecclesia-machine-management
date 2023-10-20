@@ -42,6 +42,8 @@ namespace ecclesia {
 // methods to transparently allow subclasses to implement cache implementations.
 class RedfishCachedGetterInterface {
  public:
+  enum class Relevance : uint8_t { kRelevant, kNotRelevant};
+
   struct OperationResult {
     // Result of the Redfish GET request.
     absl::StatusOr<RedfishTransport::Result> result;
@@ -72,12 +74,15 @@ class RedfishCachedGetterInterface {
 
   // Returns a result from a GET to a path. The result should be fetched
   // from a live service and GetResult.is_fresh should be set to true.
-  OperationResult UncachedGet(absl::string_view path) {
+  OperationResult UncachedGet(
+      absl::string_view path,
+      RedfishCachedGetterInterface::Relevance relevance =
+          RedfishCachedGetterInterface::Relevance::kRelevant) {
     if (manager_.has_value()) {
       (*manager_)->RecordDownstreamCall(
           ApiComplexityContext::CallType::kUncachedRedfish);
     }
-    return UncachedGetInternal(path);
+    return UncachedGetInternal(path, relevance);
   }
 
   // Returns a result from a POST to a path and a payload. May return a cached
@@ -96,7 +101,10 @@ class RedfishCachedGetterInterface {
   // Methods implement the cache specific logic for CachedGet and UncachedGet
   // public methods
   virtual OperationResult CachedGetInternal(absl::string_view path) = 0;
-  virtual OperationResult UncachedGetInternal(absl::string_view path) = 0;
+  virtual OperationResult UncachedGetInternal(
+      absl::string_view path,
+      RedfishCachedGetterInterface::Relevance relevance =
+          RedfishCachedGetterInterface::Relevance::kRelevant) = 0;
   virtual OperationResult CachedPostInternal(absl::string_view path,
                                        absl::string_view payload,
                                        absl::Duration duration) = 0;
@@ -123,7 +131,10 @@ class NullCache : public RedfishCachedGetterInterface {
 
  protected:
   OperationResult CachedGetInternal(absl::string_view path) override;
-  OperationResult UncachedGetInternal(absl::string_view path) override;
+  OperationResult UncachedGetInternal(
+      absl::string_view path,
+      RedfishCachedGetterInterface::Relevance relevance =
+          RedfishCachedGetterInterface::Relevance::kNotRelevant) override;
   OperationResult CachedPostInternal(absl::string_view path,
                                absl::string_view payload,
                                absl::Duration duration) override;
@@ -152,7 +163,9 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
 
  protected:
   OperationResult CachedGetInternal(absl::string_view path) override;
-  OperationResult UncachedGetInternal(absl::string_view path) override;
+  OperationResult UncachedGetInternal(
+      absl::string_view path,
+      RedfishCachedGetterInterface::Relevance relevance) override;
   OperationResult CachedPostInternal(absl::string_view path,
                                absl::string_view payload,
                                absl::Duration duration) override;

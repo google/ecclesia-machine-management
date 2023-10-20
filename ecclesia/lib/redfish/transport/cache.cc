@@ -20,7 +20,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
-#include "ecclesia/lib/redfish/transport/interface.h"
+
 
 namespace ecclesia {
 
@@ -31,7 +31,8 @@ RedfishCachedGetterInterface::OperationResult NullCache::CachedGetInternal(
 }
 
 RedfishCachedGetterInterface::OperationResult NullCache::UncachedGetInternal(
-    absl::string_view path) {
+    absl::string_view path,
+    RedfishCachedGetterInterface::Relevance /* relevance */) {
   return {.result = transport_->Get(path), .is_fresh = true};
 }
 
@@ -79,7 +80,14 @@ RedfishCachedGetterInterface::OperationResult TimeBasedCache::CachedGetInternal(
 }
 
 RedfishCachedGetterInterface::OperationResult
-TimeBasedCache::UncachedGetInternal(absl::string_view path) {
+TimeBasedCache::UncachedGetInternal(
+    absl::string_view path,
+    RedfishCachedGetterInterface::Relevance relevance =
+        RedfishCachedGetterInterface::Relevance::kRelevant) {
+  // Bypass cache node retrieval if caller has indicated cache irrelevance.
+  if (relevance == RedfishCachedGetterInterface::Relevance::kNotRelevant) {
+    return {.result = transport_->Get(path), .is_fresh = true};
+  }
   TimeBasedCache::CacheNode &store = RetrieveCacheNode(path);
   auto result = store.UncachedRead();
   return {.result = std::move(result.result), .is_fresh = result.is_fresh};

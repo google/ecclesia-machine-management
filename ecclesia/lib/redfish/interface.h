@@ -40,6 +40,7 @@
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/http/codes.h"
+#include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "single_include/nlohmann/json.hpp"
 
@@ -146,6 +147,8 @@ struct GetParams {
   }
 
   Freshness freshness = Freshness::kOptional;
+  RedfishCachedGetterInterface::Relevance relevance =
+      RedfishCachedGetterInterface::Relevance::kRelevant;
   bool auto_adjust_levels = false;
   std::optional<RedfishQueryParamExpand> expand;
 };

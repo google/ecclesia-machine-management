@@ -659,7 +659,7 @@ class HttpRedfishInterface : public RedfishInterface {
                                 GetParams params) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
     std::string full_redfish_path = GetUriWithQueryParameters(uri, params);
-    auto get_result = cache_->UncachedGet(full_redfish_path);
+    auto get_result = cache_->UncachedGet(full_redfish_path, params.relevance);
     return GetUriHelper(uri, std::move(params), std::move(get_result));
   }
 
