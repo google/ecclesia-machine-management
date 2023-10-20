@@ -16,10 +16,12 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/time:clock",
+        "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/synchronization",
     ],
 )
 

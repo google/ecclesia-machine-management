@@ -23,10 +23,12 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
@@ -51,6 +53,8 @@ struct QueryTracker {
 
 // Provides an interface for normalizing a redfish response into SubqueryDataSet
 // for the property specification in a Dellicius Subquery.
+// Normalizer is a thread-safe class: It's OK to call const and non-const
+// methods on an instance of this class concurrently.
 class Normalizer {
  public:
   class ImplInterface {
@@ -59,9 +63,9 @@ class Normalizer {
 
     virtual absl::Status Normalize(const RedfishObject &redfish_object,
                                    const DelliciusQuery::Subquery &query,
-                                   SubqueryDataSet &data_set) const = 0;
+                                   SubqueryDataSet &data_set) = 0;
 
-    virtual absl::StatusOr<const NodeTopology *> GetNodeTopology() const {
+    virtual absl::StatusOr<const NodeTopology *> GetNodeTopology() {
       return absl::UnimplementedError("");
     }
   };
@@ -71,12 +75,18 @@ class Normalizer {
   absl::StatusOr<SubqueryDataSet> Normalize(
       const RedfishObject &redfish_object,
       const DelliciusQuery::Subquery &query) {
+    // It's ok to use a simple mutex here. If we ever detect lock contention
+    // and we know that the writes are less frequent, we can convert this mutex
+    // to Reader-writer lock.
+    absl::MutexLock l(&impl_chain_mu_);
     if (impl_chain_.empty()) return absl::NotFoundError("No normalizers added");
     SubqueryDataSet data_set;
+
     for (const auto &impl : impl_chain_) {
       ECCLESIA_RETURN_IF_ERROR(
           impl->Normalize(redfish_object, query, data_set));
     }
+
     // Return an error if data set is empty - no field and no devpath
     if (data_set.properties().empty() && !data_set.has_devpath()) {
       return absl::NotFoundError("Resulting dataset is empty");
@@ -85,10 +95,12 @@ class Normalizer {
   }
 
   void AddNormalizer(std::unique_ptr<ImplInterface> impl) {
+    absl::MutexLock l(&impl_chain_mu_);
     impl_chain_.push_back(std::move(impl));
   }
 
   absl::StatusOr<const NodeTopology *> GetNodeTopology() {
+    absl::MutexLock l(&impl_chain_mu_);
     for (auto &impl : impl_chain_) {
       if (auto topology = impl->GetNodeTopology(); topology.ok()) {
         return *topology;
@@ -98,7 +110,9 @@ class Normalizer {
   }
 
  protected:
-  std::vector<std::unique_ptr<ImplInterface>> impl_chain_;
+  absl::Mutex impl_chain_mu_;  // Protects impl_chain_
+  std::vector<std::unique_ptr<ImplInterface>> impl_chain_
+      ABSL_GUARDED_BY(impl_chain_mu_);
 };
 
 // Provides an interface for executing a Dellicius Query plan.

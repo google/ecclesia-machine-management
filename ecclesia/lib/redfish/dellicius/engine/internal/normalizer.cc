@@ -223,7 +223,7 @@ NormalizerImplDefault::NormalizerImplDefault()
 absl::Status NormalizerImplDefault::Normalize(
     const RedfishObject &redfish_object,
     const DelliciusQuery::Subquery &subquery,
-    SubqueryDataSet &data_set_local) const {
+    SubqueryDataSet &data_set_local) {
   for (const DelliciusQuery::Subquery::RedfishProperty &property :
        subquery.properties()) {
     auto property_out = GetPropertyFromRedfishObject(redfish_object, property);
@@ -270,7 +270,7 @@ absl::Status NormalizerImplDefault::Normalize(
 
 absl::Status NormalizerImplAddDevpath::Normalize(
     const RedfishObject &redfish_object,
-    const DelliciusQuery::Subquery &subquery, SubqueryDataSet &data_set) const {
+    const DelliciusQuery::Subquery &subquery, SubqueryDataSet &data_set) {
   // Prioritize devpath populated by default normalizer.
   if (data_set.has_devpath()) {
     return absl::OkStatus();
