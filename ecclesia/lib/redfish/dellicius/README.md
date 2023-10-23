@@ -157,13 +157,17 @@ end_timestamp {
 ```c++
 FakeRedfishServer server("indus_hmb_shim/mockup.shar");
 std::unique_ptr<RedfishInterface> intf = server.RedfishClientInterface();
-QueryEngineConfiguration config{
-    .flags{.enable_devpath_extension = true,
-           .enable_cached_uri_dispatch = false},
-    .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}};
-QueryEngine query_engine(config, &clock, std::move(intf));
+ecclesia::QueryContext query_context = {.query_files = kDelliciusQueries,
+                                          .query_rules = {}};
+ecclesia::QueryEngineParams params = {.transport = GetTransport(server),
+                                      .entity_tag = "node0",
+                                      .feature_flags = {
+                                          .enable_redfish_metrics = true,
+                                          .enable_devpath_extension = true}};
+absl::StatusOr<QueryEngine> query_engine =
+        CreateQueryEngine(query_context, params);
 std::vector<DelliciusQueryResult> response_entries =
-    query_engine.ExecuteQuery({"SensorCollector"});
+        query_engine->ExecuteQuery({"SensorCollector"});
 ```
 
 ## References
