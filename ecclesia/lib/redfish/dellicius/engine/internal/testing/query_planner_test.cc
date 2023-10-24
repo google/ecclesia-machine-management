@@ -550,6 +550,43 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorHaltsExecution) {
               Eq(::google::rpc::Code::DEADLINE_EXCEEDED));
 }
 
+TEST_F(QueryPlannerTestRunner, CheckUnresolvedNodeIsNotAnError) {
+  std::string query_in_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_in/managers_in.textproto"));
+  SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
+  // Instantiate a passthrough normalizer with devpath extension.
+  auto normalizer_with_devpath = BuildDefaultNormalizerWithLocalDevpath(
+      CreateTopologyFromRedfish(intf_.get()));
+  // Create Query Planner.
+  DelliciusQuery query =
+      ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
+  absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qp =
+      BuildDefaultQueryPlanner(query, RedPathRedfishQueryParams{},
+                               normalizer_with_devpath.get());
+  ASSERT_TRUE(qp.ok());
+  // Create mock RedfishVariant to return not found error
+  std::unique_ptr<MockableGetRedfishObject> mock_rf_obj =
+      std::make_unique<MockableGetRedfishObject>();
+  EXPECT_CALL(*mock_rf_obj, Get(AnyGetParams(_), AnyGetParams(_)))
+      .WillOnce(Return(ByMove(
+          RedfishVariant(absl::NotFoundError("node not found")))));
+  // Create context node that will return the mocked Redfish Object.
+  std::unique_ptr<MockableObjectRedfishVariantImpl> mock_context_node_variant =
+      std::make_unique<MockableObjectRedfishVariantImpl>("test");
+  EXPECT_CALL(*mock_context_node_variant, AsObject())
+      .WillOnce(Return(ByMove(std::move(mock_rf_obj))));
+  RedfishVariant mock_context_node(std::move(mock_context_node_variant));
+  absl::StatusOr<DelliciusQueryResult> query_result =
+      (*qp)->Run(mock_context_node, *clock_, nullptr, {});
+  // Ensure that after encountering a NOT_FOUND error, the query status is OK,
+  // and no error summaries are populated.
+  ASSERT_TRUE(query_result.ok());
+  ASSERT_THAT(query_result->status().code(), Eq(::google::rpc::Code::OK));
+  ASSERT_THAT(query_result->query_errors().subquery_id_to_error_summary(),
+              testing::SizeIs(0));
+}
+
+
 TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorDoesntHaltExecutionIfDesired) {
   std::string query_in_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_in/assembly_in.textproto"));

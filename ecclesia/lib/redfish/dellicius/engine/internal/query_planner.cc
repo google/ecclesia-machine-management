@@ -987,18 +987,17 @@ ContextNode ExecutePredicateExpression(const int node_index,
       " to valid Redfish object at path ", last_executed_redpath,
       ". Redfish Request failed with error: ", node_variant_status.ToString());
   if (code == absl::StatusCode::kNotFound) {
-    error_code = ::google::rpc::Code::NOT_FOUND;
-  } else {
-    // Unless the error is NOT_FOUND, we want to propagate it up to QueryResult.
-    if (code == absl::StatusCode::kDeadlineExceeded) {
-      error_code = ::google::rpc::Code::DEADLINE_EXCEEDED;
-    }
-    if (code == absl::StatusCode::kUnauthenticated) {
-      error_code = ::google::rpc::Code::UNAUTHENTICATED;
-    }
-    result.mutable_status()->set_code(error_code);
-    result.mutable_status()->set_message(error_message);
+    return ::google::rpc::Code::NOT_FOUND;
   }
+  // Unless the error is NOT_FOUND, we want to propagate it up to QueryResult.
+  if (code == absl::StatusCode::kDeadlineExceeded) {
+    error_code = ::google::rpc::Code::DEADLINE_EXCEEDED;
+  }
+  if (code == absl::StatusCode::kUnauthenticated) {
+    error_code = ::google::rpc::Code::UNAUTHENTICATED;
+  }
+  result.mutable_status()->set_code(error_code);
+  result.mutable_status()->set_message(error_message);
   // If the Get fails for the node name, mark the failure status in the
   // relevant subqueries.
   for (const auto &redpath_ctx : redpath_ctx_multiple) {
