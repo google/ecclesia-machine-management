@@ -149,6 +149,8 @@ inline constexpr char kRfPropertySettingsObject[] = "SettingsObject";
 inline constexpr char kRfOemPropertyAssociatedWith[] = "AssociatedWith";
 inline constexpr char kRfOemPropertyAttachedTo[] = "AttachedTo";
 inline constexpr char kRfOemPropertyGoogle[] = "Google";
+inline constexpr char kRfOemPropertyGoogleComputerSystemBootGuestOs[] =
+    "#GoogleComputerSystem.BootGuestOS";
 inline constexpr char kRfOemPropertyComponents[] = "Components";
 inline constexpr char kRfOemPropertyMemoryErrorCounts[] = "MemoryErrorCounts";
 inline constexpr char kRfOemPropertyProcessorErrorCounts[] =
@@ -403,8 +405,7 @@ DEFINE_REDFISH_PROPERTY(PropertyCorrectableOtherErrorCount, int,
                         "CorrectableOtherErrorCount");
 DEFINE_REDFISH_PROPERTY(PropertyUncorrectableOtherErrorCount, int,
                         "UncorrectableOtherErrorCount");
-DEFINE_REDFISH_PROPERTY(PropertyDiagnosticData, std::string,
-                        "DiagnosticData");
+DEFINE_REDFISH_PROPERTY(PropertyDiagnosticData, std::string, "DiagnosticData");
 DEFINE_REDFISH_PROPERTY(PropertyAdditionalDataURI, std::string,
                         "AdditionalDataURI");
 DEFINE_REDFISH_PROPERTY(PropertyCreatedTime, std::string, "Created");
@@ -445,8 +446,7 @@ DEFINE_REDFISH_PROPERTY(PropertyResidentSetSizeBytes, int64_t,
                         "ResidentSetSizeBytes");
 DEFINE_REDFISH_PROPERTY(PropertyUserTimeSeconds, double, "UserTimeSeconds");
 DEFINE_REDFISH_PROPERTY(PropertyKernelTimeSeconds, double, "KernelTimeSeconds");
-DEFINE_REDFISH_PROPERTY(PropertyNFileDescriptors, int64_t,
-                        "NFileDescriptors");
+DEFINE_REDFISH_PROPERTY(PropertyNFileDescriptors, int64_t, "NFileDescriptors");
 DEFINE_REDFISH_PROPERTY(PropertyFirmwareTimeSeconds, double,
                         "FirmwareTimeSeconds");
 DEFINE_REDFISH_PROPERTY(PropertyLoaderTimeSeconds, double, "LoaderTimeSeconds");
