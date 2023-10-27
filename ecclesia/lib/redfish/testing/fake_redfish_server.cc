@@ -42,6 +42,7 @@
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "single_include/nlohmann/json.hpp"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -109,6 +110,21 @@ void FakeRedfishServer::AddHttpGetHandlerWithOwnedData(std::string uri,
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(data);
         req->Reply();
+      });
+}
+
+void FakeRedfishServer::AddHttpGetHandlerWithStatus(
+    std::string uri, std::string data,
+    tensorflow::serving::net_http::HTTPStatusCode status) {
+  AddHttpGetHandler(
+      std::move(uri),
+      [&, data = std::move(data)](
+          ::tensorflow::serving::net_http::ServerRequestInterface *req) {
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(data);
+        req->ReplyWithStatus(status);
       });
 }
 

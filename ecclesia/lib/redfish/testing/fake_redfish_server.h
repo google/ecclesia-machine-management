@@ -108,6 +108,12 @@ class FakeRedfishServer {
   void AddHttpGetHandlerWithOwnedData(std::string uri, std::string data)
       ABSL_LOCKS_EXCLUDED(patch_lock_);
 
+  // Convenience function to register a GET handler that returns the provided
+  // data with user specified status.
+  void AddHttpGetHandlerWithStatus(
+      std::string uri, std::string data,
+      tensorflow::serving::net_http::HTTPStatusCode status);
+
   // Allows POST Handler to accept "data". It is passed to post request along
   // with URI.
   void AddHttpPostHandlerWithData(absl::string_view uri, absl::string_view data,

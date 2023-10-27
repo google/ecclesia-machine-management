@@ -59,6 +59,7 @@
 #include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/clock_fake.h"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 
 namespace ecclesia {
 
@@ -799,6 +800,51 @@ TEST(QueryEngineTest, MalformedQueryRulesFailEngineConstruction) {
               IsStatusInternal());
 }
 
-}  // namespace
+TEST(QueryEngineTest, QueryEngineNoHaltOnFirstFailure) {
+  FakeRedfishServer server(kIndusMockup);
+  std::string temp_sensor_uri =
+      "/redfish/v1/Chassis/chassis/Sensors/indus_eat_temp";
+  std::string rotational_sensor_uri =
+      "/redfish/v1/Chassis/chassis/Sensors/indus_fan4_rpm";
+  // Ensure two subqueries return errors.
+  server.AddHttpGetHandlerWithStatus(
+      temp_sensor_uri, "",
+      tensorflow::serving::net_http::HTTPStatusCode::SERVICE_UNAV);
+  server.AddHttpGetHandlerWithStatus(
+      rotational_sensor_uri, "",
+      tensorflow::serving::net_http::HTTPStatusCode::SERVICE_UNAV);
+  // Set up query engine with redfish metrics and to not halt on first error.
+  FakeClock clock{clock_time};
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
 
+  QueryContext query_context{.query_files = kDelliciusQueries,
+                             .query_rules = kQueryRules,
+                             .clock = &clock};
+  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
+      query_context, {.transport = std::move(transport),
+                      .feature_flags = {.enable_redfish_metrics = true,
+                                        .fail_on_first_error = false}});
+  ASSERT_TRUE(query_engine.ok());
+  // Issue the query and assert that both GETs were issued, ensuring that the
+  // query execution continued AFTER the first error occurred.
+  QueryResult query_result =
+      query_engine->ExecuteRedpathQuery({"SensorCollectorWithChassisLinks"})
+          .results()
+          .at("SensorCollectorWithChassisLinks");
+  EXPECT_TRUE(
+      query_result.stats().redfish_metrics().uri_to_metrics_map().contains(
+          temp_sensor_uri));
+  EXPECT_TRUE(
+      query_result.stats().redfish_metrics().uri_to_metrics_map().contains(
+          rotational_sensor_uri));
+}
+
+}  // namespace
 }  // namespace ecclesia

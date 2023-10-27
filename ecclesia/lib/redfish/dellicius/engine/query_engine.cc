@@ -174,12 +174,14 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
           id_to_query_plans,
       const Clock *clock, std::unique_ptr<Normalizer> normalizer,
       std::unique_ptr<RedfishInterface> redfish_interface,
-      MetricalRedfishTransport *metrical_transport = nullptr)
+      MetricalRedfishTransport *metrical_transport = nullptr,
+      const QueryEngineParams::FeatureFlags &feature_flags = {})
       : id_to_query_plans_(std::move(id_to_query_plans)),
         clock_(clock),
         normalizer_(std::move(normalizer)),
         redfish_interface_(std::move(redfish_interface)),
-        metrical_transport_(metrical_transport) {}
+        metrical_transport_(metrical_transport),
+        feature_flags_(feature_flags) {}
 
   // If a metrical transport is in use, the metrics for all the queries will be
   // aggregated in its RedfishMetrics object. Invoked from
@@ -204,13 +206,19 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       DelliciusQueryResult result_single;
       {
         auto query_timer = QueryTimestamp(&result_single, clock_);
+        QueryPlannerInterface::ExecutionMode execution_mode =
+            feature_flags_.fail_on_first_error
+                ? QueryPlannerInterface::ExecutionMode::kFailOnFirstError
+                : QueryPlannerInterface::ExecutionMode::
+                      kContinueOnSubqueryErrors;
         if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
           result_single = it->second->Run(
               redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
-              *clock_, tracker, vars);
+              *clock_, tracker, vars, /* metrics = */ nullptr, execution_mode);
         } else {
-          result_single = it->second->Run(redfish_interface_->GetRoot(),
-                                          *clock_, tracker, vars);
+          result_single = it->second->Run(
+              redfish_interface_->GetRoot(), *clock_, tracker, vars,
+              /* metrics = */ nullptr, execution_mode);
         }
       }
       response_entries.push_back(std::move(result_single));
@@ -248,13 +256,19 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       DelliciusQueryResult result_single;
       {
         auto query_timer = QueryTimestamp(&result_single, clock_);
+        QueryPlannerInterface::ExecutionMode execution_mode =
+            feature_flags_.fail_on_first_error
+                ? QueryPlannerInterface::ExecutionMode::kFailOnFirstError
+                : QueryPlannerInterface::ExecutionMode::
+                      kContinueOnSubqueryErrors;
         if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
           result_single = it->second->Run(
               redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
-              *clock_, tracker, vars, metrics);
+              *clock_, tracker, vars, metrics, execution_mode);
         } else {
-          result_single = it->second->Run(redfish_interface_->GetRoot(),
-                                          *clock_, tracker, vars, metrics);
+          result_single =
+              it->second->Run(redfish_interface_->GetRoot(), *clock_, tracker,
+                              vars, metrics, execution_mode);
         }
       }
       response_entries.push_back(std::move(result_single));
@@ -300,7 +314,6 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       QueryVariables vars = QueryVariables();
       auto it_vars = query_arguments.find(query_id);
       if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
-
       if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
         it->second->Run(
             redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
@@ -429,9 +442,10 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   // empty topology to be returned if no normalizers are found with real
   // topology.
   NodeTopology default_topology_;
-
   // Used during query metrics collection.
   MetricalRedfishTransport *metrical_transport_ = nullptr;
+  // Collection of flags dictating query engine execution.
+  QueryEngineParams::FeatureFlags feature_flags_;
 };
 
 }  // namespace
@@ -447,7 +461,8 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context,
     std::unique_ptr<RedfishInterface> redfish_interface,
     std::unique_ptr<Normalizer> normalizer,
-    MetricalRedfishTransport *metrical_transport) {
+    MetricalRedfishTransport *metrical_transport,
+    const QueryEngineParams::FeatureFlags &feature_flags) {
   // Parse query rules from embedded proto messages
   ECCLESIA_ASSIGN_OR_RETURN(
       auto query_id_to_rules,
@@ -485,7 +500,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
   }
   return QueryEngine(std::make_unique<QueryEngineImpl>(
       std::move(id_to_query_plans), query_context.clock, std::move(normalizer),
-      std::move(redfish_interface), metrical_transport));
+      std::move(redfish_interface), metrical_transport, feature_flags));
 }
 
 absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
@@ -512,7 +527,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
       query_context, std::move(redfish_interface),
       BuildLocalDevpathNormalizer(configuration.stable_id_type,
                                   redfish_interface_ptr),
-      metrical_transport_ptr);
+      metrical_transport_ptr, configuration.feature_flags);
 }
 
 absl::StatusOr<QueryEngine> CreateQueryEngine(
@@ -542,7 +557,8 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
       redfish_interface.get());
 
   return CreateQueryEngine(query_context, std::move(redfish_interface),
-                           std::move(normalizer), metrical_transport_ptr);
+                           std::move(normalizer), metrical_transport_ptr,
+                           engine_params.feature_flags);
 }
 
 }  // namespace ecclesia
