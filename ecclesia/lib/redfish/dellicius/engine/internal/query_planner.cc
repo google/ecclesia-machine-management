@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <iterator>
@@ -620,8 +621,19 @@ class SubqueryHandle final {
       std::string variable_name = absl::StrCat("$", value.name());
       replacements.push_back(std::make_pair(variable_name, value.value()));
     }
+
+    // Get unpopulated RedPath steps from subquery
+    absl::StatusOr<std::vector<RedPathStep>> templated_redpath_steps =
+        RedPathToSteps(subquery_.redpath());
+    if (!templated_redpath_steps.ok()) {
+      DLOG(ERROR) << "RedPathToSteps failed: "
+                  << templated_redpath_steps.status();
+      redpath_steps_ = std::vector<RedPathStep>{};
+      return;
+    }
+
     // Go through all of the redpath steps
-    for (const auto &pair : redpath_steps_) {
+    for (const auto &pair : templated_redpath_steps.value()) {
       std::pair<std::string, std::string> new_pair = pair;
       new_pair.second = absl::StrReplaceAll(new_pair.second, replacements);
       // If after the variable replacement there is still an unfilled variable,

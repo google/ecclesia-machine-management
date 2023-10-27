@@ -546,6 +546,67 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedUnfilledVars) {
                      {std::move(intent_query_out)});
 }
 
+TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
+  std::string query_out_path_full = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/sensor_out_template_full.textproto"));
+  std::string query_out_path_filtered = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/sensor_out_template.textproto"));
+
+  // Set the variables for filter criteria #1
+  QueryVariables::VariableValue val1, val2;
+  val1.set_name("Units");
+  val1.set_value("Cel");
+  // Type and units will remain unset
+  QueryVariableSet test_args = QueryVariableSet();
+  QueryVariables args1 = QueryVariables();
+  *args1.add_values() = val1;
+  *args1.add_values() = val2;
+  test_args["SensorCollectorTemplate"] = args1;
+
+  // Set the variables for filter criteria #2
+  QueryVariables::VariableValue val3, val4, val5;
+  val3.set_name("Type");
+  val3.set_value("Temperature");
+  val4.set_name("Units");
+  val4.set_value("Cel");
+  val5.set_name("Threshold");
+  val5.set_value("40");
+  QueryVariableSet test_args_filtered = QueryVariableSet();
+  QueryVariables args2 = QueryVariables();
+  *args2.add_values() = val3;
+  *args2.add_values() = val4;
+  *args2.add_values() = val5;
+  test_args_filtered["SensorCollectorTemplate"] = args2;
+
+  FakeQueryEngineEnvironment fake_engine_env = FakeQueryEngineEnvironment(
+      {.flags{.enable_devpath_extension = true},
+       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
+      kIndusMockup, clock_time);
+
+  // Execute query with first set of variable values.
+  std::vector<DelliciusQueryResult> response_entries =
+      fake_engine_env.GetEngine().ExecuteQuery(
+          {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
+          test_args);
+
+  DelliciusQueryResult intent_query_out =
+      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path_full);
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_query_out)});
+
+  // Run query again with different variable values for the same templated
+  // RedPath query.
+  std::vector<DelliciusQueryResult> response_entries_filtered =
+      fake_engine_env.GetEngine().ExecuteQuery(
+          {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
+          test_args_filtered);
+
+  DelliciusQueryResult intent_query_out_filtered =
+      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path_filtered);
+  VerifyQueryResults(std::move(response_entries_filtered),
+                     {std::move(intent_query_out_filtered)});
+}
+
 TEST(QueryEngineTest, QueryEngineTestTemplatedNoVars) {
   std::string query_out_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
