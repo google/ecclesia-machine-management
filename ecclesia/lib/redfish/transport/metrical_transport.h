@@ -28,7 +28,7 @@
 
 namespace ecclesia {
 
-// Decorates RedfishTransport to gather transport metrics.
+// Thread-safe class: Decorates RedfishTransport to gather transport metrics.
 class MetricalRedfishTransport : public RedfishTransport {
  public:
   explicit MetricalRedfishTransport(std::unique_ptr<RedfishTransport> base,
@@ -49,13 +49,15 @@ class MetricalRedfishTransport : public RedfishTransport {
   // Overwrite the current metrics with a new metrics proto. This is used for
   // collecting metrics over certain intervals.
   void ResetTrackingMetricsProto(RedfishMetrics *transport_metrics) {
+    absl::MutexLock lock(&metrics_mutex_);
     transport_metrics_ = transport_metrics;
   }
 
  private:
   std::unique_ptr<RedfishTransport> base_transport_;
   const Clock *clock_;
-  RedfishMetrics *transport_metrics_ = nullptr;
+  absl::Mutex metrics_mutex_;
+  RedfishMetrics *transport_metrics_ ABSL_GUARDED_BY(metrics_mutex_);
 };
 
 }  // namespace ecclesia
