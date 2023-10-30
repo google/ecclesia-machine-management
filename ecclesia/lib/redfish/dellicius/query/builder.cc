@@ -114,13 +114,15 @@ absl::Status FileBuilderBase::WriteToFile(absl::string_view filename,
 absl::Status FileBuilderBase::WriteHeaderFile(absl::string_view content) const {
   std::string filename = absl::StrCat(name_snake_case(), ".h");
   // Create header guard string
-  size_t start_pos = FindIgnoreCase(output_dir(), "platforms/redfish");
-  if (start_pos == -1) {
+
+  // Check if prefix is in directory. If not return failure
+  if (FindIgnoreCase(output_dir(), header_path()) == -1) {
     return absl::FailedPreconditionError(
-        "Query is not present in platforms/redfish folder");
+        absl::StrCat("Query is not present in ", header_path(), " folder"));
   }
-  std::string header_guard = absl::AsciiStrToUpper(absl::StrCat(
-      absl::ClippedSubstr(output_dir(), start_pos), "_", filename, "_"));
+
+  std::string header_guard =
+      absl::AsciiStrToUpper(absl::StrCat(header_path(), "_", filename, "_"));
   header_guard = absl::StrReplaceAll(header_guard, {{"/", "_"}, {".", "_"}});
 
   return WriteToFile(

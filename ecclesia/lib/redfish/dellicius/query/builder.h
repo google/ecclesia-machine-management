@@ -28,8 +28,9 @@ namespace platforms_redfish {
 // test generators.
 class FileBuilderBase {
  public:
-  FileBuilderBase(absl::string_view name, absl::string_view output_dir)
-      : name_(name), output_dir_(output_dir) {}
+  FileBuilderBase(absl::string_view name, absl::string_view output_dir,
+                  absl::string_view header_path)
+      : name_(name), output_dir_(output_dir), header_path_(header_path) {}
 
   virtual ~FileBuilderBase() = default;
 
@@ -46,10 +47,12 @@ class FileBuilderBase {
   std::string name_snake_case() const;
 
   absl::string_view output_dir() const { return output_dir_; }
+  absl::string_view header_path() const { return header_path_; }
 
  private:
   const std::string name_;
   const std::string output_dir_;
+  const std::string header_path_;
 };
 
 }  // namespace platforms_redfish

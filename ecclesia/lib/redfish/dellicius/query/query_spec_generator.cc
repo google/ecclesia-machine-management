@@ -37,7 +37,6 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
-#include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/redfish/dellicius/query/builder.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/status/macros.h"
@@ -51,6 +50,7 @@ ABSL_FLAG(std::string, namespace, "",
 
 ABSL_FLAG(std::string, output_dir, "",
           "directory where the output files should be written");
+ABSL_FLAG(std::string, header_path, "", "the path to the header file");
 
 ABSL_FLAG(std::vector<std::string>, query_files, {},
           "list of query textproto files");
@@ -121,7 +121,7 @@ absl::StatusOr<FilenameContentMap> ReadFileContents(
       absl::string_view used_buffer(buffer.data(), in_f.gcount());
       absl::StrAppend(&content, used_buffer);
     }
-    contents.insert({std::string(ecclesia::GetBasename(filename)), content});
+    contents.insert({std::string(filename), content});
   }
   return contents;
 }
@@ -167,10 +167,10 @@ std::string GetFileContentsStr(
 class QuerySpecBuilder : public FileBuilderBase {
  public:
   QuerySpecBuilder(absl::string_view name, absl::string_view ns,
-                   absl::string_view output_dir,
+                   absl::string_view output_dir, absl::string_view header_path,
                    std::vector<std::string> query_files,
                    std::vector<std::string> query_rules)
-      : FileBuilderBase(name, output_dir),
+      : FileBuilderBase(name, output_dir, header_path),
         namespace_(ns),
         query_files_(std::move(query_files)),
         query_rules_(std::move(query_rules)) {}
@@ -231,11 +231,13 @@ static absl::Status GenerateQuerySpec() {
   if (absl::GetFlag(FLAGS_output_dir).empty()) {
     return absl::FailedPreconditionError("output_dir must be specified");
   }
-
+  if (absl::GetFlag(FLAGS_header_path).empty()) {
+    return absl::FailedPreconditionError("header_path must be specified");
+  }
   std::unique_ptr<FileBuilderBase> builder = std::make_unique<QuerySpecBuilder>(
       absl::GetFlag(FLAGS_name), absl::GetFlag(FLAGS_namespace),
-      absl::GetFlag(FLAGS_output_dir), absl::GetFlag(FLAGS_query_files),
-      absl::GetFlag(FLAGS_query_rules));
+      absl::GetFlag(FLAGS_output_dir), absl::GetFlag(FLAGS_header_path),
+      absl::GetFlag(FLAGS_query_files), absl::GetFlag(FLAGS_query_rules));
 
   return builder->WriteFiles();
 }

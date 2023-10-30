@@ -50,8 +50,8 @@ def redpath_query(name, cc_namespace, queries, query_rules = [], visibility = No
         name = name + "__generator",
         srcs = queries + query_rules + srcs,
         outs = [name + ".cc", name + ".h"],
-        cmd = ("$(location %s) --name=%s --output_dir=\"$(@D)\" --namespace=%s --query_files %s %s") %
-              (generator, camel_case_name, cc_namespace, _get_file_location_str(queries), cmd_suffix),
+        cmd = ("$(location %s) --name=%s --output_dir=\"$(@D)\" --header_path=\"%s\" --namespace=%s --query_files %s %s") %
+              (generator, camel_case_name, native.package_name(), cc_namespace, _get_file_location_str(queries), cmd_suffix),
         tools = [generator],
     )
 
