@@ -36,10 +36,13 @@ absl::StatusOr<HealthRollup> ExtractHealthRollup(const RedfishObject &obj);
 // provide a devpath resolver callback, to be called either on the
 // `RedfishObject` pointed to by the OriginOfCondition property (if present), or
 // the `RedfishObject` containing the Conditions array (if absent).
+// By default, parse only if the overall resource health is Warning or Critical,
+// but users may use `parse_with_ok_health` to parse even if the health is OK.
 absl::StatusOr<HealthRollup> ExtractHealthRollup(
     const RedfishObject &obj,
     absl::AnyInvocable<std::optional<std::string>(const RedfishObject &)>
-        devpath_resolver);
+        devpath_resolver,
+    bool parse_with_ok_health);
 
 }  // namespace ecclesia
 

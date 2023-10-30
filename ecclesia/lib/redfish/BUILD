@@ -1,7 +1,7 @@
+load("//ecclesia/build_defs:embed.bzl", "cc_data_library")
+
 # Description:
 # C++ wrapper interfaces for libredfish
-
-load("//ecclesia/build_defs:embed.bzl", "cc_data_library")
 
 licenses(["notice"])
 

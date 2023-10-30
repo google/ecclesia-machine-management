@@ -35,6 +35,7 @@
 #include "ecclesia/lib/time/proto.h"
 
 constexpr char kCritical[] = "Critical";
+constexpr char kOk[] = "OK";
 constexpr char kWarning[] = "Warning";
 constexpr char kResourceEventRegistry[] = "ResourceEvent";
 constexpr char kResourceErrorsDetected[] = "ResourceErrorsDetected";
@@ -161,7 +162,8 @@ absl::StatusOr<HealthRollup::ResourceEvent> ExtractResourceEventFromMessageArgs(
 absl::StatusOr<HealthRollup> ExtractHealthRollup(
     const RedfishObject &obj,
     absl::AnyInvocable<std::optional<std::string>(const RedfishObject &)>
-        devpath_resolver) {
+        devpath_resolver,
+    bool parse_with_ok_health) {
   std::optional<std::string> resource_uri = obj.GetUriString();
   HealthRollup health_rollup;
   std::unique_ptr<RedfishObject> status_obj = obj[kRfPropertyStatus].AsObject();
@@ -169,9 +171,12 @@ absl::StatusOr<HealthRollup> ExtractHealthRollup(
     return absl::InternalError("No Status for determining Health Rollup");
   std::optional<std::string> health_rollup_property =
       status_obj->GetNodeValue<PropertyHealthRollup>();
+  // Parse if Warning or Critical only, unless parse_with_ok_health is set, in
+  // which case also accept an OK HealthRollup rather than returning early.
   if (!health_rollup_property.has_value() ||
-      (*health_rollup_property != kCritical &&
-       *health_rollup_property != kWarning)) {
+      ((*health_rollup_property != kCritical &&
+        *health_rollup_property != kWarning) &&
+       !(parse_with_ok_health && *health_rollup_property == kOk))) {
     return health_rollup;
   }
   std::unique_ptr<RedfishIterable> conditions =
@@ -245,7 +250,8 @@ absl::StatusOr<HealthRollup> ExtractHealthRollup(
 
 absl::StatusOr<HealthRollup> ExtractHealthRollup(const RedfishObject &obj) {
   return ExtractHealthRollup(
-      obj, [](const RedfishObject &unused) { return std::nullopt; });
+      obj, [](const RedfishObject &unused) { return std::nullopt; },
+      /*parse_with_ok_health=*/false);
 }
 
 }  // namespace ecclesia

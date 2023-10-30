@@ -71,6 +71,41 @@ TEST(HealthRollup, HealthRollupNotCriticalOrWarning) {
   EXPECT_THAT(*health_rollup, EqualsProto(HealthRollup()));
 }
 
+TEST(HealthRollup, HealthRollupNotCriticalOrWarningAcceptOKStatus) {
+  std::unique_ptr<RedfishInterface> intf = NewJsonMockupInterface(R"json({
+    "Status": {
+      "State": "Enabled",
+      "Health": "OK",
+      "HealthRollup": "OK",
+      "Conditions": [
+        {
+          "MessageId": "ResourceEvent.1.0.ResourceErrorsDetected",
+          "Message": "The resource property Foo has detected errors of type Bar.",
+          "MessageArgs": ["Foo", "Bar"],
+          "Timestamp": "2022-1-23T12:34:56Z",
+          "Severity": "Critical"
+        }
+      ]
+    }
+  })json");
+  std::unique_ptr<RedfishObject> obj = intf->GetRoot().AsObject();
+  ASSERT_NE(obj, nullptr);
+
+  absl::StatusOr<HealthRollup> health_rollup = ExtractHealthRollup(
+      *obj, [](const RedfishObject &) { return std::nullopt; },
+      /*parse_with_ok_health=*/true);
+  ASSERT_TRUE(health_rollup.status().ok());
+  EXPECT_THAT(*health_rollup,
+              EqualsProto(R"pb(resource_events {
+                                 errors_detected {
+                                   resource_identifier: "Foo"
+                                   error_type: "Bar"
+                                 }
+                                 severity: "Critical"
+                                 timestamp { seconds: 1642941296 }
+                               })pb"));
+}
+
 TEST(HealthRollup, HealthRollupPresentButNoConditions) {
   std::unique_ptr<RedfishInterface> intf = NewJsonMockupInterface(R"json({
     "Status": {
