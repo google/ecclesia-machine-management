@@ -48,15 +48,15 @@ class RedfishTrace final {
   RedfishTrace(RedfishRequest request, const Clock *clock,
                RedfishMetrics *redfish_metrics,
                absl::Mutex *metrics_mutex)
-      : request_(request), clock_(clock), metrics_mutex_(metrics_mutex),
+      : request_(request), clock_(clock),
+        metrics_mutex_(metrics_mutex),
         redfish_metrics_(redfish_metrics) {
     start_timestamp_ = clock->Now();
   }
   ~RedfishTrace() {
     if (redfish_metrics_ == nullptr) return;
-    end_timestamp_ = clock_->Now();
     double response_time_ms =
-        absl::ToDoubleMilliseconds(end_timestamp_ - start_timestamp_);
+        absl::ToDoubleMilliseconds(clock_->Now() - start_timestamp_);
     absl::MutexLock lock(metrics_mutex_);
     RedfishMetrics::RequestMetadata *metadata;
     RedfishMetrics::Metrics *uri_metrics =
@@ -72,7 +72,8 @@ class RedfishTrace final {
     if (metadata->request_count() == 0) {
       metadata->set_max_response_time_ms(response_time_ms);
       metadata->set_min_response_time_ms(response_time_ms);
-    } else if (response_time_ms > metadata->max_response_time_ms()) {
+    }
+    if (response_time_ms > metadata->max_response_time_ms()) {
       metadata->set_max_response_time_ms(response_time_ms);
     } else if (response_time_ms < metadata->min_response_time_ms()) {
       metadata->set_min_response_time_ms(response_time_ms);
@@ -90,7 +91,6 @@ class RedfishTrace final {
   absl::Mutex *metrics_mutex_;
   RedfishMetrics *redfish_metrics_ ABSL_GUARDED_BY(metrics_mutex_);
   absl::Time start_timestamp_;
-  absl::Time end_timestamp_;
   // Flag used to populate request metadata for transport failures.
   bool has_request_failed_ = false;
 };
