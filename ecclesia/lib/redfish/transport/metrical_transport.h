@@ -28,15 +28,20 @@
 
 namespace ecclesia {
 
-// Thread-safe class: Decorates RedfishTransport to gather transport metrics.
+// Thread-safe metrics. The MetricalRedfishTransport uses a thread local
+// variable to collect metrics. Use "GetConstMetrics" api to populate a query
+// result with the collected metrics. Use "ResetMetrics" api to clear metrics
+// before reusing the transport for another query.
+
+// Decorates RedfishTransport to gather transport metrics.
 class MetricalRedfishTransport : public RedfishTransport {
  public:
   explicit MetricalRedfishTransport(std::unique_ptr<RedfishTransport> base,
-                                    const Clock *clock,
-                                    RedfishMetrics *transport_metrics)
+                                    const Clock *clock)
       : base_transport_(std::move(base)),
-        clock_(clock),
-        transport_metrics_(transport_metrics) {}
+        clock_(clock) {
+    ResetMetrics();
+  }
 
   absl::string_view GetRootUri() override;
   absl::StatusOr<Result> Get(absl::string_view path) override;
@@ -46,18 +51,15 @@ class MetricalRedfishTransport : public RedfishTransport {
                                absl::string_view data) override;
   absl::StatusOr<Result> Delete(absl::string_view path,
                                 absl::string_view data) override;
-  // Overwrite the current metrics with a new metrics proto. This is used for
-  // collecting metrics over certain intervals.
-  void ResetTrackingMetricsProto(RedfishMetrics *transport_metrics) {
-    absl::MutexLock lock(&metrics_mutex_);
-    transport_metrics_ = transport_metrics;
-  }
+  // Reset metrics once the metric collection is complete.
+  static void ResetMetrics();
+  static RedfishMetrics GetMetrics();
+  static const RedfishMetrics *GetConstMetrics();
 
  private:
   std::unique_ptr<RedfishTransport> base_transport_;
   const Clock *clock_;
-  absl::Mutex metrics_mutex_;
-  RedfishMetrics *transport_metrics_ ABSL_GUARDED_BY(metrics_mutex_);
+  inline static thread_local RedfishMetrics redfish_transport_metrics_;
 };
 
 }  // namespace ecclesia

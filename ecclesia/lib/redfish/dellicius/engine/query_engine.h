@@ -338,8 +338,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
   if (engine_params.feature_flags.enable_redfish_metrics) {
     std::unique_ptr<MetricalRedfishTransport> metrical_transport =
         std::make_unique<MetricalRedfishTransport>(
-            std::move(engine_params.transport), ecclesia::Clock::RealClock(),
-            nullptr);
+            std::move(engine_params.transport), ecclesia::Clock::RealClock());
     metrical_transport_ptr = metrical_transport.get();
     redfish_interface = NewHttpInterface(std::move(metrical_transport),
                                          std::move(engine_params.cache_factory),

@@ -47,6 +47,7 @@ using RedPathRedfishQueryParams =
 // It is a key construct used in tuning Redfish Query Parameters.
 // This also serves as a placeholder for any contextual information required
 // around a query operation.
+// Workaround: Use a QueryTracker per thread.
 struct QueryTracker {
   RedPathRedfishQueryParams redpaths_queried;
 };
@@ -130,7 +131,7 @@ class QueryPlannerInterface {
   // provided, populates the DelliciusQueryResult with transport metrics.
   virtual DelliciusQueryResult Run(
       const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
-      const QueryVariables &variables, RedfishMetrics *metrics = nullptr,
+      const QueryVariables &variables, const RedfishMetrics *metrics = nullptr,
       ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError) = 0;
   // Executes query plan using RedfishVariant as root and calls the client
   // callback with results.
@@ -141,7 +142,7 @@ class QueryPlannerInterface {
       const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
       const QueryVariables &variables,
       absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-      RedfishMetrics *metrics = nullptr) = 0;
+      const RedfishMetrics *metrics = nullptr) = 0;
 };
 
 }  // namespace ecclesia

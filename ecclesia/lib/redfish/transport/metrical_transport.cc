@@ -18,11 +18,9 @@
 
 #include <memory>
 
-#include "absl/base/thread_annotations.h"
 #include "absl/log/check.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
@@ -31,7 +29,6 @@
 namespace ecclesia {
 
 namespace {
-
 // Describes a redfish request.
 struct RedfishRequest {
   // Full redfish resource URI including query params.
@@ -41,23 +38,20 @@ struct RedfishRequest {
 };
 
 // Creates metrics around a single redfish request.
-// Shares the RedfishMetrics object and the mutex guarding it with the
-// MetricalRedfishTransport class.
+// Shares the RedfishMetrics object with MetricalRedfishTransport class.
+// Since the RedfishMetrics object passed to RedfishTrace class is thread local,
+// synchronization is not needed for thread safety.
 class RedfishTrace final {
  public:
   RedfishTrace(RedfishRequest request, const Clock *clock,
-               RedfishMetrics *redfish_metrics,
-               absl::Mutex *metrics_mutex)
-      : request_(request), clock_(clock),
-        metrics_mutex_(metrics_mutex),
-        redfish_metrics_(redfish_metrics) {
+               RedfishMetrics *redfish_metrics)
+      : request_(request), clock_(clock), redfish_metrics_(redfish_metrics) {
     start_timestamp_ = clock->Now();
   }
   ~RedfishTrace() {
     if (redfish_metrics_ == nullptr) return;
     double response_time_ms =
         absl::ToDoubleMilliseconds(clock_->Now() - start_timestamp_);
-    absl::MutexLock lock(metrics_mutex_);
     RedfishMetrics::RequestMetadata *metadata;
     RedfishMetrics::Metrics *uri_metrics =
         &(*redfish_metrics_->mutable_uri_to_metrics_map())[request_.uri];
@@ -88,8 +82,7 @@ class RedfishTrace final {
  private:
   const RedfishRequest request_;
   const Clock *clock_;
-  absl::Mutex *metrics_mutex_;
-  RedfishMetrics *redfish_metrics_ ABSL_GUARDED_BY(metrics_mutex_);
+  RedfishMetrics *redfish_metrics_;
   absl::Time start_timestamp_;
   // Flag used to populate request metadata for transport failures.
   bool has_request_failed_ = false;
@@ -102,13 +95,22 @@ absl::string_view MetricalRedfishTransport::GetRootUri() {
   return base_transport_->GetRootUri();
 }
 
+void MetricalRedfishTransport::ResetMetrics() {
+  redfish_transport_metrics_.Clear();
+}
+
+RedfishMetrics MetricalRedfishTransport::GetMetrics() {
+  return redfish_transport_metrics_;
+}
+
+const RedfishMetrics* MetricalRedfishTransport::GetConstMetrics() {
+  return &redfish_transport_metrics_;
+}
+
 absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Get(
     absl::string_view path) {
   CHECK(base_transport_ != nullptr);
-  metrics_mutex_.Lock();
-  RedfishMetrics *metrics = transport_metrics_;
-  metrics_mutex_.Unlock();
-  auto trace = RedfishTrace({path, "GET"}, clock_, metrics, &metrics_mutex_);
+  auto trace = RedfishTrace({path, "GET"}, clock_, &redfish_transport_metrics_);
   auto result = base_transport_->Get(path);
   if (!result.ok()) {
     trace.RecordError();
@@ -118,10 +120,8 @@ absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Get(
 absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Post(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
-  metrics_mutex_.Lock();
-  RedfishMetrics *metrics = transport_metrics_;
-  metrics_mutex_.Unlock();
-  auto trace = RedfishTrace({path, "POST"}, clock_, metrics, &metrics_mutex_);
+  auto trace = RedfishTrace({path, "POST"}, clock_,
+                            &redfish_transport_metrics_);
   auto result = base_transport_->Post(path, data);
   if (!result.ok()) {
     trace.RecordError();
@@ -131,10 +131,8 @@ absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Post(
 absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Patch(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
-  metrics_mutex_.Lock();
-  RedfishMetrics *metrics = transport_metrics_;
-  metrics_mutex_.Unlock();
-  auto trace = RedfishTrace({path, "PATCH"}, clock_, metrics, &metrics_mutex_);
+  auto trace = RedfishTrace({path, "PATCH"}, clock_,
+                            &redfish_transport_metrics_);
   auto result = base_transport_->Patch(path, data);
   if (!result.ok()) {
     trace.RecordError();
@@ -144,10 +142,8 @@ absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Patch(
 absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Delete(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
-  metrics_mutex_.Lock();
-  RedfishMetrics *metrics = transport_metrics_;
-  metrics_mutex_.Unlock();
-  auto trace = RedfishTrace({path, "DELETE"}, clock_, metrics, &metrics_mutex_);
+  auto trace = RedfishTrace({path, "DELETE"}, clock_,
+                            &redfish_transport_metrics_);
   auto result = base_transport_->Delete(path, data);
   if (!result.ok()) {
     trace.RecordError();

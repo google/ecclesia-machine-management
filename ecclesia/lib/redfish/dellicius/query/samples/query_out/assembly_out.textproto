@@ -1,6 +1,5 @@
 # proto-file: ecclesia/lib/redfish/dellicius/query/query_result.proto
 # proto-message: DelliciusQueryResult
-
 query_id: "AssemblyCollectorWithPropertyNameNormalization"
 subquery_output_by_id {
   key: "Chassis"

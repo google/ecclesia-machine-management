@@ -328,7 +328,6 @@ TEST(QueryEngineTest, QueryEngineEmptyItemDevpath) {
 TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
   std::string assembly_out_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_out/assembly_out.textproto"));
-
   RedfishMetrics metrics;
   FakeQueryEngineEnvironment fake_engine_env(
       {.flags{.enable_devpath_extension = false,
@@ -338,67 +337,49 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
       kIndusMockup, clock_time,
       FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
   QueryEngine &query_engine = fake_engine_env.GetEngine();
-
   {
-    // Query assemblies
+    // Query assemblies 3 times in a row. Cache is cold only for the 1st query.
     std::vector<DelliciusQueryResult> response_entries =
         query_engine.ExecuteQueryWithAggregatedMetrics(
-            {"AssemblyCollectorWithPropertyNameNormalization"}, &metrics);
-    DelliciusQueryResult intent_output_assembly =
+            {"AssemblyCollectorWithPropertyNameNormalization",
+            "AssemblyCollectorWithPropertyNameNormalization",
+            "AssemblyCollectorWithPropertyNameNormalization"}, &metrics);
+    for (int i = 0; i < response_entries.size(); i++) {
+      DelliciusQueryResult intent_output_assembly =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
-
-    VerifyQueryResults(std::move(response_entries),
-                       {std::move(intent_output_assembly)});
-  }
-  {
-    // Query assemblies again. This time we expect QueryEngine uses cache.
-    std::vector<DelliciusQueryResult> response_entries =
-        query_engine.ExecuteQueryWithAggregatedMetrics(
-            {"AssemblyCollectorWithPropertyNameNormalization"}, &metrics);
-    DelliciusQueryResult intent_output_assembly =
-        ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
-    VerifyQueryResults(std::move(response_entries),
-                       {std::move(intent_output_assembly)});
-  }
-  {
-    // Query assemblies again and again we expect QueryEngine to use cache.
-    std::vector<DelliciusQueryResult> response_entries =
-        query_engine.ExecuteQueryWithAggregatedMetrics(
-            {"AssemblyCollectorWithPropertyNameNormalization"}, &metrics);
-    DelliciusQueryResult intent_output_assembly =
-        ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
-    VerifyQueryResults(std::move(response_entries),
-                       {std::move(intent_output_assembly)});
-  }
-
-  bool traced_systems = false;
-  bool traced_processor_collection = false;
-  for (const auto &uri_x_metric : *metrics.mutable_uri_to_metrics_map()) {
-    if (uri_x_metric.first == "/redfish/v1/Systems") {
-      traced_systems = true;
-      for (const auto &metadata :
-           uri_x_metric.second.request_type_to_metadata()) {
-        EXPECT_EQ(metadata.second.request_count(), 1);
+      VerifyQueryResults({std::move(response_entries[i])},
+                         {intent_output_assembly});
+    }
+    bool traced_systems = false;
+    bool traced_processor_collection = false;
+    for (const auto &uri_x_metric : *metrics.mutable_uri_to_metrics_map()) {
+      // Fetched only once from the redfish server.
+      if (uri_x_metric.first == "/redfish/v1/Systems") {
+        traced_systems = true;
+        for (const auto &metadata :
+             uri_x_metric.second.request_type_to_metadata()) {
+          EXPECT_EQ(metadata.second.request_count(), 1);
+        }
+      }
+      // Note query_rule sample_query_rules.textproto uses level 1 expand at
+      // Processors collection. But the query has freshness = true for the
+      // members in processor collection and not the collection resource. Yet we
+      // see the collection being fetched fresh each time because the freshness
+      // requirement bubbles up if child redpath is in the expand path of parent
+      // redpath.
+      if (uri_x_metric.first ==
+          "/redfish/v1/Systems/system/Processors?$expand=~($levels=1)") {
+        traced_processor_collection = true;
+        for (const auto &metadata :
+             uri_x_metric.second.request_type_to_metadata()) {
+          EXPECT_EQ(metadata.second.request_count(), 3);
+        }
       }
     }
-
-    // Note query_rule sample_query_rules.textproto uses level 1 expand at
-    // Processors collection. But the query has freshness = true for the
-    // members in processor collection and not the collection resource. Yet we
-    // see the collection getting fetched fresh each time because the freshness
-    // requirement bubbles up if child redpath is in expand path of parent
-    // redpath.
-    if (uri_x_metric.first ==
-        "/redfish/v1/Systems/system/Processors?$expand=~($levels=1)") {
-      traced_processor_collection = true;
-      for (const auto &metadata :
-           uri_x_metric.second.request_type_to_metadata()) {
-        EXPECT_EQ(metadata.second.request_count(), 3);
-      }
-    }
+    // Both requests are fetched from Redfish server on the 1st query.
+    EXPECT_TRUE(traced_systems);
+    EXPECT_TRUE(traced_processor_collection);
   }
-  EXPECT_TRUE(traced_systems);
-  EXPECT_TRUE(traced_processor_collection);
 }
 
 // Tests that when transport metrics are enabled per DelliciusQueryResult,

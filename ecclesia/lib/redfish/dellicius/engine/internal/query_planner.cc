@@ -756,13 +756,13 @@ class QueryPlanner final : public QueryPlannerInterface {
 
   DelliciusQueryResult Run(
       const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
-      const QueryVariables &variables, RedfishMetrics *metrics = nullptr,
+      const QueryVariables &variables, const RedfishMetrics *metrics = nullptr,
       ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError) override;
 
   void Run(const RedfishVariant &variant, const Clock &clock,
            QueryTracker *tracker, const QueryVariables &variables,
            absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-           RedfishMetrics *metrics = nullptr) override;
+           const RedfishMetrics *metrics = nullptr) override;
 
   void ProcessSubqueries(
       const RedfishVariant &variant, const QueryVariables &variables,
@@ -1405,7 +1405,7 @@ DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,
                                        const Clock &clock,
                                        QueryTracker *tracker,
                                        const QueryVariables &query_variables,
-                                       RedfishMetrics *metrics,
+                                       const RedfishMetrics *metrics,
                                        ExecutionMode execution_mode) {
   DelliciusQueryResult result;
   result.set_query_id(plan_id_);
@@ -1421,7 +1421,7 @@ void QueryPlanner::Run(
     const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
     const QueryVariables &query_variables,
     absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-    RedfishMetrics *metrics) {
+    const RedfishMetrics *metrics) {
   DelliciusQueryResult result;
   result.set_query_id(plan_id_);
   SetTime(clock, *result.mutable_start_timestamp());

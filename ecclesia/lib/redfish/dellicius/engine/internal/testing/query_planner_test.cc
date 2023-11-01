@@ -303,9 +303,12 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
   // Create metrical transport and issue queries.
   std::unique_ptr<RedfishTransport> base_transport =
       server.RedfishClientTransport();
-  RedfishMetrics metrics;
   auto transport = std::make_unique<MetricalRedfishTransport>(
-      std::move(base_transport), Clock::RealClock(), &metrics);
+      std::move(base_transport), Clock::RealClock());
+  // This metrics object is owned and populated by the metrical transport. Use
+  // it to populate metrics in the QueryPlanner result.
+  const RedfishMetrics *metrics = transport->GetConstMetrics();
+  ASSERT_NE(metrics, nullptr);
   auto cache = std::make_unique<NullCache>(transport.get());
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
@@ -318,8 +321,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
                                       default_normalizer.get());
   ASSERT_TRUE(qps.ok());
   DelliciusQueryResult result_sensor =
-      (*qps)->Run(service_root, clock, nullptr, {}, &metrics);
-
+      (*qps)->Run(service_root, clock, nullptr, {}, metrics);
   // Metrics should be auto-populated in the query result.
   ASSERT_TRUE(result_sensor.has_redfish_metrics());
   // For each type of redfish request for each URI, validate that the
@@ -347,9 +349,13 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
   // Create metrical transport and issue queries.
   std::unique_ptr<RedfishTransport> base_transport =
       std::make_unique<NullTransport>();
-  RedfishMetrics metrics;
   auto transport = std::make_unique<MetricalRedfishTransport>(
-      std::move(base_transport), Clock::RealClock(), &metrics);
+      std::move(base_transport), Clock::RealClock());
+
+  // This metrics object is owned and populated by the metrical transport. Use
+  // it to populate metrics in the QueryPlanner result.
+  const RedfishMetrics *metrics = transport->GetConstMetrics();
+  ASSERT_NE(metrics, nullptr);
 
   auto cache = std::make_unique<NullCache>(transport.get());
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
@@ -364,7 +370,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
                                default_normalizer.get());
   ASSERT_TRUE(qps.ok());
   absl::StatusOr<DelliciusQueryResult> result_sensor =
-      (*qps)->Run(service_root, clock, nullptr, {}, &metrics);
+      (*qps)->Run(service_root, clock, nullptr, {}, metrics);
   ASSERT_TRUE(result_sensor.ok());
   EXPECT_THAT((*result_sensor).status().code(),
               Eq(::google::rpc::Code::FAILED_PRECONDITION));
@@ -374,17 +380,17 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
   // Validate that no attempt was made by query planner to query redfish service
   // Redfish Metrics should indicate 1 failed GET request to service root which
   // is sent before running the query planner.
-  EXPECT_EQ(metrics.uri_to_metrics_map().size(), 1);
-  EXPECT_TRUE(metrics.uri_to_metrics_map().contains("/redfish/v1"));
-  EXPECT_EQ(metrics.uri_to_metrics_map()
+  EXPECT_EQ(metrics->uri_to_metrics_map().size(), 1);
+  EXPECT_TRUE(metrics->uri_to_metrics_map().contains("/redfish/v1"));
+  EXPECT_EQ(metrics->uri_to_metrics_map()
                 .at("/redfish/v1")
                 .request_type_to_metadata_failures_size(),
             1);
-  EXPECT_TRUE(metrics.uri_to_metrics_map()
+  EXPECT_TRUE(metrics->uri_to_metrics_map()
                   .at("/redfish/v1")
                   .request_type_to_metadata_failures()
                   .contains("GET"));
-  EXPECT_EQ(metrics.uri_to_metrics_map()
+  EXPECT_EQ(metrics->uri_to_metrics_map()
                 .at("/redfish/v1")
                 .request_type_to_metadata_size(),
             0);

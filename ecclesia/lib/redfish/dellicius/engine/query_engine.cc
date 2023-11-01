@@ -111,7 +111,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     if (config.flags.enable_transport_metrics) {
       std::unique_ptr<MetricalRedfishTransport> metrical_transport =
           std::make_unique<MetricalRedfishTransport>(std::move(transport),
-                                                     clock_, nullptr);
+                                                     clock_);
       metrical_transport_ = metrical_transport.get();
       redfish_interface_ = NewHttpInterface(std::move(metrical_transport),
                                             std::move(cache_factory),
@@ -227,13 +227,10 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       absl::Span<const absl::string_view> query_ids,
       const QueryVariableSet &query_arguments, QueryTracker *tracker) {
     std::vector<DelliciusQueryResult> response_entries;
-    RedfishMetrics *metrics = nullptr;
-    // In the case no RedfishMetrics Object is provided, we have to construct
-    // one to use for populating the DelliciusQueryResult.
-    RedfishMetrics local_metrics;
+    const RedfishMetrics *metrics = nullptr;
+    // Each metrical_transport object has a thread local RedfishMetrics object.
     if (metrical_transport_ != nullptr) {
-      metrics = &local_metrics;
-      metrical_transport_->ResetTrackingMetricsProto(metrics);
+      metrics = MetricalRedfishTransport::GetConstMetrics();
     }
     for (const absl::string_view query_id : query_ids) {
       auto it = id_to_query_plans_.find(query_id);
@@ -244,7 +241,10 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       QueryVariables vars = QueryVariables();
       auto it_vars = query_arguments.find(query_id);
       if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
-
+      // Clear metrics every query.
+      if (metrical_transport_ != nullptr) {
+        MetricalRedfishTransport::ResetMetrics();
+      }
       DelliciusQueryResult result_single;
       {
         auto query_timer = QueryTimestamp(&result_single, clock_);
@@ -253,8 +253,9 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
               redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
               *clock_, tracker, vars, metrics);
         } else {
-          result_single = it->second->Run(redfish_interface_->GetRoot(),
-                                          *clock_, tracker, vars, metrics);
+          result_single =
+              it->second->Run(redfish_interface_->GetRoot(), *clock_, tracker,
+                      vars, metrics);
         }
       }
       response_entries.push_back(std::move(result_single));
@@ -287,9 +288,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       const QueryVariableSet &query_arguments,
       absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
       QueryTracker *tracker) {
-    RedfishMetrics metrics;
     if (metrical_transport_ != nullptr) {
-      metrical_transport_->ResetTrackingMetricsProto(&metrics);
+      MetricalRedfishTransport::ResetMetrics();
     }
     for (const absl::string_view query_id : query_ids) {
       auto it = id_to_query_plans_.find(query_id);
@@ -354,12 +354,18 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       absl::Span<const absl::string_view> query_ids,
       RedfishMetrics *transport_metrics,
       const QueryVariableSet &query_arguments = {}) override {
-    // Copies the new transport metrics over the previous metrics.
+    // Clear metrics for every query.
     if (metrical_transport_ != nullptr) {
-      metrical_transport_->ResetTrackingMetricsProto(transport_metrics);
+      MetricalRedfishTransport::ResetMetrics();
     }
-    return ExecuteQueryForAggregatedMetrics(service_root_uri, query_ids,
+    std::vector<DelliciusQueryResult> result =
+        ExecuteQueryForAggregatedMetrics(service_root_uri, query_ids,
                                             query_arguments, nullptr);
+    // Copy the metrics into the user provided data struct.
+    if (transport_metrics != nullptr) {
+      *transport_metrics = MetricalRedfishTransport::GetMetrics();
+    }
+    return result;
   }
 
   // Translates vector of  DelliciusQueryResult to new QueryResult format.
@@ -496,8 +502,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
   if (configuration.feature_flags.enable_redfish_metrics) {
     std::unique_ptr<MetricalRedfishTransport> metrical_transport =
         std::make_unique<MetricalRedfishTransport>(
-            std::move(configuration.transport), ecclesia::Clock::RealClock(),
-            nullptr);
+            std::move(configuration.transport), ecclesia::Clock::RealClock());
     metrical_transport_ptr = metrical_transport.get();
     redfish_interface = NewHttpInterface(std::move(metrical_transport),
                                          std::move(configuration.cache_factory),
@@ -523,8 +528,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
   if (engine_params.feature_flags.enable_redfish_metrics) {
     std::unique_ptr<MetricalRedfishTransport> metrical_transport =
         std::make_unique<MetricalRedfishTransport>(
-            std::move(engine_params.transport), ecclesia::Clock::RealClock(),
-            nullptr);
+            std::move(engine_params.transport), ecclesia::Clock::RealClock());
     metrical_transport_ptr = metrical_transport.get();
     redfish_interface = NewHttpInterface(std::move(metrical_transport),
                                          std::move(engine_params.cache_factory),
