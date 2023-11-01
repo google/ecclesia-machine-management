@@ -65,15 +65,23 @@ namespace ecclesia {
 namespace {
 
 std::unique_ptr<Normalizer> GetMachineDevpathNormalizer(
-    QueryEngineParams::RedfishStableIdType stable_id_type,
+    const QueryEngineParams &query_engine_params,
     std::unique_ptr<IdAssigner> id_assigner,
     RedfishInterface *redfish_interface) {
-  switch (stable_id_type) {
+  switch (query_engine_params.stable_id_type) {
     case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
       return BuildNormalizerWithMachineDevpath(std::move(id_assigner));
     case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
+      if (query_engine_params.redfish_topology_config_name.empty()) {
+        return BuildNormalizerWithMachineDevpath(
+            std::move(id_assigner),
+            CreateTopologyFromRedfish(redfish_interface));
+      }
       return BuildNormalizerWithMachineDevpath(
-          std::move(id_assigner), CreateTopologyFromRedfish(redfish_interface));
+          std::move(id_assigner),
+          CreateTopologyFromRedfish(
+              redfish_interface,
+              query_engine_params.redfish_topology_config_name));
   }
 }
 
@@ -515,8 +523,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
   RedfishInterface *redfish_interface_ptr = redfish_interface.get();
   return CreateQueryEngine(
       query_context, std::move(redfish_interface),
-      BuildLocalDevpathNormalizer(configuration.stable_id_type,
-                                  redfish_interface_ptr),
+      BuildLocalDevpathNormalizer(redfish_interface_ptr, configuration),
       metrical_transport_ptr);
 }
 
@@ -542,8 +549,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
   if (redfish_interface == nullptr)
     return absl::InternalError("Can't create redfish interface");
   std::unique_ptr<Normalizer> normalizer = GetMachineDevpathNormalizer(
-      engine_params.stable_id_type, std::move(id_assigner),
-      redfish_interface.get());
+      engine_params, std::move(id_assigner), redfish_interface.get());
 
   return CreateQueryEngine(query_context, std::move(redfish_interface),
                            std::move(normalizer), metrical_transport_ptr);

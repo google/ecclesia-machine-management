@@ -143,7 +143,8 @@ absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
     FakeRedfishServer &server,
     absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
     absl::Span<const EmbeddedFile> query_rules = kQueryRules,
-    const Clock *clock = Clock::RealClock()) {
+    const Clock *clock = Clock::RealClock(),
+    const QueryEngineParams &query_engine_params = {}) {
   FakeRedfishServer::Config config = server.GetConfig();
   auto http_client = std::make_unique<CurlHttpClient>(
       LibCurlProxy::CreateInstance(), HttpCredential{});
@@ -155,7 +156,11 @@ absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
 
   QueryContext query_context{
       .query_files = query_files, .query_rules = query_rules, .clock = clock};
-  return CreateQueryEngine(query_context, {.transport = std::move(transport)});
+  return CreateQueryEngine(
+      query_context, {.transport = std::move(transport),
+                      .stable_id_type = query_engine_params.stable_id_type,
+                      .redfish_topology_config_name =
+                          query_engine_params.redfish_topology_config_name});
 }
 
 absl::StatusOr<QueryEngine> GetQueryEngineWithIdAssigner(
@@ -778,6 +783,76 @@ TEST(QueryEngineTest, MalformedQueryRulesFailEngineConstruction) {
   FakeRedfishServer server(kIndusMockup);
   EXPECT_THAT(GetDefaultQueryEngine(server, kDelliciusQueries, query_rules),
               IsStatusInternal());
+}
+
+TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
+  FakeRedfishServer server(kComponentIntegrityMockupPath);
+  FakeClock clock{clock_time};
+  {
+    QueryEngineParams params{
+        .stable_id_type =
+            QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived,
+        .redfish_topology_config_name = "redfish_test.textpb"};
+    absl::StatusOr<QueryEngine> query_engine = GetDefaultQueryEngine(
+        server, kDelliciusQueries, kQueryRules, &clock, params);
+    EXPECT_TRUE(query_engine.ok());
+
+    // Parse DelliciusQueryResult from string
+    std::string query_result_str = R"pb(
+      query_id: "AssemblyCollectorWithPropertyNameNormalization"
+      subquery_output_by_id {
+        key: "Chassis"
+        value { data_sets { devpath: "/phys" } }
+      }
+      start_timestamp { seconds: 10 }
+      end_timestamp { seconds: 10 }
+    )pb";
+
+    DelliciusQueryResult intent_output_sensor =
+        ParseTextAsProtoOrDie<DelliciusQueryResult>(query_result_str);
+
+    std::vector<DelliciusQueryResult> response_entries =
+        query_engine->ExecuteQuery(
+            {"AssemblyCollectorWithPropertyNameNormalization"});
+
+    VerifyQueryResults(std::move(response_entries),
+                       {std::move(intent_output_sensor)});
+  }
+
+  {
+    QueryEngineParams params{
+        .stable_id_type =
+            QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived};
+    absl::StatusOr<QueryEngine> query_engine = GetDefaultQueryEngine(
+        server, kDelliciusQueries, kQueryRules, &clock, params);
+    EXPECT_TRUE(query_engine.ok());
+
+    // Parse DelliciusQueryResult from string
+    std::string query_result_str = R"pb(
+      query_id: "AssemblyCollectorWithPropertyNameNormalization"
+      subquery_output_by_id {
+        key: "Chassis"
+        value {
+          data_sets { devpath: "/phys" }
+          data_sets { devpath: "/phys:device:erot-gpu1" }
+          data_sets { devpath: "/phys:device:erot-gpu2" }
+        }
+      }
+      start_timestamp { seconds: 10 }
+      end_timestamp { seconds: 10 }
+    )pb";
+
+    DelliciusQueryResult intent_output_sensor =
+        ParseTextAsProtoOrDie<DelliciusQueryResult>(query_result_str);
+
+    std::vector<DelliciusQueryResult> response_entries =
+        query_engine->ExecuteQuery(
+            {"AssemblyCollectorWithPropertyNameNormalization"});
+    ASSERT_EQ(response_entries.size(), 1);
+
+    VerifyQueryResults(std::move(response_entries),
+                       {std::move(intent_output_sensor)});
+  }
 }
 
 }  // namespace

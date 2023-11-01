@@ -277,15 +277,27 @@ struct QueryEngineParams {
       QueryEngineParams::RedfishStableIdType::kRedfishLocation;
   // Captures toggleable features controlled by the user.
   FeatureFlags feature_flags;
+
+  // Node topology configuration:-
+  // This configuration is used with
+  // RedfishStableIdType::kRedfishLocationDerived feature flag to instruct
+  // QueryEngine to traverse the tree for specific resources and their
+  // subordinates to build physical topology.
+  std::string redfish_topology_config_name;
 };
 
 inline std::unique_ptr<Normalizer> BuildLocalDevpathNormalizer(
-    QueryEngineParams::RedfishStableIdType stable_id_type,
-    RedfishInterface *redfish_interface) {
-  switch (stable_id_type) {
+    RedfishInterface *redfish_interface,
+    const QueryEngineParams &query_engine_params) {
+  switch (query_engine_params.stable_id_type) {
     case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
       return BuildDefaultNormalizer();
     case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
+      if (!query_engine_params.redfish_topology_config_name.empty()) {
+        return BuildDefaultNormalizerWithLocalDevpath(CreateTopologyFromRedfish(
+            redfish_interface,
+            query_engine_params.redfish_topology_config_name));
+      }
       return BuildDefaultNormalizerWithLocalDevpath(
           CreateTopologyFromRedfish(redfish_interface));
   }
