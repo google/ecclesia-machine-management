@@ -15,8 +15,11 @@
  */
 
 #include "ecclesia/lib/redfish/interface.h"
+#include <memory>
+#include <string>
 
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 #include "absl/types/optional.h"
 
 namespace ecclesia {
