@@ -1,0 +1,12 @@
+{
+  "@odata.id": "/redfish/v1/Cables",
+  "@odata.type": "#CableCollection.CableCollection",
+  "Description": "Collection of Cable Entries",
+  "Members": [
+    {
+      "@odata.id": "/redfish/v1/Cables/cable1"
+    }
+  ],
+  "Members@odata.count": 1,
+  "Name": "Cable Collection"
+}

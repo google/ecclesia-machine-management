@@ -74,7 +74,9 @@ void CheckAgainstTestingMultiHostFullDevpaths(const NodeTopology &topology) {
       Node{"memory_m1", "memory_m1", "/phys/DIMM0", NodeType::kBoard},
       Node{"cpu_m1", "cpu_m1", "/phys/CPU0", NodeType::kBoard},
       Node{"memory_m2", "memory_m2", "/phys/DIMM1", NodeType::kBoard},
-      Node{"cpu_m2", "cpu_m2", "/phys/CPU1", NodeType::kBoard}};
+      Node{"cpu_m2", "cpu_m2", "/phys/CPU1", NodeType::kBoard},
+      Node{"cable1", "cable1", "/phys/PE1", NodeType::kCable},
+      Node{"multi2", "multi2", "/phys/PE1/DOWNLINK", NodeType::kBoard}};
 
   std::vector<Node> actual_nodes;
   actual_nodes.reserve(topology.nodes.size());

@@ -1,0 +1,20 @@
+{
+  "@odata.id": "/redfish/v1/Chassis/multi2",
+  "@odata.type": "#Chassis.v1_14_0.Chassis",
+  "ChassisType": "RackMount",
+  "Id": "multi2",
+  "Links": {
+    "ComputerSystems": [
+      {
+        "@odata.id": "/redfish/v1/Systems/system_multi1"
+      }
+    ]
+  },
+  "Location": {
+    "PartLocation": {
+      "LocationType": "Slot",
+      "ServiceLabel": "DOWNLINK"
+    }
+  },
+  "Name": "multi2"
+}

@@ -22,6 +22,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/sysmodel.h"
@@ -142,6 +144,24 @@ TEST_F(RedfishMultiHostFilterTest, ObjectHostTest) {
         host_filter_->GetHostDomainForObj(*obj);
     EXPECT_THAT(os_domain, IsOkAndHolds("host-compute-node-2"));
   }
+  {
+    RedfishVariant var =
+        fake_intf_->UncachedGetUri("/redfish/v1/Cables/cable1");
+    std::unique_ptr<RedfishObject> obj = var.AsObject();
+    ASSERT_TRUE(obj != nullptr);
+    absl::StatusOr<absl::string_view> os_domain =
+        host_filter_->GetHostDomainForObj(*obj);
+    EXPECT_THAT(os_domain, IsOkAndHolds("host-compute-node-1"));
+  }
+  {
+    RedfishVariant var =
+        fake_intf_->UncachedGetUri("/redfish/v1/Chassis/multi2");
+    std::unique_ptr<RedfishObject> obj = var.AsObject();
+    ASSERT_TRUE(obj != nullptr);
+    absl::StatusOr<absl::string_view> os_domain =
+        host_filter_->GetHostDomainForObj(*obj);
+    EXPECT_THAT(os_domain, IsOkAndHolds("host-compute-node-1"));
+  }
 }
 
 TEST_F(RedfishMultiHostFilterTest, ObjectHostAdditionalTest) {
@@ -172,6 +192,63 @@ TEST_F(RedfishMultiHostFilterTest, ObjectNoHostTest) {
   EXPECT_THAT(os_domain,
               absl::NotFoundError("Can't find a host domain for object: "
                                   "/redfish/v1/Chassis/multi1"));
+}
+
+TEST_F(RedfishMultiHostFilterTest, ObjectCableNoHostTest) {
+  const std::string fake_cable_str = R"json({
+  "@odata.id": "/redfish/v1/Cables/dummy",
+  "@odata.type": "#Cable.v1_0_0.Cable",
+  "Model": "dummy",
+  "Name": "dummy",
+  "Id": "dummy",
+  "Links": {
+    "DownstreamChassis": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/multi1"
+      }
+    ]
+  }
+})json";
+  multi_host_server_->AddHttpGetHandlerWithData("/redfish/v1/Cables/dummy",
+                                                fake_cable_str);
+  RedfishVariant var = fake_intf_->UncachedGetUri("/redfish/v1/Cables/dummy");
+  std::unique_ptr<RedfishObject> obj = var.AsObject();
+  ASSERT_TRUE(obj != nullptr);
+  absl::StatusOr<absl::string_view> os_domain =
+      host_filter_->GetHostDomainForObj(*obj);
+  EXPECT_THAT(os_domain,
+              absl::NotFoundError("Can't find a host domain for object: "
+                                  "/redfish/v1/Chassis/multi1"));
+}
+
+TEST_F(RedfishMultiHostFilterTest, ObjectCableMultiSystemTest) {
+  const std::string fake_cable_str = R"json({
+  "@odata.id": "/redfish/v1/Cables/dummy",
+  "@odata.type": "#Cable.v1_0_0.Cable",
+  "Model": "dummy",
+  "Name": "dummy",
+  "Id": "dummy",
+  "Links": {
+    "DownstreamChassis": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/multi1"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/multi2"
+      }
+    ]
+  }
+})json";
+  multi_host_server_->AddHttpGetHandlerWithData("/redfish/v1/Cables/dummy",
+                                                fake_cable_str);
+  RedfishVariant var = fake_intf_->UncachedGetUri("/redfish/v1/Cables/dummy");
+  std::unique_ptr<RedfishObject> obj = var.AsObject();
+  ASSERT_TRUE(obj != nullptr);
+  absl::StatusOr<absl::string_view> os_domain =
+      host_filter_->GetHostDomainForObj(*obj);
+  EXPECT_THAT(os_domain,
+              absl::NotFoundError("Can't find a host domain for object: "
+                                  "/redfish/v1/Cables/dummy"));
 }
 
 TEST_F(RedfishMultiHostFilterTest, ObjectHostMissingConfigTest) {
@@ -209,7 +286,7 @@ TEST_F(RedfishMultiHostFilterTest, ObjectHostMissingConfigTest) {
   EXPECT_THAT(os_domain, IsStatusNotFound());
 }
 
-TEST_F(RedfishMultiHostFilterTest, UriHostFailTest) {
+TEST_F(RedfishMultiHostFilterTest, UriHostSystemFail) {
   {
     absl::StatusOr<absl::string_view> os_domain =
         host_filter_->GetHostDomainFromUri("/redfish");
@@ -242,6 +319,29 @@ TEST_F(RedfishMultiHostFilterTest, UriHostFailTest) {
   }
 }
 
+TEST_F(RedfishMultiHostFilterTest, UriHostChassisFail) {
+  {
+    absl::StatusOr<absl::string_view> os_domain =
+        host_filter_->GetHostDomainFromUri("/redfish/v1/Chassis");
+    EXPECT_THAT(os_domain, IsStatusNotFound());
+  }
+  {
+    absl::StatusOr<absl::string_view> os_domain =
+        host_filter_->GetHostDomainFromUri("/NO_EXIST/v1/Chassis/chassis");
+    EXPECT_THAT(os_domain, IsStatusNotFound());
+  }
+  {
+    absl::StatusOr<absl::string_view> os_domain =
+        host_filter_->GetHostDomainFromUri("/redfish/NO_EXIST/Chassis/chassis");
+    EXPECT_THAT(os_domain, IsStatusNotFound());
+  }
+  {
+    absl::StatusOr<absl::string_view> os_domain =
+        host_filter_->GetHostDomainFromUri("/redfish/v1/NO_EXIST/chassis");
+    EXPECT_THAT(os_domain, IsStatusNotFound());
+  }
+}
+
 TEST_F(RedfishMultiHostFilterTest, SystemNoUriTest) {
   const std::string fake_system_str = R"json({
     "Name": "system2"
@@ -250,6 +350,21 @@ TEST_F(RedfishMultiHostFilterTest, SystemNoUriTest) {
                                                 fake_system_str);
   RedfishVariant var =
       fake_intf_->UncachedGetUri("/redfish/v1/Systems/system2");
+  std::unique_ptr<RedfishObject> obj = var.AsObject();
+  ASSERT_TRUE(obj != nullptr);
+  absl::StatusOr<absl::string_view> os_domain =
+      host_filter_->GetHostDomainForObj(*obj);
+  EXPECT_THAT(os_domain, IsStatusNotFound());
+}
+
+TEST_F(RedfishMultiHostFilterTest, ChassisNoUriTest) {
+  const std::string fake_chassis_str = R"json({
+    "Name": "multi1"
+  })json";
+  multi_host_server_->AddHttpGetHandlerWithData("/redfish/v1/Chassis/multi1",
+                                                fake_chassis_str);
+  RedfishVariant var =
+      fake_intf_->UncachedGetUri("/redfish/v1/Chassis/multi1");
   std::unique_ptr<RedfishObject> obj = var.AsObject();
   ASSERT_TRUE(obj != nullptr);
   absl::StatusOr<absl::string_view> os_domain =

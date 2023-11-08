@@ -4,9 +4,6 @@
   "ChassisType": "RackMount",
   "Id": "multi1",
   "Links": {
-    "ContainedBy": {
-      "@odata.id": "/redfish/v1/Chassis/root"
-    },
     "ComputerSystems": [
       {
         "@odata.id": "/redfish/v1/Systems/system_multi1"

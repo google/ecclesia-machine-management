@@ -116,6 +116,7 @@ inline constexpr char kRfPropertySATAControllersProperties[] =
 inline constexpr char kRfPropertyLinks[] = "Links";
 inline constexpr char kRfPropertyLinkState[] = "LinkState";
 inline constexpr char kRfPropertyLinkStatus[] = "LinkStatus";
+inline constexpr char kRfPropertyComputerSystems[] = "ComputerSystems";
 inline constexpr char kRfPropertyContainedBy[] = "ContainedBy";
 inline constexpr char kRfPropertyContains[] = "Contains";
 inline constexpr char kRfPropertyManagedBy[] = "ManagedBy";

@@ -1,0 +1,25 @@
+{
+  "@odata.id": "/redfish/v1/Cables/cable1",
+  "@odata.type": "#Cable.v1_0_0.Cable",
+  "Model": "cable1",
+  "Name": "cable1",
+  "Id": "cable1",
+  "Links": {
+    "UpstreamResources": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/multi1"
+      }
+    ],
+    "DownstreamChassis": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/multi2"
+      }
+    ]
+  },
+  "Location": {
+    "PartLocation": {
+      "LocationType": "Slot",
+      "ServiceLabel": "PE1"
+    }
+  }
+}
