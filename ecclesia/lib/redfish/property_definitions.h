@@ -484,6 +484,8 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyTcgOpalAdditionalDataStoreRawData,
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyBareMetal, std::string, "BareMetal");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyNerf, std::string, "NERF");
 DEFINE_REDFISH_PROPERTY(OemPropertyRootOfTrust, std::string, "RootOfTrust");
+DEFINE_REDFISH_PROPERTY(OemPropertyEmbeddedLocationContext,
+                        std::vector<std::string>, "EmbeddedLocationContext");
 
 // Redfish Task properties.
 DEFINE_REDFISH_PROPERTY(PropertyTaskStatus, std::string, "TaskStatus");
