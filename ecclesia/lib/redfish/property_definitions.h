@@ -225,6 +225,10 @@ inline constexpr char kRfPropertyMetricReportDefinitions[] =
     "MetricReportDefinitions";
 inline constexpr char kRfPropertyMetricValues[] = "MetricValues";
 inline constexpr char kRfPropertyMetricProperty[] = "MetricProperty";
+inline constexpr char kRfPropertyEndpoints[] = "Endpoints";
+inline constexpr char kRfPropertyConnectedPorts[] = "ConnectedPorts";
+inline constexpr char kRfPropertyConnectedSwitchPorts[] =
+    "ConnectedSwitchPorts";
 
 DEFINE_REDFISH_RESOURCE(ResourceCertificate, "Certificate");
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
