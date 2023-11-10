@@ -264,6 +264,7 @@ struct QueryEngineParams {
     // Creates a query engine using metrical transport. When enabled,
     // DelliciusQueryResult will have RedfishMetrics object populated.
     bool enable_redfish_metrics = false;
+    bool fail_on_first_error = true;
   };
 
   // Transport medium over which Redfish queries are sent to the redfish server.
@@ -331,7 +332,8 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context,
     std::unique_ptr<RedfishInterface> redfish_interface,
     std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer(),
-    MetricalRedfishTransport *metrical_transport = nullptr);
+    MetricalRedfishTransport *metrical_transport = nullptr,
+    const QueryEngineParams::FeatureFlags &feature_flags = {});
 
 // Build query engine based on given |configuration| to execute queries in
 // |query_context|.
@@ -368,7 +370,8 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
       std::move(local_id_map), id_assigner_factory, redfish_interface.get());
 
   return CreateQueryEngine(query_context, std::move(redfish_interface),
-                           std::move(normalizer), metrical_transport_ptr);
+                           std::move(normalizer), metrical_transport_ptr,
+                           engine_params.feature_flags);
 }
 
 // Creates query engine for machine devpath decorator extensions.

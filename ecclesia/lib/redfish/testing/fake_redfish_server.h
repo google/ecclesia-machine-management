@@ -31,6 +31,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/httpserver_interface.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -106,6 +107,13 @@ class FakeRedfishServer {
   // Similar to AddHttpGetHandlerWithData; the handler takes ownership of the
   // data.
   void AddHttpGetHandlerWithOwnedData(std::string uri, std::string data)
+      ABSL_LOCKS_EXCLUDED(patch_lock_);
+
+  // Convenience function to register a GET handler that returns the provided
+  // data with user specified status.
+  void AddHttpGetHandlerWithStatus(
+      std::string uri, absl::Span<const char> data,
+      tensorflow::serving::net_http::HTTPStatusCode status)
       ABSL_LOCKS_EXCLUDED(patch_lock_);
 
   // Allows POST Handler to accept "data". It is passed to post request along
