@@ -26,12 +26,11 @@
 #include <variant>
 #include <vector>
 
+#include "absl/base/attributes.h"
 #include "absl/base/call_once.h"
 #include "absl/base/const_init.h"
 #include "absl/cleanup/cleanup.h"
-#include "absl/container/flat_hash_map.h"
 #include "absl/log/log.h"
-#include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/ascii.h"
@@ -41,6 +40,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "curl/curl.h"
+#include "curl/easy.h"
 #include "curl/system.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"
@@ -400,6 +400,9 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
   if (code == CURLE_ABORTED_BY_CALLBACK) {
     return absl::CancelledError();
   }
+  if (code == CURLE_OPERATION_TIMEDOUT) {
+    return absl::UnavailableError("Operation timed out");
+  }
   if (code != CURLE_OK) {
     return absl::InternalError(
         absl::StrFormat("cURL failure: %s", curl_easy_strerror(code)));
@@ -414,7 +417,7 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
 size_t CurlHttpClient::HeaderCallback(const void *data, size_t size,
                                       size_t nmemb, void *userp) {
   auto *context = static_cast<ResponseContext *>(userp);
-  auto str = static_cast<const char *>(data);
+  const auto *str = static_cast<const char *>(data);
 
   if (str[0] != '\r' && str[1] != '\n') {
     auto s = std::string(str, size * nmemb);
