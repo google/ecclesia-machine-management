@@ -1,5 +1,5 @@
-load("//ecclesia/lib/redfish/dellicius/engine:redpath_query.bzl", "redpath_queries")
 load("//ecclesia/build_defs:embed.bzl", "cc_data_library")
+load("//ecclesia/lib/redfish/dellicius/engine:redpath_query.bzl", "redpath_queries")
 
 licenses(["notice"])
 
@@ -13,6 +13,7 @@ filegroup(
         "query_in/sensor_in_links.textproto",
         "query_in/sensor_in_predicates.textproto",
         "query_in/sensor_in_template.textproto",
+        "query_in/service_root_custom.textproto",
         "query_in/service_root_google_in.textproto",
         "query_in/service_root_in.textproto",
         "query_in/thermal_in.textproto",

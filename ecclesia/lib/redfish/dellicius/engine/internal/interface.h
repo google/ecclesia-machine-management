@@ -125,6 +125,14 @@ class QueryPlannerInterface {
   };
 
   virtual ~QueryPlannerInterface() = default;
+  // Constructs RedfishVariant using service root specified in the redpath
+  // query, then executes query plan using that RedfishVariant as root. If
+  // metrical transport provided, populates the DelliciusQueryResult with
+  // transport metrics.
+  virtual DelliciusQueryResult Run(
+      const Clock &clock, QueryTracker *tracker,
+      const QueryVariables &variables, const RedfishMetrics *metrics = nullptr,
+      ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError) = 0;
   // Executes query plan using RedfishVariant as root.
   // The RedfishVariant can be the service root (redfish/v1) or any redfish
   // resource acting as local root for redfish subtree. If metrical transport

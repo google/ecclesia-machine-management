@@ -466,6 +466,26 @@ TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
                      {std::move(intent_query_out)});
 }
 
+TEST(QueryEngineTest, QueryEngineTestCustomServiceRoot) {
+  FakeRedfishServer server(kComponentIntegrityMockupPath);
+  FakeClock clock{clock_time};
+  absl::StatusOr<QueryEngine> query_engine =
+      GetDefaultQueryEngine(server, kDelliciusQueries, kQueryRules, &clock);
+  EXPECT_TRUE(query_engine.ok());
+  // Execute query where custom service root is set to /google/v1.
+  QueryIdToResult response =
+      query_engine->ExecuteRedpathQuery({"CustomServiceRoot"});
+  QueryIdToResult intent_output = ParseTextFileAsProtoOrDie<QueryIdToResult>(
+      GetTestDataDependencyPath(JoinFilePaths(
+          kQuerySamplesLocation,
+          "query_out/service_root_google_out_translated.textproto")));
+  // Ignore the query id, since the expected data is from the google service
+  // root query.
+  EXPECT_THAT(
+      response.results().at("CustomServiceRoot").data(),
+      EqualsProto(intent_output.results().at("GoogleServiceRoot").data()));
+}
+
 TEST(QueryEngineTest, QueryEngineTestTemplatedQuery) {
   std::string query_out_path = GetTestDataDependencyPath(JoinFilePaths(
       kQuerySamplesLocation, "query_out/sensor_out_template.textproto"));

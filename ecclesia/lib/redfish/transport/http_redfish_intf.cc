@@ -641,6 +641,16 @@ class HttpRedfishInterface : public RedfishInterface {
     return root;
   }
 
+  RedfishVariant GetRoot(ecclesia::GetParams params,
+                         absl::string_view service_root) override {
+    RedfishVariant root = [&]() {
+      return CachedGetUri(service_root, std::move(params));
+    }();
+    // parse supported features if not parsed yet
+    PopuplateSupportedFeatures(root);
+    return root;
+  }
+
   // GetUri fetches the given URI and resolves any JSON pointers. Note that
   // this method must not resolve any references (i.e. JSON object containing
   // only "@odata.id") to avoid infinite recursion in case a bad Redfish

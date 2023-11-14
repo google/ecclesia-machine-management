@@ -175,6 +175,11 @@ class JsonMockupMockup : public RedfishInterface {
                          ServiceRootUri service_root) override {
     return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(json_model_));
   }
+  RedfishVariant GetRoot(GetParams params,
+                         absl::string_view service_root) override {
+    return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(json_model_));
+  }
+
   RedfishVariant UncachedGetUri(absl::string_view uri,
                                 GetParams params) override {
     // We will implement GetUri as walking the URI from the root JSON node.

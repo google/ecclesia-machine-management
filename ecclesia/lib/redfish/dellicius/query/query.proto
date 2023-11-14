@@ -110,4 +110,8 @@ message DelliciusQuery {
   repeated Subquery subquery = 2;
   repeated SubquerySet subquery_sets = 3;
   repeated PropertySet property_sets = 4;
+
+  // Indicates the service root the query executes relative to, Defaults to
+  // redfish/v1.
+  optional string service_root = 9;
 }

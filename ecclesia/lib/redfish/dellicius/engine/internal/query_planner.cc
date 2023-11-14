@@ -84,6 +84,7 @@ constexpr LazyRE2 kRedfishDatetimeRegex = {
 
 // All RedPath expressions execute relative to service root identified by '/'.
 constexpr absl::string_view kServiceRootNode = "/";
+constexpr absl::string_view kDefaultRedfishServiceRoot = "/redfish/v1";
 
 // Known predicate expressions.
 constexpr absl::string_view kPredicateSelectAll = "*";
@@ -752,7 +753,15 @@ class QueryPlanner final : public QueryPlannerInterface {
         subquery_handles_(std::move(subquery_handles)),
         redpath_to_query_params_(
             CombineQueryParams(query, std::move(redpath_to_query_params))),
-        redfish_interface_(redfish_interface) {}
+        redfish_interface_(redfish_interface),
+        service_root_(query.has_service_root()
+                          ? query.service_root()
+                          : std::string(kDefaultRedfishServiceRoot)) {}
+
+  DelliciusQueryResult Run(
+      const Clock &clock, QueryTracker *tracker,
+      const QueryVariables &variables, const RedfishMetrics *metrics = nullptr,
+      ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError) override;
 
   DelliciusQueryResult Run(
       const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
@@ -785,6 +794,7 @@ class QueryPlanner final : public QueryPlannerInterface {
   std::vector<std::unique_ptr<SubqueryHandle>> subquery_handles_;
   const RedPathRedfishQueryParams redpath_to_query_params_;
   RedfishInterface *redfish_interface_;
+  const std::string service_root_;
 };
 
 using SubqueryHandleCollection = std::vector<std::unique_ptr<SubqueryHandle>>;
@@ -1399,6 +1409,23 @@ void QueryPlanner::ProcessSubqueries(
   ExecuteRedPathStepFromEachSubquery(this, redpath_to_query_params_,
                                      context_node, result, tracker,
                                      execution_mode);
+}
+
+// Runs the Redpath Query; handles construction of the service root
+// RedfishVariant.
+DelliciusQueryResult QueryPlanner::Run(const Clock &clock,
+                                       QueryTracker *tracker,
+                                       const QueryVariables &query_variables,
+                                       const RedfishMetrics *metrics,
+                                       ExecutionMode execution_mode) {
+  DelliciusQueryResult result;
+  result.set_query_id(plan_id_);
+  ProcessSubqueries(redfish_interface_->GetRoot(GetParams{}, service_root_),
+                    query_variables, nullptr, result, tracker, execution_mode);
+  if (metrics != nullptr) {
+    *result.mutable_redfish_metrics() = *metrics;
+  }
+  return result;
 }
 
 DelliciusQueryResult QueryPlanner::Run(const RedfishVariant &variant,

@@ -595,6 +595,8 @@ class RedfishInterface {
   virtual RedfishVariant GetRoot(
       GetParams params = {},
       ServiceRootUri service_root = ServiceRootUri::kRedfish) = 0;
+  virtual RedfishVariant GetRoot(GetParams params,
+                                 absl::string_view service_root) = 0;
 
   // The following Get URIs fetches the given URIs and returns the resulting
   // payloads. Both CachedGetUri and UncachedGetUri go through the cache
@@ -672,6 +674,10 @@ class NullRedfish : public RedfishInterface {
   bool IsTrusted() const override { return true; }
   RedfishVariant GetRoot(GetParams params,
                          ServiceRootUri service_root) override {
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
+  }
+  RedfishVariant GetRoot(GetParams params,
+                         absl::string_view service_root) override {
     return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }
   RedfishVariant CachedGetUri(absl::string_view uri,

@@ -16,8 +16,9 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 
+#include <sys/types.h>
+
 #include <algorithm>
-#include <iterator>
 #include <memory>
 #include <string>
 #include <utility>
@@ -212,20 +213,24 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
 
       DelliciusQueryResult result_single;
+      QueryPlannerInterface::ExecutionMode execution_mode =
+          feature_flags_.fail_on_first_error
+              ? QueryPlannerInterface::ExecutionMode::kFailOnFirstError
+              : QueryPlannerInterface::ExecutionMode::kContinueOnSubqueryErrors;
       {
         auto query_timer = QueryTimestamp(&result_single, clock_);
-        QueryPlannerInterface::ExecutionMode execution_mode =
-            feature_flags_.fail_on_first_error
-                ? QueryPlannerInterface::ExecutionMode::kFailOnFirstError
-                : QueryPlannerInterface::ExecutionMode::
-                      kContinueOnSubqueryErrors;
-        if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
-          result_single = it->second->Run(
-              redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
-              *clock_, tracker, vars, /* metrics = */ nullptr, execution_mode);
+        if (service_root_uri == QueryEngine::ServiceRootType::kCustom) {
+          result_single =
+              it->second->Run(*clock_, tracker, vars,
+                              /* metrics = */ nullptr, execution_mode);
         } else {
           result_single = it->second->Run(
-              redfish_interface_->GetRoot(), *clock_, tracker, vars,
+              redfish_interface_->GetRoot(
+                  GetParams{},
+                  service_root_uri == QueryEngine::ServiceRootType::kGoogle
+                      ? ServiceRootUri::kGoogle
+                      : ServiceRootUri::kRedfish),
+              *clock_, tracker, vars,
               /* metrics = */ nullptr, execution_mode);
         }
       }
@@ -262,26 +267,27 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
         MetricalRedfishTransport::ResetMetrics();
       }
       DelliciusQueryResult result_single;
+      QueryPlannerInterface::ExecutionMode execution_mode =
+          feature_flags_.fail_on_first_error
+              ? QueryPlannerInterface::ExecutionMode::kFailOnFirstError
+              : QueryPlannerInterface::ExecutionMode::kContinueOnSubqueryErrors;
       {
         auto query_timer = QueryTimestamp(&result_single, clock_);
-        QueryPlannerInterface::ExecutionMode execution_mode =
-            feature_flags_.fail_on_first_error
-                ? QueryPlannerInterface::ExecutionMode::kFailOnFirstError
-                : QueryPlannerInterface::ExecutionMode::
-                      kContinueOnSubqueryErrors;
-        if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
-          result_single = it->second->Run(
-              redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
-              *clock_, tracker, vars, metrics, execution_mode);
-        } else {
+        if (service_root_uri == QueryEngine::ServiceRootType::kCustom) {
           result_single =
-              it->second->Run(redfish_interface_->GetRoot(), *clock_, tracker,
-                              vars, metrics, execution_mode);
+              it->second->Run(*clock_, tracker, vars, metrics, execution_mode);
+        } else {
+          result_single = it->second->Run(
+              redfish_interface_->GetRoot(
+                  GetParams{},
+                  service_root_uri == QueryEngine::ServiceRootType::kGoogle
+                      ? ServiceRootUri::kGoogle
+                      : ServiceRootUri::kRedfish),
+              *clock_, tracker, vars, metrics, execution_mode);
         }
       }
       response_entries.push_back(std::move(result_single));
     }
-
     return response_entries;
   }
 

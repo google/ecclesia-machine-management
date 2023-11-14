@@ -90,7 +90,7 @@ using QueryVariableSet = absl::flat_hash_map<std::string, QueryVariables>;
 
 class QueryEngine {
  public:
-  enum class ServiceRootType : uint8_t { kRedfish, kGoogle };
+  enum class ServiceRootType : uint8_t { kRedfish, kGoogle, kCustom };
 
   // Interface for private implementation of Query Engine using PImpl Idiom
   class QueryEngineIntf {
@@ -186,7 +186,7 @@ class QueryEngine {
   ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
+      ServiceRootType service_root_uri = ServiceRootType::kCustom,
       const QueryVariableSet &query_arguments = {}) {
     return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
                                       query_arguments);
@@ -194,7 +194,7 @@ class QueryEngine {
   ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
-      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
+      ServiceRootType service_root_uri = ServiceRootType::kCustom,
       const QueryVariableSet &query_arguments = {}) {
     return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
                                       query_arguments, tracker);
@@ -202,7 +202,7 @@ class QueryEngine {
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
+      ServiceRootType service_root_uri = ServiceRootType::kCustom,
       const QueryVariableSet &query_arguments = {}) {
     return engine_impl_->ExecuteRedpathQuery(service_root_uri, query_ids,
                                              query_arguments);
@@ -210,7 +210,7 @@ class QueryEngine {
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
-      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
+      ServiceRootType service_root_uri = ServiceRootType::kCustom,
       const QueryVariableSet &query_arguments = {}) {
     return engine_impl_->ExecuteRedpathQuery(service_root_uri, query_ids,
                                              query_arguments, tracker);
