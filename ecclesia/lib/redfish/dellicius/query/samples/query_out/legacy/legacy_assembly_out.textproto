@@ -1,0 +1,24 @@
+# proto-file: ecclesia/lib/redfish/dellicius/query/query_result.proto
+# proto-message: DelliciusQueryResult
+query_id: "AssemblyCollectorWithPropertyNameNormalization"
+subquery_output_by_id {
+  key: "Chassis"
+  value {
+    data_sets {
+      properties: {
+        name: "serial_number"
+        string_value: "MBBQTW194106556"
+      }
+      properties {
+        name: "part_number"
+        string_value: "1043652-02"
+      }
+    }
+  }
+}
+start_timestamp {
+  seconds: 10
+}
+end_timestamp {
+  seconds: 10
+}

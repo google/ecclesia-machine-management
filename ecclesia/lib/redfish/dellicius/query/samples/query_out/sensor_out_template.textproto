@@ -1,53 +1,92 @@
-# proto-file: ecclesia/lib/redfish/dellicius/query/query_result.proto
-# proto-message: DelliciusQueryResult
+# proto-file: ecclesia/lib/redfish/redpath/definitions/query_result/query_result.proto
+# proto-message: ecclesia.QueryIdToResult
 
-query_id: "SensorCollectorTemplate"
-subquery_output_by_id {
-  key: "Sensors"
+results {
+  key: "SensorCollectorTemplate"
   value {
-    data_sets {
-      devpath: "/phys/CPU0"
-      properties {
-        name: "Name"
-        string_value: "CPU0"
-      }
-      properties {
-        name: "ReadingType"
-        string_value: "Temperature"
-      }
-      properties {
-        name: "ReadingUnits"
-        string_value: "Cel"
-      }
-      properties {
-        name: "Reading"
-        int64_value: 60
-      }
+    query_id: "SensorCollectorTemplate"
+    stats {
     }
-    data_sets {
-      devpath: "/phys/CPU1"
-      properties {
-        name: "Name"
-        string_value: "CPU1"
-      }
-      properties {
-        name: "ReadingType"
-        string_value: "Temperature"
-      }
-      properties {
-        name: "ReadingUnits"
-        string_value: "Cel"
-      }
-      properties {
-        name: "Reading"
-        int64_value: 60
+    data {
+      fields {
+        key: "Sensors"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "CPU0"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 60
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Temperature"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "Cel"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/CPU0"
+                    }
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "CPU1"
+                  }
+                }
+                fields {
+                  key: "Reading"
+                  value {
+                    int_value: 60
+                  }
+                }
+                fields {
+                  key: "ReadingType"
+                  value {
+                    string_value: "Temperature"
+                  }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value {
+                    string_value: "Cel"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/CPU1"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
-}
-start_timestamp {
-  seconds: 10
-}
-end_timestamp {
-  seconds: 10
 }

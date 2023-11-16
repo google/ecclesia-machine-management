@@ -1,37 +1,58 @@
-# proto-file: ecclesia/lib/redfish/dellicius/query/query_result.proto
-# proto-message: DelliciusQueryResult
+# proto-file: ecclesia/lib/redfish/redpath/definitions/query_result/query_result.proto
+# proto-message: ecclesia.QueryIdToResult
 
-query_id: "AssemblyCollectorWithPropertyNameNormalization"
-subquery_output_by_id {
-  key: "Chassis"
-  value {
-    data_sets {
-      devpath: "/phys"
-      properties: {
-        name: "serial_number"
-        string_value: "MBBQTW194106556"
+results: {
+  key: "AssemblyCollectorWithPropertyNameNormalization"
+  value: {
+    query_id: "AssemblyCollectorWithPropertyNameNormalization"
+    stats { start_time { seconds: 10 } end_time { seconds: 10 } }
+    data {
+      fields {
+        key: "Chassis"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "_id_"
+                  value { identifier { local_devpath: "/phys" } }
+                }
+                fields {
+                  key: "part_number"
+                  value { string_value: "1043652-02" }
+                }
+                fields {
+                  key: "serial_number"
+                  value { string_value: "MBBQTW194106556" }
+                }
+              }
+            }
+          }
+        }
       }
-      properties {
-        name: "part_number"
-        string_value: "1043652-02"
+      fields {
+        key: "Processors"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "_id_"
+                  value { identifier { local_devpath: "/phys/CPU0" } }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_id_"
+                  value { identifier { local_devpath: "/phys/CPU1" } }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
-}
-subquery_output_by_id {
-  key: "Processors"
-  value {
-    data_sets {
-      devpath: "/phys/CPU0"
-    }
-    data_sets {
-      devpath: "/phys/CPU1"
-    }
-  }
-}
-start_timestamp {
-  seconds: 10
-}
-end_timestamp {
-  seconds: 10
 }

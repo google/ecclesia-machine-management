@@ -178,8 +178,9 @@ class QueryPlannerTestRunner : public ::testing::Test {
 TEST_F(QueryPlannerTestRunner, CheckPredicatesFilterNodesAsExpected) {
   std::string sensor_in_path = GetTestDataDependencyPath(JoinFilePaths(
       kQuerySamplesLocation, "query_in/sensor_in_predicates.textproto"));
-  std::string sensor_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/sensor_out_predicates.textproto"));
+  std::string sensor_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation,
+                    "query_out/legacy/legacy_sensor_out_predicates.textproto"));
   SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer.
   auto default_normalizer = BuildDefaultNormalizer();
@@ -189,8 +190,9 @@ TEST_F(QueryPlannerTestRunner, CheckPredicatesFilterNodesAsExpected) {
 TEST_F(QueryPlannerTestRunner, CheckPredicatesFilterAncestorNodesAsExpected) {
   std::string processor_in_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_in/processors_in.textproto"));
-  std::string processor_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/processors_out.textproto"));
+  std::string processor_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation,
+                    "query_out/legacy/legacy_processors_out.textproto"));
   SetTestParams("indus_hmb_cn/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer.
   auto default_normalizer = BuildDefaultNormalizer();
@@ -202,10 +204,10 @@ TEST_F(QueryPlannerTestRunner, BasicDelliciusInterpreter) {
       JoinFilePaths(kQuerySamplesLocation, "query_in/assembly_in.textproto"));
   std::string sensor_in_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_in/sensor_in.textproto"));
-  std::string assembly_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation, "query_out/assembly_out.textproto"));
-  std::string sensor_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
+  std::string assembly_out_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/legacy/legacy_assembly_out.textproto"));
+  std::string sensor_out_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/legacy/legacy_sensor_out.textproto"));
   SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer.
   auto default_normalizer = BuildDefaultNormalizer();
@@ -218,8 +220,9 @@ TEST_F(QueryPlannerTestRunner, BasicDelliciusInterpreter) {
 TEST_F(QueryPlannerTestRunner, DefaultNormalizerWithDevpaths) {
   std::string sensor_in_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_in/sensor_in.textproto"));
-  std::string sensor_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/devpath_sensor_out.textproto"));
+  std::string sensor_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation,
+                    "query_out/legacy/legacy_devpath_sensor_out.textproto"));
   SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer with devpath extension.
   auto normalizer_with_devpath = BuildDefaultNormalizerWithLocalDevpath(
@@ -232,8 +235,9 @@ TEST_F(QueryPlannerTestRunner,
        CheckChildSubqueryOutputCorrectlyGroupsUnderParent) {
   std::string query_in_path = GetTestDataDependencyPath(JoinFilePaths(
       kQuerySamplesLocation, "query_in/sensor_in_links.textproto"));
-  std::string query_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/sensor_out_links.textproto"));
+  std::string query_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation,
+                    "query_out/legacy/legacy_sensor_out_links.textproto"));
   SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer with devpath extension.
   auto normalizer_with_devpath = BuildDefaultNormalizerWithLocalDevpath(
@@ -245,8 +249,8 @@ TEST_F(QueryPlannerTestRunner,
 TEST_F(QueryPlannerTestRunner, TestNestedNodeNameInQueryProperty) {
   std::string query_in_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_in/managers_in.textproto"));
-  std::string query_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation, "query_out/managers_out.textproto"));
+  std::string query_out_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_out/legacy/legacy_managers_out.textproto"));
   SetTestParams("indus_hmb_cn/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer.
   auto default_normalizer = BuildDefaultNormalizer();
@@ -256,8 +260,9 @@ TEST_F(QueryPlannerTestRunner, TestNestedNodeNameInQueryProperty) {
 TEST_F(QueryPlannerTestRunner, TestServiceRootQuery) {
   std::string query_in_path = GetTestDataDependencyPath(JoinFilePaths(
       kQuerySamplesLocation, "query_in/service_root_in.textproto"));
-  std::string query_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/service_root_out.textproto"));
+  std::string query_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation,
+                    "query_out/legacy/legacy_service_root_out.textproto"));
   SetTestParams("indus_hmb_cn/mockup.shar", absl::FromUnixSeconds(10));
   // Instantiate a passthrough normalizer.
   auto default_normalizer = BuildDefaultNormalizer();
@@ -292,8 +297,9 @@ TEST(QueryPlannerTest,
 TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
   std::string sensor_in_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_in/sensor_in.textproto"));
-  std::string sensor_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/devpath_sensor_out.textproto"));
+  std::string sensor_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation,
+                    "query_out/legacy/legacy_devpath_sensor_out.textproto"));
   FakeClock clock(absl::FromUnixSeconds(10));
   // Set up context node for dellicius query.
   FakeRedfishServer server("indus_hmb_shim/mockup.shar");
@@ -338,8 +344,9 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
 TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
   std::string sensor_in_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_in/sensor_in.textproto"));
-  std::string sensor_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/devpath_sensor_out.textproto"));
+  std::string sensor_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation,
+                    "query_out/legacy/legacy_devpath_sensor_out.textproto"));
   FakeClock clock(absl::FromUnixSeconds(10));
   // Set up context node for dellicius query.
   FakeRedfishServer server("indus_hmb_shim/mockup.shar");

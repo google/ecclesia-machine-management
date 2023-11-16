@@ -65,6 +65,7 @@ namespace ecclesia {
 
 namespace {
 
+using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedPointwise;
@@ -103,40 +104,21 @@ void VerifyTrackedPathWithParamsMatchExpected(
               UnorderedPointwise(RedPathExpandConfigsEq(), expected_configs));
 }
 
-void VerifyQueryResults(std::vector<DelliciusQueryResult> actual_entries,
-                        std::vector<DelliciusQueryResult> expected_entries,
-                        bool check_timestamps = false) {
-  auto remove_timestamps = [](std::vector<DelliciusQueryResult> &entries) {
-    for (DelliciusQueryResult &entry : entries) {
-      entry.clear_start_timestamp();
-      entry.clear_end_timestamp();
-    }
-  };
-
-  if (!check_timestamps) {
-    remove_timestamps(actual_entries);
-    remove_timestamps(expected_entries);
+void RemoveTimestamps(QueryIdToResult &entries) {
+  for (auto &[query_id, entry] : *entries.mutable_results()) {
+    entry.mutable_stats()->clear_start_time();
+    entry.mutable_stats()->clear_end_time();
   }
-
-  EXPECT_THAT(actual_entries,
-              UnorderedElementsAreArrayOfProtos(expected_entries));
 }
 
 void VerifyQueryResults(QueryIdToResult actual_entries,
                         QueryIdToResult expected_entries,
-                        bool check_timestamps = false) {
-  auto remove_timestamps = [](QueryIdToResult &entries) {
-    for (auto &[query_id, entry] : *entries.mutable_results()) {
-      entry.mutable_stats()->clear_start_time();
-      entry.mutable_stats()->clear_end_time();
-    }
-  };
-
+                        bool check_timestamps = false,
+                        bool check_metrics = false) {
   if (!check_timestamps) {
-    remove_timestamps(actual_entries);
-    remove_timestamps(expected_entries);
+    RemoveTimestamps(actual_entries);
+    RemoveTimestamps(expected_entries);
   }
-
   EXPECT_THAT(actual_entries, EqualsProto(expected_entries));
 }
 
@@ -187,38 +169,34 @@ absl::StatusOr<QueryEngine> GetQueryEngineWithIdAssigner(
 }
 
 TEST(QueryEngineTest, QueryEngineDevpathConfiguration) {
-  std::string sensor_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/devpath_sensor_out.textproto"));
-
-  std::vector<DelliciusQueryResult> response_entries =
+  QueryIdToResult intent_output_sensor =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/devpath_sensor_out.textproto")));
+  QueryIdToResult response_entries =
       FakeQueryEngineEnvironment(
           {.flags{.enable_devpath_extension = true},
            .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
           kIndusMockup, clock_time)
           .GetEngine()
-          .ExecuteQuery({"SensorCollector"});
-
-  DelliciusQueryResult intent_output_sensor =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
+          .ExecuteRedpathQuery({"SensorCollector"});
 
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_output_sensor)});
 }
 
 TEST(QueryEngineTest, QueryEngineDefaultConfiguration) {
-  std::string sensor_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
-
-  std::vector<DelliciusQueryResult> response_entries =
+  QueryIdToResult intent_output_sensor =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(
+          GetTestDataDependencyPath(JoinFilePaths(
+              kQuerySamplesLocation, "query_out/sensor_out.textproto")));
+  QueryIdToResult response_entries =
       FakeQueryEngineEnvironment(
           {.flags{.enable_devpath_extension = false},
            .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
           kIndusMockup, clock_time)
           .GetEngine()
-          .ExecuteQuery({"SensorCollector"});
-
-  DelliciusQueryResult intent_output_sensor =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
+          .ExecuteRedpathQuery({"SensorCollector"});
 
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_output_sensor)});
@@ -240,25 +218,25 @@ TEST(QueryEngineTest, QueryEngineRedfishIntfAccessor) {
 }
 
 TEST(QueryEngineTest, QueryEngineWithExpandConfiguration) {
-  std::string sensor_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation, "query_out/assembly_out.textproto"));
+  QueryIdToResult intent_output_assembly =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(
+          GetTestDataDependencyPath(JoinFilePaths(
+              kQuerySamplesLocation, "query_out/assembly_out.textproto")));
 
   QueryTracker query_tracker;
-  std::vector<DelliciusQueryResult> response_entries =
+  QueryIdToResult response_entries =
       FakeQueryEngineEnvironment(
           {.flags{.enable_devpath_extension = false},
            .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
            .query_rules{kQueryRules.begin(), kQueryRules.end()}},
           kIndusMockup, clock_time)
           .GetEngine()
-          .ExecuteQuery({"AssemblyCollectorWithPropertyNameNormalization"},
-                        query_tracker);
-
-  DelliciusQueryResult intent_output_sensor =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
+          .ExecuteRedpathQuery(
+              {"AssemblyCollectorWithPropertyNameNormalization"},
+              query_tracker);
 
   VerifyQueryResults(std::move(response_entries),
-                     {std::move(intent_output_sensor)});
+                     {std::move(intent_output_assembly)});
 
   std::vector<RedPathToQueryParams> tracked_configs;
   tracked_configs.reserve(query_tracker.redpaths_queried.size());
@@ -276,65 +254,72 @@ TEST(QueryEngineTest, QueryEngineWithExpandConfiguration) {
 
 TEST(QueryEngineTest, QueryEngineInvalidQueries) {
   // Invalid Query Id
-
-  std::vector<DelliciusQueryResult> response_entries =
+  QueryIdToResult response_entries =
       FakeQueryEngineEnvironment(
           {.flags{.enable_devpath_extension = false},
            .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
           kIndusMockup, clock_time)
           .GetEngine()
-          .ExecuteQuery({"ThereIsNoSuchId"});
+          .ExecuteRedpathQuery({"ThereIsNoSuchId"});
 
-  EXPECT_EQ(response_entries.size(), 0);
+  EXPECT_EQ(response_entries.results().size(), 0);
 }
 
 TEST(QueryEngineTest, QueryEngineConcurrentQueries) {
-  std::string assembly_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation, "query_out/assembly_out.textproto"));
-  std::string sensor_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
+  QueryIdToResult intent_output_sensor =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(
+          GetTestDataDependencyPath(JoinFilePaths(
+              kQuerySamplesLocation, "query_out/sensor_out.textproto")));
+  QueryIdToResult intent_output_assembly =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(
+          GetTestDataDependencyPath(JoinFilePaths(
+              kQuerySamplesLocation, "query_out/assembly_out.textproto")));
 
-  std::vector<DelliciusQueryResult> response_entries =
+  QueryIdToResult response_entries =
       FakeQueryEngineEnvironment(
           {.flags{.enable_devpath_extension = false},
            .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
           kIndusMockup, clock_time)
           .GetEngine()
-          .ExecuteQuery({"SensorCollector",
-                         "AssemblyCollectorWithPropertyNameNormalization"});
-
-  DelliciusQueryResult intent_sensor_out =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensor_out_path);
-  DelliciusQueryResult intent_assembly_out =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
-
-  VerifyQueryResults(
-      std::move(response_entries),
-      {std::move(intent_sensor_out), std::move(intent_assembly_out)});
+          .ExecuteRedpathQuery(
+              {"SensorCollector",
+               "AssemblyCollectorWithPropertyNameNormalization"});
+  RemoveTimestamps(response_entries);
+  RemoveTimestamps(intent_output_sensor);
+  RemoveTimestamps(intent_output_assembly);
+  EXPECT_THAT(
+      response_entries.results().at("SensorCollector"),
+      EqualsProto(intent_output_sensor.results().at("SensorCollector")));
+  EXPECT_THAT(response_entries.results().at(
+                  "AssemblyCollectorWithPropertyNameNormalization"),
+              EqualsProto(intent_output_assembly.results().at(
+                  "AssemblyCollectorWithPropertyNameNormalization")));
 }
 
 TEST(QueryEngineTest, QueryEngineEmptyItemDevpath) {
-  std::string assembly_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/devpath_assembly_out.textproto"));
-
-  std::vector<DelliciusQueryResult> response_entries =
+  QueryIdToResult intent_output_assembly =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/devpath_assembly_out.textproto")));
+  QueryIdToResult response_entries =
       FakeQueryEngineEnvironment(
           {.flags{.enable_devpath_extension = true},
            .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
           kIndusMockup, clock_time)
           .GetEngine()
-          .ExecuteQuery({"AssemblyCollectorWithPropertyNameNormalization"});
-
-  DelliciusQueryResult intent_assembly_out =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
+          .ExecuteRedpathQuery(
+              {"AssemblyCollectorWithPropertyNameNormalization"});
 
   VerifyQueryResults(std::move(response_entries),
-                     {std::move(intent_assembly_out)});
+                     {std::move(intent_output_assembly)});
 }
+
 TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
-  std::string assembly_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation, "query_out/assembly_out.textproto"));
-  RedfishMetrics metrics;
+  QueryIdToResult intent_output_assembly =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(
+          GetTestDataDependencyPath(JoinFilePaths(
+              kQuerySamplesLocation, "query_out/assembly_out.textproto")));
+
   FakeQueryEngineEnvironment fake_engine_env(
       {.flags{.enable_devpath_extension = false,
               .enable_transport_metrics = true},
@@ -345,51 +330,65 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
   QueryEngine &query_engine = fake_engine_env.GetEngine();
   {
     // Query assemblies 3 times in a row. Cache is cold only for the 1st query.
-    std::vector<DelliciusQueryResult> response_entries =
-        query_engine.ExecuteQueryWithAggregatedMetrics(
-            {"AssemblyCollectorWithPropertyNameNormalization",
-            "AssemblyCollectorWithPropertyNameNormalization",
-            "AssemblyCollectorWithPropertyNameNormalization"}, &metrics);
-    for (int i = 0; i < response_entries.size(); i++) {
-      DelliciusQueryResult intent_output_assembly =
-        ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
-      VerifyQueryResults({std::move(response_entries[i])},
-                         {intent_output_assembly});
-    }
-    bool traced_systems = false;
-    bool traced_processor_collection = false;
-    for (const auto &uri_x_metric : *metrics.mutable_uri_to_metrics_map()) {
-      // Fetched only once from the redfish server.
-      if (uri_x_metric.first == "/redfish/v1/Systems") {
-        traced_systems = true;
-        for (const auto &metadata :
-             uri_x_metric.second.request_type_to_metadata()) {
-          EXPECT_EQ(metadata.second.request_count(), 1);
+    QueryIdToResult first_response = query_engine.ExecuteRedpathQuery(
+        {"AssemblyCollectorWithPropertyNameNormalization"});
+    QueryIdToResult second_response = query_engine.ExecuteRedpathQuery(
+        {"AssemblyCollectorWithPropertyNameNormalization"});
+    QueryIdToResult third_response = query_engine.ExecuteRedpathQuery(
+        {"AssemblyCollectorWithPropertyNameNormalization"});
+
+    int systems_fetched_counter = 0;
+    int processor_collection_fetched_counter = 0;
+    for (const QueryIdToResult &response_entries :
+         {first_response, second_response, third_response}) {
+      // Copy stats from the expected result for data verification first.
+      *intent_output_assembly.mutable_results()
+           ->at("AssemblyCollectorWithPropertyNameNormalization")
+           .mutable_stats() =
+          response_entries.results()
+              .at("AssemblyCollectorWithPropertyNameNormalization")
+              .stats();
+      VerifyQueryResults(response_entries, intent_output_assembly);
+
+      // Validate the stats are correct.
+      for (const auto &uri_x_metric :
+           response_entries.results()
+               .at("AssemblyCollectorWithPropertyNameNormalization")
+               .stats()
+               .redfish_metrics()
+               .uri_to_metrics_map()) {
+        // Expected systems only fetched only once from the redfish server.
+        if (uri_x_metric.first == "/redfish/v1/Systems") {
+          systems_fetched_counter++;
+          for (const auto &metadata :
+               uri_x_metric.second.request_type_to_metadata()) {
+            EXPECT_EQ(metadata.second.request_count(), 1);
+          }
         }
-      }
-      // Note query_rule sample_query_rules.textproto uses level 1 expand at
-      // Processors collection. But the query has freshness = true for the
-      // members in processor collection and not the collection resource. Yet we
-      // see the collection being fetched fresh each time because the freshness
-      // requirement bubbles up if child redpath is in the expand path of parent
-      // redpath.
-      if (uri_x_metric.first ==
-          "/redfish/v1/Systems/system/Processors?$expand=~($levels=1)") {
-        traced_processor_collection = true;
-        for (const auto &metadata :
-             uri_x_metric.second.request_type_to_metadata()) {
-          EXPECT_EQ(metadata.second.request_count(), 3);
+        // Note query_rule sample_query_rules.textproto uses level 1 expand at
+        // Processors collection. But the query has freshness = true for the
+        // members in processor collection and not the collection resource. Yet
+        // we see the collection being fetched fresh each time because the
+        // freshness requirement bubbles up if child redpath is in the expand
+        // path of parent redpath.
+        if (uri_x_metric.first ==
+            "/redfish/v1/Systems/system/Processors?$expand=~($levels=1)") {
+          processor_collection_fetched_counter++;
+          for (const auto &metadata :
+               uri_x_metric.second.request_type_to_metadata()) {
+            EXPECT_EQ(metadata.second.request_count(), 1);
+          }
         }
       }
     }
     // Both requests are fetched from Redfish server on the 1st query.
-    EXPECT_TRUE(traced_systems);
-    EXPECT_TRUE(traced_processor_collection);
+    EXPECT_THAT(systems_fetched_counter, Eq(1));
+    EXPECT_THAT(processor_collection_fetched_counter, Eq(3));
   }
 }
 
-// Tests that when transport metrics are enabled per DelliciusQueryResult,
-// the metrics are independent of other DelliciusQueryResults.
+// // Tests that when transport metrics are enabled per QueryResult,
+// // the metrics are independent of other QueryResult.
 TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
   // Create QueryEngine with transport metrics
   FakeQueryEngineEnvironment fake_engine_env(
@@ -400,24 +399,27 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
       kIndusHmbCnMockup, clock_time,
       FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
   QueryEngine &query_engine = fake_engine_env.GetEngine();
-  // Hold all the metrics collected from each query execution to validate later.
+  // Hold all the metrics collected from each query execution to validate
+  // later.
   RedfishMetrics metrics_first, metrics_cached;
   {
     // On first query, thermal subsystem won't be queried explicitly since
-    // chassis level 2 expand will return thermal objects. Here we expect to see
-    // only 1 expand URI dispatched.
-    std::vector<DelliciusQueryResult> response_entries =
-        query_engine.ExecuteQuery({"Thermal"});
-    ASSERT_THAT(response_entries, Not(IsEmpty()));
-    metrics_first = response_entries.back().redfish_metrics();
+    // chassis level 2 expand will return thermal objects. Here we expect to
+    // see only 1 expand URI dispatched.
+    QueryIdToResult response_entries =
+        query_engine.ExecuteRedpathQuery({"Thermal"});
+    ASSERT_THAT(response_entries.results(), Not(IsEmpty()));
+    metrics_first =
+        response_entries.results().at("Thermal").stats().redfish_metrics();
   }
   {
-    // Query again. This time all resources upto Thermal should be served from
-    // cache. All Thermal objects will be freshly queried.
-    std::vector<DelliciusQueryResult> response_entries =
-        query_engine.ExecuteQuery({"Thermal"});
-    ASSERT_THAT(response_entries, Not(IsEmpty()));
-    metrics_cached = response_entries.back().redfish_metrics();
+    // Query again. This time all resources upto Thermal should be served
+    // from cache. All Thermal objects will be freshly queried.
+    QueryIdToResult response_entries =
+        query_engine.ExecuteRedpathQuery({"Thermal"});
+    ASSERT_THAT(response_entries.results(), Not(IsEmpty()));
+    metrics_cached =
+        response_entries.results().at("Thermal").stats().redfish_metrics();
   }
 
   size_t traced_chassis_expand = 0;
@@ -448,22 +450,22 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
 }
 
 TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
-  std::string query_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/service_root_google_out.textproto"));
+  QueryIdToResult intent_output_service_root =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/service_root_google_out.textproto")));
 
-  std::vector<DelliciusQueryResult> response_entries =
+  QueryIdToResult response_entries =
       FakeQueryEngineEnvironment(
           {.flags{.enable_devpath_extension = true},
            .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
           kComponentIntegrityMockupPath, clock_time)
           .GetEngine()
-          .ExecuteQuery({"GoogleServiceRoot"},
-                        QueryEngine::ServiceRootType::kGoogle);
+          .ExecuteRedpathQuery({"GoogleServiceRoot"},
+                               QueryEngine::ServiceRootType::kGoogle);
 
-  DelliciusQueryResult intent_query_out =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
   VerifyQueryResults(std::move(response_entries),
-                     {std::move(intent_query_out)});
+                     {std::move(intent_output_service_root)});
 }
 
 TEST(QueryEngineTest, QueryEngineTestCustomServiceRoot) {
@@ -487,8 +489,9 @@ TEST(QueryEngineTest, QueryEngineTestCustomServiceRoot) {
 }
 
 TEST(QueryEngineTest, QueryEngineTestTemplatedQuery) {
-  std::string query_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/sensor_out_template.textproto"));
+  QueryIdToResult intent_query_out = ParseTextFileAsProtoOrDie<QueryIdToResult>(
+      GetTestDataDependencyPath(JoinFilePaths(
+          kQuerySamplesLocation, "query_out/sensor_out_template.textproto")));
 
   // Build the argument map.
   QueryVariables::VariableValue val1, val2, val3;
@@ -505,24 +508,25 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedQuery) {
   *args1.add_values() = val3;
   test_args["SensorCollectorTemplate"] = args1;
 
-  std::vector<DelliciusQueryResult> response_entries =
+  QueryIdToResult response_entries =
       FakeQueryEngineEnvironment(
           {.flags{.enable_devpath_extension = true},
            .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
           kIndusMockup, clock_time)
           .GetEngine()
-          .ExecuteQuery({"SensorCollectorTemplate"},
-                        QueryEngine::ServiceRootType::kRedfish, test_args);
+          .ExecuteRedpathQuery({"SensorCollectorTemplate"},
+                               QueryEngine::ServiceRootType::kRedfish,
+                               test_args);
 
-  DelliciusQueryResult intent_query_out =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_query_out)});
 }
 
 TEST(QueryEngineTest, QueryEngineTestTemplatedUnfilledVars) {
-  std::string query_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/sensor_out_template_full.textproto"));
+  QueryIdToResult intent_query_out =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/sensor_out_template_full.textproto")));
 
   QueryVariables::VariableValue val1, val2;
   val1.set_name("Units");
@@ -536,28 +540,31 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedUnfilledVars) {
   *args1.add_values() = val2;
   test_args["SensorCollectorTemplate"] = args1;
 
-  std::vector<DelliciusQueryResult> response_entries =
+  QueryIdToResult response_entries =
       FakeQueryEngineEnvironment(
           {.flags{.enable_devpath_extension = true},
            .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
           kIndusMockup, clock_time)
           .GetEngine()
-          .ExecuteQuery({"SensorCollectorTemplate"},
-                        QueryEngine::ServiceRootType::kRedfish, test_args);
+          .ExecuteRedpathQuery({"SensorCollectorTemplate"},
+                               QueryEngine::ServiceRootType::kRedfish,
+                               test_args);
 
-  // Since some of the variables are unfilled only sensors with a unit of "Cel"
-  // will be returned. All other parts of the predicate are ignored.
-  DelliciusQueryResult intent_query_out =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
+  // Since some of the variables are unfilled only sensors with a unit of
+  // "Cel" will be returned. All other parts of the predicate are ignored.
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_query_out)});
 }
 
 TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
-  std::string query_out_path_full = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/sensor_out_template_full.textproto"));
-  std::string query_out_path_filtered = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/sensor_out_template.textproto"));
+  QueryIdToResult intent_query_out_full =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/sensor_out_template_full.textproto")));
+  QueryIdToResult intent_query_out_filtered =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/sensor_out_template.textproto")));
 
   // Set the variables for filter criteria #1
   QueryVariables::VariableValue val1, val2;
@@ -591,49 +598,49 @@ TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
       kIndusMockup, clock_time);
 
   // Execute query with first set of variable values.
-  std::vector<DelliciusQueryResult> response_entries =
-      fake_engine_env.GetEngine().ExecuteQuery(
+  QueryIdToResult response_entries =
+      fake_engine_env.GetEngine().ExecuteRedpathQuery(
           {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
           test_args);
-
-  DelliciusQueryResult intent_query_out =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path_full);
   VerifyQueryResults(std::move(response_entries),
-                     {std::move(intent_query_out)});
+                     std::move(intent_query_out_full));
 
   // Run query again with different variable values for the same templated
   // RedPath query.
-  std::vector<DelliciusQueryResult> response_entries_filtered =
-      fake_engine_env.GetEngine().ExecuteQuery(
+  QueryIdToResult response_entries_filtered =
+      fake_engine_env.GetEngine().ExecuteRedpathQuery(
           {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
           test_args_filtered);
-
-  DelliciusQueryResult intent_query_out_filtered =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path_filtered);
   VerifyQueryResults(std::move(response_entries_filtered),
-                     {std::move(intent_query_out_filtered)});
+                     std::move(intent_query_out_filtered));
 }
 
 TEST(QueryEngineTest, QueryEngineTestTemplatedNoVars) {
-  std::string query_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
-  std::vector<DelliciusQueryResult> response_entries =
+  // Since all variables are unfilled the entire predicate will be replaced
+  // with "select all". Therefore the whole set of sensors should be returned.
+  QueryIdToResult intent_query_out = ParseTextFileAsProtoOrDie<QueryIdToResult>(
+      GetTestDataDependencyPath(JoinFilePaths(
+          kQuerySamplesLocation, "query_out/sensor_out.textproto")));
+
+  QueryIdToResult response_entries =
       FakeQueryEngineEnvironment(
           {.query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
           kIndusMockup, clock_time)
           .GetEngine()
-          .ExecuteQuery({"SensorCollectorTemplate"},
-                        QueryEngine::ServiceRootType::kRedfish);
+          .ExecuteRedpathQuery({"SensorCollectorTemplate"},
+                               QueryEngine::ServiceRootType::kRedfish);
 
-  // Since all variables are unfilled the entire predicate will be replaced with
-  // "select all". Therefore the whole set of sensors should be returned.
-  DelliciusQueryResult intent_query_out =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
   // Changing the query ID in the expected result so a whole new output file
   // doesn't need made.
-  *intent_query_out.mutable_query_id() = "SensorCollectorTemplate";
+  QueryIdToResult new_intent_query_out;
+  new_intent_query_out.mutable_results()->insert(
+      {"SensorCollectorTemplate",
+       intent_query_out.results().at("SensorCollector")});
+  *new_intent_query_out.mutable_results()
+       ->at("SensorCollectorTemplate")
+       .mutable_query_id() = "SensorCollectorTemplate";
   VerifyQueryResults(std::move(response_entries),
-                     {std::move(intent_query_out)});
+                     std::move(new_intent_query_out));
 }
 
 TEST(QueryEngineTest, QueryEngineAggregatedTransportMetrics) {
@@ -662,10 +669,14 @@ TEST(QueryEngineTest, QueryEngineAggregatedTransportMetrics) {
 }
 
 TEST(QueryEngineTest, QueryEngineTransportMetricsInResult) {
-  std::string assembly_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/assembly_out_with_metrics.textproto"));
-  std::string sensors_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/sensor_out_with_metrics.textproto"));
+  QueryIdToResult intent_output_assembly =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/assembly_out_with_metrics.textproto")));
+  QueryIdToResult intent_output_sensors =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/sensor_out_with_metrics.textproto")));
 
   FakeQueryEngineEnvironment fake_engine_env(
       {.flags{.enable_devpath_extension = false,
@@ -677,21 +688,16 @@ TEST(QueryEngineTest, QueryEngineTransportMetricsInResult) {
   QueryEngine &query_engine = fake_engine_env.GetEngine();
 
   // Validate first query result with metrics.
-  std::vector<DelliciusQueryResult> response_entries =
-      query_engine.ExecuteQuery(
-          {"AssemblyCollectorWithPropertyNameNormalization"});
-  DelliciusQueryResult intent_output_assembly =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(assembly_out_path);
-  VerifyQueryResults(response_entries, {intent_output_assembly});
+  QueryIdToResult response_entries = query_engine.ExecuteRedpathQuery(
+      {"AssemblyCollectorWithPropertyNameNormalization"});
+  VerifyQueryResults(response_entries, intent_output_assembly);
   // Validate second query result with metrics.
-  std::vector<DelliciusQueryResult> response_entries_2 =
-      query_engine.ExecuteQuery({"SensorCollector"});
-  DelliciusQueryResult intent_output_sensors =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(sensors_out_path);
+  QueryIdToResult response_entries_2 =
+      query_engine.ExecuteRedpathQuery({"SensorCollector"});
   VerifyQueryResults(std::move(response_entries_2),
                      {std::move(intent_output_sensors)});
   // Ensure metrics from first response are not overwritten.
-  VerifyQueryResults(response_entries, {intent_output_assembly});
+  VerifyQueryResults(response_entries, intent_output_assembly);
 }
 
 TEST(QueryEngineTest, QueryEngineWithDefaultNormalizer) {
@@ -701,14 +707,14 @@ TEST(QueryEngineTest, QueryEngineWithDefaultNormalizer) {
       GetDefaultQueryEngine(server, kDelliciusQueries, kQueryRules, &clock);
   EXPECT_TRUE(query_engine.ok());
 
-  DelliciusQueryResult intent_output_sensor =
-      ParseTextFileAsProtoOrDie<DelliciusQueryResult>(
+  QueryIdToResult intent_output_sensor =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(
           GetTestDataDependencyPath(JoinFilePaths(
               kQuerySamplesLocation, "query_out/sensor_out.textproto")));
-  std::vector<DelliciusQueryResult> response_entries =
-      query_engine->ExecuteQuery({"SensorCollector"});
+  QueryIdToResult response_entries =
+      query_engine->ExecuteRedpathQuery({"SensorCollector"});
   VerifyQueryResults(std::move(response_entries),
-                     {std::move(intent_output_sensor)});
+                     std::move(intent_output_sensor));
 }
 
 TEST(QueryEngineTest, QueryEngineWithIdAssigner) {
@@ -722,15 +728,14 @@ TEST(QueryEngineTest, QueryEngineWithIdAssigner) {
       server, std::move(id_assigner), kDelliciusQueries, &clock);
   EXPECT_TRUE(query_engine.ok());
 
-  QueryIdToResult intent_output_sensor =
-      ParseTextFileAsProtoOrDie<QueryIdToResult>(
-          GetTestDataDependencyPath(JoinFilePaths(
-              kQuerySamplesLocation,
-              "query_out/devpath_assembly_out_translated.textproto")));
+  QueryIdToResult intent_output_assembly =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/devpath_assembly_out.textproto")));
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"AssemblyCollectorWithPropertyNameNormalization"});
   VerifyQueryResults(std::move(response_entries),
-                     std::move(intent_output_sensor));
+                     std::move(intent_output_assembly));
 }
 
 TEST(QueryEngineTest, TestQueryEngineFactoryForParserError) {
@@ -746,8 +751,10 @@ TEST(QueryEngineTest, TestQueryEngineFactoryForInvalidQuery) {
 }
 
 TEST(QueryEngineTest, QueryEngineWithTranslation) {
-  std::string assembly_out_path = GetTestDataDependencyPath(JoinFilePaths(
-      kQuerySamplesLocation, "query_out/assembly_out_translated.textproto"));
+  QueryIdToResult intent_output_assembly =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(
+          GetTestDataDependencyPath(JoinFilePaths(
+              kQuerySamplesLocation, "query_out/assembly_out.textproto")));
 
   FakeQueryEngineEnvironment fake_engine_env(
       {.flags{.enable_devpath_extension = false,
@@ -761,15 +768,14 @@ TEST(QueryEngineTest, QueryEngineWithTranslation) {
   // Validate first query result with metrics.
   QueryIdToResult response_entries = query_engine.ExecuteRedpathQuery(
       {"AssemblyCollectorWithPropertyNameNormalization"});
-  QueryIdToResult intent_output_assembly =
-      ParseTextFileAsProtoOrDie<QueryIdToResult>(assembly_out_path);
   VerifyQueryResults(response_entries, intent_output_assembly);
 }
 
 TEST(QueryEngineTest, QueryEngineWithTranslationAndLocalDevpath) {
-  std::string sensor_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation,
-                    "query_out/devpath_sensor_out_translated.textproto"));
+  QueryIdToResult intent_output_sensor =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/devpath_sensor_out.textproto")));
 
   FakeQueryEngineEnvironment fake_engine_env(
       {.flags{.enable_devpath_extension = true,
@@ -783,9 +789,7 @@ TEST(QueryEngineTest, QueryEngineWithTranslationAndLocalDevpath) {
   // Validate first query result with metrics.
   QueryIdToResult response_entries =
       query_engine.ExecuteRedpathQuery({"SensorCollector"});
-  QueryIdToResult intent_output_assembly =
-      ParseTextFileAsProtoOrDie<QueryIdToResult>(sensor_out_path);
-  VerifyQueryResults(response_entries, intent_output_assembly);
+  VerifyQueryResults(response_entries, intent_output_sensor);
 }
 
 TEST(QueryEngineTest, MalformedQueryRulesFailEngineConstruction) {
@@ -866,22 +870,36 @@ TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
 
     // Parse DelliciusQueryResult from string
     std::string query_result_str = R"pb(
-      query_id: "AssemblyCollectorWithPropertyNameNormalization"
-      subquery_output_by_id {
-        key: "Chassis"
-        value { data_sets { devpath: "/phys" } }
+      results {
+        key: "AssemblyCollectorWithPropertyNameNormalization"
+        value {
+          query_id: "AssemblyCollectorWithPropertyNameNormalization"
+          stats {}
+          data {
+            fields {
+              key: "Chassis"
+              value {
+                list_value {
+                  values {
+                    subquery_value {
+                      fields {
+                        key: "_id_"
+                        value { identifier { local_devpath: "/phys" } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
-      start_timestamp { seconds: 10 }
-      end_timestamp { seconds: 10 }
     )pb";
+    QueryIdToResult intent_output_sensor =
+        ParseTextAsProtoOrDie<QueryIdToResult>(query_result_str);
 
-    DelliciusQueryResult intent_output_sensor =
-        ParseTextAsProtoOrDie<DelliciusQueryResult>(query_result_str);
-
-    std::vector<DelliciusQueryResult> response_entries =
-        query_engine->ExecuteQuery(
-            {"AssemblyCollectorWithPropertyNameNormalization"});
-
+    QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
+        {"AssemblyCollectorWithPropertyNameNormalization"});
     VerifyQueryResults(std::move(response_entries),
                        {std::move(intent_output_sensor)});
   }
@@ -896,27 +914,57 @@ TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
 
     // Parse DelliciusQueryResult from string
     std::string query_result_str = R"pb(
-      query_id: "AssemblyCollectorWithPropertyNameNormalization"
-      subquery_output_by_id {
-        key: "Chassis"
+      results {
+        key: "AssemblyCollectorWithPropertyNameNormalization"
         value {
-          data_sets { devpath: "/phys" }
-          data_sets { devpath: "/phys:device:erot-gpu1" }
-          data_sets { devpath: "/phys:device:erot-gpu2" }
+          query_id: "AssemblyCollectorWithPropertyNameNormalization"
+          stats {}
+          data {
+            fields {
+              key: "Chassis"
+              value {
+                list_value {
+                  values {
+                    subquery_value {
+                      fields {
+                        key: "_id_"
+                        value { identifier { local_devpath: "/phys" } }
+                      }
+                    }
+                  }
+                  values {
+                    subquery_value {
+                      fields {
+                        key: "_id_"
+                        value {
+                          identifier { local_devpath: "/phys:device:erot-gpu1" }
+                        }
+                      }
+                    }
+                  }
+                  values {
+                    subquery_value {
+                      fields {
+                        key: "_id_"
+                        value {
+                          identifier { local_devpath: "/phys:device:erot-gpu2" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
-      start_timestamp { seconds: 10 }
-      end_timestamp { seconds: 10 }
     )pb";
+    QueryIdToResult intent_output_sensor =
+        ParseTextAsProtoOrDie<QueryIdToResult>(query_result_str);
 
-    DelliciusQueryResult intent_output_sensor =
-        ParseTextAsProtoOrDie<DelliciusQueryResult>(query_result_str);
-
-    std::vector<DelliciusQueryResult> response_entries =
-        query_engine->ExecuteQuery(
-            {"AssemblyCollectorWithPropertyNameNormalization"});
-    ASSERT_EQ(response_entries.size(), 1);
-
+    QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
+        {"AssemblyCollectorWithPropertyNameNormalization"});
+    ASSERT_EQ(response_entries.results().size(), 1);
     VerifyQueryResults(std::move(response_entries),
                        {std::move(intent_output_sensor)});
   }

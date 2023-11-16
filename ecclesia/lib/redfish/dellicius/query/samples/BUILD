@@ -32,7 +32,10 @@ filegroup(
 
 filegroup(
     name = "sample_queries_out",
-    srcs = glob(["query_out/**"]),
+    srcs = glob([
+        "query_out/**",
+        "query_out/legacy/**",
+    ]),
     visibility = ["//visibility:public"],
 )
 

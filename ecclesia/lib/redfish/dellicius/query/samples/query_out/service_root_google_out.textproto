@@ -1,37 +1,56 @@
-# proto-file: ecclesia/lib/redfish/dellicius/query/query_result.proto
-# proto-message: DelliciusQueryResult
+# proto-file: ecclesia/lib/redfish/redpath/definitions/query_result/query_result.proto
+# proto-message: ecclesia.QueryIdToResult
 
-query_id: "GoogleServiceRoot"
-subquery_output_by_id {
-  key: "GetAllRots"
+results {
+  key: "GoogleServiceRoot"
   value {
-    data_sets {
-      devpath: "/phys:device:hoth"
-      properties {
-        name: "Name"
-        string_value: "Hoth"
-      }
-      properties {
-        name: "State"
-        string_value: "Enabled"
-      }
-      properties {
-        name: "LocationType"
-        string_value: "Embedded"
-      }
-      properties {
-        name: "ServiceLabel"
-        string_value: "Hoth"
-      }
-      redfish_location {
-        service_label: "Hoth"
+    query_id: "GoogleServiceRoot"
+    stats {
+    }
+    data {
+      fields {
+        key: "GetAllRots"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "LocationType"
+                  value {
+                    string_value: "Embedded"
+                  }
+                }
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "Hoth"
+                  }
+                }
+                fields {
+                  key: "ServiceLabel"
+                  value {
+                    string_value: "Hoth"
+                  }
+                }
+                fields {
+                  key: "State"
+                  value {
+                    string_value: "Enabled"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys:device:hoth"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
-}
-start_timestamp {
-  seconds: 10
-}
-end_timestamp {
-  seconds: 10
 }

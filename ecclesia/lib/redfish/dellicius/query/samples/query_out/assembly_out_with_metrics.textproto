@@ -1,74 +1,91 @@
-# proto-file: ecclesia/lib/redfish/dellicius/query/query_result.proto
-# proto-message: DelliciusQueryResult
+# proto-file: ecclesia/lib/redfish/redpath/definitions/query_result/query_result.proto
+# proto-message: ecclesia.QueryIdToResult
 
-query_id: "AssemblyCollectorWithPropertyNameNormalization"
-subquery_output_by_id {
-  key: "Chassis"
+results {
+  key: "AssemblyCollectorWithPropertyNameNormalization"
   value {
-    data_sets {
-      properties {
-        name: "serial_number"
-        string_value: "MBBQTW194106556"
-      }
-      properties {
-        name: "part_number"
-        string_value: "1043652-02"
-      }
-    }
-  }
-}
-redfish_metrics {
-  uri_to_metrics_map {
-    key: "/redfish/v1"
-    value {
-      request_type_to_metadata {
-        key: "GET"
-        value {
-          request_count: 1
+    query_id: "AssemblyCollectorWithPropertyNameNormalization"
+    stats {
+      redfish_metrics {
+        uri_to_metrics_map {
+          key: "/redfish/v1"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis?$expand=.($levels=1)"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Systems"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Systems/system"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Systems/system/Processors?$expand=~($levels=1)"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                request_count: 1
+              }
+            }
+          }
         }
       }
     }
-  }
-  uri_to_metrics_map {
-    key: "/redfish/v1/Chassis?$expand=.($levels=1)"
-    value {
-      request_type_to_metadata {
-        key: "GET"
+    data {
+      fields {
+        key: "Chassis"
         value {
-          request_count: 1
-        }
-      }
-    }
-  }
-  uri_to_metrics_map {
-    key: "/redfish/v1/Systems"
-    value {
-      request_type_to_metadata {
-        key: "GET"
-        value {
-          request_count: 1
-        }
-      }
-    }
-  }
-  uri_to_metrics_map {
-    key: "/redfish/v1/Systems/system"
-    value {
-      request_type_to_metadata {
-        key: "GET"
-        value {
-          request_count: 1
-        }
-      }
-    }
-  }
-  uri_to_metrics_map {
-    key: "/redfish/v1/Systems/system/Processors?$expand=~($levels=1)"
-    value {
-      request_type_to_metadata {
-        key: "GET"
-        value {
-          request_count: 1
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "1043652-02"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "MBBQTW194106556"
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

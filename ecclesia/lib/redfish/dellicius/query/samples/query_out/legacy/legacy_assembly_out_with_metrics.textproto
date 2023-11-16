@@ -1,0 +1,76 @@
+# proto-file: ecclesia/lib/redfish/dellicius/query/query_result.proto
+# proto-message: DelliciusQueryResult
+
+query_id: "AssemblyCollectorWithPropertyNameNormalization"
+subquery_output_by_id {
+  key: "Chassis"
+  value {
+    data_sets {
+      properties {
+        name: "serial_number"
+        string_value: "MBBQTW194106556"
+      }
+      properties {
+        name: "part_number"
+        string_value: "1043652-02"
+      }
+    }
+  }
+}
+redfish_metrics {
+  uri_to_metrics_map {
+    key: "/redfish/v1"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Chassis?$expand=.($levels=1)"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Systems"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Systems/system"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+  uri_to_metrics_map {
+    key: "/redfish/v1/Systems/system/Processors?$expand=~($levels=1)"
+    value {
+      request_type_to_metadata {
+        key: "GET"
+        value {
+          request_count: 1
+        }
+      }
+    }
+  }
+}
