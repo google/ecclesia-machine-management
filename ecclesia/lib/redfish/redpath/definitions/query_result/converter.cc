@@ -24,6 +24,7 @@
 #include "google/rpc/status.pb.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
@@ -81,6 +82,10 @@ void AddChildSubQuery(QueryResultDataBuilder& builder,
                       const ::ecclesia::SubqueryOutput& subquery_output) {
   QueryValueBuilder subquery_builder = builder[subquery_id];
   for (const auto& data_set : subquery_output.data_sets()) {
+    if (data_set.has_raw_data()) {
+      subquery_builder = data_set.raw_data();
+      continue;
+    }
     QueryValueBuilder value_builder = subquery_builder.append();
     Identifier identifier;
     if (data_set.has_devpath() && !data_set.devpath().empty()) {
@@ -130,6 +135,7 @@ void AddChildSubQuery(QueryResultDataBuilder& builder,
       QueryResultDataBuilder child_subquery_builder(&child_subquery_value);
       AddChildSubQuery(child_subquery_builder, child_subquery_id,
                        child_subquery_output);
+      // Adds the child subquery's fields.
       value_builder[child_subquery_id] =
           child_subquery_value.fields().at(child_subquery_id);
     }
@@ -138,8 +144,8 @@ void AddChildSubQuery(QueryResultDataBuilder& builder,
 
 void AddSubQuery(
     QueryResultDataBuilder& builder,
-    const google::protobuf::Map<std::string, ::ecclesia::SubqueryOutput>& subuery_in) {
-  for (const auto& [subquery_id, subquery_output] : subuery_in) {
+    const google::protobuf::Map<std::string, ::ecclesia::SubqueryOutput>& subquery_in) {
+  for (const auto& [subquery_id, subquery_output] : subquery_in) {
     AddChildSubQuery(builder, subquery_id, subquery_output);
   }
 }
@@ -251,6 +257,20 @@ nlohmann::json ValueToJson(const QueryValue& value) {
     case QueryValue::kIdentifier:
       json = IdentifierValueToJson(value.identifier());
       break;
+    case QueryValue::kRawData: {
+      const QueryValue::RawData& raw_data = value.raw_data();
+      if (raw_data.has_raw_string_value()) {
+        json = raw_data.raw_string_value();
+      } else {
+        // The raw bytes value might have null terminators so we need to
+        // explicitly construct the string using the full length, and ensure it
+        // is base64 encoded.
+        json =
+            absl::Base64Escape(std::string(raw_data.raw_bytes_value().begin(),
+                                           raw_data.raw_bytes_value().end()));
+      }
+      break;
+    }
     case QueryValue::KIND_NOT_SET:
       json = nlohmann::json::object();
       break;

@@ -27,6 +27,12 @@ message QueryResultData {
 }
 
 message QueryValue {
+  message RawData {
+    oneof value {
+      string raw_string_value = 1;  // base64 encoded string
+      bytes raw_bytes_value = 2;
+    }
+  }
   // The kind of value.
   oneof kind {
     int64 int_value = 1;
@@ -44,6 +50,8 @@ message QueryValue {
     ListValue list_value = 7;
     // Represents an identifier.
     Identifier identifier = 8;
+    // Represenst raw data value.
+    RawData raw_data = 9;
   }
 }
 

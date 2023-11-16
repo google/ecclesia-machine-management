@@ -28,6 +28,7 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 
 namespace ecclesia {
@@ -98,6 +99,18 @@ class QueryValueBuilder {
     return *this;
   }
 
+  // Sets `value` to given raw data value.
+  QueryValueBuilder& operator=(const SubqueryDataSet::RawData& raw_data) {
+    if (raw_data.has_bytes_value()) {
+      *query_value_.mutable_raw_data()->mutable_raw_bytes_value() =
+          raw_data.bytes_value();
+    } else if (raw_data.has_string_value()) {
+      *query_value_.mutable_raw_data()->mutable_raw_string_value() =
+          raw_data.string_value();
+    }
+    return *this;
+  }
+
   QueryValueBuilder& operator=(Identifier other) {
     *query_value_.mutable_identifier() = std::move(other);
     return *this;
@@ -125,6 +138,7 @@ class QueryValueBuilder {
         &(*result_value->mutable_fields())[std::string(name)]);
   }
 
+
  private:
   QueryValue& query_value_;
 };
@@ -146,7 +160,6 @@ class QueryResultDataBuilder {
     return QueryValueBuilder(
         &(*query_result_.mutable_fields())[std::string(key)]);
   }
-
  private:
   QueryResultData& query_result_;
 };

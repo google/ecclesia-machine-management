@@ -21,6 +21,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":query_result_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/status:macros",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
