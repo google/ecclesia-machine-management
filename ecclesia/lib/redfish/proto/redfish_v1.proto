@@ -64,4 +64,6 @@ service RedfishV1 {
   // Get Redfish override data
   rpc GetOverridePolicy(GetOverridePolicyRequest)
       returns (GetOverridePolicyResponse) {}
+  // A revised Redfish eventing implementation by a server side stream RPC.
+  rpc Subscribe(Request) returns (stream Response) {}
 }
