@@ -42,34 +42,50 @@ absl::StatusOr<QueryValueReader> QueryValueReader::Get(
 }
 
 // Returns the string value for a given key; returns error if the key is not
-// present.
+// present or is not a string property.
 absl::StatusOr<std::string> QueryValueReader::GetStringValue(
     absl::string_view key) const {
   ECCLESIA_ASSIGN_OR_RETURN(QueryValueReader reader, Get(key));
+  if (reader.kind() != QueryValue::kStringValue) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Property ", key, " does not have a string value."));
+  }
   return reader.string_value();
 }
 
 // Returns the int value for a given key; returns error if the key is not
-// present.
+// present or is not an int property.
 absl::StatusOr<int64_t> QueryValueReader::GetIntValue(
     absl::string_view key) const {
   ECCLESIA_ASSIGN_OR_RETURN(QueryValueReader reader, Get(key));
+  if (reader.kind() != QueryValue::kIntValue) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Property ", key, " does not have an int value."));
+  }
   return reader.int_value();
 }
 
 // Returns the double value for a given key; returns error if the key is not
-// present.
+// present or is not a double property.
 absl::StatusOr<double> QueryValueReader::GetDoubleValue(
     absl::string_view key) const {
   ECCLESIA_ASSIGN_OR_RETURN(QueryValueReader reader, Get(key));
+  if (reader.kind() != QueryValue::kDoubleValue) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Property ", key, " does not have a double value."));
+  }
   return reader.double_value();
 }
 
 // Returns the boolean value for a given key; returns error if the key is not
-// present.
+// present or is not a bool property.
 absl::StatusOr<bool> QueryValueReader::GetBoolValue(
     absl::string_view key) const {
   ECCLESIA_ASSIGN_OR_RETURN(QueryValueReader reader, Get(key));
+  if (reader.kind() != QueryValue::kBoolValue) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Property ", key, " does not have a bool value."));
+  }
   return reader.bool_value();
 }
 
