@@ -215,7 +215,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   std::vector<DelliciusQueryResult> ExecuteQueryForAggregatedMetrics(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments, QueryTracker *tracker) {
+      const QueryVariableSet &query_arguments) {
     std::vector<DelliciusQueryResult> response_entries;
 
     for (const absl::string_view query_id : query_ids) {
@@ -237,7 +237,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
         auto query_timer = QueryTimestamp(&result_single, clock_);
         if (service_root_uri == QueryEngine::ServiceRootType::kCustom) {
           result_single =
-              it->second->Run(*clock_, tracker, vars,
+              it->second->Run(*clock_, nullptr, vars,
                               /* metrics = */ nullptr, execution_mode);
         } else {
           result_single = it->second->Run(
@@ -246,7 +246,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
                   service_root_uri == QueryEngine::ServiceRootType::kGoogle
                       ? ServiceRootUri::kGoogle
                       : ServiceRootUri::kRedfish),
-              *clock_, tracker, vars,
+              *clock_, nullptr, vars,
               /* metrics = */ nullptr, execution_mode);
         }
       }
@@ -262,7 +262,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   std::vector<DelliciusQueryResult> ExecuteQueryWithMetricsPerResult(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments, QueryTracker *tracker) {
+      const QueryVariableSet &query_arguments) {
     std::vector<DelliciusQueryResult> response_entries;
     const RedfishMetrics *metrics = nullptr;
     // Each metrical_transport object has a thread local RedfishMetrics object.
@@ -291,7 +291,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
         auto query_timer = QueryTimestamp(&result_single, clock_);
         if (service_root_uri == QueryEngine::ServiceRootType::kCustom) {
           result_single =
-              it->second->Run(*clock_, tracker, vars, metrics, execution_mode);
+              it->second->Run(*clock_, nullptr, vars, metrics, execution_mode);
         } else {
           result_single = it->second->Run(
               redfish_interface_->GetRoot(
@@ -299,7 +299,7 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
                   service_root_uri == QueryEngine::ServiceRootType::kGoogle
                       ? ServiceRootUri::kGoogle
                       : ServiceRootUri::kRedfish),
-              *clock_, tracker, vars, metrics, execution_mode);
+              *clock_, nullptr, vars, metrics, execution_mode);
         }
       }
       response_entries.push_back(std::move(result_single));
@@ -313,24 +313,23 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   std::vector<DelliciusQueryResult> ExecuteQuery(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments, QueryTracker *tracker) {
+      const QueryVariableSet &query_arguments = {}) override {
     // Execution for aggregated metrics is the same as no metrics desired.
     if (metrical_transport_ == nullptr) {
       return ExecuteQueryForAggregatedMetrics(service_root_uri, query_ids,
-                                              query_arguments, tracker);
+                                              query_arguments);
     }
     return ExecuteQueryWithMetricsPerResult(service_root_uri, query_ids,
-                                            query_arguments, tracker);
+                                            query_arguments);
   }
 
   // Main method for ExecuteQuery with callback with entry point into the
   // QueryPlanner.
-  void ExecuteQuery(
-      QueryEngine::ServiceRootType service_root_uri,
-      absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments,
-      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-      QueryTracker *tracker) {
+  void ExecuteQuery(QueryEngine::ServiceRootType service_root_uri,
+                    absl::Span<const absl::string_view> query_ids,
+                    const QueryVariableSet &query_arguments,
+                    absl::FunctionRef<bool(const DelliciusQueryResult &result)>
+                        callback) override {
     if (metrical_transport_ != nullptr) {
       MetricalRedfishTransport::ResetMetrics();
     }
@@ -347,32 +346,14 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
       if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
         it->second->Run(
             redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
-            *clock_, tracker, vars, callback);
+            *clock_, nullptr, vars, callback);
       } else {
-        it->second->Run(redfish_interface_->GetRoot(), *clock_, tracker, vars,
+        it->second->Run(redfish_interface_->GetRoot(), *clock_, nullptr, vars,
                         callback);
       }
     }
   }
 
-  // ExecuteQuery Methods involving calling user supplied callback when
-  // the SubqueryOutput is too large.
-  void ExecuteQuery(QueryEngine::ServiceRootType service_root_uri,
-                    absl::Span<const absl::string_view> query_ids,
-                    const QueryVariableSet &query_arguments,
-                    absl::FunctionRef<bool(const DelliciusQueryResult &result)>
-                        callback) override {
-    ExecuteQuery(service_root_uri, query_ids, query_arguments, callback,
-                 nullptr);
-  }
-
-  // ExecuteQuery methods returning results to user.
-  std::vector<DelliciusQueryResult> ExecuteQuery(
-      QueryEngine::ServiceRootType service_root_uri,
-      absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments = {}) override {
-    return ExecuteQuery(service_root_uri, query_ids, query_arguments, nullptr);
-  }
 
   // Translates vector of  DelliciusQueryResult to new QueryResult format.
   static QueryIdToResult TranslateLegacyResults(
