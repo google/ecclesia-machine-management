@@ -223,23 +223,6 @@ struct QueryEngineParams {
   std::string redfish_topology_config_name;
 };
 
-inline std::unique_ptr<Normalizer> BuildLocalDevpathNormalizer(
-    RedfishInterface *redfish_interface,
-    const QueryEngineParams &query_engine_params) {
-  switch (query_engine_params.stable_id_type) {
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
-      return BuildDefaultNormalizer();
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
-      if (!query_engine_params.redfish_topology_config_name.empty()) {
-        return BuildDefaultNormalizerWithLocalDevpath(CreateTopologyFromRedfish(
-            redfish_interface,
-            query_engine_params.redfish_topology_config_name));
-      }
-      return BuildDefaultNormalizerWithLocalDevpath(
-          CreateTopologyFromRedfish(redfish_interface));
-  }
-}
-
 template <typename LocalIdMapT>
 std::unique_ptr<Normalizer> BuildMachineDevpathNormalizer(
     const std::string &server_tag,

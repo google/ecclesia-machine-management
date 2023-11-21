@@ -85,6 +85,23 @@ std::unique_ptr<Normalizer> GetMachineDevpathNormalizer(
   }
 }
 
+std::unique_ptr<Normalizer> BuildLocalDevpathNormalizer(
+    RedfishInterface *redfish_interface,
+    const QueryEngineParams &query_engine_params) {
+  switch (query_engine_params.stable_id_type) {
+    case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
+      return BuildDefaultNormalizer();
+    case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
+      if (!query_engine_params.redfish_topology_config_name.empty()) {
+        return BuildDefaultNormalizerWithLocalDevpath(CreateTopologyFromRedfish(
+            redfish_interface,
+            query_engine_params.redfish_topology_config_name));
+      }
+      return BuildDefaultNormalizerWithLocalDevpath(
+          CreateTopologyFromRedfish(redfish_interface));
+  }
+}
+
 // RAII style wrapper to timestamp query.
 class QueryTimestamp {
  public:
