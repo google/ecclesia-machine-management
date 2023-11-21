@@ -357,6 +357,34 @@ TEST(QueryValueReaderTest, SubqueryGetValueTest) {
   ASSERT_THAT(reader.GetStringValue("str_val_invalid"), IsStatusNotFound());
 }
 
+TEST(QueryValueReaderTest, SubqueryGetWrongValueTypeTest) {
+  QueryValue data = ParseTextProtoOrDie(R"pb(
+    subquery_value {
+      fields {
+        key: "bool_val"
+        value { bool_value: true }
+      }
+      fields {
+        key: "double_val"
+        value { double_value: 3.14 }
+      }
+      fields {
+        key: "int_val"
+        value { int_value: 42 }
+      }
+      fields {
+        key: "str_val"
+        value { string_value: "abcd" }
+      }
+    })pb");
+
+  QueryValueReader reader(&data);
+  ASSERT_THAT(reader.GetBoolValue("double_val"), IsStatusInvalidArgument());
+  ASSERT_THAT(reader.GetBoolValue("int_val"), IsStatusInvalidArgument());
+  ASSERT_THAT(reader.GetBoolValue("str_val"), IsStatusInvalidArgument());
+  ASSERT_THAT(reader.GetStringValue("bool_val"), IsStatusInvalidArgument());
+}
+
 TEST(QueryResultDataReaderTest, SmokeTest) {
   QueryResultData data = ParseTextProtoOrDie(
       R"pb(fields {
