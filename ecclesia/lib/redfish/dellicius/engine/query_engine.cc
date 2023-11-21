@@ -48,7 +48,6 @@
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/topology.h"
@@ -350,49 +349,12 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
                  nullptr);
   }
 
-  void ExecuteQuery(
-      QueryEngine::ServiceRootType service_root_uri,
-      absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments,
-      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-      QueryTracker &tracker) override {
-    ExecuteQuery(service_root_uri, query_ids, query_arguments, callback,
-                 &tracker);
-  }
-
   // ExecuteQuery methods returning results to user.
   std::vector<DelliciusQueryResult> ExecuteQuery(
       QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
       const QueryVariableSet &query_arguments = {}) override {
     return ExecuteQuery(service_root_uri, query_ids, query_arguments, nullptr);
-  }
-
-  std::vector<DelliciusQueryResult> ExecuteQuery(
-      QueryEngine::ServiceRootType service_root_uri,
-      absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments, QueryTracker &tracker) override {
-    return ExecuteQuery(service_root_uri, query_ids, query_arguments, &tracker);
-  }
-
-  // Deprecated API that writes metrics to user supplied RedfishMetrics object.
-  std::vector<DelliciusQueryResult> ExecuteQueryWithAggregatedMetrics(
-      QueryEngine::ServiceRootType service_root_uri,
-      absl::Span<const absl::string_view> query_ids,
-      RedfishMetrics *transport_metrics,
-      const QueryVariableSet &query_arguments = {}) override {
-    // Clear metrics for every query.
-    if (metrical_transport_ != nullptr) {
-      MetricalRedfishTransport::ResetMetrics();
-    }
-    std::vector<DelliciusQueryResult> result =
-        ExecuteQueryForAggregatedMetrics(service_root_uri, query_ids,
-                                            query_arguments, nullptr);
-    // Copy the metrics into the user provided data struct.
-    if (transport_metrics != nullptr) {
-      *transport_metrics = MetricalRedfishTransport::GetMetrics();
-    }
-    return result;
   }
 
   // Translates vector of  DelliciusQueryResult to new QueryResult format.
@@ -416,34 +378,6 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
         ExecuteQuery(service_root_uri, query_ids, query_arguments));
   }
 
-  // Executes Redpath query and returns results in updated QueryResult format,
-  // with a tracker.
-  QueryIdToResult ExecuteRedpathQuery(
-      QueryEngine::ServiceRootType service_root_uri,
-      absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments, QueryTracker &tracker) override {
-    return TranslateLegacyResults(
-        ExecuteQuery(service_root_uri, query_ids, query_arguments, tracker));
-  }
-
-  const NodeTopology &GetTopology() override {
-    if (absl::StatusOr<const NodeTopology *> topology =
-            normalizer_->GetNodeTopology();
-        topology.ok()) {
-      return **topology;
-    }
-    return default_topology_;
-  }
-
-  std::vector<std::string> GetQueryIds() const override {
-    std::vector<std::string> keys;
-    keys.reserve(id_to_query_plans_.size());
-    for (const auto &[query_id, plan] : id_to_query_plans_) {
-      keys.push_back(query_id);
-    }
-    return keys;
-  }
-
   absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) override {
     if (redfish_interface_ == nullptr) {
@@ -459,9 +393,6 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   const Clock *clock_;
   std::unique_ptr<Normalizer> normalizer_;
   std::unique_ptr<RedfishInterface> redfish_interface_;
-  // empty topology to be returned if no normalizers are found with real
-  // topology.
-  NodeTopology default_topology_;
 
   // Used during query metrics collection.
   MetricalRedfishTransport *metrical_transport_ = nullptr;

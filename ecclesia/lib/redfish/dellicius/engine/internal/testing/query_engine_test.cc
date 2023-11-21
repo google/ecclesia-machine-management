@@ -218,38 +218,6 @@ TEST(QueryEngineTest, QueryEngineRedfishIntfAccessor) {
 }
 
 TEST(QueryEngineTest, QueryEngineWithExpandConfiguration) {
-  QueryIdToResult intent_output_assembly =
-      ParseTextFileAsProtoOrDie<QueryIdToResult>(
-          GetTestDataDependencyPath(JoinFilePaths(
-              kQuerySamplesLocation, "query_out/assembly_out.textproto")));
-
-  QueryTracker query_tracker;
-  QueryIdToResult response_entries =
-      FakeQueryEngineEnvironment(
-          {.flags{.enable_devpath_extension = false},
-           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
-           .query_rules{kQueryRules.begin(), kQueryRules.end()}},
-          kIndusMockup, clock_time)
-          .GetEngine()
-          .ExecuteRedpathQuery(
-              {"AssemblyCollectorWithPropertyNameNormalization"},
-              query_tracker);
-
-  VerifyQueryResults(std::move(response_entries),
-                     {std::move(intent_output_assembly)});
-
-  std::vector<RedPathToQueryParams> tracked_configs;
-  tracked_configs.reserve(query_tracker.redpaths_queried.size());
-  for (auto paths_with_params : query_tracker.redpaths_queried) {
-    RedPathToQueryParams redpath_to_query_params;
-    redpath_to_query_params.tracked_path = paths_with_params.first;
-    if (paths_with_params.second.expand.has_value()) {
-      redpath_to_query_params.query_params =
-          paths_with_params.second.expand->ToString();
-    }
-    tracked_configs.push_back(redpath_to_query_params);
-  }
-  VerifyTrackedPathWithParamsMatchExpected(tracked_configs);
 }
 
 TEST(QueryEngineTest, QueryEngineInvalidQueries) {
@@ -641,31 +609,6 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedNoVars) {
        .mutable_query_id() = "SensorCollectorTemplate";
   VerifyQueryResults(std::move(response_entries),
                      std::move(new_intent_query_out));
-}
-
-TEST(QueryEngineTest, QueryEngineAggregatedTransportMetrics) {
-  RedfishMetrics transport_metrics;
-  FakeQueryEngineEnvironment fake_engine_env(
-      {.flags{.enable_devpath_extension = false,
-              .enable_transport_metrics = true},
-       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
-       .query_rules{kQueryRules.begin(), kQueryRules.end()}},
-      kIndusMockup, clock_time,
-      FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
-  QueryEngine &query_engine = fake_engine_env.GetEngine();
-  std::vector<DelliciusQueryResult> response_entries =
-      query_engine.ExecuteQueryWithAggregatedMetrics(
-          {"AssemblyCollectorWithPropertyNameNormalization"},
-          &transport_metrics);
-  EXPECT_EQ(transport_metrics.uri_to_metrics_map().size(), 5);
-  RedfishMetrics transport_metrics_2;
-  std::vector<DelliciusQueryResult> response_entries_2 =
-      query_engine.ExecuteQueryWithAggregatedMetrics({"SensorCollector"},
-                                                     &transport_metrics_2);
-  // Run another query to make sure the metrics are cleared per query
-  EXPECT_EQ(transport_metrics_2.uri_to_metrics_map().size(), 17);
-  // Double checking first metric set to make sure it was not overwritten.
-  EXPECT_EQ(transport_metrics.uri_to_metrics_map().size(), 5);
 }
 
 TEST(QueryEngineTest, QueryEngineTransportMetricsInResult) {

@@ -103,42 +103,18 @@ class QueryEngine {
         const QueryVariableSet &query_arguments,
         absl::FunctionRef<bool(const DelliciusQueryResult &result)>
             callback) = 0;
-    ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-    virtual void ExecuteQuery(
-        ServiceRootType service_root_uri,
-        absl::Span<const absl::string_view> query_ids,
-        const QueryVariableSet &query_arguments,
-        absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-        QueryTracker &tracker) = 0;
+
     ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
     virtual std::vector<DelliciusQueryResult> ExecuteQuery(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments) = 0;
-    ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-    virtual std::vector<DelliciusQueryResult> ExecuteQuery(
-        ServiceRootType service_root_uri,
-        absl::Span<const absl::string_view> query_ids,
-        const QueryVariableSet &query_arguments, QueryTracker &tracker) = 0;
 
     virtual QueryIdToResult ExecuteRedpathQuery(
         ServiceRootType service_root_uri,
         absl::Span<const absl::string_view> query_ids,
         const QueryVariableSet &query_arguments) = 0;
-    virtual QueryIdToResult ExecuteRedpathQuery(
-        ServiceRootType service_root_uri,
-        absl::Span<const absl::string_view> query_ids,
-        const QueryVariableSet &query_arguments, QueryTracker &tracker) = 0;
 
-    ABSL_DEPRECATED(
-        "Create QueryEngine With Feature Flag enabling redfish metrics Instead")
-    virtual std::vector<DelliciusQueryResult> ExecuteQueryWithAggregatedMetrics(
-        ServiceRootType service_root_uri,
-        absl::Span<const absl::string_view> query_ids,
-        RedfishMetrics *transport_metrics,
-        const QueryVariableSet &query_arguments) = 0;
-    virtual const NodeTopology &GetTopology() = 0;
-    virtual std::vector<std::string> GetQueryIds() const = 0;
     // QueryEngineRawInterfacePasskey is just an empty strongly-typed object
     // that one needs to provide in order to invoke the member function.
     // We restrict the visibility of QueryEngineRawInterfacePasskey so that
@@ -173,16 +149,7 @@ class QueryEngine {
     return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
                                       query_arguments, callback);
   }
-  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-  void ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-      QueryTracker &tracker,
-      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
-      const QueryVariableSet &query_arguments = {}) {
-    return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
-                                      query_arguments, callback, tracker);
-  }
+
   ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
@@ -190,14 +157,6 @@ class QueryEngine {
       const QueryVariableSet &query_arguments = {}) {
     return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
                                       query_arguments);
-  }
-  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-  std::vector<DelliciusQueryResult> ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
-      ServiceRootType service_root_uri = ServiceRootType::kCustom,
-      const QueryVariableSet &query_arguments = {}) {
-    return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
-                                      query_arguments, tracker);
   }
 
   QueryIdToResult ExecuteRedpathQuery(
@@ -208,32 +167,9 @@ class QueryEngine {
                                              query_arguments);
   }
 
-  QueryIdToResult ExecuteRedpathQuery(
-      absl::Span<const absl::string_view> query_ids, QueryTracker &tracker,
-      ServiceRootType service_root_uri = ServiceRootType::kCustom,
-      const QueryVariableSet &query_arguments = {}) {
-    return engine_impl_->ExecuteRedpathQuery(service_root_uri, query_ids,
-                                             query_arguments, tracker);
-  }
-  // Transport metrics flag must be true for metrics to be populated.
-
-  ABSL_DEPRECATED(
-      "Create QueryEngine With Feature Flag enabling redfish metrics Instead")
-  std::vector<DelliciusQueryResult> ExecuteQueryWithAggregatedMetrics(
-      absl::Span<const absl::string_view> query_ids,
-      RedfishMetrics *transport_metrics,
-      ServiceRootType service_root_uri = ServiceRootType::kRedfish,
-      const QueryVariableSet &query_arguments = {}) {
-    return engine_impl_->ExecuteQueryWithAggregatedMetrics(
-        service_root_uri, query_ids, transport_metrics, query_arguments);
-  }
-  const NodeTopology &GetTopology() { return engine_impl_->GetTopology(); }
   absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) {
     return engine_impl_->GetRedfishInterface(unused_passkey);
-  }
-  std::vector<std::string> GetQueryIds() const {
-    return engine_impl_->GetQueryIds();
   }
 
  private:
