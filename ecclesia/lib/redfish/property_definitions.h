@@ -426,6 +426,7 @@ DEFINE_REDFISH_PROPERTY(PropertyAllowableMax, int, "AllowableMax");
 DEFINE_REDFISH_PROPERTY(PropertyAllowableMin, int, "AllowableMin");
 DEFINE_REDFISH_PROPERTY(PropertyECCModeEnabled, bool, "ECCModeEnabled");
 DEFINE_REDFISH_PROPERTY(PropertyTotalMemorySizeMiB, int, "TotalMemorySizeMiB");
+DEFINE_REDFISH_PROPERTY(PropertyDramBandwidthGbps, double, "DRAMBandwidthGbps");
 DEFINE_REDFISH_PROPERTY(PropertySwitchType, std::string, "SwitchType");
 DEFINE_REDFISH_PROPERTY(PropertyHealthRollup, std::string, "HealthRollup");
 DEFINE_REDFISH_PROPERTY(PropertyMessageId, std::string, "MessageId");
