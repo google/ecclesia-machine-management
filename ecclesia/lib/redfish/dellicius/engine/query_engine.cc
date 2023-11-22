@@ -126,7 +126,7 @@ class QueryTimestamp {
   absl::Time start_time_;
 };
 
-class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
+class QueryEngineImpl final : public QueryEngineIntf {
  public:
   explicit QueryEngineImpl(const QueryEngineConfiguration &config,
                            std::unique_ptr<RedfishTransport> transport,
@@ -311,8 +311,8 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
   // DelliciusQueryIdToResult if QueryEngine was constructed with a metrical
   // transport.
   std::vector<DelliciusQueryResult> ExecuteQuery(
-      QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
+      QueryEngine::ServiceRootType service_root_uri,
       const QueryVariableSet &query_arguments = {}) override {
     // Execution for aggregated metrics is the same as no metrics desired.
     if (metrical_transport_ == nullptr) {
@@ -325,11 +325,11 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 
   // Main method for ExecuteQuery with callback with entry point into the
   // QueryPlanner.
-  void ExecuteQuery(QueryEngine::ServiceRootType service_root_uri,
-                    absl::Span<const absl::string_view> query_ids,
-                    const QueryVariableSet &query_arguments,
-                    absl::FunctionRef<bool(const DelliciusQueryResult &result)>
-                        callback) override {
+  void ExecuteQuery(
+      absl::Span<const absl::string_view> query_ids,
+      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
+      QueryEngine::ServiceRootType service_root_uri,
+      const QueryVariableSet &query_arguments) override {
     if (metrical_transport_ != nullptr) {
       MetricalRedfishTransport::ResetMetrics();
     }
@@ -354,7 +354,6 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
     }
   }
 
-
   // Translates vector of  DelliciusQueryResult to new QueryResult format.
   static QueryIdToResult TranslateLegacyResults(
       const std::vector<DelliciusQueryResult> &legacy_results) {
@@ -369,11 +368,11 @@ class QueryEngineImpl final : public QueryEngine::QueryEngineIntf {
 
   // Executes Redpath query and returns results in updated QueryResult format.
   QueryIdToResult ExecuteRedpathQuery(
-      QueryEngine::ServiceRootType service_root_uri,
       absl::Span<const absl::string_view> query_ids,
+      QueryEngine::ServiceRootType service_root_uri,
       const QueryVariableSet &query_arguments = {}) override {
     return TranslateLegacyResults(
-        ExecuteQuery(service_root_uri, query_ids, query_arguments));
+        ExecuteQuery(query_ids, service_root_uri, query_arguments));
   }
 
   absl::StatusOr<RedfishInterface *> GetRedfishInterface(

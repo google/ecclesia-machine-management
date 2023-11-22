@@ -469,7 +469,7 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedQuery) {
   val2.set_value("Cel");
   val3.set_name("Threshold");
   val3.set_value("40");
-  QueryVariableSet test_args = QueryVariableSet();
+  QueryEngineIntf::QueryVariableSet test_args;
   QueryVariables args1 = QueryVariables();
   *args1.add_values() = val1;
   *args1.add_values() = val2;
@@ -500,7 +500,7 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedUnfilledVars) {
   val1.set_name("Units");
   val1.set_value("Cel");
   // Type and units will remain unset
-  QueryVariableSet test_args = QueryVariableSet();
+  QueryEngineIntf::QueryVariableSet test_args;
   QueryVariables args1 = QueryVariables();
   *args1.add_values() = val1;
   // Pass in an empty value to make sure it doesn't mess up the variable
@@ -539,7 +539,7 @@ TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
   val1.set_name("Units");
   val1.set_value("Cel");
   // Type and units will remain unset
-  QueryVariableSet test_args = QueryVariableSet();
+  QueryEngineIntf::QueryVariableSet test_args;
   QueryVariables args1 = QueryVariables();
   *args1.add_values() = val1;
   *args1.add_values() = val2;
@@ -553,7 +553,7 @@ TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
   val4.set_value("Cel");
   val5.set_name("Threshold");
   val5.set_value("40");
-  QueryVariableSet test_args_filtered = QueryVariableSet();
+  QueryEngineIntf::QueryVariableSet test_args_filtered;
   QueryVariables args2 = QueryVariables();
   *args2.add_values() = val3;
   *args2.add_values() = val4;

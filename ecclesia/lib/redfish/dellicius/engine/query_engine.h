@@ -85,45 +85,44 @@ namespace ecclesia {
 //     query_context, std::move(redfish_interface),
 //     std::move(my_custom_normalizer));
 
-// A set of populated variables for 1 to many queries.
-using QueryVariableSet = absl::flat_hash_map<std::string, QueryVariables>;
-
-class QueryEngine {
+class QueryEngineIntf {
  public:
+  // A set of populated variables for 1 to many queries.
+  using QueryVariableSet = absl::flat_hash_map<std::string, QueryVariables>;
+
   enum class ServiceRootType : uint8_t { kRedfish, kGoogle, kCustom };
 
-  // Interface for private implementation of Query Engine using PImpl Idiom
-  class QueryEngineIntf {
-   public:
-    virtual ~QueryEngineIntf() = default;
-    ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-    virtual void ExecuteQuery(
-        ServiceRootType service_root_uri,
-        absl::Span<const absl::string_view> query_ids,
-        const QueryVariableSet &query_arguments,
-        absl::FunctionRef<bool(const DelliciusQueryResult &result)>
-            callback) = 0;
+  virtual ~QueryEngineIntf() = default;
 
-    ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-    virtual std::vector<DelliciusQueryResult> ExecuteQuery(
-        ServiceRootType service_root_uri,
-        absl::Span<const absl::string_view> query_ids,
-        const QueryVariableSet &query_arguments) = 0;
+  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
+  virtual void ExecuteQuery(
+      absl::Span<const absl::string_view> query_ids,
+      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
+      ServiceRootType service_root_uri,
+      const QueryVariableSet &query_arguments) = 0;
 
-    virtual QueryIdToResult ExecuteRedpathQuery(
-        ServiceRootType service_root_uri,
-        absl::Span<const absl::string_view> query_ids,
-        const QueryVariableSet &query_arguments) = 0;
+  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
+  virtual std::vector<DelliciusQueryResult> ExecuteQuery(
+      absl::Span<const absl::string_view> query_ids,
+      ServiceRootType service_root_uri,
+      const QueryVariableSet &query_arguments) = 0;
 
-    // QueryEngineRawInterfacePasskey is just an empty strongly-typed object
-    // that one needs to provide in order to invoke the member function.
-    // We restrict the visibility of QueryEngineRawInterfacePasskey so that
-    // we can understand which users are using raw-interface features which
-    // are not yet available in the query engine.
-    virtual absl::StatusOr<RedfishInterface *> GetRedfishInterface(
-        RedfishInterfacePasskey unused_passkey) = 0;
-  };
+  virtual QueryIdToResult ExecuteRedpathQuery(
+      absl::Span<const absl::string_view> query_ids,
+      ServiceRootType service_root_uri,
+      const QueryVariableSet &query_arguments) = 0;
 
+  // QueryEngineRawInterfacePasskey is just an empty strongly-typed object
+  // that one needs to provide in order to invoke the member function.
+  // We restrict the visibility of QueryEngineRawInterfacePasskey so that
+  // we can understand which users are using raw-interface features which
+  // are not yet available in the query engine.
+  virtual absl::StatusOr<RedfishInterface *> GetRedfishInterface(
+      RedfishInterfacePasskey unused_passkey) = 0;
+};
+
+class QueryEngine : public QueryEngineIntf {
+ public:
   ABSL_DEPRECATED("Use QueryEngine factory methods instead.")
   QueryEngine(const QueryEngineConfiguration &config,
               std::unique_ptr<RedfishTransport> transport,
@@ -138,16 +137,16 @@ class QueryEngine {
   QueryEngine(QueryEngine &&other) = default;
   QueryEngine &operator=(QueryEngine &&other) = default;
 
-  // The callback will be called when SubqueryOutput exceeds the max_size_limit
-  // in the query
+  // The callback will be called when SubqueryOutput exceeds the
+  // max_size_limit in the query
   ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   void ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
       absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
       ServiceRootType service_root_uri = ServiceRootType::kRedfish,
       const QueryVariableSet &query_arguments = {}) {
-    return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
-                                      query_arguments, callback);
+    return engine_impl_->ExecuteQuery(query_ids, callback, service_root_uri,
+                                      query_arguments);
   }
 
   ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
@@ -155,7 +154,7 @@ class QueryEngine {
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri = ServiceRootType::kCustom,
       const QueryVariableSet &query_arguments = {}) {
-    return engine_impl_->ExecuteQuery(service_root_uri, query_ids,
+    return engine_impl_->ExecuteQuery(query_ids, service_root_uri,
                                       query_arguments);
   }
 
@@ -163,7 +162,7 @@ class QueryEngine {
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri = ServiceRootType::kCustom,
       const QueryVariableSet &query_arguments = {}) {
-    return engine_impl_->ExecuteRedpathQuery(service_root_uri, query_ids,
+    return engine_impl_->ExecuteRedpathQuery(query_ids, service_root_uri,
                                              query_arguments);
   }
 
