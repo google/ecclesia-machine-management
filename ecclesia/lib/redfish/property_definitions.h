@@ -433,6 +433,8 @@ DEFINE_REDFISH_PROPERTY(PropertyMessageId, std::string, "MessageId");
 DEFINE_REDFISH_PROPERTY(PropertySeverity, std::string, "Severity");
 DEFINE_REDFISH_PROPERTY(PropertyTimestamp, absl::Time, "Timestamp");
 DEFINE_REDFISH_PROPERTY(PropertyBandwidthPercent, double, "BandwidthPercent");
+DEFINE_REDFISH_PROPERTY(PropertyRxBytes, int, "RXBytes");
+DEFINE_REDFISH_PROPERTY(PropertyTxBytes, int, "TXBytes");
 
 // ManagerDiagnosticData properties
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
