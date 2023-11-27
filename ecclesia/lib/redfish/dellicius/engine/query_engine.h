@@ -216,15 +216,14 @@ struct QueryEngineParams {
   std::string redfish_topology_config_name;
 };
 
-// Build query engine based on given |configuration| to execute queries in
+// Build query engine based on given |engine_params| to execute queries in
 // |query_context|.
-absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
-                                              QueryEngineParams engine_params);
-
-// Creates query engine for machine devpath decorator extensions.
+//
+// Optionally provide a valid id_assigner to create Query Engine with Machine
+// Devpath Decorator extension.
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
-    std::unique_ptr<IdAssigner> id_assigner);
+    std::unique_ptr<IdAssigner> id_assigner = nullptr);
 
 }  // namespace ecclesia
 
