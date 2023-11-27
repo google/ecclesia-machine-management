@@ -26,26 +26,20 @@
 #include "absl/base/attributes.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/config.h"
-#include "ecclesia/lib/redfish/dellicius/engine/factory.h"
-#include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
-#include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
-#include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/time/clock.h"
 
@@ -222,75 +216,10 @@ struct QueryEngineParams {
   std::string redfish_topology_config_name;
 };
 
-template <typename LocalIdMapT>
-std::unique_ptr<Normalizer> BuildMachineDevpathNormalizer(
-    const std::string &server_tag,
-    QueryEngineParams::RedfishStableIdType stable_id_type,
-    std::unique_ptr<LocalIdMapT> local_id_map,
-    const IdAssignerFactory<LocalIdMapT> &id_assigner_factory,
-    RedfishInterface *redfish_interface) {
-  switch (stable_id_type) {
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
-      return BuildDefaultNormalizerWithMachineDevpath<LocalIdMapT>(
-          server_tag, std::move(local_id_map), id_assigner_factory);
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
-      return BuildDefaultNormalizerWithMachineDevpath<LocalIdMapT>(
-          server_tag, std::move(local_id_map), id_assigner_factory,
-          CreateTopologyFromRedfish(redfish_interface));
-  }
-}
-
-// Creates query engine to execute queries in given |query_context| over the
-// |redfish_interface| provided.
-// Caller can optionally provide a |normalizer| for the queried data.
-// Caller can provide their own metrical transport to populate redfish metrics;
-// one is constructed and passed to this method when using QueryEngineParams
-// with the enable_redfish_metrics feature flag enabled.
-absl::StatusOr<QueryEngine> CreateQueryEngine(
-    const QueryContext &query_context,
-    std::unique_ptr<RedfishInterface> redfish_interface,
-    std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer(),
-    MetricalRedfishTransport *metrical_transport = nullptr,
-    const QueryEngineParams::FeatureFlags &feature_flags = {});
-
 // Build query engine based on given |configuration| to execute queries in
 // |query_context|.
 absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
-                                              QueryEngineParams configuration);
-
-// Creates query engine for machine devpath DecoratorExtensions.
-template <typename LocalIdMapT>
-ABSL_DEPRECATED("Create QueryEngine by passing the IdAssigner object instead.")
-absl::StatusOr<QueryEngine> CreateQueryEngine(
-    const QueryContext &query_context, QueryEngineParams engine_params,
-    std::unique_ptr<LocalIdMapT> local_id_map,
-    const IdAssignerFactory<LocalIdMapT> &id_assigner_factory) {
-  std::unique_ptr<RedfishInterface> redfish_interface;
-  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
-  if (engine_params.feature_flags.enable_redfish_metrics) {
-    std::unique_ptr<MetricalRedfishTransport> metrical_transport =
-        std::make_unique<MetricalRedfishTransport>(
-            std::move(engine_params.transport), ecclesia::Clock::RealClock());
-    metrical_transport_ptr = metrical_transport.get();
-    redfish_interface = NewHttpInterface(std::move(metrical_transport),
-                                         std::move(engine_params.cache_factory),
-                                         RedfishInterface::kTrusted);
-  } else {
-    redfish_interface = NewHttpInterface(std::move(engine_params.transport),
-                                         std::move(engine_params.cache_factory),
-                                         RedfishInterface::kTrusted);
-  }
-
-  if (redfish_interface == nullptr)
-    return absl::InternalError("Can't create redfish interface");
-  std::unique_ptr<Normalizer> normalizer = BuildMachineDevpathNormalizer(
-      engine_params.entity_tag, engine_params.stable_id_type,
-      std::move(local_id_map), id_assigner_factory, redfish_interface.get());
-
-  return CreateQueryEngine(query_context, std::move(redfish_interface),
-                           std::move(normalizer), metrical_transport_ptr,
-                           engine_params.feature_flags);
-}
+                                              QueryEngineParams engine_params);
 
 // Creates query engine for machine devpath decorator extensions.
 absl::StatusOr<QueryEngine> CreateQueryEngine(

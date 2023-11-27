@@ -406,6 +406,12 @@ QueryEngine::QueryEngine(const QueryEngineConfiguration &config,
     : engine_impl_(std::make_unique<QueryEngineImpl>(
           config, std::move(transport), std::move(cache_factory), clock)) {}
 
+// Creates query engine to execute queries in given |query_context| over the
+// |redfish_interface| provided.
+// Caller can optionally provide a |normalizer| for the queried data.
+// Caller can provide their own metrical transport to populate redfish metrics;
+// one is constructed and passed to this method when using QueryEngineParams
+// with the enable_redfish_metrics feature flag enabled.
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context,
     std::unique_ptr<RedfishInterface> redfish_interface,
