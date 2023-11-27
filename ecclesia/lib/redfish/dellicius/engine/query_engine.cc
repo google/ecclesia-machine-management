@@ -458,12 +458,36 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
       std::move(redfish_interface), metrical_transport, feature_flags));
 }
 
+absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
+                                              QueryEngineParams configuration) {
+  std::unique_ptr<RedfishInterface> redfish_interface;
+  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
+  // Build Redfish interface and metrical transport if desired.
+  if (configuration.feature_flags.enable_redfish_metrics) {
+    std::unique_ptr<MetricalRedfishTransport> metrical_transport =
+        std::make_unique<MetricalRedfishTransport>(
+            std::move(configuration.transport), ecclesia::Clock::RealClock());
+    metrical_transport_ptr = metrical_transport.get();
+    redfish_interface = NewHttpInterface(std::move(metrical_transport),
+                                         std::move(configuration.cache_factory),
+                                         RedfishInterface::kTrusted);
+  } else {
+    redfish_interface = NewHttpInterface(std::move(configuration.transport),
+                                         std::move(configuration.cache_factory),
+                                         RedfishInterface::kTrusted);
+  }
+  RedfishInterface *redfish_interface_ptr = redfish_interface.get();
+  return CreateQueryEngine(
+      query_context, std::move(redfish_interface),
+      BuildLocalDevpathNormalizer(redfish_interface_ptr, configuration),
+      metrical_transport_ptr, configuration.feature_flags);
+}
+
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
     std::unique_ptr<IdAssigner> id_assigner) {
   std::unique_ptr<RedfishInterface> redfish_interface;
   MetricalRedfishTransport *metrical_transport_ptr = nullptr;
-  // Build Redfish interface and metrical transport if desired.
   if (engine_params.feature_flags.enable_redfish_metrics) {
     std::unique_ptr<MetricalRedfishTransport> metrical_transport =
         std::make_unique<MetricalRedfishTransport>(
@@ -477,17 +501,9 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
                                          std::move(engine_params.cache_factory),
                                          RedfishInterface::kTrusted);
   }
-  if (redfish_interface == nullptr) {
-    return absl::InternalError("Unable to create RedfishInterface");
-  }
 
-  RedfishInterface *redfish_interface_ptr = redfish_interface.get();
-  if (id_assigner == nullptr) {
-    return CreateQueryEngine(
-        query_context, std::move(redfish_interface),
-        BuildLocalDevpathNormalizer(redfish_interface_ptr, engine_params),
-        metrical_transport_ptr, engine_params.feature_flags);
-  }
+  if (redfish_interface == nullptr)
+    return absl::InternalError("Can't create redfish interface");
   std::unique_ptr<Normalizer> normalizer = GetMachineDevpathNormalizer(
       engine_params, std::move(id_assigner), redfish_interface.get());
 
