@@ -40,21 +40,20 @@
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/protobuf/parse.h"
-#include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
+#include "ecclesia/lib/redfish/dellicius/engine/fake_query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/testing/test_queries_embedded.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/testing/test_query_rules_embedded.h"
-#include "ecclesia/lib/redfish/dellicius/engine/query_engine_fake.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner_devpath.h"
-#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
+#include "ecclesia/lib/status/test_macros.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/time/clock.h"
@@ -108,6 +107,11 @@ void RemoveTimestamps(QueryIdToResult &entries) {
   for (auto &[query_id, entry] : *entries.mutable_results()) {
     entry.mutable_stats()->clear_start_time();
     entry.mutable_stats()->clear_end_time();
+    for (auto &[uri, metadata] : *entry.mutable_stats()
+                                      ->mutable_redfish_metrics()
+                                      ->mutable_uri_to_metrics_map()) {
+      metadata.mutable_request_type_to_metadata()->clear();
+    }
   }
 }
 
@@ -173,30 +177,13 @@ TEST(QueryEngineTest, QueryEngineDevpathConfiguration) {
       ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
           JoinFilePaths(kQuerySamplesLocation,
                         "query_out/devpath_sensor_out.textproto")));
-  QueryIdToResult response_entries =
-      FakeQueryEngineEnvironment(
-          {.flags{.enable_devpath_extension = true},
-           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
-          kIndusMockup, clock_time)
-          .GetEngine()
-          .ExecuteRedpathQuery({"SensorCollector"});
 
-  VerifyQueryResults(std::move(response_entries),
-                     {std::move(intent_output_sensor)});
-}
-
-TEST(QueryEngineTest, QueryEngineDefaultConfiguration) {
-  QueryIdToResult intent_output_sensor =
-      ParseTextFileAsProtoOrDie<QueryIdToResult>(
-          GetTestDataDependencyPath(JoinFilePaths(
-              kQuerySamplesLocation, "query_out/sensor_out.textproto")));
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+                              {}));
   QueryIdToResult response_entries =
-      FakeQueryEngineEnvironment(
-          {.flags{.enable_devpath_extension = false},
-           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
-          kIndusMockup, clock_time)
-          .GetEngine()
-          .ExecuteRedpathQuery({"SensorCollector"});
+      query_engine->ExecuteRedpathQuery({"SensorCollector"});
 
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_output_sensor)});
@@ -205,15 +192,14 @@ TEST(QueryEngineTest, QueryEngineDefaultConfiguration) {
 TEST(QueryEngineTest, QueryEngineRedfishIntfAccessor) {
   std::string sensor_out_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+                              {}));
   EXPECT_TRUE(
-      FakeQueryEngineEnvironment(
-          {.flags{.enable_devpath_extension = false},
-           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
-          kIndusMockup, clock_time)
-          .GetEngine()
-          // Uniform initialization "{}" in place of the passkey will cause
-          // compilation errors.
-          .GetRedfishInterface(RedfishInterfacePasskeyFactory::GetPassKey())
+      query_engine
+          ->GetRedfishInterface(RedfishInterfacePasskeyFactory::GetPassKey())
           .ok());
 }
 
@@ -221,14 +207,14 @@ TEST(QueryEngineTest, QueryEngineWithExpandConfiguration) {
 }
 
 TEST(QueryEngineTest, QueryEngineInvalidQueries) {
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+                              {.devpath = FakeQueryEngine::Devpath::kDisable}));
+
   // Invalid Query Id
   QueryIdToResult response_entries =
-      FakeQueryEngineEnvironment(
-          {.flags{.enable_devpath_extension = false},
-           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
-          kIndusMockup, clock_time)
-          .GetEngine()
-          .ExecuteRedpathQuery({"ThereIsNoSuchId"});
+      query_engine->ExecuteRedpathQuery({"ThereIsNoSuchId"});
 
   EXPECT_EQ(response_entries.results().size(), 0);
 }
@@ -243,15 +229,14 @@ TEST(QueryEngineTest, QueryEngineConcurrentQueries) {
           GetTestDataDependencyPath(JoinFilePaths(
               kQuerySamplesLocation, "query_out/assembly_out.textproto")));
 
-  QueryIdToResult response_entries =
-      FakeQueryEngineEnvironment(
-          {.flags{.enable_devpath_extension = false},
-           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
-          kIndusMockup, clock_time)
-          .GetEngine()
-          .ExecuteRedpathQuery(
-              {"SensorCollector",
-               "AssemblyCollectorWithPropertyNameNormalization"});
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+                              {.devpath = FakeQueryEngine::Devpath::kDisable}));
+
+  QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
+      {"SensorCollector", "AssemblyCollectorWithPropertyNameNormalization"});
+
   RemoveTimestamps(response_entries);
   RemoveTimestamps(intent_output_sensor);
   RemoveTimestamps(intent_output_assembly);
@@ -269,14 +254,14 @@ TEST(QueryEngineTest, QueryEngineEmptyItemDevpath) {
       ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
           JoinFilePaths(kQuerySamplesLocation,
                         "query_out/devpath_assembly_out.textproto")));
-  QueryIdToResult response_entries =
-      FakeQueryEngineEnvironment(
-          {.flags{.enable_devpath_extension = true},
-           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
-          kIndusMockup, clock_time)
-          .GetEngine()
-          .ExecuteRedpathQuery(
-              {"AssemblyCollectorWithPropertyNameNormalization"});
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+                              {}));
+
+  QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
+      {"AssemblyCollectorWithPropertyNameNormalization"});
 
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_output_assembly)});
@@ -288,21 +273,22 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
           GetTestDataDependencyPath(JoinFilePaths(
               kQuerySamplesLocation, "query_out/assembly_out.textproto")));
 
-  FakeQueryEngineEnvironment fake_engine_env(
-      {.flags{.enable_devpath_extension = false,
-              .enable_transport_metrics = true},
-       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
-       .query_rules{kQueryRules.begin(), kQueryRules.end()}},
-      kIndusMockup, clock_time,
-      FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
-  QueryEngine &query_engine = fake_engine_env.GetEngine();
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules},
+          kIndusMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .metrics = FakeQueryEngine::Metrics::kEnable,
+           .cache = FakeQueryEngine::Cache::kInfinite}));
+
   {
     // Query assemblies 3 times in a row. Cache is cold only for the 1st query.
-    QueryIdToResult first_response = query_engine.ExecuteRedpathQuery(
+    QueryIdToResult first_response = query_engine->ExecuteRedpathQuery(
         {"AssemblyCollectorWithPropertyNameNormalization"});
-    QueryIdToResult second_response = query_engine.ExecuteRedpathQuery(
+    QueryIdToResult second_response = query_engine->ExecuteRedpathQuery(
         {"AssemblyCollectorWithPropertyNameNormalization"});
-    QueryIdToResult third_response = query_engine.ExecuteRedpathQuery(
+    QueryIdToResult third_response = query_engine->ExecuteRedpathQuery(
         {"AssemblyCollectorWithPropertyNameNormalization"});
 
     int systems_fetched_counter = 0;
@@ -359,14 +345,16 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
 // // the metrics are independent of other QueryResult.
 TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
   // Create QueryEngine with transport metrics
-  FakeQueryEngineEnvironment fake_engine_env(
-      {.flags{.enable_devpath_extension = false,
-              .enable_transport_metrics = true},
-       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
-       .query_rules{kQueryRules.begin(), kQueryRules.end()}},
-      kIndusHmbCnMockup, clock_time,
-      FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
-  QueryEngine &query_engine = fake_engine_env.GetEngine();
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules},
+          kIndusHmbCnMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .metrics = FakeQueryEngine::Metrics::kEnable,
+           .cache = FakeQueryEngine::Cache::kInfinite}));
+
   // Hold all the metrics collected from each query execution to validate
   // later.
   RedfishMetrics metrics_first, metrics_cached;
@@ -375,7 +363,7 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
     // chassis level 2 expand will return thermal objects. Here we expect to
     // see only 1 expand URI dispatched.
     QueryIdToResult response_entries =
-        query_engine.ExecuteRedpathQuery({"Thermal"});
+        query_engine->ExecuteRedpathQuery({"Thermal"});
     ASSERT_THAT(response_entries.results(), Not(IsEmpty()));
     metrics_first =
         response_entries.results().at("Thermal").stats().redfish_metrics();
@@ -384,7 +372,7 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
     // Query again. This time all resources upto Thermal should be served
     // from cache. All Thermal objects will be freshly queried.
     QueryIdToResult response_entries =
-        query_engine.ExecuteRedpathQuery({"Thermal"});
+        query_engine->ExecuteRedpathQuery({"Thermal"});
     ASSERT_THAT(response_entries.results(), Not(IsEmpty()));
     metrics_cached =
         response_entries.results().at("Thermal").stats().redfish_metrics();
@@ -423,14 +411,13 @@ TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
           JoinFilePaths(kQuerySamplesLocation,
                         "query_out/service_root_google_out.textproto")));
 
-  QueryIdToResult response_entries =
-      FakeQueryEngineEnvironment(
-          {.flags{.enable_devpath_extension = true},
-           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
-          kComponentIntegrityMockupPath, clock_time)
-          .GetEngine()
-          .ExecuteRedpathQuery({"GoogleServiceRoot"},
-                               QueryEngine::ServiceRootType::kGoogle);
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create({.query_files = kDelliciusQueries},
+                              kComponentIntegrityMockupPath, {}));
+
+  QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
+      {"GoogleServiceRoot"}, QueryEngine::ServiceRootType::kGoogle);
 
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_output_service_root)});
@@ -476,15 +463,14 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedQuery) {
   *args1.add_values() = val3;
   test_args["SensorCollectorTemplate"] = args1;
 
-  QueryIdToResult response_entries =
-      FakeQueryEngineEnvironment(
-          {.flags{.enable_devpath_extension = true},
-           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
-          kIndusMockup, clock_time)
-          .GetEngine()
-          .ExecuteRedpathQuery({"SensorCollectorTemplate"},
-                               QueryEngine::ServiceRootType::kRedfish,
-                               test_args);
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+                              {}));
+
+  QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
+      {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
+      test_args);
 
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_query_out)});
@@ -508,15 +494,14 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedUnfilledVars) {
   *args1.add_values() = val2;
   test_args["SensorCollectorTemplate"] = args1;
 
-  QueryIdToResult response_entries =
-      FakeQueryEngineEnvironment(
-          {.flags{.enable_devpath_extension = true},
-           .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
-          kIndusMockup, clock_time)
-          .GetEngine()
-          .ExecuteRedpathQuery({"SensorCollectorTemplate"},
-                               QueryEngine::ServiceRootType::kRedfish,
-                               test_args);
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+                              {}));
+
+  QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
+      {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
+      test_args);
 
   // Since some of the variables are unfilled only sensors with a unit of
   // "Cel" will be returned. All other parts of the predicate are ignored.
@@ -560,25 +545,23 @@ TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
   *args2.add_values() = val5;
   test_args_filtered["SensorCollectorTemplate"] = args2;
 
-  FakeQueryEngineEnvironment fake_engine_env = FakeQueryEngineEnvironment(
-      {.flags{.enable_devpath_extension = true},
-       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
-      kIndusMockup, clock_time);
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+                              {}));
 
   // Execute query with first set of variable values.
-  QueryIdToResult response_entries =
-      fake_engine_env.GetEngine().ExecuteRedpathQuery(
-          {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
-          test_args);
+  QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
+      {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
+      test_args);
   VerifyQueryResults(std::move(response_entries),
                      std::move(intent_query_out_full));
 
   // Run query again with different variable values for the same templated
   // RedPath query.
-  QueryIdToResult response_entries_filtered =
-      fake_engine_env.GetEngine().ExecuteRedpathQuery(
-          {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
-          test_args_filtered);
+  QueryIdToResult response_entries_filtered = query_engine->ExecuteRedpathQuery(
+      {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
+      test_args_filtered);
   VerifyQueryResults(std::move(response_entries_filtered),
                      std::move(intent_query_out_filtered));
 }
@@ -590,13 +573,13 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedNoVars) {
       GetTestDataDependencyPath(JoinFilePaths(
           kQuerySamplesLocation, "query_out/sensor_out.textproto")));
 
-  QueryIdToResult response_entries =
-      FakeQueryEngineEnvironment(
-          {.query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()}},
-          kIndusMockup, clock_time)
-          .GetEngine()
-          .ExecuteRedpathQuery({"SensorCollectorTemplate"},
-                               QueryEngine::ServiceRootType::kRedfish);
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+                              {.devpath = FakeQueryEngine::Devpath::kDisable}));
+
+  QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
+      {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish);
 
   // Changing the query ID in the expected result so a whole new output file
   // doesn't need made.
@@ -621,22 +604,22 @@ TEST(QueryEngineTest, QueryEngineTransportMetricsInResult) {
           JoinFilePaths(kQuerySamplesLocation,
                         "query_out/sensor_out_with_metrics.textproto")));
 
-  FakeQueryEngineEnvironment fake_engine_env(
-      {.flags{.enable_devpath_extension = false,
-              .enable_transport_metrics = true},
-       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
-       .query_rules{kQueryRules.begin(), kQueryRules.end()}},
-      kIndusMockup, clock_time,
-      FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
-  QueryEngine &query_engine = fake_engine_env.GetEngine();
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules},
+          kIndusMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .metrics = FakeQueryEngine::Metrics::kEnable,
+           .cache = FakeQueryEngine::Cache::kInfinite}));
 
   // Validate first query result with metrics.
-  QueryIdToResult response_entries = query_engine.ExecuteRedpathQuery(
+  QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"AssemblyCollectorWithPropertyNameNormalization"});
   VerifyQueryResults(response_entries, intent_output_assembly);
   // Validate second query result with metrics.
   QueryIdToResult response_entries_2 =
-      query_engine.ExecuteRedpathQuery({"SensorCollector"});
+      query_engine->ExecuteRedpathQuery({"SensorCollector"});
   VerifyQueryResults(std::move(response_entries_2),
                      {std::move(intent_output_sensors)});
   // Ensure metrics from first response are not overwritten.
@@ -699,17 +682,13 @@ TEST(QueryEngineTest, QueryEngineWithTranslation) {
           GetTestDataDependencyPath(JoinFilePaths(
               kQuerySamplesLocation, "query_out/assembly_out.textproto")));
 
-  FakeQueryEngineEnvironment fake_engine_env(
-      {.flags{.enable_devpath_extension = false,
-              .enable_transport_metrics = false},
-       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
-       .query_rules{kQueryRules.begin(), kQueryRules.end()}},
-      kIndusMockup, clock_time,
-      FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
-  QueryEngine &query_engine = fake_engine_env.GetEngine();
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+                              {.devpath = FakeQueryEngine::Devpath::kDisable}));
 
   // Validate first query result with metrics.
-  QueryIdToResult response_entries = query_engine.ExecuteRedpathQuery(
+  QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"AssemblyCollectorWithPropertyNameNormalization"});
   VerifyQueryResults(response_entries, intent_output_assembly);
 }
@@ -720,18 +699,14 @@ TEST(QueryEngineTest, QueryEngineWithTranslationAndLocalDevpath) {
           JoinFilePaths(kQuerySamplesLocation,
                         "query_out/devpath_sensor_out.textproto")));
 
-  FakeQueryEngineEnvironment fake_engine_env(
-      {.flags{.enable_devpath_extension = true,
-              .enable_transport_metrics = false},
-       .query_files{kDelliciusQueries.begin(), kDelliciusQueries.end()},
-       .query_rules{kQueryRules.begin(), kQueryRules.end()}},
-      kIndusMockup, clock_time,
-      FakeQueryEngineEnvironment::CachingMode::kNoExpiration);
-  QueryEngine &query_engine = fake_engine_env.GetEngine();
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+                              {}));
 
   // Validate first query result with metrics.
   QueryIdToResult response_entries =
-      query_engine.ExecuteRedpathQuery({"SensorCollector"});
+      query_engine->ExecuteRedpathQuery({"SensorCollector"});
   VerifyQueryResults(response_entries, intent_output_sensor);
 }
 
