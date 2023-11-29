@@ -116,36 +116,44 @@ class Normalizer {
       ABSL_GUARDED_BY(impl_chain_mu_);
 };
 
-// Provides an interface for executing a Dellicius Query plan.
-class QueryPlannerInterface {
- public:
+struct ExecutionFlags {
   enum class ExecutionMode : std::uint8_t {
     kFailOnFirstError,
     kContinueOnSubqueryErrors
   };
-
+  ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError;
+  bool log_redfish_traces = false;
+};
+// Provides an interface for executing a Dellicius Query plan.
+class QueryPlannerInterface {
+ public:
   virtual ~QueryPlannerInterface() = default;
   // Constructs RedfishVariant using service root specified in the redpath
-  // query, then executes query plan using that RedfishVariant as root. If
-  // metrical transport provided, populates the DelliciusQueryResult with
-  // transport metrics.
+  // query, then executes query plan using that RedfishVariant as root.
+  // Only populates RedfishMetrics if provided. Accepts flags that toggle
+  // continuing execution on subquery errors and logging redfish traces.
   virtual DelliciusQueryResult Run(
       const Clock &clock, QueryTracker *tracker,
       const QueryVariables &variables, const RedfishMetrics *metrics = nullptr,
-      ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError) = 0;
+      ExecutionFlags execution_flags = {
+          .execution_mode = ExecutionFlags::ExecutionMode::kFailOnFirstError,
+          .log_redfish_traces = false}) = 0;
   // Executes query plan using RedfishVariant as root.
   // The RedfishVariant can be the service root (redfish/v1) or any redfish
-  // resource acting as local root for redfish subtree. If metrical transport
-  // provided, populates the DelliciusQueryResult with transport metrics.
+  // resource acting as local root for redfish subtree.
+  // Only populates RedfishMetrics if provided. Accepts flags that toggle
+  // continuing execution on subquery errors and logging redfish traces.
   virtual DelliciusQueryResult Run(
       const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
       const QueryVariables &variables, const RedfishMetrics *metrics = nullptr,
-      ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError) = 0;
+      ExecutionFlags execution_flags = {
+          .execution_mode = ExecutionFlags::ExecutionMode::kFailOnFirstError,
+          .log_redfish_traces = false}) = 0;
   // Executes query plan using RedfishVariant as root and calls the client
   // callback with results.
   // The RedfishVariant can be the service root (redfish/v1) or any redfish
-  // resource acting as local root for redfish subtree. If metrical transport
-  // provided, populates the DelliciusQueryResult with transport metrics.
+  // resource acting as local root for redfish subtree.
+  // Only populates RedfishMetrics if provided.
   virtual void Run(
       const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
       const QueryVariables &variables,

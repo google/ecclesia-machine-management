@@ -70,6 +70,7 @@ struct QueryEngineParams {
     // DelliciusQueryResult will have RedfishMetrics object populated.
     bool enable_redfish_metrics = false;
     bool fail_on_first_error = true;
+    bool log_redfish_traces = false;
   };
 
   // Transport medium over which Redfish queries are sent to the redfish server.

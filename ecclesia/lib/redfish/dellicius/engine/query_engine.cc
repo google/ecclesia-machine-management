@@ -208,61 +208,13 @@ class QueryEngineImpl final : public QueryEngineIntf {
         metrical_transport_(metrical_transport),
         feature_flags_(feature_flags) {}
 
-  // If a metrical transport is in use, the metrics for all the queries will be
-  // aggregated in its RedfishMetrics object. Invoked from
-  // ExecuteQueryWithAggregatedMetrics. In the case a normal redfish transport
-  // is in use, executes the query normally.
-  std::vector<DelliciusQueryResult> ExecuteQueryForAggregatedMetrics(
-      QueryEngine::ServiceRootType service_root_uri,
+  // Main method for ExecuteQuery that triggers the QueryPlanner to execute
+  // queries and provide transport metrics as part of the Statistics in each
+  // QueryResult.
+  std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments) {
-    std::vector<DelliciusQueryResult> response_entries;
-
-    for (const absl::string_view query_id : query_ids) {
-      auto it = id_to_query_plans_.find(query_id);
-      if (it == id_to_query_plans_.end()) {
-        LOG(ERROR) << "Query plan does not exist for id " << query_id;
-        continue;
-      }
-      QueryVariables vars = QueryVariables();
-      auto it_vars = query_arguments.find(query_id);
-      if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
-
-      DelliciusQueryResult result_single;
-      QueryPlannerInterface::ExecutionMode execution_mode =
-          feature_flags_.fail_on_first_error
-              ? QueryPlannerInterface::ExecutionMode::kFailOnFirstError
-              : QueryPlannerInterface::ExecutionMode::kContinueOnSubqueryErrors;
-      {
-        auto query_timer = QueryTimestamp(&result_single, clock_);
-        if (service_root_uri == QueryEngine::ServiceRootType::kCustom) {
-          result_single =
-              it->second->Run(*clock_, nullptr, vars,
-                              /* metrics = */ nullptr, execution_mode);
-        } else {
-          result_single = it->second->Run(
-              redfish_interface_->GetRoot(
-                  GetParams{},
-                  service_root_uri == QueryEngine::ServiceRootType::kGoogle
-                      ? ServiceRootUri::kGoogle
-                      : ServiceRootUri::kRedfish),
-              *clock_, nullptr, vars,
-              /* metrics = */ nullptr, execution_mode);
-        }
-      }
-      response_entries.push_back(std::move(result_single));
-    }
-
-    return response_entries;
-  }
-
-  // Executes queries and provides transport metrics for each
-  // DelliciusQueryResult, and populates the redfish_metrics field in each
-  // result.
-  std::vector<DelliciusQueryResult> ExecuteQueryWithMetricsPerResult(
       QueryEngine::ServiceRootType service_root_uri,
-      absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments) {
+      const QueryVariableSet &query_arguments) override {
     std::vector<DelliciusQueryResult> response_entries;
     const RedfishMetrics *metrics = nullptr;
     // Each metrical_transport object has a thread local RedfishMetrics object.
@@ -283,15 +235,16 @@ class QueryEngineImpl final : public QueryEngineIntf {
         MetricalRedfishTransport::ResetMetrics();
       }
       DelliciusQueryResult result_single;
-      QueryPlannerInterface::ExecutionMode execution_mode =
+      ExecutionFlags planner_execution_flags{
           feature_flags_.fail_on_first_error
-              ? QueryPlannerInterface::ExecutionMode::kFailOnFirstError
-              : QueryPlannerInterface::ExecutionMode::kContinueOnSubqueryErrors;
+              ? ExecutionFlags::ExecutionMode::kFailOnFirstError
+              : ExecutionFlags::ExecutionMode::kContinueOnSubqueryErrors,
+          feature_flags_.log_redfish_traces};
       {
         auto query_timer = QueryTimestamp(&result_single, clock_);
         if (service_root_uri == QueryEngine::ServiceRootType::kCustom) {
-          result_single =
-              it->second->Run(*clock_, nullptr, vars, metrics, execution_mode);
+          result_single = it->second->Run(*clock_, nullptr, vars, metrics,
+                                          planner_execution_flags);
         } else {
           result_single = it->second->Run(
               redfish_interface_->GetRoot(
@@ -299,7 +252,7 @@ class QueryEngineImpl final : public QueryEngineIntf {
                   service_root_uri == QueryEngine::ServiceRootType::kGoogle
                       ? ServiceRootUri::kGoogle
                       : ServiceRootUri::kRedfish),
-              *clock_, nullptr, vars, metrics, execution_mode);
+              *clock_, nullptr, vars, metrics, planner_execution_flags);
         }
       }
       response_entries.push_back(std::move(result_single));
@@ -307,24 +260,8 @@ class QueryEngineImpl final : public QueryEngineIntf {
     return response_entries;
   }
 
-  // Executes Queries based on query_ids; auto-collects metrics into resultant
-  // DelliciusQueryIdToResult if QueryEngine was constructed with a metrical
-  // transport.
-  std::vector<DelliciusQueryResult> ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      QueryEngine::ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments = {}) override {
-    // Execution for aggregated metrics is the same as no metrics desired.
-    if (metrical_transport_ == nullptr) {
-      return ExecuteQueryForAggregatedMetrics(service_root_uri, query_ids,
-                                              query_arguments);
-    }
-    return ExecuteQueryWithMetricsPerResult(service_root_uri, query_ids,
-                                            query_arguments);
-  }
-
-  // Main method for ExecuteQuery with callback with entry point into the
-  // QueryPlanner.
+  // Main method for ExecuteQuery that triggers the QueryPlanner to execute
+  // queries and processes the result with a caller provided callback.
   void ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
       absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,

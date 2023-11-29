@@ -634,9 +634,9 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorDoesntHaltExecutionIfDesired) {
   RedfishVariant mock_context_node(std::move(mock_context_node_variant));
   // Run query with execution_mode=kContinueOnSubqueryErrors; ensure the status
   // is populated.
-  absl::StatusOr<DelliciusQueryResult> query_result = (*qp)->Run(
-      mock_context_node, *clock_, nullptr, {}, nullptr,
-      QueryPlannerInterface::ExecutionMode::kContinueOnSubqueryErrors);
+  absl::StatusOr<DelliciusQueryResult> query_result =
+      (*qp)->Run(mock_context_node, *clock_, nullptr, {}, nullptr,
+                 {ExecutionFlags::ExecutionMode::kContinueOnSubqueryErrors});
   ASSERT_TRUE(query_result.ok());
   EXPECT_THAT(query_result->status().code(),
               Eq(::google::rpc::Code::DEADLINE_EXCEEDED));
