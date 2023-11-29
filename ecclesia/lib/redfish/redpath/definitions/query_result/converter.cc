@@ -40,6 +40,7 @@ namespace {
 
 constexpr char kLocalDevpathTag[] = "_local_devpath_";
 constexpr char kMachineDevpathTag[] = "_machine_devpath_";
+constexpr char kEmbeddedLocationContextTag[] = "_embedded_location_context_";
 
 absl::Status Validate(const google::protobuf::Timestamp& t) {
   const auto sec = t.seconds();
@@ -91,12 +92,19 @@ void AddChildSubQuery(QueryResultDataBuilder& builder,
     if (data_set.has_devpath() && !data_set.devpath().empty()) {
       identifier.set_local_devpath(data_set.devpath());
     }
-    if (data_set.has_decorators() &&
-        data_set.decorators().has_machine_devpath() &&
-        !data_set.decorators().machine_devpath().empty()) {
-      identifier.set_machine_devpath(data_set.decorators().machine_devpath());
+    if (data_set.has_decorators()) {
+      if (data_set.decorators().has_machine_devpath() &&
+          !data_set.decorators().machine_devpath().empty()) {
+        identifier.set_machine_devpath(data_set.decorators().machine_devpath());
+      }
+      if (data_set.decorators().has_embedded_location_context() &&
+          !data_set.decorators().embedded_location_context().empty()) {
+        identifier.set_embedded_location_context(
+            data_set.decorators().embedded_location_context());
+      }
     }
-    if (identifier.has_local_devpath() || identifier.has_machine_devpath()) {
+    if (identifier.has_local_devpath() || identifier.has_machine_devpath() ||
+        identifier.has_embedded_location_context()) {
       value_builder[kIdentifierTag] = std::move(identifier);
     }
 
@@ -222,6 +230,10 @@ nlohmann::json IdentifierValueToJson(const Identifier& value) {
   if (value.has_machine_devpath() && !value.machine_devpath().empty()) {
     json[kMachineDevpathTag] = value.machine_devpath();
   }
+  if (value.has_embedded_location_context() &&
+      !value.embedded_location_context().empty()) {
+    json[kEmbeddedLocationContextTag] = value.embedded_location_context();
+  }
   return json;
 }
 
@@ -336,9 +348,12 @@ std::optional<Identifier> JsonToIdentifierValue(const nlohmann::json& json) {
         id.set_local_devpath(value.get<std::string>());
       } else if (key == kMachineDevpathTag) {
         id.set_machine_devpath(value.get<std::string>());
+      } else if (key == kEmbeddedLocationContextTag) {
+        id.set_embedded_location_context(value.get<std::string>());
       }
     }
-    if (id.has_local_devpath() || id.has_machine_devpath()) {
+    if (id.has_local_devpath() || id.has_machine_devpath() ||
+        id.has_embedded_location_context()) {
       return id;
     }
   }

@@ -888,5 +888,59 @@ TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
   }
 }
 
+TEST(QueryEngineTest, QueryEngineLocationContextSuccess) {
+  QueryIdToResult intent_output_embedded_location =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/embedded_location_out.textproto")));
+  FakeRedfishServer server(kIndusMockup);
+  std::string deeply_nested_resource_uri = "/redfish/v1/deeply/nested/resource";
+  std::string deeply_nested_resource_data = R"json(
+            {
+              "@odata.id": "/redfish/v1/deeply/nested/resource",
+              "Id": "resource",
+              "Oem": {
+                "Google": {
+                  "LocationContext": {
+                    "ServiceLabel": "board1",
+                    "EmbeddedLocationContext": ["sub-fru", "logical"]
+                  }
+                }
+              }
+            }
+           )json";
+  server.AddHttpGetHandlerWithData(deeply_nested_resource_uri,
+                                   deeply_nested_resource_data);
+  // Set up Query Engine with ID assigner. This is needed for the normalizer to
+  // assign the embedded location context.
+  absl::flat_hash_map<std::string, std::string> devpath_map = {};
+  auto id_assigner = NewMapBasedDevpathAssigner(devpath_map);
+  FakeClock clock{clock_time};
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
+  // Set up Query Engine with query files and query rules.
+  QueryContext query_context{.query_files = kDelliciusQueries,
+                             .query_rules = kQueryRules,
+                             .clock = &clock};
+  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
+      query_context,
+      {.transport = std::move(transport),
+       .stable_id_type =
+           QueryEngineParams::RedfishStableIdType::kRedfishLocation},
+      std::move(id_assigner));
+  ASSERT_TRUE(query_engine.ok());
+  QueryIdToResult response_entries =
+      query_engine->ExecuteRedpathQuery({"EmbeddedResource"});
+  ASSERT_EQ(response_entries.results().size(), 1);
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_output_embedded_location)});
+}
+
 }  // namespace
 }  // namespace ecclesia

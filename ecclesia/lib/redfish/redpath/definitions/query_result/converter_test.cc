@@ -757,17 +757,21 @@ TEST(ConvertToJsonTest, TimestampTest) {
 }
 
 TEST(ConvertToJsonTest, IdentifierTest) {
-  QueryValue value = ParseTextProtoOrDie(R"pb(identifier {
-                                                local_devpath: "/phys/"
-                                                machine_devpath: "/phys/PE0"
-                                              })pb");
+  QueryValue value = ParseTextProtoOrDie(
+      R"pb(identifier {
+             local_devpath: "/phys/"
+             machine_devpath: "/phys/PE0",
+             embedded_location_context: "embedded_dev/sub_fru"
+           })pb");
   ASSERT_EQ(ValueToJson(value), nlohmann::json::parse(R"json({
     "_local_devpath_": "/phys/",
-    "_machine_devpath_": "/phys/PE0"
+    "_machine_devpath_": "/phys/PE0",
+    "_embedded_location_context_": "embedded_dev/sub_fru"
   })json"));
 
   Identifier id = ParseTextProtoOrDie(R"pb(local_devpath: "/phys/"
-                                           machine_devpath: "/phys/PE0")pb");
+                                           machine_devpath: "/phys/PE0",
+                                           embedded_location_context: "")pb");
   ASSERT_EQ(IdentifierValueToJson(id), nlohmann::json::parse(R"json({
     "_local_devpath_": "/phys/",
     "_machine_devpath_": "/phys/PE0"

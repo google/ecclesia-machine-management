@@ -1,0 +1,9 @@
+# proto-file: ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "EmbeddedResource"
+subquery {
+  subquery_id: "EmbeddedResource"
+  uri: "/redfish/v1/deeply/nested/resource"
+  properties { property: "Id" type: STRING }
+}

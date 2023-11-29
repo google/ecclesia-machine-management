@@ -25,6 +25,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
+#include "absl/strings/str_join.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
@@ -92,6 +93,16 @@ class NormalizerImplAddMachineBarepath final
          (data_set.redfish_location().service_label().empty() &&
           data_set.redfish_location().part_location_context().empty()))) {
       is_root = true;
+    }
+
+    // Assign the embedded location context for sub-fru resources. As this will
+    // be used for unique id purposes from now on, flatten the ordered array
+    // into a slash delimited string.
+    if (data_set.has_redfish_location() &&
+        !data_set.redfish_location().embedded_location_context().empty()) {
+      data_set.mutable_decorators()->set_embedded_location_context(
+          absl::StrJoin(data_set.redfish_location().embedded_location_context(),
+                        "/"));
     }
 
     absl::StatusOr<std::string> machine_devpath =

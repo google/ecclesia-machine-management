@@ -91,6 +91,7 @@ cc_test(
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish/dellicius/engine:fake_query_engine",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
+        "//ecclesia/lib/redfish/dellicius/engine:query_engine_fake",
         "//ecclesia/lib/redfish/dellicius/engine/internal:passkey",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",

@@ -63,15 +63,21 @@ message SubqueryDataSet {
       // label.
       properties: [
         "Location.PartLocation.ServiceLabel",
-        "PhysicalLocation.PartLocation.ServiceLabel"
+        "PhysicalLocation.PartLocation.ServiceLabel",
+        "Oem.Google.LocationContext.ServiceLabel"
       ]
     }];
     string part_location_context = 2 [(query_options) = {
       label: "__PartLocationContext__",
       properties: [
         "Location.PartLocationContext",
-        "PhysicalLocation.PartLocationContext"
+        "PhysicalLocation.PartLocationContext",
+        "Oem.Google.LocationContext.PartLocationContext"
       ]
+    }];
+    repeated string embedded_location_context = 3 [(query_options) = {
+      label: "__EmbeddedLocationContext__",
+      properties: [ "Oem.Google.LocationContext.EmbeddedLocationContext" ]
     }];
   }
 
@@ -82,7 +88,8 @@ message SubqueryDataSet {
     label: "__LocalDevpath__",
     properties: [
       "Location.Oem.Google.Devpath",
-      "PhysicalLocation.Oem.Google.Devpath"
+      "PhysicalLocation.Oem.Google.Devpath",
+      "Oem.Google.LocationContext.Devpath"
     ]
   }];
   // Redfish properties queried.
@@ -111,6 +118,8 @@ message SubqueryDataSet {
 
     // Machine barepath.
     optional string machine_devpath = 2;
+    // Sub-Fru Embedded Location Context
+    optional string embedded_location_context = 3;
   }
   DecoratorExtensions decorators = 5;
 }

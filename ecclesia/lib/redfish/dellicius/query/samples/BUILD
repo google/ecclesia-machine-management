@@ -7,6 +7,7 @@ filegroup(
     name = "sample_queries_in",
     srcs = [
         "query_in/assembly_in.textproto",
+        "query_in/embedded_location_in.textproto",
         "query_in/managers_in.textproto",
         "query_in/processors_in.textproto",
         "query_in/sensor_in.textproto",

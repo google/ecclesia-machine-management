@@ -47,28 +47,43 @@ namespace {
 
 constexpr absl::string_view kServiceLabel = "__ServiceLabel__";
 constexpr absl::string_view kPartLocationContext = "__PartLocationContext__";
+constexpr absl::string_view kEmbeddedLocationContext =
+    "__EmbeddedLocationContext__";
 constexpr absl::string_view kLocalDevpath = "__LocalDevpath__";
 
 std::vector<DelliciusQuery::Subquery::RedfishProperty>
 GetAdditionalProperties() {
   std::vector<DelliciusQuery::Subquery::RedfishProperty> result;
   auto add_property = [&](absl::string_view name,
-                          std::vector<std::string> properties) {
+                          std::vector<std::string> properties,
+                          bool is_collection = false) {
     for (std::string &property : properties) {
       DelliciusQuery::Subquery::RedfishProperty new_prop;
       new_prop.set_name(std::string(name));
       new_prop.set_property(std::move(property));
+      if (is_collection) {
+        new_prop.set_property_element_type(
+            DelliciusQuery::Subquery::RedfishProperty::COLLECTION_PRIMITIVE);
+      }
       new_prop.set_type(DelliciusQuery::Subquery::RedfishProperty::STRING);
       result.push_back(std::move(new_prop));
     }
   };
 
   add_property(kServiceLabel, {"Location.PartLocation.ServiceLabel",
-                               "PhysicalLocation.PartLocation.ServiceLabel"});
-  add_property(kPartLocationContext, {"Location.PartLocationContext",
-                                      "PhysicalLocation.PartLocationContext"});
+                               "PhysicalLocation.PartLocation.ServiceLabel",
+                               "Oem.Google.LocationContext.ServiceLabel"});
+  add_property(
+      kPartLocationContext,
+      {"Location.PartLocationContext", "PhysicalLocation.PartLocationContext",
+       "Oem.Google.LocationContext.PartLocationContext"});
+
+  add_property(kEmbeddedLocationContext,
+               {"Oem.Google.LocationContext.EmbeddedLocationContext"}, true);
+
   add_property(kLocalDevpath, {"Location.Oem.Google.Devpath",
-                               "PhysicalLocation.Oem.Google.Devpath"});
+                               "PhysicalLocation.Oem.Google.Devpath",
+                               "Oem.Google.LocationContext.Devpath"});
 
   return result;
 }
@@ -263,6 +278,12 @@ absl::Status NormalizerImplDefault::Normalize(
     } else if (name == kLocalDevpath) {
       *data_set_local.mutable_devpath() =
           std::move(*property_out->mutable_string_value());
+    } else if (name == kEmbeddedLocationContext) {
+      for (const auto &value : property_out->collection_value().values()) {
+        *data_set_local.mutable_redfish_location()
+             ->mutable_embedded_location_context()
+             ->Add() = value.string_value();
+      }
     }
   }
   return absl::OkStatus();

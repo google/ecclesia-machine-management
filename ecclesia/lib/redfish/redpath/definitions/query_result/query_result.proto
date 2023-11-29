@@ -65,6 +65,8 @@ message Identifier {
   optional string local_devpath = 1;
   // Machine-level devpath
   optional string machine_devpath = 2;
+  // Sub-Fru location context
+  optional string embedded_location_context = 3;
 }
 
 message Statistics {
