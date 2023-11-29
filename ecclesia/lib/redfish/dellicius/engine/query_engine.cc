@@ -512,4 +512,19 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
                            engine_params.feature_flags);
 }
 
+absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
+    const QueryContext &query_context, QueryEngineParams params,
+    std::unique_ptr<IdAssigner> id_assigner) {
+  if (id_assigner != nullptr) {
+    ECCLESIA_ASSIGN_OR_RETURN(
+        QueryEngine engine, CreateQueryEngine(query_context, std::move(params),
+                                              std::move(id_assigner)));
+    return std::make_unique<QueryEngine>(std::move(engine));
+  }
+
+  ECCLESIA_ASSIGN_OR_RETURN(
+      QueryEngine engine, CreateQueryEngine(query_context, std::move(params)));
+  return std::make_unique<QueryEngine>(std::move(engine));
+}
+
 }  // namespace ecclesia

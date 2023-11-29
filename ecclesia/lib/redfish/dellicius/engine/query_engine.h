@@ -45,6 +45,53 @@
 
 namespace ecclesia {
 
+// Encapsulates the context needed to execute RedPath query.
+struct QueryContext {
+  // Describes the RedPath queries that engine will be configured to execute.
+  absl::Span<const EmbeddedFile> query_files;
+  // Rules used to configure Redfish query parameter - $expand for
+  // specific RedPath prefixes in given queries.
+  absl::Span<const EmbeddedFile> query_rules = {};
+  const Clock *clock = Clock::RealClock();
+};
+
+// Parameters necessary to configure the query engine.
+struct QueryEngineParams {
+  // Stable id types used to configure engine for an appropriate normalizer that
+  // decorates the query result with desired stable
+  // id type.
+  enum class RedfishStableIdType : uint8_t {
+    kRedfishLocation,  // Redfish Standard - PartLocationContext + ServiceLabel
+    kRedfishLocationDerived  // Derived from Redfish topology.
+  };
+
+  struct FeatureFlags {
+    // Creates a query engine using metrical transport. When enabled,
+    // DelliciusQueryResult will have RedfishMetrics object populated.
+    bool enable_redfish_metrics = false;
+    bool fail_on_first_error = true;
+  };
+
+  // Transport medium over which Redfish queries are sent to the redfish server.
+  std::unique_ptr<RedfishTransport> transport;
+  // Generates cache used by query engine, default set to Null cache (no cache).
+  RedfishTransportCacheFactory cache_factory = NullCache::Create;
+  // Optional attribute to uniquely identify redfish server where necessary.
+  std::string entity_tag;
+  // Type of stable identifier to use in query result
+  QueryEngineParams::RedfishStableIdType stable_id_type =
+      QueryEngineParams::RedfishStableIdType::kRedfishLocation;
+  // Captures toggleable features controlled by the user.
+  FeatureFlags feature_flags;
+
+  // Node topology configuration:-
+  // This configuration is used with
+  // RedfishStableIdType::kRedfishLocationDerived feature flag to instruct
+  // QueryEngine to traverse the tree for specific resources and their
+  // subordinates to build physical topology.
+  std::string redfish_topology_config_name;
+};
+
 // QueryEngine is logical composition of Redfish query interpreter, dispatcher
 // and normalizer built to execute a statically defined set of Redfish Queries
 // based on accompanying optional query rules.
@@ -103,8 +150,8 @@ class QueryEngineIntf {
 
   virtual QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) = 0;
+      ServiceRootType service_root_uri = ServiceRootType::kCustom,
+      const QueryVariableSet &query_arguments = {}) = 0;
 
   // QueryEngineRawInterfacePasskey is just an empty strongly-typed object
   // that one needs to provide in order to invoke the member function.
@@ -117,6 +164,11 @@ class QueryEngineIntf {
 
 class QueryEngine : public QueryEngineIntf {
  public:
+  // Creates query engine for machine devpath decorator extensions.
+  static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
+      const QueryContext &query_context, QueryEngineParams params,
+      std::unique_ptr<IdAssigner> id_assigner = nullptr);
+
   ABSL_DEPRECATED("Use QueryEngine factory methods instead.")
   QueryEngine(const QueryEngineConfiguration &config,
               std::unique_ptr<RedfishTransport> transport,
@@ -167,53 +219,6 @@ class QueryEngine : public QueryEngineIntf {
 
  private:
   std::unique_ptr<QueryEngineIntf> engine_impl_;
-};
-
-// Encapsulates the context needed to execute RedPath query.
-struct QueryContext {
-  // Describes the RedPath queries that engine will be configured to execute.
-  absl::Span<const EmbeddedFile> query_files;
-  // Rules used to configure Redfish query parameter - $expand for
-  // specific RedPath prefixes in given queries.
-  absl::Span<const EmbeddedFile> query_rules = {};
-  const Clock *clock = Clock::RealClock();
-};
-
-// Parameters necessary to configure the query engine.
-struct QueryEngineParams {
-  // Stable id types used to configure engine for an appropriate normalizer that
-  // decorates the query result with desired stable
-  // id type.
-  enum class RedfishStableIdType : uint8_t {
-    kRedfishLocation,  // Redfish Standard - PartLocationContext + ServiceLabel
-    kRedfishLocationDerived  // Derived from Redfish topology.
-  };
-
-  struct FeatureFlags {
-    // Creates a query engine using metrical transport. When enabled,
-    // DelliciusQueryResult will have RedfishMetrics object populated.
-    bool enable_redfish_metrics = false;
-    bool fail_on_first_error = true;
-  };
-
-  // Transport medium over which Redfish queries are sent to the redfish server.
-  std::unique_ptr<RedfishTransport> transport;
-  // Generates cache used by query engine, default set to Null cache (no cache).
-  RedfishTransportCacheFactory cache_factory = NullCache::Create;
-  // Optional attribute to uniquely identify redfish server where necessary.
-  std::string entity_tag;
-  // Type of stable identifier to use in query result
-  QueryEngineParams::RedfishStableIdType stable_id_type =
-      QueryEngineParams::RedfishStableIdType::kRedfishLocation;
-  // Captures toggleable features controlled by the user.
-  FeatureFlags feature_flags;
-
-  // Node topology configuration:-
-  // This configuration is used with
-  // RedfishStableIdType::kRedfishLocationDerived feature flag to instruct
-  // QueryEngine to traverse the tree for specific resources and their
-  // subordinates to build physical topology.
-  std::string redfish_topology_config_name;
 };
 
 // Build query engine based on given |configuration| to execute queries in

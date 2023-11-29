@@ -19,7 +19,6 @@ cc_library(
         ":query_engine_config",
         "//ecclesia/lib/file:cc_embed_interface",
         "//ecclesia/lib/redfish:interface",
-        "//ecclesia/lib/redfish:node_topology",
         "//ecclesia/lib/redfish:topology",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
         "//ecclesia/lib/redfish/dellicius/engine/internal:passkey",
@@ -52,6 +51,47 @@ cc_library(
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
         "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
+    name = "mock_query_engine",
+    testonly = 1,
+    hdrs = ["mock_query_engine.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":query_engine_cc",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:passkey",
+        "@com_google_absl//absl/functional:function_ref",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_library(
+    name = "fake_query_engine",
+    testonly = 1,
+    hdrs = ["fake_query_engine.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":query_engine_cc",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:passkey",
+        "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "//ecclesia/lib/redfish/transport:cache",
+        "//ecclesia/lib/redfish/transport:interface",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/functional:function_ref",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+        "@com_google_absl//absl/types:span",
     ],
 )
 
