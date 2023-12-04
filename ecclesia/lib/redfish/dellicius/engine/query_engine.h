@@ -146,8 +146,8 @@ class QueryEngineIntf {
   ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   virtual std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) = 0;
+      ServiceRootType service_root_uri = ServiceRootType::kCustom,
+      const QueryVariableSet &query_arguments = {}) = 0;
 
   virtual QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
