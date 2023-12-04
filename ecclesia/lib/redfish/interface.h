@@ -657,6 +657,23 @@ class RedfishInterface {
     return std::nullopt;
   }
 
+  // Creates a subscription to stream out Redfish events from Redfish server.
+  // The subscription is configured by |data|.
+  // It takes two callbacks:
+  // 1. |on_event| will be invoked with every event the client receives
+  // 2. |on_stop| will be invoked with the given |end_status| when the stream
+  // stops. |end_status| represents what status the stream ends with.
+  // NOTE: None of the callbacks shall be blocking (e.g., sleeps, file I/O,
+  // synchronous RPCs, or waiting on a condition variable).
+  // The implementation will guarantee that there is only one callback being
+  // executed at a given time.
+  virtual absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
+      absl::string_view data,
+      absl::FunctionRef<void(const RedfishVariant &event)> on_event,
+      absl::FunctionRef<void(const absl::Status &end_status)> on_stop) {
+    return absl::UnimplementedError("Not implemented");
+  }
+
  protected:
   static inline constexpr absl::string_view kServiceRoot = "/redfish/v1";
   static inline constexpr absl::string_view kGoogleServiceRoot = "/google/v1";

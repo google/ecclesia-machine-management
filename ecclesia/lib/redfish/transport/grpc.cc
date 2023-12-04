@@ -17,7 +17,7 @@
 #include "ecclesia/lib/redfish/transport/grpc.h"
 
 #include <cctype>
-#include <chrono>
+#include <chrono>  // NOLINT We have to chromo to make upstream code compile
 #include <cstddef>
 #include <map>
 #include <memory>
@@ -27,7 +27,7 @@
 #include <variant>
 
 #include "google/protobuf/struct.pb.h"
-#include "absl/base/thread_annotations.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
@@ -47,6 +47,7 @@
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
+#include "grpcpp/support/client_callback.h"
 #include "grpcpp/support/status.h"
 #include "single_include/nlohmann/json.hpp"
 #include "google/protobuf/util/json_util.h"
@@ -68,6 +69,7 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
     absl::string_view path, std::optional<std::string_view> json_str,
     absl::string_view target_fqdn, GrpcTransportParams params, RpcFunc rpc) {
   redfish::v1::Request request;
+  // This header is used when authorizing peers without trust bundle.
   request.mutable_headers()->insert(
       {std::string(kHostHeader), std::string(target_fqdn)});
   request.set_url(std::string(path));
@@ -122,7 +124,7 @@ absl::string_view EndpointToFqdn(absl::string_view endpoint) {
   return endpoint.substr(0, port_pos);
 }
 
-// NOTE: this class is only kept for backward campatibility purpose.
+// NOTE: this class is only kept for backward compatibility purpose.
 // DO NOT ADD MORE METADATA.
 // Use HTTP headers instead.
 class GrpcRedfishCredentials : public grpc::MetadataCredentialsPlugin {
@@ -144,6 +146,79 @@ class GrpcRedfishCredentials : public grpc::MetadataCredentialsPlugin {
  private:
   std::string target_fqdn_;
   std::string resource_;
+};
+
+class GrpcRedfishSubscribeReactor
+    : public grpc::ClientReadReactor<::redfish::v1::Response> {
+ public:
+  GrpcRedfishSubscribeReactor(grpc::ClientContext &context,
+                              GrpcRedfishV1::Stub &stub,
+                              const redfish::v1::Request &request,
+                              RedfishTransport::EventCallback &&on_event,
+                              RedfishTransport::StopCallback on_stop)
+      : request_(request), on_event_(std::move(on_event)), on_stop_(on_stop) {
+    stub.async()->Subscribe(&context, &request_, this);
+    StartRead(&event_);
+  }
+
+  // NOLINT See https://github.com/grpc/proposal/blob/master/L67-cpp-callback-api.md#reactor-model
+  // The framework and API guarantees that there is only one |OnReadDone| will
+  // be executed at a given time.
+  void OnReadDone(bool ok) override {
+    if (!ok) {
+      // no new read will be called
+      LOG(WARNING) << "The previous event read failed!";
+      return;
+    }
+    RedfishTransport::Result result;
+
+    // Every Redfish event shall have the corresponding HTTP header implemented
+    // including:
+    //  1. payload type, octet_stream, json_str, etc;
+    //  2. subscribtion ID
+    if (event_.has_octet_stream()) {
+      result.body = GetBytesFromString(event_.octet_stream());
+    } else if (event_.has_json_str()) {
+      result.body = nlohmann::json::parse(event_.json_str(), nullptr, false);
+    }
+    result.code = static_cast<int>(event_.code());
+    on_event_(result);
+    StartRead(&event_);
+  }
+
+  // OnDone will always take place after all other reactions.
+  void OnDone(const grpc::Status &status) override {
+    on_stop_(AsAbslStatus(status));
+  }
+
+ private:
+  redfish::v1::Response event_;
+  redfish::v1::Request request_;
+  RedfishTransport::EventCallback on_event_;
+  RedfishTransport::StopCallback on_stop_;
+};
+
+class GrpcRedfishEventStream : public RedfishEventStream {
+ public:
+  GrpcRedfishEventStream(GrpcRedfishV1::Stub &stub,
+                         const redfish::v1::Request &request,
+                         RedfishTransport::EventCallback &&on_event,
+                         RedfishTransport::StopCallback on_stop)
+      : reactor_(std::make_unique<GrpcRedfishSubscribeReactor>(
+            context_, stub, request, std::move(on_event), on_stop)) {}
+
+  void StartStreaming() override { reactor_->StartCall(); }
+  void CancelStreaming() override {
+    // that a subscription is cancelled. A possible implementation is DELETE on
+    // corresponding EventDestination.
+    context_.TryCancel();
+  }
+
+  ~GrpcRedfishEventStream() override { context_.TryCancel(); };
+
+ private:
+  grpc::ClientContext context_;
+  std::unique_ptr<GrpcRedfishSubscribeReactor> reactor_;
 };
 
 class GrpcRedfishTransport : public RedfishTransport {
@@ -231,6 +306,18 @@ class GrpcRedfishTransport : public RedfishTransport {
                   GRPC_SECURITY_NONE));
           return client_->Delete(&context, request, response);
         });
+  }
+
+  absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
+      absl::string_view data, EventCallback &&on_event,
+      StopCallback on_stop) override {
+    ::redfish::v1::Request request;
+    // This header is used when authorizing peers without trust bundle.
+    request.mutable_headers()->insert(
+        {std::string(kHostHeader), std::string(fqdn_)});
+    request.set_json_str(std::string(data));
+    return std::make_unique<GrpcRedfishEventStream>(
+        *client_, request, std::move(on_event), on_stop);
   }
 
  private:

@@ -762,6 +762,23 @@ class HttpRedfishInterface : public RedfishInterface {
     remove_expand_support_ = true;
   }
 
+  absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
+      absl::string_view data,
+      absl::FunctionRef<void(const RedfishVariant &event)> on_event,
+      absl::FunctionRef<void(const absl::Status &status)> on_stop) override {
+    auto new_callback = [on_event,
+                         this](const RedfishTransport::Result &result) {
+      int code = result.code;
+      absl::flat_hash_map<std::string, std::string> headers = result.headers;
+      RedfishVariant variant(std::make_unique<HttpIntfVariantImpl>(
+                                 this, RedfishExtendedPath{}, result, kIsFresh),
+                             ecclesia::HttpResponseCodeFromInt(code), headers);
+      on_event(variant);
+    };
+    absl::ReaderMutexLock mu(&transport_mutex_);
+    return transport_->Subscribe(data, std::move(new_callback), on_stop);
+  }
+
  private:
   // Helper function to resolve JSON pointers after doing a GET.
   RedfishVariant GetUriHelper(

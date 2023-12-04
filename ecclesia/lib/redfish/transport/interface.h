@@ -18,17 +18,37 @@
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_INTERFACE_H_
 
 #include <cstdint>
+#include <functional>
+#include <memory>
 #include <string>
 #include <variant>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
+
+// RedfishEventStream defines a data-layer-protocol agnostic interface for the
+// server-side event streaming.
+// An implementation shall be thread-safe.
+class RedfishEventStream {
+ public:
+  // Starts the Redfish streaming until any unexpected errors happen or being
+  // cancelled.
+  virtual void StartStreaming() = 0;
+  // Cancels and stops the Redfish streaming. Does nothing if the stream is
+  // already stopped.
+  // NOTE: When a stream is stopped, it can never be started again. Create a new
+  // stream instead.
+  virtual void CancelStreaming() = 0;
+
+  virtual ~RedfishEventStream() = default;
+};
 
 // RedfishTransport defines a data-layer-protocol agnostic interface for the
 // raw RESTful operations to a Redfish Service.
@@ -47,6 +67,9 @@ class RedfishTransport {
     absl::flat_hash_map<std::string, std::string> headers;
   };
 
+  using EventCallback = std::function<void(const Result &)>;
+  using StopCallback = absl::FunctionRef<void(const absl::Status &)>;
+
   virtual ~RedfishTransport() = default;
 
   // Fetches the root uri and returns it.
@@ -62,6 +85,20 @@ class RedfishTransport {
                                        absl::string_view data) = 0;
   virtual absl::StatusOr<Result> Delete(absl::string_view path,
                                         absl::string_view data) = 0;
+
+  // A Redfish eventing implemented by a server side stream RPC.
+  // 1. |data| represents the subscription configuration. TODO(nanzhou): link
+  // to schema
+  // 2. |on_event| will be invoked every time an event (modelled as |Result|) is
+  // sent from the server. A callback must never block.
+  // 3. |on_stop| will be invoked when the stream stops.
+  // Returns a Redfish event stream on success where clients can start or stop
+  // the streaming.
+  virtual absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
+      absl::string_view data, EventCallback &&on_event, StopCallback on_stop) {
+    return absl::UnimplementedError(
+        "Streaming is not implemented yet.");
+  }
 };
 
 // NullTransport provides a placeholder implementation which gracefully fails
@@ -79,6 +116,11 @@ class NullTransport : public RedfishTransport {
   }
   absl::StatusOr<Result> Delete(absl::string_view path,
                                 absl::string_view data) {
+    return absl::InternalError("NullTransport");
+  }
+  absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
+      absl::string_view data, EventCallback &&callback,
+      StopCallback on_stop) override {
     return absl::InternalError("NullTransport");
   }
 };

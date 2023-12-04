@@ -22,6 +22,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/redfish/property.h"
@@ -236,6 +237,21 @@ TEST(RedfishVariant, ValidateRedfishSupportFailures) {
           .ValidateRedfishSupport(RedfishSupportedFeatures{
               .expand = {.no_links = true, .max_levels = 1}}),
       ecclesia::IsStatusInternal());
+}
+
+// Test the default behavior of RedfishInterface regarding the other non-pure
+// virtual interfaces.
+TEST(RedfishInterface, DefaultBehavior) {
+  std::unique_ptr<RedfishInterface> interface = std::make_unique<NullRedfish>();
+  EXPECT_EQ(interface->SupportedFeatures(), std::nullopt);
+
+  absl::AnyInvocable<void(const RedfishVariant &) const> on_event =
+      [](const RedfishVariant &) {};
+  absl::AnyInvocable<void(const absl::Status &) const> on_stop =
+      [](const absl::Status &) {};
+
+  EXPECT_THAT(interface->Subscribe("", on_event, on_stop),
+              ecclesia::IsStatusUnimplemented());
 }
 
 }  // namespace

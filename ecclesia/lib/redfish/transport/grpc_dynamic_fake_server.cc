@@ -21,6 +21,7 @@
 #include <string>
 #include <utility>
 
+#include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
@@ -33,6 +34,54 @@
 namespace ecclesia {
 
 using ::redfish::v1::Request;
+
+FakeServerWriteReactor::FakeServerWriteReactor(FakeServerStreamConfig config)
+    : config_(std::move(config)) {
+  fake_event_.set_octet_stream("Random data");
+  MaybeStartWrite();
+}
+
+void FakeServerWriteReactor::OnWriteDone(bool ok) {
+  if (!ok) {
+    LOG(WARNING) << "Write event failed!";
+    Finish(grpc::Status(grpc::StatusCode::INTERNAL, "Unexpected error"));
+    return;
+  }
+  switch (config_.mode) {
+    case FakeServerStreamConfig::Mode::kPreConfigured: {
+      config_.events.pop();
+      break;
+    }
+    case FakeServerStreamConfig::Mode::kRandom: {
+      break;
+    }
+  }
+  MaybeStartWrite();
+}
+
+void FakeServerWriteReactor::OnDone() {}
+
+// OnDone will still be called afterwards.
+void FakeServerWriteReactor::OnCancel() {
+  // not used now, but leave here for future usage.
+}
+
+void FakeServerWriteReactor::MaybeStartWrite() {
+  switch (config_.mode) {
+    case FakeServerStreamConfig::Mode::kPreConfigured: {
+      if (config_.events.empty()) {
+        Finish(grpc::Status::OK);
+        return;
+      }
+      StartWrite(&config_.events.front());
+      break;
+    }
+    case FakeServerStreamConfig::Mode::kRandom: {
+      StartWrite(&fake_event_);
+      break;
+    }
+  }
+}
 
 GrpcDynamicFakeServer::GrpcDynamicFakeServer()
     : GrpcDynamicFakeServer(grpc::InsecureServerCredentials()) {}
@@ -55,12 +104,14 @@ GrpcDynamicFakeServer::GrpcDynamicFakeServer(
 }
 
 GrpcDynamicFakeServer::~GrpcDynamicFakeServer() { grpc_server_->Shutdown(); }
-
-void GrpcDynamicFakeServer::SetCallback(
-    std::function<grpc::Status(grpc::ServerContext *, const Request *,
-                               redfish::v1::Response *)>
-        callback) {
+void GrpcDynamicFakeServer::SetCallback(FakeRedfishV1Impl::Callback callback) {
   service_impl_.SetCallback(std::move(callback));
 }
+
+void GrpcDynamicFakeServer::SetStreamConfig(FakeServerStreamConfig config) {
+  service_impl_.SetStreamConfig(std::move(config));
+}
+
+void GrpcDynamicFakeServer::StartStreaming() { service_impl_.StartStreaming(); }
 
 }  // namespace ecclesia

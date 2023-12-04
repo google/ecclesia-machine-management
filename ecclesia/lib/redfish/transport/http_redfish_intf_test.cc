@@ -26,6 +26,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
@@ -41,6 +42,7 @@
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/thread/thread.h"
 #include "ecclesia/lib/time/clock_fake.h"
 #include "single_include/nlohmann/json.hpp"
@@ -1447,6 +1449,15 @@ TEST_F(HttpRedfishInterfaceTest, GetUnresolvedNavigationProperty) {
   std::optional<std::string> odata_id = obj->GetNodeValue<PropertyOdataId>();
   ASSERT_TRUE(odata_id.has_value());
   EXPECT_EQ("/redfish/v1/Chassis/chassis", odata_id.value());
+}
+
+TEST_F(HttpRedfishInterfaceTest, SubscribeReturnsUnimplementedError) {
+  absl::AnyInvocable<void(const absl::Status &) const> on_stop =
+      [](const absl::Status &) {};
+  absl::AnyInvocable<void(const RedfishVariant &) const> on_event =
+      [](const RedfishVariant &) {};
+  EXPECT_THAT(intf_->Subscribe("", on_event, on_stop),
+              ecclesia::IsStatusUnimplemented());
 }
 
 }  // namespace
