@@ -345,6 +345,10 @@ TEST(QueryValueReaderTest, SubqueryGetValueTest) {
         key: "str_val"
         value { string_value: "abcd" }
       }
+      fields {
+        key: "_id_"
+        value { identifier { local_devpath: "/phys" } }
+      }
     })pb");
 
   QueryValueReader reader(&data);
@@ -359,6 +363,9 @@ TEST(QueryValueReaderTest, SubqueryGetValueTest) {
 
   ASSERT_THAT(reader.GetStringValue("str_val"), IsOkAndHolds("abcd"));
   ASSERT_THAT(reader.GetStringValue("str_val_invalid"), IsStatusNotFound());
+
+  ASSERT_THAT(reader.GetIdentifier(),
+              IsOkAndHolds(EqualsProto(R"pb(local_devpath: "/phys")pb")));
 }
 
 TEST(QueryValueReaderTest, SubqueryGetWrongValueTypeTest) {

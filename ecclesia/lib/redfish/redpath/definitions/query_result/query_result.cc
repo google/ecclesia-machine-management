@@ -100,4 +100,12 @@ absl::StatusOr<QueryValueReader> QueryResultDataReader::Get(
   return absl::NotFoundError(absl::StrCat("Key '", key, "' doesn't exist"));
 }
 
+absl::StatusOr<Identifier> QueryValueReader::GetIdentifier() const {
+  ECCLESIA_ASSIGN_OR_RETURN(QueryValueReader reader, Get(kIdentifierTag));
+  if (reader.kind() != QueryValue::kIdentifier) {
+    return absl::InvalidArgumentError(absl::StrCat("No identifier available."));
+  }
+  return reader.identifier();
+}
+
 }  // namespace ecclesia

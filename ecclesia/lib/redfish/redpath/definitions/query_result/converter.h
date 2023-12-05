@@ -26,10 +26,6 @@
 
 namespace ecclesia {
 
-// Tag for identifiers in legacy DelliciusQueryResult to new QueryResult
-// converter.
-inline static constexpr absl::string_view kIdentifierTag = "_id_";
-
 // Converts legacy DelliciusQueryResult to QueryResult.
 QueryResult ToQueryResult(const ecclesia::DelliciusQueryResult& result_in);
 

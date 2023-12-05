@@ -33,6 +33,9 @@
 
 namespace ecclesia {
 
+// Key for Identifier type QueryValues when part of QueryResultData.
+inline static constexpr absl::string_view kIdentifierTag = "_id_";
+
 // A builder class for ecclesia::QueryValue.
 class QueryValueBuilder {
  public:
@@ -199,6 +202,9 @@ class QueryValueReader {
   // Returns the boolean value for a given key; returns error if the key is not
   // present.
   absl::StatusOr<bool> GetBoolValue(absl::string_view key) const;
+
+  // Returns the identifier for the underlying subquery value;
+  absl::StatusOr<Identifier> GetIdentifier() const;
 
   // Returns a QueryValueReader for the underlying subquery result.
   QueryValueReader operator[](absl::string_view key) const {
