@@ -31,6 +31,7 @@
 namespace ecclesia {
 
 class MockQueryEngine : public QueryEngineIntf {
+ public:
   virtual ~MockQueryEngine() = default;
 
   MOCK_METHOD(void, ExecuteQuery,
