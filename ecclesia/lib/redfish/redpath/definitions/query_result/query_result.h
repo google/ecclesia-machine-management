@@ -25,9 +25,8 @@
 #include "absl/log/check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
-#include "absl/status/status.h"
-#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 
@@ -286,6 +285,31 @@ class QueryResultDataReader {
  private:
   const QueryResultData& query_result_;
 };
+
+// Utility functions to help process Query Results
+
+// Returns the query result from the Result Map for a specified query id.
+// Returns an error if the query is not found in the map. Also returns an error
+// if the query result contains an error.
+//
+// Please note that this function  accepts the query result map as value; if the
+// query result is found in the map, it will be moved. Clients should expect the
+// map to be in an invalid state after the function.
+absl::StatusOr<QueryResult> GetQueryResult(QueryIdToResult result,
+                                           absl::string_view query_id);
+
+// Returns true if the query result contains an error.
+bool QueryResultHasErrors(const QueryResult& query_result);
+
+// Returns true if at least one of the query results in the map contains an
+// error.
+bool QueryOutputHasErrors(const QueryIdToResult& query_output);
+
+// Decodes the start and end time in the query and returns the elapsed time.
+// Returns error if the time or the duration is invalid or if the result doesn't
+// contain time statistics.
+absl::StatusOr<absl::Duration> GetQueryDuration(
+    const QueryResult& query_result);
 
 }  // namespace ecclesia
 

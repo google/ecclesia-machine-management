@@ -25,6 +25,7 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/testing/proto.h"
@@ -523,6 +524,181 @@ TEST(QueryResultDataReaderTest, SmokeTest) {
   absl::StatusOr<QueryValueReader> value_reader = reader.Get(kSensorTag);
   ASSERT_THAT(value_reader, IsOk());
   ASSERT_EQ(value_reader->size(), 4);
+}
+
+TEST(GetQueryResultByValue, SuccessTest) {
+  QueryIdToResult result =
+      ParseTextProtoOrDie(R"pb(results {
+                                 key: "test"
+                                 value {
+                                   query_id: "test"
+                                   data {
+                                     fields {
+                                       key: "name0"
+                                       value { string_value: "value0" }
+                                     }
+                                   }
+                                 }
+                               })pb");
+
+  ASSERT_THAT(GetQueryResult(std::move(result), "test"),
+              IsOkAndHolds(EqualsProto(R"pb(query_id: "test"
+                                            data {
+                                              fields {
+                                                key: "name0"
+                                                value { string_value: "value0" }
+                                              }
+                                            }
+              )pb")));
+}
+
+TEST(GetQueryResultByValue, EmptyResult) {
+  ASSERT_THAT(GetQueryResult(QueryIdToResult(), "test"),
+              IsStatusFailedPrecondition());
+}
+
+TEST(GetQueryResultByValue, QueryIdNotPresent) {
+  QueryIdToResult result = ParseTextProtoOrDie(
+      R"pb(results {
+             key: "test"
+             value {
+               query_id: "test"
+               data {
+                 fields {
+                   key: "name0"
+                   value { string_value: "value0" }
+                 }
+               }
+             }
+           })pb");
+  ASSERT_THAT(GetQueryResult(std::move(result), "query_id_not_set"),
+              IsStatusNotFound());
+}
+
+TEST(GetQueryResultByValue, QueryHasErrors) {
+  QueryIdToResult result = ParseTextProtoOrDie(R"pb(
+    results {
+      key: "test"
+      value {
+        query_id: "test"
+        status { errors: "internal error" }
+      }
+    }
+  )pb");
+  ASSERT_THAT(GetQueryResult(std::move(result), "test"), IsStatusInternal());
+}
+
+TEST(QueryResultHasErrors, SuccessTest) {
+  QueryResult result =
+      ParseTextProtoOrDie(R"pb(query_id: "test"
+                               data {
+                                 fields {
+                                   key: "name0"
+                                   value { string_value: "value0" }
+                                 }
+                               })pb");
+  ASSERT_FALSE(QueryResultHasErrors(result));
+}
+
+TEST(QueryResultHasErrors, FailureTest) {
+  QueryResult result =
+      ParseTextProtoOrDie(R"pb(query_id: "test"
+                               status { errors: "internal error" })pb");
+  ASSERT_TRUE(QueryResultHasErrors(result));
+}
+
+TEST(QueryOutputHasErrors, SuccessTest) {
+  QueryIdToResult result =
+      ParseTextProtoOrDie(R"pb(results {
+                                 key: "test1"
+                                 value {
+                                   query_id: "test1"
+                                   data {
+                                     fields {
+                                       key: "name1"
+                                       value { string_value: "value1" }
+                                     }
+                                   }
+                                 }
+                               }
+                               results {
+                                 key: "test0"
+                                 value {
+                                   query_id: "test0"
+                                   data {
+                                     fields {
+                                       key: "name0"
+                                       value { string_value: "value0" }
+                                     }
+                                   }
+                                 }
+                               }
+      )pb");
+  ASSERT_FALSE(QueryOutputHasErrors(result));
+}
+
+TEST(QueryOutputHasErrors, FailureTest) {
+  QueryIdToResult result =
+      ParseTextProtoOrDie(R"pb(results {
+                                 key: "test1"
+                                 value {
+                                   query_id: "test1"
+                                   status { errors: "internal error" }
+                                 }
+                               }
+                               results {
+                                 key: "test0"
+                                 value {
+                                   query_id: "test0"
+                                   data {
+                                     fields {
+                                       key: "name0"
+                                       value { string_value: "value0" }
+                                     }
+                                   }
+                                 }
+                               }
+      )pb");
+  ASSERT_TRUE(QueryOutputHasErrors(result));
+}
+
+TEST(GetQueryDuration, SuccessTest) {
+  ASSERT_THAT(GetQueryDuration(ParseTextProtoOrDie(
+                  R"pb(query_id: "test"
+                       stats {
+                         start_time { seconds: 100 }
+                         end_time { seconds: 200 }
+                       })pb")),
+              IsOkAndHolds(absl::Duration(absl::Seconds(100))));
+}
+
+TEST(GetQueryDuration, TimeStatsMissing) {
+  ASSERT_THAT(GetQueryDuration(ParseTextProtoOrDie(R"pb(query_id: "test")pb")),
+              IsStatusInternal());
+}
+
+TEST(GetQueryDuration, StartTimeMissing) {
+  ASSERT_THAT(GetQueryDuration(ParseTextProtoOrDie(
+                  R"pb(query_id: "test"
+                       stats { end_time { seconds: 200 } })pb")),
+              IsStatusInternal());
+}
+
+TEST(GetQueryDuration, EndTimeMissing) {
+  ASSERT_THAT(GetQueryDuration(ParseTextProtoOrDie(
+                  R"pb(query_id: "test"
+                       stats { start_time { seconds: 100 } })pb")),
+              IsStatusInternal());
+}
+
+TEST(GetQueryDuration, StartTimeAfterEndTime) {
+  ASSERT_THAT(GetQueryDuration(ParseTextProtoOrDie(
+                  R"pb(query_id: "test"
+                       stats {
+                         start_time { seconds: 200 }
+                         end_time { seconds: 100 }
+                       })pb")),
+              IsStatusInternal());
 }
 
 }  // namespace

@@ -18,12 +18,15 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/status/macros.h"
+#include "ecclesia/lib/time/proto.h"
 
 namespace ecclesia {
 
@@ -106,6 +109,57 @@ absl::StatusOr<Identifier> QueryValueReader::GetIdentifier() const {
     return absl::InvalidArgumentError(absl::StrCat("No identifier available."));
   }
   return reader.identifier();
+}
+
+absl::StatusOr<QueryResult> GetQueryResult(QueryIdToResult result,
+                                           absl::string_view query_id) {
+  if (result.results().empty()) {
+    return absl::FailedPreconditionError(
+        absl::StrCat("No results for query_id: ", query_id,
+                     ". The output from the Query Engine is empty."));
+  }
+  auto it = result.mutable_results()->find(query_id);
+  if (it == result.mutable_results()->end()) {
+    return absl::NotFoundError(absl::StrCat(
+        "Query result doesn't contain result for query: ", query_id, "."));
+  }
+
+  if (QueryResult query_result = std::move(it->second);
+      !QueryResultHasErrors(query_result)) {
+    return std::move(query_result);
+  }
+  return absl::InternalError(
+      absl::StrCat("Query result contains errors for query: ", query_id, "."));
+}
+
+bool QueryResultHasErrors(const QueryResult& query_result) {
+  return (query_result.has_status() && !query_result.status().errors().empty());
+}
+
+bool QueryOutputHasErrors(const QueryIdToResult& query_output) {
+  for (const auto& [query_id, query_result] : query_output.results()) {
+    if (QueryResultHasErrors(query_result)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+absl::StatusOr<absl::Duration> GetQueryDuration(
+    const QueryResult& query_result) {
+  if (!query_result.has_stats() || !query_result.stats().has_start_time() ||
+      !query_result.stats().has_end_time()) {
+    return absl::InternalError("Query result has no time statistics.");
+  }
+  absl::Time start_time =
+      AbslTimeFromProtoTime(query_result.stats().start_time());
+  absl::Time end_time = AbslTimeFromProtoTime(query_result.stats().end_time());
+  if (start_time > end_time) {
+    return absl::InternalError(
+        "Query result has invalid time statistics. Start time is after end "
+        "time.");
+  }
+  return end_time - start_time;
 }
 
 }  // namespace ecclesia
