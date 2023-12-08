@@ -4,6 +4,7 @@
     "ChassisType": "RackMount",
     "Id": "root",
     "Name": "sensors",
+    "Model": "sensors",
     "Power": {
         "@odata.id": "/redfish/v1/Chassis/root/Power"
     },
