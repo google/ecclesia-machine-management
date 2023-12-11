@@ -118,6 +118,7 @@ cc_library(
 proto_library(
     name = "query_rules_proto",
     srcs = ["query_rules.proto"],
+    visibility = ["//visibility:public"],
 )
 
 cc_proto_library(

@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package ecclesia;
+
+import "ecclesia/lib/redfish/dellicius/engine/query_rules.proto";
+import "ecclesia/lib/redfish/dellicius/query/query.proto";
+
+message QueryAndRulePath {
+  string query_path = 1;
+  string rule_path = 2;
+}
+
+message QueryAndRule {
+  ecclesia.DelliciusQuery query = 1;
+  ecclesia.QueryRules.RedPathPrefixSetWithQueryParams rule = 2;
+}
+
+message SelectionSpec {
+  message SelectionClass {
+    enum ServerType {
+      SERVER_TYPE_UNSPECIFIED = 0;
+      SERVER_TYPE_BMCWEB = 1;
+
+      reserved 2 to 99;
+    }
+
+    // We recommend setting either server_type or server_tag. If both are set,
+    // AND operation will be applied and the query will execute only on those
+    // nodes that satisfy both the criteria and miss the nodes that satisfy one
+    // or the other.
+    optional ServerType server_type = 1;
+    repeated string server_tag = 2;
+  }
+
+  message QuerySpec {
+    repeated SelectionClass select = 1;
+    oneof query_spec {
+      QueryAndRulePath query_and_rule_path = 2;
+      QueryAndRule query_and_rule = 3;
+    }
+  }
+
+  repeated QuerySpec query_specs = 2;
+}
+
+message QueryEngineFeatures {
+  // Flag to turn on redfish metrics in the Query Result
+  bool enable_redfish_metrics = 1;
+  // Flag to determine the error mode.
+  bool fail_on_first_errors = 2;
+}
+
+enum QueryPattern {
+  PATTERN_UNSPECIFIED = 0;
+  // All queries will be executed in series across all agents
+  PATTERN_SERIAL_ALL = 1;
+  // All queries will be executed in series for an agent, but queries across
+  // agents are exectued in parallel
+  PATTERN_SERIAL_AGENT = 2;
+  // All queries will be executed in parallel across all agents
+  PATTERN_PARALLEL_ALL = 3;
+}
+
+message QueryRouterSpec {
+  // map of query id to selection spec.
+  map<string, SelectionSpec> selection_specs = 1;
+  // Set of feature flags that will be applied to all query engine instances in
+  // the router.
+  QueryEngineFeatures features = 2;
+  // Duration of Timebased cache. Value of 0 signifies NullCache
+  int64 cache_duration_ms = 3;
+  // Pattern for issuing the query to all the query engine instances
+  QueryPattern query_pattern = 4;
+}
