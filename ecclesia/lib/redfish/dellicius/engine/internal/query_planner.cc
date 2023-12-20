@@ -103,6 +103,7 @@ constexpr absl::string_view kRedfishDatetimePlusOffset =
 constexpr absl::string_view kRedfishDatetimeNoOffset = "%Y-%m-%dT%H:%M:%E6S";
 
 using RedPathStep = std::pair<std::string, std::string>;
+using RedPathSteps = std::vector<RedPathStep>;
 using RedPathIterator =
     std::vector<std::pair<std::string, std::string>>::const_iterator;
 
@@ -628,9 +629,12 @@ class SubqueryHandle final {
     parent_subquery_data_set_ = parent_subquery_data_set;
   }
 
-  void SubstituteVariables(const QueryVariables &variables) {
-    std::vector<std::pair<std::string, std::string>> new_redpath_steps;
+  // Substitute variables in the predicates and return fully resolved redpath
+  // steps.
+  std::unique_ptr<RedPathSteps> SubstituteVariables(
+      const QueryVariables &variables) {
     std::vector<std::pair<std::string, std::string>> replacements;
+    replacements.reserve(variables.values_size());
     // Build the list of replacements that will be passed into StrReplaceAll.
     for (const auto &value : variables.values()) {
       if (value.name().empty()) continue;
@@ -639,18 +643,10 @@ class SubqueryHandle final {
       replacements.push_back(std::make_pair(variable_name, value.value()));
     }
 
-    // Get unpopulated RedPath steps from subquery
-    absl::StatusOr<std::vector<RedPathStep>> templated_redpath_steps =
-        RedPathToSteps(subquery_.redpath());
-    if (!templated_redpath_steps.ok()) {
-      DLOG(ERROR) << "RedPathToSteps failed: "
-                  << templated_redpath_steps.status();
-      redpath_steps_ = std::vector<RedPathStep>{};
-      return;
-    }
-
+    auto new_redpath_steps = std::make_unique<RedPathSteps>();
+    new_redpath_steps->reserve(redpath_steps_.size());
     // Go through all of the redpath steps
-    for (const auto &pair : templated_redpath_steps.value()) {
+    for (const auto &pair : redpath_steps_) {
       std::pair<std::string, std::string> new_pair = pair;
       new_pair.second = absl::StrReplaceAll(new_pair.second, replacements);
       // If after the variable replacement there is still an unfilled variable,
@@ -661,12 +657,23 @@ class SubqueryHandle final {
                      << ". Removing predicate step.";
         new_pair.second = InvalidateUnpopulatedVariables(new_pair.second);
       }
-      new_redpath_steps.push_back(new_pair);
+      new_redpath_steps->push_back(std::move(new_pair));
     }
-    redpath_steps_ = new_redpath_steps;
+    return new_redpath_steps;
   }
 
-  RedPathIterator GetRedPathIterator() { return redpath_steps_.begin(); }
+  const RedPathSteps& GetRedPathSteps() const {
+      return redpath_steps_;
+  }
+
+  std::unique_ptr<RedPathSteps> GetRedPathStepsCopy() {
+    auto new_redpath_steps = std::make_unique<RedPathSteps>();
+    new_redpath_steps->reserve(redpath_steps_.size());
+    for (const auto &pair : redpath_steps_) {
+      new_redpath_steps->push_back(pair);
+    }
+    return new_redpath_steps;
+  }
 
   bool IsEndOfRedPath(const RedPathIterator &iter) {
     return (iter != redpath_steps_.end()) &&
@@ -739,6 +746,8 @@ struct RedPathContext {
   // Iterator configured to iterate over RedPath steps - NodeName and
   // Predicate pair - irrelevant for uri_reference_redpath.
   RedPathIterator redpath_steps_iterator;
+  // A resolved RedPath steps with substituted variables.
+  std::shared_ptr<RedPathSteps> redpath_steps;
   // Client callback to send the subquery results
   std::function<bool(const DelliciusQueryResult &result)> callback = nullptr;
 };
@@ -880,6 +889,12 @@ std::vector<RedPathContext> ExecutePredicateFromEachSubquery(
   return filtered_redpath_context;
 }
 
+bool IsEndOfRedPath(const RedPathIterator &iter,
+                    const RedPathSteps &redpath_steps) {
+    return (iter != redpath_steps.end()) &&
+           (next(iter) == redpath_steps.end());
+}
+
 // Populates Query Result for the requested properties for fully resolved
 // RedPath expressions or returns RedPath contexts that have unresolved
 // RedPath steps. When full resolved RedPath contexts have child RedPaths
@@ -901,7 +916,8 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
         subquery_handle->HasUriReferenceRedpath() || subquery_handle->HasUri();
     if (subquery_handle->HasRedPath()) {
       is_end_of_redpath =
-          subquery_handle->IsEndOfRedPath(redpath_ctx.redpath_steps_iterator);
+          IsEndOfRedPath(redpath_ctx.redpath_steps_iterator,
+                        *(redpath_ctx.redpath_steps));
     }
 
     // If there aren't any child subqueries and all step expressions in the
@@ -926,12 +942,15 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
       }
       // We will insert all the RedPath contexts in the list tracked for the
       // new context node.
-      for (auto &child_subquery_handle :
+      for (const auto &child_subquery_handle :
            subquery_handle->GetChildSubqueryHandles()) {
         if (!child_subquery_handle) continue;
+        std::unique_ptr<RedPathSteps> redpath_steps =
+            child_subquery_handle->GetRedPathStepsCopy();
         redpath_ctx_unresolved.push_back(
             {child_subquery_handle, *last_normalized_dataset,
-             child_subquery_handle->GetRedPathIterator(),
+             redpath_steps->begin(),
+             std::move(redpath_steps),
              redpath_ctx.callback});
       }
       continue;
@@ -1415,7 +1434,8 @@ void QueryPlanner::ProcessSubqueries(
   for (auto &subquery_handle : subquery_handles_) {
     // Substitute any variables with their values provided by the query
     // engine.
-    subquery_handle->SubstituteVariables(query_variables);
+    std::unique_ptr<RedPathSteps> redpath_steps =
+        subquery_handle->SubstituteVariables(query_variables);
 
     // Only consider subqueries that have RedPath expressions to execute
     // relative to service root. This step filters out any child subqueries
@@ -1425,10 +1445,12 @@ void QueryPlanner::ProcessSubqueries(
     // A context node can usually have multiple RedPath expressions mapped.
     // Let's instantiate the RedPathContext list with the one RedPath in the
     // subquery.
-    RedPathIterator path_iter = subquery_handle->GetRedPathIterator();
+    RedPathIterator path_iter = redpath_steps->begin();
 
     std::vector<RedPathContext> redpath_ctx_multiple = {
-        {subquery_handle.get(), nullptr, path_iter, callback}};
+        {subquery_handle.get(), nullptr, path_iter, std::move(redpath_steps),
+         callback}};
+
     if (subquery_handle->HasRedPath() && path_iter->first.empty()) {
       // A special case where properties need to be queried from service root
       // itself.
