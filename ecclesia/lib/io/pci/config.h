@@ -52,6 +52,7 @@
 #include <iterator>
 #include <type_traits>
 
+#include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -161,8 +162,6 @@ class PciCapability {
   }
 
  private:
-  friend class PciCapabilityIterator;
-
   PciRegion *region_;
   uint8_t offset_;
 };
@@ -237,80 +236,6 @@ class PciExpressCapability : public PciCapability {
 };
 static_assert(std::is_trivially_destructible_v<PciExpressCapability>);
 
-// Provides an iterator implementation that allows capabilities to be iterated
-// over using standard C++ algorithms. The actual value stored in the iterator
-// is a copy of the capability object itself.
-//
-// When the iterator is default-constructed, it will point at a capability
-// referencing a null region. This default-constructed iterator is also used as
-// the "end" iterator. It is invalid to deference or advance these values.
-class PciCapabilityIterator {
- public:
-  // Standard iterator type traits.
-  using value_type = PciCapability;
-  using difference_type = std::ptrdiff_t;
-  using pointer = value_type *;
-  using reference = value_type &;
-  using iterator_category = std::input_iterator_tag;
-
-  PciCapabilityIterator() : capability_(nullptr, 0) {}
-  explicit PciCapabilityIterator(PciCapability capability)
-      : capability_(capability) {}
-
-  // Default copy and assignment operators should work.
-  PciCapabilityIterator(const PciCapabilityIterator &) = default;
-  PciCapabilityIterator &operator=(const PciCapabilityIterator &) = default;
-
-  // Comparisons are implemented by checking if two capabilities are the same.
-  //
-  // Note that if you construct two different PciRegion objects that both refer
-  // to the same physical device, their capability objects will not be
-  // considered to be equal or equivalent. There's no practical method to check
-  // if the actual underlying memory regions are "the same".
-  bool operator==(const PciCapabilityIterator &other) const {
-    return capability_.region_ == other.capability_.region_ &&
-           capability_.offset_ == other.capability_.offset_;
-  }
-  bool operator!=(const PciCapabilityIterator &other) const {
-    return !(*this == other);
-  }
-
-  // Incrementing the iterator replaces PciCapability with NextCapability. If
-  // getting the next capability fails then we become the default (end) value.
-  PciCapabilityIterator &operator++() {
-    absl::StatusOr<PciCapability> next_cap = capability_.NextCapability();
-    if (next_cap.ok()) {
-      capability_ = *next_cap;
-    } else {
-      *this = PciCapabilityIterator();
-    }
-    return *this;
-  }
-  PciCapabilityIterator operator++(int) {
-    PciCapabilityIterator current = *this;
-    ++(*this);
-    return current;
-  }
-
-  // Dereferencing the iterator gives you the capability.
-  reference operator*() { return capability_; }
-  pointer operator->() { return &capability_; }
-
- private:
-  PciCapability capability_;
-};
-
-// Define begin and end functions for the capability iterator. This allows the
-// capabilities to be used in generic code. We define begin(iter) to return iter
-// and end(iter) to return the default iterator, so that given an iterator
-// object you can iterate from it to the end of the capability list.
-inline PciCapabilityIterator begin(const PciCapabilityIterator &iter) noexcept {
-  return iter;
-}
-inline PciCapabilityIterator end(const PciCapabilityIterator &iter) noexcept {
-  return PciCapabilityIterator();
-}
-
 // An object for reading and writing information from config space. It requires
 // a low-level interface for actually doing raw reads and writes.
 class PciConfigSpace {
@@ -332,6 +257,11 @@ class PciConfigSpace {
   static constexpr uint8_t kCapPointerOffset = 0x34;
   static constexpr uint8_t kInterruptLineOffset = 0x3c;
   static constexpr uint8_t kInterruptPinOffset = 0x3d;
+  // PCI spec defines the Configuration Space as 256 bytes, with 64 bytes
+  // dedicated to the header and another 192 bytes available for a list of
+  // capabilities. Each capability is 32-bit aligned, implying a max of
+  // 192 / 4 = 48 possible capabilities.
+  static constexpr uint8_t kMaxPciCapabilities = 48;
 
   // Construct a config space provided by the underlying memory region.
   explicit PciConfigSpace(PciRegion *region) : region_(region) {}
@@ -350,8 +280,9 @@ class PciConfigSpace {
   // Read the header type of the config space.
   absl::StatusOr<uint8_t> HeaderType() const;
 
-  // Return an iterator over the device capabilities.
-  PciCapabilityIterator Capabilities() const;
+  // Perform callback on each defined device capability.
+  absl::Status ForEachCapability(
+      absl::FunctionRef<absl::Status(const PciCapability &)> callback) const;
 
   // Check if this config space matches the given header type, and construct and
   // return an instance if it does. Otherwise returns a not-OK status.

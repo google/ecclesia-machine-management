@@ -17,11 +17,12 @@
 #include "ecclesia/lib/io/pci/config.h"
 
 #include <cstdint>
-#include <string>
-#include <utility>
 
+#include "absl/container/flat_hash_set.h"
+#include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/codec/bits.h"
 #include "ecclesia/lib/io/pci/location.h"
@@ -211,12 +212,43 @@ absl::StatusOr<uint8_t> PciConfigSpace::HeaderType() const {
   return ExtractBits(header_type, BitRange(6, 0));
 }
 
-PciCapabilityIterator PciConfigSpace::Capabilities() const {
-  auto maybe_ptr = region_->Read8(kCapPointerOffset);
-  if (!maybe_ptr.ok()) return PciCapabilityIterator();
-  uint8_t ptr = CapabilityPointerToOffset(*maybe_ptr);
-  if (ptr == 0) return PciCapabilityIterator();
-  return PciCapabilityIterator(PciCapability(region_, ptr));
+absl::Status PciConfigSpace::ForEachCapability(
+    absl::FunctionRef<absl::Status(const PciCapability &)> callback) const {
+  ECCLESIA_ASSIGN_OR_RETURN(uint8_t next_ptr,
+                            region_->Read8(kCapPointerOffset));
+
+  // Because PCI capabilities are implemented as a linked list, we track each
+  // requested offset to guard against a circular linked list in the event of a
+  // malformed device response.
+  absl::flat_hash_set<uint8_t> visited_offsets;
+
+  uint8_t cap_ptr;
+  while (cap_ptr = CapabilityPointerToOffset(next_ptr), cap_ptr != 0) {
+    // If we're still reading capabilities after the max num of possible
+    // capabilities has been read, assume the PCI Config Space is malformed,
+    // stop iterating further capabilities, and return an error.
+    if (visited_offsets.size() == kMaxPciCapabilities) {
+      return absl::InternalError(absl::StrFormat(
+          "Reached maximum of %d PCI capabilities for this PCI region. Any "
+          "remaining capabilities will not be read.",
+          PciConfigSpace::kMaxPciCapabilities));
+    }
+
+    // Only continue if we have not already visited this offset.
+    auto [_, inserted] = visited_offsets.insert(cap_ptr);
+    if (!inserted) {
+      return absl::InternalError(absl::StrFormat(
+          "Circular linked list detected for PCI capabilities. Visited offset "
+          "%i twice. Stopping further iteration of the list.",
+          cap_ptr));
+    }
+
+    PciCapability capability(region_, cap_ptr);
+    ECCLESIA_RETURN_IF_ERROR(callback(capability));
+    ECCLESIA_ASSIGN_OR_RETURN(next_ptr, capability.NextCapabilityPointer());
+  }
+
+  return absl::OkStatus();
 }
 
 absl::StatusOr<PciSubsystemSignature> PciConfigSpace::SubsystemSignature(
@@ -229,9 +261,8 @@ absl::StatusOr<PciSubsystemSignature> PciConfigSpace::SubsystemSignature(
 
 absl::StatusOr<PciSubsystemSignature> PciConfigSpace::SubsystemSignature()
     const {
-  absl::StatusOr<uint8_t> header_type = HeaderType();
-  if (!header_type.ok()) return header_type.status();
-  return SubsystemSignature(*header_type);
+  ECCLESIA_ASSIGN_OR_RETURN(uint8_t header_type, HeaderType());
+  return SubsystemSignature(header_type);
 }
 
 absl::StatusOr<PciSubsystemSignature>
@@ -256,12 +287,16 @@ absl::StatusOr<PciBusNum> PciType1ConfigSpace::SubordinateBusNum() const {
 absl::StatusOr<PciSubsystemSignature>
 PciType1ConfigSpace::SubsystemSignatureImpl() const {
   // For bridge types we need to look for a subsystem capability.
-  for (const PciCapability &capability : Capabilities()) {
-    auto maybe_subsys_cap = capability.GetIf<PciSubsystemCapability>();
-    if (!maybe_subsys_cap.ok()) continue;
-    return maybe_subsys_cap->SubsystemSignature();
-  }
-  return absl::UnimplementedError("no subsystem capability found on bridge");
+  absl::StatusOr<PciSubsystemSignature> subsys_sig =
+      absl::UnimplementedError("no subsystem capability found on bridge");
+  ECCLESIA_RETURN_IF_ERROR(ForEachCapability(
+      [&subsys_sig](const PciCapability &cap) -> absl::Status {
+        ECCLESIA_ASSIGN_OR_RETURN(PciSubsystemCapability subsys_cap,
+                                  cap.GetIf<PciSubsystemCapability>());
+        subsys_sig = subsys_cap.SubsystemSignature();
+        return absl::OkStatus();
+      }));
+  return subsys_sig;
 }
 
 }  // namespace ecclesia
