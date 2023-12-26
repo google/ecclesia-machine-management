@@ -77,7 +77,7 @@ int RealMain(int argc, char* argv[]) {
       std::move(transport), std::move(cache), RedfishInterface::kTrusted);
 
   if (!intf || !intf->GetRoot().status().ok()) {
-    std::cerr << "Failed to connect to backend" << std::endl;
+    std::cerr << "Failed to connect to backend" << '\n';
     return -1;
   }
 
