@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner_devpath.h"
 
 #include <string>
+#include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

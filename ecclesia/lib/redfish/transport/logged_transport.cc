@@ -19,6 +19,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <variant>
 
 #include "absl/functional/any_invocable.h"
 #include "absl/log/check.h"

@@ -28,6 +28,7 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include "absl/base/macros.h"
 #include "absl/log/check.h"

@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/manager.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 

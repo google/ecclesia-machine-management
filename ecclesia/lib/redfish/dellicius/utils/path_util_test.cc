@@ -17,6 +17,8 @@
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

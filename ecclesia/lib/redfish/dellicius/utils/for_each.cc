@@ -16,6 +16,8 @@
 
 #include "ecclesia/lib/redfish/dellicius/utils/for_each.h"
 
+#include <vector>
+
 #include "absl/functional/any_invocable.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 

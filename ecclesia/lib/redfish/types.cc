@@ -17,6 +17,8 @@
 #include "ecclesia/lib/redfish/types.h"
 
 #include <optional>
+#include <string>
+#include <vector>
 
 #include "absl/strings/str_split.h"
 #include "absl/strings/strip.h"

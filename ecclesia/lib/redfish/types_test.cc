@@ -17,6 +17,8 @@
 #include "ecclesia/lib/redfish/types.h"
 
 #include <memory>
+#include <optional>
+#include <string>
 
 #include "gtest/gtest.h"
 #include "ecclesia/lib/file/test_filesystem.h"

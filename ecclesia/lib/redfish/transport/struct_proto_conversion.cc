@@ -16,6 +16,8 @@
 
 #include "ecclesia/lib/redfish/transport/struct_proto_conversion.h"
 
+#include <string>
+
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {

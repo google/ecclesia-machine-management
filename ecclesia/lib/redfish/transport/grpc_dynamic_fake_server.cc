@@ -33,8 +33,6 @@
 
 namespace ecclesia {
 
-using ::redfish::v1::Request;
-
 FakeServerWriteReactor::FakeServerWriteReactor(FakeServerStreamConfig config)
     : config_(std::move(config)) {
   fake_event_.set_octet_stream("Random data");

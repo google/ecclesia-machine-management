@@ -50,7 +50,7 @@ std::optional<std::string> GetDevpathForUri(const NodeTopology &topology,
 absl::StatusOr<std::string> GetFirstUriForDevpath(const NodeTopology &topology,
                                                   absl::string_view devpath) {
   auto it = topology.devpath_to_node_map.find(devpath);
-  if (it == topology.devpath_to_node_map.end() || !it->second ||
+  if (it == topology.devpath_to_node_map.end() || (it->second == nullptr) ||
       it->second->associated_uris.empty()) {
     return absl::NotFoundError(
         absl::StrCat("Unable to find a uri for devpath ", devpath));
