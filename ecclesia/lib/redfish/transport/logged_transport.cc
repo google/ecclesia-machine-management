@@ -31,6 +31,7 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/utils.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 namespace {

@@ -89,6 +89,7 @@ cc_library(
         "@com_google_googleapis//google/rpc:code_cc_proto",
         "@com_google_googleapis//google/rpc:status_cc_proto",
         "@com_googlesource_code_re2//:re2",
+        "@com_json//:json",
     ],
 )
 

@@ -23,11 +23,11 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <variant>
 
 #include "google/protobuf/struct.pb.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -45,11 +45,15 @@
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/status/rpc.h"
 #include "ecclesia/lib/time/clock.h"
+#include "grpc/grpc_security_constants.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
+#include "grpcpp/security/auth_context.h"
 #include "grpcpp/security/credentials.h"
 #include "grpcpp/support/client_callback.h"
+#include "grpcpp/support/config.h"
 #include "grpcpp/support/status.h"
+#include "grpcpp/support/string_ref.h"
 #include "single_include/nlohmann/json.hpp"
 #include "google/protobuf/util/json_util.h"
 
@@ -67,7 +71,7 @@ constexpr absl::string_view kHostHeader = "Host";
 
 template <typename RpcFunc>
 absl::StatusOr<RedfishTransport::Result> DoRpc(
-    absl::string_view path, std::optional<std::string_view> json_str,
+    absl::string_view path, std::optional<absl::string_view> json_str,
     absl::string_view target_fqdn, GrpcTransportParams params, RpcFunc rpc) {
   redfish::v1::Request request;
   // This header is used when authorizing peers without trust bundle.
@@ -84,7 +88,8 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
     *request.mutable_json() = request_body;
   }
   grpc::ClientContext context;
-  context.set_deadline(ToChronoTime(params.clock->Now() + params.timeout));
+  context.set_deadline(
+      absl::ToChronoTime(params.clock->Now() + params.timeout));
 
   ::redfish::v1::Response response;
   if (grpc::Status status = rpc(context, request, &response); !status.ok()) {
@@ -100,7 +105,7 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
     ret_result.body =
         nlohmann::json::parse(response.json_str(), nullptr, false);
   }
-  ret_result.code = response.code();
+  ret_result.code = static_cast<int>(response.code());
   ret_result.headers = absl::flat_hash_map<std::string, std::string>(
       response.headers().begin(), response.headers().end());
   return ret_result;
@@ -232,10 +237,10 @@ class GrpcRedfishTransport : public RedfishTransport {
                        const GrpcTransportParams &params,
                        const std::shared_ptr<grpc::Channel> &channel)
       : client_(GrpcRedfishV1::NewStub(channel)),
-        params_(std::move(params)),
+        params_(params),
         fqdn_(EndpointToFqdn(endpoint)) {}
 
-  GrpcRedfishTransport(absl::string_view endpoint)
+  explicit GrpcRedfishTransport(absl::string_view endpoint)
       : client_(GrpcRedfishV1::NewStub(grpc::CreateChannel(
             std::string(endpoint), grpc::InsecureChannelCredentials()))),
         params_({}),
@@ -339,12 +344,12 @@ absl::Status ValidateEndpoint(absl::string_view endpoint) {
     return absl::OkStatus();
   } else {
     size_t pos = endpoint.find_last_of(':');
-    if (pos == endpoint.npos || pos + 1 == endpoint.size()) {
+    if (pos == absl::string_view::npos || pos + 1 == endpoint.size()) {
       return absl::InvalidArgumentError(
           absl::StrCat("bad endpoint: ", endpoint, " ;missing port in a dns"));
     }
     for (size_t i = pos + 1; i < endpoint.size(); ++i) {
-      if (!std::isdigit(endpoint[i])) {
+      if (std::isdigit(endpoint[i]) == 0) {
         return absl::InvalidArgumentError(absl::StrCat(
             "bad endpoint: ", endpoint, " ;port should be an integer"));
       }
@@ -363,7 +368,7 @@ absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
   std::optional<absl::Duration> timeout = params.wait_for_connected_timeout;
   if (timeout.has_value()) {
     std::chrono::system_clock::time_point deadline =
-        ToChronoTime(params.clock->Now() + *timeout);
+        absl::ToChronoTime(params.clock->Now() + *timeout);
     if (!channel->WaitForConnected(deadline)) {
       return absl::DeadlineExceededError(
           absl::StrCat("Channel did not become healthy within ",

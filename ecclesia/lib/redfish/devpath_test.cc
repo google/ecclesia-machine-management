@@ -19,7 +19,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -133,8 +132,8 @@ TEST(GetSensorDevpathFromNodeTopology, RelatedItemDevpath) {
   ASSERT_NE(json, nullptr);
 
   NodeTopology topology;
-  absl::string_view uri = "/redfish/v1/System/system/Processors/0",
-                    test_devpath = "/phys/test";
+  absl::string_view uri = "/redfish/v1/System/system/Processors/0";
+  absl::string_view test_devpath = "/phys/test";
   {
     auto node = std::make_unique<Node>();
     node->local_devpath = test_devpath;
@@ -160,8 +159,8 @@ TEST(GetSensorDevpathFromNodeTopology, RelatedItemNoDevpath) {
   ASSERT_NE(json, nullptr);
 
   NodeTopology topology;
-  absl::string_view uri = "/redfish/v1/Chassis/chassis/Sensors/sensor",
-                    test_devpath = "/phys/test";
+  absl::string_view uri = "/redfish/v1/Chassis/chassis/Sensors/sensor";
+  absl::string_view test_devpath = "/phys/test";
   {
     auto node = std::make_unique<Node>();
     node->local_devpath = test_devpath;
@@ -190,8 +189,8 @@ TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemUsingSensor) {
   ASSERT_NE(json, nullptr);
 
   NodeTopology topology;
-  absl::string_view uri = "/redfish/v1/Chassis/chassis/Sensors/sensor",
-                    test_devpath = "/phys/test";
+  absl::string_view uri = "/redfish/v1/Chassis/chassis/Sensors/sensor";
+  absl::string_view test_devpath = "/phys/test";
   {
     auto node = std::make_unique<Node>();
     node->local_devpath = test_devpath;
@@ -220,8 +219,8 @@ TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemUsingChassisDevpath) {
   ASSERT_NE(json, nullptr);
 
   NodeTopology topology;
-  absl::string_view uri = "/redfish/v1/Chassis/chassis",
-                    test_devpath = "/phys/test";
+  absl::string_view uri = "/redfish/v1/Chassis/chassis";
+  absl::string_view test_devpath = "/phys/test";
   {
     auto node = std::make_unique<Node>();
     node->local_devpath = test_devpath;
@@ -252,8 +251,8 @@ TEST(GetSensorDevpathFromNodeTopology, SensorChassisPrefixInvalid) {
   ASSERT_NE(json, nullptr);
 
   NodeTopology topology;
-  absl::string_view uri = "/redfish/v1/Systems/system",
-                    test_devpath = "/phys/test";
+  absl::string_view uri = "/redfish/v1/Systems/system";
+  absl::string_view test_devpath = "/phys/test";
   {
     auto node = std::make_unique<Node>();
     node->local_devpath = test_devpath;
@@ -281,8 +280,8 @@ TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemSensorChassisDevpaths) {
   ASSERT_NE(json, nullptr);
 
   NodeTopology topology;
-  absl::string_view uri = "/redfish/v1/Chassis/none_of_them",
-                    test_devpath = "/phys/test";
+  absl::string_view uri = "/redfish/v1/Chassis/none_of_them";
+  absl::string_view test_devpath = "/phys/test";
   {
     auto node = std::make_unique<Node>();
     node->local_devpath = test_devpath;
@@ -318,8 +317,8 @@ TEST(GetManagerDevpathFromNodeTopology, DevpathByManagerInChassisLink) {
   ASSERT_NE(json, nullptr);
 
   NodeTopology topology;
-  absl::string_view uri = "/redfish/v1/Chassis/child0",
-                    test_devpath = "/phys/test";
+  absl::string_view uri = "/redfish/v1/Chassis/child0";
+  absl::string_view test_devpath = "/phys/test";
   {
     auto node = std::make_unique<Node>();
     node->local_devpath = test_devpath;
@@ -354,8 +353,8 @@ TEST(GetManagerDevpathFromNodeTopology, DevpathByFallbackPath) {
   auto json = intf->GetRoot().AsObject();
   ASSERT_NE(json, nullptr);
   NodeTopology topology;
-  absl::string_view uri = "/redfish/v1/Managers/bmc",
-                    test_devpath = "/phys/test_bmc";
+  absl::string_view uri = "/redfish/v1/Managers/bmc";
+  absl::string_view test_devpath = "/phys/test_bmc";
   {
     auto node = std::make_unique<Node>();
     node->local_devpath = test_devpath;
@@ -417,8 +416,8 @@ TEST(GetSlotDevpathFromNodeTopology, DevpathFromNodeLocation) {
   ASSERT_NE(json, nullptr);
 
   NodeTopology topology;
-  absl::string_view uri = "test/redfish/v1/Chassis/test",
-                    test_devpath = "/phys";
+  absl::string_view uri = "test/redfish/v1/Chassis/test";
+  absl::string_view test_devpath = "/phys";
   {
     auto node = std::make_unique<Node>();
     node->local_devpath = test_devpath;
@@ -426,9 +425,9 @@ TEST(GetSlotDevpathFromNodeTopology, DevpathFromNodeLocation) {
     topology.nodes.push_back(std::move(node));
   }
 
-  std::string_view parent_uri =
-                       "test/redfish/v1/Chassis/test/Drives/SataDrive_0",
-                   expect_devpath = "/phys:connector:SATA";
+  absl::string_view parent_uri =
+      "test/redfish/v1/Chassis/test/Drives/SataDrive_0";
+  absl::string_view expect_devpath = "/phys:connector:SATA";
   std::optional<std::string> slot_devpath =
       GetSlotDevpathFromNodeTopology(*json, parent_uri, topology);
   ASSERT_TRUE(slot_devpath.has_value());
@@ -452,8 +451,8 @@ TEST(GetSlotDevpathFromNodeTopology, DevpathFromNodePhysicalLocation) {
   ASSERT_NE(json, nullptr);
 
   NodeTopology topology;
-  absl::string_view uri = "test/redfish/v1/Chassis/test",
-                    test_devpath = "/phys";
+  absl::string_view uri = "test/redfish/v1/Chassis/test";
+  absl::string_view test_devpath = "/phys";
   {
     auto node = std::make_unique<Node>();
     node->local_devpath = test_devpath;
@@ -461,9 +460,9 @@ TEST(GetSlotDevpathFromNodeTopology, DevpathFromNodePhysicalLocation) {
     topology.nodes.push_back(std::move(node));
   }
 
-  std::string_view parent_uri =
-                       "test/redfish/v1/Chassis/test/Drives/SataDrive_0",
-                   expect_devpath = "/phys:connector:SATA";
+  absl::string_view parent_uri =
+      "test/redfish/v1/Chassis/test/Drives/SataDrive_0";
+  absl::string_view expect_devpath = "/phys:connector:SATA";
   std::optional<std::string> slot_devpath =
       GetSlotDevpathFromNodeTopology(*json, parent_uri, topology);
   ASSERT_TRUE(slot_devpath.has_value());
@@ -496,7 +495,7 @@ TEST(GetSlotDevpathFromNodeTopology, NumberOfParentUriSizeCanEqualToFive) {
     topology.nodes.push_back(std::move(node));
   }
 
-  std::string_view parent_uri = "test/redfish/v1/Chassis/Tray0_SATA0";
+  absl::string_view parent_uri = "test/redfish/v1/Chassis/Tray0_SATA0";
   absl::string_view expect_devpath = "/phys/PCIE0:connector:SATA";
   std::optional<std::string> slot_devpath =
       GetSlotDevpathFromNodeTopology(*json, parent_uri, topology);

@@ -26,7 +26,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -63,6 +62,7 @@
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/proto.h"
+#include "single_include/nlohmann/json.hpp"
 #include "re2/re2.h"
 
 namespace ecclesia {
@@ -172,7 +172,8 @@ absl::StatusOr<std::vector<RedPathStep>> RedPathToSteps(
 
   for (absl::string_view step_expression :
        absl::StrSplit(redpath, '/', absl::SkipEmpty())) {
-    std::string node_name, predicate;
+    std::string node_name;
+    std::string predicate;
     if (!RE2::FullMatch(step_expression, *kLocationStepRegex, &node_name,
                         &predicate) ||
         node_name.empty()) {
@@ -198,7 +199,8 @@ bool IsInExpandPath(absl::string_view child_redpath,
       absl::StrSplit(diff, '/', absl::SkipEmpty());
   // Now count the possible expand levels in the diff expresion.
   for (absl::string_view step_expression : step_expressions) {
-    std::string node_name, predicate;
+    std::string node_name;
+    std::string predicate;
     if (RE2::FullMatch(step_expression, *kLocationStepRegex, &node_name,
                        &predicate)) {
       if (!node_name.empty()) {
@@ -469,7 +471,7 @@ bool ApplyPredicateRule(const RedfishObject &redfish_object, size_t node_index,
   bool is_filter_success = true;
   std::vector<absl::string_view> expressions =
       SplitExprByDelimiterWithEscape(predicate, " ", '\\');
-  for (std::string_view expr : expressions) {
+  for (absl::string_view expr : expressions) {
     // If expression is a logical operator, capture it and move to next
     // expression
     if (expr == kLogicalOperatorAnd || expr == kLogicalOperatorOr) {
@@ -877,7 +879,7 @@ std::vector<RedPathContext> ExecutePredicateFromEachSubquery(
     size_t node_set_size) {
   std::vector<RedPathContext> filtered_redpath_context;
   for (const auto &redpath_ctx : redpath_ctx_multiple) {
-    if (!redpath_ctx.subquery_handle) {
+    if (redpath_ctx.subquery_handle == nullptr) {
       continue;
     }
     if (!ApplyPredicateRule(redfish_object, node_index, node_set_size,
@@ -944,7 +946,7 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
       // new context node.
       for (const auto &child_subquery_handle :
            subquery_handle->GetChildSubqueryHandles()) {
-        if (!child_subquery_handle) continue;
+        if (child_subquery_handle == nullptr) continue;
         std::unique_ptr<RedPathSteps> redpath_steps =
             child_subquery_handle->GetRedPathStepsCopy();
         redpath_ctx_unresolved.push_back(
@@ -1101,7 +1103,7 @@ void PopulateRawData(std::optional<RedfishTransport::bytes> raw_data,
     // Otherwise, add the raw data to the query result.
     const auto subquery_id = subquery_handle->GetSubqueryId();
     SubqueryOutput *subquery_output = nullptr;
-    if (!redpath_ctx.root_redpath_dataset) {
+    if (redpath_ctx.root_redpath_dataset == nullptr) {
       subquery_output =
         &(*result.mutable_subquery_output_by_id())[subquery_id];
     } else {
@@ -1214,7 +1216,7 @@ void ExecuteRedPathStepFromEachSubquery(
     }
 
     // Add the last executed RedPath to the record.
-    if (tracker) {
+    if (tracker != nullptr) {
       tracker->redpaths_queried.insert(
           {redpath_to_execute, get_params_for_redpath});
     }
@@ -1324,7 +1326,7 @@ void ExecuteRedPathStepFromEachSubquery(
     // going to execute '[*]' predicate expression as we iterate over each
     // member in collection to test predicate filters.
     absl::StrAppend(&redpath_to_execute, "[", kPredicateSelectAll, "]");
-    if (tracker) {
+    if (tracker != nullptr) {
       tracker->redpaths_queried.insert({redpath_to_execute, redpath_params});
     }
     node_count = node_as_iterable->Size();
@@ -1380,7 +1382,7 @@ absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
   // Insert normalized data in the parent Subquery dataset if provided.
   // Otherwise, add the dataset in the query result.
   SubqueryOutput *subquery_output = nullptr;
-  if (!parent_subquery_dataset) {
+  if (parent_subquery_dataset == nullptr) {
     subquery_output =
         &(*result.mutable_subquery_output_by_id())[subquery_.subquery_id()];
   } else {
@@ -1555,7 +1557,7 @@ RedfishVariant QueryPlanner::FetchUri(absl::string_view uri,
   RedfishVariant node_set_as_variant =
       ecclesia::FetchUri(redfish_interface_, uri, get_params_for_redpath);
   // Add the last executed uri to the record.
-  if (tracker) {
+  if (tracker != nullptr) {
     tracker->redpaths_queried.insert(
         {std::string(uri), get_params_for_redpath});
   }

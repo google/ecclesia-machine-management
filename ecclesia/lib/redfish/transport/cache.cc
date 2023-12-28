@@ -29,7 +29,7 @@ namespace ecclesia {
 
 RedfishCachedGetterInterface::OperationResult NullCache::CachedGetInternal(
     absl::string_view path) {
-  // Report uncached call as this is nullcache
+  // Report uncached call as this is null cache
   return {.result = transport_->Get(path), .is_fresh = true};
 }
 

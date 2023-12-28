@@ -18,14 +18,16 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <iterator>
 #include <string>
-#include <string_view>
+
+#include "absl/strings/string_view.h"
 
 namespace ecclesia {
 
 namespace {
-constexpr std::array<std::string_view,
+constexpr std::array<absl::string_view,
                      static_cast<size_t>(ResourceEntity::kUndefined) + 1>
     kEntityNames = {
         // go/keep-sorted start
@@ -247,7 +249,7 @@ constexpr std::array<std::string_view,
         "Undefined",
 };
 
-constexpr std::array<std::string_view, 7> kOperationNames = {
+constexpr std::array<absl::string_view, 7> kOperationNames = {
     "DELETE", "GET", "HEAD", "PATCH", "POST", "PUT", "Undefined"};
 
 }  // namespace
@@ -266,16 +268,16 @@ std::string OperationToString(Operation operation) {
   return std::string(kOperationNames[static_cast<int>(operation)]);
 }
 
-ResourceEntity StringToResourceEntity(std::string_view resource) {
-  auto it = std::lower_bound(kEntityNames.cbegin(),
-                             std::prev(kEntityNames.cend()), resource);
+ResourceEntity StringToResourceEntity(absl::string_view resource) {
+  const auto *it = std::lower_bound(kEntityNames.cbegin(),
+                                    std::prev(kEntityNames.cend()), resource);
   if (it == std::prev(kEntityNames.cend()) || *it != resource) {
     return ResourceEntity::kUndefined;
   }
   return static_cast<ResourceEntity>(std::distance(kEntityNames.cbegin(), it));
 }
 
-Operation StringToOperation(std::string_view operation) {
+Operation StringToOperation(absl::string_view operation) {
   if (operation == "DELETE") {
     return Operation::kDelete;
   }

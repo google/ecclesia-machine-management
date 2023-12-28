@@ -140,6 +140,7 @@ cc_library(
     srcs = ["authorizer_enums.cc"],
     hdrs = ["authorizer_enums.h"],
     visibility = ["//visibility:public"],
+    deps = ["@com_google_absl//absl/strings"],
 )
 
 cc_test(
@@ -464,6 +465,7 @@ cc_library(
         ":utils",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_json//:json",
     ],

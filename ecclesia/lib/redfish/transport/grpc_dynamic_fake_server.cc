@@ -16,7 +16,6 @@
 
 #include "ecclesia/lib/redfish/transport/grpc_dynamic_fake_server.h"
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <utility>

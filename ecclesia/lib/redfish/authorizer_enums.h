@@ -17,8 +17,10 @@
 #ifndef ECCLESIA_LIB_REDFISH_AUTHORIZER_ENUMS_H_
 #define ECCLESIA_LIB_REDFISH_AUTHORIZER_ENUMS_H_
 
+#include <cstdint>
 #include <string>
-#include <string_view>
+
+#include "absl/strings/string_view.h"
 
 namespace ecclesia {
 
@@ -242,7 +244,7 @@ enum class ResourceEntity : int {
   kUndefined,
 };
 
-enum class Operation : int {
+enum class Operation : uint8_t {
   kDelete = 0,
   kGet,
   kHead,
@@ -259,10 +261,10 @@ std::string ResourceEntityToString(ResourceEntity entity);
 std::string OperationToString(Operation operation);
 
 // Returns the resource entity of the given string.
-ResourceEntity StringToResourceEntity(std::string_view resource);
+ResourceEntity StringToResourceEntity(absl::string_view resource);
 
 // Returns the operation of the given string.
-Operation StringToOperation(std::string_view operation);
+Operation StringToOperation(absl::string_view operation);
 
 }  // namespace ecclesia
 
