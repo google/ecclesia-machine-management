@@ -138,6 +138,12 @@ CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
   return ::curl_easy_setopt(curl, option, param);
 }
 
+CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
+                          size_t (*param)(char *, size_t, size_t,
+                                          void *)) {
+  return ::curl_easy_setopt(curl, option, param);
+}
+
 CURLcode LibCurlProxy::curl_easy_setopt(
     CURL *curl, CURLoption option,
     int (*param)(void *clientp, curl_off_t dltotal, curl_off_t dlnow,
@@ -192,6 +198,15 @@ CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH *share, CURLSHoption option,
                                            void (*param)(CURL *, curl_lock_data,
                                                          void *)) {
   return ::curl_share_setopt(share, option, param);
+}
+
+void LibCurlProxy::curl_slist_free_all(struct curl_slist *list) {
+  return ::curl_slist_free_all(list);
+}
+
+struct curl_slist *LibCurlProxy::curl_slist_append(struct curl_slist *list,
+                                                   const char *data) {
+  return ::curl_slist_append(list, data);
 }
 
 CurlHttpClient::CurlHttpClient(std::unique_ptr<LibCurl> libcurl,

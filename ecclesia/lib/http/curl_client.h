@@ -68,6 +68,9 @@ class LibCurl {
   virtual CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
                                     size_t (*param)(const void *, size_t,
                                                     size_t, void *)) = 0;
+  virtual CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
+                                    size_t (*param)(char *, size_t, size_t,
+                                                    void *)) = 0;
 
   virtual CURLcode curl_easy_setopt(
       CURL *curl, CURLoption option,
@@ -99,6 +102,11 @@ class LibCurl {
   virtual CURLSHcode curl_share_setopt(CURLSH *share, CURLSHoption option,
                                        void (*param)(CURL *, curl_lock_data,
                                                      void *)) = 0;
+
+  virtual void curl_slist_free_all(struct curl_slist *list) = 0;
+
+  virtual struct curl_slist *curl_slist_append(struct curl_slist *list,
+                                        const char *data) = 0;
 };
 
 class LibCurlProxy : public LibCurl {
@@ -140,6 +148,9 @@ class LibCurlProxy : public LibCurl {
                             int (*param)(void *clientp, curl_off_t dltotal,
                                          curl_off_t dlnow, curl_off_t ultotal,
                                          curl_off_t ulnow)) override;
+  CURLcode curl_easy_setopt(CURL *curl, CURLoption option,
+                            size_t (*param)(char *, size_t, size_t,
+                                            void *)) override;
 
   CURLcode curl_easy_perform(CURL *curl) override;
 
@@ -167,6 +178,11 @@ class LibCurlProxy : public LibCurl {
   CURLSHcode curl_share_setopt(CURLSH *share, CURLSHoption option,
                                void (*param)(CURL *, curl_lock_data,
                                              void *)) override;
+
+  void curl_slist_free_all(struct curl_slist *list) override;
+
+  struct curl_slist *curl_slist_append(struct curl_slist *list,
+                                        const char *data) override;
 };
 
 // The cURL client is NOT threadsafe as the underlying curl operations modify
