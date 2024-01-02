@@ -487,7 +487,10 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
       if (status_object != nullptr &&
           status_object->GetNodeValue<PropertyState>().value_or("") ==
               kRfPropertyAbsent) {
-        LOG(INFO) << *current_uri
+        // Unpopulated memory slots are among those that trigger this log, so
+        // limit the count to avoid log spam. Uses a power of two to align with
+        // memory slot counts.
+        LOG_FIRST_N(INFO, 64) << *current_uri
                   << " is absent; not including in topology generation";
         continue;
       }
