@@ -53,7 +53,7 @@ class NormalizerImplDefault final : public Normalizer::ImplInterface {
 // Adds devpath to subquery output.
 class NormalizerImplAddDevpath final : public Normalizer::ImplInterface {
  public:
-  NormalizerImplAddDevpath(NodeTopology node_topology)
+  explicit NormalizerImplAddDevpath(NodeTopology node_topology)
       : topology_(std::move(node_topology)) {}
 
  protected:
@@ -127,8 +127,8 @@ class NormalizerImplAddMachineBarepath final
   }
 
  private:
-  std::unique_ptr<IdAssigner> id_assigner_;
   std::unique_ptr<LocalIdMapT> local_id_map_;
+  std::unique_ptr<IdAssigner> id_assigner_;
 };
 
 }  // namespace ecclesia
