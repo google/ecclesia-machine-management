@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_QUERY_VALIDATOR_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_QUERY_VALIDATOR_H_
 
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -45,8 +46,12 @@ namespace ecclesia {
 //
 class RedPathQueryValidator {
  public:
-  struct Warning {
-    enum class Type {
+  struct Issue {
+    enum class Type : uint8_t {
+      // Occurs when property names within a subquery conflict with
+      // each other or the subquery id, or subquery ids conflict across a
+      // redpath query.
+      kConflictingIds,
       // Occurs when 2+ RedPathResources depend on the same resource context.
       kWideBranching,
       // Occurs when querying more than 5 RedPathResources.
@@ -55,8 +60,10 @@ class RedPathQueryValidator {
       kDeepRedPath
     };
 
-    static absl::string_view GetWarningDescriptor(Type type) {
+    static absl::string_view GetDescriptor(Type type) {
       switch (type) {
+        case Type::kConflictingIds:
+          return "Conflicting Identifiers";
         case Type::kWideBranching:
           return "Wide Branching";
         case Type::kDeepQuery:
@@ -86,10 +93,10 @@ class RedPathQueryValidator {
 
   // Returns errors that reflect incongruencies when comparing against the most
   // valid CSDL schema.
-  absl::Span<const std::string> GetErrors() { return errors_; }
+  absl::Span<const Issue> GetErrors() { return errors_; }
 
-  // Returns all warnings that were stored for any of the Warning types.
-  absl::Span<const Warning> GetWarnings() { return warnings_; }
+  // Returns all warnings that were stored for any of the Issue types.
+  absl::Span<const Issue> GetWarnings() { return warnings_; }
 
   // Validates a RedPath Query proto file. Errors and warnings that occur can
   // be accessed from GetErrors and GetWarnings, respectively.
@@ -99,8 +106,8 @@ class RedPathQueryValidator {
   static absl::StatusOr<DelliciusQuery> GetRedPathQuery(absl::string_view path);
 
   QueryRetrievalFunction get_redpath_query_;
-  std::vector<std::string> errors_;
-  std::vector<Warning> warnings_;
+  std::vector<Issue> errors_;
+  std::vector<Issue> warnings_;
 };
 
 }  // namespace ecclesia

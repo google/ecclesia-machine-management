@@ -30,8 +30,6 @@
 
 #include <stdlib.h>
 
-#include <memory>
-#include <ostream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -93,38 +91,46 @@ static void RunPresubmitGuardRails(absl::Span<const std::string> paths,
       LOG(ERROR) << validator_run_status;
     }
   }
-  const bool errors_occurred = !validator.GetErrors().empty();
   resp.set_succeeded(true);
   // Add warnings to response. Add each warning as a Finding member in the
   // PresubmitResponse. Downgrade the failure status to warning if there
   // are no errors.
   if (!validator.GetWarnings().empty()) {
     resp.set_succeeded(false);
-    for (const RedPathQueryValidator::Warning& warning :
+    for (const RedPathQueryValidator::Issue& warning :
          validator.GetWarnings()) {
       Finding finding;
+      finding.set_actionable(true);
       finding.mutable_location()->set_path(warning.path);
       finding.set_message(absl::StrCat(
-          RedPathQueryValidator::Warning::GetWarningDescriptor(warning.type),
+          RedPathQueryValidator::Issue::GetDescriptor(warning.type),
           " Warning: ", warning.message));
       *resp.add_finding() = std::move(finding);
     }
-    if (!errors_occurred) {
-      resp.set_failure_message(absl::StrCat(
-          "Warnings raised for one or more redpath queries. These can be "
-          "suppressed with the tag ",
-          kDisableValidatorTag));
-      resp.set_downgrade_failure_status(Status::WARNING);
-    }
   }
-  // Add redpath query validation errors to response. This shouldn't include
-  // parsing errors.
-  if (errors_occurred) {
-    resp.set_succeeded(false);
-    resp.set_failure_message("One or more redpath query validations failed.");
-    for (absl::string_view error : validator.GetErrors()) {
-      resp.add_item(error);
-    }
+  // Return early if no error level issues.
+  if (validator.GetErrors().empty()) {
+    resp.set_failure_message(absl::StrCat(
+        "Warnings raised for one or more redpath queries. These can be "
+        "suppressed with the tag ",
+        kDisableValidatorTag));
+    resp.set_downgrade_failure_status(Status::WARNING);
+    return;
+  }
+  // Add redpath query validation errors to response.
+  resp.set_succeeded(false);
+  resp.set_failure_message(
+      "One or more redpath query validations failed. Please fix all query "
+      "errors before submitting.");
+  for (const RedPathQueryValidator::Issue& error : validator.GetErrors()) {
+    Finding error_finding;
+    error_finding.set_actionable(true);
+    error_finding.mutable_location()->set_path(error.path);
+    error_finding.set_message(
+        absl::StrCat(RedPathQueryValidator::Issue::GetDescriptor(error.type),
+                     " Error: ", error.message));
+    resp.set_downgrade_failure_status(Status::ERROR);
+    *resp.add_finding() = std::move(error_finding);
   }
 }
 }  // namespace ecclesia

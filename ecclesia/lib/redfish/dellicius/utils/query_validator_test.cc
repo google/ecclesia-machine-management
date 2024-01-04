@@ -30,7 +30,7 @@ using ::testing::AllOf;
 using ::testing::Eq;
 using ::testing::Field;
 using ::testing::IsEmpty;
-using Warning = RedPathQueryValidator::Warning;
+using Issue = RedPathQueryValidator::Issue;
 
 // Constants for valid RedPathQuery tests.
 constexpr absl::string_view kPathToValidQueryBasic =
@@ -149,6 +149,54 @@ const char kValidQueryMixedWarningsFileContents[] = R"pb(
     properties { name: "uri" property: "@odata\\.id" type: STRING }
   })pb";
 
+constexpr absl::string_view kPathToInvalidQueryConflictingSubqueryIds =
+    "/path/to/invalid/conflicting_subquery_ids";
+const char kInvalidQueryConflictingSubqueryIdsFileContents[] = R"pb(
+  query_id: "ChassisQuery"
+  subquery {
+    subquery_id: "Query1"
+    redpath: "/Systems[*]/Processors[*]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "Query1"
+    redpath: "/Chassis[*]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+)pb";
+
+constexpr absl::string_view kPathToInvalidQueryConflictingProperties =
+    "/path/to/invalid/conflicting_properties";
+const char kInvalidQueryConflictingPropertiesFileContents[] = R"pb(
+  query_id: "ChassisQuery"
+  subquery {
+    subquery_id: "Query1"
+    redpath: "/Systems[*]/Processors[*]"
+    properties { name: "odata" property: "@odata\\.id" type: STRING }
+    properties { name: "odata" property: "@odata\\.type" type: STRING }
+  }
+)pb";
+
+// Example where a child subquery id is the same as a property name of the
+// parent.
+constexpr absl::string_view kPathToInvalidQueryConflictingIdProperty =
+    "/path/to/invalid/conflicting_subquery_ids_and_properties";
+const char kInvalidQueryConflictingIdPropertyFileContents[] = R"pb(
+  query_id: "ChassisQuery"
+  subquery {
+    subquery_id: "Query1"
+    redpath: "/Systems[*]"
+    properties { property: "@odata\\.id" type: STRING }
+    properties { name: "Query2" property: "LocationType" type: STRING }
+  }
+  subquery {
+    subquery_id: "Query2"
+    root_subquery_ids: "Query1"
+    redpath: "/Chassis[*]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+)pb";
+
 // Constants for invalid RedPathQuery tests that should trigger errors.
 constexpr absl::string_view kPathToMissingQuery = "/path/to/missing/query/";
 constexpr absl::string_view kPathToInvalidQuery =
@@ -175,10 +223,10 @@ TEST(RedPathQueryValidationTest, ValidQueryWithDeepQueryWarning) {
       deep_query_validator.ValidateQueryFile(kPathToValidQueryDeepQuery),
       IsOk());
   EXPECT_THAT(deep_query_validator.GetErrors(), IsEmpty());
-  EXPECT_THAT(deep_query_validator.GetWarnings(),
-              ElementsAre(AllOf(
-                  Field(&Warning::type, Eq(Warning::Type::kDeepQuery)),
-                  Field(&Warning::path, Eq(kPathToValidQueryDeepQuery)))));
+  EXPECT_THAT(
+      deep_query_validator.GetWarnings(),
+      ElementsAre(AllOf(Field(&Issue::type, Eq(Issue::Type::kDeepQuery)),
+                        Field(&Issue::path, Eq(kPathToValidQueryDeepQuery)))));
 }
 
 TEST(RedPathQueryValidationTest, ValidQueryWithDeepRedPathWarning) {
@@ -192,11 +240,10 @@ TEST(RedPathQueryValidationTest, ValidQueryWithDeepRedPathWarning) {
       deep_redpath_validator.ValidateQueryFile(kPathToValidQueryDeepRedPath),
       IsOk());
   EXPECT_THAT(deep_redpath_validator.GetErrors(), IsEmpty());
-  EXPECT_THAT(
-      deep_redpath_validator.GetWarnings(),
-      ElementsAre(AllOf(
-        Field(&Warning::type, Eq(Warning::Type::kDeepRedPath)),
-        Field(&Warning::path, Eq(kPathToValidQueryDeepRedPath)))));
+  EXPECT_THAT(deep_redpath_validator.GetWarnings(),
+              ElementsAre(AllOf(
+                  Field(&Issue::type, Eq(Issue::Type::kDeepRedPath)),
+                  Field(&Issue::path, Eq(kPathToValidQueryDeepRedPath)))));
 }
 
 TEST(RedPathQueryValidationTest, ValidQueryWithWideBranchingWarning) {
@@ -210,11 +257,10 @@ TEST(RedPathQueryValidationTest, ValidQueryWithWideBranchingWarning) {
                   kPathToValidQueryWideBranching),
               IsOk());
   EXPECT_THAT(wide_branching_validator.GetErrors(), IsEmpty());
-  EXPECT_THAT(
-      wide_branching_validator.GetWarnings(),
-      ElementsAre(AllOf(
-        Field(&Warning::type, Eq(Warning::Type::kWideBranching)),
-        Field(&Warning::path, Eq(kPathToValidQueryWideBranching)))));
+  EXPECT_THAT(wide_branching_validator.GetWarnings(),
+              ElementsAre(AllOf(
+                  Field(&Issue::type, Eq(Issue::Type::kWideBranching)),
+                  Field(&Issue::path, Eq(kPathToValidQueryWideBranching)))));
 }
 
 TEST(RedPathQueryValidationTest, MixedWarnings) {
@@ -228,10 +274,10 @@ TEST(RedPathQueryValidationTest, MixedWarnings) {
                   kPathToValidQueryMixedWarnings),
               IsOk());
   EXPECT_THAT(mixed_warnings_validator.GetErrors(), IsEmpty());
-  EXPECT_THAT(mixed_warnings_validator.GetWarnings(),
-              UnorderedElementsAre(
-                  Field(&Warning::type, Eq(Warning::Type::kWideBranching)),
-                  Field(&Warning::type, Eq(Warning::Type::kDeepQuery))));
+  EXPECT_THAT(
+      mixed_warnings_validator.GetWarnings(),
+      UnorderedElementsAre(Field(&Issue::type, Eq(Issue::Type::kWideBranching)),
+                           Field(&Issue::type, Eq(Issue::Type::kDeepQuery))));
 }
 
 TEST(RedPathQueryValidationTest, ReadFailureTriggersErrors) {
@@ -243,6 +289,58 @@ TEST(RedPathQueryValidationTest, ReadFailureTriggersErrors) {
   EXPECT_THAT(validator.ValidateQueryFile(
                   GetTestDataDependencyPath(kPathToInvalidQuery)),
               IsStatusInvalidArgument());
+}
+
+TEST(RedPathQueryValidationTest, InvalidQueryWithConflictingSubqueryIds) {
+  RedPathQueryValidator validator(
+      [&](absl::string_view path) -> absl::StatusOr<DelliciusQuery> {
+        EXPECT_THAT(path, Eq(kPathToInvalidQueryConflictingSubqueryIds));
+        return ParseTextAsProtoOrDie<DelliciusQuery>(
+            kInvalidQueryConflictingSubqueryIdsFileContents);
+      });
+  EXPECT_THAT(
+      validator.ValidateQueryFile(kPathToInvalidQueryConflictingSubqueryIds),
+      IsOk());
+  EXPECT_THAT(
+      validator.GetErrors(),
+      ElementsAre(AllOf(
+          Field(&Issue::type, Eq(Issue::Type::kConflictingIds)),
+          Field(&Issue::path, Eq(kPathToInvalidQueryConflictingSubqueryIds)))));
+}
+
+TEST(RedPathQueryValidationTest, InvalidQueryWithConflictingProperties) {
+  RedPathQueryValidator validator(
+      [&](absl::string_view path) -> absl::StatusOr<DelliciusQuery> {
+        EXPECT_THAT(path, Eq(kPathToInvalidQueryConflictingProperties));
+        return ParseTextAsProtoOrDie<DelliciusQuery>(
+            kInvalidQueryConflictingPropertiesFileContents);
+      });
+  EXPECT_THAT(
+      validator.ValidateQueryFile(kPathToInvalidQueryConflictingProperties),
+      IsOk());
+  EXPECT_THAT(
+      validator.GetErrors(),
+      ElementsAre(AllOf(
+          Field(&Issue::type, Eq(Issue::Type::kConflictingIds)),
+          Field(&Issue::path, Eq(kPathToInvalidQueryConflictingProperties)))));
+}
+
+TEST(RedPathQueryValidationTest, InvalidQueryWithConflictingIdAndProperty) {
+  RedPathQueryValidator validator(
+      [&](absl::string_view path) -> absl::StatusOr<DelliciusQuery> {
+        EXPECT_THAT(path, Eq(kPathToInvalidQueryConflictingIdProperty));
+        return ParseTextAsProtoOrDie<DelliciusQuery>(
+            kInvalidQueryConflictingIdPropertyFileContents);
+      });
+  EXPECT_THAT(
+      validator.ValidateQueryFile(kPathToInvalidQueryConflictingIdProperty),
+      IsOk());
+  auto x = validator.GetErrors().front();
+  EXPECT_THAT(
+      validator.GetErrors(),
+      ElementsAre(AllOf(
+          Field(&Issue::type, Eq(Issue::Type::kConflictingIds)),
+          Field(&Issue::path, Eq(kPathToInvalidQueryConflictingIdProperty)))));
 }
 
 }  // namespace
