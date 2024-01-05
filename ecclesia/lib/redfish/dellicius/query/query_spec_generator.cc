@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <utility>
@@ -39,6 +41,7 @@
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/query/builder.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/query_validator.h"
 #include "ecclesia/lib/status/macros.h"
 #include "google/protobuf/text_format.h"
 
@@ -126,6 +129,31 @@ absl::StatusOr<FilenameContentMap> ReadFileContents(
   return contents;
 }
 
+// Uses the ecclesia::RedpathQueryValidator to perform query validation, returns
+// an error status if any error level issues are detected by the validator.
+absl::Status ValidateQueries(const FilenameContentMap &filename_contents) {
+  ecclesia::RedPathQueryValidator query_validator;
+  std::vector<std::string> error_msgs;
+  // Run Redpath Query Validator on all queries.
+  for (const auto &[filename, contents] : filename_contents) {
+    ecclesia::DelliciusQuery query;
+    if (!google::protobuf::TextFormat::ParseFromString(contents, &query)) {
+      return absl::InternalError(
+          absl::StrCat("Unable to parse query file: ", filename));
+    }
+    ECCLESIA_RETURN_IF_ERROR(query_validator.ValidateQuery(query, filename));
+  }
+  // Add all validator errors to the error message.
+  const auto errors = query_validator.GetErrors();
+  if (errors.empty()) return absl::OkStatus();
+  std::transform(errors.begin(), errors.end(), std::back_inserter(error_msgs),
+                 [](const auto &issue) {
+                   return absl::StrCat("Query file: ", issue.path,
+                                       " has error:\n", issue.message);
+                 });
+  return absl::InternalError(absl::StrJoin(error_msgs, "\n"));
+}
+
 absl::StatusOr<absl::flat_hash_set<std::string>> GetQueryIds(
     const FilenameContentMap &filename_contents) {
   absl::flat_hash_set<std::string> query_ids;
@@ -199,7 +227,7 @@ class QuerySpecBuilder : public FileBuilderBase {
       context_query_rule =
           absl::StrFormat(".query_rules = k%sQueryRule,", name());
     }
-
+    ECCLESIA_RETURN_IF_ERROR(ValidateQueries(query_file_contents));
     ECCLESIA_ASSIGN_OR_RETURN(absl::flat_hash_set<std::string> query_ids,
                               GetQueryIds(query_file_contents));
     std::string query_ids_str = absl::StrJoin(query_ids, "\" , \"");

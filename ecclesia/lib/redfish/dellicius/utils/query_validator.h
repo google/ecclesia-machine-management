@@ -102,6 +102,11 @@ class RedPathQueryValidator {
   // be accessed from GetErrors and GetWarnings, respectively.
   absl::Status ValidateQueryFile(absl::string_view path);
 
+  // Validates a Redpath Query given the DelliciusQuery object directly. The
+  // path input is only used for populating error messages.
+  absl::Status ValidateQuery(const DelliciusQuery& query,
+                             absl::string_view path);
+
  private:
   static absl::StatusOr<DelliciusQuery> GetRedPathQuery(absl::string_view path);
 
