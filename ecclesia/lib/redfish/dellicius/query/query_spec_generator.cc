@@ -39,6 +39,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/builder.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/query_validator.h"
@@ -129,6 +130,31 @@ absl::StatusOr<FilenameContentMap> ReadFileContents(
   return contents;
 }
 
+absl::Status CheckForDuplicateQueryRules(
+    const FilenameContentMap &filename_contents) {
+  // maps a query rule's key to the filename that contains it.
+  absl::flat_hash_map<std::string, std::string> query_rule_key_to_filename;
+  for (const auto &[filename, contents] : filename_contents) {
+    ecclesia::QueryRules query_rules;
+    if (!google::protobuf::TextFormat::ParseFromString(contents, &query_rules)) {
+      return absl::InternalError(
+          absl::StrCat("Unable to parse query rules file: ", filename));
+    }
+    for (const auto &[rule_key, rule_configs] :
+         query_rules.query_id_to_params_rule()) {
+      // Look up if the current rule key has been found before in another file.
+      const auto it = query_rule_key_to_filename.find(rule_key);
+      if (it != query_rule_key_to_filename.end()) {
+        return absl::InternalError(
+            absl::StrCat("Duplicate query rule for key: ", rule_key,
+                         "in file(s): ", it->second, ", ", filename));
+      }
+      query_rule_key_to_filename[rule_key] = filename;
+    }
+  }
+  return absl::OkStatus();
+}
+
 // Uses the ecclesia::RedpathQueryValidator to perform query validation, returns
 // an error status if any error level issues are detected by the validator.
 absl::Status ValidateQueries(const FilenameContentMap &filename_contents) {
@@ -216,12 +242,13 @@ class QuerySpecBuilder : public FileBuilderBase {
                               ReadFileContents(query_files_));
     ECCLESIA_ASSIGN_OR_RETURN(FilenameContentMap query_rule_contents,
                               ReadFileContents(query_rules_));
-
     std::string context_query_rule;
 
     std::string content =
         GetFileContentsStr(name(), "Query", query_file_contents);
     if (!query_rule_contents.empty()) {
+      ECCLESIA_RETURN_IF_ERROR(
+          CheckForDuplicateQueryRules(query_rule_contents));
       absl::StrAppend(&content, GetFileContentsStr(name(), "QueryRule",
                                                    query_rule_contents));
       context_query_rule =
