@@ -145,6 +145,7 @@ absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
       .query_files = query_files, .query_rules = query_rules, .clock = clock};
   return CreateQueryEngine(
       query_context, {.transport = std::move(transport),
+                      .entity_tag = query_engine_params.entity_tag,
                       .stable_id_type = query_engine_params.stable_id_type,
                       .redfish_topology_config_name =
                           query_engine_params.redfish_topology_config_name});
@@ -167,6 +168,7 @@ absl::StatusOr<QueryEngine> GetQueryEngineWithIdAssigner(
   return CreateQueryEngine(
       query_context,
       {.transport = std::move(transport),
+       .entity_tag = "test_node_id",
        .stable_id_type =
            QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived},
       std::move(id_assigner));
@@ -258,7 +260,7 @@ TEST(QueryEngineTest, QueryEngineEmptyItemDevpath) {
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
       FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
-                              {}));
+                              {.entity_tag = "test_node_id"}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"AssemblyCollectorWithPropertyNameNormalization"});
@@ -757,9 +759,11 @@ TEST(QueryEngineTest, QueryEngineNoHaltOnFirstFailure) {
                              .clock = &clock};
   absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
       query_context, {.transport = std::move(transport),
+                      .entity_tag = "test_node_id",
                       .feature_flags = {.enable_redfish_metrics = true,
                                         .fail_on_first_error = false}});
   ASSERT_TRUE(query_engine.ok());
+  EXPECT_EQ(query_engine->GetAgentIdentifier(), "test_node_id");
   // Issue the query and assert that both GETs were issued, ensuring that the
   // query execution continued AFTER the first error occurred.
   QueryResult query_result =

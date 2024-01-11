@@ -19,6 +19,8 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -50,11 +52,12 @@ class FakeQueryEngine : public QueryEngineIntf {
     Devpath devpath = Devpath::kEnable;
     Metrics metrics = Metrics::kDisable;
     Cache cache = Cache::kInfinite;
+    std::optional<std::string> entity_tag;
   };
 
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
       const QueryContext &query_context, absl::string_view mockup_name,
-      Params params) {
+      const Params &params) {
     auto query_engine = absl::WrapUnique(new FakeQueryEngine(mockup_name));
     ECCLESIA_RETURN_IF_ERROR(
         query_engine->InitializeQueryEngine(query_context, params));
@@ -98,7 +101,7 @@ class FakeQueryEngine : public QueryEngineIntf {
   }
 
   absl::Status InitializeQueryEngine(const QueryContext &query_context,
-                                     Params params) {
+                                     const Params &params) {
     // Devpaths will not be generated if the stable_id_type is kRedfishLocation
     // without an IdAssigner passed to the Query Engine object.
     const QueryEngineParams::RedfishStableIdType stable_id_type =
@@ -119,6 +122,7 @@ class FakeQueryEngine : public QueryEngineIntf {
             query_context,
             {.transport = redfish_server_.RedfishClientTransport(),
              .cache_factory = cache_factory,
+             .entity_tag = params.entity_tag.value_or(""),
              .stable_id_type = stable_id_type,
              .feature_flags = {.enable_redfish_metrics =
                                    (params.metrics == Metrics::kEnable)}}));
