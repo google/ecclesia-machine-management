@@ -24,12 +24,13 @@
 namespace ecclesia {
 
 // Returns an implementation of SubscriptionService.
-// SubscriptionService is provided a |redfish_handler| to subscribe and query
-// redfish resources and |subscription_store| tracks created event subscriptions
-// and is queried on each event.
+// SubscriptionService is provided a `redfish_handler` to subscribe and query
+// redfish resources, a `subscription_store` to track and query created event
+// subscriptions and an `event_store` to store Redfish events to dispatch.
 std::unique_ptr<SubscriptionService> CreateSubscriptionService(
     std::unique_ptr<RedfishHandler> redfish_handler,
-    std::unique_ptr<SubscriptionStore> subscription_store);
+    std::unique_ptr<SubscriptionStore> subscription_store,
+    std::unique_ptr<EventStore> event_store);
 
 }  // namespace ecclesia
 

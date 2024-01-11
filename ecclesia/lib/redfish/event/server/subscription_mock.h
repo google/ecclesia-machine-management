@@ -17,6 +17,8 @@
 #ifndef ECCLESIA_LIB_REDFISH_EVENT_SERVER_SUBSCRIPTION_MOCK_H_
 #define ECCLESIA_LIB_REDFISH_EVENT_SERVER_SUBSCRIPTION_MOCK_H_
 
+#include <cstddef>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -49,6 +51,15 @@ class RedfishHandlerMock : public RedfishHandler {
               (absl::string_view url), (override));
   MOCK_METHOD(absl::Status, Query, (const absl::string_view, QueryCallback),
               (override));
+};
+
+class EventStoreMock : public EventStore {
+ public:
+  MOCK_METHOD(void, AddNewEvent,
+              (const EventId &event_id, const nlohmann::json &event),
+              (override));
+  MOCK_METHOD(std::vector<nlohmann::json>, GetEventsSince,
+              (std::optional<size_t> redfish_event_id), (override));
 };
 
 }  // namespace ecclesia

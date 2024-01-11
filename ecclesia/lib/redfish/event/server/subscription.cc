@@ -59,14 +59,15 @@ EventId::EventId(const SubscriptionId& subscription_id_in,
     : source_id(source_id_in),
       timestamp(timestamp_in),
       subscription_id(subscription_id_in),
-      uuid(absl::HashOf(timestamp_in, source_id_in, subscription_id_in)) {}
+      redfish_event_id(
+          absl::HashOf(timestamp_in, source_id_in, subscription_id_in)) {}
 
 nlohmann::json EventId::ToJSON() const {
   nlohmann::json json;
   json["source_id"] = source_id.ToJSON();
   json["timestamp"] =
       absl::FormatTime(absl::RFC3339_full, timestamp, absl::UTCTimeZone());
-  json["uuid"] = uuid;
+  json["uuid"] = redfish_event_id;
   return json;
 }
 

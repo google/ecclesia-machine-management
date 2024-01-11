@@ -20,6 +20,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -96,10 +97,10 @@ struct SubscriptionId {
 // EventId uniquely identifies an event at any given point in time from any
 // event source.
 //
-// EventId satisfies the contract of uniqueness through "uuid" and monotonicity
-// through "timestamp". EventId has an association with "subscription_id" to
-// allow subscription service to group events for a subscriber, useful to
-// satisfy "lossless events" contract.
+// EventId satisfies the contract of uniqueness through `redfish_event_id` and
+// monotonicity through `timestamp`. `EventId` has an association with
+// `SubscriptionId` to allow subscription service to group events for a
+// subscriber, useful to satisfy lossless-events contract.
 struct EventId {
   EventId(const SubscriptionId &subscription_id_in,
           const EventSourceId &source_id_in, absl::Time timestamp_in);
@@ -112,13 +113,13 @@ struct EventId {
 
   template <typename H>
   friend H AbslHashValue(H h, const EventId &n) {
-    return H::combine(std::move(h), n.uuid);
+    return H::combine(std::move(h), n.redfish_event_id);
   }
 
   EventSourceId source_id;
   absl::Time timestamp;
   SubscriptionId subscription_id;
-  size_t uuid;
+  size_t redfish_event_id;
 };
 
 // Structure representing a Trigger, which defines event triggering conditions
@@ -130,8 +131,8 @@ struct Trigger {
   static absl::StatusOr<Trigger> Create(const nlohmann::json &trigger_json);
 
   // Constructor for Trigger
-  Trigger(std::vector<std::string> origin_resources_in,
-          absl::string_view predicate_in = "", bool mask_in = false);
+  explicit Trigger(std::vector<std::string> origin_resources_in,
+                   absl::string_view predicate_in = "", bool mask_in = false);
 
   // Converts Trigger to JSON format
   nlohmann::json ToJSON() const;
@@ -171,6 +172,29 @@ struct SubscriptionContext {
   // subscription's triggers. The callback function receives the event data as
   // its argument.
   std::function<void(const nlohmann::json &)> on_event_callback;
+};
+
+// Interface for an event store.
+// EventStore stores events in an overwriting circular buffer and allows
+// looking up the events queued since a specific event_id to honor the
+// lossless eventing contract of subscription service.
+//
+// The event store shall be thread safe.
+class EventStore {
+ public:
+  virtual ~EventStore() = default;
+
+  // Adds a new event to the overwriting circular buffer.
+  virtual void AddNewEvent(const EventId &event_id,
+                           const nlohmann::json &event) = 0;
+
+  // Retrieves all events that have been added since (but not including) the
+  // given redfish event id in a chronological order determined by
+  // `event_id.timestamp`.
+  // If `redfish_event_id` is std::nullopt value, all events shall be returned
+  // in chronological order.
+  virtual std::vector<nlohmann::json> GetEventsSince(
+      std::optional<size_t> redfish_event_id) = 0;
 };
 
 // Interface for a subscription store

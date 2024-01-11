@@ -23,9 +23,11 @@
 #include <utility>
 #include <vector>
 
+#include "absl/algorithm/container.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/hash/hash.h"
+#include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -43,6 +45,17 @@
 namespace ecclesia {
 
 namespace {
+
+// Redfish properties to parse in Subscription request.
+constexpr absl::string_view kPropertyOem = "Oem";
+constexpr absl::string_view kPropertyGoogle = "Google";
+constexpr absl::string_view kPropertyTriggers = "Triggers";
+constexpr absl::string_view kPropertyId = "Id";
+constexpr absl::string_view kPropertyLastEventId = "LastEventId";
+
+std::string PropertyNotPopulatedError(absl::string_view property) {
+  return absl::StrCat(property, " not populated");
+}
 
 // Constructs a RedfishEvent from |query_response|
 void BuildRedfishEvent(const nlohmann::json &query_response,
@@ -104,7 +117,7 @@ class AggregatedQueryResponse {
   }
 
  private:
-  // Counts response to sync/async query requests sent via redfish handler.
+  // Counts response to sync/async query requests sent via Redfish handler.
   // Response can be valid or invalid.
   std::atomic_size_t responses_received_{0};
 
@@ -122,12 +135,16 @@ class AggregatedQueryResponse {
 
 // Concrete implementation of SubscriptionService.
 // Thread safe
-class SubscriptionServiceImpl : public SubscriptionService {
+class SubscriptionServiceImpl
+    : public SubscriptionService,
+      public std::enable_shared_from_this<SubscriptionServiceImpl> {
  public:
   SubscriptionServiceImpl(std::unique_ptr<RedfishHandler> redfish_handler,
-                          std::unique_ptr<SubscriptionStore> subscription_store)
-      : redfish_handler_(std::move(redfish_handler)),
-        subscription_store_(std::move(subscription_store)) {}
+                          std::unique_ptr<SubscriptionStore> subscription_store,
+                          std::unique_ptr<EventStore> event_store)
+      : redfish_handler_(ABSL_DIE_IF_NULL(std::move(redfish_handler))),
+        subscription_store_(ABSL_DIE_IF_NULL(std::move(subscription_store))),
+        event_store_(ABSL_DIE_IF_NULL(std::move(event_store))) {}
 
   // Returns unique event subscription id after validating the request and
   // enabling event listeners.
@@ -143,19 +160,22 @@ class SubscriptionServiceImpl : public SubscriptionService {
     SubscriptionId subscription_id(absl::HashOf(absl::Now(), request.dump()));
 
     // Check if Oem, Google, and Triggers exist
-    auto find_oem = request.find("Oem");
+    auto find_oem = request.find(kPropertyOem);
     if (find_oem == request.end()) {
-      return absl::InvalidArgumentError("Oem not populated");
+      return absl::InvalidArgumentError(
+          PropertyNotPopulatedError(kPropertyOem));
     }
 
-    auto find_google = find_oem->find("Google");
+    auto find_google = find_oem->find(kPropertyGoogle);
     if (find_google == find_oem->end()) {
-      return absl::InvalidArgumentError("Google not populated");
+      return absl::InvalidArgumentError(
+          PropertyNotPopulatedError(kPropertyGoogle));
     }
 
-    auto find_triggers = find_google->find("Triggers");
+    auto find_triggers = find_google->find(kPropertyTriggers);
     if (find_triggers == find_google->end() || find_triggers->empty()) {
-      return absl::InvalidArgumentError("Triggers not populated");
+      return absl::InvalidArgumentError(
+          PropertyNotPopulatedError(kPropertyTriggers));
     }
 
     absl::flat_hash_map<std::string, Trigger> id_to_triggers;
@@ -178,12 +198,23 @@ class SubscriptionServiceImpl : public SubscriptionService {
             AddEventSourcesToTrigger(source_ids, origin_resource, trigger_obj));
       }
 
-      auto find_id = trigger.find("Id");
+      auto find_id = trigger.find(kPropertyId);
       if (find_id == trigger.end() || !find_id->is_string()) {
-        return absl::InvalidArgumentError("Trigger Id not populated");
+        return absl::InvalidArgumentError(
+            PropertyNotPopulatedError(kPropertyId));
       }
 
       id_to_triggers.insert_or_assign(find_id->get<std::string>(), trigger_obj);
+    }
+
+    // If subscriber requested to stream events queued after given
+    // "last_event_id", pull the events from the event store and dispatch.
+    if (auto find_last_event_id = find_google->find(kPropertyLastEventId);
+        find_last_event_id != find_google->end()) {
+      // Dispatch events since last event id.
+      absl::c_for_each(
+          event_store_->GetEventsSince(find_last_event_id->get<size_t>()),
+          on_event_callback);
     }
 
     // Build and store subscription context.
@@ -277,8 +308,8 @@ class SubscriptionServiceImpl : public SubscriptionService {
       // Get Origin of condition
       ECCLESIA_RETURN_IF_ERROR(BuildOriginOfCondition(
           uri_collection->second,
-          [source_id, context](const absl::Status &sc,
-                               nlohmann::json::array_t &events) mutable {
+          [source_id, context, this](const absl::Status &sc,
+                                     nlohmann::json::array_t &events) mutable {
             if (!sc.ok()) {
               LOG(ERROR) << "Cannot create RedfishEvent for event source_id"
                          << source_id.ToString();
@@ -289,10 +320,12 @@ class SubscriptionServiceImpl : public SubscriptionService {
             EventId event_id(context.subscription_id, source_id, absl::Now());
 
             nlohmann::json redfish_event_obj;
-            redfish_event_obj["Id"] = event_id.uuid;
+            redfish_event_obj["Id"] = event_id.redfish_event_id;
             redfish_event_obj["@odata.type"] = "#Event.v1_7_0.Event";
             redfish_event_obj["Name"] = "RedfishEvent";
             redfish_event_obj["Events"] = events;
+
+            event_store_->AddNewEvent(event_id, redfish_event_obj);
 
             // Send event to the destination.
             context.on_event_callback(redfish_event_obj);
@@ -303,15 +336,18 @@ class SubscriptionServiceImpl : public SubscriptionService {
 
   std::unique_ptr<RedfishHandler> redfish_handler_;
   std::unique_ptr<SubscriptionStore> subscription_store_;
+  std::unique_ptr<EventStore> event_store_;
 };
 
 }  // namespace
 
 std::unique_ptr<SubscriptionService> CreateSubscriptionService(
     std::unique_ptr<RedfishHandler> redfish_handler,
-    std::unique_ptr<SubscriptionStore> subscription_store) {
+    std::unique_ptr<SubscriptionStore> subscription_store,
+    std::unique_ptr<EventStore> event_store) {
   return std::make_unique<SubscriptionServiceImpl>(
-      std::move(redfish_handler), std::move(subscription_store));
+      std::move(redfish_handler), std::move(subscription_store),
+      std::move(event_store));
 }
 
 }  // namespace ecclesia

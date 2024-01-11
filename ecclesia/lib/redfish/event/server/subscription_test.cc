@@ -85,7 +85,7 @@ TEST(EventIdTest, UniqueUuid) {
   EventId event_id1(subscription_id, source_id, timestamp1);
   EventId event_id2(subscription_id, source_id, timestamp2);
 
-  EXPECT_NE(event_id1.uuid, event_id2.uuid);
+  EXPECT_NE(event_id1.redfish_event_id, event_id2.redfish_event_id);
 }
 
 TEST(EventIdTest, ToJSON) {
@@ -99,7 +99,7 @@ TEST(EventIdTest, ToJSON) {
   EXPECT_EQ(json["source_id"], source_id.ToJSON());
   EXPECT_EQ(json["timestamp"], absl::FormatTime(absl::RFC3339_full, timestamp,
                                                 absl::UTCTimeZone()));
-  EXPECT_EQ(json["uuid"], event_id.uuid);
+  EXPECT_EQ(json["uuid"], event_id.redfish_event_id);
 }
 
 TEST(EventIdTest, ToString) {
@@ -113,7 +113,7 @@ TEST(EventIdTest, ToString) {
   std::string timestamp_string =
       absl::FormatTime(absl::RFC3339_full, timestamp, absl::UTCTimeZone());
 
-  std::string uuid_string = absl::StrCat(event_id.uuid);
+  std::string uuid_string = absl::StrCat(event_id.redfish_event_id);
 
   std::string expected_string =
       "{\"source_id\":{\"key\":456,\"type\":\"kDbusObjects\"},\"timestamp\":"

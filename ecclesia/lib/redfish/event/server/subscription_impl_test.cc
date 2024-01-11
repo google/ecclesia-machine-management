@@ -17,7 +17,9 @@
 #include "ecclesia/lib/redfish/event/server/subscription_impl.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -39,8 +41,10 @@ namespace {
 
 using ::testing::_;
 using ::testing::DoAll;
+using ::testing::Eq;
 using ::testing::InvokeArgument;
 using ::testing::Return;
+using ::testing::UnorderedElementsAre;
 
 bool CompareJson(const nlohmann::json& json1, const nlohmann::json& json2,
                  const std::vector<std::string>& excludedFields = {}) {
@@ -66,20 +70,25 @@ class SubscriptionServiceImplTest : public ::testing::Test {
     auto subscription_store = std::make_unique<SubscriptionStoreMock>();
     subscription_store_ptr_ = subscription_store.get();
 
+    auto event_store = std::make_unique<EventStoreMock>();
+    event_store_ptr_ = event_store.get();
+
     // Create subscription service with mock objects.
     subscription_service_ = CreateSubscriptionService(
-        std::move(redfish_handler), std::move(subscription_store));
+        std::move(redfish_handler), std::move(subscription_store),
+        std::move(event_store));
   }
 
   // Mock objects.
   RedfishHandlerMock* redfish_handler_ptr_ = nullptr;
   SubscriptionStoreMock* subscription_store_ptr_ = nullptr;
+  EventStoreMock* event_store_ptr_ = nullptr;
 
   // Subscription service under test.
   std::unique_ptr<SubscriptionService> subscription_service_ = nullptr;
 };
 
-TEST_F(SubscriptionServiceImplTest, CreateSubscription_ValidRequest) {
+TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
   // Create valid subscription request.
   static constexpr absl::string_view valid_request = R"json(
     {
@@ -114,14 +123,17 @@ TEST_F(SubscriptionServiceImplTest, CreateSubscription_ValidRequest) {
   nlohmann::json request = nlohmann::json::parse(valid_request);
   ASSERT_TRUE(!request.is_discarded());
 
-  EXPECT_CALL(*redfish_handler_ptr_, Subscribe(_))
-      .Times(2)
-      .WillRepeatedly(
-          testing::Return(absl::StatusOr<std::vector<EventSourceId>>(
-              {{1, EventSourceId::Type::kDbusObjects},
-               {2, EventSourceId::Type::kDbusObjects}})));
+  EXPECT_CALL(*redfish_handler_ptr_,
+              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x")))
+      .WillOnce(Return(std::vector<EventSourceId>(
+          {{1, EventSourceId::Type::kDbusObjects},
+           {2, EventSourceId::Type::kDbusObjects}})));
+  EXPECT_CALL(*redfish_handler_ptr_,
+              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y")))
+      .WillOnce(Return(std::vector<EventSourceId>(
+          {{3, EventSourceId::Type::kDbusObjects}})));
 
-  EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(1);
+  EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription).Times(1);
 
   // Expect subscription creation to succeed.
   EXPECT_THAT(subscription_service_
@@ -130,7 +142,8 @@ TEST_F(SubscriptionServiceImplTest, CreateSubscription_ValidRequest) {
               absl::OkStatus());
 }
 
-TEST_F(SubscriptionServiceImplTest, CreateSubscription_InvalidRequest) {
+TEST_F(SubscriptionServiceImplTest,
+       ShouldNotCreateSubscriptionOnInvalidRequest) {
   // Create invalid subscription request with missing "Oem" field.
   static constexpr absl::string_view invalid_request_missing_oem = R"json(
     {
@@ -239,9 +252,12 @@ TEST_F(SubscriptionServiceImplTest, CreateSubscription_InvalidRequest) {
     nlohmann::json request = nlohmann::json::parse(invalid_request);
     ASSERT_TRUE(!request.is_discarded());
 
-    // Verify mock calls.
-    EXPECT_CALL(*redfish_handler_ptr_, Subscribe(_)).Times(0);
-    EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
+    // Redfish handler should not be queried on invalid subscription request.
+    EXPECT_CALL(*redfish_handler_ptr_, Subscribe).Times(0);
+
+    // No subscription should be added to SubscriptionStore when subscription
+    // request is invalid.
+    EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription).Times(0);
 
     // Expect subscription creation to fail.
     EXPECT_NE(subscription_service_
@@ -251,7 +267,7 @@ TEST_F(SubscriptionServiceImplTest, CreateSubscription_InvalidRequest) {
   }
 }
 
-TEST_F(SubscriptionServiceImplTest, Notify_ValidEvent) {
+TEST_F(SubscriptionServiceImplTest, ShouldSendEventIfOriginOfConditionIsValid) {
   static constexpr absl::string_view mock_query_response = R"json(
     {
        "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/current_cpu0_pvccd_hv_Output_Current",
@@ -363,8 +379,7 @@ TEST_F(SubscriptionServiceImplTest, Notify_ValidEvent) {
               GetSubscriptionsBySourceId(event_source_id))
       .WillRepeatedly(Return(absl::MakeSpan(&context, 1)));
 
-  // Expect mock calls for redfish queries.
-  EXPECT_CALL(*redfish_handler_ptr_, Query(_, _))
+  EXPECT_CALL(*redfish_handler_ptr_, Query(Eq("/redfish/v1/node1"), _))
       .WillOnce(DoAll(InvokeArgument<1>(absl::OkStatus(), query_response),
                       Return(absl::OkStatus())))
       .WillOnce(
@@ -372,24 +387,101 @@ TEST_F(SubscriptionServiceImplTest, Notify_ValidEvent) {
                 Return(absl::OkStatus())))
       .WillOnce(Return(absl::OkStatus()));
 
-  EXPECT_THAT(subscription_service_->Notify(event_source_id, absl::OkStatus()),
+  // Check that only 1 Redfish event is added to the store.
+  EXPECT_CALL(*event_store_ptr_, AddNewEvent).Times(1);
+
+  // 1. Origin of condition is built, event is sent to the subscriber.
+  ASSERT_THAT(subscription_service_->Notify(event_source_id, absl::OkStatus()),
               absl::OkStatus());
-  EXPECT_THAT(subscription_service_->Notify(event_source_id, absl::OkStatus()),
+
+  // 2. Event source returns an error on query, OriginOfCondition is not built
+  // and event is not sent out.
+  ASSERT_THAT(subscription_service_->Notify(event_source_id, absl::OkStatus()),
               absl::OkStatus());
-  EXPECT_THAT(subscription_service_->Notify(event_source_id, absl::OkStatus()),
+  // 3. Event source does not complete query, OriginOfCondition is not built
+  // and event is not sent out.
+  ASSERT_THAT(subscription_service_->Notify(event_source_id, absl::OkStatus()),
               absl::OkStatus());
+
+  // Verify event is sent only once in above 3 cases.
   EXPECT_EQ(on_event_callback_count, 1);
 }
 
-TEST_F(SubscriptionServiceImplTest, GetAllSubscriptions_Unimplemented) {
+TEST_F(SubscriptionServiceImplTest, GetAllSubscriptions_ReturnsEmpty) {
   EXPECT_EQ(subscription_service_->GetAllSubscriptions().size(), 0);
 }
 
-TEST_F(SubscriptionServiceImplTest, NotifyWithData_Unimplemented) {
+TEST_F(SubscriptionServiceImplTest, NotifyWithData_ReturnsUnimplementedError) {
   EventSourceId event_source_id(1, EventSourceId::Type::kDbusObjects);
   EXPECT_EQ(subscription_service_->NotifyWithData(event_source_id,
                                                   absl::OkStatus(), {}),
             absl::UnimplementedError("NotifyWithData:: Unimplemented!"));
+}
+
+TEST_F(SubscriptionServiceImplTest, ShouldDispatchEventsAfterLastEventId) {
+  static constexpr absl::string_view valid_request = R"json(
+    {
+      "EventFormatType": "Event",
+      "Protocol": "Redfish",
+      "SubscriptionType": "OEM",
+      "HeartbeatIntervalMinutes": 2,
+      "IncludeOriginOfCondition": true,
+      "DeliveryRetryPolicy": "SuspendRetries",
+      "OEMSubscriptionType": "gRPC",
+      "Oem":{
+        "Google": {
+          "LastEventId": 4,
+          "Triggers": [
+            {
+              "Id": "1",
+              "OriginResources":[
+                {
+                  "@odata.id": "/redfish/v1/Chassis/Foo/Sensors/x"
+                },
+                {
+                  "@odata.id": "/redfish/v1/Chassis/Foo/Sensors/y"
+                }
+              ],
+              "Predicate": "Reading>23"
+            }
+          ]
+        }
+      }
+    }
+  )json";
+
+  nlohmann::json request = nlohmann::json::parse(valid_request);
+  ASSERT_TRUE(!request.is_discarded());
+
+  nlohmann::json event1 = {{"key1", "value1"}};
+  nlohmann::json event2 = {{"key2", "value2"}};
+
+  EXPECT_CALL(*event_store_ptr_, GetEventsSince(std::optional<size_t>(4)))
+      .WillOnce(Return(std::vector<nlohmann::json>{event1, event2}));
+
+  EXPECT_CALL(*redfish_handler_ptr_,
+              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x")))
+      .WillOnce(Return(std::vector<EventSourceId>(
+          {{/*key_in=*/1, EventSourceId::Type::kDbusObjects},
+           {/*key_in=*/2, EventSourceId::Type::kDbusObjects}})));
+  EXPECT_CALL(*redfish_handler_ptr_,
+              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y")))
+      .WillOnce(Return(std::vector<EventSourceId>(
+          {{3, EventSourceId::Type::kDbusObjects}})));
+
+  // Create subscription and check if events are dispatched after LastEventId
+  EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription).Times(1);
+
+  std::vector<nlohmann::json> actual_events;
+  EXPECT_THAT(subscription_service_
+                  ->CreateSubscription(request,
+                                       [&](const nlohmann::json& data) {
+                                         actual_events.push_back(data);
+                                       })
+                  .status(),
+              absl::OkStatus());
+
+  EXPECT_THAT(actual_events, UnorderedElementsAre(event1, event2));
 }
 
 }  // namespace
