@@ -91,6 +91,7 @@ struct SubscriptionId {
     return !(*this == other);
   }
 
+  size_t Id() const { return subscription_id; }
   size_t subscription_id;
 };
 
@@ -203,15 +204,18 @@ class SubscriptionStore {
   virtual ~SubscriptionStore() = default;
 
   // Adds a new subscription with the given subscription ID and event source IDs
-  virtual void AddNewSubscription(
-      SubscriptionContext &&subscription_context) = 0;
+  virtual absl::Status AddNewSubscription(
+      std::unique_ptr<SubscriptionContext> subscription_context) = 0;
 
   // Deletes the subscription with the given subscription ID
   virtual void DeleteSubscription(const SubscriptionId &subscription_id) = 0;
 
+  virtual absl::StatusOr<const SubscriptionContext*>
+  GetSubscription(const SubscriptionId& subscription_id) = 0;
+
   // Retrieves the subscriptions associated with the given event source ID
-  virtual absl::StatusOr<absl::Span<const SubscriptionContext>>
-  GetSubscriptionsBySourceId(const EventSourceId &source_id) = 0;
+  virtual absl::StatusOr<absl::Span<const ecclesia::SubscriptionContext* const>>
+  GetSubscriptionsByEventSourceId(const EventSourceId &source_id) = 0;
 
   // Converts SubscriptionStore to JSON format
   virtual nlohmann::json ToJSON() const = 0;

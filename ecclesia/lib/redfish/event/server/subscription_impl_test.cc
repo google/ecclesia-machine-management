@@ -133,7 +133,7 @@ TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
       .WillOnce(Return(std::vector<EventSourceId>(
           {{3, EventSourceId::Type::kDbusObjects}})));
 
-  EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription).Times(1);
+  EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(1);
 
   // Expect subscription creation to succeed.
   EXPECT_THAT(subscription_service_
@@ -252,13 +252,9 @@ TEST_F(SubscriptionServiceImplTest,
     nlohmann::json request = nlohmann::json::parse(invalid_request);
     ASSERT_TRUE(!request.is_discarded());
 
-    // Redfish handler should not be queried on invalid subscription request.
-    EXPECT_CALL(*redfish_handler_ptr_, Subscribe).Times(0);
-
-    // No subscription should be added to SubscriptionStore when subscription
-    // request is invalid.
-    EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription).Times(0);
-
+    // Verify mock calls.
+    EXPECT_CALL(*redfish_handler_ptr_, Subscribe(_)).Times(0);
+    EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
     // Expect subscription creation to fail.
     EXPECT_NE(subscription_service_
                   ->CreateSubscription(request, [](const std::string&) {})
@@ -366,18 +362,20 @@ TEST_F(SubscriptionServiceImplTest, ShouldSendEventIfOriginOfConditionIsValid) {
       {"1", *trigger_or_status}};
 
   int on_event_callback_count = 0;
-  SubscriptionContext context(
-      SubscriptionId(1), test_id_to_triggers,
+  const auto context = std::make_unique<SubscriptionContext>(
+    SubscriptionId(1), test_id_to_triggers,
       [&on_event_callback_count, expected_event](const nlohmann::json& event) {
         ++on_event_callback_count;
         EXPECT_TRUE(CompareJson(event, expected_event,
                                 {"EventId", "EventTimestamp", "Id"}));
-      });
+  });
 
+  std::vector<const SubscriptionContext*> contexts = {context.get()};
   // Expect subscription store to be queried for subscriptions.
   EXPECT_CALL(*subscription_store_ptr_,
-              GetSubscriptionsBySourceId(event_source_id))
-      .WillRepeatedly(Return(absl::MakeSpan(&context, 1)));
+    GetSubscriptionsByEventSourceId(event_source_id))
+    .WillRepeatedly(Return(
+        absl::Span<const SubscriptionContext* const>(contexts)));
 
   EXPECT_CALL(*redfish_handler_ptr_, Query(Eq("/redfish/v1/node1"), _))
       .WillOnce(DoAll(InvokeArgument<1>(absl::OkStatus(), query_response),
@@ -468,9 +466,6 @@ TEST_F(SubscriptionServiceImplTest, ShouldDispatchEventsAfterLastEventId) {
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y")))
       .WillOnce(Return(std::vector<EventSourceId>(
           {{3, EventSourceId::Type::kDbusObjects}})));
-
-  // Create subscription and check if events are dispatched after LastEventId
-  EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription).Times(1);
 
   std::vector<nlohmann::json> actual_events;
   EXPECT_THAT(subscription_service_

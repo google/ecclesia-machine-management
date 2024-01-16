@@ -218,9 +218,11 @@ class SubscriptionServiceImpl
     }
 
     // Build and store subscription context.
-    SubscriptionContext subscription_context(subscription_id, id_to_triggers,
-                                             std::move(on_event_callback));
-    subscription_store_->AddNewSubscription(std::move(subscription_context));
+    auto subscription_context = std::make_unique<SubscriptionContext>(
+        subscription_id, id_to_triggers, std::move(on_event_callback));
+
+    ECCLESIA_RETURN_IF_ERROR(subscription_store_->AddNewSubscription(
+        std::move(subscription_context)));
     return subscription_id;
   }
 
@@ -238,14 +240,13 @@ class SubscriptionServiceImpl
   // the event source which would trigger delete subscription sequence.
   absl::Status Notify(EventSourceId key, absl::Status status) override {
     // Pull subscription context from Subscription Store
-    absl::Span<const SubscriptionContext> contexts;
-
     ECCLESIA_ASSIGN_OR_RETURN(
-        contexts, subscription_store_->GetSubscriptionsBySourceId(key));
+        auto contexts,
+        subscription_store_->GetSubscriptionsByEventSourceId(key));
 
-    for (const SubscriptionContext &subscription_context : contexts) {
+    for (const SubscriptionContext *subscription_context : contexts) {
       ECCLESIA_RETURN_IF_ERROR(
-          HandleEventsForSubscription(subscription_context, key));
+          HandleEventsForSubscription(*subscription_context, key));
     }
     return absl::OkStatus();
   }

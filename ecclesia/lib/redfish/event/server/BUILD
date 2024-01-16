@@ -42,6 +42,26 @@ cc_library(
 )
 
 cc_library(
+    name = "subscription_store",
+    srcs = ["subscription_store.cc"],
+    hdrs = ["subscription_store_impl.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":subscription",
+        "@com_google_absl//absl/algorithm:container",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/hash",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:die_if_null",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+        "@com_json//:json",
+    ],
+)
+
+cc_library(
     name = "subscription_mock",
     testonly = 1,
     hdrs = ["subscription_mock.h"],
@@ -105,5 +125,21 @@ cc_test(
         "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "subscription_store_test",
+    srcs = ["subscription_store_test.cc"],
+    deps = [
+        ":subscription",
+        ":subscription_store",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+        "@com_google_googletest//:gtest_main",
+        "@com_json//:json",
     ],
 )
