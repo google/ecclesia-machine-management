@@ -86,3 +86,24 @@ cc_test(
         "@com_json//:json",
     ],
 )
+
+cc_library(
+    name = "redfish_id",
+    srcs = ["redfish_id.hpp"],
+    hdrs = ["redfish_id.hpp"],
+    deps = [
+        "@com_google_absl//absl/synchronization",
+    ],
+)
+
+cc_test(
+    name = "redfish_id_test",
+    srcs = ["redfish_id_test.cc"],
+    deps = [
+        ":redfish_id",
+        "@com_google_absl//absl/hash",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
