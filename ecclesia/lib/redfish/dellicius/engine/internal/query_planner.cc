@@ -103,9 +103,6 @@ constexpr absl::string_view kRedfishDatetimePlusOffset =
 constexpr absl::string_view kRedfishDatetimeNoOffset = "%Y-%m-%dT%H:%M:%E6S";
 
 using RedPathStep = std::pair<std::string, std::string>;
-using RedPathSteps = std::vector<RedPathStep>;
-using RedPathIterator =
-    std::vector<std::pair<std::string, std::string>>::const_iterator;
 
 // Encapsulates information relevant per redfish object that is queried during
 // the overall query execution process; used to tag redfish jsons when logging.
@@ -113,6 +110,75 @@ struct TraceInfo {
   std::string redpath_prefix;
   std::string query_id;
   std::vector<std::string> subquery_ids;
+};
+
+// Class that encapsulates redpath and predicates.
+// If the predicates are templated, then this class contains predicates that
+// are resolved with run time values.
+// Example:
+// redpath: "/Chassis[*]/Sensors[ReadingType=$Type and Reading>$Threshold]"
+// On user providing the folowing variables at run time:
+// Type = Temperature, Threshold = 50
+// this class instance will contain:
+// nodes_: {"Chassis", "Sensors"}
+// predicates_: {"*", "ReadingType=Temperature and Reading>50"}
+class RedPathSteps final {
+ public:
+  RedPathSteps(const RedPathSteps &) = default;
+  RedPathSteps(RedPathSteps &&) = default;
+  RedPathSteps &operator=(const RedPathSteps &) = default;
+  RedPathSteps &operator=(RedPathSteps &&) = default;
+  RedPathSteps(const std::vector<std::string> *nodes,
+               std::shared_ptr<std::vector<std::string>> predicates)
+     : nodes_(nodes), predicates_(std::move(predicates)) {
+    if (nodes_ != nullptr) {
+      nodes_iterator_ = nodes_->begin();
+    }
+    if (predicates_ != nullptr) {
+      predicates_iterator_ = predicates_->begin();
+    }
+  }
+
+  bool IsEndOfRedPath() const {
+    if (nodes_ == nullptr) return true;
+    return ((nodes_iterator_ != nodes_->end()) &&
+           (std::next(nodes_iterator_) == nodes_->end()));
+  }
+
+  bool IsPredicateEmpty() const {
+    if (predicates_ == nullptr || predicates_->empty()) return true;
+    return predicates_iterator_->empty();
+  }
+
+  bool IsNodeEmpty() const {
+    if (nodes_ == nullptr || nodes_->empty()) return true;
+    return nodes_iterator_->empty();
+  }
+
+  std::string GetPredicate() const {
+    if (IsPredicateEmpty()) return "";
+    return *predicates_iterator_;
+  }
+
+  std::string GetNode() const {
+    if (IsNodeEmpty()) return "";
+    return *nodes_iterator_;
+  }
+  // Prefix increment operator
+  void increment() {
+    if (nodes_ == nullptr) return;
+    nodes_iterator_++;
+    if (predicates_ == nullptr) return;
+    predicates_iterator_++;
+  }
+
+ private:
+  // The member variable nodes_ points to the nodes in SubqueryHandle.
+  // SubqueryHandle objects must exist beyond the life of RedPathStep objects.
+  const std::vector<std::string> *nodes_;
+  std::shared_ptr<std::vector<std::string>> predicates_;
+  std::vector<std::string>::const_iterator nodes_iterator_;
+  std::vector<std::string>::const_iterator predicates_iterator_;
 };
 
 // Gets RedfishObject from given RedfishVariant.
@@ -463,10 +529,8 @@ bool PredicateFilterByNodeName(const RedfishObject &redfish_object,
 }
 
 bool ApplyPredicateRule(const RedfishObject &redfish_object, size_t node_index,
-                        size_t node_set_size, const RedPathIterator &iter) {
-  absl::string_view predicate = iter->second;
+                        size_t node_set_size, const std::string& predicate) {
   if (predicate.empty()) return false;
-
   absl::string_view logical_operation = kLogicalOperatorAnd;
   bool is_filter_success = true;
   std::vector<absl::string_view> expressions =
@@ -597,8 +661,12 @@ class SubqueryHandle final {
                  std::vector<std::pair<std::string, std::string>> redpath_steps,
                  Normalizer *normalizer)
       : subquery_(subquery),
-        normalizer_(normalizer),
-        redpath_steps_(std::move(redpath_steps)) {}
+        normalizer_(normalizer) {
+    for (auto &pair : redpath_steps) {
+      nodes_.push_back(std::move(pair.first));
+      predicates_.push_back(std::move(pair.second));
+    }
+  }
 
   // Parses given 'redfish_object' for properties requested in the subquery
   // and prepares dataset to be appended in 'result'.
@@ -631,10 +699,9 @@ class SubqueryHandle final {
     parent_subquery_data_set_ = parent_subquery_data_set;
   }
 
-  // Substitute variables in the predicates and return fully resolved redpath
+  // Substitute variables in the predicates and return a fully resolved redpath
   // steps.
-  std::unique_ptr<RedPathSteps> SubstituteVariables(
-      const QueryVariables &variables) {
+  RedPathSteps SubstituteVariables(const QueryVariables &variables) {
     std::vector<std::pair<std::string, std::string>> replacements;
     replacements.reserve(variables.values_size());
     // Build the list of replacements that will be passed into StrReplaceAll.
@@ -645,41 +712,52 @@ class SubqueryHandle final {
       replacements.push_back(std::make_pair(variable_name, value.value()));
     }
 
-    auto new_redpath_steps = std::make_unique<RedPathSteps>();
-    new_redpath_steps->reserve(redpath_steps_.size());
-    // Go through all of the redpath steps
-    for (const auto &pair : redpath_steps_) {
-      std::pair<std::string, std::string> new_pair = pair;
-      new_pair.second = absl::StrReplaceAll(new_pair.second, replacements);
+    // The `new_predicates` variable is a concrete version of `predicates_`
+    // with fully resolved templated arguments. It is created once per query.
+    // The new_predicates is a shared_ptr for the following reasons:
+    // a. A unique_ptr allows only move constructor. The usage pattern
+    // of the `new_predicates` object throughout this code requires
+    // copy construction of the predicates object.
+    // b. Retaining the ownership of `new_predicates` object in SubqueryHandle
+    // and using a raw pointer in RedPathSteps was explored but rejected due to
+    // the complexity of handling the lifetime of these objects. Both mutex
+    // based and TLS based solutions were explored.
+    // In the end shared_ptr was preferred by the team as the most elegant and
+    // maintainable approach.
+
+    auto new_predicates = std::make_shared<std::vector<std::string>>();
+    new_predicates->reserve(predicates_.size());
+
+    for (const auto &predicate : predicates_) {
+      std::string new_predicate = predicate;
+      new_predicate = absl::StrReplaceAll(new_predicate, replacements);
       // If after the variable replacement there is still an unfilled variable,
       // remove the predicate step. This will be equivalent to a match-all/*.
-      if (absl::StrContains(new_pair.second, '$')) {
+      if (absl::StrContains(new_predicate, '$')) {
         LOG(WARNING) << "Unmatched variable within predicate: "
-                     << new_pair.first << "[" << new_pair.second << "]"
+                     << predicate << "[" << new_predicate << "]"
                      << ". Removing predicate step.";
-        new_pair.second = InvalidateUnpopulatedVariables(new_pair.second);
+        new_predicate =
+            InvalidateUnpopulatedVariables(new_predicate);
       }
-      new_redpath_steps->push_back(std::move(new_pair));
+      new_predicates->push_back(std::move(new_predicate));
     }
+    // SubqueryHandle instance MUST outlast the RedPathSteps instance
+    // that uses the address of nodes_. The new_predicates shared pointer will
+    // be owned only by RedPathSteps instance after this function returns.
+    RedPathSteps new_redpath_steps(&nodes_, new_predicates);
     return new_redpath_steps;
   }
 
-  const RedPathSteps& GetRedPathSteps() const {
-      return redpath_steps_;
-  }
-
-  std::unique_ptr<RedPathSteps> GetRedPathStepsCopy() {
-    auto new_redpath_steps = std::make_unique<RedPathSteps>();
-    new_redpath_steps->reserve(redpath_steps_.size());
-    for (const auto &pair : redpath_steps_) {
-      new_redpath_steps->push_back(pair);
+  RedPathSteps GetRedPathSteps() {
+    auto new_predicates = std::make_shared<std::vector<std::string>>();
+    new_predicates->reserve(predicates_.size());
+    for (const auto &predicate : predicates_) {
+      new_predicates->push_back(predicate);
     }
-    return new_redpath_steps;
-  }
 
-  bool IsEndOfRedPath(const RedPathIterator &iter) {
-    return (iter != redpath_steps_.end()) &&
-           (next(iter) == redpath_steps_.end());
+    RedPathSteps new_redpath_steps(&nodes_, new_predicates);
+    return new_redpath_steps;
   }
 
   bool HasRedPath() const { return subquery_.has_redpath(); }
@@ -728,10 +806,13 @@ class SubqueryHandle final {
  private:
   DelliciusQuery::Subquery subquery_;
   Normalizer *normalizer_;
-  // Collection of RedPath Step expressions - (NodeName + Predicate) in the
-  // RedPath of a Subquery.
-  // Eg. /Chassis[*]/Sensors[1] - {(Chassis, *), (Sensors, 1)}
-  std::vector<std::pair<std::string, std::string>> redpath_steps_;
+  // Two separate collections of RedPath Step expressions
+  // - (NodeName + Predicate) in the RedPath of a Subquery.
+  // Eg. /Chassis[*]/Sensors[1]
+  // nodes -      {Chassis, Sensors}
+  // predicates - {*, 1}
+  std::vector<std::string> nodes_;
+  std::vector<std::string> predicates_;
   std::vector<SubqueryHandle *> child_subquery_handles_;
   // Dataset of parent subquery to link the current subquery output with.
   SubqueryDataSet *parent_subquery_data_set_ = nullptr;
@@ -745,11 +826,9 @@ struct RedPathContext {
   // Dataset of the root RedPath to which the current RedPath dataset is
   // linked.
   SubqueryDataSet *root_redpath_dataset = nullptr;
-  // Iterator configured to iterate over RedPath steps - NodeName and
-  // Predicate pair - irrelevant for uri_reference_redpath.
-  RedPathIterator redpath_steps_iterator;
-  // A resolved RedPath steps with substituted variables.
-  std::shared_ptr<RedPathSteps> redpath_steps;
+  // An object containing RedPath steps with substituted variables in the
+  // predicates.
+  RedPathSteps redpath_steps;
   // Client callback to send the subquery results
   std::function<bool(const DelliciusQueryResult &result)> callback = nullptr;
 };
@@ -883,18 +962,12 @@ std::vector<RedPathContext> ExecutePredicateFromEachSubquery(
       continue;
     }
     if (!ApplyPredicateRule(redfish_object, node_index, node_set_size,
-                            redpath_ctx.redpath_steps_iterator)) {
+                            redpath_ctx.redpath_steps.GetPredicate())) {
       continue;
     }
     filtered_redpath_context.push_back(redpath_ctx);
   }
   return filtered_redpath_context;
-}
-
-bool IsEndOfRedPath(const RedPathIterator &iter,
-                    const RedPathSteps &redpath_steps) {
-    return (iter != redpath_steps.end()) &&
-           (next(iter) == redpath_steps.end());
 }
 
 // Populates Query Result for the requested properties for fully resolved
@@ -918,8 +991,7 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
         subquery_handle->HasUriReferenceRedpath() || subquery_handle->HasUri();
     if (subquery_handle->HasRedPath()) {
       is_end_of_redpath =
-          IsEndOfRedPath(redpath_ctx.redpath_steps_iterator,
-                        *(redpath_ctx.redpath_steps));
+          redpath_ctx.redpath_steps.IsEndOfRedPath();
     }
 
     // If there aren't any child subqueries and all step expressions in the
@@ -947,19 +1019,16 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
       for (const auto &child_subquery_handle :
            subquery_handle->GetChildSubqueryHandles()) {
         if (child_subquery_handle == nullptr) continue;
-        std::unique_ptr<RedPathSteps> redpath_steps =
-            child_subquery_handle->GetRedPathStepsCopy();
+        RedPathSteps redpath_steps = child_subquery_handle->GetRedPathSteps();
         redpath_ctx_unresolved.push_back(
             {child_subquery_handle, *last_normalized_dataset,
-             redpath_steps->begin(),
-             std::move(redpath_steps),
-             redpath_ctx.callback});
+             std::move(redpath_steps), redpath_ctx.callback});
       }
       continue;
     }
     redpath_ctx_unresolved.push_back(redpath_ctx);
     if (subquery_handle->HasRedPath()) {
-      ++redpath_ctx_unresolved.back().redpath_steps_iterator;
+      redpath_ctx_unresolved.back().redpath_steps.increment();
     }
   }
   return redpath_ctx_unresolved;
@@ -979,7 +1048,7 @@ std::vector<RedPathContext> FilterRedPathWithNoPredicate(
     if (redpath_ctx.subquery_handle->HasUriReferenceRedpath() ||
         redpath_ctx.subquery_handle->HasUri() ||
         (redpath_ctx.subquery_handle->HasRedPath() &&
-         redpath_ctx.redpath_steps_iterator->second.empty())) {
+         redpath_ctx.redpath_steps.IsPredicateEmpty())) {
       redpath_ctx_no_predicate.push_back(redpath_ctx);
     }
   }
@@ -1006,7 +1075,7 @@ NodeNameToRedPathContexts DeduplicateNodeNamesAcrossSubqueries(
       node_name =
           redpath_context.subquery_handle->UriReferenceRedpathToString();
     } else if (redpath_context.subquery_handle->HasRedPath()) {
-      node_name = redpath_context.redpath_steps_iterator->first;
+      node_name = redpath_context.redpath_steps.GetNode();
     }
     node_to_redpath_contexts[node_name].push_back(redpath_context);
   }
@@ -1378,17 +1447,16 @@ absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
   auto id = subquery_.subquery_id();
   ECCLESIA_ASSIGN_OR_RETURN(SubqueryDataSet subquery_dataset,
                             normalizer_->Normalize(redfish_object, subquery_));
-
   // Insert normalized data in the parent Subquery dataset if provided.
   // Otherwise, add the dataset in the query result.
   SubqueryOutput *subquery_output = nullptr;
   if (parent_subquery_dataset == nullptr) {
     subquery_output =
-        &(*result.mutable_subquery_output_by_id())[subquery_.subquery_id()];
+        &(*result.mutable_subquery_output_by_id())[id];
   } else {
     subquery_output = &(
         *parent_subquery_dataset
-             ->mutable_child_subquery_output_by_id())[subquery_.subquery_id()];
+             ->mutable_child_subquery_output_by_id())[id];
   }
   // Check if size limit would be honored on appending the normalized data to
   // the result
@@ -1434,26 +1502,24 @@ void QueryPlanner::ProcessSubqueries(
   // Now we create RedPathContext for each RedPath across subqueries and map
   // them to the ContextNode.
   for (auto &subquery_handle : subquery_handles_) {
-    // Substitute any variables with their values provided by the query
-    // engine.
-    std::unique_ptr<RedPathSteps> redpath_steps =
-        subquery_handle->SubstituteVariables(query_variables);
-
     // Only consider subqueries that have RedPath expressions to execute
     // relative to service root. This step filters out any child subqueries
     // which execute relative to other subqueries.
     if (!subquery_handle || subquery_handle->IsChildSubquery()) continue;
 
+    // Substitute any variables with their values provided by the query
+    // engine.
+    RedPathSteps redpath_steps =
+        subquery_handle->SubstituteVariables(query_variables);
+
     // A context node can usually have multiple RedPath expressions mapped.
     // Let's instantiate the RedPathContext list with the one RedPath in the
     // subquery.
-    RedPathIterator path_iter = redpath_steps->begin();
-
+    auto node = redpath_steps.GetNode();
     std::vector<RedPathContext> redpath_ctx_multiple = {
-        {subquery_handle.get(), nullptr, path_iter, std::move(redpath_steps),
-         callback}};
+        {subquery_handle.get(), nullptr, std::move(redpath_steps), callback}};
 
-    if (subquery_handle->HasRedPath() && path_iter->first.empty()) {
+    if (subquery_handle->HasRedPath() && node.empty()) {
       // A special case where properties need to be queried from service root
       // itself.
       redpath_ctx_multiple = PopulateResultOrContinueQuery(
