@@ -17,6 +17,8 @@ cc_library(
     deps = [
         ":factory",
         ":query_engine_config",
+        ":query_rules_cc_proto",
+        "//ecclesia/lib/apifs",
         "//ecclesia/lib/file:cc_embed_interface",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:topology",

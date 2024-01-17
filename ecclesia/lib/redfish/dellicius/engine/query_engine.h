@@ -32,6 +32,8 @@
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/config.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
+#include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
@@ -41,6 +43,7 @@
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
+#include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
@@ -53,6 +56,31 @@ struct QueryContext {
   // specific RedPath prefixes in given queries.
   absl::Span<const EmbeddedFile> query_rules = {};
   const Clock *clock = Clock::RealClock();
+};
+
+// Encapsulates the queries and rules needed to execute Redpath Query.
+// This is a resolved QueryContext containing the actual query and rule read
+// from the embedded files.
+struct QuerySpec {
+  struct QueryInfo {
+    DelliciusQuery query;
+    QueryRules::RedPathPrefixSetWithQueryParams rule;
+  };
+
+  // Map of query id to query info.
+  absl::flat_hash_map<std::string, QueryInfo> query_id_to_info;
+  const Clock *clock = Clock::RealClock();
+
+  // Utility function to convert query context to resolved QuerySpec.
+  static absl::StatusOr<QuerySpec> FromQueryContext(
+      const QueryContext &query_context);
+
+  // Utility function to read query and rule files and convert them to a
+  // resolved QuerySpec.
+  static absl::StatusOr<QuerySpec> FromQueryFiles(
+      absl::Span<const std::string> query_files,
+      absl::Span<const std::string> query_rules,
+      const Clock *clock = Clock::RealClock());
 };
 
 // Parameters necessary to configure the query engine.
@@ -194,8 +222,18 @@ class QueryEngine : public QueryEngineIntf {
 
   // Creates query engine for machine devpath decorator extensions.
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
-      const QueryContext &query_context, QueryEngineParams params,
+      QuerySpec query_spec, QueryEngineParams params,
       std::unique_ptr<IdAssigner> id_assigner = nullptr);
+
+  // Overloaded Create function that accepts QueryContext instead of QuerySpec
+  static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
+      const QueryContext &query_context, QueryEngineParams params,
+      std::unique_ptr<IdAssigner> id_assigner = nullptr) {
+    ECCLESIA_ASSIGN_OR_RETURN(QuerySpec query_spec,
+                              QuerySpec::FromQueryContext(query_context));
+    return Create(std::move(query_spec), std::move(params),
+                  std::move(id_assigner));
+  }
 
   ABSL_DEPRECATED("Use QueryEngine factory methods instead.")
   QueryEngine(const QueryEngineConfiguration &config,
@@ -255,10 +293,12 @@ class QueryEngine : public QueryEngineIntf {
 
 // Build query engine based on given |configuration| to execute queries in
 // |query_context|.
+ABSL_DEPRECATED("Use QueryEngine::Create Instead")
 absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
                                               QueryEngineParams engine_params);
 
 // Creates query engine for machine devpath decorator extensions.
+ABSL_DEPRECATED("Use QueryEngine::Create Instead")
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
     std::unique_ptr<IdAssigner> id_assigner);

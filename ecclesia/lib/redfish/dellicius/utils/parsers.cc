@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
@@ -26,6 +27,7 @@
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
+#include "ecclesia/lib/redfish/interface.h"
 #include "google/protobuf/text_format.h"
 
 namespace ecclesia {
@@ -41,44 +43,52 @@ ParseQueryRulesFromEmbeddedFiles(
   for (const EmbeddedFile &embedded_rule : embedded_query_rules) {
     QueryRules query_rules;
     // Parse query rules into embedded file object.
+
     if (!google::protobuf::TextFormat::ParseFromString(std::string(embedded_rule.data),
-                                             &query_rules)) {
+            &query_rules)) {
       return absl::InternalError(
           absl::StrFormat("Invalid query rule:\n%s", embedded_rule.data));
     }
     // Extract RedPath prefix to query params map for each query id.
-    for (const auto &[query_id, prefix_set_with_query_params] :
-         query_rules.query_id_to_params_rule()) {
-      RedPathRedfishQueryParams redpath_prefix_to_params;
-      // Iterate over each pair of RedPath prefix and Redfish query parameter
-      // configuration and build the prefix to param mapping in memory.
-      for (const auto &redpath_prefix_with_query_params :
-           prefix_set_with_query_params.redpath_prefix_with_params()) {
-        RedfishQueryParamExpand::ExpandType expand_type;
-        ExpandConfiguration::ExpandType expand_type_in_rule =
-            redpath_prefix_with_query_params.expand_configuration().type();
-        if (expand_type_in_rule == ExpandConfiguration::BOTH) {
-          expand_type = RedfishQueryParamExpand::kBoth;
-        } else if (expand_type_in_rule == ExpandConfiguration::NO_LINKS) {
-          expand_type = RedfishQueryParamExpand::kNotLinks;
-        } else if (expand_type_in_rule == ExpandConfiguration::ONLY_LINKS) {
-          expand_type = RedfishQueryParamExpand::kLinks;
-        } else {
-          break;
-        }
-        GetParams params{.expand = RedfishQueryParamExpand(
-                             {.type = expand_type,
-                              .levels = redpath_prefix_with_query_params
-                                            .expand_configuration()
-                                            .level()})};
-
-        redpath_prefix_to_params[redpath_prefix_with_query_params.redpath()] =
-            params;
-      }
-      parsed_query_rules[query_id] = redpath_prefix_to_params;
+    for (auto &[query_id, prefix_set_with_query_params] :
+         *query_rules.mutable_query_id_to_params_rule()) {
+      parsed_query_rules[query_id] =
+          ParseQueryRuleParams(std::move(prefix_set_with_query_params));
     }
   }
-  return parsed_query_rules;
+  return std::move(parsed_query_rules);
+}
+
+RedPathRedfishQueryParams ParseQueryRuleParams(
+    QueryRules::RedPathPrefixSetWithQueryParams rule) {
+  RedPathRedfishQueryParams redpath_prefix_to_params;
+  // Iterate over each pair of RedPath prefix and Redfish query parameter
+  // configuration and build the prefix to param mapping in memory.
+  for (auto &redpath_prefix_with_query_params :
+       *rule.mutable_redpath_prefix_with_params()) {
+    RedfishQueryParamExpand::ExpandType expand_type;
+    ExpandConfiguration::ExpandType expand_type_in_rule =
+        redpath_prefix_with_query_params.expand_configuration().type();
+    if (expand_type_in_rule == ExpandConfiguration::BOTH) {
+      expand_type = RedfishQueryParamExpand::ExpandType::kBoth;
+    } else if (expand_type_in_rule == ExpandConfiguration::NO_LINKS) {
+      expand_type = RedfishQueryParamExpand::ExpandType::kNotLinks;
+    } else if (expand_type_in_rule == ExpandConfiguration::ONLY_LINKS) {
+      expand_type = RedfishQueryParamExpand::ExpandType::kLinks;
+    } else {
+      break;
+    }
+    GetParams params{
+        .expand = RedfishQueryParamExpand(
+            {.type = expand_type,
+             .levels = redpath_prefix_with_query_params.expand_configuration()
+                           .level()})};
+
+    redpath_prefix_to_params[std::move(
+        *redpath_prefix_with_query_params.mutable_redpath())] =
+        std::move(params);
+  }
+  return redpath_prefix_to_params;
 }
 
 }  // namespace ecclesia

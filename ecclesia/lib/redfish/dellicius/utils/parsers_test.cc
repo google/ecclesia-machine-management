@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -25,6 +26,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
+#include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -62,7 +64,7 @@ TEST(ParserTest, ValidQueryRulesParseCorrectly) {
 
   GetParams test_params{
       .expand = RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::kBoth, .levels = 1})};
+          {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 1})};
   ASSERT_TRUE(test_params.expand.has_value());
 
   EXPECT_THAT(
@@ -87,6 +89,49 @@ TEST(ParserTest, MalformedQueryRulesReturnError) {
   absl::StatusOr<absl::flat_hash_map<std::string, RedPathRedfishQueryParams>>
       query_to_params = ParseQueryRulesFromEmbeddedFiles(query_rules);
   EXPECT_THAT(query_to_params, IsStatusInternal());
+}
+
+TEST(ParseQueryRuleParams, ParseQueryRuleParamsCorrectly) {
+  QueryRules::RedPathPrefixSetWithQueryParams rule = ParseTextProtoOrDie(
+      R"pb(redpath_prefix_with_params {
+             redpath: "/Systems[*]/Memory"
+             expand_configuration { level: 1 type: NO_LINKS }
+           }
+           redpath_prefix_with_params {
+             redpath: "/Systems[*]/Processors"
+             expand_configuration { level: 2 type: ONLY_LINKS }
+           }
+           redpath_prefix_with_params {
+             redpath: "/Chassis[*]/Sensors"
+             expand_configuration { level: 3 type: BOTH }
+           }
+           redpath_prefix_with_params {
+             redpath: "/Undefined"
+             expand_configuration { level: 4 }
+           }
+      )pb");
+
+  EXPECT_THAT(
+      ParseQueryRuleParams(std::move(rule)),
+      UnorderedElementsAre(
+          Pair("/Systems[*]/Memory",
+               GetParamsEq(
+                   RedfishQueryParamExpand(
+                       {.type = RedfishQueryParamExpand::ExpandType::kNotLinks,
+                        .levels = 1})
+                       .ToString())),
+          Pair("/Systems[*]/Processors",
+               GetParamsEq(
+                   RedfishQueryParamExpand(
+                       {.type = RedfishQueryParamExpand::ExpandType::kLinks,
+                        .levels = 2})
+                       .ToString())),
+          Pair("/Chassis[*]/Sensors",
+               GetParamsEq(
+                   RedfishQueryParamExpand(
+                       {.type = RedfishQueryParamExpand::ExpandType::kBoth,
+                        .levels = 3})
+                       .ToString()))));
 }
 
 }  // namespace

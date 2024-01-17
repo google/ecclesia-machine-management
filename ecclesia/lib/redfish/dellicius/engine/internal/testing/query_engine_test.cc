@@ -34,6 +34,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
@@ -44,6 +45,8 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/testing/test_queries_embedded.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/testing/test_query_rules_embedded.h"
+#include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
@@ -67,6 +70,8 @@ namespace {
 using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Not;
+using ::testing::Pair;
+using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedPointwise;
 
 constexpr absl::string_view kQuerySamplesLocation =
@@ -343,8 +348,8 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
   }
 }
 
-// // Tests that when transport metrics are enabled per QueryResult,
-// // the metrics are independent of other QueryResult.
+// Tests that when transport metrics are enabled per QueryResult,
+// the metrics are independent of other QueryResult.
 TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
   // Create QueryEngine with transport metrics
 
@@ -359,7 +364,8 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
 
   // Hold all the metrics collected from each query execution to validate
   // later.
-  RedfishMetrics metrics_first, metrics_cached;
+  RedfishMetrics metrics_first;
+  RedfishMetrics metrics_cached;
   {
     // On first query, thermal subsystem won't be queried explicitly since
     // chassis level 2 expand will return thermal objects. Here we expect to
@@ -451,7 +457,9 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedQuery) {
           kQuerySamplesLocation, "query_out/sensor_out_template.textproto")));
 
   // Build the argument map.
-  QueryVariables::VariableValue val1, val2, val3;
+  QueryVariables::VariableValue val1;
+  QueryVariables::VariableValue val2;
+  QueryVariables::VariableValue val3;
   val1.set_name("Type");
   val1.set_value("Temperature");
   val2.set_name("Units");
@@ -484,7 +492,8 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedUnfilledVars) {
           JoinFilePaths(kQuerySamplesLocation,
                         "query_out/sensor_out_template_full.textproto")));
 
-  QueryVariables::VariableValue val1, val2;
+  QueryVariables::VariableValue val1;
+  QueryVariables::VariableValue val2;
   val1.set_name("Units");
   val1.set_value("Cel");
   // Type and units will remain unset
@@ -522,7 +531,8 @@ TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
                         "query_out/sensor_out_template.textproto")));
 
   // Set the variables for filter criteria #1
-  QueryVariables::VariableValue val1, val2;
+  QueryVariables::VariableValue val1;
+  QueryVariables::VariableValue val2;
   val1.set_name("Units");
   val1.set_value("Cel");
   // Type and units will remain unset
@@ -533,7 +543,9 @@ TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
   test_args["SensorCollectorTemplate"] = args1;
 
   // Set the variables for filter criteria #2
-  QueryVariables::VariableValue val3, val4, val5;
+  QueryVariables::VariableValue val3;
+  QueryVariables::VariableValue val4;
+  QueryVariables::VariableValue val5;
   val3.set_name("Type");
   val3.set_value("Temperature");
   val4.set_name("Units");
@@ -669,7 +681,7 @@ TEST(QueryEngineTest, QueryEngineWithIdAssigner) {
 TEST(QueryEngineTest, TestQueryEngineFactoryForParserError) {
   FakeRedfishServer server(kIndusMockup);
   EXPECT_EQ(GetDefaultQueryEngine(server, {{"Test", "{}"}}).status().code(),
-            absl::StatusCode::kInvalidArgument);
+            absl::StatusCode::kInternal);
 }
 
 TEST(QueryEngineTest, TestQueryEngineFactoryForInvalidQuery) {
@@ -790,7 +802,6 @@ TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
         server, kDelliciusQueries, kQueryRules, &clock, params);
     EXPECT_TRUE(query_engine.ok());
 
-    // Parse DelliciusQueryResult from string
     std::string query_result_str = R"pb(
       results {
         key: "AssemblyCollectorWithPropertyNameNormalization"
@@ -834,7 +845,6 @@ TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
         server, kDelliciusQueries, kQueryRules, &clock, params);
     EXPECT_TRUE(query_engine.ok());
 
-    // Parse DelliciusQueryResult from string
     std::string query_result_str = R"pb(
       results {
         key: "AssemblyCollectorWithPropertyNameNormalization"
@@ -944,6 +954,269 @@ TEST(QueryEngineTest, QueryEngineLocationContextSuccess) {
   ASSERT_EQ(response_entries.results().size(), 1);
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_output_embedded_location)});
+}
+
+TEST(QueryEngineTest, QueryEngineCreateUsingQuerySpec) {
+  FakeRedfishServer server(kComponentIntegrityMockupPath);
+  FakeClock clock{clock_time};
+
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
+                                   .query_rules = kQueryRules,
+                                   .clock = &clock}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      QueryEngine::Create(std::move(query_spec),
+                          {.transport = std::move(transport)}));
+
+  // Execute query where custom service root is set to /google/v1.
+  QueryIdToResult response =
+      query_engine->ExecuteRedpathQuery({"CustomServiceRoot"});
+  QueryIdToResult intent_output = ParseTextFileAsProtoOrDie<QueryIdToResult>(
+      GetTestDataDependencyPath(JoinFilePaths(
+          kQuerySamplesLocation,
+          "query_out/service_root_google_out_translated.textproto")));
+
+  EXPECT_THAT(
+      response.results().at("CustomServiceRoot").data(),
+      EqualsProto(intent_output.results().at("GoogleServiceRoot").data()));
+}
+
+// Custom matcher to match QueryInfo struct.
+MATCHER_P(QueryInfoEq, query_info, "") {
+  return ExplainMatchResult(EqualsProto(query_info.query), arg.query,
+                            result_listener) &&
+         ExplainMatchResult(EqualsProto(query_info.rule), arg.rule,
+                            result_listener);
+}
+
+TEST(QuerySpecTest, ConvertFromQueryContextPass) {
+  DelliciusQuery query_a = ParseTextProtoOrDie(
+      R"pb(query_id: "query_a"
+           property_sets { properties { property: "property_1" type: STRING } }
+      )pb");
+
+  DelliciusQuery query_b = ParseTextProtoOrDie(
+      R"pb(query_id: "query_b"
+           property_sets { properties { property: "property_1" type: STRING } }
+      )pb");
+
+  QueryRules query_rules = ParseTextProtoOrDie(
+      R"pb(query_id_to_params_rule {
+             key: "query_a"
+             value {
+               redpath_prefix_with_params {
+                 expand_configuration { level: 1 type: BOTH }
+               }
+             }
+           }
+      )pb");
+
+  std::string query_a_contents = query_a.ShortDebugString();
+  std::string query_b_contents = query_b.ShortDebugString();
+  std::string rule_contents = query_rules.ShortDebugString();
+
+  std::vector<EmbeddedFile> queries = {
+      EmbeddedFile{.name = "query_a.textproto", .data = query_a_contents},
+      EmbeddedFile{.name = "query_b.textproto", .data = query_b_contents},
+  };
+
+  std::vector<EmbeddedFile> rules = {
+      EmbeddedFile{.name = "query_rules.textproto", .data = rule_contents},
+  };
+
+  FakeClock clock;
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec spec,
+      QuerySpec::FromQueryContext(
+          {.query_files = queries, .query_rules = rules, .clock = &clock}));
+  EXPECT_THAT(
+      spec.query_id_to_info,
+      UnorderedElementsAre(
+          Pair("query_a",
+               QueryInfoEq(QuerySpec::QueryInfo{
+                   .query = std::move(query_a),
+                   .rule = std::move(
+                       query_rules.mutable_query_id_to_params_rule()->at(
+                           "query_a"))})),
+          Pair("query_b", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = std::move(query_b)}))));
+  EXPECT_EQ(spec.clock, &clock);
+}
+
+TEST(QuerySpecTest, ConvertFromQueryContextDuplicateQueries) {
+  DelliciusQuery query_a = ParseTextProtoOrDie(
+      R"pb(query_id: "query_a"
+           property_sets { properties { property: "property_1" type: STRING } }
+      )pb");
+
+  std::string query_a_contents = query_a.ShortDebugString();
+
+  std::vector<EmbeddedFile> queries = {
+      EmbeddedFile{.name = "query_a.textproto", .data = query_a_contents},
+      EmbeddedFile{.name = "query_b.textproto", .data = query_a_contents},
+  };
+
+  EXPECT_THAT(QuerySpec::FromQueryContext({.query_files = queries}),
+              IsStatusInternal());
+}
+
+TEST(QuerySpecTest, ConvertFromQueryContextUnableToReadQuery) {
+  std::vector<EmbeddedFile> queries = {
+      EmbeddedFile{.name = "query_a.textproto", .data = "UNKNOWN"}};
+
+  EXPECT_THAT(QuerySpec::FromQueryContext({.query_files = queries}),
+              IsStatusInternal());
+}
+
+TEST(QuerySpecTest, ConvertFromQueryContextUnableToReadQueryRule) {
+  DelliciusQuery query_a = ParseTextProtoOrDie(
+      R"pb(query_id: "query_a"
+           property_sets { properties { property: "property_1" type: STRING } }
+      )pb");
+
+  std::string query_a_contents = query_a.ShortDebugString();
+
+  std::vector<EmbeddedFile> queries = {
+      EmbeddedFile{.name = "query_a.textproto", .data = query_a_contents},
+  };
+
+  std::vector<EmbeddedFile> rules = {
+      EmbeddedFile{.name = "query_rules.textproto", .data = "UNKNOWN"},
+  };
+
+  EXPECT_THAT(QuerySpec::FromQueryContext(
+                  {.query_files = queries, .query_rules = rules}),
+              IsStatusInternal());
+}
+
+class QuerySpecConvertTest : public testing::Test {
+ protected:
+  QuerySpecConvertTest()
+      : fs_(GetTestTempdirPath()), apifs_(GetTestTempdirPath("test")) {
+    fs_.CreateDir("/tmp/test");
+  }
+
+  TestFilesystem fs_;
+  ApifsDirectory apifs_;
+};
+
+TEST_F(QuerySpecConvertTest, ConvertFromQueryFilesPass) {
+  DelliciusQuery query_a = ParseTextProtoOrDie(
+      R"pb(query_id: "query_a"
+           property_sets { properties { property: "property_1" type: STRING } }
+      )pb");
+
+  DelliciusQuery query_b = ParseTextProtoOrDie(
+      R"pb(query_id: "query_b"
+           property_sets { properties { property: "property_1" type: STRING } }
+      )pb");
+
+  QueryRules query_rules = ParseTextProtoOrDie(
+      R"pb(query_id_to_params_rule {
+             key: "query_a"
+             value {
+               redpath_prefix_with_params {
+                 expand_configuration { level: 1 type: BOTH }
+               }
+             }
+           }
+      )pb");
+
+  std::string query_a_contents = query_a.ShortDebugString();
+  std::string query_b_contents = query_b.ShortDebugString();
+  std::string rule_contents = query_rules.ShortDebugString();
+
+  fs_.CreateFile("/tmp/test/query_a.textproto", query_a_contents);
+  fs_.CreateFile("/tmp/test/query_b.textproto", query_b_contents);
+  fs_.CreateFile("/tmp/test/query_rule.textproto", rule_contents);
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec spec, QuerySpec::FromQueryFiles(
+                          {fs_.GetTruePath("/tmp/test/query_a.textproto"),
+                           fs_.GetTruePath("/tmp/test/query_b.textproto")},
+                          {fs_.GetTruePath("/tmp/test/query_rule.textproto")}));
+
+  EXPECT_THAT(
+      spec.query_id_to_info,
+      UnorderedElementsAre(
+          Pair("query_a",
+               QueryInfoEq(QuerySpec::QueryInfo{
+                   .query = std::move(query_a),
+                   .rule = std::move(
+                       query_rules.mutable_query_id_to_params_rule()->at(
+                           "query_a"))})),
+          Pair("query_b", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = std::move(query_b)}))));
+  EXPECT_NE(spec.clock, nullptr);
+}
+
+TEST_F(QuerySpecConvertTest, ConvertFromQueryFilesDuplicateQueries) {
+  DelliciusQuery query_a = ParseTextProtoOrDie(
+      R"pb(query_id: "query_a"
+           property_sets { properties { property: "property_1" type: STRING } }
+      )pb");
+
+  QueryRules query_rules = ParseTextProtoOrDie(
+      R"pb(query_id_to_params_rule {
+             key: "query_a"
+             value {
+               redpath_prefix_with_params {
+                 expand_configuration { level: 1 type: BOTH }
+               }
+             }
+           }
+      )pb");
+
+  std::string query_a_contents = query_a.ShortDebugString();
+  std::string rule_contents = query_rules.ShortDebugString();
+
+  fs_.CreateFile("/tmp/test/query_a.textproto", query_a_contents);
+  fs_.CreateFile("/tmp/test/query_b.textproto", query_a_contents);
+  fs_.CreateFile("/tmp/test/query_rule.textproto", rule_contents);
+
+  EXPECT_THAT(QuerySpec::FromQueryFiles(
+                  {fs_.GetTruePath("/tmp/test/query_a.textproto"),
+                   fs_.GetTruePath("/tmp/test/query_b.textproto")},
+                  {fs_.GetTruePath("/tmp/test/query_rule.textproto")}),
+              IsStatusInternal());
+}
+
+TEST_F(QuerySpecConvertTest, ConvertFromQueryFilesUnableToReadQuery) {
+  fs_.CreateFile("/tmp/test/query_a.textproto", "UNKNOWN");
+
+  EXPECT_THAT(QuerySpec::FromQueryFiles(
+                  {fs_.GetTruePath("/tmp/test/query_a.textproto")}, {}),
+              IsStatusInternal());
+}
+
+TEST_F(QuerySpecConvertTest, ConvertFromQueryFilesUnableToReadQueryRule) {
+  DelliciusQuery query_a = ParseTextProtoOrDie(
+      R"pb(query_id: "query_a"
+           property_sets { properties { property: "property_1" type: STRING } }
+      )pb");
+
+  std::string query_a_contents = query_a.ShortDebugString();
+
+  fs_.CreateFile("/tmp/test/query_a.textproto", query_a_contents);
+  fs_.CreateFile("/tmp/test/query_rule.textproto", "UNKNOWN");
+
+  EXPECT_THAT(QuerySpec::FromQueryFiles(
+                  {fs_.GetTruePath("/tmp/test/query_a.textproto")},
+                  {fs_.GetTruePath("/tmp/test/query_rule.textproto")}),
+              IsStatusInternal());
 }
 
 }  // namespace

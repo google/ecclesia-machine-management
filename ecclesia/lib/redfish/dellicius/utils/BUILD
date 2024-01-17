@@ -85,6 +85,7 @@ cc_library(
     visibility = ["//ecclesia/lib/redfish:__subpackages__"],
     deps = [
         "//ecclesia/lib/file:cc_embed_interface",
+        "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/engine:query_rules_cc_proto",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
         "@com_google_absl//absl/container:flat_hash_map",
@@ -101,13 +102,13 @@ cc_test(
     deps = [
         ":parsers",
         "//ecclesia/lib/file:cc_embed_interface",
+        "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/engine:query_rules_cc_proto",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",

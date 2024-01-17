@@ -35,6 +35,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/config.h"
 #include "ecclesia/lib/redfish/dellicius/engine/factory.h"
@@ -341,6 +342,77 @@ class QueryEngineImpl final : public QueryEngineIntf {
 
 }  // namespace
 
+absl::StatusOr<QuerySpec> QuerySpec::FromQueryContext(
+    const QueryContext &query_context) {
+  QuerySpec query_spec;
+  for (const EmbeddedFile &query_file : query_context.query_files) {
+    DelliciusQuery query;
+
+      if (!google::protobuf::TextFormat::ParseFromString(std::string(query_file.data),
+                                               &query)) {
+      return absl::InternalError(absl::StrCat(
+          "Cannot get RedPath query from embedded file ", query_file.name));
+    }
+    std::string query_id = query.query_id();
+    auto [it, inserted] = query_spec.query_id_to_info.insert(
+        {query_id, QuerySpec::QueryInfo{.query = std::move(query)}});
+    if (!inserted) {
+      return absl::InternalError(
+          absl::StrCat("Duplicate query for: ", query_id));
+    }
+  }
+  for (const EmbeddedFile &query_rule : query_context.query_rules) {
+    QueryRules rules;
+    if (!google::protobuf::TextFormat::ParseFromString(std::string(query_rule.data),
+        &rules)) {
+      return absl::InternalError(
+          absl::StrCat("Cannot get RedPath query rules from embedded file ",
+                       query_rule.name));
+    }
+    for (auto &[query_id, rule] : *rules.mutable_query_id_to_params_rule()) {
+      if (auto it = query_spec.query_id_to_info.find(query_id);
+          it != query_spec.query_id_to_info.end()) {
+        it->second.rule = std::move(rule);
+      }
+    }
+  }
+  query_spec.clock = query_context.clock;
+  return query_spec;
+}
+
+absl::StatusOr<QuerySpec> QuerySpec::FromQueryFiles(
+    absl::Span<const std::string> query_files,
+    absl::Span<const std::string> query_rules, const Clock *clock) {
+  std::vector<EmbeddedFile> query_files_embedded;
+  std::vector<EmbeddedFile> query_rules_embedded;
+
+  std::vector<std::string> query_files_data;
+  query_files_data.reserve(query_files.size());
+  for (const std::string &query_file : query_files) {
+    ApifsFile query_data_file(query_file);
+    ECCLESIA_ASSIGN_OR_RETURN(std::string query_data, query_data_file.Read());
+    query_files_data.push_back(std::move(query_data));
+    query_files_embedded.push_back(
+        EmbeddedFile{.name = query_file, .data = query_files_data.back()});
+  }
+
+  std::vector<std::string> query_rules_data;
+  query_rules_data.reserve(query_rules.size());
+  for (const std::string &query_rule : query_rules) {
+    ApifsFile query_rule_file(query_rule);
+    ECCLESIA_ASSIGN_OR_RETURN(std::string rule_data, query_rule_file.Read());
+    query_rules_data.push_back(std::move(rule_data));
+    query_rules_embedded.push_back(
+        EmbeddedFile{.name = query_rule, .data = query_rules_data.back()});
+  }
+
+  QueryContext query_context = {.query_files = query_files_embedded,
+                                .query_rules = query_rules_embedded,
+                                .clock = clock};
+
+  return QuerySpec::FromQueryContext(query_context);
+}
+
 QueryEngine::QueryEngine(const QueryEngineConfiguration &config,
                          std::unique_ptr<RedfishTransport> transport,
                          RedfishTransportCacheFactory cache_factory,
@@ -356,54 +428,32 @@ QueryEngine::QueryEngine(const QueryEngineConfiguration &config,
 // one is constructed and passed to this method when using QueryEngineParams
 // with the enable_redfish_metrics feature flag enabled.
 absl::StatusOr<QueryEngine> CreateQueryEngine(
-    std::string target_node_id, const QueryContext &query_context,
+    std::string target_node_id, QuerySpec query_spec,
     std::unique_ptr<RedfishInterface> redfish_interface,
     std::unique_ptr<Normalizer> normalizer,
     MetricalRedfishTransport *metrical_transport,
     const QueryEngineParams::FeatureFlags &feature_flags) {
-  // Parse query rules from embedded proto messages
-  ECCLESIA_ASSIGN_OR_RETURN(
-      auto query_id_to_rules,
-      ParseQueryRulesFromEmbeddedFiles({query_context.query_rules.begin(),
-                                        query_context.query_rules.end()}));
-
   // Parse queries from embedded proto messages
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
       id_to_query_plans;
-  for (const EmbeddedFile &query_file : query_context.query_files) {
-    DelliciusQuery query;
-    if (!google::protobuf::TextFormat::ParseFromString(std::string(query_file.data),
-                                             &query)) {
-      return absl::InvalidArgumentError(absl::StrCat(
-          "Cannot get RedPath query from embedded file ", query_file.name));
-    }
 
-    // Build a query plan if none exists for the query id
-    if (id_to_query_plans.contains(query.query_id())) continue;
-    RedPathRedfishQueryParams params;
-    if (auto iter = query_id_to_rules.find(query.query_id());
-        iter != query_id_to_rules.end()) {
-      params = std::move(iter->second);
-    }
+  for (auto &[query_id, query_info] : query_spec.query_id_to_info) {
+    ECCLESIA_ASSIGN_OR_RETURN(
+        auto query_planner,
+        BuildDefaultQueryPlanner(
+            query_info.query, ParseQueryRuleParams(std::move(query_info.rule)),
+            normalizer.get(), redfish_interface.get()));
 
-    absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> query_planner =
-        BuildDefaultQueryPlanner(query, std::move(params), normalizer.get(),
-                                 redfish_interface.get());
-    if (!query_planner.ok()) {
-      return absl::InternalError(
-          absl::StrCat("Cannot create query plan due to error: ",
-                       query_planner.status().message()));
-    }
-    id_to_query_plans.insert({query.query_id(), *std::move(query_planner)});
+    id_to_query_plans[query_id] = std::move(query_planner);
   }
   return QueryEngine(std::make_unique<QueryEngineImpl>(
-      std::move(target_node_id), std::move(id_to_query_plans),
-      query_context.clock, std::move(normalizer), std::move(redfish_interface),
-      metrical_transport, feature_flags));
+      std::move(target_node_id), std::move(id_to_query_plans), query_spec.clock,
+      std::move(normalizer), std::move(redfish_interface), metrical_transport,
+      feature_flags));
 }
 
-absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
-                                              QueryEngineParams engine_params) {
+static absl::StatusOr<QueryEngine> CreateQueryEngine(
+    QuerySpec query_spec, QueryEngineParams engine_params) {
   std::unique_ptr<RedfishInterface> redfish_interface;
   MetricalRedfishTransport *metrical_transport_ptr = nullptr;
   // Build Redfish interface and metrical transport if desired.
@@ -421,13 +471,14 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
   }
   RedfishInterface *redfish_interface_ptr = redfish_interface.get();
   return CreateQueryEngine(
-      engine_params.entity_tag, query_context, std::move(redfish_interface),
+      engine_params.entity_tag, std::move(query_spec),
+      std::move(redfish_interface),
       BuildLocalDevpathNormalizer(redfish_interface_ptr, engine_params),
       metrical_transport_ptr, engine_params.feature_flags);
 }
 
 absl::StatusOr<QueryEngine> CreateQueryEngine(
-    const QueryContext &query_context, QueryEngineParams engine_params,
+    QuerySpec query_spec, QueryEngineParams engine_params,
     std::unique_ptr<IdAssigner> id_assigner) {
   std::unique_ptr<RedfishInterface> redfish_interface;
   MetricalRedfishTransport *metrical_transport_ptr = nullptr;
@@ -449,23 +500,41 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
   std::unique_ptr<Normalizer> normalizer = GetMachineDevpathNormalizer(
       engine_params, std::move(id_assigner), redfish_interface.get());
 
-  return CreateQueryEngine(engine_params.entity_tag, query_context,
+  return CreateQueryEngine(engine_params.entity_tag, std::move(query_spec),
                            std::move(redfish_interface), std::move(normalizer),
                            metrical_transport_ptr, engine_params.feature_flags);
 }
 
+absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
+                                              QueryEngineParams engine_params) {
+  ECCLESIA_ASSIGN_OR_RETURN(QuerySpec query_spec,
+                            QuerySpec::FromQueryContext(query_context));
+  return CreateQueryEngine(std::move(query_spec), std::move(engine_params));
+}
+
+absl::StatusOr<QueryEngine> CreateQueryEngine(
+    const QueryContext &query_context, QueryEngineParams engine_params,
+    std::unique_ptr<IdAssigner> id_assigner) {
+  ECCLESIA_ASSIGN_OR_RETURN(QuerySpec query_spec,
+                            QuerySpec::FromQueryContext(query_context));
+  return CreateQueryEngine(std::move(query_spec), std::move(engine_params),
+                           std::move(id_assigner));
+}
+
 absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
-    const QueryContext &query_context, QueryEngineParams params,
+    QuerySpec query_spec, QueryEngineParams params,
     std::unique_ptr<IdAssigner> id_assigner) {
   if (id_assigner != nullptr) {
     ECCLESIA_ASSIGN_OR_RETURN(
-        QueryEngine engine, CreateQueryEngine(query_context, std::move(params),
-                                              std::move(id_assigner)));
+        QueryEngine engine,
+        CreateQueryEngine(std::move(query_spec), std::move(params),
+                          std::move(id_assigner)));
     return std::make_unique<QueryEngine>(std::move(engine));
   }
 
   ECCLESIA_ASSIGN_OR_RETURN(
-      QueryEngine engine, CreateQueryEngine(query_context, std::move(params)));
+      QueryEngine engine,
+      CreateQueryEngine(std::move(query_spec), std::move(params)));
   return std::make_unique<QueryEngine>(std::move(engine));
 }
 
