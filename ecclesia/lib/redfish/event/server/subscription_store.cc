@@ -56,18 +56,18 @@ class SubscriptionStoreImpl : public SubscriptionStore {
       return absl::InvalidArgumentError("Invalid Id, must be >0");
     }
 
+    SubscriptionId subscription_id = subscription_context->subscription_id;
     const SubscriptionContext *subscription_context_raw_ptr =
         subscription_context.get();
 
     // Insert a subscription id if an equivalent key does not
     // already exist within the map.
     auto [it, inserted] = subscriptions_.insert({
-                        subscription_context_raw_ptr->subscription_id,
-                        std::move(subscription_context)});
+                    subscription_id, std::move(subscription_context)});
     // subscription_context cannot be used past this point.
     if (!inserted) {
       return absl::AlreadyExistsError(absl::StrCat("Subscription Id ",
-      subscription_context_raw_ptr->subscription_id.Id(), " already exists.") );
+        subscription_id.Id(), " already exists.") );
     }
 
     std::vector<EventSourceId> event_source_ids_to_add;
