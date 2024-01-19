@@ -21,6 +21,7 @@
 #include <string>
 #include <utility>
 
+#include "google/rpc/code.pb.h"
 #include "google/rpc/status.pb.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -181,12 +182,33 @@ absl::StatusOr<google::protobuf::Timestamp> TimestampStrToTimestamp(
   return absl::InternalError("Unable to convert to timestamp value");
 }
 
+// Takes a google rpc code as an int, as from a DelliciusQueryResult Status,
+// and converts it to a QueryResultStatus.
+ErrorCode RpcCodeToQueryResultErrorCode(int code) {
+  google::rpc::Code rpc_code = static_cast<google::rpc::Code>(code);
+  switch (rpc_code) {
+    case google::rpc::OK:
+    case google::rpc::NOT_FOUND:
+      return ErrorCode::ERROR_NONE;
+    case google::rpc::FAILED_PRECONDITION:
+      return ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE;
+    case google::rpc::DEADLINE_EXCEEDED:
+      return ErrorCode::ERROR_NETWORK;
+    case google::rpc::UNAUTHENTICATED:
+      return ErrorCode::ERROR_UNAUTHENTICATED;
+    default:
+      return ErrorCode::ERROR_INTERNAL;
+  }
+}
+
 }  // namespace
 
 QueryResult ToQueryResult(const ecclesia::DelliciusQueryResult& result_in) {
   QueryResult result;
   result.set_query_id(result_in.query_id());
   if (!result_in.status().message().empty()) {
+    result.mutable_status()->set_error_code(
+        RpcCodeToQueryResultErrorCode(result_in.status().code()));
     result.mutable_status()->add_errors(result_in.status().message());
   }
   if (result_in.has_start_timestamp()) {

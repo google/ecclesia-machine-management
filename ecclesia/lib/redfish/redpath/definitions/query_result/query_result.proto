@@ -86,7 +86,23 @@ message Statistics {
   optional RedfishMetrics redfish_metrics = 7;
 }
 
+// Codes for errors that may be encountered during redpath query execution.
+enum ErrorCode {
+  ERROR_NONE = 0;
+  // Occurs when the redfish service root cannot be queried. Query execution not
+  // attempted.
+  ERROR_SERVICE_ROOT_UNREACHABLE = 1;
+  // Encapsulates network timeouts during query execution.
+  ERROR_NETWORK = 2;
+  // Occurs when user is unauthenticated to access any RF resource during the
+  // query execution.
+  ERROR_UNAUTHENTICATED = 3;
+  ERROR_INTERNAL = 4;
+}
+
 message Status {
   // List of errors encountered for this query
   repeated string errors = 1;
+  // Error code for the query. Will reflect first encountered error.
+  ErrorCode error_code = 2;
 }

@@ -532,6 +532,21 @@ TEST(QueryResultDataConverterTest, ConvertLegacyResultWithArrayProperty) {
                          }
                        })pb"));
 }
+TEST(QueryResultDataConverterTest, ConvertLegacyResultWithErrors) {
+  ecclesia::DelliciusQueryResult legacy_result = ParseTextProtoOrDie(
+      R"pb(query_id: "PCIErrorLogSingleEntry"
+           status { code: 4 message: "Deadline Exceeded" })pb");
+
+  QueryResult result = ToQueryResult(legacy_result);
+  ASSERT_THAT(result, EqualsProto(
+                          R"pb(query_id: "PCIErrorLogSingleEntry"
+                               status {
+                                 errors: "Deadline Exceeded"
+                                 error_code: ERROR_NETWORK
+                               }
+                               data {}
+                          )pb"));
+}
 
 TEST(QueryResultDataConverterTest, DataVerificationWithMetrics) {
   ecclesia::DelliciusQueryResult legacy_result = ParseTextProtoOrDie(
