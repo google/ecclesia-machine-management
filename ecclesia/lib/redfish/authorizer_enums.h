@@ -227,6 +227,8 @@ enum class ResourceEntity : int {
   kThermalSubsystem,
   kTriggers,
   kTriggersCollection,
+  kTrustedComponent,
+  kTrustedComponentCollection,
   kUSBController,
   kUSBControllerCollection,
   kUpdateService,
