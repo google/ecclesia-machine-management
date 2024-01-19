@@ -76,6 +76,32 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "event_store",
+    srcs = ["event_store.cc"],
+    hdrs = ["event_store.h"],
+    deps = [
+        ":subscription",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/container:btree",
+        "@com_google_absl//absl/synchronization",
+        "@com_json//:json",
+    ],
+)
+
+cc_test(
+    name = "event_store_test",
+    srcs = ["event_store_test.cc"],
+    deps = [
+        ":event_store",
+        ":subscription",
+        ":subscription_mock",
+        "@com_google_absl//absl/time",
+        "@com_google_googletest//:gtest_main",
+        "@com_json//:json",
+    ],
+)
+
 cc_test(
     name = "subscription_test",
     srcs = ["subscription_test.cc"],

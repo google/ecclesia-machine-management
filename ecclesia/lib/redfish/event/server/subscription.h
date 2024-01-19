@@ -144,7 +144,7 @@ struct Trigger {
   // List of origin resources associated with the Trigger
   std::vector<std::string> origin_resources;
 
-  // Map of event source to redfish resource URI
+  // Map of event source to Redfish resource URI
   EventSourceToUri event_source_to_uri;
 
   // Predicate expression for determining when to trigger the event
@@ -225,7 +225,7 @@ class SubscriptionStore {
 };
 
 // Interface for Redfish handler
-// This ensures that SubscriptionService interoperates with different redfish
+// This ensures that SubscriptionService interoperates with different Redfish
 // backends by standardizing the interface to subscribe and query Redfish
 // resources.
 class RedfishHandler {
