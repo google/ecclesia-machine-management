@@ -24,7 +24,9 @@
 #include <optional>
 #include <string>
 #include <variant>
+#include <vector>
 
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/http/client.h"
@@ -66,8 +68,22 @@ class TestingMockupServer {
   // defined in redfish_mockups are supported.For example:
   //   mockup_sar = "indus_hmb_cn_mockup.shar"
   explicit TestingMockupServer(absl::string_view mockup_shar);
+
+  // A mockup file preparer is supposed to prepare a directory containing the
+  // redfish mockup (index.json files). Upon success, it should return the path
+  // to the parent directory of "/redfish". Otherwise, it returns a status
+  // instead.
+  // For example, a directory "<path>/foo/" contains
+  // "<path>/foo/redfish/index.json", "<path>/foo/redfish/v1/index.json", etc.
+  // Then this MockupFilePreparer should return "<path>/foo/" if it successfully
+  // prepares the mockup files.
+  using MockupFilePreparer = std::function<absl::StatusOr<std::string>()>;
+  TestingMockupServer(const MockupFilePreparer &mockup_file_preparer,
+                      absl::string_view mockup_path);
+
   TestingMockupServer(absl::string_view mockup_shar,
                       absl::string_view uds_path);
+
   // Creates an mTLS enabled mockup server
   TestingMockupServer(absl::string_view mockup_shar,
                       const ServerTlsConfig &server_config,
@@ -100,7 +116,7 @@ class TestingMockupServer {
 
  private:
   void SetUpMockupServer(
-      char **server_argv,
+      std::vector<std::string> &string_argv,
       const std::function<std::unique_ptr<RedfishInterface>()> &factory,
       std::optional<absl::Duration> start_estimation);
 

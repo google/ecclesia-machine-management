@@ -323,13 +323,32 @@ cc_library(
         "//ecclesia/lib/redfish/transport:http",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
         "//ecclesia/lib/redfish/transport:interface",
-        "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
-        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
+    ],
+)
+
+cc_test(
+    name = "test_mockup_test",
+    srcs = ["test_mockup_test.cc"],
+    data = [
+        "@redfishMockupServer//:redfishMockupServer.par",
+    ],
+    deps = [
+        ":interface",
+        ":test_mockup",
+        "//ecclesia/lib/file:path",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 

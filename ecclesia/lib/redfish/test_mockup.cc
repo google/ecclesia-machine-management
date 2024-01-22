@@ -19,8 +19,8 @@
 #include <signal.h>
 #include <spawn.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
-#include <cstddef>
 #include <cstdlib>
 #include <functional>
 #include <memory>
@@ -30,11 +30,10 @@
 #include <variant>
 #include <vector>
 
-#include "absl/base/macros.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
-#include "absl/memory/memory.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/clock.h"
@@ -64,16 +63,8 @@ constexpr absl::Duration kDaemonStartSleepDuration = absl::Milliseconds(50);
 // Tune this value until you didn't see retries very often
 constexpr absl::Duration kDaemonAuthStartEstimation = absl::Seconds(1);
 
-// The URI scheme is ignored for unix sockets.
-std::string ConfigToEndpoint(absl::string_view scheme,
-                             const TestingMockupServer::ConfigUnix &config) {
-  return absl::StrCat("unix://", config.socket_path);
-}
-
-std::string ConfigToEndpoint(absl::string_view scheme,
-                             const TestingMockupServer::ConfigNetwork &config) {
-  return absl::StrCat(scheme, "://", config.hostname, ":", config.port);
-}
+constexpr absl::string_view kMockupServerPath =
+    "com_google_ecclesia/external/redfishMockupServer/redfishMockupServer.par";
 
 std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
     std::unique_ptr<ecclesia::HttpClient> client, absl::string_view scheme,
@@ -83,7 +74,7 @@ std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
       absl::StrCat(scheme, "://", conn.hostname, ":", conn.port));
 }
 std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
-    std::unique_ptr<ecclesia::HttpClient> client, absl::string_view,
+    std::unique_ptr<ecclesia::HttpClient> client, absl::string_view /*unused*/,
     const TestingMockupServer::ConfigUnix &conn) {
   return ecclesia::HttpRedfishTransport::MakeUds(std::move(client),
                                                  conn.socket_path);
@@ -93,16 +84,14 @@ std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
 
 TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
                                          absl::string_view uds_path)
-    : connection_config_(ConfigUnix{.socket_path = uds_path.data()}) {
+    : connection_config_(ConfigUnix{.socket_path = std::string(uds_path)}) {
   std::string mockup_path = ecclesia::GetTestDataDependencyPath(
       ecclesia::JoinFilePaths("redfish_mockups", mockup_shar));
-  std::string string_argv[] = {mockup_path, "--unix", uds_path.data()};
-  char *argv[ABSL_ARRAYSIZE(string_argv) + 1] = {};
-  for (size_t i = 0; i < ABSL_ARRAYSIZE(string_argv); ++i) {
-    argv[i] = &string_argv[i][0];
-  }
+  std::vector<std::string> string_argv = {mockup_path, "--unix",
+                                          std::string(uds_path)};
   SetUpMockupServer(
-      argv, [this]() { return RedfishClientInterface(/*client=*/nullptr); },
+      string_argv,
+      [this]() { return RedfishClientInterface(/*client=*/nullptr); },
       std::nullopt);
 }
 
@@ -117,12 +106,46 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar)
   if (IsIpv6LocalhostAvailable()) {
     string_argv.push_back("--ipv6");
   }
-  std::vector<char *> argv(string_argv.size() + 1);
-  for (size_t i = 0; i < string_argv.size(); ++i) {
-    argv[i] = &string_argv[i][0];
+  SetUpMockupServer(
+      string_argv,
+      [this]() { return RedfishClientInterface(/*client=*/nullptr); },
+      std::nullopt);
+}
+
+TestingMockupServer::TestingMockupServer(
+    const MockupFilePreparer &mockup_file_preparer,
+    absl::string_view mockup_path)
+    : connection_config_(ConfigNetwork{
+          .hostname = "localhost", .port = ecclesia::FindUnusedPortOrDie()}) {
+  absl::StatusOr<std::string> local_file_dir = mockup_file_preparer();
+  CHECK_OK(local_file_dir.status()) << "Failed to prepare local mockup dir";
+
+  std::string server_path = std::string(mockup_path);
+  if (server_path.empty()) {
+    char *srcdir = std::getenv("TEST_SRCDIR");
+    if (srcdir != nullptr) {
+      server_path = ecclesia::JoinFilePaths(srcdir, kMockupServerPath);
+    }
+  }
+  CHECK(!server_path.empty()) << "Invalid path for mockup server";
+
+  LOG(INFO) << absl::StrCat(
+      "Starting server: ", server_path,
+      " that serves mockup files from dir: ", *local_file_dir);
+
+  std::vector<std::string> string_argv = {
+      server_path,
+      "--dir",
+      *local_file_dir,
+      "--host",
+      "localhost",
+      "--port",
+      absl::StrCat(std::get<ConfigNetwork>(connection_config_).port)};
+  if (IsIpv6LocalhostAvailable()) {
+    string_argv.push_back("--ipv6");
   }
   SetUpMockupServer(
-      argv.data(),
+      string_argv,
       [this]() { return RedfishClientInterface(/*client=*/nullptr); },
       std::nullopt);
 }
@@ -152,19 +175,19 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
   if (IsIpv6LocalhostAvailable()) {
     string_argv.push_back("--ipv6");
   }
-  std::vector<char *> argv(string_argv.size() + 1);
-  for (size_t i = 0; i < string_argv.size(); ++i) {
-    argv[i] = &string_argv[i][0];
-  }
   SetUpMockupServer(
-      argv.data(), [this]() { return RedfishClientTlsAuthInterface(); },
+      string_argv, [this]() { return RedfishClientTlsAuthInterface(); },
       kDaemonAuthStartEstimation);
 }
 
 void TestingMockupServer::SetUpMockupServer(
-    char **server_argv,
+    std::vector<std::string> &string_argv,
     const std::function<std::unique_ptr<RedfishInterface>()> &factory,
     std::optional<absl::Duration> start_estimation) {
+  std::vector<char *> server_argv(string_argv.size() + 1);
+  for (size_t i = 0; i < string_argv.size(); ++i) {
+    server_argv[i] = &string_argv[i][0];
+  }
   // Launch the supprocess using spawn. We spawn it into a unique process group
   // so that at shutdown we can terminate the entire tree.
   absl::Time start_time = absl::Now();
@@ -174,7 +197,7 @@ void TestingMockupServer::SetUpMockupServer(
   posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETPGROUP);
   // Pass our environment to the child to at least get TEST_TMPDIR.
   int result = posix_spawn(&server_pid_, server_argv[0], nullptr, &attr,
-                           server_argv, environ);
+                           server_argv.data(), environ);
   CHECK(result == 0) << "mockup server process started, "
                      << "posix_spawn() returned " << result;
 
