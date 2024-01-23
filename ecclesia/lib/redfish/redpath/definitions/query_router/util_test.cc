@@ -1,0 +1,529 @@
+/*
+ * Copyright 2024 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "ecclesia/lib/redfish/redpath/definitions/query_router/util.h"
+
+#include <string>
+
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
+#include "absl/strings/substitute.h"
+#include "ecclesia/lib/apifs/apifs.h"
+#include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/protobuf/parse.h"
+#include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
+#include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
+#include "ecclesia/lib/status/test_macros.h"
+#include "ecclesia/lib/testing/proto.h"
+#include "ecclesia/lib/testing/status.h"
+
+namespace ecclesia {
+namespace {
+
+using ::testing::ElementsAre;
+using ::testing::Pair;
+using ::testing::UnorderedElementsAre;
+
+constexpr absl::string_view kRootDir = "/test/";
+
+// Custom matcher to match QueryInfo struct.
+MATCHER_P(QueryInfoEq, query_info, "") {
+  return ExplainMatchResult(EqualsProto(query_info.query), arg.query,
+                            result_listener) &&
+         ExplainMatchResult(EqualsProto(query_info.rule), arg.rule,
+                            result_listener);
+}
+
+class GetQuerySpecTest : public testing::Test {
+ protected:
+  GetQuerySpecTest()
+      : fs_(GetTestTempdirPath()), apifs_(GetTestTempdirPath("test")) {}
+
+  void SetUp() override {
+    fs_.CreateDir(kRootDir);
+
+    // Create Sample queries
+    query_a_ = ParseTextProtoOrDie(
+        R"pb(query_id: "query_a"
+             property_sets {
+               properties { property: "property_a" type: STRING }
+             }
+        )pb");
+    CreateFile("query_a.textproto", query_a_);
+
+    query_a_other_ = ParseTextProtoOrDie(
+        R"pb(query_id: "query_a"
+             property_sets {
+               properties { property: "property_a_other" type: BOOLEAN }
+             }
+        )pb");
+    CreateFile("query_a_other.textproto", query_a_other_);
+
+    query_b_ = ParseTextProtoOrDie(
+        R"pb(query_id: "query_b"
+             property_sets {
+               properties { property: "property_b" type: STRING }
+             }
+        )pb");
+    CreateFile("query_b.textproto", query_b_);
+
+    query_c_ = ParseTextProtoOrDie(
+        R"pb(query_id: "query_c"
+             property_sets {
+               properties { property: "property_c" type: STRING }
+             }
+        )pb");
+    CreateFile("query_c.textproto", query_c_);
+
+    // Create Sample rule
+    query_rules_ = ParseTextProtoOrDie(R"pb(
+      query_id_to_params_rule {
+        key: "query_a"
+        value {
+          redpath_prefix_with_params {
+            expand_configuration { level: 1 type: ONLY_LINKS }
+          }
+        }
+      }
+      query_id_to_params_rule {
+        key: "query_b"
+        value {
+          redpath_prefix_with_params {
+            expand_configuration { level: 1 type: BOTH }
+          }
+        }
+      }
+    )pb");
+
+    CreateFile("query_rules.textproto", query_rules_);
+
+    query_rules_other_ = ParseTextProtoOrDie(R"pb(
+      query_id_to_params_rule {
+        key: "query_a"
+        value {
+          redpath_prefix_with_params {
+            expand_configuration { level: 5 type: BOTH }
+          }
+        }
+      }
+    )pb");
+
+    CreateFile("query_rules_other.textproto", query_rules_other_);
+  }
+
+  template <typename T>
+  void CreateFile(absl::string_view filename, const T &item) {
+    std::string contents = item.ShortDebugString();
+    fs_.WriteFile(absl::StrCat(kRootDir, filename), contents);
+  }
+
+  TestFilesystem fs_;
+  ApifsDirectory apifs_;
+  DelliciusQuery query_a_;
+  DelliciusQuery query_a_other_;
+  DelliciusQuery query_b_;
+  DelliciusQuery query_c_;
+  QueryRules query_rules_;
+  QueryRules query_rules_other_;
+};
+
+TEST_F(GetQuerySpecTest, RouterSpecWithServerType) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_specs {
+              select {
+                server_type: SERVER_TYPE_BMCWEB
+                server_tag: "server_1"
+                server_tag: "server_2"
+                server_tag: "server_3"
+              }
+              query_and_rule_path {
+                query_path: "$0/query_a.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+          }
+        }
+        selection_specs {
+          key: "query_b"
+          value {
+            query_specs {
+              select {
+                server_type: SERVER_TYPE_BMCWEB
+                server_tag: "server_1"
+                server_tag: "server_2"
+              }
+              query_and_rule_path {
+                query_path: "$0/query_b.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+          }
+        }
+        selection_specs {
+          key: "query_c"
+          value {
+            query_specs {
+              select { server_type: SERVER_TYPE_BMCWEB }
+              query_and_rule_path { query_path: "$0/query_c.textproto" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  // All queries are applicable for server_1
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      GetQuerySpec(router_spec, "server_1",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB));
+
+  EXPECT_THAT(
+      query_spec.query_id_to_info,
+      UnorderedElementsAre(
+          Pair("query_a", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = query_a_,
+                              .rule = query_rules_.query_id_to_params_rule().at(
+                                  "query_a")})),
+          Pair("query_b", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = query_b_,
+                              .rule = query_rules_.query_id_to_params_rule().at(
+                                  "query_b")})),
+          Pair("query_c", QueryInfoEq(QuerySpec::QueryInfo{.query = query_c_,
+                                                           .rule = {}}))));
+
+  // Only query_a and query_c are applicable for server_3
+  ECCLESIA_ASSIGN_OR_FAIL(
+      query_spec,
+      GetQuerySpec(router_spec, "server_3",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB));
+
+  EXPECT_THAT(
+      query_spec.query_id_to_info,
+      UnorderedElementsAre(
+          Pair("query_a", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = query_a_,
+                              .rule = query_rules_.query_id_to_params_rule().at(
+                                  "query_a")})),
+          Pair("query_c", QueryInfoEq(QuerySpec::QueryInfo{.query = query_c_,
+                                                           .rule = {}}))));
+
+  // Only query_c is applicable for server_4
+  ECCLESIA_ASSIGN_OR_FAIL(
+      query_spec,
+      GetQuerySpec(router_spec, "server_4",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB));
+
+  EXPECT_THAT(
+      query_spec.query_id_to_info,
+      ElementsAre(Pair("query_c", QueryInfoEq(QuerySpec::QueryInfo{
+                                      .query = query_c_, .rule = {}}))));
+}
+
+TEST_F(GetQuerySpecTest, RouterSpecWithServerTagsOnly) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_specs {
+              select { server_tag: "server_1" server_tag: "server_2" }
+              query_and_rule_path {
+                query_path: "$0/query_a.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+          }
+        }
+        selection_specs {
+          key: "query_b"
+          value {
+            query_specs {
+              select { server_tag: "server_1" server_tag: "server_3" }
+              query_and_rule_path {
+                query_path: "$0/query_b.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  // Both query_a and query_b are applicable for server_1
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      GetQuerySpec(router_spec, "server_1",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB));
+
+  EXPECT_THAT(
+      query_spec.query_id_to_info,
+      UnorderedElementsAre(
+          Pair("query_a", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = query_a_,
+                              .rule = query_rules_.query_id_to_params_rule().at(
+                                  "query_a")})),
+          Pair("query_b", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = query_b_,
+                              .rule = query_rules_.query_id_to_params_rule().at(
+                                  "query_b")}))));
+
+  // Only query_a is applicable for server_2
+  ECCLESIA_ASSIGN_OR_FAIL(
+      query_spec,
+      GetQuerySpec(router_spec, "server_2",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB));
+
+  EXPECT_THAT(
+      query_spec.query_id_to_info,
+      UnorderedElementsAre(Pair(
+          "query_a",
+          QueryInfoEq(QuerySpec::QueryInfo{
+              .query = query_a_,
+              .rule = query_rules_.query_id_to_params_rule().at("query_a")}))));
+
+  // Only query_b is applicable for server_3
+  ECCLESIA_ASSIGN_OR_FAIL(
+      query_spec,
+      GetQuerySpec(router_spec, "server_3",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB));
+
+  EXPECT_THAT(
+      query_spec.query_id_to_info,
+      UnorderedElementsAre(Pair(
+          "query_b",
+          QueryInfoEq(QuerySpec::QueryInfo{
+              .query = query_b_,
+              .rule = query_rules_.query_id_to_params_rule().at("query_b")}))));
+}
+
+TEST_F(GetQuerySpecTest, RouterSpecWithServerSpecificQueries) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path {
+                query_path: "$0/query_a.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+            query_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_2" }
+              query_and_rule_path {
+                query_path: "$0/query_a_other.textproto"
+                rule_path: "$0/query_rules_other.textproto"
+              }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  // For server_1, query_a should point to query_a.textproto and
+  // query_rules.textproto
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      GetQuerySpec(router_spec, "server_1",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB));
+
+  EXPECT_THAT(
+      query_spec.query_id_to_info,
+      UnorderedElementsAre(Pair(
+          "query_a",
+          QueryInfoEq(QuerySpec::QueryInfo{
+              .query = query_a_,
+              .rule = query_rules_.query_id_to_params_rule().at("query_a")}))));
+
+  // For server_2, query_a should point to query_a_other.textproto and
+  // query_rules_other.textproto
+  ECCLESIA_ASSIGN_OR_FAIL(
+      query_spec,
+      GetQuerySpec(router_spec, "server_2",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB));
+
+  EXPECT_THAT(query_spec.query_id_to_info,
+              UnorderedElementsAre(Pair(
+                  "query_a",
+                  QueryInfoEq(QuerySpec::QueryInfo{
+                      .query = query_a_other_,
+                      .rule = query_rules_other_.query_id_to_params_rule().at(
+                          "query_a")}))));
+}
+
+TEST_F(GetQuerySpecTest, RouterSpecWithNoSelectionSpec) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_specs {
+              query_and_rule_path {
+                query_path: "$0/query_a.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  EXPECT_THAT(GetQuerySpec(router_spec, "server_1",
+                           SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB),
+              IsStatusFailedPrecondition());
+}
+
+TEST_F(GetQuerySpecTest, RouterSpecWithIncorrectQueryId) {
+  // query_b textproto is set for query_a spec.
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_b.textproto" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  EXPECT_THAT(GetQuerySpec(router_spec, "server_1",
+                           SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB),
+              IsStatusFailedPrecondition());
+}
+
+TEST_F(GetQuerySpecTest, RouterSpecWithUnspecifiedServerType) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_specs {
+              select {
+                server_type: SERVER_TYPE_UNSPECIFIED
+                server_tag: "server_1"
+              }
+              query_and_rule_path {
+                query_path: "$0/query_a.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  EXPECT_THAT(GetQuerySpec(router_spec, "server_1",
+                           SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB),
+              IsStatusFailedPrecondition());
+}
+
+TEST_F(GetQuerySpecTest, QueryFilesDoesNotExist) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/does_not_exist.textproto" }
+            }
+          }
+        }
+        selection_specs {
+          key: "query_b"
+          value {
+            query_specs {
+              select { server_tag: "server_1" }
+              query_and_rule_path {
+                query_path: "$0/query_b.textproto"
+                rule_path: "$0/does_not_exist.textproto"
+              }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  EXPECT_THAT(GetQuerySpec(router_spec, "server_1",
+                           SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB),
+              IsStatusNotFound());
+}
+
+TEST_F(GetQuerySpecTest, RouterSpecWithInvalidQueryFile) {
+  fs_.WriteFile(absl::StrCat(kRootDir, "invalid_query.textproto"), "deadbeef");
+
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/invalid_query.textproto" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  EXPECT_THAT(GetQuerySpec(router_spec, "server_1",
+                           SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB),
+              IsStatusFailedPrecondition());
+}
+
+TEST_F(GetQuerySpecTest, RouterSpecWithoutQueryFile) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_specs {
+              select { server_tag: "server_1" }
+              query_and_rule_path { rule_path: "$0/query_rules.textproto" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  EXPECT_THAT(GetQuerySpec(router_spec, "server_1",
+                           SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB),
+              IsStatusFailedPrecondition());
+}
+
+TEST_F(GetQuerySpecTest, EmptyRouterSpecTest) {
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      GetQuerySpec({}, "server_1",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB));
+
+  EXPECT_TRUE(query_spec.query_id_to_info.empty());
+}
+
+}  // namespace
+}  // namespace ecclesia
