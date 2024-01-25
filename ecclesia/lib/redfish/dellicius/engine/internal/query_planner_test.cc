@@ -52,6 +52,7 @@
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/clock_fake.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 
@@ -65,6 +66,16 @@ using ::testing::ByMove;
 constexpr absl::string_view kQuerySamplesLocation =
     "lib/redfish/dellicius/query/samples";
 
+constexpr absl::string_view kMockObject = R"json(
+  {
+    "Object": {
+      "NestedObject": {
+          "Property": 90
+      }
+    }
+  }
+)json";
+
 // Test Redfish Object class with mockable Get().
 class MockableGetRedfishObject : public RedfishObject {
  public:
@@ -74,13 +85,11 @@ class MockableGetRedfishObject : public RedfishObject {
     return RedfishVariant(
         absl::UnimplementedError("TestRedfishObject [] unsupported"));
   }
-  nlohmann::json GetContentAsJson() const override {
-    return nlohmann::json::value_t::discarded;
-  }
+  nlohmann::json GetContentAsJson() const override { return kMockObject; }
   MOCK_METHOD(RedfishVariant, Get,
               (const std::string &node_name, GetParams params),
               (const, override));
-  std::string DebugString() const override { return ""; }
+  std::string DebugString() const override { return std::string(kMockObject); }
   std::optional<std::string> GetUriString() const override { return ""; }
   absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
       GetParams params) override {
