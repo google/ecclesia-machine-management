@@ -91,3 +91,30 @@ cc_test(
         "@com_json//:json",
     ],
 )
+
+cc_library(
+    name = "query_result_validator",
+    srcs = ["query_result_validator.cc"],
+    hdrs = ["query_result_validator.h"],
+    deps = [
+        ":query_result_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "query_result_validator_test",
+    srcs = ["query_result_validator_test.cc"],
+    deps = [
+        ":query_result_validator",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
