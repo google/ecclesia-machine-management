@@ -89,8 +89,8 @@ absl::StatusOr<QuerySpec> GetQuerySpec(
   };
 
   for (const auto& [query_id, select_spec] : router_spec.selection_specs()) {
-    for (const SelectionSpec::QuerySpec& query_select_spec :
-         select_spec.query_specs()) {
+    for (const SelectionSpec::QuerySelectionSpec& query_select_spec :
+         select_spec.query_selection_specs()) {
       if (query_select_spec.select().empty()) {
         return absl::FailedPreconditionError(absl::StrCat(
             "Both server tag and server type not specified for query: ",

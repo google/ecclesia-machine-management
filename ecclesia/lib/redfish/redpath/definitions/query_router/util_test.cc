@@ -150,7 +150,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithServerType) {
         selection_specs {
           key: "query_a"
           value {
-            query_specs {
+            query_selection_specs {
               select {
                 server_type: SERVER_TYPE_BMCWEB
                 server_tag: "server_1"
@@ -167,7 +167,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithServerType) {
         selection_specs {
           key: "query_b"
           value {
-            query_specs {
+            query_selection_specs {
               select {
                 server_type: SERVER_TYPE_BMCWEB
                 server_tag: "server_1"
@@ -183,7 +183,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithServerType) {
         selection_specs {
           key: "query_c"
           value {
-            query_specs {
+            query_selection_specs {
               select { server_type: SERVER_TYPE_BMCWEB }
               query_and_rule_path { query_path: "$0/query_c.textproto" }
             }
@@ -246,7 +246,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithServerTagsOnly) {
         selection_specs {
           key: "query_a"
           value {
-            query_specs {
+            query_selection_specs {
               select { server_tag: "server_1" server_tag: "server_2" }
               query_and_rule_path {
                 query_path: "$0/query_a.textproto"
@@ -258,7 +258,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithServerTagsOnly) {
         selection_specs {
           key: "query_b"
           value {
-            query_specs {
+            query_selection_specs {
               select { server_tag: "server_1" server_tag: "server_3" }
               query_and_rule_path {
                 query_path: "$0/query_b.textproto"
@@ -323,14 +323,14 @@ TEST_F(GetQuerySpecTest, RouterSpecWithServerSpecificQueries) {
         selection_specs {
           key: "query_a"
           value {
-            query_specs {
+            query_selection_specs {
               select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
               query_and_rule_path {
                 query_path: "$0/query_a.textproto"
                 rule_path: "$0/query_rules.textproto"
               }
             }
-            query_specs {
+            query_selection_specs {
               select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_2" }
               query_and_rule_path {
                 query_path: "$0/query_a_other.textproto"
@@ -379,7 +379,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithNoSelectionSpec) {
         selection_specs {
           key: "query_a"
           value {
-            query_specs {
+            query_selection_specs {
               query_and_rule_path {
                 query_path: "$0/query_a.textproto"
                 rule_path: "$0/query_rules.textproto"
@@ -402,7 +402,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithIncorrectQueryId) {
         selection_specs {
           key: "query_a"
           value {
-            query_specs {
+            query_selection_specs {
               select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
               query_and_rule_path { query_path: "$0/query_b.textproto" }
             }
@@ -422,7 +422,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithUnspecifiedServerType) {
         selection_specs {
           key: "query_a"
           value {
-            query_specs {
+            query_selection_specs {
               select {
                 server_type: SERVER_TYPE_UNSPECIFIED
                 server_tag: "server_1"
@@ -448,7 +448,7 @@ TEST_F(GetQuerySpecTest, QueryFilesDoesNotExist) {
         selection_specs {
           key: "query_a"
           value {
-            query_specs {
+            query_selection_specs {
               select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
               query_and_rule_path { query_path: "$0/does_not_exist.textproto" }
             }
@@ -457,7 +457,7 @@ TEST_F(GetQuerySpecTest, QueryFilesDoesNotExist) {
         selection_specs {
           key: "query_b"
           value {
-            query_specs {
+            query_selection_specs {
               select { server_tag: "server_1" }
               query_and_rule_path {
                 query_path: "$0/query_b.textproto"
@@ -482,7 +482,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithInvalidQueryFile) {
         selection_specs {
           key: "query_a"
           value {
-            query_specs {
+            query_selection_specs {
               select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
               query_and_rule_path { query_path: "$0/invalid_query.textproto" }
             }
@@ -502,7 +502,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithoutQueryFile) {
         selection_specs {
           key: "query_a"
           value {
-            query_specs {
+            query_selection_specs {
               select { server_tag: "server_1" }
               query_and_rule_path { rule_path: "$0/query_rules.textproto" }
             }

@@ -32,7 +32,7 @@ message SelectionSpec {
     repeated string server_tag = 2;
   }
 
-  message QuerySpec {
+  message QuerySelectionSpec {
     repeated SelectionClass select = 1;
     oneof query_spec {
       QueryAndRulePath query_and_rule_path = 2;
@@ -40,7 +40,7 @@ message SelectionSpec {
     }
   }
 
-  repeated QuerySpec query_specs = 2;
+  repeated QuerySelectionSpec query_selection_specs = 1;
 }
 
 message QueryEngineFeatures {
