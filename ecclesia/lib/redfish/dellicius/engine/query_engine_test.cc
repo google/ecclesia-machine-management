@@ -186,9 +186,12 @@ TEST(QueryEngineTest, QueryEngineDevpathConfiguration) {
                         "query_out/devpath_sensor_out.textproto")));
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
-                              {}));
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
   QueryIdToResult response_entries =
       query_engine->ExecuteRedpathQuery({"SensorCollector"});
 
@@ -201,9 +204,12 @@ TEST(QueryEngineTest, QueryEngineRedfishIntfAccessor) {
       JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
-                              {}));
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
   EXPECT_TRUE(
       query_engine
           ->GetRedfishInterface(RedfishInterfacePasskeyFactory::GetPassKey())
@@ -215,8 +221,12 @@ TEST(QueryEngineTest, QueryEngineWithExpandConfiguration) {
 
 TEST(QueryEngineTest, QueryEngineInvalidQueries) {
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
                               {.devpath = FakeQueryEngine::Devpath::kDisable}));
 
   // Invalid Query Id
@@ -237,8 +247,12 @@ TEST(QueryEngineTest, QueryEngineConcurrentQueries) {
               kQuerySamplesLocation, "query_out/assembly_out.textproto")));
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
                               {.devpath = FakeQueryEngine::Devpath::kDisable}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -263,8 +277,12 @@ TEST(QueryEngineTest, QueryEngineEmptyItemDevpath) {
                         "query_out/devpath_assembly_out.textproto")));
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
                               {.entity_tag = "test_node_id"}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -281,13 +299,16 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
               kQuerySamplesLocation, "query_out/assembly_out.textproto")));
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(
-          {.query_files = kDelliciusQueries, .query_rules = kQueryRules},
-          kIndusMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
-           .metrics = FakeQueryEngine::Metrics::kEnable,
-           .cache = FakeQueryEngine::Cache::kInfinite}));
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
+                              {.devpath = FakeQueryEngine::Devpath::kDisable,
+                               .metrics = FakeQueryEngine::Metrics::kEnable,
+                               .cache = FakeQueryEngine::Cache::kInfinite}));
 
   {
     // Query assemblies 3 times in a row. Cache is cold only for the 1st query.
@@ -354,13 +375,16 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
   // Create QueryEngine with transport metrics
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(
-          {.query_files = kDelliciusQueries, .query_rules = kQueryRules},
-          kIndusHmbCnMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
-           .metrics = FakeQueryEngine::Metrics::kEnable,
-           .cache = FakeQueryEngine::Cache::kInfinite}));
+      FakeQueryEngine::Create(std::move(query_spec), kIndusHmbCnMockup,
+                              {.devpath = FakeQueryEngine::Devpath::kDisable,
+                               .metrics = FakeQueryEngine::Metrics::kEnable,
+                               .cache = FakeQueryEngine::Cache::kInfinite}));
 
   // Hold all the metrics collected from each query execution to validate
   // later.
@@ -420,8 +444,12 @@ TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
                         "query_out/service_root_google_out.textproto")));
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create({.query_files = kDelliciusQueries},
+      FakeQueryEngine::Create(std::move(query_spec),
                               kComponentIntegrityMockupPath, {}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -474,9 +502,12 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedQuery) {
   test_args["SensorCollectorTemplate"] = args1;
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
-                              {}));
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
@@ -506,9 +537,12 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedUnfilledVars) {
   test_args["SensorCollectorTemplate"] = args1;
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
-                              {}));
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
@@ -560,9 +594,12 @@ TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
   test_args_filtered["SensorCollectorTemplate"] = args2;
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
-                              {}));
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   // Execute query with first set of variable values.
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -588,8 +625,12 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedNoVars) {
           kQuerySamplesLocation, "query_out/sensor_out.textproto")));
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
                               {.devpath = FakeQueryEngine::Devpath::kDisable}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -619,13 +660,16 @@ TEST(QueryEngineTest, QueryEngineTransportMetricsInResult) {
                         "query_out/sensor_out_with_metrics.textproto")));
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(
-          {.query_files = kDelliciusQueries, .query_rules = kQueryRules},
-          kIndusMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
-           .metrics = FakeQueryEngine::Metrics::kEnable,
-           .cache = FakeQueryEngine::Cache::kInfinite}));
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
+                              {.devpath = FakeQueryEngine::Devpath::kDisable,
+                               .metrics = FakeQueryEngine::Metrics::kEnable,
+                               .cache = FakeQueryEngine::Cache::kInfinite}));
 
   // Validate first query result with metrics.
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -697,8 +741,12 @@ TEST(QueryEngineTest, QueryEngineWithTranslation) {
               kQuerySamplesLocation, "query_out/assembly_out.textproto")));
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
                               {.devpath = FakeQueryEngine::Devpath::kDisable}));
 
   // Validate first query result with metrics.
@@ -714,9 +762,12 @@ TEST(QueryEngineTest, QueryEngineWithTranslationAndLocalDevpath) {
                         "query_out/devpath_sensor_out.textproto")));
 
   ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create({.query_files = kDelliciusQueries}, kIndusMockup,
-                              {}));
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   // Validate first query result with metrics.
   QueryIdToResult response_entries =

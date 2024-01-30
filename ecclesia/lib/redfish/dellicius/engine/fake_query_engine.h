@@ -56,11 +56,11 @@ class FakeQueryEngine : public QueryEngineIntf {
   };
 
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
-      const QueryContext &query_context, absl::string_view mockup_name,
+      QuerySpec query_spec, absl::string_view mockup_name,
       const Params &params) {
     auto query_engine = absl::WrapUnique(new FakeQueryEngine(mockup_name));
     ECCLESIA_RETURN_IF_ERROR(
-        query_engine->InitializeQueryEngine(query_context, params));
+        query_engine->InitializeQueryEngine(std::move(query_spec), params));
     return std::move(query_engine);
   }
 
@@ -100,7 +100,7 @@ class FakeQueryEngine : public QueryEngineIntf {
     redfish_server_.EnableExpandGetHandler();
   }
 
-  absl::Status InitializeQueryEngine(const QueryContext &query_context,
+  absl::Status InitializeQueryEngine(QuerySpec query_spec,
                                      const Params &params) {
     // Devpaths will not be generated if the stable_id_type is kRedfishLocation
     // without an IdAssigner passed to the Query Engine object.
@@ -119,7 +119,7 @@ class FakeQueryEngine : public QueryEngineIntf {
     ECCLESIA_ASSIGN_OR_RETURN(
         auto query_engine,
         QueryEngine::Create(
-            query_context,
+            std::move(query_spec),
             {.transport = redfish_server_.RedfishClientTransport(),
              .cache_factory = cache_factory,
              .entity_tag = params.entity_tag.value_or(""),

@@ -225,16 +225,6 @@ class QueryEngine : public QueryEngineIntf {
       QuerySpec query_spec, QueryEngineParams params,
       std::unique_ptr<IdAssigner> id_assigner = nullptr);
 
-  // Overloaded Create function that accepts QueryContext instead of QuerySpec
-  static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
-      const QueryContext &query_context, QueryEngineParams params,
-      std::unique_ptr<IdAssigner> id_assigner = nullptr) {
-    ECCLESIA_ASSIGN_OR_RETURN(QuerySpec query_spec,
-                              QuerySpec::FromQueryContext(query_context));
-    return Create(std::move(query_spec), std::move(params),
-                  std::move(id_assigner));
-  }
-
   ABSL_DEPRECATED("Use QueryEngine factory methods instead.")
   QueryEngine(const QueryEngineConfiguration &config,
               std::unique_ptr<RedfishTransport> transport,
