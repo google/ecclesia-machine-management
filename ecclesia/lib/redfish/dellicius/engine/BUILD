@@ -61,6 +61,7 @@ cc_library(
     name = "file_backed_query_engine",
     srcs = ["file_backed_query_engine.cc"],
     hdrs = ["file_backed_query_engine.h"],
+    visibility = ["//visibility:public"],
     deps = [
         ":query_engine_cc",
         "//ecclesia/lib/apifs",
