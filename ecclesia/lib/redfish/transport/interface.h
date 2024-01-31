@@ -40,6 +40,7 @@ class RedfishEventStream {
  public:
   // Starts the Redfish streaming until any unexpected errors happen or being
   // cancelled.
+  // This function is nonblocking. Callbacks are executed in a separate thread.
   virtual void StartStreaming() = 0;
   // Cancels and stops the Redfish streaming. Does nothing if the stream is
   // already stopped.
@@ -96,8 +97,7 @@ class RedfishTransport {
   // the streaming.
   virtual absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
       absl::string_view data, EventCallback &&on_event, StopCallback on_stop) {
-    return absl::UnimplementedError(
-        "Streaming is not implemented yet.");
+    return absl::UnimplementedError("Streaming is not implemented yet.");
   }
 };
 
