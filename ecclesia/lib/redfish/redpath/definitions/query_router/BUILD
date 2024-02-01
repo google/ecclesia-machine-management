@@ -15,9 +15,60 @@ cc_proto_library(
 )
 
 cc_library(
+    name = "query_router",
+    srcs = ["query_router.cc"],
+    hdrs = ["query_router.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":query_router_spec_cc_proto",
+        ":util",
+        "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
+        "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "//ecclesia/lib/redfish/transport:cache",
+        "//ecclesia/lib/redfish/transport:interface",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "query_router_test",
+    srcs = ["query_router_test.cc"],
+    deps = [
+        ":query_router",
+        ":query_router_spec_cc_proto",
+        "//ecclesia/lib/apifs",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/redfish/dellicius/engine:file_backed_query_engine",
+        "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
+        "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "//ecclesia/lib/status:test_macros",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "util",
     srcs = ["util.cc"],
     hdrs = ["util.h"],
+    visibility = ["//visibility:public"],
     deps = [
         ":query_router_spec_cc_proto",
         "//ecclesia/lib/apifs",

@@ -47,7 +47,9 @@ message QueryEngineFeatures {
   // Flag to turn on redfish metrics in the Query Result
   bool enable_redfish_metrics = 1;
   // Flag to determine the error mode.
-  bool fail_on_first_errors = 2;
+  bool fail_on_first_error = 2;
+  // Flag to control tracing
+  bool log_redfish_traces = 3;
 }
 
 enum QueryPattern {

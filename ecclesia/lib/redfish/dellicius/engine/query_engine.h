@@ -25,6 +25,7 @@
 
 #include "absl/base/attributes.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/functional/any_invocable.h"
 #include "absl/functional/function_ref.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -292,6 +293,15 @@ ABSL_DEPRECATED("Use QueryEngine::Create Instead")
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
     std::unique_ptr<IdAssigner> id_assigner);
+
+// Factory for creating different variants of query engine.
+//
+//  Ideally used in tests to inject different types of Query Engine variants
+//  like `MockQueryEngine`, `FakeQueryEngine`, `FileBackedQueryEngine`.
+using QueryEngineFactory =
+    absl::AnyInvocable<absl::StatusOr<std::unique_ptr<QueryEngineIntf>>(
+        QuerySpec query_spec, QueryEngineParams engine_params,
+        std::unique_ptr<IdAssigner> id_assigner)>;
 
 }  // namespace ecclesia
 
