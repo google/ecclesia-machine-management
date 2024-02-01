@@ -18,8 +18,8 @@ cc_library(
 )
 
 cc_library(
-    name = "susbscription_impl",
-    srcs = ["susbscription_impl.cc"],
+    name = "subscription_impl",
+    srcs = ["subscription_impl.cc"],
     hdrs = ["subscription_impl.h"],
     visibility = ["//visibility:public"],
     deps = [
@@ -43,16 +43,12 @@ cc_library(
 
 cc_library(
     name = "subscription_store",
-    srcs = ["subscription_store.cc"],
+    srcs = ["subscription_store_impl.cc"],
     hdrs = ["subscription_store_impl.h"],
     visibility = ["//visibility:public"],
     deps = [
         ":subscription",
-        "@com_google_absl//absl/algorithm:container",
         "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/hash",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:die_if_null",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -121,8 +117,8 @@ cc_test(
     srcs = ["subscription_impl_test.cc"],
     deps = [
         ":subscription",
+        ":subscription_impl",
         ":subscription_mock",
-        ":susbscription_impl",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

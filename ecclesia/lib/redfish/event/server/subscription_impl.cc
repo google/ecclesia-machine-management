@@ -122,7 +122,7 @@ class AggregatedQueryResponse {
   std::atomic_size_t responses_received_{0};
 
   // Maximum number of OriginResources to be queried.
-  int max_origin_resources_;
+  size_t max_origin_resources_;
 
   std::function<void(absl::Status, nlohmann::json::array_t &)> done_callback_;
 
@@ -238,7 +238,8 @@ class SubscriptionServiceImpl
   // Notify function is invoked with |key| that uniquely identifies event source
   // and |status| to indicate the subscription service of an error condition at
   // the event source which would trigger delete subscription sequence.
-  absl::Status Notify(EventSourceId key, absl::Status status) override {
+  absl::Status Notify(EventSourceId key,
+                      [[maybe_unused]] absl::Status status) override {
     // Pull subscription context from Subscription Store
     ECCLESIA_ASSIGN_OR_RETURN(
         auto contexts,
@@ -253,8 +254,9 @@ class SubscriptionServiceImpl
 
   // Just like Notify() with an additional parameter |data| that represents
   // Redfish resource associated with event source.
-  absl::Status NotifyWithData(EventSourceId key, absl::Status status,
-                              const nlohmann::json &data) override {
+  absl::Status NotifyWithData(
+      [[maybe_unused]] EventSourceId key, [[maybe_unused]] absl::Status status,
+      [[maybe_unused]] const nlohmann::json &data) override {
     return absl::UnimplementedError("NotifyWithData:: Unimplemented!");
   }
 

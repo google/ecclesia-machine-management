@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
+#include "ecclesia/lib/redfish/event/server/subscription_store_impl.h"
+
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "absl/types/span.h"
-#include "ecclesia/lib/redfish/event/server/subscription.h"
-#include "ecclesia/lib/redfish/event/server/subscription_store_impl.h"
-
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
+#include "absl/types/span.h"
+#include "ecclesia/lib/redfish/event/server/subscription.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
@@ -39,10 +40,6 @@ constexpr absl::string_view kPropertyGoogle = "Google";
 constexpr absl::string_view kPropertyTriggers = "Triggers";
 constexpr absl::string_view kPropertyId = "Id";
 constexpr absl::string_view kPropertyLastEventId = "LastEventId";
-
-std::string PropertyNotPopulatedError(absl::string_view property) {
-  return absl::StrCat(property, " not populated");
-}
 
 // Concrete implementation of SubscriptionStore.
 // Not Thread safe
