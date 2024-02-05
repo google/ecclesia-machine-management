@@ -31,6 +31,7 @@ cc_library(
         "//ecclesia/lib/status:macros",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/functional:any_invocable",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
@@ -61,6 +62,20 @@ cc_test(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "query_router_mock",
+    testonly = True,
+    hdrs = ["query_router_mock.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":query_router",
+        "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+        "@com_google_googletest//:gtest",
     ],
 )
 

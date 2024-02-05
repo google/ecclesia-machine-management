@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"
+#include "absl/functional/any_invocable.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
@@ -124,6 +125,14 @@ class QueryRouter : public QueryRouterIntf {
 
   RoutingTable routing_table_;
 };
+
+// Factory for creating different variants of query router.
+// Ideally used in tests to inject different variants of query router
+using QueryRouterFactory = absl::AnyInvocable<
+    absl::StatusOr<std::unique_ptr<ecclesia::QueryRouterIntf>>(
+        const ecclesia::QueryRouterSpec&,
+        std::vector<ecclesia::QueryRouter::ServerSpec>,
+        ecclesia::QueryEngineFactory)>;
 
 }  // namespace ecclesia
 
