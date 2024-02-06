@@ -104,6 +104,7 @@ cc_library(
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
     ],
 )
 
@@ -113,7 +114,9 @@ cc_test(
     deps = [
         ":query_result_validator",
         "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_main",
     ],

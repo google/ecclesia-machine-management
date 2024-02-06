@@ -17,20 +17,170 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result_validator.h"
 
 #include <memory>
+#include <string>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/protobuf/parse.h"
+#include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/testing/status.h"
 
 namespace ecclesia {
 namespace {
 
-TEST(QueryResultValidatorTest, SuccessCreateValidator) {
+TEST(QueryResultValidatorTest, FailCreateEmptyQueryCofnig) {
+  auto validator = QueryResultValidator::Create(nullptr);
+  ASSERT_THAT(validator.status(), IsStatusInvalidArgument());
+  EXPECT_EQ(validator.status().message(), "Query Configuration is Empty");
+}
+TEST(QueryResultValidatorTest, FailCreateEmptyQueryId) {
   DelliciusQuery query = ParseTextProtoOrDie(R"pb(
     subquery {
       subquery_id: "subquery_id"
+      properties { property: "property" type: STRING }
+    }
+  )pb");
+
+  absl::StatusOr<std::unique_ptr<QueryResultValidatorIntf>> validator =
+      QueryResultValidator::Create(&query);
+  ASSERT_THAT(validator.status(), IsStatusInvalidArgument());
+  EXPECT_EQ(validator.status().message(), "Query ID is empty");
+}
+TEST(QueryResultValidatorTest, FailCreateMissingRootId) {
+  DelliciusQuery query = ParseTextProtoOrDie(R"pb(
+    query_id: "query_id"
+    subquery {
+      subquery_id: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+    subquery {
+      subquery_id: "subquery_id2"
+      root_subquery_ids: "subquery_id"
+      properties { property: "property" type: STRING }
+    }
+  )pb");
+  absl::StatusOr<std::unique_ptr<QueryResultValidatorIntf>> validator =
+      QueryResultValidator::Create(&query);
+  ASSERT_THAT(validator.status(), IsStatusNotFound());
+  EXPECT_EQ(validator.status().message(), "No subquery found for subquery_id");
+}
+TEST(QueryResultValidatorTest, FailCreateDuplicatePaths) {
+  DelliciusQuery query = ParseTextProtoOrDie(R"pb(
+    query_id: "query_id"
+    subquery {
+      subquery_id: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+    subquery {
+      subquery_id: "subquery_id2"
+      root_subquery_ids: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+    subquery {
+      subquery_id: "subquery_id2"
+      root_subquery_ids: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+  )pb");
+  absl::StatusOr<std::unique_ptr<QueryResultValidatorIntf>> validator =
+      QueryResultValidator::Create(&query);
+  ASSERT_THAT(validator.status(), IsStatusInternal());
+  EXPECT_EQ(validator.status().message(),
+            "Duplicate path: /subquery_id1/subquery_id2");
+}
+
+TEST(QueryResultValidatorTest, FailCreateCycleDetected) {
+  DelliciusQuery query = ParseTextProtoOrDie(R"pb(
+    query_id: "query_id"
+    subquery {
+      subquery_id: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+    subquery {
+      subquery_id: "subquery_id2"
+      root_subquery_ids: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+    subquery {
+      subquery_id: "subquery_id2"
+      root_subquery_ids: "subquery_id2"
+      properties { property: "property" type: STRING }
+    }
+  )pb");
+  absl::StatusOr<std::unique_ptr<QueryResultValidatorIntf>> validator =
+      QueryResultValidator::Create(&query);
+  ASSERT_THAT(validator.status(), IsStatusInternal());
+  EXPECT_EQ(validator.status().message(), "Cycle detected: subquery_id2");
+}
+TEST(QueryResultValidatorTest, SuccessCreateValidator) {
+  DelliciusQuery query = ParseTextProtoOrDie(R"pb(
+    query_id: "query_id"
+    subquery {
+      subquery_id: "subquery_id"
+      properties { property: "property" type: STRING }
+    }
+  )pb");
+  EXPECT_THAT(QueryResultValidator::Create(&query), IsOk());
+}
+TEST(QueryResultValidatorTest, SuccessCreateValidator2Levels) {
+  DelliciusQuery query = ParseTextProtoOrDie(R"pb(
+    query_id: "query_id"
+    subquery {
+      subquery_id: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+    subquery {
+      subquery_id: "subquery_id2"
+      root_subquery_ids: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+  )pb");
+  EXPECT_THAT(QueryResultValidator::Create(&query), IsOk());
+}
+
+TEST(QueryResultValidatorTest, SuccessCreateValidator2Branched2Levels) {
+  DelliciusQuery query = ParseTextProtoOrDie(R"pb(
+    query_id: "query_id"
+    subquery {
+      subquery_id: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+    subquery {
+      subquery_id: "subquery_id2"
+      root_subquery_ids: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+    subquery {
+      subquery_id: "subquery_id3"
+      root_subquery_ids: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+  )pb");
+  EXPECT_THAT(QueryResultValidator::Create(&query), IsOk());
+}
+
+TEST(QueryResultValidatorTest, SuccessCreateValidatorMultiBranch) {
+  DelliciusQuery query = ParseTextProtoOrDie(R"pb(
+    query_id: "query_id"
+    subquery {
+      subquery_id: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+    subquery {
+      subquery_id: "subquery_id2"
+      root_subquery_ids: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+    subquery {
+      subquery_id: "subquery_id3"
+      root_subquery_ids: "subquery_id1"
+      properties { property: "property" type: STRING }
+    }
+    subquery {
+      subquery_id: "subquery_id2"
+      root_subquery_ids: "subquery_id3"
       properties { property: "property" type: STRING }
     }
   )pb");
@@ -39,6 +189,7 @@ TEST(QueryResultValidatorTest, SuccessCreateValidator) {
 
 TEST(QueryResultValidatorTest, SuccessValidate) {
   DelliciusQuery query = ParseTextProtoOrDie(R"pb(
+    query_id: "query_id"
     subquery {
       subquery_id: "subquery_id"
       properties { property: "property" type: STRING }
@@ -53,6 +204,7 @@ TEST(QueryResultValidatorTest, SuccessValidate) {
 
 TEST(QueryResultValidatorTest, SuccessStatelessValidator) {
   DelliciusQuery query = ParseTextProtoOrDie(R"pb(
+    query_id: "query_id"
     subquery {
       subquery_id: "subquery_id"
       properties { property: "property" type: STRING }

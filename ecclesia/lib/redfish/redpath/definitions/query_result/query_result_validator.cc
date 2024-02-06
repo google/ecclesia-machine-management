@@ -19,24 +19,144 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/status/macros.h"
 
 namespace ecclesia {
+namespace {
+
+struct SubqueryConfig {
+  const DelliciusQuery::Subquery* config;
+  std::vector<std::string> paths;
+};
+
+absl::Status TraverseQueryConfig(
+    SubqueryConfig& subquery_config,
+    absl::flat_hash_map<std::string, std::vector<SubqueryConfig>>&
+        subquery_id_to_config,
+    absl::flat_hash_map<std::string,
+                        DelliciusQuery::Subquery::RedfishProperty const*>&
+        property_name_to_config_map) {
+  auto populate_property_map =
+      [&property_name_to_config_map](
+          std::string path, SubqueryConfig& subquery_config) -> absl::Status {
+    for (const DelliciusQuery::Subquery::RedfishProperty& property :
+         subquery_config.config->properties()) {
+      std::string property_name = property.property();
+      if (property.has_name()) {
+        property_name = property.name();
+      }
+
+      const auto [_, status] = property_name_to_config_map.insert(
+          {absl::StrCat(path, "/", property_name), &property});
+
+      if (!status) {
+        return absl::InternalError(absl::StrCat("Duplicate path: ", path));
+      }
+    }
+
+    subquery_config.paths.push_back(std::move(path));
+    return absl::OkStatus();
+  };
+
+  if (!subquery_config.paths.empty()) {
+    return absl::OkStatus();
+  }
+
+  // Traverse each root, such that each root has a complete set of paths.
+  absl::string_view subquery_id = subquery_config.config->subquery_id();
+  if (subquery_config.config->root_subquery_ids().empty()) {
+    ECCLESIA_RETURN_IF_ERROR(
+        populate_property_map(absl::StrCat("/", subquery_id), subquery_config));
+    return absl::OkStatus();
+  }
+
+  for (absl::string_view root_subquery :
+       subquery_config.config->root_subquery_ids()) {
+    if (root_subquery == subquery_id) {
+      return absl::InternalError(
+          absl::StrCat("Cycle detected: ", root_subquery));
+    }
+
+    auto root_it = subquery_id_to_config.find(root_subquery);
+    if (root_it == subquery_id_to_config.end()) {
+      return absl::NotFoundError(
+          absl::StrCat("No subquery found for ", root_subquery));
+    }
+
+    // Check if root has paths generated. If empty then move to root node
+    for (SubqueryConfig& root_config : root_it->second) {
+      if (root_config.paths.empty()) {
+        ECCLESIA_RETURN_IF_ERROR(TraverseQueryConfig(
+            root_config, subquery_id_to_config, property_name_to_config_map));
+
+        if (root_config.paths.empty()) {
+          return absl::NotFoundError(
+              absl::StrCat("No paths were generated for ", root_subquery));
+        }
+      }
+      for (absl::string_view root_path : root_config.paths) {
+        ECCLESIA_RETURN_IF_ERROR(populate_property_map(
+            absl::StrCat(root_path, "/", subquery_id), subquery_config));
+      }
+    }
+  }
+  return absl::OkStatus();
+}
+
+absl::StatusOr<absl::flat_hash_map<
+    std::string, DelliciusQuery::Subquery::RedfishProperty const*>>
+BuildQueryConfigMap(const DelliciusQuery& query) {
+  absl::flat_hash_map<std::string, std::vector<SubqueryConfig>>
+      subquery_id_to_config;
+  subquery_id_to_config.reserve(query.subquery_size());
+
+  // Pre-processes the Redpath query config, and relate the subquery_id to the
+  // subquery configuration via a map. This will be helpful during the
+  // traversal and populating the final map of path to property vector.
+  for (const DelliciusQuery_Subquery& subquery : query.subquery()) {
+    subquery_id_to_config[subquery.subquery_id()].push_back(
+        {.config = &subquery});
+  }
+
+  // Traverse the Redpath query config and build paths via roots of the
+  // subquery_id. Then relate each subquery to all possible paths to the
+  // property configurations.
+  absl::flat_hash_map<std::string,
+                      DelliciusQuery::Subquery::RedfishProperty const*>
+      property_name_to_config_map;
+  for (auto& [_, subquery_list] : subquery_id_to_config) {
+    for (SubqueryConfig& subquery : subquery_list) {
+      ECCLESIA_RETURN_IF_ERROR(TraverseQueryConfig(
+          subquery, subquery_id_to_config, property_name_to_config_map));
+    }
+  }
+
+  return property_name_to_config_map;
+}
+}  // namespace
 
 absl::StatusOr<std::unique_ptr<QueryResultValidator>>
 QueryResultValidator::Create(const DelliciusQuery* query) {
   if (query == nullptr) {
-    return absl::InternalError("Invalid Query");
+    return absl::InvalidArgumentError("Query Configuration is Empty");
   }
 
-  absl::flat_hash_map<std::string, PropertyVector*> subquery_id_to_property;
+  if (query->query_id().empty()) {
+    return absl::InvalidArgumentError("Query ID is empty");
+  }
+
+  ECCLESIA_ASSIGN_OR_RETURN(SubqueryIdToPropertyMap property_name_to_config_map,
+                            BuildQueryConfigMap(*query));
   return absl::WrapUnique(
-      new QueryResultValidator(*query, std::move(subquery_id_to_property)));
+      new QueryResultValidator(*query, std::move(property_name_to_config_map)));
 }
 
 absl::Status QueryResultValidator::Validate(const QueryResult& query_result) {

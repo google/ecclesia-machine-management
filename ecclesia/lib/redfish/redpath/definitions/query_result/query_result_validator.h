@@ -32,6 +32,9 @@ namespace ecclesia {
 // The result will be validated against an actual query.
 class QueryResultValidatorIntf {
  public:
+  using SubqueryIdToPropertyMap =
+      absl::flat_hash_map<std::string,
+                          DelliciusQuery::Subquery::RedfishProperty const*>;
   virtual ~QueryResultValidatorIntf() = default;
   // Results:
   // OK - check is ok
@@ -43,9 +46,6 @@ class QueryResultValidatorIntf {
 // configuration must exist after the creation of the QueryResultValidator
 class QueryResultValidator : public QueryResultValidatorIntf {
  public:
-  using PropertyVector = const ::google::protobuf::RepeatedPtrField<
-      DelliciusQuery::Subquery::RedfishProperty>;
-
   // The query must outlive the QueryResultValidator.
   static absl::StatusOr<std::unique_ptr<QueryResultValidator>> Create(
       const DelliciusQuery* query);
@@ -53,14 +53,13 @@ class QueryResultValidator : public QueryResultValidatorIntf {
   absl::Status Validate(const QueryResult& query_result) override;
 
  private:
-  QueryResultValidator(
-      const DelliciusQuery& query,
-      absl::flat_hash_map<std::string, PropertyVector*> subquery_id_to_property)
+  QueryResultValidator(const DelliciusQuery& query,
+                       SubqueryIdToPropertyMap subquery_id_to_property)
       : query_(query),
         subquery_id_to_property_(std::move(subquery_id_to_property)) {}
 
   const DelliciusQuery& query_;
-  absl::flat_hash_map<std::string, PropertyVector*> subquery_id_to_property_;
+  SubqueryIdToPropertyMap subquery_id_to_property_;
 };
 
 // Helper function that will validate a query result via
