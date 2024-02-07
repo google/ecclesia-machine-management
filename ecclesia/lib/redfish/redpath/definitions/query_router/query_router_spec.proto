@@ -4,6 +4,7 @@ package ecclesia;
 
 import "ecclesia/lib/redfish/dellicius/engine/query_rules.proto";
 import "ecclesia/lib/redfish/dellicius/query/query.proto";
+import "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.proto";
 
 message QueryAndRulePath {
   string query_path = 1;
@@ -41,15 +42,6 @@ message SelectionSpec {
   }
 
   repeated QuerySelectionSpec query_selection_specs = 1;
-}
-
-message QueryEngineFeatures {
-  // Flag to turn on redfish metrics in the Query Result
-  bool enable_redfish_metrics = 1;
-  // Flag to determine the error mode.
-  bool fail_on_first_error = 2;
-  // Flag to control tracing
-  bool log_redfish_traces = 3;
 }
 
 enum QueryPattern {
