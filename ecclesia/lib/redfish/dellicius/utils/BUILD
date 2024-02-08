@@ -142,7 +142,7 @@ cc_library(
     name = "query_validator",
     srcs = ["query_validator.cc"],
     hdrs = ["query_validator.h"],
-    visibility = ["//ecclesia/lib/redfish/dellicius:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/apifs",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
