@@ -18,12 +18,58 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
+#include "absl/strings/str_replace.h"
+#include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 
 namespace ecclesia {
+namespace {
+
+// The only difference between Redpath predicate format and $filter format are
+// the relational operators. Redpath supports spaces or no spaces surrounding a
+// relational operator so both substitutions need to be done. Substitutions with
+// surrounding spaces will be done first as the $filter format requires spaces.
+std::string GetFilterString(absl::string_view predicate) {
+  std::vector<std::pair<std::string, std::string>> relational_operators_spaces =
+      {{" < ", " lt "},  {" > ", " gt "}, {" <= ", " le "},
+       {" >= ", " ge "}, {" = ", " eq "}, {" != ", " ne "}};
+  std::vector<std::pair<std::string, std::string>> relational_operators = {
+      {"<", " lt "},  {">", " gt "}, {"<=", " le "},
+      {">=", " ge "}, {"=", " eq "}, {"!=", " ne "}};
+  // If the supplied predicate uses surrounding spaces the conversion should be
+  // complete.
+  std::string filter_string_intermediate =
+      absl::StrReplaceAll(predicate, relational_operators_spaces);
+  // If the operators have no spaces the final replacement will cover it.
+  std::string filter_string_with_spaces =
+      absl::StrReplaceAll(filter_string_intermediate, relational_operators);
+
+  return absl::StrReplaceAll(filter_string_with_spaces, {{" ", "%20"}});
+}
+
+}  // namespace
+
+void RedfishQueryParamFilter::BuildFromRedpathPredicate(
+    absl::string_view predicate) {
+  filter_string_ = GetFilterString(predicate);
+}
+
+void RedfishQueryParamFilter::BuildFromRedpathPredicateList(
+    const std::vector<std::string> &predicates) {
+  std::vector<std::string> filter_strings;
+  filter_strings.reserve(predicates.size());
+  for (absl::string_view predicate : predicates) {
+    filter_strings.push_back(GetFilterString(predicate));
+  }
+  filter_string_ = absl::StrJoin(filter_strings, "%20or%20");
+}
 
 RedfishQueryParamTop::RedfishQueryParamTop(
     size_t numMembers)

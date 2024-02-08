@@ -32,8 +32,6 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
-#include "ecclesia/lib/http/client.h"
-#include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -516,7 +514,8 @@ TEST_F(HttpRedfishInterfaceTest, CachedPostWorkWithBytes) {
 }
 
 TEST_F(HttpRedfishInterfaceTest, CachedPostWorkWithSameUriDifferentPayload) {
-  int called_count_1 = 0, called_count_2 = 0;
+  int called_count_1 = 0;
+  int called_count_2 = 0;
   auto result_json_1 = nlohmann::json::parse(R"json({
     "Id": "1",
     "Name": "MyResource",
@@ -892,6 +891,76 @@ TEST_F(HttpRedfishInterfaceTest, GetWithoutExpand) {
   redfish_object->Get("Chassis",
                       {.expand = RedfishQueryParamExpand({.levels = 1})});
   EXPECT_EQ(called_expanded_count, 0);
+}
+
+TEST_F(HttpRedfishInterfaceTest, GetWithFilter) {
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    SetContentType(req, "application/json");
+    // Reply will redirect the chassis
+    auto reply = nlohmann::json::parse(
+        R"json({
+              "@odata.id": "/redfish/v1",
+              "Chassis": {
+                "@odata.id": "/redfish/v1/Chassis"
+              },
+              "ProtocolFeaturesSupported": {
+                "FilterQuery": true
+              }
+            })json");
+    req->WriteResponseString(reply.dump());
+    req->Reply();
+  });
+  int called_chassis_filter_count = 0;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis?$filter=expression",
+      [&](ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        called_chassis_filter_count++;
+        req->WriteResponseString(R"json({"@odata.id": "uri"})json");
+        req->Reply();
+      });
+  auto redfish_object = intf_->GetRoot().AsObject();
+  ASSERT_NE(redfish_object, nullptr);
+  RedfishQueryParamFilter filter;
+  filter.SetFilterString("expression");
+  RedfishVariant chassis_variant =
+      redfish_object->Get("Chassis", {.filter = filter});
+  EXPECT_EQ(called_chassis_filter_count, 1);
+}
+
+TEST_F(HttpRedfishInterfaceTest, GetWithoutFilter) {
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    auto reply = nlohmann::json::parse(
+        R"json({
+              "@odata.id": "/redfish/v1",
+              "Chassis": {
+                "@odata.id": "/redfish/v1/Chassis"
+              }
+            })json");
+    req->WriteResponseString(reply.dump());
+    req->Reply();
+  });
+  int called_chassis_filter_count = 0;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis?$filter=expression",
+      [&](ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        called_chassis_filter_count++;
+        req->WriteResponseString(R"json({"@odata.id": "uri"})json");
+        req->Reply();
+      });
+  auto redfish_object = intf_->GetRoot().AsObject();
+  ASSERT_NE(redfish_object, nullptr);
+  RedfishQueryParamFilter filter;
+  filter.SetFilterString("expression");
+  RedfishVariant chassis_variant =
+      redfish_object->Get("Chassis", {.filter = filter});
+  EXPECT_EQ(called_chassis_filter_count, 0);
 }
 
 TEST_F(HttpRedfishInterfaceTest, CachedGetWithOperator) {

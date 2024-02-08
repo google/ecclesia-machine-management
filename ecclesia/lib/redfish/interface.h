@@ -91,6 +91,9 @@ struct RedfishSupportedFeatures {
     // $expand query parameter. Shall be included only if $levels is true.
     int max_levels = 0;
   };
+  // Simply indicates whether or not the agent supports filtering collection
+  // results.
+  bool filter_enabled = false;
   Expand expand;
   struct TopSkip {
     // This property shall indicate whether this service supports the $top
@@ -162,6 +165,34 @@ class RedfishQueryParamTop : public GetParamQueryInterface {
   size_t numMembers_;
 };
 
+// Defines Filter parameter
+// See RedFish spec 7.3.4 The $filter query parameter
+class RedfishQueryParamFilter : public GetParamQueryInterface {
+ public:
+  void BuildFromRedpathPredicate(absl::string_view predicate);
+  void BuildFromRedpathPredicateList(
+      const std::vector<std::string> &predicates);
+  void SetFilterString(absl::string_view filter_string) {
+    filter_string_ = filter_string;
+  }
+
+  // It is possible for the filter parameter to be enabled, but unused, in that
+  // case return nothing.
+  std::string ToString() const override {
+    if (filter_string_.empty()) {
+      return "";
+    }
+    return absl::StrCat("$filter=", filter_string_);
+  }
+
+ private:
+  // This struct contains two strictly ordered vectors. When building the
+  // filter, the first expression is popped, and then the first logical operator
+  // and so on. There should always be 1-(number of expressions) logical
+  // operators.
+  std::string filter_string_;
+};
+
 // Struct to be used as a parameter to RedfishInterface implementations
 struct GetParams {
   enum class Freshness { kOptional, kRequired };
@@ -173,6 +204,9 @@ struct GetParams {
     }
     if (expand.has_value()) {
       query_params.push_back(&expand.value());
+    }
+    if (filter.has_value()) {
+      query_params.push_back(&filter.value());
     }
     return query_params;
   }
@@ -192,6 +226,7 @@ struct GetParams {
   bool auto_adjust_levels = false;
   std::optional<RedfishQueryParamTop> top;
   std::optional<RedfishQueryParamExpand> expand;
+  std::optional<RedfishQueryParamFilter> filter;
 };
 
 // RedfishVariant is the standard return type for all Redfish interfaces.

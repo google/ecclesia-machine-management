@@ -215,6 +215,7 @@ inline constexpr char kProtocolFeaturesSupported[] =
     "ProtocolFeaturesSupported";
 inline constexpr char kExpandQuery[] = "ExpandQuery";
 inline constexpr char kTopSkipQuery[] = "TopSkipQuery";
+inline constexpr char kFilterQuery[] = "FilterQuery";
 
 inline constexpr char kRfPropertyTaskPayload[] = "Payload";
 inline constexpr char kRfPropertyTaskHttpHeaders[] = "HttpHeaders";

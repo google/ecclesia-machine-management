@@ -338,6 +338,12 @@ class HttpIntfObjectImpl : public RedfishObject {
               intf_->SupportedFeatures()).ok()) {
       params.top.reset();
     }
+    // Reset filter if requested but not available
+    if (params.filter.has_value() &&
+        (!intf_->SupportedFeatures().has_value() ||
+         !intf_->SupportedFeatures()->filter_enabled)) {
+      params.filter.reset();
+    }
     return ResolveReference(result_.code, itr.value(), result_.headers, intf_,
                             std::move(new_path), cache_state_,
                             std::move(params));
@@ -835,7 +841,7 @@ class HttpRedfishInterface : public RedfishInterface {
       return;
     }
     if (remove_expand_support_) {
-      supported_features_ = RedfishSupportedFeatures{};
+      supported_features_->expand = {};
       return;
     }
     auto expand_features_json =
@@ -872,6 +878,14 @@ class HttpRedfishInterface : public RedfishInterface {
         features.top_skip.enable = *val;
       }
     }
+    // Process $filter features if applicable
+    bool filter_enabled = false;
+    if ((*root_object)[kProtocolFeaturesSupported][kFilterQuery].GetValue(
+            &filter_enabled);
+        filter_enabled) {
+      features.filter_enabled = filter_enabled;
+    }
+
     supported_features_ = std::move(features);
   }
 

@@ -19,13 +19,14 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 #include "ecclesia/lib/http/codes.h"
-#include "ecclesia/lib/redfish/property.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/testing/status.h"
@@ -182,6 +183,43 @@ TEST(RedfishVariant, RedfishQueryParamExpand) {
           {.type = RedfishQueryParamExpand::ExpandType::kNotLinks, .levels = 3})
           .ToString(),
       "$expand=.($levels=3)");
+}
+
+TEST(RedfishVariant, RedfishQueryParamFilter) {
+  auto filter = RedfishQueryParamFilter();
+  // No spaces between operators.
+  std::string predicate1 = "Prop1<=42";
+  filter.BuildFromRedpathPredicate(predicate1);
+  EXPECT_EQ(filter.ToString(), "$filter=Prop1%20le%2042");
+  // Spaces between operators.
+  std::string predicate2 = "Prop1 != 42";
+  filter.BuildFromRedpathPredicate(predicate2), ecclesia::IsOk();
+  EXPECT_EQ(filter.ToString(), "$filter=Prop1%20ne%2042");
+  // Spaces between operators with logical operator.
+  std::string predicate3 = "Prop1 > 42 and Prop1 < 84";
+  filter.BuildFromRedpathPredicate(predicate3), ecclesia::IsOk();
+  EXPECT_EQ(filter.ToString(),
+            "$filter=Prop1%20gt%2042%20and%20Prop1%20lt%2084");
+  // Directly assign the filter string
+  std::string filter_string = "Prop1%20eq%2042";
+  filter.SetFilterString(filter_string);
+  EXPECT_EQ(filter.ToString(), absl::StrCat("$filter=", filter_string));
+}
+
+TEST(RedfishVariant, RedfishQueryParamFilterEmpty) {
+  auto filter = RedfishQueryParamFilter();
+  EXPECT_EQ(filter.ToString(), "");
+}
+
+TEST(RedfishVariant, RedfishQueryParamFilterPredicateList) {
+  auto filter = RedfishQueryParamFilter();
+  // No spaces between operators.
+  std::string predicate1 = "Prop1<=42";
+  std::string predicate2 = "Prop1 != 42";
+  std::vector<std::string> predicates = {predicate1, predicate2};
+  filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
+  EXPECT_EQ(filter.ToString(),
+            "$filter=Prop1%20le%2042%20or%20Prop1%20ne%2042");
 }
 
 TEST(RedfishVariant, ValidateRedfishSupportSuccess) {
