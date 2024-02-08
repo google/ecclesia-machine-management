@@ -66,23 +66,33 @@ RedPathRedfishQueryParams ParseQueryRuleParams(
   // configuration and build the prefix to param mapping in memory.
   for (auto &redpath_prefix_with_query_params :
        *rule.mutable_redpath_prefix_with_params()) {
-    RedfishQueryParamExpand::ExpandType expand_type;
-    ExpandConfiguration::ExpandType expand_type_in_rule =
-        redpath_prefix_with_query_params.expand_configuration().type();
-    if (expand_type_in_rule == ExpandConfiguration::BOTH) {
-      expand_type = RedfishQueryParamExpand::ExpandType::kBoth;
-    } else if (expand_type_in_rule == ExpandConfiguration::NO_LINKS) {
-      expand_type = RedfishQueryParamExpand::ExpandType::kNotLinks;
-    } else if (expand_type_in_rule == ExpandConfiguration::ONLY_LINKS) {
-      expand_type = RedfishQueryParamExpand::ExpandType::kLinks;
-    } else {
-      break;
+    GetParams params;
+    if (redpath_prefix_with_query_params.has_top_configuration()) {
+      if (redpath_prefix_with_query_params.top_configuration().num_members()
+          < 0) {
+        params.top = RedfishQueryParamTop(0);
+      } else {
+        params.top = RedfishQueryParamTop(
+            redpath_prefix_with_query_params.top_configuration().num_members());
+      }
     }
-    GetParams params{
-        .expand = RedfishQueryParamExpand(
-            {.type = expand_type,
-             .levels = redpath_prefix_with_query_params.expand_configuration()
-                           .level()})};
+    if (redpath_prefix_with_query_params.has_expand_configuration()) {
+      RedfishQueryParamExpand::ExpandType expand_type;
+      ExpandConfiguration::ExpandType expand_type_in_rule =
+        redpath_prefix_with_query_params.expand_configuration().type();
+      if (expand_type_in_rule == ExpandConfiguration::BOTH) {
+        expand_type = RedfishQueryParamExpand::ExpandType::kBoth;
+      } else if (expand_type_in_rule == ExpandConfiguration::NO_LINKS) {
+        expand_type = RedfishQueryParamExpand::ExpandType::kNotLinks;
+      } else if (expand_type_in_rule == ExpandConfiguration::ONLY_LINKS) {
+        expand_type = RedfishQueryParamExpand::ExpandType::kLinks;
+      } else {
+        break;
+      }
+      params.expand = RedfishQueryParamExpand({
+          expand_type,
+          redpath_prefix_with_query_params.expand_configuration().level()});
+    }
 
     redpath_prefix_to_params[std::move(
         *redpath_prefix_with_query_params.mutable_redpath())] =

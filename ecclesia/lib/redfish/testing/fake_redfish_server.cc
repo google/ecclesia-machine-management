@@ -291,4 +291,52 @@ void FakeRedfishServer::EnableExpandGetHandler(ExpandQuery expand_query) {
       });
 }
 
+void FakeRedfishServer::EnableTopSkipGetHandler(bool enable) {
+  RedfishVariant redfish_var = redfish_intf_->UncachedGetUri("/redfish/v1");
+  nlohmann::json json_res;
+  std::unique_ptr<RedfishObject> obj_res = redfish_var.AsObject();
+  if (obj_res != nullptr) {
+    json_res = obj_res->GetContentAsJson();
+  }
+  nlohmann::json root_response;
+  root_response["TopSkipQuery"] = enable;
+  json_res["ProtocolFeaturesSupported"] = root_response;
+  std::string result = json_res.dump();
+  AddHttpGetHandler(
+      "/redfish/v1",
+      [&, result](tensorflow::serving::net_http::ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(result);
+        req->Reply();
+      });
+}
+
+void FakeRedfishServer::EnableExpandTopSkipGetHandler(ExpandQuery expand_query,
+                                              bool top_skip_enable) {
+  RedfishVariant redfish_var = redfish_intf_->UncachedGetUri("/redfish/v1");
+  nlohmann::json json_res;
+  std::unique_ptr<RedfishObject> obj_res = redfish_var.AsObject();
+  if (obj_res != nullptr) {
+    json_res = obj_res->GetContentAsJson();
+  }
+  nlohmann::json root_response;
+  root_response["ExpandQuery"]["ExpandALL"] = expand_query.ExpandAll;
+  root_response["ExpandQuery"]["Levels"] = expand_query.Levels;
+  root_response["ExpandQuery"]["Links"] = expand_query.Links;
+  root_response["ExpandQuery"]["MaxLevels"] = expand_query.MaxLevels;
+  root_response["ExpandQuery"]["NoLinks"] = expand_query.NoLinks;
+  root_response["TopSkipQuery"] = top_skip_enable;
+  json_res["ProtocolFeaturesSupported"] = root_response;
+  std::string result = json_res.dump();
+  AddHttpGetHandler(
+      "/redfish/v1",
+      [&, result](tensorflow::serving::net_http::ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(result);
+        req->Reply();
+      });
+}
+
 }  // namespace ecclesia

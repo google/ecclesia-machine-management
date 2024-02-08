@@ -182,7 +182,7 @@ TEST(GetUriWithQueryParameters, CanGetUriWithParams) {
     std::string uri = GetUriWithQueryParameters(
         "/redfish/v1/Systems/system/Memory/dimm0", params);
     EXPECT_EQ(uri,
-              "/redfish/v1/Systems/system/Memory/dimm0?$expand=*($levels=3)");
+      "/redfish/v1/Systems/system/Memory/dimm0?$expand=*($levels=3)");
   }
   {
     auto params =
@@ -193,6 +193,30 @@ TEST(GetUriWithQueryParameters, CanGetUriWithParams) {
         "/redfish/v1/Systems/system/Memory/dimm0", params);
     EXPECT_EQ(uri,
               "/redfish/v1/Systems/system/Memory/dimm0?$expand=~($levels=3)");
+  }
+}
+
+TEST(GetUriWithQueryParameters, CanGetUriWithMultiParams) {
+    {
+    auto params = GetParams{
+        .top = RedfishQueryParamTop(/*numMembers*/ 100),
+        .expand = RedfishQueryParamExpand(
+                      {.type = RedfishQueryParamExpand::ExpandType::kNotLinks,
+                       .levels = 3})};
+    std::string uri = GetUriWithQueryParameters(
+        "/redfish/v1/Systems/system/Memory/dimm0", params);
+    EXPECT_EQ(uri,
+      "/redfish/v1/Systems/system/Memory/dimm0?$top=100&$expand=.($levels=3)");
+  }
+  {
+    auto params = GetParams{
+        .top = RedfishQueryParamTop(/*numMembers*/ 100),
+        .expand = RedfishQueryParamExpand(
+            {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 3})};
+    std::string uri = GetUriWithQueryParameters(
+        "/redfish/v1/Systems/system/Memory/dimm0", params);
+    EXPECT_EQ(uri,
+      "/redfish/v1/Systems/system/Memory/dimm0?$top=100&$expand=*($levels=3)");
   }
 }
 

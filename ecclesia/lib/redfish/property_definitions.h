@@ -214,6 +214,7 @@ inline constexpr char kRfResourceTypeProcessorMetrics[] = "ProcessorMetrics";
 inline constexpr char kProtocolFeaturesSupported[] =
     "ProtocolFeaturesSupported";
 inline constexpr char kExpandQuery[] = "ExpandQuery";
+inline constexpr char kTopSkipQuery[] = "TopSkipQuery";
 
 inline constexpr char kRfPropertyTaskPayload[] = "Payload";
 inline constexpr char kRfPropertyTaskHttpHeaders[] = "HttpHeaders";
@@ -516,6 +517,9 @@ DEFINE_REDFISH_PROPERTY(ExpandQueryLevels, bool, "Levels");
 DEFINE_REDFISH_PROPERTY(ExpandQuerykLinks, bool, "Links");
 DEFINE_REDFISH_PROPERTY(ExpandQuerykMaxLevels, int, "MaxLevels");
 DEFINE_REDFISH_PROPERTY(ExpandQuerykNoLinks, bool, "NoLinks");
+
+// Redfish agent top and skip support capabilities
+DEFINE_REDFISH_PROPERTY(TopSkipQuery, bool, "TopSkipQuery");
 
 }  // namespace ecclesia
 

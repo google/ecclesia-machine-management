@@ -15,6 +15,7 @@
  */
 
 #include "ecclesia/lib/redfish/interface.h"
+#include <cstddef>
 #include <memory>
 #include <string>
 
@@ -23,6 +24,25 @@
 #include "absl/types/optional.h"
 
 namespace ecclesia {
+
+RedfishQueryParamTop::RedfishQueryParamTop(
+    size_t numMembers)
+    : numMembers_(numMembers) {}
+
+std::string RedfishQueryParamTop::ToString() const {
+  return absl::StrCat("$top=", numMembers_);
+}
+
+absl::Status RedfishQueryParamTop::ValidateRedfishSupport(
+    const absl::optional<RedfishSupportedFeatures> &features) {
+  if (!features.has_value()) {
+    return absl::InternalError("Top query parameter is not supported.");
+  }
+  if (!features->top_skip.enable) {
+    return absl::InternalError("'$top' and '$skip' are not supported");
+  }
+  return absl::OkStatus();
+}
 
 RedfishQueryParamExpand::RedfishQueryParamExpand(
     RedfishQueryParamExpand::Params params)

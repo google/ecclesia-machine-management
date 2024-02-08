@@ -16,8 +16,12 @@ message RedPathPrefixWithQueryParams {
     uint64 level = 1;
     ExpandType type = 2;
   }
+  message TopConfiguration {
+    uint64 num_members = 1;
+  }
   string redpath = 1;
-  ExpandConfiguration expand_configuration = 2;
+  optional TopConfiguration top_configuration = 3;
+  optional ExpandConfiguration expand_configuration = 2;
 }
 
 // Collection of Prefix Set with QueryParams.

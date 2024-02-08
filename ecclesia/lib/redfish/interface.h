@@ -61,8 +61,9 @@ enum class RedfishIterReturnValue {
 };
 
 // Stores what RedFish features are supported by the specific backend.
-// See ProtocolFeaturesSupported defenition:
+// See ProtocolFeaturesSupported definition:
 //    https://www.dmtf.org/sites/default/files/standards/documents/DSP0268_2021.4_0.pdf
+//    https://github.com/DMTF/Redfish/pull/5928
 struct RedfishSupportedFeatures {
   struct Expand {
     // This property shall indicate whether this service supports the asterisk
@@ -91,6 +92,12 @@ struct RedfishSupportedFeatures {
     int max_levels = 0;
   };
   Expand expand;
+  struct TopSkip {
+    // This property shall indicate whether this service supports the $top
+    // and $skip query parameters.
+    bool enable = false;
+  };
+  TopSkip top_skip;
 };
 
 // Classes below provide an interface to supply query parameters to mmanager
@@ -134,22 +141,56 @@ class RedfishQueryParamExpand : public GetParamQueryInterface {
   size_t levels_;
 };
 
+// Defines Top parameter
+// Spec does not currently support $top in ProtocolSupportedFeatures,
+// but gbmcweb will (b/324127258).
+class RedfishQueryParamTop : public GetParamQueryInterface {
+ public:
+  explicit RedfishQueryParamTop(size_t numMembers);
+
+  // Validates if redfish agent supports the Top query arg.
+  // Redfish agent is supposed to return ProtocolFeaturesSupported as part of
+  // the /redfish/v1 object
+  static absl::Status ValidateRedfishSupport(
+      const absl::optional<RedfishSupportedFeatures> &features);
+
+  std::string ToString() const override;
+
+  size_t numMembers() const { return numMembers_; }
+
+ private:
+  size_t numMembers_;
+};
+
 // Struct to be used as a parameter to RedfishInterface implementations
 struct GetParams {
   enum class Freshness { kOptional, kRequired };
 
   std::vector<const GetParamQueryInterface *> GetQueryParams() const {
     std::vector<const GetParamQueryInterface *> query_params;
+    if (top.has_value()) {
+      query_params.push_back(&top.value());
+    }
     if (expand.has_value()) {
       query_params.push_back(&expand.value());
     }
     return query_params;
   }
 
+  std::string ToString() {
+    std::string result;
+    for (const auto *query_param : GetQueryParams()) {
+      if (!result.empty()) result.append("&");
+      absl::StrAppend(&result, query_param->ToString());
+    }
+    return result;
+  }
+
   Freshness freshness = Freshness::kOptional;
   RedfishCachedGetterInterface::Relevance relevance =
       RedfishCachedGetterInterface::Relevance::kRelevant;
   bool auto_adjust_levels = false;
+  std::optional<RedfishQueryParamTop> top;
   std::optional<RedfishQueryParamExpand> expand;
 };
 

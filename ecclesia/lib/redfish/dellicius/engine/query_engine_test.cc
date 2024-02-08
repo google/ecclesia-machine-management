@@ -195,6 +195,11 @@ TEST(QueryEngineTest, QueryEngineDevpathConfiguration) {
   QueryIdToResult response_entries =
       query_engine->ExecuteRedpathQuery({"SensorCollector"});
 
+  auto results =
+      response_entries.results().at("SensorCollector").data();
+  auto sensors = results.fields().at("Sensors");
+  EXPECT_EQ(sensors.list_value().values_size(), 14);
+
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_output_sensor)});
 }
@@ -214,6 +219,26 @@ TEST(QueryEngineTest, QueryEngineRedfishIntfAccessor) {
       query_engine
           ->GetRedfishInterface(RedfishInterfacePasskeyFactory::GetPassKey())
           .ok());
+}
+
+// Test $top queries
+// Use the paginated version of SensorCollector query for this test
+TEST(QueryEngineTest, QueryEngineTopConfiguration) {
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
+                                  .query_rules = kQueryRules}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
+  QueryIdToResult response_entries =
+      query_engine->ExecuteRedpathQuery({"PaginatedSensorCollector"});
+
+  auto results =
+      response_entries.results().at("PaginatedSensorCollector").data();
+  auto sensors = results.fields().at("Sensors");
+  EXPECT_EQ(sensors.list_value().values_size(), 4);
 }
 
 TEST(QueryEngineTest, QueryEngineWithExpandConfiguration) {

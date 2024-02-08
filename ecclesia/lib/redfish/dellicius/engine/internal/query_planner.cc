@@ -289,7 +289,7 @@ GetParams GetQueryParamsForRedPath(
   auto params = GetParams{.freshness = GetParams::Freshness::kOptional,
                           .expand = std::nullopt};
 
-  // Get RedPath specific configuration for expand and freshness
+  // Get RedPath specific configuration for top, expand, and freshness
   if (auto iter = redpath_to_query_params.find(redpath_prefix);
       iter != redpath_to_query_params.end()) {
     params = iter->second;

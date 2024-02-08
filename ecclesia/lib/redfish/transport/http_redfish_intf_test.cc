@@ -1460,5 +1460,86 @@ TEST_F(HttpRedfishInterfaceTest, SubscribeReturnsUnimplementedError) {
               ecclesia::IsStatusUnimplemented());
 }
 
+TEST_F(HttpRedfishInterfaceTest, GetWithTopSkip) {
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    SetContentType(req, "application/json");
+    // Reply will redirect the chassis
+    auto reply = nlohmann::json::parse(
+        R"json({
+              "@odata.id": "/redfish/v1",
+              "Chassis": {
+                "@odata.id": "/redfish/v1/Chassis"
+              },
+              "ProtocolFeaturesSupported": {
+                "TopSkipQuery": true
+              }
+            })json");
+    req->WriteResponseString(reply.dump());
+    req->Reply();
+  });
+  int called_top_skip_query_count = 0;
+  server_->AddHttpGetHandler("/redfish/v1/Chassis?$top=1111",
+    [&](ServerRequestInterface *req) {
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    SetContentType(req, "application/json");
+    called_top_skip_query_count++;
+    auto reply = nlohmann::json::parse(
+        R"json({
+              "@odata.id": "/redfish/v1/Chassis",
+              "Sensors": {
+                "@odata.id": "/redfish/v1/Chassis/Sensors"
+              }
+            })json");
+    req->WriteResponseString(reply.dump());
+    req->Reply();
+  });
+  auto redfish_object = intf_->GetRoot().AsObject();
+  ASSERT_NE(redfish_object, nullptr);
+  RedfishQueryParamTop top(1111);
+  RedfishVariant chassis_variant =
+      redfish_object->Get("Chassis", {.top = top});
+  EXPECT_EQ(called_top_skip_query_count, 1);
+}
+
+TEST_F(HttpRedfishInterfaceTest, GetWithoutTopSkip) {
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    SetContentType(req, "application/json");
+    // Reply will redirect the chassis
+    auto reply = nlohmann::json::parse(
+        R"json({
+              "@odata.id": "/redfish/v1",
+              "Chassis": {
+                "@odata.id": "/redfish/v1/Chassis"
+              }
+            })json");
+    req->WriteResponseString(reply.dump());
+    req->Reply();
+  });
+  int called_top_query_count = 0;
+  server_->AddHttpGetHandler("/redfish/v1/Chassis?$top=1111",
+    [&](ServerRequestInterface *req) {
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    SetContentType(req, "application/json");
+    called_top_query_count++;
+    auto reply = nlohmann::json::parse(
+        R"json({
+              "@odata.id": "/redfish/v1/Chassis",
+              "Sensors": {
+                "@odata.id": "/redfish/v1/Chassis/Sensors"
+              }
+            })json");
+    req->WriteResponseString(reply.dump());
+    req->Reply();
+  });
+  auto redfish_object = intf_->GetRoot().AsObject();
+  ASSERT_NE(redfish_object, nullptr);
+  RedfishQueryParamTop top(1111);
+  RedfishVariant chassis_variant =
+      redfish_object->Get("Chassis", {.top = top});
+  EXPECT_EQ(called_top_query_count, 0);
+}
+
 }  // namespace
 }  // namespace ecclesia

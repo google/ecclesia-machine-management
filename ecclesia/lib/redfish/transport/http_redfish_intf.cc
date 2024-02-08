@@ -332,6 +332,12 @@ class HttpIntfObjectImpl : public RedfishObject {
              .ok()) {
       params.expand.reset();
     }
+    // Reset top if requested but not available
+    if (params.top.has_value() &&
+        !RedfishQueryParamTop::ValidateRedfishSupport(
+              intf_->SupportedFeatures()).ok()) {
+      params.top.reset();
+    }
     return ResolveReference(result_.code, itr.value(), result_.headers, intf_,
                             std::move(new_path), cache_state_,
                             std::move(params));
@@ -637,7 +643,7 @@ class HttpRedfishInterface : public RedfishInterface {
       return CachedGetUri(ServiceRootToUri(service_root), std::move(params));
     }();
     // parse supported features if not parsed yet
-    PopuplateSupportedFeatures(root);
+    PopulateSupportedFeatures(root);
     return root;
   }
 
@@ -647,7 +653,7 @@ class HttpRedfishInterface : public RedfishInterface {
       return CachedGetUri(service_root, std::move(params));
     }();
     // parse supported features if not parsed yet
-    PopuplateSupportedFeatures(root);
+    PopulateSupportedFeatures(root);
     return root;
   }
 
@@ -659,7 +665,6 @@ class HttpRedfishInterface : public RedfishInterface {
                               GetParams params) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
     std::string full_redfish_path = GetUriWithQueryParameters(uri, params);
-
     auto result = GetUriHelper(uri, std::move(params),
                                cache_->CachedGet(full_redfish_path));
     return result;
@@ -820,7 +825,7 @@ class HttpRedfishInterface : public RedfishInterface {
         ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
-  void PopuplateSupportedFeatures(const RedfishVariant &root) {
+  void PopulateSupportedFeatures(const RedfishVariant &root) {
     absl::MutexLock lock(&supported_features_mutex_);
     if (supported_features_.has_value() || !root.status().ok()) {
       return;
@@ -833,29 +838,38 @@ class HttpRedfishInterface : public RedfishInterface {
       supported_features_ = RedfishSupportedFeatures{};
       return;
     }
-    auto features_json =
+    auto expand_features_json =
         (*root_object)[kProtocolFeaturesSupported][kExpandQuery].AsObject();
     RedfishSupportedFeatures features;
-    if (features_json != nullptr) {
-      if (auto val = features_json->GetNodeValue<ExpandQueryExpandAll>();
+    if (expand_features_json != nullptr) {
+      if (auto val = expand_features_json->GetNodeValue<ExpandQueryExpandAll>();
           val.has_value()) {
         features.expand.expand_all = *val;
       }
-      if (auto val = features_json->GetNodeValue<ExpandQueryLevels>();
+      if (auto val = expand_features_json->GetNodeValue<ExpandQueryLevels>();
           val.has_value()) {
         features.expand.levels = *val;
       }
-      if (auto val = features_json->GetNodeValue<ExpandQuerykLinks>();
+      if (auto val = expand_features_json->GetNodeValue<ExpandQuerykLinks>();
           val.has_value()) {
         features.expand.links = *val;
       }
-      if (auto val = features_json->GetNodeValue<ExpandQuerykMaxLevels>();
+      if (auto val =
+          expand_features_json->GetNodeValue<ExpandQuerykMaxLevels>();
           val.has_value()) {
         features.expand.max_levels = *val;
       }
-      if (auto val = features_json->GetNodeValue<ExpandQuerykNoLinks>();
+      if (auto val = expand_features_json->GetNodeValue<ExpandQuerykNoLinks>();
           val.has_value()) {
         features.expand.no_links = *val;
+      }
+    }
+    auto features_json =
+        (*root_object)[kProtocolFeaturesSupported].AsObject();
+    if (features_json != nullptr) {
+      if (auto val = features_json->GetNodeValue<TopSkipQuery>();
+          val.has_value()) {
+        features.top_skip.enable = *val;
       }
     }
     supported_features_ = std::move(features);

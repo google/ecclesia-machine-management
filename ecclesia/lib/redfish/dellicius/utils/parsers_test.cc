@@ -41,7 +41,24 @@ using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
 MATCHER_P(GetParamsEq, test_str, "") {
-  return arg.expand.has_value() && arg.expand->ToString() == test_str;
+  // atleast one param is set
+  if (!arg.top.has_value() && !arg.expand.has_value()) {
+    return false;
+  }
+  std::string expected_str;
+  if (arg.top.has_value()) {
+    expected_str = arg.top->ToString();
+  }
+  if (arg.expand.has_value()) {
+    if (!expected_str.empty()) {
+      expected_str += "&";
+    }
+    expected_str += arg.expand->ToString();
+  }
+  if (expected_str != test_str) {
+    return false;
+  }
+  return true;
 }
 
 TEST(ParserTest, ValidQueryRulesParseCorrectly) {
@@ -51,6 +68,7 @@ TEST(ParserTest, ValidQueryRulesParseCorrectly) {
       value {
         redpath_prefix_with_params {
           redpath: "/Systems"
+          top_configuration { num_members: 10 }
           expand_configuration { level: 1 type: BOTH }
         }
       }
@@ -63,16 +81,40 @@ TEST(ParserTest, ValidQueryRulesParseCorrectly) {
       query_to_params = ParseQueryRulesFromEmbeddedFiles(query_rules);
 
   GetParams test_params{
+      .top = RedfishQueryParamTop(10),
       .expand = RedfishQueryParamExpand(
           {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 1})};
   ASSERT_TRUE(test_params.expand.has_value());
+  ASSERT_TRUE(test_params.top.has_value());
 
   EXPECT_THAT(
       query_to_params,
       IsOkAndHolds(UnorderedElementsAre(Pair(
           "Assembly",
           UnorderedElementsAre(Pair(
-              "/Systems", GetParamsEq(test_params.expand->ToString())))))));
+              "/Systems", GetParamsEq(test_params.ToString())))))));
+}
+
+TEST(ParserTest, InvalidTopConfigurationParseFail) {
+  constexpr absl::string_view kQueryRuleStr = R"pb(
+    query_id_to_params_rule {
+      key: "Assembly"
+      value {
+        redpath_prefix_with_params {
+          redpath: "/Systems"
+          top_configuration { num_members: -1 }
+          expand_configuration { level: 1 type: BOTH }
+        }
+      }
+    })pb";
+
+  const std::vector<EmbeddedFile> query_rules = {
+      {.name = "", .data = kQueryRuleStr}};
+
+  absl::StatusOr<absl::flat_hash_map<std::string, RedPathRedfishQueryParams>>
+      query_to_params = ParseQueryRulesFromEmbeddedFiles(query_rules);
+
+  EXPECT_THAT(query_to_params, IsStatusInternal());
 }
 
 TEST(ParserTest, MalformedQueryRulesReturnError) {

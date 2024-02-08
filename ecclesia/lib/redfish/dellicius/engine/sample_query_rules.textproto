@@ -47,3 +47,15 @@ query_id_to_params_rule {
     }
   }
 }
+
+query_id_to_params_rule {
+  key: "PaginatedSensorCollector"
+  value {
+    redpath_prefix_with_params {
+      redpath: "/Chassis[*]/Sensors"
+      top_configuration {
+        num_members: 4
+      }
+    }
+  }
+}
