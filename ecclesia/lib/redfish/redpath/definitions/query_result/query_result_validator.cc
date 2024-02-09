@@ -27,6 +27,8 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/status/macros.h"
 
 namespace ecclesia {
@@ -141,7 +143,106 @@ BuildQueryConfigMap(const DelliciusQuery& query) {
 
   return property_name_to_config_map;
 }
+
+absl::Status CompareTypes(
+    absl::string_view path, const QueryValue::KindCase& query_result_property,
+    const DelliciusQuery::Subquery::RedfishProperty::PrimitiveType&
+        property_type) {
+  bool is_equal = false;
+  switch (query_result_property) {
+    case QueryValue::kIntValue:
+      is_equal =
+          property_type == DelliciusQuery::Subquery::RedfishProperty::INT64;
+      break;
+    case QueryValue::kDoubleValue:
+      is_equal =
+          property_type == DelliciusQuery::Subquery::RedfishProperty::DOUBLE;
+      break;
+    case QueryValue::kStringValue:
+      is_equal =
+          property_type == DelliciusQuery::Subquery::RedfishProperty::STRING;
+      break;
+    case QueryValue::kBoolValue:
+      is_equal =
+          property_type == DelliciusQuery::Subquery::RedfishProperty::BOOLEAN;
+      break;
+    case QueryValue::kIdentifier:
+      is_equal = true;
+      break;
+    case QueryValue::kListValue:
+    case QueryValue::kTimestampValue:
+    case QueryValue::kSubqueryValue:
+    case QueryValue::kRawData:
+    case QueryValue::KIND_NOT_SET:
+      break;
+  }
+
+  if (is_equal) {
+    return absl::OkStatus();
+  }
+  return absl::InternalError(absl::StrCat("Unexpected value type for ", path));
+}
+
+absl::Status CheckProperty(
+    absl::string_view path, const QueryValue& value,
+    const DelliciusQuery::Subquery::RedfishProperty& property_config) {
+  if (value.ByteSizeLong() == 0) {
+    return absl::InternalError(absl::StrCat("Empty value for ", path));
+  }
+
+  if (property_config.property_element_type() ==
+      DelliciusQuery::Subquery::RedfishProperty::COLLECTION_PRIMITIVE) {
+    if (value.kind_case() != QueryValue::kListValue) {
+      return absl::InternalError(
+          absl::StrCat("Unexpected value type for ", path));
+    }
+    for (const ecclesia::QueryValue& element : value.list_value().values()) {
+      if (element.ByteSizeLong() == 0) {
+        return absl::InternalError(absl::StrCat("Empty value for ", path));
+      }
+      ECCLESIA_RETURN_IF_ERROR(
+          CompareTypes(path, element.kind_case(), property_config.type()));
+    }
+
+    return absl::OkStatus();
+  }
+
+  return CompareTypes(path, value.kind_case(), property_config.type());
+}
 }  // namespace
+
+absl::Status QueryResultValidator::TraverseQueryResult(
+    absl::string_view path, const QueryResultData& query_result) {
+  for (const auto& [key, value] : query_result.fields()) {
+    std::string current_path = absl::StrCat(path, "/", key);
+
+    if (auto property_it = subquery_id_to_property_.find(current_path);
+        property_it != subquery_id_to_property_.end()) {
+      ECCLESIA_RETURN_IF_ERROR(
+          CheckProperty(current_path, value, *property_it->second));
+      continue;
+    }
+
+    if (value.has_list_value()) {
+      for (const ecclesia::QueryValue& child : value.list_value().values()) {
+        ECCLESIA_RETURN_IF_ERROR(
+            TraverseQueryResult(current_path, child.subquery_value()));
+      }
+      continue;
+    }
+
+    if (value.has_subquery_value()) {
+      ECCLESIA_RETURN_IF_ERROR(
+          TraverseQueryResult(current_path, value.subquery_value()));
+      continue;
+    }
+
+    return absl::InternalError(
+        absl::StrCat("Unknown ", current_path, " missing from configuration"));
+  }
+
+  return absl::OkStatus();
+}
 
 absl::StatusOr<std::unique_ptr<QueryResultValidator>>
 QueryResultValidator::Create(const DelliciusQuery* query) {
@@ -160,7 +261,18 @@ QueryResultValidator::Create(const DelliciusQuery* query) {
 }
 
 absl::Status QueryResultValidator::Validate(const QueryResult& query_result) {
-  return absl::OkStatus();
+  if (query_result.ByteSizeLong() == 0) {
+    return absl::InvalidArgumentError("Query result is empty");
+  }
+
+  absl::string_view query_id = query_result.query_id();
+  if (query_id != query_.query_id()) {
+    return absl::InvalidArgumentError(absl::StrCat(
+        "Query id mismatch: ", query_id, " vs ", query_.query_id()));
+  }
+
+  // Start Traversing the query_result tree
+  return TraverseQueryResult("", query_result.data());
 }
 
 absl::Status ValidateQueryResult(const DelliciusQuery& query,

@@ -24,6 +24,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 
@@ -58,6 +59,8 @@ class QueryResultValidator : public QueryResultValidatorIntf {
       : query_(query),
         subquery_id_to_property_(std::move(subquery_id_to_property)) {}
 
+  absl::Status TraverseQueryResult(absl::string_view path,
+                                   const QueryResultData& query_result);
   const DelliciusQuery& query_;
   SubqueryIdToPropertyMap subquery_id_to_property_;
 };

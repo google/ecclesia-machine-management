@@ -115,6 +115,7 @@ cc_test(
         ":query_result_validator",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/status:test_macros",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
