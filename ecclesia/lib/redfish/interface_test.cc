@@ -222,6 +222,15 @@ TEST(RedfishVariant, RedfishQueryParamFilterPredicateList) {
             "$filter=Prop1%20le%2042%20or%20Prop1%20ne%2042");
 }
 
+TEST(RedfishVariant, RedfishQueryParamFilterBreadcrumbs) {
+  auto filter = RedfishQueryParamFilter();
+  std::string predicate1 = "Status.Health = OK";
+  std::vector<std::string> predicates = {predicate1};
+  filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
+  EXPECT_EQ(filter.ToString(),
+            "$filter=Status/Health%20eq%20OK");
+}
+
 TEST(RedfishVariant, ValidateRedfishSupportSuccess) {
   EXPECT_THAT(
       RedfishQueryParamExpand(

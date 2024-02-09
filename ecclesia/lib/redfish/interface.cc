@@ -52,7 +52,11 @@ std::string GetFilterString(absl::string_view predicate) {
   std::string filter_string_with_spaces =
       absl::StrReplaceAll(filter_string_intermediate, relational_operators);
 
-  return absl::StrReplaceAll(filter_string_with_spaces, {{" ", "%20"}});
+  // Another difference between Redpath predicates and $filter format is
+  // breadcrumbs are denoted with a slash rather than a period/dot.
+  std::string filter_string_no_dots =
+      absl::StrReplaceAll(filter_string_with_spaces, {{".", "/"}});
+  return absl::StrReplaceAll(filter_string_no_dots, {{" ", "%20"}});
 }
 
 }  // namespace
