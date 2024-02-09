@@ -11,6 +11,7 @@ filegroup(
         "query_in/managers_in.textproto",
         "query_in/processors_in.textproto",
         "query_in/sensor_in.textproto",
+        "query_in/sensor_in_filter.textproto",
         "query_in/sensor_in_links.textproto",
         "query_in/sensor_in_paginated.textproto",
         "query_in/sensor_in_predicates.textproto",

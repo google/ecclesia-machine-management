@@ -285,9 +285,10 @@ GetParams GetQueryParamsForRedPath(
     absl::string_view redpath_prefix) {
   // Set default GetParams value as follows:
   //   Default freshness is Optional
-  //   Default Redfish query parameter setting is no expand!
+  //   Default Redfish query parameter setting is no expand or filter!
   auto params = GetParams{.freshness = GetParams::Freshness::kOptional,
-                          .expand = std::nullopt};
+                          .expand = std::nullopt,
+                          .filter = std::nullopt};
 
   // Get RedPath specific configuration for top, expand, and freshness
   if (auto iter = redpath_to_query_params.find(redpath_prefix);
@@ -301,6 +302,7 @@ GetParams GetQueryParamsForRedPath(
 // There are 2 places where we get parameters associated with RedPath prefix:
 // 1) Expand configuration from embedded query_rule file
 // 2) Freshness configuration in the Query itself
+// 3) Filter configuration toggled in query_rule and derived from predicate.
 // In this function, we merge Freshness requirement with expand configuration
 // for the redpath prefix.
 RedPathRedfishQueryParams CombineQueryParams(
@@ -1278,6 +1280,32 @@ void ExecuteRedPathStepFromEachSubquery(
       node_set_as_variant =
           qp->FetchUriReference(context_node, node_name, result, tracker);
     } else {
+      // Before retrieving the next node check if the $filter query param is
+      // enabled. This is done by checking if the filter parameter object has
+      // been instantiated. If so, find the predicate(s) and populate the filter
+      // param object. At this point template substitution will have occurred so
+      // the predicate will be in its final state.
+      if (get_params_for_redpath.filter.has_value()) {
+        // Go through every predicate in the context and if there are multiple
+        // predicates, generate a combined filter string using the "or"
+        // operator. This operator is supported in the $filter specification.
+        //
+        // An alternative to this solution would be for every context node
+        // (query scoped) to have its predicate carried with it so we would
+        // not have combine the predicates using the redpath_to_query_params
+        // map (plan scoped). This would require some refactoring, which would
+        // be wasted effort due to the existing effort to refactor Query
+        // Planner.
+        // Engine.
+        absl::flat_hash_set<std::string> predicates;
+        for (const auto &redpath_ctx : redpath_ctx_multiple) {
+          predicates.insert(redpath_ctx.redpath_steps.GetPredicate());
+        }
+        std::vector<std::string> predicates_vec(predicates.begin(),
+                                                predicates.end());
+        get_params_for_redpath.filter->BuildFromRedpathPredicateList(
+            predicates_vec);
+      }
       // Dispatch Redfish Request for the Redfish Resource associated with the
       // NodeName expression.
       node_set_as_variant =

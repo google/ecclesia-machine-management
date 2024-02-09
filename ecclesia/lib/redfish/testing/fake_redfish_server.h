@@ -139,13 +139,12 @@ class FakeRedfishServer {
   void EnableExpandGetHandler(ExpandQuery expand_query = {true, true, true, 6,
                                                           true});
   void EnableTopSkipGetHandler(bool enable = true);
-  void EnableExpandTopSkipGetHandler(ExpandQuery expand_query =
-                                          {.ExpandAll = true,
-                                          .Levels = true,
-                                          .Links = true,
-                                          .MaxLevels = 6,
-                                          .NoLinks = true},
-                                     bool top_skip_enable = true);
+  void EnableAllParamsGetHandler(ExpandQuery expand_query = {.ExpandAll = true,
+                                                             .Levels = true,
+                                                             .Links = true,
+                                                             .MaxLevels = 6,
+                                                             .NoLinks = true},
+                                 bool top_skip_enable = true);
 
  private:
   // Store of all patches

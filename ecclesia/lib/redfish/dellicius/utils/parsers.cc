@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -92,6 +93,11 @@ RedPathRedfishQueryParams ParseQueryRuleParams(
       params.expand = RedfishQueryParamExpand({
           expand_type,
           redpath_prefix_with_query_params.expand_configuration().level()});
+    }
+    // Populate the filter parameter with an empty object to indicate that
+    // filter is enabled.
+    if (redpath_prefix_with_query_params.filter_enabled()) {
+      params.filter = RedfishQueryParamFilter();
     }
 
     redpath_prefix_to_params[std::move(

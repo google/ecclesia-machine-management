@@ -312,8 +312,8 @@ void FakeRedfishServer::EnableTopSkipGetHandler(bool enable) {
       });
 }
 
-void FakeRedfishServer::EnableExpandTopSkipGetHandler(ExpandQuery expand_query,
-                                              bool top_skip_enable) {
+void FakeRedfishServer::EnableAllParamsGetHandler(ExpandQuery expand_query,
+                                                  bool top_skip_enable) {
   RedfishVariant redfish_var = redfish_intf_->UncachedGetUri("/redfish/v1");
   nlohmann::json json_res;
   std::unique_ptr<RedfishObject> obj_res = redfish_var.AsObject();
@@ -327,6 +327,7 @@ void FakeRedfishServer::EnableExpandTopSkipGetHandler(ExpandQuery expand_query,
   root_response["ExpandQuery"]["MaxLevels"] = expand_query.MaxLevels;
   root_response["ExpandQuery"]["NoLinks"] = expand_query.NoLinks;
   root_response["TopSkipQuery"] = top_skip_enable;
+  root_response["FilterQuery"] = true;
   json_res["ProtocolFeaturesSupported"] = root_response;
   std::string result = json_res.dump();
   AddHttpGetHandler(

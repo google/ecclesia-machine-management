@@ -20,8 +20,9 @@ message RedPathPrefixWithQueryParams {
     uint64 num_members = 1;
   }
   string redpath = 1;
-  optional TopConfiguration top_configuration = 3;
   optional ExpandConfiguration expand_configuration = 2;
+  optional TopConfiguration top_configuration = 3;
+  bool filter_enabled = 4;
 }
 
 // Collection of Prefix Set with QueryParams.

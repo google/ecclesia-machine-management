@@ -97,7 +97,7 @@ class FakeQueryEngine : public QueryEngineIntf {
  private:
   explicit FakeQueryEngine(absl::string_view mockup_name)
       : redfish_server_(mockup_name) {
-    redfish_server_.EnableExpandTopSkipGetHandler();
+    redfish_server_.EnableAllParamsGetHandler();
   }
 
   absl::Status InitializeQueryEngine(QuerySpec query_spec,

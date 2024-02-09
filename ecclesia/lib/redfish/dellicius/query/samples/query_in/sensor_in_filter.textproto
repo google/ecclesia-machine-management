@@ -1,0 +1,16 @@
+# proto-file: ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "FilteredSensorCollector"
+subquery {
+  subquery_id: "SensorsTemplated"
+  redpath: "/Chassis[*]/Sensors[Reading<$Ceiling]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: INT64 }
+}
+subquery {
+  subquery_id: "SensorsStatic"
+  redpath: "/Chassis[Id=chassis]/Sensors[Reading>100]"
+  properties { property: "Name" type: STRING }
+  properties { property: "Reading" type: INT64 }
+}

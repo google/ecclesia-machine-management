@@ -15,6 +15,7 @@
  */
 
 #include "ecclesia/lib/redfish/interface.h"
+
 #include <cstddef>
 #include <memory>
 #include <string>

@@ -1295,5 +1295,42 @@ TEST_F(QuerySpecConvertTest, ConvertFromQueryFilesUnableToReadQueryRule) {
               IsStatusInternal());
 }
 
+// Test $filter query, include multiple predicates and variable substitution.
+// Filter support is enabled in the query rules.
+TEST(QueryEngineTest, QueryEngineFilterConfiguration) {
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
+
+  QueryVariables::VariableValue val1;
+  val1.set_name("Ceiling");
+  val1.set_value("95");
+  QueryEngineIntf::QueryVariableSet test_args;
+  QueryVariables args1 = QueryVariables();
+  *args1.add_values() = val1;
+  test_args["FilteredSensorCollector"] = args1;
+
+  QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
+      {"FilteredSensorCollector"}, QueryEngine::ServiceRootType::kRedfish,
+      test_args);
+
+  // Fake Redfish Server currently supports the $filter parameter, but does not
+  // actually perform the filtering. Query Planner is still responsible for
+  // filtering. At this point we just need to verify the query succeeded.
+  // used.
+  // based on $filter parameter.
+  auto results =
+      response_entries.results().at("FilteredSensorCollector").data();
+  auto sensors_templated = results.fields().at("SensorsTemplated");
+  auto sensors_static = results.fields().at("SensorsStatic");
+  EXPECT_EQ(sensors_templated.list_value().values_size(), 6);
+  EXPECT_EQ(sensors_static.list_value().values_size(), 7);
+}
+
 }  // namespace
 }  // namespace ecclesia
