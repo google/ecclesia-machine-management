@@ -17,8 +17,13 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_PATH_UTIL_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_UTILS_PATH_UTIL_H_
 
+#include <string>
+#include <vector>
+
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 
@@ -37,10 +42,13 @@ std::vector<absl::string_view> SplitExprByDelimiterWithEscape(
 std::vector<std::string> SplitNodeNameForNestedNodes(
     absl::string_view expression);
 
-// Helper function to resolve node_name for nested nodes if any and return json
-// object to be evaluated for required property.
-absl::StatusOr<nlohmann::json> ResolveNodeNameToJsonObj(
-    const RedfishObject &redfish_object, absl::string_view node_name);
+// Helper function to resolve a RedPath node relative to given JSON.
+// Returns JSON object referenced by the node expression.
+// Example:
+//  ResolveRedPathNodeToJson(some_json_object, Threshold.UpperCritial.Reading)
+//  would return JSON object {"Reading": 23} nested in some_json_object.
+absl::StatusOr<nlohmann::json> ResolveRedPathNodeToJson(
+    const nlohmann::json &json_object, absl::string_view node_name);
 
 }  // namespace ecclesia
 

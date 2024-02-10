@@ -166,7 +166,8 @@ absl::StatusOr<SubqueryDataSet::Property> GetPropertyFromRedfishObject(
   // the property expression.
   ECCLESIA_ASSIGN_OR_RETURN(
       nlohmann::json json_obj,
-      ResolveNodeNameToJsonObj(redfish_object, property.property()));
+      ResolveRedPathNodeToJson(redfish_object.GetContentAsJson(),
+                               property.property()));
 
   using RedfishProperty = DelliciusQuery::Subquery::RedfishProperty;
 

@@ -456,7 +456,8 @@ bool PredicateFilterByNodeComparison(const RedfishObject &redfish_object,
   if (RE2::FullMatch(predicate, *kPredicateRegexRelationalOperator, &node_name,
                      &op, &test_value)) {
     double value;
-    auto json_obj = ResolveNodeNameToJsonObj(redfish_object, node_name);
+    auto json_obj =
+        ResolveRedPathNodeToJson(redfish_object.GetContentAsJson(), node_name);
     if (!json_obj.ok()) {
       return false;
     }
@@ -1629,8 +1630,8 @@ RedfishVariant QueryPlanner::FetchUriReference(const ContextNode &context_node,
   std::string normalized_node_name =
       absl::StrReplaceAll(node_name, {{"/", "."}});
   // resolve the nest node represented in the normalized_node_name
-  absl::StatusOr<nlohmann::json> json_obj =
-      ResolveNodeNameToJsonObj(redfish_object, normalized_node_name);
+  absl::StatusOr<nlohmann::json> json_obj = ResolveRedPathNodeToJson(
+      redfish_object.GetContentAsJson(), normalized_node_name);
   if (!json_obj.ok()) {
     return RedfishVariant(absl::NotFoundError(
         absl::StrCat("Failed to resolve NodeName: ", normalized_node_name)));

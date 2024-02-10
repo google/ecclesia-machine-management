@@ -23,11 +23,12 @@
 #include <vector>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/ascii.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/redfish/interface.h"
+#include "single_include/nlohmann/json.hpp"
 #include "re2/re2.h"
 
 namespace ecclesia {
@@ -43,6 +44,8 @@ namespace {
 constexpr LazyRE2 kValidPropertyPathSegment = {
     "^([a-zA-Z#@][0-9a-zA-Z#@.]+)(?:\\[([0-9]+)\\]|)$"};
 
+// Splits node expression containing name and index into pair of name and index
+// Example: node_name[i] -> [node_name, i]
 std::optional<std::pair<std::string, int>> SplitNodeNameIfArrayType(
     absl::string_view node_name) {
   std::string string_index;
@@ -105,13 +108,14 @@ std::vector<std::string> SplitNodeNameForNestedNodes(
   return node_names_without_escape;
 }
 
-absl::StatusOr<nlohmann::json> ResolveNodeNameToJsonObj(
-    const RedfishObject &redfish_object, absl::string_view node_name) {
+absl::StatusOr<nlohmann::json> ResolveRedPathNodeToJson(
+    const nlohmann::json &json_object, absl::string_view node_name) {
   std::vector<std::string> node_names = SplitNodeNameForNestedNodes(node_name);
   if (node_names.empty()) {
     return absl::InternalError("Given NodeName is empty or invalid.");
   }
-  nlohmann::json json_obj = redfish_object.GetContentAsJson();
+
+  nlohmann::json json_object_out = json_object;
   // If given expression has multiple nodes, we need to return the json object
   // associated with the leaf node.
   for (auto &name : node_names) {
@@ -123,18 +127,18 @@ absl::StatusOr<nlohmann::json> ResolveNodeNameToJsonObj(
       name = name_and_index->first;
       index = name_and_index->second;
     }
-    if (!json_obj.contains(name)) {
+    if (!json_object_out.contains(name)) {
       return absl::InternalError(
           absl::StrFormat("Node %s not found in json object", name));
     }
-    json_obj = json_obj.at(name);
+    json_object_out = json_object_out.at(name);
 
     // If we have a valid index, refine further
     if (index >= 0) {
-      json_obj = json_obj[index];
+      json_object_out = json_object_out[index];
     }
   }
-  return json_obj;
+  return json_object_out;
 }
 
 }  // namespace ecclesia

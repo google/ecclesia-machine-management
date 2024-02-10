@@ -8,8 +8,10 @@ cc_library(
     deps = [
         "//ecclesia/lib/redfish:interface",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_googlesource_code_re2//:re2",
+        "@com_json//:json",
     ],
 )
 
@@ -18,10 +20,10 @@ cc_test(
     srcs = ["path_util_test.cc"],
     deps = [
         ":path_util",
-        "//ecclesia/lib/redfish:interface",
-        "//ecclesia/lib/redfish/testing:json_mockup",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
+        "@com_json//:json",
     ],
 )
 
