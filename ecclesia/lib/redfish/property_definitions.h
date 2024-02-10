@@ -174,6 +174,9 @@ inline constexpr char kRfOemPropertyNvmeControllerIdentify[] =
     "#NVMeController.Identify";
 inline constexpr char kRfOemPropertyNvmeControllerKnuckleIdentify[] =
     "#NVMeController.KnuckleIdentify";
+inline constexpr char kRfOemPropertyKnuckleLinkStatus[] = "KnuckleLinkStatus";
+inline constexpr char kRfOemPropertyPf0[] = "PF0";
+inline constexpr char kRfOemPropertyPf1[] = "PF1";
 inline constexpr char kRfOemPropertyLocationContext[] = "LocationContext";
 
 inline constexpr char kRfPropertyMediaTypeSsd[] = "SSD";
