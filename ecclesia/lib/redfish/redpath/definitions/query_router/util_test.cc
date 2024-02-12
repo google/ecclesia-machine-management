@@ -373,6 +373,77 @@ TEST_F(GetQuerySpecTest, RouterSpecWithServerSpecificQueries) {
                           "query_a")}))));
 }
 
+TEST_F(GetQuerySpecTest, RouterSpecWithEmbeddedQueries) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule {
+                query {
+                  query_id: "query_a"
+                  property_sets {
+                    properties { property: "property_a" type: STRING }
+                  }
+                }
+                rule {
+                  redpath_prefix_with_params {
+                    expand_configuration { level: 1 type: ONLY_LINKS }
+                  }
+                }
+              }
+            }
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_2" }
+              query_and_rule {
+                query {
+                  query_id: "query_a"
+                  property_sets {
+                    properties { property: "property_a_other" type: BOOLEAN }
+                  }
+                }
+                rule {
+                  redpath_prefix_with_params {
+                    expand_configuration { level: 5 type: BOTH }
+                  }
+                }
+              }
+            }
+          }
+        }
+      )pb");
+
+  // For server_1, query_a should point to query_a and query_a rule
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      GetQuerySpec(router_spec, "server_1",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB));
+
+  EXPECT_THAT(
+      query_spec.query_id_to_info,
+      UnorderedElementsAre(Pair(
+          "query_a",
+          QueryInfoEq(QuerySpec::QueryInfo{
+              .query = query_a_,
+              .rule = query_rules_.query_id_to_params_rule().at("query_a")}))));
+
+  // For server_2, query_a should point to query_a_other and query_a_other rule
+  ECCLESIA_ASSIGN_OR_FAIL(
+      query_spec,
+      GetQuerySpec(router_spec, "server_2",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB));
+
+  EXPECT_THAT(query_spec.query_id_to_info,
+              UnorderedElementsAre(Pair(
+                  "query_a",
+                  QueryInfoEq(QuerySpec::QueryInfo{
+                      .query = query_a_other_,
+                      .rule = query_rules_other_.query_id_to_params_rule().at(
+                          "query_a")}))));
+}
+
 TEST_F(GetQuerySpecTest, RouterSpecWithNoSelectionSpec) {
   QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
       R"pb(

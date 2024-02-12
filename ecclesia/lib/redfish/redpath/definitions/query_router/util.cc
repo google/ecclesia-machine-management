@@ -53,36 +53,46 @@ absl::StatusOr<QuerySpec> GetQuerySpec(
   QuerySpec query_spec;
 
   auto add_to_query_spec =
-      [&query_spec](
-          absl::string_view query_id,
-          const QueryAndRulePath& query_and_rule_path) -> absl::Status {
-    if (query_and_rule_path.query_path().empty()) {
-      return absl::FailedPreconditionError(
-          absl::StrCat("Query path is not specified for query: ", query_id));
-    }
-    ECCLESIA_ASSIGN_OR_RETURN(
-        DelliciusQuery query,
-        GetProto<DelliciusQuery>(query_and_rule_path.query_path()));
-    if (query_id != query.query_id()) {
-      return absl::FailedPreconditionError(
-          absl::StrCat("Query id mismatch - router spec: ", query_id,
-                       " vs query spec: ", query.query_id()));
-    }
+      [&query_spec](absl::string_view query_id,
+                    const SelectionSpec::QuerySelectionSpec& selection_spec)
+      -> absl::Status {
+    if (selection_spec.has_query_and_rule_path()) {
+      const QueryAndRulePath& query_and_rule_path =
+          selection_spec.query_and_rule_path();
+      if (query_and_rule_path.query_path().empty()) {
+        return absl::FailedPreconditionError(
+            absl::StrCat("Query path is not specified for query: ", query_id));
+      }
+      ECCLESIA_ASSIGN_OR_RETURN(
+          DelliciusQuery query,
+          GetProto<DelliciusQuery>(query_and_rule_path.query_path()));
+      if (query_id != query.query_id()) {
+        return absl::FailedPreconditionError(
+            absl::StrCat("Query id mismatch - router spec: ", query_id,
+                         " vs query spec: ", query.query_id()));
+      }
 
-    QuerySpec::QueryInfo& query_info = query_spec.query_id_to_info[query_id];
-    query_info.query = std::move(query);
+      QuerySpec::QueryInfo& query_info = query_spec.query_id_to_info[query_id];
+      query_info.query = std::move(query);
 
-    if (query_and_rule_path.rule_path().empty()) {
-      return absl::OkStatus();
-    }
+      if (query_and_rule_path.rule_path().empty()) {
+        return absl::OkStatus();
+      }
 
-    ECCLESIA_ASSIGN_OR_RETURN(
-        QueryRules query_rules,
-        GetProto<QueryRules>(query_and_rule_path.rule_path()));
-    if (auto it =
-            query_rules.mutable_query_id_to_params_rule()->find(query_id);
-        it != query_rules.mutable_query_id_to_params_rule()->end()) {
-      query_info.rule = std::move(it->second);
+      ECCLESIA_ASSIGN_OR_RETURN(
+          QueryRules query_rules,
+          GetProto<QueryRules>(query_and_rule_path.rule_path()));
+      if (auto it =
+              query_rules.mutable_query_id_to_params_rule()->find(query_id);
+          it != query_rules.mutable_query_id_to_params_rule()->end()) {
+        query_info.rule = std::move(it->second);
+      }
+    } else if (selection_spec.has_query_and_rule()) {
+      QuerySpec::QueryInfo& query_info = query_spec.query_id_to_info[query_id];
+      query_info.query = selection_spec.query_and_rule().query();
+      if (selection_spec.query_and_rule().has_rule()) {
+        query_info.rule = selection_spec.query_and_rule().rule();
+      }
     }
 
     return absl::OkStatus();
@@ -109,14 +119,14 @@ absl::StatusOr<QuerySpec> GetQuerySpec(
           }
         }
         if (select.server_tag().empty()) {
-          ECCLESIA_RETURN_IF_ERROR(add_to_query_spec(
-              query_id, query_select_spec.query_and_rule_path()));
+          ECCLESIA_RETURN_IF_ERROR(
+              add_to_query_spec(query_id, query_select_spec));
           continue;
         }
         for (absl::string_view tag : select.server_tag()) {
           if (tag == server_tag) {
-            ECCLESIA_RETURN_IF_ERROR(add_to_query_spec(
-                query_id, query_select_spec.query_and_rule_path()));
+            ECCLESIA_RETURN_IF_ERROR(
+                add_to_query_spec(query_id, query_select_spec));
           }
         }
       }
