@@ -57,6 +57,7 @@
 #include "ecclesia/lib/redfish/dellicius/utils/join.h"
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_predicates/predicates.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/status/macros.h"
@@ -68,40 +69,16 @@
 namespace ecclesia {
 
 namespace {
-using ecclesia::RedfishInterface;
-
-// Pattern for predicate formatted with relational operators:
-constexpr LazyRE2 kPredicateRegexRelationalOperator = {
-    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=))([a-zA-Z0-9._\-\:#\\ ]+)$)"};
-
 // Pattern for location step: NodeName[Predicate]
 constexpr LazyRE2 kLocationStepRegex = {
     "^([a-zA-Z#@][0-9a-zA-Z.]+|)(?:\\[(.*?)\\]|)$"};
-
-// Pattern for Redfish standard (ISO 8601) datetime string.
-constexpr LazyRE2 kRedfishDatetimeRegex = {
-    R"(^(?:[1-9]\d{3}-(?:(?:0[1-9]|1[0-2])-(?:0[1-9]|1\d|2[0-8])|(?:0[13-9]|1[0-2])-(?:29|30)|(?:0[13578]|1[02])-31)|(?:[1-9]\d(?:0[48]|[2468][048]|[13579][26])|(?:[2468][048]|[13579][26])00)-02-29)T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,9})?(?:Z|[+-][01]\d:[0-5]\d)?$)"};
+constexpr absl::string_view kPredicateSelectAll = "*";
 
 // All RedPath expressions execute relative to service root identified by '/'.
 constexpr absl::string_view kServiceRootNode = "/";
 constexpr absl::string_view kDefaultRedfishServiceRoot = "/redfish/v1";
 
-// Known predicate expressions.
-constexpr absl::string_view kPredicateSelectAll = "*";
-constexpr absl::string_view kPredicateSelectLastIndex = "last()";
-constexpr absl::string_view kBinaryOperandTrue = "true";
-constexpr absl::string_view kBinaryOperandFalse = "false";
-constexpr absl::string_view kLogicalOperatorAnd = "and";
-constexpr absl::string_view kLogicalOperatorOr = "or";
-// Supported relational operators
-constexpr std::array<const char *, 6> kRelationsOperators = {
-    "<", ">", "!=", ">=", "<=", "="};
-
-// Matchers for user supplied datetime formats in a predicate.
-constexpr absl::string_view kRedfishDatetimePlusOffset =
-    "%Y-%m-%dT%H:%M:%E6S%Ez";
-constexpr absl::string_view kRedfishDatetimeNoOffset = "%Y-%m-%dT%H:%M:%E6S";
-
+using ecclesia::RedfishInterface;
 using RedPathStep = std::pair<std::string, std::string>;
 
 // Encapsulates information relevant per redfish object that is queried during
@@ -392,214 +369,6 @@ RedPathRedfishQueryParams CombineQueryParams(
   }
   return {redpaths_to_query_params_ordered.begin(),
           redpaths_to_query_params_ordered.end()};
-}
-
-template <typename F>
-bool ApplyNumberComparisonFilter(const nlohmann::json &obj, F comparator) {
-  double number;
-  if (obj.is_number()) {
-    number = obj.get<double>();
-  } else if (!obj.is_string() ||
-             !absl::SimpleAtod(obj.get<std::string>(), &number)) {
-    return false;
-  }
-  return comparator(number);
-}
-
-// Helper function is used to ensure the obtained value equal or not equal to
-// a non-number value.
-template <typename F>
-bool ApplyStringComparisonFilter(F filter_condition,
-                                 absl::string_view inequality_string) {
-  if (inequality_string == "!=") {
-    return !filter_condition();
-  }
-  return filter_condition();
-}
-
-// Helper function used to validates two timestamp strings are in line with the
-// expected redfish standard and applies a given comparator.
-bool ApplyDateTimeComparisonFilter(
-    const std::function<bool(absl::Time, absl::Time)> &time_comparator,
-    const std::string &lhs_time_str, absl::string_view test_value) {
-  absl::Time test_time, lhs_time;
-  // Parse the user supplied timestamp into the desired format.
-  if (!absl::ParseTime(kRedfishDatetimeNoOffset, test_value, &test_time,
-                       /*err=*/nullptr)) {
-    LOG(ERROR) << "Failed to parse " << test_value
-               << " into a valid time string, expected format is "
-               << kRedfishDatetimeNoOffset;
-
-    return false;
-  }
-  // Parse the timestamp from the Redfish property into the desired format.
-  if (!absl::ParseTime(kRedfishDatetimePlusOffset, lhs_time_str, &lhs_time,
-                       /*err=*/nullptr)) {
-    LOG(ERROR) << "Failed to parse redfish property " << lhs_time_str
-               << " into a valid time string, expected format is "
-               << kRedfishDatetimePlusOffset;
-
-    return false;
-  }
-  return time_comparator(lhs_time, test_time);
-}
-
-bool IsDateTimeString(absl::string_view test_value) {
-  return RE2::FullMatch(test_value, *kRedfishDatetimeRegex);
-}
-
-// Handler for predicate expressions containing relational operators.
-bool PredicateFilterByNodeComparison(const RedfishObject &redfish_object,
-                                     absl::string_view predicate) {
-  std::string node_name, op, test_value;
-  bool ret = false;
-  if (RE2::FullMatch(predicate, *kPredicateRegexRelationalOperator, &node_name,
-                     &op, &test_value)) {
-    double value;
-    auto json_obj =
-        ResolveRedPathNodeToJson(redfish_object.GetContentAsJson(), node_name);
-    if (!json_obj.ok()) {
-      return false;
-    }
-    if (IsDateTimeString(test_value)) {
-      const auto time_condition = [&op](absl::Time lhs_time,
-                                        absl::Time test_time) {
-        if (op == ">=") return lhs_time >= test_time;
-        if (op == ">") return lhs_time > test_time;
-        if (op == "<=") return lhs_time <= test_time;
-        if (op == "<") return lhs_time < test_time;
-        if (op == "!=") return lhs_time != test_time;
-        if (op == "=") return lhs_time == test_time;
-        return false;
-      };
-      return json_obj->is_string()
-                 ? ApplyDateTimeComparisonFilter(
-                       time_condition, json_obj->get<std::string>(), test_value)
-                 : false;
-    }
-    // Number comparison.
-    if (absl::SimpleAtod(test_value, &value)) {
-      const auto condition = [&op, value](double number) {
-        if (op == ">=") return number >= value;
-        if (op == ">") return number > value;
-        if (op == "<=") return number <= value;
-        if (op == "<") return number < value;
-        if (op == "!=") return number != value;
-        if (op == "=") return number == value;
-        return false;
-      };
-      ret = ApplyNumberComparisonFilter(*json_obj, condition);
-    } else if (test_value == kBinaryOperandFalse ||
-               test_value == kBinaryOperandTrue) {
-      // For the property value's type is boolean.
-      bool bool_value = test_value != kBinaryOperandFalse;
-      const auto condition = [json_obj, bool_value]() {
-        return *json_obj == bool_value;
-      };
-      ret = ApplyStringComparisonFilter(condition, op);
-    } else if (test_value == "null") {
-      // For the property value is null.
-      const auto condition = [json_obj]() { return json_obj->is_null(); };
-      ret = ApplyStringComparisonFilter(condition, op);
-    } else {
-      // For the property value's type is string.
-      const auto condition = [json_obj, &test_value]() {
-        absl::StrReplaceAll({{"\\", ""}}, &test_value);
-        return *json_obj == test_value;
-      };
-      ret = ApplyStringComparisonFilter(condition, op);
-    }
-  }
-  return ret;
-}
-
-// Handler for '[nodename]'
-// Checks if given Redfish Resource contains predicate string.
-bool PredicateFilterByNodeName(const RedfishObject &redfish_object,
-                               absl::string_view predicate) {
-  std::vector<std::string> node_names = SplitNodeNameForNestedNodes(predicate);
-  if (node_names.empty()) {
-    return false;
-  }
-  nlohmann::json leaf = redfish_object.GetContentAsJson();
-  for (auto const &name : node_names) {
-    if (!leaf.contains(name)) {
-      return false;
-    }
-    leaf = leaf.at(name);
-  }
-  return true;
-}
-
-bool ApplyPredicateRule(const RedfishObject &redfish_object, size_t node_index,
-                        size_t node_set_size, const std::string& predicate) {
-  if (predicate.empty()) return false;
-  absl::string_view logical_operation = kLogicalOperatorAnd;
-  bool is_filter_success = true;
-  std::vector<absl::string_view> expressions =
-      SplitExprByDelimiterWithEscape(predicate, " ", '\\');
-  for (absl::string_view expr : expressions) {
-    // If expression is a logical operator, capture it and move to next
-    // expression
-    if (expr == kLogicalOperatorAnd || expr == kLogicalOperatorOr) {
-      // A binary operator is parsed only when last operator has been applied.
-      // Since last operator has not been applied and we are seeing another
-      // operator in the expression, it can be considered an invalid
-      // expression.
-      if (!logical_operation.empty()) {
-        LOG(ERROR) << "Invalid predicate expression " << predicate;
-        return false;
-      }
-      logical_operation = expr;
-      continue;
-    }
-
-    // There should always be a logical operation defined for the predicates.
-    // Default logical operation is 'AND' between a predicate expression and
-    // default boolean operand 'true'
-    if (logical_operation.empty()) {
-      LOG(ERROR) << "Invalid predicate expression " << predicate;
-      return false;
-    }
-
-    size_t num;
-    bool single_predicate_result = false;
-    // If '[last()]' predicate expression, check if current node at last
-    // index.
-    if ((expr == kPredicateSelectLastIndex &&
-         node_index == node_set_size - 1) ||
-        // If '[Index]' predicate expression, check if current node at given
-        // index
-        (absl::SimpleAtoi(expr, &num) && num == node_index) ||
-        // If '[*]' predicate expression, no filter required.
-        (expr == kPredicateSelectAll)) {
-      single_predicate_result = true;
-    } else if (std::any_of(kRelationsOperators.begin(),
-                           kRelationsOperators.end(), [&](const char *op) {
-                             return absl::StrContains(expr, op);
-                           })) {
-      // Look for predicate expression containing relational operators.
-      single_predicate_result =
-          PredicateFilterByNodeComparison(redfish_object, expr);
-    } else if (absl::StartsWith(expr, "!")) {
-      // For predicate [!<NodeName>]
-      single_predicate_result =
-          !PredicateFilterByNodeName(redfish_object, expr.substr(1));
-    } else {
-      // For predicate[<NodeName>]
-      single_predicate_result = PredicateFilterByNodeName(redfish_object, expr);
-    }
-
-    // Apply logical operation.
-    if (logical_operation == kLogicalOperatorAnd) {
-      is_filter_success &= single_predicate_result;
-    } else {
-      is_filter_success |= single_predicate_result;
-    }
-    // Reset logical operation
-    logical_operation = "";
-  }
-  return is_filter_success;
 }
 
 // If there is an unpopulated variable the predicate cannot be completely
@@ -964,8 +733,13 @@ std::vector<RedPathContext> ExecutePredicateFromEachSubquery(
     if (redpath_ctx.subquery_handle == nullptr) {
       continue;
     }
-    if (!ApplyPredicateRule(redfish_object, node_index, node_set_size,
-                            redpath_ctx.redpath_steps.GetPredicate())) {
+
+    absl::StatusOr<bool> predicate_test = ApplyPredicateRule(
+        redfish_object.GetContentAsJson(),
+        {.predicate = redpath_ctx.redpath_steps.GetPredicate(),
+         .node_index = node_index,
+         .node_set_size = node_set_size});
+    if (!predicate_test.ok() || !predicate_test.value()) {
       continue;
     }
     filtered_redpath_context.push_back(redpath_ctx);
