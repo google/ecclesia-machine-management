@@ -38,6 +38,8 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
@@ -92,14 +94,6 @@ struct QueryEngineParams {
     kRedfishLocationDerived  // Derived from Redfish topology.
   };
 
-  struct FeatureFlags {
-    // Creates a query engine using metrical transport. When enabled,
-    // DelliciusQueryResult will have RedfishMetrics object populated.
-    bool enable_redfish_metrics = false;
-    bool fail_on_first_error = true;
-    bool log_redfish_traces = false;
-  };
-
   // Transport medium over which Redfish queries are sent to the redfish server.
   std::unique_ptr<RedfishTransport> transport;
   // Generates cache used by query engine, default set to Null cache (no cache).
@@ -110,7 +104,7 @@ struct QueryEngineParams {
   QueryEngineParams::RedfishStableIdType stable_id_type =
       QueryEngineParams::RedfishStableIdType::kRedfishLocation;
   // Captures toggleable features controlled by the user.
-  FeatureFlags feature_flags;
+  QueryEngineFeatures features = DefaultQueryEngineFeatures();
 
   // Node topology configuration:-
   // This configuration is used with

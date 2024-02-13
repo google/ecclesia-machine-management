@@ -48,8 +48,11 @@
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
@@ -138,14 +141,14 @@ class QueryEngineImpl final : public QueryEngineIntf {
       const Clock *clock, std::unique_ptr<Normalizer> normalizer,
       std::unique_ptr<RedfishInterface> redfish_interface,
       MetricalRedfishTransport *metrical_transport = nullptr,
-      const QueryEngineParams::FeatureFlags &feature_flags = {})
+      QueryEngineFeatures features = DefaultQueryEngineFeatures())
       : entity_tag_(std::move(entity_tag)),
         id_to_query_plans_(std::move(id_to_query_plans)),
         clock_(clock),
         normalizer_(std::move(normalizer)),
         redfish_interface_(std::move(redfish_interface)),
         metrical_transport_(metrical_transport),
-        feature_flags_(feature_flags) {}
+        features_(std::move(features)) {}
 
   // Main method for ExecuteQuery that triggers the QueryPlanner to execute
   // queries and provide transport metrics as part of the Statistics in each
@@ -175,10 +178,10 @@ class QueryEngineImpl final : public QueryEngineIntf {
       }
       DelliciusQueryResult result_single;
       ExecutionFlags planner_execution_flags{
-          feature_flags_.fail_on_first_error
+          features_.fail_on_first_error()
               ? ExecutionFlags::ExecutionMode::kFailOnFirstError
               : ExecutionFlags::ExecutionMode::kContinueOnSubqueryErrors,
-          feature_flags_.log_redfish_traces};
+          features_.log_redfish_traces()};
       {
         auto query_timer = QueryTimestamp(&result_single, clock_);
         if (service_root_uri == QueryEngine::ServiceRootType::kCustom) {
@@ -273,7 +276,7 @@ class QueryEngineImpl final : public QueryEngineIntf {
   // Used during query metrics collection.
   MetricalRedfishTransport *metrical_transport_ = nullptr;
   // Collection of flags dictating query engine execution.
-  QueryEngineParams::FeatureFlags feature_flags_;
+  QueryEngineFeatures features_;
 };
 
 }  // namespace
@@ -360,7 +363,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
     std::unique_ptr<RedfishInterface> redfish_interface,
     std::unique_ptr<Normalizer> normalizer,
     MetricalRedfishTransport *metrical_transport,
-    const QueryEngineParams::FeatureFlags &feature_flags) {
+    QueryEngineFeatures features) {
   // Parse queries from embedded proto messages
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
       id_to_query_plans;
@@ -377,7 +380,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
   return QueryEngine(std::make_unique<QueryEngineImpl>(
       std::move(target_node_id), std::move(id_to_query_plans), query_spec.clock,
       std::move(normalizer), std::move(redfish_interface), metrical_transport,
-      feature_flags));
+      std::move(features)));
 }
 
 static absl::StatusOr<QueryEngine> CreateQueryEngine(
@@ -385,7 +388,7 @@ static absl::StatusOr<QueryEngine> CreateQueryEngine(
   std::unique_ptr<RedfishInterface> redfish_interface;
   MetricalRedfishTransport *metrical_transport_ptr = nullptr;
   // Build Redfish interface and metrical transport if desired.
-  if (engine_params.feature_flags.enable_redfish_metrics) {
+  if (engine_params.features.enable_redfish_metrics()) {
     auto metrical_transport = std::make_unique<MetricalRedfishTransport>(
         std::move(engine_params.transport), ecclesia::Clock::RealClock());
     metrical_transport_ptr = metrical_transport.get();
@@ -402,7 +405,7 @@ static absl::StatusOr<QueryEngine> CreateQueryEngine(
       engine_params.entity_tag, std::move(query_spec),
       std::move(redfish_interface),
       BuildLocalDevpathNormalizer(redfish_interface_ptr, engine_params),
-      metrical_transport_ptr, engine_params.feature_flags);
+      metrical_transport_ptr, std::move(engine_params.features));
 }
 
 absl::StatusOr<QueryEngine> CreateQueryEngine(
@@ -410,7 +413,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
     std::unique_ptr<IdAssigner> id_assigner) {
   std::unique_ptr<RedfishInterface> redfish_interface;
   MetricalRedfishTransport *metrical_transport_ptr = nullptr;
-  if (engine_params.feature_flags.enable_redfish_metrics) {
+  if (engine_params.features.enable_redfish_metrics()) {
     auto metrical_transport = std::make_unique<MetricalRedfishTransport>(
         std::move(engine_params.transport), ecclesia::Clock::RealClock());
     metrical_transport_ptr = metrical_transport.get();
@@ -430,7 +433,8 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
 
   return CreateQueryEngine(engine_params.entity_tag, std::move(query_spec),
                            std::move(redfish_interface), std::move(normalizer),
-                           metrical_transport_ptr, engine_params.feature_flags);
+                           metrical_transport_ptr,
+                           std::move(engine_params.features));
 }
 
 absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,

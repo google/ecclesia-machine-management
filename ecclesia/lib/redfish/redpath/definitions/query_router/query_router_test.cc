@@ -229,9 +229,9 @@ TEST_F(QueryRouterTest, CreateSuccessTest) {
           [&](const QuerySpec &, const QueryEngineParams &params,
               std::unique_ptr<IdAssigner>)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
-            EXPECT_FALSE(params.feature_flags.enable_redfish_metrics);
-            EXPECT_TRUE(params.feature_flags.fail_on_first_error);
-            EXPECT_FALSE(params.feature_flags.log_redfish_traces);
+            EXPECT_FALSE(params.features.enable_redfish_metrics());
+            EXPECT_TRUE(params.features.fail_on_first_error());
+            EXPECT_FALSE(params.features.log_redfish_traces());
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
           }));
@@ -552,9 +552,9 @@ TEST_F(QueryRouterTest, CheckFeatureFlags) {
                   [&](const QuerySpec &, const QueryEngineParams &params,
                       std::unique_ptr<IdAssigner>)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
-                    EXPECT_TRUE(params.feature_flags.enable_redfish_metrics);
-                    EXPECT_TRUE(params.feature_flags.fail_on_first_error);
-                    EXPECT_TRUE(params.feature_flags.log_redfish_traces);
+                    EXPECT_TRUE(params.features.enable_redfish_metrics());
+                    EXPECT_TRUE(params.features.fail_on_first_error());
+                    EXPECT_TRUE(params.features.log_redfish_traces());
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
                   }),

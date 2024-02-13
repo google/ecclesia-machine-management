@@ -32,6 +32,7 @@
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
@@ -62,12 +63,9 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
     };
 
     if (router_spec.has_features()) {
-      query_engine_params.feature_flags.enable_redfish_metrics =
-          router_spec.features().enable_redfish_metrics();
-      query_engine_params.feature_flags.fail_on_first_error =
-          router_spec.features().fail_on_first_error();
-      query_engine_params.feature_flags.log_redfish_traces =
-          router_spec.features().log_redfish_traces();
+      query_engine_params.features = router_spec.features();
+    } else {
+      query_engine_params.features = DefaultQueryEngineFeatures();
     }
 
     if (router_spec.cache_duration_ms() > 0) {

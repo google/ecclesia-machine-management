@@ -35,6 +35,8 @@
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -116,6 +118,9 @@ class FakeQueryEngine : public QueryEngineIntf {
                                       transport, absl::InfiniteDuration());
                                 });
 
+    QueryEngineFeatures features = DefaultQueryEngineFeatures();
+    features.set_enable_redfish_metrics(params.metrics == Metrics::kEnable);
+
     ECCLESIA_ASSIGN_OR_RETURN(
         auto query_engine,
         QueryEngine::Create(
@@ -124,8 +129,7 @@ class FakeQueryEngine : public QueryEngineIntf {
              .cache_factory = cache_factory,
              .entity_tag = params.entity_tag.value_or(""),
              .stable_id_type = stable_id_type,
-             .feature_flags = {.enable_redfish_metrics =
-                                   (params.metrics == Metrics::kEnable)}}));
+             .features = std::move(features)}));
 
     query_engine_ = std::move(query_engine);
     return absl::OkStatus();

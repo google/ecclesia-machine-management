@@ -52,6 +52,7 @@
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner_devpath.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -845,11 +846,13 @@ TEST(QueryEngineTest, QueryEngineNoHaltOnFirstFailure) {
   QueryContext query_context{.query_files = kDelliciusQueries,
                              .query_rules = kQueryRules,
                              .clock = &clock};
-  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
-      query_context, {.transport = std::move(transport),
-                      .entity_tag = "test_node_id",
-                      .feature_flags = {.enable_redfish_metrics = true,
-                                        .fail_on_first_error = false}});
+  absl::StatusOr<QueryEngine> query_engine =
+      CreateQueryEngine(query_context, {.transport = std::move(transport),
+                                        .entity_tag = "test_node_id",
+                                        .features = ParseTextProtoOrDie(R"pb(
+                                          enable_redfish_metrics: true
+                                          fail_on_first_error: false
+                                        )pb")});
   ASSERT_TRUE(query_engine.ok());
   EXPECT_EQ(query_engine->GetAgentIdentifier(), "test_node_id");
   // Issue the query and assert that both GETs were issued, ensuring that the
