@@ -2,9 +2,7 @@ cc_library(
     name = "path_util",
     srcs = ["path_util.cc"],
     hdrs = ["path_util.h"],
-    visibility = [
-        "//ecclesia/lib/redfish/dellicius:__subpackages__",
-    ],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/redfish:interface",
         "@com_google_absl//absl/status",
