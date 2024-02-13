@@ -4,20 +4,12 @@ load("//ecclesia/build_defs:embed.bzl", "cc_data_library")
 licenses(["notice"])
 
 cc_library(
-    name = "query_engine_config",
-    hdrs = ["config.h"],
-    visibility = ["//visibility:public"],
-    deps = ["//ecclesia/lib/file:cc_embed_interface"],
-)
-
-cc_library(
     name = "query_engine_cc",
     srcs = ["query_engine.cc"],
     hdrs = ["query_engine.h"],
     visibility = ["//visibility:public"],
     deps = [
         ":factory",
-        ":query_engine_config",
         ":query_rules_cc_proto",
         "//ecclesia/lib/apifs",
         "//ecclesia/lib/file:cc_embed_interface",

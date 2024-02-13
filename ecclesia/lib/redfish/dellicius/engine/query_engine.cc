@@ -37,7 +37,6 @@
 #include "absl/types/span.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
-#include "ecclesia/lib/redfish/dellicius/engine/config.h"
 #include "ecclesia/lib/redfish/dellicius/engine/factory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
@@ -53,7 +52,6 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
-#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/status/macros.h"
@@ -129,68 +127,6 @@ class QueryTimestamp {
 
 class QueryEngineImpl final : public QueryEngineIntf {
  public:
-  explicit QueryEngineImpl(std::string entity_tag,
-                           const QueryEngineConfiguration &config,
-                           std::unique_ptr<RedfishTransport> transport,
-                           RedfishTransportCacheFactory cache_factory,
-                           const Clock *clock)
-      : entity_tag_(std::move(entity_tag)), clock_(clock) {
-    if (config.flags.enable_transport_metrics) {
-      auto metrical_transport = std::make_unique<MetricalRedfishTransport>(
-          std::move(transport), clock_);
-      metrical_transport_ = metrical_transport.get();
-      redfish_interface_ = NewHttpInterface(std::move(metrical_transport),
-                                            std::move(cache_factory),
-                                            RedfishInterface::kTrusted);
-    } else {
-      redfish_interface_ =
-          NewHttpInterface(std::move(transport), std::move(cache_factory),
-                           RedfishInterface::kTrusted);
-    }
-
-    if (config.flags.enable_devpath_extension) {
-      normalizer_ = BuildDefaultNormalizerWithLocalDevpath(
-          CreateTopologyFromRedfish(redfish_interface_.get()));
-    } else {
-      normalizer_ = BuildDefaultNormalizer();
-    }
-
-    // Parse query rules from embedded proto messages
-    absl::StatusOr<absl::flat_hash_map<std::string, RedPathRedfishQueryParams>>
-        query_id_to_rules =
-            ParseQueryRulesFromEmbeddedFiles(config.query_rules);
-    if (!query_id_to_rules.ok()) {
-      LOG(ERROR) << query_id_to_rules.status();
-      query_id_to_rules =
-          absl::flat_hash_map<std::string, RedPathRedfishQueryParams>();
-    }
-
-    // Parse queries from embedded proto messages
-    for (const EmbeddedFile &query_file : config.query_files) {
-      DelliciusQuery query;
-      if (!google::protobuf::TextFormat::ParseFromString(std::string(query_file.data),
-                                               &query)) {
-        LOG(ERROR) << "Cannot get RedPath query from embedded file "
-                   << query_file.name;
-        continue;
-      }
-
-      // Build a query plan if none exists for the query id
-      if (id_to_query_plans_.contains(query.query_id())) continue;
-      RedPathRedfishQueryParams params;
-      if (auto iter = query_id_to_rules->find(query.query_id());
-          iter != query_id_to_rules->end()) {
-        params = std::move(iter->second);
-      }
-
-      absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> query_planner =
-          BuildDefaultQueryPlanner(query, std::move(params), normalizer_.get(),
-                                   redfish_interface_.get());
-      if (!query_planner.ok()) continue;
-      id_to_query_plans_.emplace(query.query_id(), *std::move(query_planner));
-    }
-  }
-
   // Constructs QueryEngine to execute queries in the map |id_to_query_plans|.
   // When a valid |metrical_transport| instance is provided,  QueryEngine is
   // constructed to trace each query and return associated metrics in the
@@ -412,14 +348,6 @@ absl::StatusOr<QuerySpec> QuerySpec::FromQueryFiles(
 
   return QuerySpec::FromQueryContext(query_context);
 }
-
-QueryEngine::QueryEngine(const QueryEngineConfiguration &config,
-                         std::unique_ptr<RedfishTransport> transport,
-                         RedfishTransportCacheFactory cache_factory,
-                         const Clock *clock)
-    : engine_impl_(std::make_unique<QueryEngineImpl>(
-          "unknown", config, std::move(transport), std::move(cache_factory),
-          clock)) {}
 
 // Creates query engine to execute queries in given |query_context| over the
 // |redfish_interface| provided.

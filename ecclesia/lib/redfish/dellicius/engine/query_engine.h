@@ -31,7 +31,6 @@
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
-#include "ecclesia/lib/redfish/dellicius/engine/config.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -44,7 +43,6 @@
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
-#include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
@@ -55,7 +53,7 @@ struct QueryContext {
   absl::Span<const EmbeddedFile> query_files;
   // Rules used to configure Redfish query parameter - $expand for
   // specific RedPath prefixes in given queries.
-  absl::Span<const EmbeddedFile> query_rules = {};
+  absl::Span<const EmbeddedFile> query_rules;
   const Clock *clock = Clock::RealClock();
 };
 
@@ -225,12 +223,6 @@ class QueryEngine : public QueryEngineIntf {
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
       QuerySpec query_spec, QueryEngineParams params,
       std::unique_ptr<IdAssigner> id_assigner = nullptr);
-
-  ABSL_DEPRECATED("Use QueryEngine factory methods instead.")
-  QueryEngine(const QueryEngineConfiguration &config,
-              std::unique_ptr<RedfishTransport> transport,
-              RedfishTransportCacheFactory cache_factory = NullCache::Create,
-              const Clock *clock = Clock::RealClock());
 
   explicit QueryEngine(std::unique_ptr<QueryEngineIntf> engine_impl)
       : engine_impl_(std::move(engine_impl)) {}
