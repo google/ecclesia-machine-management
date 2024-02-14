@@ -27,10 +27,17 @@
 
 namespace ecclesia {
 
-// Utility function to join subqueries using "root_subquery_id" property.
-// Populates "all_joined_subqueries" with one or more vectors of
+// Utility function to join subqueries.
+// Populates `all_joined_subqueries` with one or more vectors of
 // subquery ids where each vector represents chain of subqueries formed by
-// resolving "root_subquery_id" relationship between subqueries.
+// resolving `root_subquery_id` relationship between RedPath subqueries.
+// Example:
+//          SQ1
+//         /  \
+//        SQ2 SQ3
+//          \ / \
+//          SQ4  SQ5
+// Output: {{SQ1, SQ2, SQ4}, {SQ1, SQ3, SQ4}, {SQ1, SQ3, SQ5}}
 absl::Status JoinSubqueries(
     const DelliciusQuery &query,
     absl::flat_hash_set<std::vector<std::string>> &all_joined_subqueries);

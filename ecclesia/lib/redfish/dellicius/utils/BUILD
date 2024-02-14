@@ -162,7 +162,7 @@ cc_library(
     name = "join",
     srcs = ["join.cc"],
     hdrs = ["join.h"],
-    visibility = ["//ecclesia/lib/redfish/dellicius:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/status:macros",
