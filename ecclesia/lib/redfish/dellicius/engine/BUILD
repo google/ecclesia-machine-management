@@ -11,8 +11,6 @@ cc_library(
     deps = [
         ":factory",
         ":query_rules_cc_proto",
-        "//ecclesia/lib/apifs",
-        "//ecclesia/lib/file:cc_embed_interface",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:topology",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
@@ -26,9 +24,9 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/utils:parsers",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_engine_features",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_engine_features_cc_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_spec",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:converter",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
-        "//ecclesia/lib/redfish/redpath/definitions/query_router:query_router_spec_cc_proto",
         "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
         "//ecclesia/lib/redfish/transport:interface",
@@ -49,7 +47,6 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
-        "@com_google_protobuf//:protobuf",
     ],
 )
 
@@ -232,7 +229,6 @@ cc_test(
         ":query_rules_cc_proto",
         ":test_queries_embedded",
         ":test_query_rules_embedded",
-        "//ecclesia/lib/apifs",
         "//ecclesia/lib/file:cc_embed_interface",
         "//ecclesia/lib/file:path",
         "//ecclesia/lib/file:test_filesystem",
@@ -245,6 +241,7 @@ cc_test(
         "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
         "//ecclesia/lib/redfish/dellicius/utils:id_assigner_devpath",
+        "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_spec",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
         "//ecclesia/lib/redfish/redpath/definitions/query_router:query_router_spec_cc_proto",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",

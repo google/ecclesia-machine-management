@@ -30,7 +30,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
-#include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -40,49 +39,14 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
-#include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
-
-// Encapsulates the context needed to execute RedPath query.
-struct QueryContext {
-  // Describes the RedPath queries that engine will be configured to execute.
-  absl::Span<const EmbeddedFile> query_files;
-  // Rules used to configure Redfish query parameter - $expand for
-  // specific RedPath prefixes in given queries.
-  absl::Span<const EmbeddedFile> query_rules;
-  const Clock *clock = Clock::RealClock();
-};
-
-// Encapsulates the queries and rules needed to execute Redpath Query.
-// This is a resolved QueryContext containing the actual query and rule read
-// from the embedded files.
-struct QuerySpec {
-  struct QueryInfo {
-    DelliciusQuery query;
-    QueryRules::RedPathPrefixSetWithQueryParams rule;
-  };
-
-  // Map of query id to query info.
-  absl::flat_hash_map<std::string, QueryInfo> query_id_to_info;
-  const Clock *clock = Clock::RealClock();
-
-  // Utility function to convert query context to resolved QuerySpec.
-  static absl::StatusOr<QuerySpec> FromQueryContext(
-      const QueryContext &query_context);
-
-  // Utility function to read query and rule files and convert them to a
-  // resolved QuerySpec.
-  static absl::StatusOr<QuerySpec> FromQueryFiles(
-      absl::Span<const std::string> query_files,
-      absl::Span<const std::string> query_rules,
-      const Clock *clock = Clock::RealClock());
-};
 
 // Parameters necessary to configure the query engine.
 struct QueryEngineParams {
