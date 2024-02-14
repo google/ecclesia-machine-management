@@ -268,17 +268,13 @@ class QueryEngine : public QueryEngineIntf {
   std::unique_ptr<QueryEngineIntf> engine_impl_;
 };
 
-// Build query engine based on given |configuration| to execute queries in
-// |query_context|.
-ABSL_DEPRECATED("Use QueryEngine::Create Instead")
-absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
-                                              QueryEngineParams engine_params);
-
-// Creates query engine for machine devpath decorator extensions.
+// Build query engine based on given `engine_params` to execute queries in
+// `query_context`. Optionally supply `id_assigner` to decorate the results with
+// devpaths.
 ABSL_DEPRECATED("Use QueryEngine::Create Instead")
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
-    std::unique_ptr<IdAssigner> id_assigner);
+    std::unique_ptr<IdAssigner> id_assigner = nullptr);
 
 // Factory for creating different variants of query engine.
 //

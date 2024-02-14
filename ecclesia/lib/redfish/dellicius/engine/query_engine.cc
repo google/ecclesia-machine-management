@@ -52,7 +52,6 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
-#include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
@@ -279,6 +278,57 @@ class QueryEngineImpl final : public QueryEngineIntf {
   QueryEngineFeatures features_;
 };
 
+absl::StatusOr<QueryEngine> CreateQueryEngine(
+    QuerySpec query_spec, QueryEngineParams engine_params,
+    std::unique_ptr<IdAssigner> id_assigner) {
+  std::unique_ptr<RedfishInterface> redfish_interface;
+  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
+  if (engine_params.features.enable_redfish_metrics()) {
+    auto metrical_transport = std::make_unique<MetricalRedfishTransport>(
+        std::move(engine_params.transport), ecclesia::Clock::RealClock());
+    metrical_transport_ptr = metrical_transport.get();
+    redfish_interface = NewHttpInterface(std::move(metrical_transport),
+                                         std::move(engine_params.cache_factory),
+                                         RedfishInterface::kTrusted);
+  } else {
+    redfish_interface = NewHttpInterface(std::move(engine_params.transport),
+                                         std::move(engine_params.cache_factory),
+                                         RedfishInterface::kTrusted);
+  }
+
+  if (redfish_interface == nullptr) {
+    return absl::InternalError("Can't create redfish interface");
+  }
+
+  std::unique_ptr<Normalizer> normalizer;
+  if (id_assigner == nullptr) {
+    normalizer =
+        BuildLocalDevpathNormalizer(redfish_interface.get(), engine_params);
+  } else {
+    normalizer = GetMachineDevpathNormalizer(
+        engine_params, std::move(id_assigner), redfish_interface.get());
+  }
+
+  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
+      id_to_query_plans;
+  id_to_query_plans.reserve(query_spec.query_id_to_info.size());
+
+  for (auto &[query_id, query_info] : query_spec.query_id_to_info) {
+    ECCLESIA_ASSIGN_OR_RETURN(
+        auto query_planner,
+        BuildDefaultQueryPlanner(
+            query_info.query, ParseQueryRuleParams(std::move(query_info.rule)),
+            normalizer.get(), redfish_interface.get()));
+
+    id_to_query_plans[query_id] = std::move(query_planner);
+  }
+
+  return QueryEngine(std::make_unique<QueryEngineImpl>(
+      engine_params.entity_tag, std::move(id_to_query_plans), query_spec.clock,
+      std::move(normalizer), std::move(redfish_interface),
+      metrical_transport_ptr, std::move(engine_params.features)));
+}
+
 }  // namespace
 
 absl::StatusOr<QuerySpec> QuerySpec::FromQueryContext(
@@ -352,98 +402,6 @@ absl::StatusOr<QuerySpec> QuerySpec::FromQueryFiles(
   return QuerySpec::FromQueryContext(query_context);
 }
 
-// Creates query engine to execute queries in given |query_context| over the
-// |redfish_interface| provided.
-// Caller can optionally provide a |normalizer| for the queried data.
-// Caller can provide their own metrical transport to populate redfish metrics;
-// one is constructed and passed to this method when using QueryEngineParams
-// with the enable_redfish_metrics feature flag enabled.
-absl::StatusOr<QueryEngine> CreateQueryEngine(
-    std::string target_node_id, QuerySpec query_spec,
-    std::unique_ptr<RedfishInterface> redfish_interface,
-    std::unique_ptr<Normalizer> normalizer,
-    MetricalRedfishTransport *metrical_transport,
-    QueryEngineFeatures features) {
-  // Parse queries from embedded proto messages
-  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
-      id_to_query_plans;
-
-  for (auto &[query_id, query_info] : query_spec.query_id_to_info) {
-    ECCLESIA_ASSIGN_OR_RETURN(
-        auto query_planner,
-        BuildDefaultQueryPlanner(
-            query_info.query, ParseQueryRuleParams(std::move(query_info.rule)),
-            normalizer.get(), redfish_interface.get()));
-
-    id_to_query_plans[query_id] = std::move(query_planner);
-  }
-  return QueryEngine(std::make_unique<QueryEngineImpl>(
-      std::move(target_node_id), std::move(id_to_query_plans), query_spec.clock,
-      std::move(normalizer), std::move(redfish_interface), metrical_transport,
-      std::move(features)));
-}
-
-static absl::StatusOr<QueryEngine> CreateQueryEngine(
-    QuerySpec query_spec, QueryEngineParams engine_params) {
-  std::unique_ptr<RedfishInterface> redfish_interface;
-  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
-  // Build Redfish interface and metrical transport if desired.
-  if (engine_params.features.enable_redfish_metrics()) {
-    auto metrical_transport = std::make_unique<MetricalRedfishTransport>(
-        std::move(engine_params.transport), ecclesia::Clock::RealClock());
-    metrical_transport_ptr = metrical_transport.get();
-    redfish_interface = NewHttpInterface(std::move(metrical_transport),
-                                         std::move(engine_params.cache_factory),
-                                         RedfishInterface::kTrusted);
-  } else {
-    redfish_interface = NewHttpInterface(std::move(engine_params.transport),
-                                         std::move(engine_params.cache_factory),
-                                         RedfishInterface::kTrusted);
-  }
-  RedfishInterface *redfish_interface_ptr = redfish_interface.get();
-  return CreateQueryEngine(
-      engine_params.entity_tag, std::move(query_spec),
-      std::move(redfish_interface),
-      BuildLocalDevpathNormalizer(redfish_interface_ptr, engine_params),
-      metrical_transport_ptr, std::move(engine_params.features));
-}
-
-absl::StatusOr<QueryEngine> CreateQueryEngine(
-    QuerySpec query_spec, QueryEngineParams engine_params,
-    std::unique_ptr<IdAssigner> id_assigner) {
-  std::unique_ptr<RedfishInterface> redfish_interface;
-  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
-  if (engine_params.features.enable_redfish_metrics()) {
-    auto metrical_transport = std::make_unique<MetricalRedfishTransport>(
-        std::move(engine_params.transport), ecclesia::Clock::RealClock());
-    metrical_transport_ptr = metrical_transport.get();
-    redfish_interface = NewHttpInterface(std::move(metrical_transport),
-                                         std::move(engine_params.cache_factory),
-                                         RedfishInterface::kTrusted);
-  } else {
-    redfish_interface = NewHttpInterface(std::move(engine_params.transport),
-                                         std::move(engine_params.cache_factory),
-                                         RedfishInterface::kTrusted);
-  }
-
-  if (redfish_interface == nullptr)
-    return absl::InternalError("Can't create redfish interface");
-  std::unique_ptr<Normalizer> normalizer = GetMachineDevpathNormalizer(
-      engine_params, std::move(id_assigner), redfish_interface.get());
-
-  return CreateQueryEngine(engine_params.entity_tag, std::move(query_spec),
-                           std::move(redfish_interface), std::move(normalizer),
-                           metrical_transport_ptr,
-                           std::move(engine_params.features));
-}
-
-absl::StatusOr<QueryEngine> CreateQueryEngine(const QueryContext &query_context,
-                                              QueryEngineParams engine_params) {
-  ECCLESIA_ASSIGN_OR_RETURN(QuerySpec query_spec,
-                            QuerySpec::FromQueryContext(query_context));
-  return CreateQueryEngine(std::move(query_spec), std::move(engine_params));
-}
-
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
     std::unique_ptr<IdAssigner> id_assigner) {
@@ -456,17 +414,10 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
 absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
     QuerySpec query_spec, QueryEngineParams params,
     std::unique_ptr<IdAssigner> id_assigner) {
-  if (id_assigner != nullptr) {
-    ECCLESIA_ASSIGN_OR_RETURN(
-        QueryEngine engine,
-        CreateQueryEngine(std::move(query_spec), std::move(params),
-                          std::move(id_assigner)));
-    return std::make_unique<QueryEngine>(std::move(engine));
-  }
-
   ECCLESIA_ASSIGN_OR_RETURN(
       QueryEngine engine,
-      CreateQueryEngine(std::move(query_spec), std::move(params)));
+      CreateQueryEngine(std::move(query_spec), std::move(params),
+                        std::move(id_assigner)));
   return std::make_unique<QueryEngine>(std::move(engine));
 }
 
