@@ -48,10 +48,12 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":subscription",
+        "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:span",
         "@com_json//:json",
     ],
@@ -61,6 +63,7 @@ cc_library(
     name = "subscription_mock",
     testonly = 1,
     hdrs = ["subscription_mock.h"],
+    visibility = ["//visibility:public"],
     deps = [
         ":subscription",
         "@com_google_absl//absl/status",

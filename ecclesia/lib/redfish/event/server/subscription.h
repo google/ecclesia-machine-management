@@ -20,6 +20,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -210,18 +211,18 @@ class SubscriptionStore {
   // Deletes the subscription with the given subscription ID
   virtual void DeleteSubscription(const SubscriptionId &subscription_id) = 0;
 
-  virtual absl::StatusOr<const SubscriptionContext*>
-  GetSubscription(const SubscriptionId& subscription_id) = 0;
+  virtual absl::StatusOr<const SubscriptionContext *> GetSubscription(
+      const SubscriptionId &subscription_id) = 0;
 
   // Retrieves the subscriptions associated with the given event source ID
-  virtual absl::StatusOr<absl::Span<const ecclesia::SubscriptionContext* const>>
+  virtual absl::StatusOr<absl::Span<const ecclesia::SubscriptionContext *const>>
   GetSubscriptionsByEventSourceId(const EventSourceId &source_id) = 0;
 
   // Converts SubscriptionStore to JSON format
-  virtual nlohmann::json ToJSON() const = 0;
+  virtual nlohmann::json ToJSON() = 0;
 
   // Converts SubscriptionStore to string format
-  virtual std::string ToString() const = 0;
+  virtual std::string ToString() = 0;
 };
 
 // Interface for Redfish handler

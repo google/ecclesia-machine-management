@@ -36,18 +36,17 @@ namespace ecclesia {
 class SubscriptionStoreMock : public SubscriptionStore {
  public:
   MOCK_METHOD(absl::Status, AddNewSubscription,
-      (std::unique_ptr<SubscriptionContext> subscription_context), (override));
-  MOCK_METHOD(absl::StatusOr<absl::Span<
-              const ecclesia::SubscriptionContext* const>>,
-              GetSubscriptionsByEventSourceId, (const EventSourceId &id),
+              (std::unique_ptr<SubscriptionContext> subscription_context),
               (override));
-  MOCK_METHOD(absl::StatusOr<const SubscriptionContext*>,
-              GetSubscription, (const SubscriptionId& subscription_id),
-              (override));
+  MOCK_METHOD(
+      absl::StatusOr<absl::Span<const ecclesia::SubscriptionContext *const>>,
+      GetSubscriptionsByEventSourceId, (const EventSourceId &id), (override));
+  MOCK_METHOD(absl::StatusOr<const SubscriptionContext *>, GetSubscription,
+              (const SubscriptionId &subscription_id), (override));
   MOCK_METHOD(void, DeleteSubscription, (const SubscriptionId &subscription_id),
               (override));
-  MOCK_METHOD(nlohmann::json, ToJSON, (), (const, override));
-  MOCK_METHOD(std::string, ToString, (), (const, override));
+  MOCK_METHOD(nlohmann::json, ToJSON, (), (override));
+  MOCK_METHOD(std::string, ToString, (), (override));
 };
 
 class RedfishHandlerMock : public RedfishHandler {
