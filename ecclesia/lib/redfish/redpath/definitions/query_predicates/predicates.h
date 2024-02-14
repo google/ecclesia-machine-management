@@ -27,7 +27,7 @@ namespace ecclesia {
 
 struct PredicateOptions {
   std::string predicate;
-  size_t node_index;
+  int node_index;
   size_t node_set_size;
 };
 

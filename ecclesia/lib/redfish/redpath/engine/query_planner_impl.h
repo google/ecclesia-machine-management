@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_QUERY_PLANNER_H_
-#define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_QUERY_PLANNER_H_
+#ifndef ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_IMPL_H_
+#define ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_IMPL_H_
 
 #include <memory>
 
@@ -23,14 +23,16 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 
 namespace ecclesia {
 
-absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> BuildDefaultQueryPlanner(
-  const DelliciusQuery &query,
-  RedPathRedfishQueryParams redpath_to_query_params, Normalizer *normalizer,
-  RedfishInterface *redfish_interface = nullptr);
+absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
+    const DelliciusQuery &query,
+    RedPathRedfishQueryParams redpath_to_query_params, Normalizer *normalizer,
+    RedfishInterface *redfish_interface);
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_QUERY_PLANNER_H_
+#endif  // ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_IMPL_H_

@@ -41,7 +41,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/match.h"
-#include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -726,8 +725,7 @@ class SubqueryHandleFactory {
 // RedPath contexts whose filter criteria is met by the given RedfishObject.
 std::vector<RedPathContext> ExecutePredicateFromEachSubquery(
     const std::vector<RedPathContext> &redpath_ctx_multiple,
-    const RedfishObject &redfish_object, size_t node_index,
-    size_t node_set_size) {
+    const RedfishObject &redfish_object, int node_index, size_t node_set_size) {
   std::vector<RedPathContext> filtered_redpath_context;
   for (const auto &redpath_ctx : redpath_ctx_multiple) {
     if (redpath_ctx.subquery_handle == nullptr) {

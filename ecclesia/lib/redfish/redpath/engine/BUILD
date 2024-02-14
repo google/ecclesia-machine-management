@@ -1,6 +1,82 @@
 licenses(["notice"])
 
 cc_library(
+    name = "query_planner_impl",
+    srcs = ["query_planner_impl.cc"],
+    hdrs = ["query_planner_impl.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":query_planner",
+        ":redpath_trie",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/query:query_errors_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/query_predicates:predicates",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:converter",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/container:btree",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:die_if_null",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_googlesource_code_re2//:re2",
+    ],
+)
+
+cc_test(
+    name = "query_planner_impl_test",
+    srcs = ["query_planner_impl_test.cc"],
+    data = [
+        "//ecclesia/lib/redfish/dellicius/query/samples:sample_malformed_queries_in",
+        "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_in",
+        "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_out",
+        "//ecclesia/redfish_mockups/indus_hmb_shim:mockup.shar",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":query_planner",
+        ":query_planner_impl",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/dellicius/engine:factory",
+        "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "//ecclesia/lib/redfish/transport:cache",
+        "//ecclesia/lib/redfish/transport:http_redfish_intf",
+        "//ecclesia/lib/redfish/transport:interface",
+        "//ecclesia/lib/testing:proto",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+    ],
+)
+
+cc_library(
+    name = "query_planner",
+    hdrs = ["query_planner.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_library(
     name = "redpath_trie",
     srcs = ["redpath_trie.cc"],
     hdrs = ["redpath_trie.h"],
