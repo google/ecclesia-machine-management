@@ -116,7 +116,7 @@ TEST(RedPathTrieTest, RedPathTrieIsBuiltCorrectly) {
       systems_node->second->expression_to_trie_node.find(
           RedPathExpression(RedPathExpression::Type::kPredicate, "*"));
   EXPECT_TRUE(systems_wildcard_node !=
-              (*redpath_trie)->expression_to_trie_node.end());
+              systems_node->second->expression_to_trie_node.end());
   EXPECT_THAT(systems_wildcard_node->second->subquery_id, "Systems");
 
   // Validate /Systems[*] node has `Processors` and `Memory` as child nodes.
@@ -130,7 +130,8 @@ TEST(RedPathTrieTest, RedPathTrieIsBuiltCorrectly) {
   auto memory_node =
       systems_wildcard_node->second->expression_to_trie_node.find(
           RedPathExpression(RedPathExpression::Type::kNodeName, "Memory"));
-  EXPECT_TRUE(memory_node != (*redpath_trie)->expression_to_trie_node.end());
+  EXPECT_TRUE(memory_node !=
+              systems_wildcard_node->second->expression_to_trie_node.end());
   EXPECT_THAT(memory_node->second->subquery_id, "Memory");
 
   // Validate root node as `Chassis` as child node.
@@ -143,13 +144,14 @@ TEST(RedPathTrieTest, RedPathTrieIsBuiltCorrectly) {
   auto chassis_child_node = chassis_node->second->expression_to_trie_node.find(
       RedPathExpression(RedPathExpression::Type::kPredicate, "Id=1"));
   EXPECT_TRUE(chassis_child_node !=
-              (*redpath_trie)->expression_to_trie_node.end());
+              chassis_node->second->expression_to_trie_node.end());
   EXPECT_THAT(chassis_child_node->second->subquery_id, "Chassis");
 
   // Validate /Chassis[Id=1] has `Sensors` as child node.
   auto sensors_node = chassis_child_node->second->expression_to_trie_node.find(
       RedPathExpression(RedPathExpression::Type::kNodeName, "Sensors"));
-  EXPECT_TRUE(sensors_node != (*redpath_trie)->expression_to_trie_node.end());
+  EXPECT_TRUE(sensors_node !=
+              chassis_child_node->second->expression_to_trie_node.end());
   EXPECT_THAT(sensors_node->second->subquery_id, "Sensors");
 }
 
