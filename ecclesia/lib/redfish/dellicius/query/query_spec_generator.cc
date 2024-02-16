@@ -69,7 +69,7 @@ namespace {
 constexpr absl::string_view kFileTemplate = R"(
 #include "absl/container/flat_hash_set.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
-#include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/time/clock.h"
 
 namespace $0 {
@@ -81,7 +81,7 @@ $1
 
 constexpr absl::string_view kHeaderFileTemplate = R"(
 #include "absl/container/flat_hash_set.h"
-#include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/time/clock.h"
 
 namespace $0 {
@@ -89,6 +89,9 @@ namespace $0 {
 absl::flat_hash_set<std::string> Get$1QueryIds();
 
 ecclesia::QueryContext Get$1QueryContext(
+    const ecclesia::Clock *clock = ecclesia::Clock::RealClock());
+
+absl::StatusOr<ecclesia::QuerySpec> Get$1QuerySpec(
     const ecclesia::Clock *clock = ecclesia::Clock::RealClock());
 
 }  // namespace $0
@@ -104,6 +107,11 @@ ecclesia::QueryContext Get$0QueryContext(const ecclesia::Clock *clock) {
                                 $1
                                 .clock = clock};
 }
+
+absl::StatusOr<ecclesia::QuerySpec> Get$0QuerySpec(const ecclesia::Clock *clock) {
+  return ecclesia::QuerySpec::FromQueryContext(Get$0QueryContext(clock));
+}
+
 )";
 
 using FilenameContentMap = absl::flat_hash_map<std::string, std::string>;

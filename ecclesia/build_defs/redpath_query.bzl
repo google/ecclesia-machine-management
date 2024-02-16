@@ -62,8 +62,8 @@ def redpath_query(name, cc_namespace, queries, query_rules = [], visibility = No
         deps = [
             "@com_google_absl//absl/container:flat_hash_set",
             "//ecclesia/lib/file:cc_embed_interface",
-            "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
             "//ecclesia/lib/time:clock",
+            "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_spec",
         ],
         visibility = visibility,
     )
