@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/dellicius/utils/query_validator.h"
 
 #include <fcntl.h>
+
 #include <cstddef>
 #include <string>
 #include <vector>
@@ -32,11 +33,25 @@
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/status/macros.h"
 #include "google/protobuf/text_format.h"
+#include "re2/re2.h"
 
 namespace ecclesia {
 namespace {
 
 constexpr absl::string_view kTopLevelQueryId = "TopLevelQuery";
+// Regex to match redpath predicates of the following form composed of 3 tokens:
+// 1st token: any string; if on its own, cannot contain "$" or ay comparator
+// 2nd token: a comparator, one of <, <=, =, >, >=, !=
+// 3rd token: any string, it can be preceded by "$", or not, must occur with
+//  the 2nd token
+// Examples that match:
+// "ProcessorType=CPU", "Status.State=Enabled", "ServiceLabel", "Id=$variable"
+//  "Reading>=1.0"
+// Examples that do not match:
+// "$variable", "Id=", "$var1<=$var2", "$reading<1.0"
+constexpr LazyRE2 kPredicateRegex = {
+    "^([^$<>=]+)(?:(<|>|>=|<=|=|!=)(?:\\$?[^$]+))?$"};
+constexpr LazyRE2 kLogicalOperatorRegex = {"(?: and | or )"};
 
 const int kDeepRedpathLimit = 5;
 const int kUniqueRedpathsLimit = 5;
@@ -154,6 +169,63 @@ void TestForConflictingIds(const DelliciusQuery& redpath_query,
   }
 }
 
+std::vector<std::string> ParsePredicate(absl::string_view predicate) {
+  auto open_bracket = predicate.find_first_of('[');
+  // Strip the predicates out of the brackets, it may be composed of multipple
+  // predicates with " and " and/or " or " operators in between.
+  absl::string_view predicates = predicate.substr(
+      open_bracket + 1,
+      predicate.find_first_of(']', open_bracket) - open_bracket - 1);
+  std::string predicates_string(predicates);
+  // Replace all instances of " and " and " or " with a custom delimiter,
+  // then return the predicates all split by that delimiter.
+  RE2::GlobalReplace(&predicates_string, *kLogicalOperatorRegex, "//");
+  return absl::StrSplit(predicates_string, "//");
+}
+
+// Populates errors when encountering invalid templated query predicates.
+// Predicates should adhere to one of the following formats:
+// [<PropertyName><comparator>$<variable name>]
+// [<PropertyName><comparator><variable value>]
+// [<PropertyName>]
+// [!<PropertyName>]
+// [<index number>]
+// [last()]
+// [*]
+// [<Predicate><comparator><Predicate>]
+void TestForDisallowedPredicates(const DelliciusQuery& redpath_query,
+                                 absl::string_view path,
+                                 std::vector<Issue>& errors) {
+  for (const Subquery& subquery : redpath_query.subquery()) {
+    // split a redpath into redpath step expressions:
+    // /Systems[*]/LogServices[Id=$id] -> ["Systems[*]", "LogServices[Id=$id]"]
+    std::vector<std::string> redpath_steps =
+        absl::StrSplit(subquery.redpath(), '/');
+    if (redpath_steps.empty()) continue;
+    // Check that predicates conform to the allowed format.
+    for (absl::string_view redpath_step : redpath_steps) {
+      if (redpath_step.empty()) continue;
+      // Parse out all base predicates, stripping away the logical operators.
+      for (absl::string_view bare_predicate : ParsePredicate(redpath_step)) {
+        if (!RE2::FullMatch(bare_predicate, *kPredicateRegex)) {
+          errors.push_back(
+              Issue{.type = Issue::Type::kDisallowedPredicate,
+                    .message = absl::StrCat(
+                        "Disallowed predicate: ", bare_predicate,
+                        " in redpath: ", subquery.redpath(),
+                        ".\nTemplated query predicates must adhere to the "
+                        "format: "
+                        "<property name><comparator>$<variable name>, where "
+                        "<comparator> "
+                        "is "
+                        "any one of >, <, >=, <=, or ="),
+                    .path = std::string(path)});
+        }
+      }
+    }
+  }
+}
+
 void TestForDeepRedPath(const DelliciusQuery& redpath_query,
                         absl::string_view path, std::vector<Issue>& warnings) {
   for (const Subquery& subquery : redpath_query.subquery()) {
@@ -208,6 +280,7 @@ void TestForWideBranching(const DelliciusQuery& redpath_query,
 void TestForErrorLevelIssues(const DelliciusQuery& redpath_query,
                              absl::string_view path,
                              std::vector<Issue>& errors) {
+  TestForDisallowedPredicates(redpath_query, path, errors);
   TestForConflictingIds(redpath_query, path, errors);
 }
 

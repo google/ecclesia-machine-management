@@ -18,6 +18,8 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -30,6 +32,7 @@ using ::testing::AllOf;
 using ::testing::Eq;
 using ::testing::Field;
 using ::testing::IsEmpty;
+using ::testing::StartsWith;
 using Issue = RedPathQueryValidator::Issue;
 
 // Constants for valid RedPathQuery tests.
@@ -197,6 +200,37 @@ const char kInvalidQueryConflictingIdPropertyFileContents[] = R"pb(
   }
 )pb";
 
+constexpr absl::string_view kPathToInvalidQueryInvalidPredicate =
+    "/path/to/invalid/invalid_predicate";
+const char kToInvalidQueryInvalidPredicateFileContents[] = R"pb(
+  query_id: "ChassisQuery"
+  subquery {
+    subquery_id: "Query1"
+    redpath: "/Systems[*]/Processors[ProcessorType=$type and $another_predicate]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "Query2"
+    redpath: "/Chassis[*]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "Query3"
+    redpath: "/Chassis[last()]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "Query4"
+    redpath: "/Chassis[Id=xyz]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "Query5"
+    redpath: "/Chassis[*]/Links/Memory[$memory_location_predicate]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+)pb";
+
 // Constants for invalid RedPathQuery tests that should trigger errors.
 constexpr absl::string_view kPathToMissingQuery = "/path/to/missing/query/";
 constexpr absl::string_view kPathToInvalidQuery =
@@ -335,12 +369,36 @@ TEST(RedPathQueryValidationTest, InvalidQueryWithConflictingIdAndProperty) {
   EXPECT_THAT(
       validator.ValidateQueryFile(kPathToInvalidQueryConflictingIdProperty),
       IsOk());
-  auto x = validator.GetErrors().front();
   EXPECT_THAT(
       validator.GetErrors(),
       ElementsAre(AllOf(
           Field(&Issue::type, Eq(Issue::Type::kConflictingIds)),
           Field(&Issue::path, Eq(kPathToInvalidQueryConflictingIdProperty)))));
+}
+
+TEST(RedPathQueryValidationTest, InvalidQueryWithInvalidPredicate) {
+  RedPathQueryValidator validator(
+      [&](absl::string_view path) -> absl::StatusOr<DelliciusQuery> {
+        EXPECT_THAT(path, Eq(kPathToInvalidQueryInvalidPredicate));
+        return ParseTextAsProtoOrDie<DelliciusQuery>(
+            kToInvalidQueryInvalidPredicateFileContents);
+      });
+  EXPECT_THAT(validator.ValidateQueryFile(kPathToInvalidQueryInvalidPredicate),
+              IsOk());
+  auto x = validator.GetErrors().front();
+  EXPECT_THAT(
+      validator.GetErrors(),
+      ElementsAre(
+          AllOf(Field(&Issue::type, Eq(Issue::Type::kDisallowedPredicate)),
+                Field(&Issue::message,
+                      StartsWith(
+                          "Disallowed predicate: $another_predicate")),
+                Field(&Issue::path, Eq(kPathToInvalidQueryInvalidPredicate))),
+          AllOf(Field(&Issue::type, Eq(Issue::Type::kDisallowedPredicate)),
+                Field(&Issue::message,
+                      StartsWith(
+                          "Disallowed predicate: $memory_location_predicate")),
+                Field(&Issue::path, Eq(kPathToInvalidQueryInvalidPredicate)))));
 }
 
 }  // namespace

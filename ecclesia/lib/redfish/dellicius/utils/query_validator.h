@@ -52,6 +52,8 @@ class RedPathQueryValidator {
       // each other or the subquery id, or subquery ids conflict across a
       // redpath query.
       kConflictingIds,
+      // Occurs when a predicate in a redpath is not of an acceptable form.
+      kDisallowedPredicate,
       // Occurs when 2+ RedPathResources depend on the same resource context.
       kWideBranching,
       // Occurs when querying more than 5 RedPathResources.
