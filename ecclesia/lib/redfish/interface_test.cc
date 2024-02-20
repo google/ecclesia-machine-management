@@ -224,11 +224,26 @@ TEST(RedfishVariant, RedfishQueryParamFilterPredicateList) {
 
 TEST(RedfishVariant, RedfishQueryParamFilterBreadcrumbs) {
   auto filter = RedfishQueryParamFilter();
-  std::string predicate1 = "Status.Health = OK";
+  std::string predicate1 = "Created >= 2024-01-22T00:41:38.000000+00:00";
   std::vector<std::string> predicates = {predicate1};
   filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
   EXPECT_EQ(filter.ToString(),
-            "$filter=Status/Health%20eq%20OK");
+            "$filter=Created%20ge%202024-01-22T00:41:38.000000+00:00");
+}
+
+TEST(RedfishVariant, RedfishQueryParamFilterPeriodReplacement) {
+  auto filter = RedfishQueryParamFilter();
+  // Simple 1 expression predicate
+  std::string predicate1 = "Status.Health = OK.test";
+  std::vector<std::string> predicates = {predicate1};
+  filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
+  EXPECT_EQ(filter.ToString(), "$filter=Status/Health%20eq%20OK.test");
+  // 2 expression predicate
+  std::string predicate2 = "Status.Health = OK.test or Status.Something >= 6.8";
+  filter.BuildFromRedpathPredicate(predicate2), ecclesia::IsOk();
+  EXPECT_EQ(filter.ToString(),
+            "$filter=Status/Health%20eq%20OK.test%20or%20Status/"
+            "Something%20ge%206.8");
 }
 
 TEST(RedfishVariant, ValidateRedfishSupportSuccess) {

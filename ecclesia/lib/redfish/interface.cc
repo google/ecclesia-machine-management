@@ -22,16 +22,54 @@
 #include <utility>
 #include <vector>
 
+#include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
+#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
+#include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 
 namespace ecclesia {
 namespace {
+
+// Replaces periods in predicates with slashes. Only the property side (left
+// hand side) should be affected. Value side (right hand side), may contain
+// periods, eg decimals and timestamps.
+std::string ReplacePeriodsInPredicates(const std::string &predicate) {
+  std::vector<std::string> result = {};
+  absl::flat_hash_set<std::string> rel_operators = {"lt", "gt", "le",
+                                                    "ge", "eq", "ne"};
+  absl::flat_hash_set<std::string> log_operators = {"or", "and"};
+  bool looking = true;
+  std::vector<std::string> tokens = absl::StrSplit(predicate, ' ');
+  for (const std::string &token : tokens) {
+    if (rel_operators.contains(token)) {
+      // Token is a relational operator, therefore the next token will be a
+      // value which we should not change.
+      looking = false;
+      result.push_back(token);
+    } else if (log_operators.contains(token)) {
+      // Token is a logical operator, therefore the next token will be a
+      // property which we should change.
+      looking = true;
+      result.push_back(token);
+    } else {
+      // Token is either rhs or lhs of a predicate expression. If looking is
+      // true, it will be the lhs, which needs periods swapped
+      if (looking) {
+        std::vector<std::string> nodes = SplitNodeNameForNestedNodes(token);
+        result.push_back(absl::StrJoin(nodes, "/"));
+      } else {
+        result.push_back(token);
+      }
+    }
+  }
+  return absl::StrJoin(result, " ");
+}
 
 // The only difference between Redpath predicate format and $filter format are
 // the relational operators. Redpath supports spaces or no spaces surrounding a
@@ -55,7 +93,7 @@ std::string GetFilterString(absl::string_view predicate) {
   // Another difference between Redpath predicates and $filter format is
   // breadcrumbs are denoted with a slash rather than a period/dot.
   std::string filter_string_no_dots =
-      absl::StrReplaceAll(filter_string_with_spaces, {{".", "/"}});
+      ReplacePeriodsInPredicates(filter_string_with_spaces);
   return absl::StrReplaceAll(filter_string_no_dots, {{" ", "%20"}});
 }
 

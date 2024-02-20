@@ -22,7 +22,6 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/redfish/interface.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
