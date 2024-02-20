@@ -26,6 +26,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/ascii.h"
 #include "absl/strings/numbers.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
 #include "single_include/nlohmann/json.hpp"
@@ -129,7 +130,7 @@ absl::StatusOr<nlohmann::json> ResolveRedPathNodeToJson(
     }
     if (!json_object_out.contains(name)) {
       return absl::InternalError(
-          absl::StrFormat("Node %s not found in json object", name));
+          absl::StrCat("Node ", name, " not found in json object"));
     }
     json_object_out = json_object_out.at(name);
 
