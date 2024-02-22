@@ -18,6 +18,7 @@
 #define ECCLESIA_LIB_REDFISH_EVENT_SERVER_SUBSCRIPTION_MOCK_H_
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -64,6 +65,27 @@ class EventStoreMock : public EventStore {
               (override));
   MOCK_METHOD(std::vector<nlohmann::json>, GetEventsSince,
               (std::optional<size_t> redfish_event_id), (override));
+};
+
+class SubscriptionServiceMock : public SubscriptionService {
+ public:
+  MOCK_METHOD(absl::StatusOr<SubscriptionId>, CreateSubscription,
+              (const nlohmann::json &request,
+               std::function<void(const nlohmann::json &)> &&on_event_callback),
+              (override));
+  MOCK_METHOD(void, DeleteSubscription, (const SubscriptionId &subscription_id),
+              (override));
+
+  MOCK_METHOD(absl::Span<const SubscriptionContext>, GetAllSubscriptions, (),
+              (override));
+
+  MOCK_METHOD(absl::Status, Notify, (EventSourceId key, absl::Status status),
+              (override));
+
+  MOCK_METHOD(absl::Status, NotifyWithData,
+              (EventSourceId key, absl::Status status,
+               const nlohmann::json &data),
+              (override));
 };
 
 }  // namespace ecclesia

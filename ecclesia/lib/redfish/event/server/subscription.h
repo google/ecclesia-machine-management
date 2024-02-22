@@ -257,9 +257,14 @@ class SubscriptionService {
 
   // Creates a new subscription and returns the subscription ID of the newly
   // created subscription.
+  // Note: the implementation must guarantee that `on_event_callback` will only
+  // be called once at a time. No parallel call will be allowed!
   virtual absl::StatusOr<SubscriptionId> CreateSubscription(
       const nlohmann::json &request,
       std::function<void(const nlohmann::json &)> &&on_event_callback) = 0;
+
+  // Deletes the subscription with the given subscription ID
+  virtual void DeleteSubscription(const SubscriptionId &subscription_id) = 0;
 
   // Retrieves all subscriptions managed by the service.
   virtual absl::Span<const SubscriptionContext> GetAllSubscriptions() = 0;

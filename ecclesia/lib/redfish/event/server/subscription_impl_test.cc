@@ -88,6 +88,15 @@ class SubscriptionServiceImplTest : public ::testing::Test {
   std::unique_ptr<SubscriptionService> subscription_service_ = nullptr;
 };
 
+TEST_F(SubscriptionServiceImplTest,
+       DeleteSubscriptionShouldDeleteSameInSubscriptionStore) {
+  SubscriptionId fake(123);
+  EXPECT_CALL(*subscription_store_ptr_, DeleteSubscription(fake))
+      .Times(1)
+      .WillOnce(Return());
+  subscription_service_->DeleteSubscription(fake);
+}
+
 TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
   // Create valid subscription request.
   static constexpr absl::string_view valid_request = R"json(
@@ -363,19 +372,19 @@ TEST_F(SubscriptionServiceImplTest, ShouldSendEventIfOriginOfConditionIsValid) {
 
   int on_event_callback_count = 0;
   const auto context = std::make_unique<SubscriptionContext>(
-    SubscriptionId(1), test_id_to_triggers,
+      SubscriptionId(1), test_id_to_triggers,
       [&on_event_callback_count, expected_event](const nlohmann::json& event) {
         ++on_event_callback_count;
         EXPECT_TRUE(CompareJson(event, expected_event,
                                 {"EventId", "EventTimestamp", "Id"}));
-  });
+      });
 
   std::vector<const SubscriptionContext*> contexts = {context.get()};
   // Expect subscription store to be queried for subscriptions.
   EXPECT_CALL(*subscription_store_ptr_,
-    GetSubscriptionsByEventSourceId(event_source_id))
-    .WillRepeatedly(Return(
-        absl::Span<const SubscriptionContext* const>(contexts)));
+              GetSubscriptionsByEventSourceId(event_source_id))
+      .WillRepeatedly(
+          Return(absl::Span<const SubscriptionContext* const>(contexts)));
 
   EXPECT_CALL(*redfish_handler_ptr_, Query(Eq("/redfish/v1/node1"), _))
       .WillOnce(DoAll(InvokeArgument<1>(absl::OkStatus(), query_response),

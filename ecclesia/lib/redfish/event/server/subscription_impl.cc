@@ -226,6 +226,10 @@ class SubscriptionServiceImpl
     return subscription_id;
   }
 
+  void DeleteSubscription(const SubscriptionId& subscription_id) override {
+    subscription_store_->DeleteSubscription(subscription_id);
+  }
+
   // Retrieves all subscriptions managed by the service.
   absl::Span<const SubscriptionContext> GetAllSubscriptions() override {
     LOG(ERROR) << "GetAllSubscriptions: Unimplemented!";
