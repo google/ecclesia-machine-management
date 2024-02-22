@@ -225,19 +225,19 @@ class SubscriptionStore {
   virtual std::string ToString() = 0;
 };
 
-// Interface for Redfish handler
+// Interface for a SubscriptionService backend.
 // This ensures that SubscriptionService interoperates with different Redfish
 // backends by standardizing the interface to subscribe and query Redfish
 // resources.
-class RedfishHandler {
+class SubscriptionBackend {
  public:
   // Callback type for Redfish queries
   using QueryCallback =
       std::function<void(const absl::Status & /*Status Code*/,
                          const nlohmann::json & /*Redfish Resource json_str*/)>;
 
-  // Destructor for RedfishHandler
-  virtual ~RedfishHandler() = default;
+  // Destructor for SubscriptionBackend
+  virtual ~SubscriptionBackend() = default;
 
   // Performs a Redfish query at the given URL and invokes the provided callback
   // with the query result

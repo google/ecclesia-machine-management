@@ -117,7 +117,7 @@ class AggregatedQueryResponse {
   }
 
  private:
-  // Counts response to sync/async query requests sent via Redfish handler.
+  // Counts response to sync/async query requests sent via Subscription Backend.
   // Response can be valid or invalid.
   std::atomic_size_t responses_received_{0};
 
@@ -139,10 +139,12 @@ class SubscriptionServiceImpl
     : public SubscriptionService,
       public std::enable_shared_from_this<SubscriptionServiceImpl> {
  public:
-  SubscriptionServiceImpl(std::unique_ptr<RedfishHandler> redfish_handler,
-                          std::unique_ptr<SubscriptionStore> subscription_store,
-                          std::unique_ptr<EventStore> event_store)
-      : redfish_handler_(ABSL_DIE_IF_NULL(std::move(redfish_handler))),
+  SubscriptionServiceImpl(
+      std::unique_ptr<SubscriptionBackend> subscription_backend,
+      std::unique_ptr<SubscriptionStore> subscription_store,
+      std::unique_ptr<EventStore> event_store)
+      : subscription_backend_(
+            ABSL_DIE_IF_NULL(std::move(subscription_backend))),
         subscription_store_(ABSL_DIE_IF_NULL(std::move(subscription_store))),
         event_store_(ABSL_DIE_IF_NULL(std::move(event_store))) {}
 
@@ -188,12 +190,13 @@ class SubscriptionServiceImpl
 
       ECCLESIA_ASSIGN_OR_RETURN(Trigger trigger_obj, Trigger::Create(trigger));
 
-      // Invoke subscribe on redfish_handler for each origin_resources in the
-      // trigger and store the returned source ids.
+      // Invoke subscribe on subscription_backend_ for each origin_resources in
+      // the trigger and store the returned source ids.
       for (const std::string &origin_resource : trigger_obj.origin_resources) {
         if (trigger_obj.mask) continue;
-        ECCLESIA_ASSIGN_OR_RETURN(std::vector<EventSourceId> source_ids,
-                                  redfish_handler_->Subscribe(origin_resource));
+        ECCLESIA_ASSIGN_OR_RETURN(
+            std::vector<EventSourceId> source_ids,
+            subscription_backend_->Subscribe(origin_resource));
         ECCLESIA_RETURN_IF_ERROR(
             AddEventSourcesToTrigger(source_ids, origin_resource, trigger_obj));
       }
@@ -285,7 +288,7 @@ class SubscriptionServiceImpl
         uri_count, std::move(done_callback));
 
     for (const std::string &uri : uri_collection) {
-      ECCLESIA_RETURN_IF_ERROR(redfish_handler_->Query(
+      ECCLESIA_RETURN_IF_ERROR(subscription_backend_->Query(
           uri, [uri, aggregated_response](
                    const absl::Status &sc,
                    const nlohmann::json &query_response) mutable {
@@ -341,7 +344,7 @@ class SubscriptionServiceImpl
     return absl::OkStatus();
   }
 
-  std::unique_ptr<RedfishHandler> redfish_handler_;
+  std::unique_ptr<SubscriptionBackend> subscription_backend_;
   std::unique_ptr<SubscriptionStore> subscription_store_;
   std::unique_ptr<EventStore> event_store_;
 };
@@ -349,11 +352,11 @@ class SubscriptionServiceImpl
 }  // namespace
 
 std::unique_ptr<SubscriptionService> CreateSubscriptionService(
-    std::unique_ptr<RedfishHandler> redfish_handler,
+    std::unique_ptr<SubscriptionBackend> subscription_backend,
     std::unique_ptr<SubscriptionStore> subscription_store,
     std::unique_ptr<EventStore> event_store) {
   return std::make_unique<SubscriptionServiceImpl>(
-      std::move(redfish_handler), std::move(subscription_store),
+      std::move(subscription_backend), std::move(subscription_store),
       std::move(event_store));
 }
 

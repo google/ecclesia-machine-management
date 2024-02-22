@@ -64,8 +64,8 @@ bool CompareJson(const nlohmann::json& json1, const nlohmann::json& json2,
 class SubscriptionServiceImplTest : public ::testing::Test {
  protected:
   SubscriptionServiceImplTest() {
-    auto redfish_handler = std::make_unique<RedfishHandlerMock>();
-    redfish_handler_ptr_ = redfish_handler.get();
+    auto subscription_backend = std::make_unique<SubscriptionBackendMock>();
+    subscription_backend_ptr_ = subscription_backend.get();
 
     auto subscription_store = std::make_unique<SubscriptionStoreMock>();
     subscription_store_ptr_ = subscription_store.get();
@@ -75,12 +75,12 @@ class SubscriptionServiceImplTest : public ::testing::Test {
 
     // Create subscription service with mock objects.
     subscription_service_ = CreateSubscriptionService(
-        std::move(redfish_handler), std::move(subscription_store),
+        std::move(subscription_backend), std::move(subscription_store),
         std::move(event_store));
   }
 
   // Mock objects.
-  RedfishHandlerMock* redfish_handler_ptr_ = nullptr;
+  SubscriptionBackendMock* subscription_backend_ptr_ = nullptr;
   SubscriptionStoreMock* subscription_store_ptr_ = nullptr;
   EventStoreMock* event_store_ptr_ = nullptr;
 
@@ -132,12 +132,12 @@ TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
   nlohmann::json request = nlohmann::json::parse(valid_request);
   ASSERT_TRUE(!request.is_discarded());
 
-  EXPECT_CALL(*redfish_handler_ptr_,
+  EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x")))
       .WillOnce(Return(std::vector<EventSourceId>(
           {{1, EventSourceId::Type::kDbusObjects},
            {2, EventSourceId::Type::kDbusObjects}})));
-  EXPECT_CALL(*redfish_handler_ptr_,
+  EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y")))
       .WillOnce(Return(std::vector<EventSourceId>(
           {{3, EventSourceId::Type::kDbusObjects}})));
@@ -262,7 +262,7 @@ TEST_F(SubscriptionServiceImplTest,
     ASSERT_TRUE(!request.is_discarded());
 
     // Verify mock calls.
-    EXPECT_CALL(*redfish_handler_ptr_, Subscribe(_)).Times(0);
+    EXPECT_CALL(*subscription_backend_ptr_, Subscribe(_)).Times(0);
     EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
     // Expect subscription creation to fail.
     EXPECT_NE(subscription_service_
@@ -386,7 +386,7 @@ TEST_F(SubscriptionServiceImplTest, ShouldSendEventIfOriginOfConditionIsValid) {
       .WillRepeatedly(
           Return(absl::Span<const SubscriptionContext* const>(contexts)));
 
-  EXPECT_CALL(*redfish_handler_ptr_, Query(Eq("/redfish/v1/node1"), _))
+  EXPECT_CALL(*subscription_backend_ptr_, Query(Eq("/redfish/v1/node1"), _))
       .WillOnce(DoAll(InvokeArgument<1>(absl::OkStatus(), query_response),
                       Return(absl::OkStatus())))
       .WillOnce(
@@ -466,12 +466,12 @@ TEST_F(SubscriptionServiceImplTest, ShouldDispatchEventsAfterLastEventId) {
   EXPECT_CALL(*event_store_ptr_, GetEventsSince(std::optional<size_t>(4)))
       .WillOnce(Return(std::vector<nlohmann::json>{event1, event2}));
 
-  EXPECT_CALL(*redfish_handler_ptr_,
+  EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x")))
       .WillOnce(Return(std::vector<EventSourceId>(
           {{/*key_in=*/1, EventSourceId::Type::kDbusObjects},
            {/*key_in=*/2, EventSourceId::Type::kDbusObjects}})));
-  EXPECT_CALL(*redfish_handler_ptr_,
+  EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y")))
       .WillOnce(Return(std::vector<EventSourceId>(
           {{3, EventSourceId::Type::kDbusObjects}})));

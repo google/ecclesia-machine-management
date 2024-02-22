@@ -50,7 +50,7 @@ class SubscriptionStoreMock : public SubscriptionStore {
   MOCK_METHOD(std::string, ToString, (), (override));
 };
 
-class RedfishHandlerMock : public RedfishHandler {
+class SubscriptionBackendMock : public SubscriptionBackend {
  public:
   MOCK_METHOD(absl::StatusOr<std::vector<EventSourceId>>, Subscribe,
               (absl::string_view url), (override));
