@@ -35,6 +35,7 @@ namespace ecclesia {
 namespace {
 
 using ::testing::IsEmpty;
+using ::testing::UnorderedElementsAre;
 
 class QueryValueBuilderTest : public testing::Test {
  protected:
@@ -121,6 +122,43 @@ TEST_F(QueryValueBuilderTest, QueryResultDataTest) {
                                    list_value {
                                      values { int_value: 100 }
                                      values { double_value: 3.25 }
+                                   }
+                                 }
+                               }
+                               fields {
+                                 key: "value"
+                                 value { string_value: "value1" }
+                               })pb"));
+}
+
+TEST_F(QueryValueBuilderTest, ModifyListElementsTest) {
+  builder_["value"] = "value1";
+  builder_["list_value"].append(static_cast<int64_t>(100));
+  builder_["list_value"].append(3.25);
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kSubqueryValue);
+  ASSERT_THAT(value_.subquery_value(),
+              EqualsProto(R"pb(fields {
+                                 key: "list_value"
+                                 value {
+                                   list_value {
+                                     values { int_value: 100 }
+                                     values { double_value: 3.25 }
+                                   }
+                                 }
+                               }
+                               fields {
+                                 key: "value"
+                                 value { string_value: "value1" }
+                               })pb"));
+  builder_["list_value"].at(0) = static_cast<int64_t> (200);
+  builder_["list_value"].at(1) = "value";
+  ASSERT_THAT(value_.subquery_value(),
+              EqualsProto(R"pb(fields {
+                                 key: "list_value"
+                                 value {
+                                   list_value {
+                                     values { int_value: 200 }
+                                     values { string_value: "value" }
                                    }
                                  }
                                }
@@ -325,6 +363,8 @@ TEST(QueryValueReaderTest, SubqueryValueTest) {
   absl::StatusOr<QueryValueReader> value_reader = reader.Get("list_value");
   ASSERT_THAT(value_reader, IsOk());
   ASSERT_EQ(value_reader->size(), 2);
+
+  EXPECT_THAT(reader.field_keys(), UnorderedElementsAre("list_value", "value"));
 }
 
 TEST(QueryValueReaderTest, SubqueryGetValueTest) {

@@ -19,7 +19,9 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <vector>
 
+#include "absl/log/check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -90,6 +92,14 @@ absl::StatusOr<bool> QueryValueReader::GetBoolValue(
         absl::StrCat("Property ", key, " does not have a bool value."));
   }
   return reader.bool_value();
+}
+
+std::vector<std::string> QueryValueReader::field_keys() const {
+  std::vector<std::string> keys;
+  for (const auto& [key, value] : query_value_.subquery_value().fields()) {
+    keys.push_back(key);
+  }
+  return keys;
 }
 
 // Returns a QueryValueReader for the given key; or an error if the key is not

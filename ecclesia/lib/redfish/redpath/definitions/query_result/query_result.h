@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "google/protobuf/timestamp.pb.h"
 #include "absl/log/check.h"
@@ -140,6 +141,15 @@ class QueryValueBuilder {
         &(*result_value->mutable_fields())[std::string(name)]);
   }
 
+  // Forces `value` to be a QueryValueBuilder, and allows users to modify
+  // elements of a QueryValue list item. Note that modifications may alter the
+  // list item's type.
+  QueryValueBuilder at(int index) {
+    CHECK(index >= 0 && index < query_value_.list_value().values_size())
+        << "Invalid index: " << index;
+    return QueryValueBuilder(
+        query_value_.mutable_list_value()->mutable_values(index));
+  }
 
  private:
   QueryValue& query_value_;
@@ -238,6 +248,9 @@ class QueryValueReader {
 
   // Returns the bool value.
   bool bool_value() const { return query_value_.bool_value(); }
+
+  // Returns the names of the keys in the underlying subquery value.
+  std::vector<std::string> field_keys() const;
 
   // Returns a const reference to the Identifier value.
   const Identifier& identifier() const { return query_value_.identifier(); }
