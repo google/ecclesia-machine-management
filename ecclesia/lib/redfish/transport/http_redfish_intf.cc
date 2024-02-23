@@ -840,10 +840,6 @@ class HttpRedfishInterface : public RedfishInterface {
     if (root_object == nullptr) {
       return;
     }
-    if (remove_expand_support_) {
-      supported_features_->expand = {};
-      return;
-    }
     auto expand_features_json =
         (*root_object)[kProtocolFeaturesSupported][kExpandQuery].AsObject();
     RedfishSupportedFeatures features;
@@ -886,7 +882,10 @@ class HttpRedfishInterface : public RedfishInterface {
       features.filter_enabled = filter_enabled;
     }
 
-    supported_features_ = std::move(features);
+    supported_features_ = features;
+    if (remove_expand_support_) {
+      supported_features_->expand = {};
+    }
   }
 
   mutable absl::Mutex transport_mutex_;
