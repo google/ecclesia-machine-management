@@ -222,13 +222,13 @@ TEST(RedfishVariant, RedfishQueryParamFilterPredicateList) {
             "$filter=Prop1%20le%2042%20or%20Prop1%20ne%2042");
 }
 
-TEST(RedfishVariant, RedfishQueryParamFilterBreadcrumbs) {
+TEST(RedfishVariant, RedfishQueryParamFilterSpecialCharacters) {
   auto filter = RedfishQueryParamFilter();
   std::string predicate1 = "Created >= 2024-01-22T00:41:38.000000+00:00";
   std::vector<std::string> predicates = {predicate1};
   filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
   EXPECT_EQ(filter.ToString(),
-            "$filter=Created%20ge%202024-01-22T00:41:38.000000+00:00");
+            "$filter=Created%20ge%202024-01-22T00%3A41%3A38.000000%2B00%3A00");
 }
 
 TEST(RedfishVariant, RedfishQueryParamFilterPeriodReplacement) {
@@ -237,12 +237,12 @@ TEST(RedfishVariant, RedfishQueryParamFilterPeriodReplacement) {
   std::string predicate1 = "Status.Health = OK.test";
   std::vector<std::string> predicates = {predicate1};
   filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(), "$filter=Status/Health%20eq%20OK.test");
+  EXPECT_EQ(filter.ToString(), "$filter=Status%2FHealth%20eq%20OK.test");
   // 2 expression predicate
   std::string predicate2 = "Status.Health = OK.test or Status.Something >= 6.8";
   filter.BuildFromRedpathPredicate(predicate2), ecclesia::IsOk();
   EXPECT_EQ(filter.ToString(),
-            "$filter=Status/Health%20eq%20OK.test%20or%20Status/"
+            "$filter=Status%2FHealth%20eq%20OK.test%20or%20Status%2F"
             "Something%20ge%206.8");
 }
 

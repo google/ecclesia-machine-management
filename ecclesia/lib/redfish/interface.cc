@@ -36,10 +36,23 @@
 namespace ecclesia {
 namespace {
 
+// Encodes special characters in predicates. Special characters are derived from
+// https://datatracker.ietf.org/doc/html/rfc3986#section-2.2
+std::string EncodeSpecialCharacters(absl::string_view filter_string) {
+  std::vector<std::pair<std::string, std::string>> special_character_encodings =
+      {
+          {"+", "%2B"}, {" ", "%20"}, {":", "%3A"}, {"/", "%2F"}, {"?", "%3F"},
+          {"#", "%25"}, {"[", "%5B"}, {"]", "%5D"}, {"@", "%40"}, {"!", "%21"},
+          {"$", "%24"}, {"&", "%26"}, {"'", "%27"}, {"(", "%28"}, {")", "%29"},
+          {"*", "%2A"}, {",", "%2C"}, {";", "%3B"}, {"=", "%3D"},
+      };
+  return absl::StrReplaceAll(filter_string, special_character_encodings);
+}
+
 // Replaces periods in predicates with slashes. Only the property side (left
 // hand side) should be affected. Value side (right hand side), may contain
 // periods, eg decimals and timestamps.
-std::string ReplacePeriodsInPredicates(const std::string &predicate) {
+std::string ReplacePeriodsInPredicates(absl::string_view predicate) {
   std::vector<std::string> result = {};
   absl::flat_hash_set<std::string> rel_operators = {"lt", "gt", "le",
                                                     "ge", "eq", "ne"};
@@ -94,7 +107,7 @@ std::string GetFilterString(absl::string_view predicate) {
   // breadcrumbs are denoted with a slash rather than a period/dot.
   std::string filter_string_no_dots =
       ReplacePeriodsInPredicates(filter_string_with_spaces);
-  return absl::StrReplaceAll(filter_string_no_dots, {{" ", "%20"}});
+  return EncodeSpecialCharacters(filter_string_no_dots);
 }
 
 }  // namespace
