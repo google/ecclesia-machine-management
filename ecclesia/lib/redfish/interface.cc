@@ -89,19 +89,13 @@ std::string ReplacePeriodsInPredicates(absl::string_view predicate) {
 // relational operator so both substitutions need to be done. Substitutions with
 // surrounding spaces will be done first as the $filter format requires spaces.
 std::string GetFilterString(absl::string_view predicate) {
-  std::vector<std::pair<std::string, std::string>> relational_operators_spaces =
-      {{" < ", " lt "},  {" > ", " gt "}, {" <= ", " le "},
-       {" >= ", " ge "}, {" = ", " eq "}, {" != ", " ne "}};
   std::vector<std::pair<std::string, std::string>> relational_operators = {
       {"<", " lt "},  {">", " gt "}, {"<=", " le "},
       {">=", " ge "}, {"=", " eq "}, {"!=", " ne "}};
-  // If the supplied predicate uses surrounding spaces the conversion should be
-  // complete.
-  std::string filter_string_intermediate =
-      absl::StrReplaceAll(predicate, relational_operators_spaces);
-  // If the operators have no spaces the final replacement will cover it.
+  // Relational operators within a Redpath predicate should not contain
+  // surrounding spaces so we only have to substitute the operators themselves.
   std::string filter_string_with_spaces =
-      absl::StrReplaceAll(filter_string_intermediate, relational_operators);
+      absl::StrReplaceAll(predicate, relational_operators);
 
   // Another difference between Redpath predicates and $filter format is
   // breadcrumbs are denoted with a slash rather than a period/dot.

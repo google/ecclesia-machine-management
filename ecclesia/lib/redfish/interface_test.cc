@@ -192,11 +192,11 @@ TEST(RedfishVariant, RedfishQueryParamFilter) {
   filter.BuildFromRedpathPredicate(predicate1);
   EXPECT_EQ(filter.ToString(), "$filter=Prop1%20le%2042");
   // Spaces between operators.
-  std::string predicate2 = "Prop1 != 42";
+  std::string predicate2 = "Prop1!=42";
   filter.BuildFromRedpathPredicate(predicate2), ecclesia::IsOk();
   EXPECT_EQ(filter.ToString(), "$filter=Prop1%20ne%2042");
   // Spaces between operators with logical operator.
-  std::string predicate3 = "Prop1 > 42 and Prop1 < 84";
+  std::string predicate3 = "Prop1>42 and Prop1<84";
   filter.BuildFromRedpathPredicate(predicate3), ecclesia::IsOk();
   EXPECT_EQ(filter.ToString(),
             "$filter=Prop1%20gt%2042%20and%20Prop1%20lt%2084");
@@ -215,7 +215,7 @@ TEST(RedfishVariant, RedfishQueryParamFilterPredicateList) {
   auto filter = RedfishQueryParamFilter();
   // No spaces between operators.
   std::string predicate1 = "Prop1<=42";
-  std::string predicate2 = "Prop1 != 42";
+  std::string predicate2 = "Prop1!=42";
   std::vector<std::string> predicates = {predicate1, predicate2};
   filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
   EXPECT_EQ(filter.ToString(),
@@ -224,7 +224,7 @@ TEST(RedfishVariant, RedfishQueryParamFilterPredicateList) {
 
 TEST(RedfishVariant, RedfishQueryParamFilterSpecialCharacters) {
   auto filter = RedfishQueryParamFilter();
-  std::string predicate1 = "Created >= 2024-01-22T00:41:38.000000+00:00";
+  std::string predicate1 = "Created>=2024-01-22T00:41:38.000000+00:00";
   std::vector<std::string> predicates = {predicate1};
   filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
   EXPECT_EQ(filter.ToString(),
@@ -234,12 +234,12 @@ TEST(RedfishVariant, RedfishQueryParamFilterSpecialCharacters) {
 TEST(RedfishVariant, RedfishQueryParamFilterPeriodReplacement) {
   auto filter = RedfishQueryParamFilter();
   // Simple 1 expression predicate
-  std::string predicate1 = "Status.Health = OK.test";
+  std::string predicate1 = "Status.Health=OK.test";
   std::vector<std::string> predicates = {predicate1};
   filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
   EXPECT_EQ(filter.ToString(), "$filter=Status%2FHealth%20eq%20OK.test");
   // 2 expression predicate
-  std::string predicate2 = "Status.Health = OK.test or Status.Something >= 6.8";
+  std::string predicate2 = "Status.Health=OK.test or Status.Something>=6.8";
   filter.BuildFromRedpathPredicate(predicate2), ecclesia::IsOk();
   EXPECT_EQ(filter.ToString(),
             "$filter=Status%2FHealth%20eq%20OK.test%20or%20Status%2F"
