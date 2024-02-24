@@ -231,10 +231,18 @@ class SubscriptionStore {
 // resources.
 class SubscriptionBackend {
  public:
-  // Callback type for Redfish queries
+  // Callback type for Redfish queries.
   using QueryCallback =
       std::function<void(const absl::Status & /*Status Code*/,
                          const nlohmann::json & /*Redfish Resource json_str*/)>;
+
+  // Callback type for Subscribe requests to SubscriptionBackend.
+  // This callback shall be invoked with collection of EventSourceId objects on
+  // a successful completion or an error in the status code on failed
+  // subscription.
+  using SubscribeCallback =
+      std::function<void(const absl::Status & /*Status Code*/,
+                         const std::vector<EventSourceId> & /*EventSources*/)>;
 
   // Destructor for SubscriptionBackend
   virtual ~SubscriptionBackend() = default;
@@ -248,6 +256,11 @@ class SubscriptionBackend {
   // event source IDs
   virtual absl::StatusOr<std::vector<EventSourceId>> Subscribe(
       absl::string_view url) = 0;
+
+  // Subscribes to Redfish events for the given URL and invokes the callback
+  // post subscription.
+  virtual absl::Status Subscribe(absl::string_view url,
+                                 SubscribeCallback subscribe_callback) = 0;
 };
 
 // Interface for a subscription service

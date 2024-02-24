@@ -54,6 +54,9 @@ class SubscriptionBackendMock : public SubscriptionBackend {
  public:
   MOCK_METHOD(absl::StatusOr<std::vector<EventSourceId>>, Subscribe,
               (absl::string_view url), (override));
+  MOCK_METHOD(absl::Status, Subscribe,
+              (absl::string_view url, SubscribeCallback subscribe_callback),
+              (override));
   MOCK_METHOD(absl::Status, Query, (const absl::string_view, QueryCallback),
               (override));
 };
