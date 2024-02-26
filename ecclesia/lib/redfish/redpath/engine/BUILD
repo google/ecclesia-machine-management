@@ -98,6 +98,45 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "normalizer",
+    srcs = ["normalizer.cc"],
+    hdrs = ["normalizer.h"],
+    deps = [
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/utils:path_util",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "//ecclesia/lib/status:macros",
+        "//ecclesia/lib/time:proto",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+        "@com_google_protobuf//:protobuf",
+        "@com_json//:json",
+    ],
+)
+
+cc_test(
+    name = "normalizer_test",
+    srcs = ["normalizer_test.cc"],
+    deps = [
+        ":normalizer",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/testing:proto",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/functional:function_ref",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+        "@com_json//:json",
+    ],
+)
+
 cc_test(
     name = "redpath_trie_test",
     srcs = ["redpath_trie_test.cc"],
