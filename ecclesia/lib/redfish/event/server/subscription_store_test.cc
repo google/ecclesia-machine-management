@@ -65,7 +65,7 @@ class SubscriptionStoreImplTest : public ::testing::Test {
     auto trigger_or_status_one = Trigger::Create(trigger);
     EXPECT_THAT(trigger_or_status_one.ok(), Eq(true));
 
-    EventSourceId event_source_id_one(1, EventSourceId::Type::kDbusObjects);
+    EventSourceId event_source_id_one("1", EventSourceId::Type::kDbusObjects);
     trigger_or_status_one->event_source_to_uri.insert(
         {event_source_id_one, {"/redfish/v1/Chassis/Foo/Sensors/x"}});
 
@@ -74,7 +74,7 @@ class SubscriptionStoreImplTest : public ::testing::Test {
     auto trigger_or_status_two = Trigger::Create(trigger);
     EXPECT_THAT(trigger_or_status_two.ok(), Eq(true));
 
-    EventSourceId event_source_id_two(2, EventSourceId::Type::kDbusObjects);
+    EventSourceId event_source_id_two("2", EventSourceId::Type::kDbusObjects);
     trigger_or_status_two->event_source_to_uri.insert(
         {event_source_id_two, {"/redfish/v1/Chassis/Foo/Sensors/y"}});
 
@@ -134,7 +134,7 @@ TEST_F(SubscriptionStoreImplTest, GetSubscriptionByEventSourceIdSuccess) {
 
   // Expect subscriptions to be returned.
   auto result = subscription_store_->GetSubscriptionsByEventSourceId(
-      EventSourceId(1, EventSourceId::Type::kDbusObjects));
+      EventSourceId("1", EventSourceId::Type::kDbusObjects));
   EXPECT_THAT(result.ok(), Eq(true));
   auto subscriptions = result.value();
   EXPECT_THAT(subscriptions[0]->subscription_id.Id(), Eq(1));
@@ -154,9 +154,10 @@ TEST_F(SubscriptionStoreImplTest, GetSubscriptionByUnknownEventSourceIdFail) {
 
   // Expect unknown event_source_id to fail lookup.
   EXPECT_THAT(subscription_store_->GetSubscriptionsByEventSourceId(
-    EventSourceId(111, EventSourceId::Type::kDbusObjects)).status(),
+    EventSourceId("111", EventSourceId::Type::kDbusObjects)).status(),
     absl::NotFoundError(
-    "Event source with ID {\"key\":111,\"type\":\"kDbusObjects\"} not found."));
+    "Event source with ID {\"key\":\"111\",\"type\":\"kDbusObjects\"}"
+        " not found."));
 }
 
 TEST_F(SubscriptionStoreImplTest, ToJSONAndToString) {

@@ -45,8 +45,8 @@ TEST(EventStoreImplTest, ShouldReturnAddedEvents) {
   nlohmann::json event = {{"key", "value"}};
 
   EventId event_id = EventId{SubscriptionId(1234),
-                             {/*key_in=*/1, EventSourceId::Type::kDbusObjects},
-                             absl::Now()};
+                        {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
+                          absl::Now()};
 
   // Add event and check if it is stored
   event_store->AddNewEvent(event_id, event);
@@ -67,12 +67,12 @@ TEST(EventStoreImplTest, ShouldReturnAllEventsByTime) {
 
     event_store->AddNewEvent(
         EventId{SubscriptionId(123),
-                {/*key_in=*/1, EventSourceId::Type::kDbusObjects},
+                {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
                 time_old},
         {{"_", 1}});
     event_store->AddNewEvent(
         EventId{SubscriptionId(123),
-                {/*key_in=*/1, EventSourceId::Type::kDbusObjects},
+                {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
                 time_new},
         {{"_", 2}});
 
@@ -91,14 +91,14 @@ TEST(EventStoreImplTest, ShouldReturnAllEventsByTime) {
     // New Event
     event_store->AddNewEvent(
         EventId{SubscriptionId(123),
-                {/*key_in=*/1, EventSourceId::Type::kDbusObjects},
+                {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
                 time_new},
         {{"_", 2}});
 
     // Old Event
     event_store->AddNewEvent(
         EventId{SubscriptionId(123),
-                {/*key_in=*/1, EventSourceId::Type::kDbusObjects},
+                {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
                 time_old},
         {{"_", 1}});
 
@@ -117,14 +117,14 @@ TEST(EventStoreImplTest, ShouldReturnAllEventsByInsertionOrder) {
   // New Event
   event_store->AddNewEvent(
       EventId{SubscriptionId(123),
-              {/*key_in=*/1, EventSourceId::Type::kDbusObjects},
+              {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
               time},
       {{"_", 2}});
 
   // Old Event
   event_store->AddNewEvent(
       EventId{SubscriptionId(123),
-              {/*key_in=*/1, EventSourceId::Type::kDbusObjects},
+              {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
               time},
       {{"_", 1}});
 
@@ -143,14 +143,14 @@ TEST(EventStoreImplTest, ShouldReturnEventsSinceValidLastEventId) {
   for (size_t i = 0; i < 2; ++i) {
     event_store->AddNewEvent(
         EventId{SubscriptionId(/*subscription_id_in=*/1),
-                {/*key_in=*/1, EventSourceId::Type::kDbusObjects},
+                {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
                 absl::Now()},
         {{"key1", i}});
   }
 
   // Add a test event whose uuid will be specified in last_event_id.
   EventId test_event{SubscriptionId(1),
-                     {/*key_in=*/1, EventSourceId::Type::kDbusObjects},
+                     {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
                      absl::Now()};
   size_t test_event_uuid = test_event.redfish_event_id;
   event_store->AddNewEvent(test_event, {{"key3", "value3"}});
@@ -159,7 +159,7 @@ TEST(EventStoreImplTest, ShouldReturnEventsSinceValidLastEventId) {
   for (size_t i = 4; i < 6; ++i) {
     event_store->AddNewEvent(
         EventId{SubscriptionId(1),
-                {/*key_in=*/1, EventSourceId::Type::kDbusObjects},
+                {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
                 absl::Now()},
         {{"key1", i}});
   }
@@ -186,7 +186,7 @@ TEST(EventStoreImplTest, ShouldOverwriteOldestEventOnFull) {
   for (size_t i = 0; i < kEventStoreSize + 1; ++i) {
     event_store->AddNewEvent(
         EventId{SubscriptionId(i),
-                {/*key_in=*/1, EventSourceId::Type::kDbusObjects},
+                {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
                 absl::Now()},
         {{"key1", i}});
   }

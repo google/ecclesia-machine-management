@@ -135,12 +135,12 @@ TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
   EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x")))
       .WillOnce(Return(std::vector<EventSourceId>(
-          {{1, EventSourceId::Type::kDbusObjects},
-           {2, EventSourceId::Type::kDbusObjects}})));
+          {{"1", EventSourceId::Type::kDbusObjects},
+           {"2", EventSourceId::Type::kDbusObjects}})));
   EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y")))
       .WillOnce(Return(std::vector<EventSourceId>(
-          {{3, EventSourceId::Type::kDbusObjects}})));
+          {{"3", EventSourceId::Type::kDbusObjects}})));
 
   EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(1);
 
@@ -363,7 +363,7 @@ TEST_F(SubscriptionServiceImplTest, ShouldSendEventIfOriginOfConditionIsValid) {
   ASSERT_TRUE(!expected_event.is_discarded());
 
   // Create event source ID
-  EventSourceId event_source_id(1, EventSourceId::Type::kDbusObjects);
+  EventSourceId event_source_id("1", EventSourceId::Type::kDbusObjects);
   trigger_or_status->event_source_to_uri.insert(
       {event_source_id, {"/redfish/v1/node1"}});
 
@@ -419,7 +419,7 @@ TEST_F(SubscriptionServiceImplTest, GetAllSubscriptions_ReturnsEmpty) {
 }
 
 TEST_F(SubscriptionServiceImplTest, NotifyWithData_ReturnsUnimplementedError) {
-  EventSourceId event_source_id(1, EventSourceId::Type::kDbusObjects);
+  EventSourceId event_source_id("1", EventSourceId::Type::kDbusObjects);
   EXPECT_EQ(subscription_service_->NotifyWithData(event_source_id,
                                                   absl::OkStatus(), {}),
             absl::UnimplementedError("NotifyWithData:: Unimplemented!"));
@@ -469,12 +469,12 @@ TEST_F(SubscriptionServiceImplTest, ShouldDispatchEventsAfterLastEventId) {
   EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x")))
       .WillOnce(Return(std::vector<EventSourceId>(
-          {{/*key_in=*/1, EventSourceId::Type::kDbusObjects},
-           {/*key_in=*/2, EventSourceId::Type::kDbusObjects}})));
+          {{/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
+           {/*key_in=*/ "2", EventSourceId::Type::kDbusObjects}})));
   EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y")))
       .WillOnce(Return(std::vector<EventSourceId>(
-          {{3, EventSourceId::Type::kDbusObjects}})));
+          {{ "3", EventSourceId::Type::kDbusObjects}})));
 
   std::vector<nlohmann::json> actual_events;
   EXPECT_THAT(subscription_service_

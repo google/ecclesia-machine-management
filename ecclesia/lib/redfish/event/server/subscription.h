@@ -47,7 +47,8 @@ struct EventSourceId {
     kFileIO = 2
   };
 
-  EventSourceId(int key_in, Type type_in) : key(key_in), type(type_in) {}
+  EventSourceId(absl::string_view key_in, Type type_in)
+      : key(key_in), type(type_in) {}
 
   template <typename H>
   friend H AbslHashValue(H h, const EventSourceId &n) {
@@ -68,7 +69,7 @@ struct EventSourceId {
   std::string ToString() const;
 
   // Unique identifier for the event source
-  int key;
+  std::string key;
 
   // Type of event source, represented by the Type enum
   Type type;
