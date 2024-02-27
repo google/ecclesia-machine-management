@@ -53,6 +53,7 @@ inline constexpr char kRfPropertyStorage[] = "Storage";
 inline constexpr char kRfPropertyDrives[] = "Drives";
 inline constexpr char kRfPropertyDriveReset[] = "#Drive.Reset";
 inline constexpr char kRfPropertyResetType[] = "ResetType";
+inline constexpr char kRfPropertyControlMode[] = "ControlMode";
 inline constexpr char kRfPropertyProtocolOem[] = "OEM";
 inline constexpr char kRfPropertyOem[] = "Oem";
 inline constexpr char kRfPropertyLifeTime[] = "LifeTime";
