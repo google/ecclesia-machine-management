@@ -34,8 +34,10 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
@@ -55,14 +57,14 @@ class FakeQueryEngine : public QueryEngineIntf {
     Metrics metrics = Metrics::kDisable;
     Cache cache = Cache::kInfinite;
     std::optional<std::string> entity_tag;
+    std::unique_ptr<IdAssigner> id_assigner;
   };
 
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
-      QuerySpec query_spec, absl::string_view mockup_name,
-      const Params &params) {
+      QuerySpec query_spec, absl::string_view mockup_name, Params params) {
     auto query_engine = absl::WrapUnique(new FakeQueryEngine(mockup_name));
-    ECCLESIA_RETURN_IF_ERROR(
-        query_engine->InitializeQueryEngine(std::move(query_spec), params));
+    ECCLESIA_RETURN_IF_ERROR(query_engine->InitializeQueryEngine(
+        std::move(query_spec), std::move(params)));
     return std::move(query_engine);
   }
 
@@ -102,8 +104,7 @@ class FakeQueryEngine : public QueryEngineIntf {
     redfish_server_.EnableAllParamsGetHandler();
   }
 
-  absl::Status InitializeQueryEngine(QuerySpec query_spec,
-                                     const Params &params) {
+  absl::Status InitializeQueryEngine(QuerySpec query_spec, Params params) {
     // Devpaths will not be generated if the stable_id_type is kRedfishLocation
     // without an IdAssigner passed to the Query Engine object.
     const QueryEngineParams::RedfishStableIdType stable_id_type =
@@ -129,7 +130,8 @@ class FakeQueryEngine : public QueryEngineIntf {
              .cache_factory = cache_factory,
              .entity_tag = params.entity_tag.value_or(""),
              .stable_id_type = stable_id_type,
-             .features = std::move(features)}));
+             .features = std::move(features)},
+            std::move(params.id_assigner)));
 
     query_engine_ = std::move(query_engine);
     return absl::OkStatus();
