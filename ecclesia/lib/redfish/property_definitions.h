@@ -236,6 +236,7 @@ inline constexpr char kRfPropertyEndpoints[] = "Endpoints";
 inline constexpr char kRfPropertyConnectedPorts[] = "ConnectedPorts";
 inline constexpr char kRfPropertyConnectedSwitchPorts[] =
     "ConnectedSwitchPorts";
+inline constexpr char kRfPropertyActiveSoftwareImage[] = "ActiveSoftwareImage";
 
 DEFINE_REDFISH_RESOURCE(ResourceCertificate, "Certificate");
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
