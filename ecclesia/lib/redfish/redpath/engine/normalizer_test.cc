@@ -19,6 +19,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -28,9 +29,10 @@
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/node_topology.h"
+#include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
 #include "single_include/nlohmann/json.hpp"
-#include "ecclesia/lib/testing/proto.h"
 
 namespace ecclesia {
 namespace {
@@ -44,6 +46,10 @@ class MockableGetRedfishObject : public RedfishObject {
     return RedfishVariant(
         absl::UnimplementedError("TestRedfishObject [] unsupported"));
   }
+  void SetTestParams(nlohmann::json mockup, std::string uri) {
+    object_ = std::move(mockup);
+    uri_string_ = std::move(uri);
+  }
   nlohmann::json GetContentAsJson() const override { return object_; }
   MOCK_METHOD(RedfishVariant, Get,
               (const std::string &node_name, GetParams params),
@@ -51,7 +57,9 @@ class MockableGetRedfishObject : public RedfishObject {
   std::string DebugString() const override {
     return std::string(object_.dump());
   }
-  std::optional<std::string> GetUriString() const override { return ""; }
+  std::optional<std::string> GetUriString() const override {
+    return uri_string_;
+  }
   absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
       GetParams params) override {
     return std::make_unique<MockableGetRedfishObject>();
@@ -79,6 +87,7 @@ class MockableGetRedfishObject : public RedfishObject {
         "A14": 6
       }
     )json");
+  std::string uri_string_;
 };
 
 class NormalizerImplTest : public testing::Test {
@@ -195,7 +204,7 @@ TEST_F(NormalizerImplTest, TestNormalizerRegular) {
   MockableGetRedfishObject obj;
 
   ASSERT_GT(query_sensor.subquery_size(), 0);
-  normalizer_ = std::make_unique<NormalizerImpl>();
+  normalizer_ = BuildDefaultNormalizer();
   EXPECT_THAT(normalizer_->Normalize(obj, query_sensor.subquery(0)),
               IsOkAndHolds(EqualsProto(expected_pb)));
 }
@@ -216,7 +225,7 @@ TEST_F(NormalizerImplTest, TestNormalizerPropertyNameAvailable) {
   MockableGetRedfishObject obj;
 
   ASSERT_GT(query_sensor.subquery_size(), 0);
-  normalizer_ = std::make_unique<NormalizerImpl>();
+  normalizer_ = BuildDefaultNormalizer();
   EXPECT_THAT(normalizer_->Normalize(obj, query_sensor.subquery(0)),
               IsOkAndHolds(EqualsProto(expected_pb)));
 }
@@ -233,9 +242,9 @@ TEST_F(NormalizerImplTest, TestNormalizerPropertyNotValid) {
   MockableGetRedfishObject obj;
 
   ASSERT_GT(query_sensor.subquery_size(), 0);
-  normalizer_ = std::make_unique<NormalizerImpl>();
+  normalizer_ = BuildDefaultNormalizer();
   EXPECT_THAT(normalizer_->Normalize(obj, query_sensor.subquery(0)),
-              IsOkAndHolds(EqualsProto(expected_pb)));
+              IsStatusNotFound());
 }
 
 TEST_F(NormalizerImplTest, TestNormalizerPropertyTimestampNotValid) {
@@ -250,9 +259,9 @@ TEST_F(NormalizerImplTest, TestNormalizerPropertyTimestampNotValid) {
   MockableGetRedfishObject obj;
 
   ASSERT_GT(query_sensor.subquery_size(), 0);
-  normalizer_ = std::make_unique<NormalizerImpl>();
+  normalizer_ = BuildDefaultNormalizer();
   EXPECT_THAT(normalizer_->Normalize(obj, query_sensor.subquery(0)),
-              IsOkAndHolds(EqualsProto(expected_pb)));
+              IsStatusNotFound());
 }
 
 TEST_F(NormalizerImplTest, TestNormalizerPropertyTimestampArrayNotValid) {
@@ -271,9 +280,9 @@ TEST_F(NormalizerImplTest, TestNormalizerPropertyTimestampArrayNotValid) {
   MockableGetRedfishObject obj;
 
   ASSERT_GT(query_sensor.subquery_size(), 0);
-  normalizer_ = std::make_unique<NormalizerImpl>();
+  normalizer_ = BuildDefaultNormalizer();
   EXPECT_THAT(normalizer_->Normalize(obj, query_sensor.subquery(0)),
-              IsOkAndHolds(EqualsProto(expected_pb)));
+              IsStatusNotFound());
 }
 
 TEST_F(NormalizerImplTest, TestNormalizerPropertyArrayNotValid) {
@@ -292,7 +301,243 @@ TEST_F(NormalizerImplTest, TestNormalizerPropertyArrayNotValid) {
   MockableGetRedfishObject obj;
 
   ASSERT_GT(query_sensor.subquery_size(), 0);
-  normalizer_ = std::make_unique<NormalizerImpl>();
+  normalizer_ = BuildDefaultNormalizer();
+  EXPECT_THAT(normalizer_->Normalize(obj, query_sensor.subquery(0)),
+              IsStatusNotFound());
+}
+
+TEST_F(NormalizerImplTest, TestNormalizerAdditionalProperties) {
+  nlohmann::json object = nlohmann::json::parse(R"json(
+      {
+        "Oem": {
+              "Google": {
+                "KernelLpuId": 0,
+                "LocationContext": {
+                  "ServiceLabel": "CPU0",
+                  "EmbeddedLocationContext": ["die0_core2"],
+                  "Devpath": "/phys/CPU0"
+                }
+              }
+            }
+      }
+    )json");
+  DelliciusQuery query_sensor = ParseTextProtoOrDie(
+      R"pb(subquery {
+             subquery_id: "Sensors"
+             properties {
+               property: "A14"
+               type: DATE_TIME_OFFSET
+               property_element_type: COLLECTION_PRIMITIVE
+             }
+           })pb");
+
+  ecclesia::QueryResultData expected_pb = ParseTextProtoOrDie(R"pb(
+    fields {
+      key: "__EmbeddedLocationContext__"
+      value { identifier { embedded_location_context: "/die0_core2" } }
+    }
+    fields {
+      key: "__LocalDevpath__"
+      value { identifier { local_devpath: "/phys/CPU0" } }
+    }
+  )pb");
+  MockableGetRedfishObject obj;
+  obj.SetTestParams(object, "");
+
+  ASSERT_GT(query_sensor.subquery_size(), 0);
+  normalizer_ = BuildDefaultNormalizer();
+  EXPECT_THAT(normalizer_->Normalize(obj, query_sensor.subquery(0)),
+              IsOkAndHolds(EqualsProto(expected_pb)));
+}
+
+TEST_F(NormalizerImplTest, TestNormalizerWithDevpathPresenOem) {
+  nlohmann::json object = nlohmann::json::parse(R"json(
+      {
+       "A1": "fan0",
+        "Oem": {
+              "Google": {
+                "KernelLpuId": 0,
+                "LocationContext": {
+                  "ServiceLabel": "CPU0",
+                  "EmbeddedLocationContext": ["die0_core2"],
+                  "Devpath": "/phys/CPU0"
+                }
+              }
+            }
+      }
+    )json");
+  DelliciusQuery query_sensor = ParseTextProtoOrDie(
+      R"pb(subquery { properties { property: "A1" type: STRING } })pb");
+
+  ecclesia::QueryResultData expected_pb = ParseTextProtoOrDie(R"pb(
+    fields {
+      key: "A1"
+      value { string_value: "fan0" }
+    }
+    fields {
+      key: "__EmbeddedLocationContext__"
+      value { identifier { embedded_location_context: "/die0_core2" } }
+    }
+    fields {
+      key: "__LocalDevpath__"
+      value { identifier { local_devpath: "/phys/CPU0" } }
+    }
+  )pb");
+  MockableGetRedfishObject obj;
+  obj.SetTestParams(object, "");
+
+  ASSERT_GT(query_sensor.subquery_size(), 0);
+
+  NodeTopology topology;
+  absl::string_view uri = "/redfish/v1/Chassis/chassis/Sensors/sensor";
+  absl::string_view test_devpath = "/phys/test";
+  {
+    auto node = std::make_unique<Node>();
+    node->local_devpath = test_devpath;
+    topology.uri_to_associated_node_map[uri].push_back(node.get());
+    topology.nodes.push_back(std::move(node));
+  }
+  normalizer_ = BuildDefaultNormalizerWithLocalDevpath(std::move(topology));
+
+  EXPECT_THAT(normalizer_->Normalize(obj, query_sensor.subquery(0)),
+              IsOkAndHolds(EqualsProto(expected_pb)));
+}
+
+TEST_F(NormalizerImplTest, TestNormalizerWithDevpathPresentLocation) {
+  nlohmann::json object = nlohmann::json::parse(R"json(
+      {
+       "A1": "fan0",
+        "Location": {
+              "Oem": {
+                "Google": {
+                  "Devpath": "/phys/CPU0"
+                }
+              }
+            }
+      }
+    )json");
+  DelliciusQuery query_sensor = ParseTextProtoOrDie(
+      R"pb(subquery { properties { property: "A1" type: STRING } })pb");
+
+  ecclesia::QueryResultData expected_pb = ParseTextProtoOrDie(R"pb(
+    fields {
+      key: "A1"
+      value { string_value: "fan0" }
+    }
+    fields {
+      key: "__LocalDevpath__"
+      value { identifier { local_devpath: "/phys/CPU0" } }
+    }
+  )pb");
+  MockableGetRedfishObject obj;
+  obj.SetTestParams(object, "");
+
+  ASSERT_GT(query_sensor.subquery_size(), 0);
+
+  NodeTopology topology;
+  absl::string_view uri = "/redfish/v1/Chassis/chassis/Sensors/sensor";
+  absl::string_view test_devpath = "/phys/test";
+  {
+    auto node = std::make_unique<Node>();
+    node->local_devpath = test_devpath;
+    topology.uri_to_associated_node_map[uri].push_back(node.get());
+    topology.nodes.push_back(std::move(node));
+  }
+  normalizer_ = BuildDefaultNormalizerWithLocalDevpath(std::move(topology));
+
+  EXPECT_THAT(normalizer_->Normalize(obj, query_sensor.subquery(0)),
+              IsOkAndHolds(EqualsProto(expected_pb)));
+}
+
+TEST_F(NormalizerImplTest, TestNormalizerWithDevpathPresentPhysicalLocation) {
+  nlohmann::json object = nlohmann::json::parse(R"json(
+      {
+       "A1": "fan0",
+        "PhysicalLocation": {
+              "Oem": {
+                "Google": {
+                  "Devpath": "/phys/CPU0"
+                }
+              }
+            }
+      }
+    )json");
+  DelliciusQuery query_sensor = ParseTextProtoOrDie(
+      R"pb(subquery { properties { property: "A1" type: STRING } })pb");
+
+  ecclesia::QueryResultData expected_pb = ParseTextProtoOrDie(R"pb(
+    fields {
+      key: "A1"
+      value { string_value: "fan0" }
+    }
+    fields {
+      key: "__LocalDevpath__"
+      value { identifier { local_devpath: "/phys/CPU0" } }
+    }
+  )pb");
+  MockableGetRedfishObject obj;
+  obj.SetTestParams(object, "");
+
+  ASSERT_GT(query_sensor.subquery_size(), 0);
+
+  NodeTopology topology;
+  absl::string_view uri = "/redfish/v1/Chassis/chassis/Sensors/sensor";
+  absl::string_view test_devpath = "/phys/test";
+  {
+    auto node = std::make_unique<Node>();
+    node->local_devpath = test_devpath;
+    topology.uri_to_associated_node_map[uri].push_back(node.get());
+    topology.nodes.push_back(std::move(node));
+  }
+  normalizer_ = BuildDefaultNormalizerWithLocalDevpath(std::move(topology));
+
+  EXPECT_THAT(normalizer_->Normalize(obj, query_sensor.subquery(0)),
+              IsOkAndHolds(EqualsProto(expected_pb)));
+}
+
+TEST_F(NormalizerImplTest, TestNormalizerWithDevpathAbsent) {
+  nlohmann::json object = nlohmann::json::parse(R"json(
+     {
+      "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/sensor",
+      "RelatedItem": [
+        {"@odata.id": "/redfish/v1/System/system/Processors/0"}
+      ],
+      "Name": "sensor0"
+    }
+    )json");
+  DelliciusQuery query_sensor = ParseTextProtoOrDie(
+      R"pb(query_id: "SensorCollector"
+           subquery {
+             subquery_id: "Sensors"
+             redpath: "/redfish/v1/Chassis/chassis/Sensors/sensor"
+             properties { property: "Name" type: STRING }
+           })pb");
+
+  ecclesia::QueryResultData expected_pb = ParseTextProtoOrDie(R"pb(
+    fields {
+      key: "Name"
+      value { string_value: "sensor0" }
+    }
+    fields {
+      key: "__LocalDevpath__"
+      value { identifier { local_devpath: "/phys/test" } }
+    }
+  )pb");
+
+  ASSERT_GT(query_sensor.subquery_size(), 0);
+
+  NodeTopology topology;
+  absl::string_view uri = "/redfish/v1/Chassis/chassis/Sensors/sensor";
+  absl::string_view test_devpath = "/phys/test";
+  {
+    auto node = std::make_unique<Node>();
+    node->local_devpath = test_devpath;
+    topology.uri_to_associated_node_map[uri].push_back(node.get());
+    topology.nodes.push_back(std::move(node));
+  }
+  MockableGetRedfishObject obj;
+  obj.SetTestParams(object, "/redfish/v1/Chassis/chassis/Sensors/sensor");
+  normalizer_ = BuildDefaultNormalizerWithLocalDevpath(std::move(topology));
   EXPECT_THAT(normalizer_->Normalize(obj, query_sensor.subquery(0)),
               IsOkAndHolds(EqualsProto(expected_pb)));
 }

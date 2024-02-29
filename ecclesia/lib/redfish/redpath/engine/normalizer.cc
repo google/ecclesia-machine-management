@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,10 +29,12 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_replace.h"
+#include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
+#include "ecclesia/lib/redfish/devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/status/macros.h"
@@ -41,6 +44,39 @@
 namespace ecclesia {
 
 namespace {
+
+constexpr absl::string_view kEmbeddedLocationContext =
+    "__EmbeddedLocationContext__";
+constexpr absl::string_view kLocalDevpath = "__LocalDevpath__";
+
+std::vector<DelliciusQuery::Subquery::RedfishProperty>
+GetAdditionalProperties() {
+  std::vector<DelliciusQuery::Subquery::RedfishProperty> result;
+  auto add_property = [&](absl::string_view name,
+                          std::vector<std::string> properties,
+                          bool is_collection = false) {
+    for (std::string &property : properties) {
+      DelliciusQuery::Subquery::RedfishProperty new_prop;
+      new_prop.set_name(std::string(name));
+      new_prop.set_property(std::move(property));
+      if (is_collection) {
+        new_prop.set_property_element_type(
+            DelliciusQuery::Subquery::RedfishProperty::COLLECTION_PRIMITIVE);
+      }
+      new_prop.set_type(DelliciusQuery::Subquery::RedfishProperty::STRING);
+      result.push_back(std::move(new_prop));
+    }
+  };
+
+  add_property(kEmbeddedLocationContext,
+               {"Oem.Google.LocationContext.EmbeddedLocationContext"}, true);
+
+  add_property(kLocalDevpath, {"Location.Oem.Google.Devpath",
+                               "PhysicalLocation.Oem.Google.Devpath",
+                               "Oem.Google.LocationContext.Devpath"});
+
+  return result;
+}
 
 absl::Status GetCollectionPropertyFromRedfishObject(
     const RedfishObject &redfish_object,
@@ -178,10 +214,13 @@ absl::StatusOr<QueryValue> GetPropertyFromRedfishObject(
 
 }  // namespace
 
-absl::StatusOr<ecclesia::QueryResultData> NormalizerImpl::Normalize(
+NormalizerImplDefault::NormalizerImplDefault()
+    : additional_properties_(GetAdditionalProperties()) {}
+
+absl::Status NormalizerImplDefault::Normalize(
     const ecclesia::RedfishObject &redfish_object,
-    const DelliciusQuery::Subquery &subquery) const {
-  QueryResultData data_set_local;
+    const DelliciusQuery::Subquery &subquery,
+    ecclesia::QueryResultData &data_set_local) {
   for (const DelliciusQuery::Subquery::RedfishProperty &property :
        subquery.properties()) {
     auto property_out = GetPropertyFromRedfishObject(redfish_object, property);
@@ -203,7 +242,54 @@ absl::StatusOr<ecclesia::QueryResultData> NormalizerImpl::Normalize(
     (*data_set_local.mutable_fields())[prop_name] = *property_out;
   }
 
-  return data_set_local;
+  // We add additional properties to populate stable id based on Redfish
+  // Location.
+  for (const DelliciusQuery::Subquery::RedfishProperty &property :
+       additional_properties_) {
+    auto property_out = GetPropertyFromRedfishObject(redfish_object, property);
+    if (!property_out.ok()) {
+      continue;
+    }
+    std::string name = property.name();
+    if (name == kLocalDevpath) {
+      QueryValue query_value;
+      query_value.mutable_identifier()->set_local_devpath(
+          property_out->string_value());
+      (*data_set_local.mutable_fields())[name] = query_value;
+    } else if (name == kEmbeddedLocationContext) {
+      QueryValue query_value;
+      std::string embedded_location_context;
+      for (const auto &value : property_out->list_value().values()) {
+        embedded_location_context.append("/");
+        embedded_location_context.append(value.string_value());
+      }
+      query_value.mutable_identifier()->set_embedded_location_context(
+          embedded_location_context);
+      (*data_set_local.mutable_fields())[name] = query_value;
+    }
+  }
+  return absl::OkStatus();
+}
+
+absl::Status NormalizerImplAddDevpath::Normalize(
+    const RedfishObject &redfish_object,
+    const DelliciusQuery::Subquery &subquery,
+    ecclesia::QueryResultData &data_set_local) {
+  // Prioritize devpath populated by default normalizer.
+  if (data_set_local.fields().contains(kLocalDevpath)) {
+    return absl::OkStatus();
+  }
+
+  // Derive devpath from Node Topology (URI to local devpath map).
+  std::optional<std::string> devpath =
+      GetDevpathForObjectAndNodeTopology(redfish_object, topology_);
+
+  if (devpath.has_value()) {
+    QueryValue query_value;
+    query_value.mutable_identifier()->set_local_devpath(devpath.value());
+    (*data_set_local.mutable_fields())[kLocalDevpath] = query_value;
+  }
+  return absl::OkStatus();
 }
 
 }  // namespace ecclesia
