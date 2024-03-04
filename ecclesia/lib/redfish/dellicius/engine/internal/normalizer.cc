@@ -88,7 +88,6 @@ GetAdditionalProperties() {
 }
 
 absl::Status GetCollectionPropertyFromRedfishObject(
-    const RedfishObject &redfish_object,
     const DelliciusQuery::Subquery::RedfishProperty &property,
     const nlohmann::json &json_obj, SubqueryDataSet::Property &property_out) {
   if (!json_obj.is_array()) {
@@ -158,7 +157,7 @@ absl::Status GetCollectionPropertyFromRedfishObject(
   return absl::OkStatus();
 }
 absl::StatusOr<SubqueryDataSet::Property> GetPropertyFromRedfishObject(
-    const RedfishObject &redfish_object,
+    const nlohmann::json &redfish_content,
     const DelliciusQuery::Subquery::RedfishProperty &property) {
   // A property requirement can specify nested nodes like
   // 'Thresholds.UpperCritical.Reading' or a simple property like 'Name'.
@@ -166,8 +165,7 @@ absl::StatusOr<SubqueryDataSet::Property> GetPropertyFromRedfishObject(
   // the property expression.
   ECCLESIA_ASSIGN_OR_RETURN(
       nlohmann::json json_obj,
-      ResolveRedPathNodeToJson(redfish_object.GetContentAsJson(),
-                               property.property()));
+      ResolveRedPathNodeToJson(redfish_content, property.property()));
 
   using RedfishProperty = DelliciusQuery::Subquery::RedfishProperty;
 
@@ -175,7 +173,7 @@ absl::StatusOr<SubqueryDataSet::Property> GetPropertyFromRedfishObject(
   if (property.property_element_type() ==
       RedfishProperty::COLLECTION_PRIMITIVE) {
     ECCLESIA_RETURN_IF_ERROR(GetCollectionPropertyFromRedfishObject(
-        redfish_object, property, json_obj, property_out));
+        property, json_obj, property_out));
   } else {
     // clients to use new property value fields.
     switch (property.type()) {
@@ -239,9 +237,10 @@ absl::Status NormalizerImplDefault::Normalize(
     const RedfishObject &redfish_object,
     const DelliciusQuery::Subquery &subquery,
     SubqueryDataSet &data_set_local) {
+  const nlohmann::json json_content = redfish_object.GetContentAsJson();
   for (const DelliciusQuery::Subquery::RedfishProperty &property :
        subquery.properties()) {
-    auto property_out = GetPropertyFromRedfishObject(redfish_object, property);
+    auto property_out = GetPropertyFromRedfishObject(json_content, property);
     // It is not an error if normalizer fails to normalize a property if
     // required property is not part of Resource attributes.
     if (!property_out.ok()) {
@@ -263,7 +262,7 @@ absl::Status NormalizerImplDefault::Normalize(
   // Location.
   for (const DelliciusQuery::Subquery::RedfishProperty &property :
        additional_properties_) {
-    auto property_out = GetPropertyFromRedfishObject(redfish_object, property);
+    auto property_out = GetPropertyFromRedfishObject(json_content, property);
     if (!property_out.ok()) {
       continue;
     }
