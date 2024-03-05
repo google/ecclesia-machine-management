@@ -28,6 +28,7 @@
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_replace.h"
+#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "single_include/nlohmann/json.hpp"
 #include "re2/re2.h"
@@ -98,15 +99,17 @@ std::vector<absl::string_view> SplitExprByDelimiterWithEscape(
 
 std::vector<std::string> SplitNodeNameForNestedNodes(
     absl::string_view expression) {
-  std::vector<absl::string_view> node_names =
-      SplitExprByDelimiterWithEscape(expression, ".", '\\');
-  std::vector<std::string> node_names_without_escape = {node_names.begin(),
-                                                        node_names.end()};
-  // Strip escape characters from each expression.
-  for (std::string &node : node_names_without_escape) {
-    absl::StrReplaceAll({{"\\", ""}}, &node);
-  }
-  return node_names_without_escape;
+  absl::string_view stripped = absl::StripAsciiWhitespace(expression);
+  if (stripped.empty()) return {};
+  // Avoid creating locals. This is an equivalent of
+  //
+  // std::string step_1 = absl::StrReplaceAll(stripped, {{".", " "}});
+  // std::string step_2 = absl::StrReplaceAll(step_1, {{"\\", "."}});
+  // return absl::StrSplit(step_2, ' ');
+  return absl::StrSplit(
+      absl::StrReplaceAll(absl::StrReplaceAll(stripped, {{".", " "}}),
+                          {{"\\ ", "."}}),
+      ' ');
 }
 
 absl::StatusOr<nlohmann::json> ResolveRedPathNodeToJson(
