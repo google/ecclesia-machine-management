@@ -42,12 +42,12 @@ namespace {
 
 // Pattern for predicate formatted with relational operators:
 constexpr LazyRE2 kPredicateRegexRelationalOperator = {
-    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=))([a-zA-Z0-9._\-\:#\\ ]+)$)"};
+    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=))([a-zA-Z0-9._\+\-\:#\\ ]+)$)"};
 
 // Pattern for Redfish standard (ISO 8601) datetime string.
 // Example: 2022-03-16T15:52:00
 constexpr LazyRE2 kRedfishDatetimeRegex = {
-    R"(^(?:[1-9]\d{3}-(?:(?:0[1-9]|1[0-2])-(?:0[1-9]|1\d|2[0-8])|(?:0[13-9]|1[0-2])-(?:29|30)|(?:0[13578]|1[02])-31)|(?:[1-9]\d(?:0[48]|[2468][048]|[13579][26])|(?:[2468][048]|[13579][26])00)-02-29)T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,9})?(?:Z|[+-][01]\d:[0-5]\d)?$)"};
+    R"(^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(([+-]\d\d:\d\d)|Z)?$)"};
 
 // Known predicate expressions.
 constexpr absl::string_view kPredicateSelectAll = "*";
@@ -62,9 +62,13 @@ constexpr std::array<const char *, 6> kRelationsOperators = {
     "<", ">", "!=", ">=", "<=", "="};
 
 // Matchers for user supplied datetime formats in a predicate.
+// Redfish datetime is of Edm.DateTimeOffset type.
+// <YYYY>-<MM>-<DD>T<hh>:<mm>:<ss>[.<SSS>](Z|((+|-)<HH>:<MM>))
 constexpr absl::string_view kRedfishDatetimePlusOffset =
     "%Y-%m-%dT%H:%M:%E6S%Ez";
 constexpr absl::string_view kRedfishDatetimeNoOffset = "%Y-%m-%dT%H:%M:%E6S";
+// Z is the zero offset indicator.
+constexpr absl::string_view kRedfishDatetimeZeroOffset = "%Y-%m-%dT%H:%M:%E6SZ";
 
 // Helper function is used to ensure the obtained value equal or not equal to
 // a non-number value.
@@ -108,17 +112,18 @@ absl::StatusOr<bool> ApplyDateTimeComparisonFilter(
     absl::string_view test_value) {
   absl::Time rhs_time;
   absl::Time lhs_time;
-
   // Parse the user supplied timestamp into the desired format.
   if (!absl::ParseTime(kRedfishDatetimeNoOffset, test_value, &rhs_time,
-                       /*err=*/nullptr)) {
+        /*err=*/nullptr) && !absl::ParseTime(kRedfishDatetimePlusOffset,
+        test_value, &rhs_time, /*err=*/nullptr)) {
     return absl::InvalidArgumentError(
         absl::StrCat("Invalid datetime string in predicate: ", test_value));
   }
 
   // Parse the timestamp from the Redfish property into the desired format.
-  if (!absl::ParseTime(kRedfishDatetimePlusOffset, lhs_time_str, &lhs_time,
-                       /*err=*/nullptr)) {
+  if (!absl::ParseTime(kRedfishDatetimeZeroOffset, lhs_time_str, &lhs_time,
+        /*err=*/nullptr) && !absl::ParseTime(kRedfishDatetimePlusOffset,
+        lhs_time_str, &lhs_time, /*err=*/nullptr)) {
     return absl::InternalError(absl::StrCat(
         "Invalid datetime string in redfish property: ", lhs_time_str));
   }

@@ -86,10 +86,10 @@ TEST(ApplyPredicateRuleTest, ShouldApplyRelationalOperatorsCorrectly) {
   options.predicate = "Created>2022-03-16T15:51:00";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
 
-  options.predicate = "Created<2022-03-16T15:53:00";
+  options.predicate = "Created<2022-03-16T15:53:00Z";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
 
-  options.predicate = "Created=2023-09-16T18:50:24.633362";
+  options.predicate = "Created=2023-09-16T18:50:24.633362+00:00";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
 }
 
@@ -146,7 +146,7 @@ TEST(ApplyPredicateRuleTest, ShouldReturnErrorOnInvalidPredicates) {
   nlohmann::json obj = {{"MemorySize", 32},
                         {"Status", {{"State", "Enabled"}}},
                         {"Created", "2023-11-24T08:40:15-08:00"},
-                        {"InvalidCreated", "2023-11-2408:40:15-08:00"}};
+                        {"InvalidCreated", "2023-11-32T08:40:15-08:00"}};
 
   PredicateOptions options;
   options.node_set_size = 1;
@@ -181,10 +181,10 @@ TEST(ApplyPredicateRuleTest, ShouldReturnErrorOnInvalidPredicates) {
   options.predicate = "MemorySize==not_a_number";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsStatusInvalidArgument());
 
-  options.predicate = "Created=2023-11-25T12:00:00Z";
+  options.predicate = "Created=2023-11-32T12:00:00";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsStatusInvalidArgument());
 
-  options.predicate = "InvalidCreated=2023-09-16T18:50:24.633362";
+  options.predicate = "InvalidCreated=2023-09-16T18:50:24.633362+00:00";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsStatusInternal());
 }
 
