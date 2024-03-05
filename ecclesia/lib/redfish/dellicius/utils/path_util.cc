@@ -30,6 +30,7 @@
 #include "absl/strings/str_replace.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/status/macros.h"
 #include "single_include/nlohmann/json.hpp"
 #include "re2/re2.h"
 
@@ -119,30 +120,41 @@ absl::StatusOr<nlohmann::json> ResolveRedPathNodeToJson(
     return absl::InternalError("Given NodeName is empty or invalid.");
   }
 
-  nlohmann::json json_object_out = json_object;
-  // If given expression has multiple nodes, we need to return the json object
-  // associated with the leaf node.
-  for (auto &name : node_names) {
-    // If name referencing array, split name into array_name and array_index
-    int index = -1;
+  nlohmann::json json_object_out;
+
+  auto process_node_name = [&json_object_out](absl::string_view name,
+                                              const nlohmann::json &obj) {
     std::optional<std::pair<std::string, int>> name_and_index =
         SplitNodeNameIfArrayType(name);
+    int index = -1;
     if (name_and_index.has_value()) {
       name = name_and_index->first;
       index = name_and_index->second;
     }
-    if (!json_object_out.contains(name)) {
+    auto it = obj.find(name);
+    if (it != obj.end()) {
+      // Ideally the second call to `process_node_name` can move the *it to
+      // `json_object_out`.
+      json_object_out = *it;
+    } else {
       return absl::InternalError(
           absl::StrCat("Node ", name, " not found in json object"));
     }
-    json_object_out = json_object_out.at(name);
-
-    // If we have a valid index, refine further
     if (index >= 0) {
-      json_object_out = json_object_out[index];
+      json_object_out = std::move(json_object_out[index]);
     }
+    return absl::OkStatus();
+  };
+
+  // Greedy approach to remove unwanted part of the json object. This copies
+  // only the node that is required instead of making copies of the entire json
+  // object.
+  ECCLESIA_RETURN_IF_ERROR(process_node_name(node_names[0], json_object));
+  for (int i = 1; i < node_names.size(); ++i) {
+    ECCLESIA_RETURN_IF_ERROR(process_node_name(node_names[i], json_object_out));
   }
-  return json_object_out;
+
+  return std::move(json_object_out);
 }
 
 }  // namespace ecclesia
