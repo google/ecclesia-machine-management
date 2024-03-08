@@ -83,6 +83,12 @@ class QueryValueBuilder {
     return *this;
   }
 
+  // Sets `value` to a string.
+  QueryValueBuilder& operator=(absl::string_view other) {
+    query_value_.set_string_value(std::string(other));
+    return *this;
+  }
+
   // Move content from other value.
   QueryValueBuilder& operator=(QueryValue other) {
     query_value_ = std::move(other);

@@ -85,6 +85,13 @@ TEST_F(QueryValueBuilderTest, StringTest) {
   ASSERT_EQ(value_.string_value(), "testing");
 }
 
+TEST_F(QueryValueBuilderTest, StringViewTest) {
+  absl::string_view test_str = "testing";
+  builder_ = test_str;
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kStringValue);
+  ASSERT_EQ(value_.string_value(), "testing");
+}
+
 TEST_F(QueryValueBuilderTest, IdentifierTest) {
   Identifier id =
       ParseTextProtoOrDie(R"pb(local_devpath: "/phys/"
