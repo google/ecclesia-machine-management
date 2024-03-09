@@ -19,6 +19,7 @@
 
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 
 namespace ecclesia {
@@ -28,7 +29,7 @@ class QueryPlannerIntf {
  public:
   // Configuration for the QueryPlanner.
   struct QueryExecutionOptions {
-    // query_variables
+    QueryVariables &variables;
   };
 
   virtual ~QueryPlannerIntf() = default;

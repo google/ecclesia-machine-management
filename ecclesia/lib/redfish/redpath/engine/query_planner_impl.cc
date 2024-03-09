@@ -36,6 +36,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_replace.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
@@ -250,6 +251,8 @@ struct QueryExecutionContext {
   // RedPath Trie Node that containing next set of RedPath expressions to
   // execute.
   RedPathTrieNode *redpath_trie_node;
+  // QueryVariables used to execute a RedPath expression.
+  QueryVariables *query_variables;
   // Tracks RedPath prefixes executed along with Redfish QueryParameters.
   RedPathPrefixTracker redpath_prefix_tracker;
 
@@ -262,12 +265,13 @@ struct QueryExecutionContext {
 
   QueryExecutionContext(
       SubqueryOutputById *subquery_output_by_id_in,
-      RedPathTrieNode *redpath_trie_node_in,
+      RedPathTrieNode *redpath_trie_node_in, QueryVariables *query_variables_in,
       RedPathPrefixTracker redpath_prefix_tracker_in,
       std::unique_ptr<RedfishObject> redfish_object_in = nullptr,
       std::unique_ptr<RedfishIterable> redfish_iterable_in = nullptr)
       : subquery_output_by_id(ABSL_DIE_IF_NULL(subquery_output_by_id_in)),
         redpath_trie_node(ABSL_DIE_IF_NULL(redpath_trie_node_in)),
+        query_variables(ABSL_DIE_IF_NULL(query_variables_in)),
         redpath_prefix_tracker(std::move(redpath_prefix_tracker_in)),
         redfish_object(std::move(redfish_object_in)),
         redfish_iterable(std::move(redfish_iterable_in)) {}
@@ -409,17 +413,28 @@ QueryPlanner::ExecuteQueryExpression(
           std::unique_ptr<RedfishObject> indexed_node_as_object,
           GetRedfishObjectWithFreshness(get_params_for_redpath, indexed_node));
 
+      std::string new_predicate = expression.expression;
+      for (const auto &value :
+           current_execution_context.query_variables->values()) {
+        if (value.name().empty()) continue;
+        std::string variable_name = absl::StrCat("$", value.name());
+        if (absl::StrContains(new_predicate, variable_name)) {
+          new_predicate = absl::StrReplaceAll(new_predicate,
+                                              {{variable_name, value.value()}});
+        }
+      }
       ECCLESIA_ASSIGN_OR_RETURN(
           bool predicate_rule_result,
           ApplyPredicateRule(indexed_node_as_object->GetContentAsJson(),
-                             {.predicate = expression.expression,
+                             {.predicate = new_predicate,
                               .node_index = node_index,
                               .node_set_size = node_count}));
 
       if (predicate_rule_result) {
         QueryExecutionContext new_execution_context(
             current_execution_context.subquery_output_by_id, next_trie_node,
-            redpath_prefix_tracker, std::move(indexed_node_as_object));
+            current_execution_context.query_variables, redpath_prefix_tracker,
+            std::move(indexed_node_as_object));
         execution_contexts.push_back(std::move(new_execution_context));
       }
     }
@@ -469,6 +484,7 @@ QueryPlanner::ExecuteQueryExpression(
 
     QueryExecutionContext new_execution_context(
         current_execution_context.subquery_output_by_id, next_trie_node,
+        current_execution_context.query_variables,
         current_execution_context.redpath_prefix_tracker,
         std::move(redfish_object), std::move(redfish_iterable));
 
@@ -526,7 +542,8 @@ absl::StatusOr<QueryResult> QueryPlanner::Run(
 
   // Initialize query execution context to execute next RedPath expression.
   QueryExecutionContext query_execution_context(
-      &subquery_output_by_id, redpath_trie_node_.get(), RedPathPrefixTracker(),
+      &subquery_output_by_id, redpath_trie_node_.get(),
+      &query_execution_options.variables, RedPathPrefixTracker(),
       std::move(service_root_object));
 
   std::queue<QueryExecutionContext> node_queue;

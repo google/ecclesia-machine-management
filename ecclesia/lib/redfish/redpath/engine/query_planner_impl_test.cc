@@ -30,6 +30,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/factory.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
@@ -174,7 +175,8 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
       query, RedPathRedfishQueryParams{}, normalizer.get(), intf_.get());
   EXPECT_THAT(qp, IsOk());
 
-  absl::StatusOr<QueryResult> query_result = (*qp)->Run({});
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  absl::StatusOr<QueryResult> query_result = (*qp)->Run({args1});
 
   EXPECT_THAT(query_result, IsOk());
   EXPECT_THAT(expected_query_result,
@@ -237,8 +239,9 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFreshnessFromQuery) {
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
       query, RedPathRedfishQueryParams{}, normalizer.get(), intf.get());
   EXPECT_THAT(qp, IsOk());
-  EXPECT_THAT((*qp)->Run({}), IsOk());
-  EXPECT_THAT((*qp)->Run({}), IsOk());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  EXPECT_THAT((*qp)->Run({args1}), IsOk());
+  EXPECT_THAT((*qp)->Run({args1}), IsOk());
 
   // We expect Chassis to be queried twice due to freshness requirement.
   EXPECT_EQ(chassis_query_count, 2);
@@ -288,8 +291,138 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesParamsFromRules) {
       BuildQueryPlanner(query, std::move(redpath_redfish_query_params),
                         normalizer.get(), intf_.get());
   EXPECT_THAT(qp, IsOk());
-  EXPECT_THAT((*qp)->Run({}), IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  EXPECT_THAT((*qp)->Run({args1}), IsOk());
   EXPECT_TRUE(expand_requested);
+}
+
+TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "Assembly"
+          root_subquery_ids: "Chassis"
+          redpath: "/Assembly/Assemblies[Name=indus]"
+          properties { property: "Name" type: STRING }
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[Name=$Name and Reading<$Threshold]"
+          properties { property: "Name" type: STRING }
+          properties { property: "Reading" type: INT64 }
+        }
+        subquery {
+          subquery_id: "UnknownPropertySubquery"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[*]"
+          properties { property: "UnknownProperty" type: STRING }
+        }
+        subquery {
+          subquery_id: "UnknownNodeNameSubquery"
+          root_subquery_ids: "Sensors"
+          redpath: "/UnknownNodeName"
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+
+  QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "ChassisSubTreeTest"
+    data {
+      fields {
+        key: "Chassis"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Assembly"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Name"
+                            value { string_value: "indus" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                fields {
+                  key: "Id"
+                  value { string_value: "chassis" }
+                }
+                fields {
+                  key: "Sensors"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Name"
+                            value { string_value: "indus_latm_temp" }
+                          }
+                          fields {
+                            key: "Reading"
+                            value { int_value: 35 }
+                          }
+                          fields {
+                            key: "UnknownNodeNameSubquery"
+                            value {}
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                fields {
+                  key: "UnknownPropertySubquery"
+                  value {}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
+      query, RedPathRedfishQueryParams{}, normalizer.get(), intf_.get());
+  EXPECT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  ecclesia::QueryVariables::VariableValue val1;
+  ecclesia::QueryVariables::VariableValue val2;
+  ecclesia::QueryVariables::VariableValue val3;
+  val1.set_name("Threshold");
+  val1.set_value("60");
+  val2.set_name("Name");
+  val2.set_value("indus_latm_temp");
+  val3.set_name("Type");
+  val3.set_value("Rotational");
+
+  *args1.add_values() = val1;
+  *args1.add_values() = val2;
+  *args1.add_values() = val3;
+  absl::StatusOr<QueryResult> query_result = (*qp)->Run({args1});
+
+  EXPECT_THAT(query_result, IsOk());
+  EXPECT_THAT(expect_query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(query_result.value())));
 }
 
 }  // namespace

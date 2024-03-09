@@ -48,6 +48,7 @@ cc_test(
         "//ecclesia/lib/redfish/dellicius/engine:factory",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/redfish/transport:cache",
@@ -68,10 +69,9 @@ cc_library(
     hdrs = ["query_planner.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
-        "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status:statusor",
     ],
 )
