@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include "ecclesia/lib/redfish/event/server/subscription_store_impl.h"
-
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -25,11 +23,14 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/event/server/subscription.h"
+#include "ecclesia/lib/redfish/event/server/subscription_store_impl.h"
+#include "ecclesia/lib/testing/status.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
@@ -56,14 +57,18 @@ constexpr absl::string_view mock_trigger_str = R"json(
 
 class SubscriptionStoreImplTest : public ::testing::Test {
  protected:
-  SubscriptionStoreImplTest() {
+  absl::Status SubscriptionStoreTestSetup() {
     subscription_store_ = CreateSubscriptionStore();
     // Create event source ID
     auto trigger = nlohmann::json::parse(mock_trigger_str);
-    EXPECT_THAT(trigger.is_discarded(), Eq(false));
+    if (trigger.is_discarded()) {
+      return absl::InvalidArgumentError("Invalid mock trigger");
+    }
 
     auto trigger_or_status_one = Trigger::Create(trigger);
-    EXPECT_THAT(trigger_or_status_one.ok(), Eq(true));
+    if (!trigger_or_status_one.ok()) {
+      return trigger_or_status_one.status();
+    }
 
     EventSourceId event_source_id_one("1", EventSourceId::Type::kDbusObjects);
     trigger_or_status_one->event_source_to_uri.insert(
@@ -72,23 +77,30 @@ class SubscriptionStoreImplTest : public ::testing::Test {
     test_id_to_triggers_.try_emplace("1", *trigger_or_status_one);
 
     auto trigger_or_status_two = Trigger::Create(trigger);
-    EXPECT_THAT(trigger_or_status_two.ok(), Eq(true));
+    if (!trigger_or_status_two.ok()) {
+      return trigger_or_status_two.status();
+    }
 
     EventSourceId event_source_id_two("2", EventSourceId::Type::kDbusObjects);
     trigger_or_status_two->event_source_to_uri.insert(
         {event_source_id_two, {"/redfish/v1/Chassis/Foo/Sensors/y"}});
 
     test_id_to_triggers_.try_emplace("2", *trigger_or_status_two);
+    return absl::OkStatus();
   }
 
   // Subscription store under test.
   std::unique_ptr<SubscriptionStore> subscription_store_ = nullptr;
   absl::flat_hash_map<std::string, Trigger> test_id_to_triggers_;
+  absl::flat_hash_map<EventSourceId, absl::flat_hash_set<std::string>>
+      test_event_source_to_uris_;
 };
 
 TEST_F(SubscriptionStoreImplTest, CreateNewSubscriptionSuccess) {
+  ASSERT_THAT(SubscriptionStoreTestSetup(), IsOk());
   auto subscription_context = std::make_unique<SubscriptionContext>(
-    SubscriptionId(1), test_id_to_triggers_, [](const nlohmann::json& event){});
+      SubscriptionId(1), test_event_source_to_uris_, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
 
   // Expect subscription creation to succeed.
   EXPECT_THAT(subscription_store_->AddNewSubscription(
@@ -98,8 +110,10 @@ TEST_F(SubscriptionStoreImplTest, CreateNewSubscriptionSuccess) {
 }
 
 TEST_F(SubscriptionStoreImplTest, BadSubscriptionFail) {
+  ASSERT_THAT(SubscriptionStoreTestSetup(), IsOk());
   auto subscription_context_zero_id = std::make_unique<SubscriptionContext>(
-    SubscriptionId(0), test_id_to_triggers_, [](const nlohmann::json& event){});
+      SubscriptionId(0), test_event_source_to_uris_, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
 
   // Reject subscription creation.
   EXPECT_THAT(subscription_store_->AddNewSubscription(
@@ -108,10 +122,13 @@ TEST_F(SubscriptionStoreImplTest, BadSubscriptionFail) {
 }
 
 TEST_F(SubscriptionStoreImplTest, CreateDupSubscriptionFail) {
+  ASSERT_THAT(SubscriptionStoreTestSetup(), IsOk());
   auto subscription_context_one = std::make_unique<SubscriptionContext>(
-    SubscriptionId(1), test_id_to_triggers_, [](const nlohmann::json& event){});
+      SubscriptionId(1), test_event_source_to_uris_, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
   auto subscription_context_one_again = std::make_unique<SubscriptionContext>(
-    SubscriptionId(1), test_id_to_triggers_, [](const nlohmann::json& event){});
+      SubscriptionId(1), test_event_source_to_uris_, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
 
   // Expect subscription creation to succeed.
   EXPECT_THAT(subscription_store_->AddNewSubscription(
@@ -122,10 +139,13 @@ TEST_F(SubscriptionStoreImplTest, CreateDupSubscriptionFail) {
 }
 
 TEST_F(SubscriptionStoreImplTest, GetSubscriptionByEventSourceIdSuccess) {
+  ASSERT_THAT(SubscriptionStoreTestSetup(), IsOk());
   auto subscription_context_one = std::make_unique<SubscriptionContext>(
-    SubscriptionId(1), test_id_to_triggers_, [](const nlohmann::json& event){});
+      SubscriptionId(1), test_event_source_to_uris_, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
   auto subscription_context_two = std::make_unique<SubscriptionContext>(
-    SubscriptionId(2), test_id_to_triggers_, [](const nlohmann::json& event){});
+      SubscriptionId(2), test_event_source_to_uris_, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
 
   EXPECT_THAT(subscription_store_->AddNewSubscription(
     std::move(subscription_context_one)).ok(), Eq(true));
@@ -142,10 +162,13 @@ TEST_F(SubscriptionStoreImplTest, GetSubscriptionByEventSourceIdSuccess) {
 }
 
 TEST_F(SubscriptionStoreImplTest, GetSubscriptionByUnknownEventSourceIdFail) {
+  ASSERT_THAT(SubscriptionStoreTestSetup(), IsOk());
   auto subscription_context_one = std::make_unique<SubscriptionContext>(
-    SubscriptionId(1), test_id_to_triggers_, [](const nlohmann::json& event){});
+      SubscriptionId(1), test_event_source_to_uris_, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
   auto subscription_context_two = std::make_unique<SubscriptionContext>(
-    SubscriptionId(2), test_id_to_triggers_, [](const nlohmann::json& event){});
+      SubscriptionId(2), test_event_source_to_uris_, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
 
   EXPECT_THAT(subscription_store_->AddNewSubscription(
     std::move(subscription_context_one)).ok(), Eq(true));
@@ -161,10 +184,13 @@ TEST_F(SubscriptionStoreImplTest, GetSubscriptionByUnknownEventSourceIdFail) {
 }
 
 TEST_F(SubscriptionStoreImplTest, ToJSONAndToString) {
+  ASSERT_THAT(SubscriptionStoreTestSetup(), IsOk());
   auto subscription_context_one = std::make_unique<SubscriptionContext>(
-    SubscriptionId(1), test_id_to_triggers_, [](const nlohmann::json& event){});
+      SubscriptionId(1), test_event_source_to_uris_, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
   auto subscription_context_two = std::make_unique<SubscriptionContext>(
-    SubscriptionId(2), test_id_to_triggers_, [](const nlohmann::json& event){});
+      SubscriptionId(2), test_event_source_to_uris_, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
 
   EXPECT_THAT(subscription_store_->AddNewSubscription(
     std::move(subscription_context_one)).ok(), Eq(true));
@@ -185,8 +211,10 @@ TEST_F(SubscriptionStoreImplTest, ToJSONAndToString) {
 }
 
 TEST_F(SubscriptionStoreImplTest, DeleteSubscriptionSuccess) {
+  ASSERT_THAT(SubscriptionStoreTestSetup(), IsOk());
   auto subscription_context = std::make_unique<SubscriptionContext>(
-    SubscriptionId(1), test_id_to_triggers_, [](const nlohmann::json& event){});
+      SubscriptionId(1), test_event_source_to_uris_, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
 
   EXPECT_THAT(subscription_store_->AddNewSubscription(
     std::move(subscription_context)).ok(), Eq(true));
@@ -199,8 +227,10 @@ TEST_F(SubscriptionStoreImplTest, DeleteSubscriptionSuccess) {
 }
 
 TEST_F(SubscriptionStoreImplTest, DeleteUnknownSubscriptionNoop) {
+  ASSERT_THAT(SubscriptionStoreTestSetup(), IsOk());
   auto subscription_context = std::make_unique<SubscriptionContext>(
-    SubscriptionId(1), test_id_to_triggers_, [](const nlohmann::json& event){});
+      SubscriptionId(1), test_event_source_to_uris_, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
 
   EXPECT_THAT(subscription_store_->AddNewSubscription(
     std::move(subscription_context)).ok(), Eq(true));

@@ -19,7 +19,9 @@
 #include <string>
 #include <vector>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -31,6 +33,8 @@
 namespace ecclesia {
 
 namespace {
+
+using ::testing::UnorderedElementsAre;
 
 TEST(EventSourceIdTest, Constructor) {
   EventSourceId source_id("123", EventSourceId::Type::kDbusObjects);
@@ -170,9 +174,9 @@ TEST(SubscriptionServiceTriggerTest, Create_ValidTrigger) {
   ASSERT_TRUE(trigger_or_status.ok());
 
   const Trigger& trigger = trigger_or_status.value();
-  EXPECT_EQ(
-      trigger.origin_resources,
-      std::vector<std::string>({"/redfish/v1/node1", "/redfish/v1/node2"}));
+  EXPECT_EQ(trigger.origin_resources,
+            absl::flat_hash_set<std::string>(
+                {"/redfish/v1/node1", "/redfish/v1/node2"}));
   EXPECT_EQ(trigger.predicate, "");
   EXPECT_TRUE(trigger.mask);
 }
@@ -229,8 +233,8 @@ TEST(SubscriptionServiceTriggerTest, ToJSON) {
   nlohmann::json json = trigger_or_status->ToJSON();
 
   EXPECT_EQ(json["origin_resources"].size(), 2);
-  EXPECT_EQ(json["origin_resources"][0], "/redfish/v1/node1");
-  EXPECT_EQ(json["origin_resources"][1], "/redfish/v1/node2");
+  EXPECT_THAT(json["origin_resources"],
+              UnorderedElementsAre("/redfish/v1/node1", "/redfish/v1/node2"));
   EXPECT_EQ(json["predicate"], "Value>23");
   EXPECT_EQ(json["mask"], false);
   EXPECT_TRUE(json["event_source_to_uri"].is_array());
@@ -249,9 +253,6 @@ TEST(SubscriptionServiceTriggerTest, ToString) {
       "OriginResources":[
         {
           "@odata.id": "/redfish/v1/node1"
-        },
-        {
-          "@odata.id": "/redfish/v1/node2"
         }
       ],
       "Predicate": "Value>23"
@@ -265,7 +266,7 @@ TEST(SubscriptionServiceTriggerTest, ToString) {
   std::string output_str = trigger_or_status->ToString();
   std::string expected_str =
       "{\"event_source_to_uri\":[],\"mask\":false,\"origin_resources\":[\"/"
-      "redfish/v1/node1\",\"/redfish/v1/node2\"],\"predicate\":\"Value>23\"}";
+      "redfish/v1/node1\"],\"predicate\":\"Value>23\"}";
 
   EXPECT_EQ(output_str, expected_str);
 }

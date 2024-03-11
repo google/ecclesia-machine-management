@@ -27,12 +27,14 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/event/server/subscription.h"
 #include "ecclesia/lib/redfish/event/server/subscription_mock.h"
+#include "ecclesia/lib/testing/status.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
@@ -45,6 +47,7 @@ using ::testing::Eq;
 using ::testing::InvokeArgument;
 using ::testing::Return;
 using ::testing::UnorderedElementsAre;
+using ::testing::WithArg;
 
 bool CompareJson(const nlohmann::json& json1, const nlohmann::json& json2,
                  const std::vector<std::string>& excludedFields = {}) {
@@ -133,22 +136,160 @@ TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
   ASSERT_TRUE(!request.is_discarded());
 
   EXPECT_CALL(*subscription_backend_ptr_,
-              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x")))
-      .WillOnce(Return(std::vector<EventSourceId>(
-          {{"1", EventSourceId::Type::kDbusObjects},
-           {"2", EventSourceId::Type::kDbusObjects}})));
-  EXPECT_CALL(*subscription_backend_ptr_,
-              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y")))
-      .WillOnce(Return(std::vector<EventSourceId>(
-          {{"3", EventSourceId::Type::kDbusObjects}})));
+              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _))
+      .WillOnce(DoAll(
+          InvokeArgument<1>(absl::OkStatus(),
+                            std::vector<EventSourceId>(
+                                {{"1", EventSourceId::Type::kDbusObjects},
+                                 {"2", EventSourceId::Type::kDbusObjects}})),
+          Return(absl::OkStatus())));
 
-  EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(1);
+  EXPECT_CALL(*subscription_backend_ptr_,
+              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _))
+      .WillOnce(DoAll(
+          InvokeArgument<1>(absl::OkStatus(),
+                            std::vector<EventSourceId>(
+                                {{"3", EventSourceId::Type::kDbusObjects}})),
+          Return(absl::OkStatus())));
+
+  EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_))
+      .WillOnce(WithArg<0>([](std::unique_ptr<SubscriptionContext> context) {
+        EXPECT_GT(context->event_source_to_uri.size(), 0);
+        EXPECT_GT(context->id_to_triggers.size(), 0);
+        return absl::OkStatus();
+      }));
 
   // Expect subscription creation to succeed.
-  EXPECT_THAT(subscription_service_
-                  ->CreateSubscription(request, [](const std::string&) {})
-                  .status(),
-              absl::OkStatus());
+  subscription_service_->CreateSubscription(
+      request,
+      [](const absl::StatusOr<SubscriptionId>& subscription_id) {
+        EXPECT_THAT(subscription_id, IsOk());
+      },
+      [](const std::string&) {});
+}
+
+TEST_F(SubscriptionServiceImplTest,
+       ShouldNotCreateWhenBackendSubscriptionRequestFails) {
+  // Create valid subscription request.
+  static constexpr absl::string_view valid_request = R"json(
+    {
+      "EventFormatType": "Event",
+      "Protocol": "Redfish",
+      "SubscriptionType": "OEM",
+      "HeartbeatIntervalMinutes": 2,
+      "IncludeOriginOfCondition": true,
+      "DeliveryRetryPolicy": "SuspendRetries",
+      "OEMSubscriptionType": "gRPC",
+      "Oem":{
+        "Google": {
+          "Triggers": [
+            {
+              "Id": "1",
+              "OriginResources":[
+                {
+                  "@odata.id": "/redfish/v1/Chassis/Foo/Sensors/x"
+                },
+                {
+                  "@odata.id": "/redfish/v1/Chassis/Foo/Sensors/y"
+                }
+              ],
+              "Predicate": "Reading>23"
+            }
+          ]
+        }
+      }
+    }
+  )json";
+
+  nlohmann::json request = nlohmann::json::parse(valid_request);
+  ASSERT_TRUE(!request.is_discarded());
+
+  // Backend->Subscribe returns an error.
+  {
+    EXPECT_CALL(*subscription_backend_ptr_, Subscribe(_, _))
+        .WillOnce(DoAll(
+            InvokeArgument<1>(absl::OkStatus(),
+                              std::vector<EventSourceId>(
+                                  {{"1", EventSourceId::Type::kDbusObjects},
+                                   {"2", EventSourceId::Type::kDbusObjects}})),
+            Return(absl::InternalError(""))));
+
+    // This verifies we don't partially subscribe.
+    EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
+
+    subscription_service_->CreateSubscription(
+        request,
+        [](const absl::StatusOr<SubscriptionId>& subscription_id) {
+          EXPECT_THAT(subscription_id, IsStatusInternal());
+        },
+        [](const std::string&) {});
+  }
+
+  // Backend->Subscribe returns unexpected responses.
+  {
+    EXPECT_CALL(*subscription_backend_ptr_,
+                Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _))
+        .WillOnce(DoAll(
+            InvokeArgument<1>(absl::OkStatus(),
+                              std::vector<EventSourceId>(
+                                  {{"1", EventSourceId::Type::kDbusObjects},
+                                   {"2", EventSourceId::Type::kDbusObjects}})),
+            InvokeArgument<1>(absl::OkStatus(),
+                              std::vector<EventSourceId>(
+                                  {{"1", EventSourceId::Type::kDbusObjects},
+                                   {"2", EventSourceId::Type::kDbusObjects}})),
+            Return(absl::OkStatus())));
+
+    EXPECT_CALL(*subscription_backend_ptr_,
+                Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _))
+        .WillOnce(DoAll(
+            InvokeArgument<1>(absl::OkStatus(),
+                              std::vector<EventSourceId>(
+                                  {{"3", EventSourceId::Type::kDbusObjects}})),
+            InvokeArgument<1>(absl::OkStatus(),
+                              std::vector<EventSourceId>(
+                                  {{"3", EventSourceId::Type::kDbusObjects}})),
+            Return(absl::OkStatus())));
+
+    // This verifies we don't partially subscribe.
+    EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
+
+    subscription_service_->CreateSubscription(
+        request,
+        [](const absl::StatusOr<SubscriptionId>& subscription_id) {
+          EXPECT_THAT(subscription_id, IsStatusInternal());
+        },
+        [](const std::string&) {});
+  }
+
+  // Backend->Subscribe returns an error in callback.
+  {
+    EXPECT_CALL(*subscription_backend_ptr_,
+                Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _))
+        .WillOnce(DoAll(
+            InvokeArgument<1>(absl::OkStatus(),
+                              std::vector<EventSourceId>(
+                                  {{"1", EventSourceId::Type::kDbusObjects},
+                                   {"2", EventSourceId::Type::kDbusObjects}})),
+            Return(absl::OkStatus())));
+
+    EXPECT_CALL(*subscription_backend_ptr_,
+                Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _))
+        .WillOnce(DoAll(
+            InvokeArgument<1>(absl::InternalError(""),
+                              std::vector<EventSourceId>(
+                                  {{"3", EventSourceId::Type::kDbusObjects}})),
+            Return(absl::OkStatus())));
+
+    EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
+
+    subscription_service_->CreateSubscription(
+        request,
+        [](const absl::StatusOr<SubscriptionId>& subscription_id) {
+          EXPECT_THAT(subscription_id, IsStatusInternal());
+        },
+        [](const std::string&) {});
+  }
 }
 
 TEST_F(SubscriptionServiceImplTest,
@@ -262,13 +403,15 @@ TEST_F(SubscriptionServiceImplTest,
     ASSERT_TRUE(!request.is_discarded());
 
     // Verify mock calls.
-    EXPECT_CALL(*subscription_backend_ptr_, Subscribe(_)).Times(0);
+    EXPECT_CALL(*subscription_backend_ptr_, Subscribe(_, _)).Times(0);
     EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
     // Expect subscription creation to fail.
-    EXPECT_NE(subscription_service_
-                  ->CreateSubscription(request, [](const std::string&) {})
-                  .status(),
-              absl::OkStatus());
+    subscription_service_->CreateSubscription(
+        request,
+        [](const absl::StatusOr<SubscriptionId>& subscription_id) {
+          EXPECT_NE(subscription_id.status(), absl::OkStatus());
+        },
+        [](const std::string&) {});
   }
 }
 
@@ -371,8 +514,11 @@ TEST_F(SubscriptionServiceImplTest, ShouldSendEventIfOriginOfConditionIsValid) {
       {"1", *trigger_or_status}};
 
   int on_event_callback_count = 0;
+  absl::flat_hash_map<EventSourceId, absl::flat_hash_set<std::string>>
+      test_event_source_to_uris;
+  test_event_source_to_uris[event_source_id] = {"/redfish/v1/node1"};
   const auto context = std::make_unique<SubscriptionContext>(
-      SubscriptionId(1), test_id_to_triggers,
+      SubscriptionId(1), test_event_source_to_uris, test_id_to_triggers,
       [&on_event_callback_count, expected_event](const nlohmann::json& event) {
         ++on_event_callback_count;
         EXPECT_TRUE(CompareJson(event, expected_event,
@@ -467,25 +613,36 @@ TEST_F(SubscriptionServiceImplTest, ShouldDispatchEventsAfterLastEventId) {
       .WillOnce(Return(std::vector<nlohmann::json>{event1, event2}));
 
   EXPECT_CALL(*subscription_backend_ptr_,
-              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x")))
-      .WillOnce(Return(std::vector<EventSourceId>(
-          {{/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
-           {/*key_in=*/ "2", EventSourceId::Type::kDbusObjects}})));
+              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _))
+      .WillOnce(DoAll(
+          InvokeArgument<1>(absl::OkStatus(),
+                            std::vector<EventSourceId>(
+                                {{"1", EventSourceId::Type::kDbusObjects},
+                                 {"2", EventSourceId::Type::kDbusObjects}})),
+          Return(absl::OkStatus())));
+
   EXPECT_CALL(*subscription_backend_ptr_,
-              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y")))
-      .WillOnce(Return(std::vector<EventSourceId>(
-          {{ "3", EventSourceId::Type::kDbusObjects}})));
+              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _))
+      .WillOnce(DoAll(
+          InvokeArgument<1>(absl::OkStatus(),
+                            std::vector<EventSourceId>(
+                                {{"3", EventSourceId::Type::kDbusObjects}})),
+          Return(absl::OkStatus())));
+
+  EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(1);
 
   std::vector<nlohmann::json> actual_events;
-  EXPECT_THAT(subscription_service_
-                  ->CreateSubscription(request,
-                                       [&](const nlohmann::json& data) {
-                                         actual_events.push_back(data);
-                                       })
-                  .status(),
-              absl::OkStatus());
+  size_t callback_count = 0;
+  subscription_service_->CreateSubscription(
+      request,
+      [&callback_count](const absl::StatusOr<SubscriptionId>& subscription_id) {
+        ++callback_count;
+        EXPECT_THAT(subscription_id, IsOk());
+      },
+      [&](const nlohmann::json& data) { actual_events.push_back(data); });
 
   EXPECT_THAT(actual_events, UnorderedElementsAre(event1, event2));
+  EXPECT_EQ(callback_count, 1);
 }
 
 }  // namespace

@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -134,8 +135,12 @@ struct Trigger {
   static absl::StatusOr<Trigger> Create(const nlohmann::json &trigger_json);
 
   // Constructor for Trigger
-  explicit Trigger(std::vector<std::string> origin_resources_in,
+  explicit Trigger(absl::string_view id_in,
+                   absl::flat_hash_set<std::string> origin_resources_in,
                    absl::string_view predicate_in = "", bool mask_in = false);
+
+  // Trigger id
+  std::string id;
 
   // Converts Trigger to JSON format
   nlohmann::json ToJSON() const;
@@ -144,7 +149,7 @@ struct Trigger {
   std::string ToString() const;
 
   // List of origin resources associated with the Trigger
-  std::vector<std::string> origin_resources;
+  absl::flat_hash_set<std::string> origin_resources;
 
   // Map of event source to Redfish resource URI
   EventSourceToUri event_source_to_uri;
@@ -156,13 +161,25 @@ struct Trigger {
   bool mask;
 };
 
+// Structure representing a subscription
 struct SubscriptionContext {
   SubscriptionContext(
       const SubscriptionId &subscription_id_in,
+      const absl::flat_hash_map<EventSourceId, absl::flat_hash_set<std::string>>
+          &event_source_to_uris_in,
       absl::flat_hash_map<std::string, Trigger> id_to_triggers_in,
       std::function<void(const nlohmann::json &)> &&on_event_callback_in);
 
+  // Unique identifier for the subscription
   SubscriptionId subscription_id;
+
+  // Map of event source IDs to corresponding URIs.
+  // This map is used to process incoming events by looking up the URI an event
+  // is associated with and then the URI is used to create an internal query
+  // that builds `OriginOfCondtion`.
+  absl::flat_hash_map<EventSourceId, absl::flat_hash_set<std::string>>
+      event_source_to_uri;
+
   // Map of trigger IDs to corresponding Trigger objects
   // This map associates each trigger ID with the corresponding Trigger
   // object, enabling efficient lookup and management of triggers for a given
@@ -276,6 +293,12 @@ class SubscriptionService {
   virtual absl::StatusOr<SubscriptionId> CreateSubscription(
       const nlohmann::json &request,
       std::function<void(const nlohmann::json &)> &&on_event_callback) = 0;
+
+  virtual void CreateSubscription(
+      const nlohmann::json &request,
+      std::function<void(const absl::StatusOr<SubscriptionId> &)>
+          on_subscribe_callback,
+      std::function<void(const nlohmann::json &)> on_event_callback) = 0;
 
   // Deletes the subscription with the given subscription ID
   virtual void DeleteSubscription(const SubscriptionId &subscription_id) = 0;

@@ -19,9 +19,9 @@
 #include <functional>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/hash/hash.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -77,9 +77,12 @@ std::string EventId::ToString() const { return this->ToJSON().dump(); }
 
 SubscriptionContext::SubscriptionContext(
     const SubscriptionId& subscription_id_in,
+    const absl::flat_hash_map<EventSourceId, absl::flat_hash_set<std::string>>&
+        event_source_to_uris_in,
     absl::flat_hash_map<std::string, Trigger> id_to_triggers_in,
     std::function<void(const nlohmann::json&)>&& on_event_callback_in)
     : subscription_id(subscription_id_in),
+      event_source_to_uri(event_source_to_uris_in),
       id_to_triggers(std::move(id_to_triggers_in)),
       on_event_callback(std::move(on_event_callback_in)) {}
 
@@ -104,9 +107,9 @@ absl::StatusOr<Trigger> Trigger::Create(const nlohmann::json& trigger_json) {
     return absl::InvalidArgumentError("Origin resources not populated");
   }
 
-  std::vector<std::string> origin_resources;
+  absl::flat_hash_set<std::string> origin_resources;
   for (const auto& origin_resource : *find_origin_resources) {
-    origin_resources.push_back(origin_resource["@odata.id"].get<std::string>());
+    origin_resources.insert(origin_resource["@odata.id"].get<std::string>());
   }
 
   std::string predicate;
@@ -121,14 +124,16 @@ absl::StatusOr<Trigger> Trigger::Create(const nlohmann::json& trigger_json) {
   }
 
   // Create a Trigger object with the extracted information
-  Trigger trigger(std::move(origin_resources), predicate, event_mask);
+  Trigger trigger(id, std::move(origin_resources), predicate, event_mask);
 
   return trigger;
 }
 
-Trigger::Trigger(std::vector<std::string> origin_resources_in,
+Trigger::Trigger(absl::string_view id_in,
+                 absl::flat_hash_set<std::string> origin_resources_in,
                  absl::string_view predicate_in, bool mask_in)
-    : origin_resources(std::move(origin_resources_in)),
+    : id(id_in),
+      origin_resources(std::move(origin_resources_in)),
       predicate(predicate_in),
       mask(mask_in) {}
 
