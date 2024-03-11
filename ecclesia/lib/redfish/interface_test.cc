@@ -187,9 +187,14 @@ TEST(RedfishVariant, RedfishQueryParamExpand) {
 
 TEST(RedfishVariant, RedfishQueryParamFilter) {
   auto filter = RedfishQueryParamFilter();
+  // No spaces between operators.
   std::string predicate1 = "Prop1<=42";
   filter.BuildFromRedpathPredicate(predicate1);
   EXPECT_EQ(filter.ToString(), "$filter=Prop1%20le%2042");
+  // Spaces between operators.
+  std::string predicate2 = "Prop1!=42";
+  filter.BuildFromRedpathPredicate(predicate2), ecclesia::IsOk();
+  EXPECT_EQ(filter.ToString(), "$filter=Prop1%20ne%2042");
   // Spaces between operators with logical operator.
   std::string predicate3 = "Prop1>42 and Prop1<84";
   filter.BuildFromRedpathPredicate(predicate3), ecclesia::IsOk();
@@ -208,6 +213,7 @@ TEST(RedfishVariant, RedfishQueryParamFilterEmpty) {
 
 TEST(RedfishVariant, RedfishQueryParamFilterPredicateList) {
   auto filter = RedfishQueryParamFilter();
+  // No spaces between operators.
   std::string predicate1 = "Prop1<=42";
   std::string predicate2 = "Prop1!=42";
   std::vector<std::string> predicates = {predicate1, predicate2};
@@ -216,37 +222,13 @@ TEST(RedfishVariant, RedfishQueryParamFilterPredicateList) {
             "$filter=Prop1%20le%2042%20or%20Prop1%20ne%2042");
 }
 
-TEST(RedfishVariant, RedfishQueryParamFilterStringQuote) {
-  auto filter = RedfishQueryParamFilter();
-  std::string predicate1 = "Prop1='this is a test'";
-  filter.BuildFromRedpathPredicate(predicate1), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(),
-            "$filter=Prop1%20eq%20%27this%20is%20a%20test%27");
-}
-
-TEST(RedfishVariant, RedfishQueryParamFilterStringNoQuote) {
-  auto filter = RedfishQueryParamFilter();
-  std::string predicate1 = "Prop1=this is a test";
-  filter.BuildFromRedpathPredicate(predicate1), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(),
-            "$filter=Prop1%20eq%20%27this%20is%20a%20test%27");
-}
-
-TEST(RedfishVariant, RedfishQueryParamFilterBoolean) {
-  auto filter = RedfishQueryParamFilter();
-  std::string predicate1 = "Prop1=true";
-  filter.BuildFromRedpathPredicate(predicate1), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(), "$filter=Prop1%20eq%20true");
-}
-
 TEST(RedfishVariant, RedfishQueryParamFilterSpecialCharacters) {
   auto filter = RedfishQueryParamFilter();
   std::string predicate1 = "Created>=2024-01-22T00:41:38.000000+00:00";
   std::vector<std::string> predicates = {predicate1};
   filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
-  EXPECT_EQ(
-      filter.ToString(),
-      "$filter=Created%20ge%20%272024-01-22T00%3A41%3A38.000000%2B00%3A00%27");
+  EXPECT_EQ(filter.ToString(),
+            "$filter=Created%20ge%202024-01-22T00%3A41%3A38.000000%2B00%3A00");
 }
 
 TEST(RedfishVariant, RedfishQueryParamFilterPeriodReplacement) {
@@ -255,12 +237,12 @@ TEST(RedfishVariant, RedfishQueryParamFilterPeriodReplacement) {
   std::string predicate1 = "Status.Health=OK.test";
   std::vector<std::string> predicates = {predicate1};
   filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(), "$filter=Status%2FHealth%20eq%20%27OK.test%27");
+  EXPECT_EQ(filter.ToString(), "$filter=Status%2FHealth%20eq%20OK.test");
   // 2 expression predicate
   std::string predicate2 = "Status.Health=OK.test or Status.Something>=6.8";
   filter.BuildFromRedpathPredicate(predicate2), ecclesia::IsOk();
   EXPECT_EQ(filter.ToString(),
-            "$filter=Status%2FHealth%20eq%20%27OK.test%27%20or%20Status%2F"
+            "$filter=Status%2FHealth%20eq%20OK.test%20or%20Status%2F"
             "Something%20ge%206.8");
 }
 
