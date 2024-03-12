@@ -139,8 +139,8 @@ CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
 }
 
 CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
-                          size_t (*param)(char *, size_t, size_t,
-                                          void *)) {
+                                        size_t (*param)(char *, size_t, size_t,
+                                                        void *)) {
   return ::curl_easy_setopt(curl, option, param);
 }
 
@@ -403,7 +403,8 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
   libcurl_->curl_easy_setopt(curl, CURLOPT_WRITEHEADER, &context);
 
   if (handler != nullptr) {
-    libcurl_->curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+    libcurl_->curl_easy_setopt(curl, CURLOPT_NOPROGRESS,
+                               static_cast<uint64_t>(0L));
     libcurl_->curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION,
                                ProgressCallback);
     libcurl_->curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &context);
