@@ -52,8 +52,6 @@ class SubscriptionStoreMock : public SubscriptionStore {
 
 class SubscriptionBackendMock : public SubscriptionBackend {
  public:
-  MOCK_METHOD(absl::StatusOr<std::vector<EventSourceId>>, Subscribe,
-              (absl::string_view url), (override));
   MOCK_METHOD(absl::Status, Subscribe,
               (absl::string_view url, SubscribeCallback subscribe_callback),
               (override));
@@ -72,11 +70,6 @@ class EventStoreMock : public EventStore {
 
 class SubscriptionServiceMock : public SubscriptionService {
  public:
-  MOCK_METHOD(absl::StatusOr<SubscriptionId>, CreateSubscription,
-              (const nlohmann::json &request,
-               std::function<void(const nlohmann::json &)> &&on_event_callback),
-              (override));
-
   MOCK_METHOD(void, CreateSubscription,
               (const nlohmann::json &request,
                std::function<void(const absl::StatusOr<SubscriptionId> &)>

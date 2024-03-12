@@ -331,14 +331,6 @@ class SubscriptionServiceImpl
     }
   }
 
-  ABSL_DEPRECATED("Use asynchrounous version of CreateSubscription instead.")
-  absl::StatusOr<SubscriptionId> CreateSubscription(
-      const nlohmann::json &request,
-      std::function<void(const nlohmann::json &)> &&on_event_callback)
-      override {
-    return absl::UnimplementedError("CreateSubscription:: Deprecated!");
-  }
-
   void DeleteSubscription(const SubscriptionId& subscription_id) override {
     subscription_store_->DeleteSubscription(subscription_id);
   }
