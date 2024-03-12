@@ -403,6 +403,7 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
   libcurl_->curl_easy_setopt(curl, CURLOPT_WRITEHEADER, &context);
 
   if (handler != nullptr) {
+    libcurl_->curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
     libcurl_->curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION,
                                ProgressCallback);
     libcurl_->curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &context);
