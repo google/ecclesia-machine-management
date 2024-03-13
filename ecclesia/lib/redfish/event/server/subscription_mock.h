@@ -76,6 +76,14 @@ class SubscriptionServiceMock : public SubscriptionService {
               (const nlohmann::json &request,
                std::function<void(const nlohmann::json &)> &&on_event_callback),
               (override));
+
+  MOCK_METHOD(void, CreateSubscription,
+              (const nlohmann::json &request,
+               std::function<void(const absl::StatusOr<SubscriptionId> &)>
+                   on_subscribe_callback,
+               std::function<void(const nlohmann::json &)> on_event_callback),
+              (override));
+
   MOCK_METHOD(void, DeleteSubscription, (const SubscriptionId &subscription_id),
               (override));
 
