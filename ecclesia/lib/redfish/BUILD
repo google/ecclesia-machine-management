@@ -31,6 +31,7 @@ cc_library(
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
+        "@com_googlesource_code_re2//:re2",
         "@com_json//:json",
     ],
 )
