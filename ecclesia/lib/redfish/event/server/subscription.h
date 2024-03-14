@@ -270,11 +270,6 @@ class SubscriptionBackend {
   virtual absl::Status Query(absl::string_view url,
                              QueryCallback query_callback) = 0;
 
-  // Subscribes to Redfish events for the given URL and returns the list of
-  // event source IDs
-  virtual absl::StatusOr<std::vector<EventSourceId>> Subscribe(
-      absl::string_view url) = 0;
-
   // Subscribes to Redfish events for the given URL and invokes the callback
   // post subscription.
   virtual absl::Status Subscribe(absl::string_view url,
@@ -290,10 +285,6 @@ class SubscriptionService {
   // created subscription.
   // Note: the implementation must guarantee that `on_event_callback` will only
   // be called once at a time. No parallel call will be allowed!
-  virtual absl::StatusOr<SubscriptionId> CreateSubscription(
-      const nlohmann::json &request,
-      std::function<void(const nlohmann::json &)> &&on_event_callback) = 0;
-
   virtual void CreateSubscription(
       const nlohmann::json &request,
       std::function<void(const absl::StatusOr<SubscriptionId> &)>
