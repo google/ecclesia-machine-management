@@ -201,40 +201,6 @@ TEST(RedfishVariant, RedfishQueryParamFilter) {
   EXPECT_EQ(filter.ToString(), absl::StrCat("$filter=", filter_string));
 }
 
-TEST(RedfishVariant, RedfishQueryParamFilterInvalid) {
-  auto filter = RedfishQueryParamFilter();
-  // Add a valid expression to $filter to make sure the string is overwritten by
-  // the builder.
-  filter.BuildFromRedpathPredicate("Prop1=42");
-  // Invalid operator (wrong equality)
-  std::string predicate1 = "Prop1==42";
-  filter.BuildFromRedpathPredicate(predicate1);
-  EXPECT_EQ(filter.ToString(), "");
-  // Invalid operator
-  std::string predicate2 = "Prop1>>42";
-  filter.BuildFromRedpathPredicate(predicate2);
-  EXPECT_EQ(filter.ToString(), "");
-  // Spaces on left
-  std::string predicate3 = "Bad Property>42";
-  filter.BuildFromRedpathPredicate(predicate3);
-  EXPECT_EQ(filter.ToString(), "");
-  // Add a valid expression to $filter to make sure the string is overwritten by
-  // the list builder.
-  filter.BuildFromRedpathPredicate("Prop1=42");
-  // Special characters in operands
-  std::string predicate4 = "Prop<erty1=42";
-  std::string predicate5 = "Property2=4>2";
-  filter.BuildFromRedpathPredicateList({predicate4, predicate5});
-  EXPECT_EQ(filter.ToString(), "");
-  // One side of a logical exp is bad. Try both sides.
-  std::string predicate6 = "Property2=42";
-  std::string predicate7 = "Prop<erty1=42";
-  filter.BuildFromRedpathPredicateList({predicate6, predicate7});
-  EXPECT_EQ(filter.ToString(), "");
-  filter.BuildFromRedpathPredicateList({predicate7, predicate6});
-  EXPECT_EQ(filter.ToString(), "");
-}
-
 TEST(RedfishVariant, RedfishQueryParamFilterEmpty) {
   auto filter = RedfishQueryParamFilter();
   EXPECT_EQ(filter.ToString(), "");

@@ -35,11 +35,6 @@
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
-#include "re2/re2.h"
-
-// Pattern for expression [lhs][operator][rhs]
-constexpr LazyRE2 kRelationalExpressionRegex = {
-    "^(?P<left>[^\\s<=>!]+)(?:(<=|>=|!=|>|<|=)(?P<right>[^<=>!]+))$"};
 
 constexpr std::array<const char *, 6> kPredicateOperators = {
     "<=", ">=", "!=", ">", "<", "=",
@@ -69,19 +64,14 @@ struct EncodedPredicate {
 absl::StatusOr<RelationalExpression> EncodeRelationalExpression(
     std::string_view expression) {
   RelationalExpression relational_expression;
-
-  // Regex match the expression. The operator must be a valid relational
-  // operator and the right hand side must not have spaces or characters
-  // included in relation operators.
-  std::string lhs;
-  std::string op;
-  std::string rhs;
-  if (RE2::FullMatch(expression, *kRelationalExpressionRegex, &lhs, &op,
-                     &rhs)) {
-    relational_expression.lhs = lhs;
-    relational_expression.rel_operator = op;
-    relational_expression.rhs = rhs;
-    return relational_expression;
+  for (const std::string predicate_operator : kPredicateOperators) {
+    auto pos = expression.find(predicate_operator);
+    if (pos == std::string::npos) continue;
+    RelationalExpression rel_expr;
+    rel_expr.lhs = expression.substr(0, pos);
+    rel_expr.rel_operator = predicate_operator;
+    rel_expr.rhs = expression.substr(pos + predicate_operator.size());
+    return rel_expr;
   }
   return absl::InvalidArgumentError("Invalid expression");
 }
@@ -93,7 +83,7 @@ absl::StatusOr<RelationalExpression> EncodeRelationalExpression(
 //   expressions = [[lhs: "Prop1", rel_operator: "<=", rhs: "42"],
 //                  [lhs: "Prop1", rel_operator: ">", rhs: "84"]
 //                 ]
-absl::StatusOr<EncodedPredicate> EncodePredicate(absl::string_view predicate) {
+EncodedPredicate EncodePredicate(absl::string_view predicate) {
   // The high level logic of this function is to break down the predicate into
   // logical operators (or/and) and the relational expressions (prop>value).
   // After breaking them up go through the relational expressions and break them
@@ -130,9 +120,6 @@ absl::StatusOr<EncodedPredicate> EncodePredicate(absl::string_view predicate) {
     auto encoded_expression = EncodeRelationalExpression(expression);
     if (encoded_expression.ok()) {
       encoded_predicate.expressions.push_back(encoded_expression.value());
-    } else {
-      // Invalid expression, return an error
-      return absl::InvalidArgumentError(encoded_expression.status().message());
     }
   }
   return encoded_predicate;
@@ -219,14 +206,7 @@ std::string GenerateFilterString(const EncodedPredicate &predicate_object) {
 
 void RedfishQueryParamFilter::BuildFromRedpathPredicate(
     absl::string_view predicate) {
-  auto encoded_predicate = EncodePredicate(predicate);
-  if (!encoded_predicate.ok()) {
-    // Invalid predicate, set filter_string_ to empty, indicating an invalid
-    // expression, and return.
-    filter_string_ = "";
-    return;
-  }
-  filter_string_ = GenerateFilterString(*encoded_predicate);
+  filter_string_ = GenerateFilterString(EncodePredicate(predicate));
 }
 
 void RedfishQueryParamFilter::BuildFromRedpathPredicateList(
@@ -234,14 +214,7 @@ void RedfishQueryParamFilter::BuildFromRedpathPredicateList(
   std::vector<std::string> filter_strings;
   filter_strings.reserve(predicates.size());
   for (absl::string_view predicate : predicates) {
-    auto encoded_predicate = EncodePredicate(predicate);
-    if (!encoded_predicate.ok()) {
-      // Invalid predicate, set filter_string_ to empty, indicating an invalid
-      // expression, and return.
-      filter_string_ = "";
-      return;
-    }
-    filter_strings.push_back(GenerateFilterString(*encoded_predicate));
+    filter_strings.push_back(GenerateFilterString(EncodePredicate(predicate)));
   }
   filter_string_ = absl::StrJoin(filter_strings, "%20or%20");
 }
