@@ -109,7 +109,7 @@ TEST(RedfishVariant, IndexingError) {
   EXPECT_THAT(chassis.AsObject(), Eq(nullptr));
   EXPECT_THAT(chassis.AsIterable(), Eq(nullptr));
 
-  // Any downsteam element from the failing element should also have the same
+  // Any downstream element from the failing element should also have the same
   // error.
   auto failed_prop = raw_intf->GetRoot()[kRfPropertyChassis][0]["Property"];
   EXPECT_THAT(failed_prop.status(), IsStatusFailedPrecondition());
@@ -296,6 +296,22 @@ TEST(RedfishVariant, RedfishQueryParamFilterPeriodReplacement) {
   EXPECT_EQ(filter.ToString(),
             "$filter=Status%2FHealth%20eq%20%27OK.test%27%20or%20Status%2F"
             "Something%20ge%206.8");
+}
+
+TEST(RedfishVariant, RedfishQueryParamFilterExistence) {
+  auto filter = RedfishQueryParamFilter();
+  std::string predicate1 = "Prop1";
+  filter.BuildFromRedpathPredicate(predicate1), ecclesia::IsOk();
+  EXPECT_EQ(filter.ToString(), "");
+  std::string predicate2 = "!Prop1";
+  filter.BuildFromRedpathPredicate(predicate2), ecclesia::IsOk();
+  EXPECT_EQ(filter.ToString(), "");
+  std::string predicate3 = "Prop1.sub_prop";
+  filter.BuildFromRedpathPredicate(predicate3), ecclesia::IsOk();
+  EXPECT_EQ(filter.ToString(), "");
+  std::string predicate4 = "!Prop1.sub_prop";
+  filter.BuildFromRedpathPredicate(predicate4), ecclesia::IsOk();
+  EXPECT_EQ(filter.ToString(), "");
 }
 
 TEST(RedfishVariant, ValidateRedfishSupportSuccess) {

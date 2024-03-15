@@ -88,6 +88,8 @@ absl::StatusOr<RelationalExpression> EncodeRelationalExpression(
 //   expressions = [[lhs: "Prop1", rel_operator: "<=", rhs: "42"],
 //                  [lhs: "Prop1", rel_operator: ">", rhs: "84"]
 //                 ]
+// Property existence check predicates are not supported by the $filter
+// specification. For example: !Property or Property.SubProperty
 absl::StatusOr<EncodedPredicate> EncodePredicate(absl::string_view predicate) {
   // The high level logic of this function is to break down the predicate into
   // logical operators (or/and) and the relational expressions (prop>value).
