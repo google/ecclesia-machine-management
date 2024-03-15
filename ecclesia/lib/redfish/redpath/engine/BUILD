@@ -102,13 +102,14 @@ cc_library(
     name = "normalizer",
     srcs = ["normalizer.cc"],
     hdrs = ["normalizer.h"],
+    visibility = ["//visibility:public"],
     deps = [
+        ":id_assigner",
         "//ecclesia/lib/redfish:devpath",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:node_topology",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
-        "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
         "//ecclesia/lib/redfish/dellicius/utils:path_util",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
         "//ecclesia/lib/status:macros",
@@ -125,22 +126,17 @@ cc_library(
     ],
 )
 
-cc_test(
-    name = "normalizer_test",
-    srcs = ["normalizer_test.cc"],
+cc_library(
+    name = "id_assigner",
+    hdrs = ["id_assigner.h"],
+    visibility = ["//visibility:public"],
     deps = [
-        ":normalizer",
-        "//ecclesia/lib/protobuf:parse",
-        "//ecclesia/lib/redfish:interface",
-        "//ecclesia/lib/redfish:node_topology",
-        "//ecclesia/lib/testing:proto",
-        "//ecclesia/lib/testing:status",
-        "@com_google_absl//absl/functional:function_ref",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@com_google_googletest//:gtest_main",
-        "@com_json//:json",
+        "@com_google_absl//absl/strings:str_format",
     ],
 )
 

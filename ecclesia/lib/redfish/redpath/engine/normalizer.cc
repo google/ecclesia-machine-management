@@ -48,6 +48,7 @@ namespace {
 constexpr absl::string_view kEmbeddedLocationContext =
     "__EmbeddedLocationContext__";
 constexpr absl::string_view kLocalDevpath = "__LocalDevpath__";
+constexpr absl::string_view kMachineDevpath = "__MachineDevpath__";
 
 std::vector<DelliciusQuery::Subquery::RedfishProperty>
 GetAdditionalProperties() {
@@ -287,6 +288,25 @@ absl::Status NormalizerImplAddDevpath::Normalize(
     QueryValue query_value;
     query_value.mutable_identifier()->set_local_devpath(devpath.value());
     (*data_set_local.mutable_fields())[kLocalDevpath] = query_value;
+  }
+  return absl::OkStatus();
+}
+
+absl::Status NormalizerImplAddMachineBarepath::Normalize(
+    const RedfishObject &redfish_object,
+    const DelliciusQuery::Subquery &subquery,
+    ecclesia::QueryResultData &data_set_local) {
+  //  We will now try to map a local devpath to machine devpath
+  if (!(data_set_local.fields().contains(kLocalDevpath))) {
+    return absl::OkStatus();
+  }
+  absl::StatusOr<std::string> machine_devpath =
+      id_assigner_->IdForLocalDevpathInDataSet(data_set_local);
+  if (machine_devpath.ok()) {
+    QueryValue query_value;
+    query_value.mutable_identifier()->set_machine_devpath(*machine_devpath);
+    (*data_set_local.mutable_fields())[kMachineDevpath] =
+        std::move(query_value);
   }
   return absl::OkStatus();
 }

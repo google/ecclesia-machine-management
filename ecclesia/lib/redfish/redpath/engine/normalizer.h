@@ -29,10 +29,10 @@
 #include "absl/strings/match.h"
 #include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
-#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/id_assigner.h"
 #include "ecclesia/lib/status/macros.h"
 
 namespace ecclesia {
@@ -113,6 +113,23 @@ class NormalizerImplAddDevpath final : public Normalizer::ImplInterface {
   NodeTopology topology_;
 };
 
+// Adds machine level barepath to subquery output.
+class NormalizerImplAddMachineBarepath final
+    : public Normalizer::ImplInterface {
+ public:
+  explicit NormalizerImplAddMachineBarepath(
+      std::unique_ptr<IdAssigner> id_assigner)
+      : id_assigner_(std::move(id_assigner)) {}
+
+ protected:
+  absl::Status Normalize(const RedfishObject &redfish_object,
+                         const DelliciusQuery::Subquery &subquery,
+                         ecclesia::QueryResultData &data_set) override;
+
+ private:
+  std::unique_ptr<IdAssigner> id_assigner_;
+};
+
 // Builds normalizer that transparently returns queried redfish property without
 // normalization for client variables or devpaths.
 inline std::unique_ptr<Normalizer> BuildDefaultNormalizer() {
@@ -128,6 +145,29 @@ inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithLocalDevpath(
   auto normalizer = BuildDefaultNormalizer();
   normalizer->AddNormalizer(
       std::make_unique<NormalizerImplAddDevpath>(std::move(node_topology)));
+  return normalizer;
+}
+
+// Extends default normalizer to populate machine devpaths using Redfish stable
+// identifier.
+inline std::unique_ptr<Normalizer> BuildNormalizerWithMachineDevpath(
+    std::unique_ptr<IdAssigner> id_assigner) {
+  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+
+  normalizer->AddNormalizer(std::make_unique<NormalizerImplAddMachineBarepath>(
+      std::move(id_assigner)));
+  return normalizer;
+}
+
+// Extends default normalizer with local devpath to populate machine devpaths
+// using Redfish stable identifier.
+inline std::unique_ptr<Normalizer> BuildNormalizerWithMachineDevpath(
+    std::unique_ptr<IdAssigner> id_assigner, NodeTopology node_topology) {
+  std::unique_ptr<Normalizer> normalizer =
+      BuildDefaultNormalizerWithLocalDevpath(std::move(node_topology));
+
+  normalizer->AddNormalizer(std::make_unique<NormalizerImplAddMachineBarepath>(
+      std::move(id_assigner)));
   return normalizer;
 }
 
