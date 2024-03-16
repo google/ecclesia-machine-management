@@ -147,6 +147,9 @@ inline constexpr char kRfPropertyCableUpstreamResources[] = "UpstreamResources";
 inline constexpr char kRfPropertySlots[] = "Slots";
 inline constexpr char kRfPropertyMemorySummary[] = "MemorySummary";
 inline constexpr char kRfPropertySettingsObject[] = "SettingsObject";
+inline constexpr char kRfPropertyVolumes[] = "Volumes";
+inline constexpr char kRfPropertyNVMeNamespaceProperties[] =
+    "NVMeNamespaceProperties";
 
 inline constexpr char kRfOemPropertyAssociatedWith[] = "AssociatedWith";
 inline constexpr char kRfOemPropertyAttachedTo[] = "AttachedTo";
@@ -179,6 +182,7 @@ inline constexpr char kRfOemPropertyKnuckleLinkStatus[] = "KnuckleLinkStatus";
 inline constexpr char kRfOemPropertyPf0[] = "PF0";
 inline constexpr char kRfOemPropertyPf1[] = "PF1";
 inline constexpr char kRfOemPropertyLocationContext[] = "LocationContext";
+inline constexpr char kRfOemPropertyLatencyHistogram[] = "LatencyHistogram";
 
 inline constexpr char kRfPropertyMediaTypeSsd[] = "SSD";
 inline constexpr char kRfPropertyMemberId[] = "MemberId";
@@ -443,6 +447,7 @@ DEFINE_REDFISH_PROPERTY(PropertyTimestamp, absl::Time, "Timestamp");
 DEFINE_REDFISH_PROPERTY(PropertyBandwidthPercent, double, "BandwidthPercent");
 DEFINE_REDFISH_PROPERTY(PropertyRxBytes, int, "RXBytes");
 DEFINE_REDFISH_PROPERTY(PropertyTxBytes, int, "TXBytes");
+DEFINE_REDFISH_PROPERTY(PropertyNamespaceId, std::string, "NamespaceId");
 
 // ManagerDiagnosticData properties
 DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
