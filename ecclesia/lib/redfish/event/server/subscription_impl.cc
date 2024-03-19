@@ -348,7 +348,7 @@ class SubscriptionServiceImpl
   // and |status| to indicate the subscription service of an error condition at
   // the event source which would trigger delete subscription sequence.
   absl::Status Notify(EventSourceId key,
-                      [[maybe_unused]] absl::Status status) override {
+                      [[maybe_unused]] const absl::Status &status) override {
     // Pull subscription context from Subscription Store
     ECCLESIA_ASSIGN_OR_RETURN(
         auto contexts,

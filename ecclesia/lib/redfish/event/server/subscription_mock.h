@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_EVENT_SERVER_SUBSCRIPTION_MOCK_H_
 #define ECCLESIA_LIB_REDFISH_EVENT_SERVER_SUBSCRIPTION_MOCK_H_
 
+#include <atomic>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -25,6 +26,7 @@
 #include <vector>
 
 #include "gmock/gmock.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -70,6 +72,17 @@ class EventStoreMock : public EventStore {
 
 class SubscriptionServiceMock : public SubscriptionService {
  public:
+  absl::Status Notify(EventSourceId key, const absl::Status &status) override {
+    // to appease the compiler - this code path will not be called
+    if (!status.ok()) {
+      LOG(WARNING) << "Bad status for " << key.ToString();
+    }
+    ++num_notifications_;
+    return absl::OkStatus();
+  }
+
+  int NumNotifications() const { return num_notifications_; }
+
   MOCK_METHOD(void, CreateSubscription,
               (const nlohmann::json &request,
                std::function<void(const absl::StatusOr<SubscriptionId> &)>
@@ -83,13 +96,13 @@ class SubscriptionServiceMock : public SubscriptionService {
   MOCK_METHOD(absl::Span<const SubscriptionContext>, GetAllSubscriptions, (),
               (override));
 
-  MOCK_METHOD(absl::Status, Notify, (EventSourceId key, absl::Status status),
-              (override));
-
   MOCK_METHOD(absl::Status, NotifyWithData,
               (EventSourceId key, absl::Status status,
                const nlohmann::json &data),
               (override));
+
+ private:
+  std::atomic_int num_notifications_ = 0;
 };
 
 }  // namespace ecclesia

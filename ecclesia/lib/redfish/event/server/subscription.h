@@ -302,7 +302,8 @@ class SubscriptionService {
   // Returns error if notification cannot be processed, typically used to
   // indicate event source that subscription is deleted and the source should
   // disable event listener.
-  virtual absl::Status Notify(EventSourceId key, absl::Status status) = 0;
+  virtual absl::Status Notify(EventSourceId key,
+                              const absl::Status &status) = 0;
 
   // Invoked by an EventSource to notify SubscriptionService about an event
   // occurrence along with providing data associated with the event.
