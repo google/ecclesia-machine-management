@@ -447,6 +447,9 @@ DEFINE_REDFISH_PROPERTY(PropertyTimestamp, absl::Time, "Timestamp");
 DEFINE_REDFISH_PROPERTY(PropertyBandwidthPercent, double, "BandwidthPercent");
 DEFINE_REDFISH_PROPERTY(PropertyRxBytes, int, "RXBytes");
 DEFINE_REDFISH_PROPERTY(PropertyTxBytes, int, "TXBytes");
+DEFINE_REDFISH_PROPERTY(PropertyRxFrames, int, "RXFrames");
+DEFINE_REDFISH_PROPERTY(PropertyRxDiscards, int, "RXDiscards");
+DEFINE_REDFISH_PROPERTY(PropertyRxErrors, int, "RXErrors");
 DEFINE_REDFISH_PROPERTY(PropertyNamespaceId, std::string, "NamespaceId");
 
 // ManagerDiagnosticData properties
