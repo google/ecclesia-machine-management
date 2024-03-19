@@ -45,8 +45,6 @@
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
-#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
@@ -124,158 +122,132 @@ class QueryTimestamp {
   absl::Time start_time_;
 };
 
-class QueryEngineImpl final : public QueryEngineIntf {
- public:
-  // Constructs QueryEngine to execute queries in the map |id_to_query_plans|.
-  // When a valid |metrical_transport| instance is provided,  QueryEngine is
-  // constructed to trace each query and return associated metrics in the
-  // response.
-  QueryEngineImpl(
-      std::string entity_tag,
-      absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
-          id_to_query_plans,
-      const Clock *clock, std::unique_ptr<Normalizer> normalizer,
-      std::unique_ptr<RedfishInterface> redfish_interface,
-      MetricalRedfishTransport *metrical_transport = nullptr,
-      QueryEngineFeatures features = DefaultQueryEngineFeatures())
-      : entity_tag_(std::move(entity_tag)),
-        id_to_query_plans_(std::move(id_to_query_plans)),
-        clock_(clock),
-        normalizer_(std::move(normalizer)),
-        redfish_interface_(std::move(redfish_interface)),
-        metrical_transport_(metrical_transport),
-        features_(std::move(features)) {}
+// Translates vector of  DelliciusQueryResult to new QueryResult format.
+QueryIdToResult TranslateLegacyResults(
+    const std::vector<DelliciusQueryResult> &legacy_results) {
+  QueryIdToResult translated_results;
+  std::for_each(legacy_results.begin(), legacy_results.end(),
+                [&](const DelliciusQueryResult &result) {
+                  translated_results.mutable_results()->insert(
+                      {result.query_id(), ToQueryResult(result)});
+                });
+  return translated_results;
+}
 
-  // Main method for ExecuteQuery that triggers the QueryPlanner to execute
-  // queries and provide transport metrics as part of the Statistics in each
-  // QueryResult.
-  std::vector<DelliciusQueryResult> ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      QueryEngine::ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override {
-    std::vector<DelliciusQueryResult> response_entries;
-    const RedfishMetrics *metrics = nullptr;
-    // Each metrical_transport object has a thread local RedfishMetrics object.
-    if (metrical_transport_ != nullptr) {
-      metrics = MetricalRedfishTransport::GetConstMetrics();
-    }
-    for (const absl::string_view query_id : query_ids) {
-      auto it = id_to_query_plans_.find(query_id);
-      if (it == id_to_query_plans_.end()) {
-        LOG(ERROR) << "Query plan does not exist for id " << query_id;
-        continue;
-      }
-      QueryVariables vars = QueryVariables();
-      auto it_vars = query_arguments.find(query_id);
-      if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
-      // Clear metrics every query.
-      if (metrical_transport_ != nullptr) {
-        MetricalRedfishTransport::ResetMetrics();
-      }
-      DelliciusQueryResult result_single;
-      ExecutionFlags planner_execution_flags{
-          features_.fail_on_first_error()
-              ? ExecutionFlags::ExecutionMode::kFailOnFirstError
-              : ExecutionFlags::ExecutionMode::kContinueOnSubqueryErrors,
-          features_.log_redfish_traces()};
-      {
-        auto query_timer = QueryTimestamp(&result_single, clock_);
-        if (service_root_uri == QueryEngine::ServiceRootType::kCustom) {
-          result_single = it->second->Run(*clock_, nullptr, vars, metrics,
-                                          planner_execution_flags);
-        } else {
-          result_single = it->second->Run(
-              redfish_interface_->GetRoot(
-                  GetParams{},
-                  service_root_uri == QueryEngine::ServiceRootType::kGoogle
-                      ? ServiceRootUri::kGoogle
-                      : ServiceRootUri::kRedfish),
-              *clock_, nullptr, vars, metrics, planner_execution_flags);
-        }
-      }
-      response_entries.push_back(std::move(result_single));
-    }
-    return response_entries;
+}  // namespace
+
+// Main method for ExecuteQuery that triggers the QueryPlanner to execute
+// queries and provide transport metrics as part of the Statistics in each
+// QueryResult.
+std::vector<DelliciusQueryResult> QueryEngine::ExecuteQuery(
+    absl::Span<const absl::string_view> query_ids,
+    QueryEngine::ServiceRootType service_root_uri,
+    const QueryVariableSet &query_arguments) {
+  std::vector<DelliciusQueryResult> response_entries;
+  const RedfishMetrics *metrics = nullptr;
+  // Each metrical_transport object has a thread local RedfishMetrics object.
+  if (metrical_transport_ != nullptr) {
+    metrics = MetricalRedfishTransport::GetConstMetrics();
   }
-
-  // Main method for ExecuteQuery that triggers the QueryPlanner to execute
-  // queries and processes the result with a caller provided callback.
-  void ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-      QueryEngine::ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override {
+  for (const absl::string_view query_id : query_ids) {
+    auto it = id_to_query_plans_.find(query_id);
+    if (it == id_to_query_plans_.end()) {
+      LOG(ERROR) << "Query plan does not exist for id " << query_id;
+      continue;
+    }
+    QueryVariables vars = QueryVariables();
+    auto it_vars = query_arguments.find(query_id);
+    if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
+    // Clear metrics every query.
     if (metrical_transport_ != nullptr) {
       MetricalRedfishTransport::ResetMetrics();
     }
-    for (const absl::string_view query_id : query_ids) {
-      auto it = id_to_query_plans_.find(query_id);
-      if (it == id_to_query_plans_.end()) {
-        LOG(ERROR) << "Query plan does not exist for id " << query_id;
-        continue;
-      }
-      QueryVariables vars = QueryVariables();
-      auto it_vars = query_arguments.find(query_id);
-      if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
-
-      if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
-        it->second->Run(
-            redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
-            *clock_, nullptr, vars, callback);
+    DelliciusQueryResult result_single;
+    ExecutionFlags planner_execution_flags{
+        features_.fail_on_first_error()
+            ? ExecutionFlags::ExecutionMode::kFailOnFirstError
+            : ExecutionFlags::ExecutionMode::kContinueOnSubqueryErrors,
+        features_.log_redfish_traces()};
+    {
+      auto query_timer = QueryTimestamp(&result_single, clock_);
+      if (service_root_uri == QueryEngine::ServiceRootType::kCustom) {
+        result_single = it->second->Run(*clock_, nullptr, vars, metrics,
+                                        planner_execution_flags);
       } else {
-        it->second->Run(redfish_interface_->GetRoot(), *clock_, nullptr, vars,
-                        callback);
+        result_single = it->second->Run(
+            redfish_interface_->GetRoot(
+                GetParams{},
+                service_root_uri == QueryEngine::ServiceRootType::kGoogle
+                    ? ServiceRootUri::kGoogle
+                    : ServiceRootUri::kRedfish),
+            *clock_, nullptr, vars, metrics, planner_execution_flags);
       }
     }
+    response_entries.push_back(std::move(result_single));
   }
+  return response_entries;
+}
 
-  // Translates vector of  DelliciusQueryResult to new QueryResult format.
-  static QueryIdToResult TranslateLegacyResults(
-      const std::vector<DelliciusQueryResult> &legacy_results) {
-    QueryIdToResult translated_results;
-    std::for_each(legacy_results.begin(), legacy_results.end(),
-                  [&](const DelliciusQueryResult &result) {
-                    translated_results.mutable_results()->insert(
-                        {result.query_id(), ToQueryResult(result)});
-                  });
-    return translated_results;
+  // Main method for ExecuteQuery that triggers the QueryPlanner to execute
+  // queries and processes the result with a caller provided callback.
+void QueryEngine::ExecuteQuery(
+    absl::Span<const absl::string_view> query_ids,
+    absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
+    QueryEngine::ServiceRootType service_root_uri,
+    const QueryVariableSet &query_arguments) {
+  if (metrical_transport_ != nullptr) {
+    MetricalRedfishTransport::ResetMetrics();
   }
+  for (const absl::string_view query_id : query_ids) {
+    auto it = id_to_query_plans_.find(query_id);
+    if (it == id_to_query_plans_.end()) {
+      LOG(ERROR) << "Query plan does not exist for id " << query_id;
+      continue;
+    }
+    QueryVariables vars = QueryVariables();
+    auto it_vars = query_arguments.find(query_id);
+    if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
+
+    if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
+      it->second->Run(
+          redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
+          *clock_, nullptr, vars, callback);
+    } else {
+      it->second->Run(redfish_interface_->GetRoot(), *clock_, nullptr, vars,
+                      callback);
+    }
+  }
+}
 
   // Executes Redpath query and returns results in updated QueryResult format.
-  QueryIdToResult ExecuteRedpathQuery(
-      absl::Span<const absl::string_view> query_ids,
-      QueryEngine::ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments = {}) override {
-    return TranslateLegacyResults(
-        ExecuteQuery(query_ids, service_root_uri, query_arguments));
+QueryIdToResult QueryEngine::ExecuteRedpathQuery(
+    absl::Span<const absl::string_view> query_ids,
+    QueryEngine::ServiceRootType service_root_uri,
+    const QueryVariableSet &query_arguments) {
+  return TranslateLegacyResults(
+      ExecuteQuery(query_ids, service_root_uri, query_arguments));
+}
+
+absl::StatusOr<RedfishInterface *> QueryEngine::GetRedfishInterface(
+    RedfishInterfacePasskey unused_passkey) {
+  if (redfish_interface_ == nullptr) {
+    return absl::InternalError(
+        "QueryEngine contains uninitialized RedfishInterface");
   }
+  return redfish_interface_.get();
+}
 
-  absl::StatusOr<RedfishInterface *> GetRedfishInterface(
-      RedfishInterfacePasskey unused_passkey) override {
-    if (redfish_interface_ == nullptr) {
-      return absl::InternalError(
-          "QueryEngine contains uninitialized RedfishInterface");
-    }
-    return redfish_interface_.get();
-  }
+absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
+    QuerySpec query_spec, QueryEngineParams params,
+    std::unique_ptr<IdAssigner> id_assigner) {
+  ECCLESIA_ASSIGN_OR_RETURN(
+      QueryEngine engine,
+      QueryEngine::CreateLegacy(std::move(query_spec), std::move(params),
+                                std::move(id_assigner)));
+  return std::make_unique<QueryEngine>(std::move(engine));
+}
 
-  absl::string_view GetAgentIdentifier() const override { return entity_tag_; }
-
- private:
-  std::string entity_tag_;
-  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
-      id_to_query_plans_;
-  const Clock *clock_;
-  std::unique_ptr<Normalizer> normalizer_;
-  std::unique_ptr<RedfishInterface> redfish_interface_;
-
-  // Used during query metrics collection.
-  MetricalRedfishTransport *metrical_transport_ = nullptr;
-  // Collection of flags dictating query engine execution.
-  QueryEngineFeatures features_;
-};
-
-absl::StatusOr<QueryEngine> CreateQueryEngine(
+absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
     QuerySpec query_spec, QueryEngineParams engine_params,
     std::unique_ptr<IdAssigner> id_assigner) {
   std::unique_ptr<RedfishInterface> redfish_interface;
@@ -320,31 +292,19 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
     id_to_query_plans[query_id] = std::move(query_planner);
   }
 
-  return QueryEngine(std::make_unique<QueryEngineImpl>(
-      engine_params.entity_tag, std::move(id_to_query_plans), query_spec.clock,
-      std::move(normalizer), std::move(redfish_interface),
-      metrical_transport_ptr, std::move(engine_params.features)));
+  return QueryEngine(engine_params.entity_tag, std::move(id_to_query_plans),
+                     query_spec.clock, std::move(normalizer),
+                     std::move(redfish_interface),
+                     std::move(engine_params.features), metrical_transport_ptr);
 }
-
-}  // namespace
 
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
     std::unique_ptr<IdAssigner> id_assigner) {
   ECCLESIA_ASSIGN_OR_RETURN(QuerySpec query_spec,
                             QuerySpec::FromQueryContext(query_context));
-  return CreateQueryEngine(std::move(query_spec), std::move(engine_params),
-                           std::move(id_assigner));
-}
-
-absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
-    QuerySpec query_spec, QueryEngineParams params,
-    std::unique_ptr<IdAssigner> id_assigner) {
-  ECCLESIA_ASSIGN_OR_RETURN(
-      QueryEngine engine,
-      CreateQueryEngine(std::move(query_spec), std::move(params),
-                        std::move(id_assigner)));
-  return std::make_unique<QueryEngine>(std::move(engine));
+  return QueryEngine::CreateLegacy(
+      std::move(query_spec), std::move(engine_params), std::move(id_assigner));
 }
 
 }  // namespace ecclesia

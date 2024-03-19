@@ -30,6 +30,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -44,7 +45,9 @@
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
+#include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
 
@@ -81,36 +84,30 @@ struct QueryEngineParams {
 // QueryEngine is logical composition of Redfish query interpreter, dispatcher
 // and normalizer built to execute a statically defined set of Redfish Queries
 // based on accompanying optional query rules.
-// A few ways to instantiate QueryEngine using factory APIs:
-//  (A) Build QueryEngine with default configuration (local id based on redfish
+//
+// There are few ways to instantiate QueryEngine:
+//  (A) Build QueryEngine without devpath decorators (local id based on redfish
 //      stable id):
-//  QueryContext query_context{.query_files = query_files};
-//  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(query_context,
-//      {.transport = std::move(transport)});
+//  ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<QueryEngineIntf> query_engine,
+//      QueryEngine::Create(std::move(query_spec),
+//                          {.transport = std::move(transport)}));
 //
 //  (B) Build QueryEngine with non default local stable id:
-//  QueryContext query_context{.query_files = query_files};
-//  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(query_context,
-//      {.transport = std::move(transport),
-//       .stable_id_type =
+//  ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<QueryEngineIntf> query_engine,
+//      QueryEngine::Create(std::move(query_spec),
+//                          {.transport = std::move(transport),
+//                           .stable_id_type =
 //            QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived});
 //
 //  (C) Build QueryEngine with machine level stable id decorator:
-//  QueryContext query_context{.query_files = query_files};
-//  absl::StatusOr<QueryEngine> query_engine =
-//    CreateQueryEngine<MyStableIdMapType>(
-//        query_context,
-//        {.transport = std::move(transport),
-//          .entity_tag = "node0",
-//          .stable_id_type =
+//  ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<QueryEngineIntf> query_engine,
+//      QueryEngine::Create(std::move(query_spec),
+//                          {.transport = std::move(transport),
+//                           .entity_tag = "node0",
+//                           .stable_id_type =
 //              QueryEngineParams::RedfishStableIdType::kRedfishLocation},
-//        std::move(my_stable_id_map), std::move(my_machine_id_assigner));
+//              std::move(my_machine_id_assigner));
 //
-//  (D) Build QueryEngine using custom normalizer:
-//  QueryContext query_context{.query_files = query_files};
-//  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
-//     query_context, std::move(redfish_interface),
-//     std::move(my_custom_normalizer));
 
 class QueryEngineIntf {
  public:
@@ -182,8 +179,10 @@ class QueryEngine : public QueryEngineIntf {
       QuerySpec query_spec, QueryEngineParams params,
       std::unique_ptr<IdAssigner> id_assigner = nullptr);
 
-  explicit QueryEngine(std::unique_ptr<QueryEngineIntf> engine_impl)
-      : engine_impl_(std::move(engine_impl)) {}
+  ABSL_DEPRECATED("Use Create Instead")
+  static absl::StatusOr<QueryEngine> CreateLegacy(
+      QuerySpec query_spec, QueryEngineParams params,
+      std::unique_ptr<IdAssigner> id_assigner = nullptr);
 
   QueryEngine(const QueryEngine &) = delete;
   QueryEngine &operator=(const QueryEngine &) = delete;
@@ -197,39 +196,51 @@ class QueryEngine : public QueryEngineIntf {
       absl::Span<const absl::string_view> query_ids,
       absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
       ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override {
-    return engine_impl_->ExecuteQuery(query_ids, callback, service_root_uri,
-                                      query_arguments);
-  }
+      const QueryVariableSet &query_arguments) override;
 
   ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override {
-    return engine_impl_->ExecuteQuery(query_ids, service_root_uri,
-                                      query_arguments);
-  }
+      const QueryVariableSet &query_arguments) override;
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override {
-    return engine_impl_->ExecuteRedpathQuery(query_ids, service_root_uri,
-                                             query_arguments);
-  }
+      const QueryVariableSet &query_arguments) override;
 
   absl::StatusOr<RedfishInterface *> GetRedfishInterface(
-      RedfishInterfacePasskey unused_passkey) override {
-    return engine_impl_->GetRedfishInterface(unused_passkey);
-  }
+      RedfishInterfacePasskey unused_passkey) override;
 
-  absl::string_view GetAgentIdentifier() const override {
-    return engine_impl_->GetAgentIdentifier();
-  }
+  absl::string_view GetAgentIdentifier() const override { return entity_tag_; }
 
  private:
-  std::unique_ptr<QueryEngineIntf> engine_impl_;
+  QueryEngine(
+      std::string entity_tag,
+      absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
+          id_to_query_plans,
+      const Clock *clock, std::unique_ptr<Normalizer> normalizer,
+      std::unique_ptr<RedfishInterface> redfish_interface,
+      QueryEngineFeatures features,
+      MetricalRedfishTransport *metrical_transport = nullptr)
+      : entity_tag_(std::move(entity_tag)),
+        id_to_query_plans_(std::move(id_to_query_plans)),
+        clock_(clock),
+        normalizer_(std::move(normalizer)),
+        redfish_interface_(std::move(redfish_interface)),
+        metrical_transport_(metrical_transport),
+        features_(std::move(features)) {}
+
+  std::string entity_tag_;
+  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
+      id_to_query_plans_;
+  const Clock *clock_;
+  std::unique_ptr<Normalizer> normalizer_;
+  std::unique_ptr<RedfishInterface> redfish_interface_;
+  // Used during query metrics collection.
+  MetricalRedfishTransport *metrical_transport_ = nullptr;
+  // Collection of flags dictating query engine execution.
+  QueryEngineFeatures features_;
 };
 
 // Build query engine based on given `engine_params` to execute queries in
