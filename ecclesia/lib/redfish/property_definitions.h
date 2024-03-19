@@ -97,6 +97,7 @@ inline constexpr char kRfPropertyBootTimeStatistics[] = "BootTimeStatistics";
 inline constexpr char kRfPropertyVoltages[] = "Voltages";
 inline constexpr char kRfPropertyFans[] = "Fans";
 inline constexpr char kRfPropertySensors[] = "Sensors";
+inline constexpr char kRfPropertyReadingType[] = "ReadingType";
 inline constexpr char kRfPropertyReadingUnits[] = "ReadingUnits";
 inline constexpr char kRfPropertyRelatedItem[] = "RelatedItem";
 inline constexpr char kRfPropertyStatus[] = "Status";
