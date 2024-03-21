@@ -148,9 +148,9 @@ class NullCache : public RedfishCachedGetterInterface {
 class TimeBasedCache : public RedfishCachedGetterInterface {
  public:
   static std::unique_ptr<RedfishCachedGetterInterface> Create(
-      RedfishTransport *transport, absl::Duration max_age) {
-    return std::make_unique<TimeBasedCache>(transport, Clock::RealClock(),
-                                            max_age);
+      RedfishTransport *transport, absl::Duration max_age,
+      const Clock *clock = Clock::RealClock()) {
+    return std::make_unique<TimeBasedCache>(transport, clock, max_age);
   }
 
   TimeBasedCache(
