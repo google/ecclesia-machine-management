@@ -45,6 +45,7 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_predicates/filter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_predicates/predicates.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
@@ -69,6 +70,23 @@ constexpr absl::string_view kDefaultRedfishServiceRoot = "/redfish/v1";
 using SubqueryIdToSubquery =
     absl::flat_hash_map<std::string, const DelliciusQuery::Subquery *>;
 using SubqueryOutputById = absl::flat_hash_map<std::string, SubqueryOutput>;
+
+// Generate a $filter string based on the predicates listed as children of this
+// node.
+absl::StatusOr<std::string> GetFilterStringFromNextNode(
+    RedPathTrieNode *next_trie_node) {
+  std::vector<std::string> predicates;
+  for (const auto &[node_exp, node_ptr] :
+       next_trie_node->expression_to_trie_node) {
+    if (node_exp.type == RedPathExpression::Type::kPredicate) {
+      // If some of the predicates are invalid for $filter, ie
+      // "[*]" or "[Property]" the entire filter generation will fail, which is
+      // intended behavior.
+      predicates.push_back(node_exp.expression);
+    }
+  }
+  return BuildFilterFromRedpathPredicateList(predicates);
+}
 
 // Returns true if child RedPath is in expand path of parent RedPath.
 bool IsInExpandPath(absl::string_view child_redpath,
@@ -449,6 +467,16 @@ QueryPlanner::ExecuteQueryExpression(
     GetParams get_params_for_redpath =
         GetQueryParamsForRedPath(redpath_prefix_tracker.last_redpath_prefix);
 
+    if (get_params_for_redpath.filter.has_value()) {
+      // Since filter is enabled all predicates that rely on the redfish data
+      // returned from this call need to be added to the $filter parameter that
+      // is sent to the Redfish agent.
+      absl::StatusOr<std::string> filter_string =
+          GetFilterStringFromNextNode(next_trie_node);
+      if (filter_string.ok()) {
+        get_params_for_redpath.filter->SetFilterString(filter_string.value());
+      }
+    }
     RedfishVariant redfish_variant =
         current_execution_context.redfish_object->Get(expression.expression,
                                                       get_params_for_redpath);

@@ -14,6 +14,7 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/query:query_errors_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/query_predicates:filter",
         "//ecclesia/lib/redfish/redpath/definitions/query_predicates:predicates",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:converter",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",

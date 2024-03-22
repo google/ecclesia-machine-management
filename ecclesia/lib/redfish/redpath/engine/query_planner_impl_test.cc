@@ -54,7 +54,7 @@ class QueryPlannerTestRunner : public ::testing::Test {
   QueryPlannerTestRunner() = default;
   void SetTestParams(absl::string_view mockup) {
     server_ = std::make_unique<FakeRedfishServer>(mockup);
-    server_->EnableExpandGetHandler();
+    server_->EnableAllParamsGetHandler();
     intf_ = server_->RedfishClientInterface();
   }
 
@@ -250,7 +250,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFreshnessFromQuery) {
   EXPECT_EQ(assembly_query_count, 1);
 }
 
-TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesParamsFromRules) {
+TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesExpandFromRules) {
   DelliciusQuery query = ParseTextProtoOrDie(
       R"pb(
         query_id: "ChassisSubTreeTest"
@@ -295,6 +295,63 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesParamsFromRules) {
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   EXPECT_THAT((*qp)->Run({args1}), IsOk());
   EXPECT_TRUE(expand_requested);
+}
+
+TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterFromRules) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "SensorTest"
+        service_root: "/redfish/v1"
+        subquery {
+          subquery_id: "SensorsGreater"
+          redpath: "/Chassis[*]/Sensors[Reading>40]"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "SensorsLesser"
+          redpath: "/Chassis[*]/Sensors[Reading<5]"
+          properties { property: "Id" type: STRING }
+        }
+      )pb");
+
+  RedPathRedfishQueryParams redpath_redfish_query_params = {
+      {"/Chassis[*]/Sensors", {.filter = RedfishQueryParamFilter("")}}};
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  bool filter_requested1 = false;
+  bool filter_requested2 = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/"
+      "Sensors?$filter=Reading%20gt%2040%20or%20Reading%20lt%205",
+      [&](ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        filter_requested1 = true;
+        req->WriteResponseString(R"json({"@odata.id": "uri"})json");
+        req->Reply();
+      });
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/"
+      "Sensors?$filter=Reading%20lt%205%20or%20Reading%20gt%2040",
+      [&](ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        filter_requested2 = true;
+        req->WriteResponseString(R"json({"@odata.id": "uri"})json");
+        req->Reply();
+      });
+  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner(query, std::move(redpath_redfish_query_params),
+                        normalizer.get(), intf_.get());
+  EXPECT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  EXPECT_THAT((*qp)->Run({args1}), IsOk());
+  // Since the order in which the predicates are passed to the $filter string
+  // construction method is non-deterministic, the Redfish request can be in two
+  // possible forms.
+  EXPECT_TRUE(filter_requested1 || filter_requested2);
 }
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
