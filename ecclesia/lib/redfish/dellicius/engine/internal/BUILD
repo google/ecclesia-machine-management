@@ -70,6 +70,7 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:join",
         "//ecclesia/lib/redfish/dellicius/utils:path_util",
+        "//ecclesia/lib/redfish/redpath/definitions/query_predicates:filter",
         "//ecclesia/lib/redfish/redpath/definitions/query_predicates:predicates",
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:transport_metrics_cc_proto",

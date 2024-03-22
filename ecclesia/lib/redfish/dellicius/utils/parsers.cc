@@ -97,7 +97,7 @@ RedPathRedfishQueryParams ParseQueryRuleParams(
     // Populate the filter parameter with an empty object to indicate that
     // filter is enabled.
     if (redpath_prefix_with_query_params.filter_enabled()) {
-      params.filter = RedfishQueryParamFilter();
+      params.filter = RedfishQueryParamFilter("");
     }
 
     redpath_prefix_to_params[std::move(

@@ -16,7 +16,6 @@
 
 #include "ecclesia/lib/redfish/dellicius/engine/internal/query_planner.h"
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdlib>
@@ -56,6 +55,7 @@
 #include "ecclesia/lib/redfish/dellicius/utils/join.h"
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_predicates/filter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_predicates/predicates.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
@@ -1076,8 +1076,14 @@ void ExecuteRedPathStepFromEachSubquery(
         }
         std::vector<std::string> predicates_vec(predicates.begin(),
                                                 predicates.end());
-        get_params_for_redpath.filter->BuildFromRedpathPredicateList(
-            predicates_vec);
+        auto filter_string =
+            BuildFilterFromRedpathPredicateList(predicates_vec);
+        if (!filter_string.ok()) {
+          LOG(ERROR) << "Failed to build filter string: "
+                     << filter_string.status();
+        } else {
+          get_params_for_redpath.filter->SetFilterString(*filter_string);
+        }
       }
       // Dispatch Redfish Request for the Redfish Resource associated with the
       // NodeName expression.

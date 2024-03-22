@@ -19,7 +19,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -186,132 +185,12 @@ TEST(RedfishVariant, RedfishQueryParamExpand) {
 }
 
 TEST(RedfishVariant, RedfishQueryParamFilter) {
-  auto filter = RedfishQueryParamFilter();
-  std::string predicate1 = "Prop1<=42";
-  filter.BuildFromRedpathPredicate(predicate1);
-  EXPECT_EQ(filter.ToString(), "$filter=Prop1%20le%2042");
-  // Spaces between operators with logical operator.
-  std::string predicate3 = "Prop1>42 and Prop1<84";
-  filter.BuildFromRedpathPredicate(predicate3), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(),
-            "$filter=Prop1%20gt%2042%20and%20Prop1%20lt%2084");
-  // Directly assign the filter string
-  std::string filter_string = "Prop1%20eq%2042";
-  filter.SetFilterString(filter_string);
-  EXPECT_EQ(filter.ToString(), absl::StrCat("$filter=", filter_string));
-}
-
-TEST(RedfishVariant, RedfishQueryParamFilterInvalid) {
-  auto filter = RedfishQueryParamFilter();
-  // Add a valid expression to $filter to make sure the string is overwritten by
-  // the builder.
-  filter.BuildFromRedpathPredicate("Prop1=42");
-  // Invalid operator (wrong equality)
-  std::string predicate1 = "Prop1==42";
-  filter.BuildFromRedpathPredicate(predicate1);
-  EXPECT_EQ(filter.ToString(), "");
-  // Invalid operator
-  std::string predicate2 = "Prop1>>42";
-  filter.BuildFromRedpathPredicate(predicate2);
-  EXPECT_EQ(filter.ToString(), "");
-  // Spaces on left
-  std::string predicate3 = "Bad Property>42";
-  filter.BuildFromRedpathPredicate(predicate3);
-  EXPECT_EQ(filter.ToString(), "");
-  // Add a valid expression to $filter to make sure the string is overwritten by
-  // the list builder.
-  filter.BuildFromRedpathPredicate("Prop1=42");
-  // Special characters in operands
-  std::string predicate4 = "Prop<erty1=42";
-  std::string predicate5 = "Property2=4>2";
-  filter.BuildFromRedpathPredicateList({predicate4, predicate5});
-  EXPECT_EQ(filter.ToString(), "");
-  // One side of a logical exp is bad. Try both sides.
-  std::string predicate6 = "Property2=42";
-  std::string predicate7 = "Prop<erty1=42";
-  filter.BuildFromRedpathPredicateList({predicate6, predicate7});
-  EXPECT_EQ(filter.ToString(), "");
-  filter.BuildFromRedpathPredicateList({predicate7, predicate6});
-  EXPECT_EQ(filter.ToString(), "");
-}
-
-TEST(RedfishVariant, RedfishQueryParamFilterEmpty) {
-  auto filter = RedfishQueryParamFilter();
-  EXPECT_EQ(filter.ToString(), "");
-}
-
-TEST(RedfishVariant, RedfishQueryParamFilterPredicateList) {
-  auto filter = RedfishQueryParamFilter();
-  std::string predicate1 = "Prop1<=42";
-  std::string predicate2 = "Prop1!=42";
-  std::vector<std::string> predicates = {predicate1, predicate2};
-  filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(),
-            "$filter=Prop1%20le%2042%20or%20Prop1%20ne%2042");
-}
-
-TEST(RedfishVariant, RedfishQueryParamFilterStringQuote) {
-  auto filter = RedfishQueryParamFilter();
-  std::string predicate1 = "Prop1='this is a test'";
-  filter.BuildFromRedpathPredicate(predicate1), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(),
-            "$filter=Prop1%20eq%20%27this%20is%20a%20test%27");
-}
-
-TEST(RedfishVariant, RedfishQueryParamFilterStringNoQuote) {
-  auto filter = RedfishQueryParamFilter();
-  std::string predicate1 = "Prop1=this is a test";
-  filter.BuildFromRedpathPredicate(predicate1), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(),
-            "$filter=Prop1%20eq%20%27this%20is%20a%20test%27");
-}
-
-TEST(RedfishVariant, RedfishQueryParamFilterBoolean) {
-  auto filter = RedfishQueryParamFilter();
-  std::string predicate1 = "Prop1=true";
-  filter.BuildFromRedpathPredicate(predicate1), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(), "$filter=Prop1%20eq%20true");
-}
-
-TEST(RedfishVariant, RedfishQueryParamFilterSpecialCharacters) {
-  auto filter = RedfishQueryParamFilter();
-  std::string predicate1 = "Created>=2024-01-22T00:41:38.000000+00:00";
-  std::vector<std::string> predicates = {predicate1};
-  filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
-  EXPECT_EQ(
-      filter.ToString(),
-      "$filter=Created%20ge%20%272024-01-22T00%3A41%3A38.000000%2B00%3A00%27");
-}
-
-TEST(RedfishVariant, RedfishQueryParamFilterPeriodReplacement) {
-  auto filter = RedfishQueryParamFilter();
-  // Simple 1 expression predicate
-  std::string predicate1 = "Status.Health=OK.test";
-  std::vector<std::string> predicates = {predicate1};
-  filter.BuildFromRedpathPredicateList(predicates), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(), "$filter=Status%2FHealth%20eq%20%27OK.test%27");
-  // 2 expression predicate
-  std::string predicate2 = "Status.Health=OK.test or Status.Something>=6.8";
-  filter.BuildFromRedpathPredicate(predicate2), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(),
-            "$filter=Status%2FHealth%20eq%20%27OK.test%27%20or%20Status%2F"
-            "Something%20ge%206.8");
-}
-
-TEST(RedfishVariant, RedfishQueryParamFilterExistence) {
-  auto filter = RedfishQueryParamFilter();
-  std::string predicate1 = "Prop1";
-  filter.BuildFromRedpathPredicate(predicate1), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(), "");
-  std::string predicate2 = "!Prop1";
-  filter.BuildFromRedpathPredicate(predicate2), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(), "");
-  std::string predicate3 = "Prop1.sub_prop";
-  filter.BuildFromRedpathPredicate(predicate3), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(), "");
-  std::string predicate4 = "!Prop1.sub_prop";
-  filter.BuildFromRedpathPredicate(predicate4), ecclesia::IsOk();
-  EXPECT_EQ(filter.ToString(), "");
+  std::string filter_string1 = "Prop1%20eq%2042";
+  auto filter = RedfishQueryParamFilter(filter_string1);
+  EXPECT_EQ(filter.ToString(), absl::StrCat("$filter=", filter_string1));
+  std::string filter_string2 = "Prop1%20eq%2084";
+  filter.SetFilterString(filter_string2);
+  EXPECT_EQ(filter.ToString(), absl::StrCat("$filter=", filter_string2));
 }
 
 TEST(RedfishVariant, ValidateRedfishSupportSuccess) {

@@ -170,13 +170,12 @@ class RedfishQueryParamTop : public GetParamQueryInterface {
 // See RedFish spec 7.3.4 The $filter query parameter
 class RedfishQueryParamFilter : public GetParamQueryInterface {
  public:
-  void BuildFromRedpathPredicate(absl::string_view predicate);
-  void BuildFromRedpathPredicateList(
-      const std::vector<std::string> &predicates);
-  void SetFilterString(absl::string_view filter_string) {
-    filter_string_ = filter_string;
-  }
+  explicit RedfishQueryParamFilter(absl::string_view filter_string)
+      : filter_string_(std::string(filter_string)) {}
 
+  void SetFilterString(absl::string_view filter_string) {
+    filter_string_ = std::string(filter_string);
+  }
   // It is possible for the filter parameter to be enabled, but unused, in that
   // case return nothing.
   std::string ToString() const override {

@@ -923,8 +923,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithFilter) {
       });
   auto redfish_object = intf_->GetRoot().AsObject();
   ASSERT_NE(redfish_object, nullptr);
-  RedfishQueryParamFilter filter;
-  filter.SetFilterString("expression");
+  RedfishQueryParamFilter filter("expression");
   RedfishVariant chassis_variant =
       redfish_object->Get("Chassis", {.filter = filter});
   EXPECT_EQ(called_chassis_filter_count, 1);
@@ -956,8 +955,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithoutFilter) {
       });
   auto redfish_object = intf_->GetRoot().AsObject();
   ASSERT_NE(redfish_object, nullptr);
-  RedfishQueryParamFilter filter;
-  filter.SetFilterString("expression");
+  RedfishQueryParamFilter filter("expression");
   RedfishVariant chassis_variant =
       redfish_object->Get("Chassis", {.filter = filter});
   EXPECT_EQ(called_chassis_filter_count, 0);

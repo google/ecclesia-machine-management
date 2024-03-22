@@ -29,3 +29,29 @@ cc_test(
         "@com_json//:json",
     ],
 )
+
+cc_library(
+    name = "filter",
+    srcs = ["filter.cc"],
+    hdrs = ["filter.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_googlesource_code_re2//:re2",
+    ],
+)
+
+cc_test(
+    name = "filter_test",
+    srcs = ["filter_test.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":filter",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
