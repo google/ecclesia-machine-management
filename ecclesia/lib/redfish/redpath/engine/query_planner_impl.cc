@@ -33,6 +33,7 @@
 #include "absl/log/check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
@@ -44,6 +45,7 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_errors.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_predicates/filter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_predicates/predicates.h"
@@ -52,6 +54,7 @@
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/redpath/engine/redpath_trie.h"
 #include "ecclesia/lib/status/macros.h"
+#include "single_include/nlohmann/json.hpp"
 #include "re2/re2.h"
 
 namespace ecclesia {
@@ -463,29 +466,57 @@ QueryPlanner::ExecuteQueryExpression(
     redpath_prefix_tracker.last_redpath_prefix = absl::StrCat(
         redpath_prefix_tracker.last_redpath_prefix, "/", expression.expression);
 
-    // Get query parameters for the RedPath expression we are about to execute.
-    GetParams get_params_for_redpath =
-        GetQueryParamsForRedPath(redpath_prefix_tracker.last_redpath_prefix);
-
-    if (get_params_for_redpath.filter.has_value()) {
-      // Since filter is enabled all predicates that rely on the redfish data
-      // returned from this call need to be added to the $filter parameter that
-      // is sent to the Redfish agent.
-      absl::StatusOr<std::string> filter_string =
-          GetFilterStringFromNextNode(next_trie_node);
-      if (filter_string.ok()) {
-        get_params_for_redpath.filter->SetFilterString(filter_string.value());
+    GetParams get_params_for_redpath;
+    RedfishVariant redfish_variant(absl::OkStatus());
+    if (expression.type == RedPathExpression::Type::kNodeName) {
+      // Get query parameters for the RedPath expression we are about to
+      // execute.
+      get_params_for_redpath =
+          GetQueryParamsForRedPath(redpath_prefix_tracker.last_redpath_prefix);
+      if (get_params_for_redpath.filter.has_value()) {
+        // Since filter is enabled all predicates that rely on the redfish data
+        // returned from this call need to be added to the $filter parameter
+        // that is sent to the Redfish agent.
+        absl::StatusOr<std::string> filter_string =
+            GetFilterStringFromNextNode(next_trie_node);
+        if (filter_string.ok()) {
+          get_params_for_redpath.filter->SetFilterString(filter_string.value());
+        }
       }
+      redfish_variant = current_execution_context.redfish_object->Get(
+          expression.expression, get_params_for_redpath);
+    } else if (expression.type ==
+               RedPathExpression::Type::kNodeNameJsonPointer) {
+      // resolve the nest node represented in the normalized_node_name
+      absl::StatusOr<nlohmann::json> json_obj = ResolveRedPathNodeToJson(
+          current_execution_context.redfish_object->GetContentAsJson(),
+          expression.expression);
+      if (!json_obj.ok()) {
+        return execution_contexts;
+      }
+      std::string node_name = json_obj->get<std::string>();
+
+      get_params_for_redpath = GetQueryParamsForRedPath(node_name);
+      if (get_params_for_redpath.filter.has_value()) {
+        // Since filter is enabled all predicates that rely on the redfish data
+        // returned from this call need to be added to the $filter parameter
+        // that is sent to the Redfish agent.
+        absl::StatusOr<std::string> filter_string =
+            GetFilterStringFromNextNode(next_trie_node);
+        if (filter_string.ok()) {
+          get_params_for_redpath.filter->SetFilterString(filter_string.value());
+        }
+      }
+      redfish_variant =
+          redfish_interface_->CachedGetUri(node_name, get_params_for_redpath);
     }
-    RedfishVariant redfish_variant =
-        current_execution_context.redfish_object->Get(expression.expression,
-                                                      get_params_for_redpath);
     ECCLESIA_RETURN_IF_ERROR(redfish_variant.status());
 
     std::unique_ptr<RedfishObject> redfish_object = nullptr;
     std::unique_ptr<RedfishIterable> redfish_iterable = nullptr;
     if (redfish_iterable = redfish_variant.AsIterable(); !redfish_iterable) {
       redfish_object = redfish_variant.AsObject();
+
       if (redfish_object == nullptr) {
         DLOG(INFO) << "Cannot query NodeName " << expression.expression
                    << " in Redfish Object:\n"

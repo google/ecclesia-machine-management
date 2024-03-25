@@ -14,6 +14,7 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/query:query_errors_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
+        "//ecclesia/lib/redfish/dellicius/utils:path_util",
         "//ecclesia/lib/redfish/redpath/definitions/query_predicates:filter",
         "//ecclesia/lib/redfish/redpath/definitions/query_predicates:predicates",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:converter",
@@ -25,9 +26,11 @@ cc_library(
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/log:die_if_null",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_googlesource_code_re2//:re2",
+        "@com_json//:json",
     ],
 )
 

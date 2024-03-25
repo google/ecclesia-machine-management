@@ -43,7 +43,12 @@ struct RedPathExpression {
   //   `Chassis` => kNodeName
   //   `[Id=1]` => kPredicate
   //   `[Reading=$arg1]` => kPredicateTemplate
-  enum class Type : uint8_t { kNodeName = 0, kPredicate, kPredicateTemplate };
+  enum class Type : uint8_t {
+    kNodeName = 0,
+    kPredicate,
+    kPredicateTemplate,
+    kNodeNameJsonPointer
+  };
   Type type;
   std::string expression;
 
@@ -75,6 +80,9 @@ struct RedPathExpression {
         break;
       case RedPathExpression::Type::kPredicateTemplate:
         type_str = "predicate_template";
+        break;
+      case RedPathExpression::Type::kNodeNameJsonPointer:
+        type_str = "node_name_json_pointer";
         break;
     }
     absl::Format(&sink, "{ type: \"%s\" expression: \"%s\"}", type_str,

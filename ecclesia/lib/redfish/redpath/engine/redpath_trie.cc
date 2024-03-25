@@ -25,10 +25,10 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/check.h"
-#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_replace.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -66,7 +66,7 @@ RedPathTrieNode *InsertRedPathExpressions(
 
 // Splits RedPath into individual expressions.
 absl::StatusOr<std::vector<RedPathExpression>> SplitRedPath(
-    const std::string &redpath) {
+    const std::string &redpath, RedPathExpression::Type type) {
   std::vector<RedPathExpression> redpath_expressions;
   for (const auto &redpath_step :
        absl::StrSplit(redpath, '/', absl::SkipEmpty())) {
@@ -77,8 +77,8 @@ absl::StatusOr<std::vector<RedPathExpression>> SplitRedPath(
       return absl::InvalidArgumentError(
           absl::StrCat("Invalid redpath step: ", redpath_step));
     }
-    redpath_expressions.push_back(
-        {RedPathExpression::Type::kNodeName, node_name});
+    redpath_expressions.push_back({type, node_name});
+
     if (!predicate.empty()) {
       // working with templated queries.
       redpath_expressions.push_back(
@@ -119,13 +119,22 @@ absl::Status RedPathTrieBuilder::ProcessSubquerySequence(
   for (const auto &subquery_id : subquery_sequence) {
     const DelliciusQuery::Subquery *subquery =
         subquery_id_to_subquery_[subquery_id];
-    const std::string &redpath = subquery->redpath();
-    ECCLESIA_ASSIGN_OR_RETURN(
-        std::vector<RedPathExpression> redpath_expressions,
-        SplitRedPath(redpath));
-
+    std::vector<RedPathExpression> redpath_expressions;
+    if (subquery->has_redpath()) {
+      const std::string &redpath = subquery->redpath();
+      ECCLESIA_ASSIGN_OR_RETURN(
+          redpath_expressions,
+          SplitRedPath(redpath, RedPathExpression::Type::kNodeName));
+    } else if (subquery->has_uri_reference_redpath()) {
+      std::string normalized_node_name =
+          absl::StrReplaceAll(subquery->uri_reference_redpath(), {{"/", "."}});
+      redpath_expressions.push_back(
+          {RedPathExpression::Type::kNodeNameJsonPointer,
+           normalized_node_name});
+    }
     // Insert RedPath Expression
     current_node = InsertRedPathExpressions(current_node, redpath_expressions);
+
     current_node->subquery_id = subquery_id;
   }
   return absl::OkStatus();
