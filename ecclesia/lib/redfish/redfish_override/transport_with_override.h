@@ -20,6 +20,7 @@
 #include <memory>
 #include <optional>
 #include <utility>
+#include <vector>
 
 #include "absl/functional/any_invocable.h"
 #include "absl/status/statusor.h"
@@ -27,6 +28,7 @@
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "grpcpp/security/credentials.h"
+#include "re2/re2.h"
 
 namespace ecclesia {
 
@@ -56,7 +58,18 @@ class RedfishTransportWithOverride : public RedfishTransport {
       std::unique_ptr<RedfishTransport> redfish_transport,
       absl::AnyInvocable<absl::StatusOr<OverridePolicy>()> override_policy_cb)
       : redfish_transport_(std::move(redfish_transport)),
-        override_policy_cb_(std::move(override_policy_cb)) {}
+        override_policy_cb_(std::move(override_policy_cb)) {
+    absl::StatusOr<OverridePolicy> override_policy = override_policy_cb_();
+    if (!override_policy.ok()) return;
+    // Precompile regex for overrides.
+    override_re2_and_content_.reserve(
+        override_policy->override_content_map_regex_size());
+    for (auto &[regex_str, override_content] :
+         *override_policy->mutable_override_content_map_regex()) {
+      override_re2_and_content_.push_back(std::make_pair(
+          std::make_unique<RE2>(regex_str), std::move(override_content)));
+    }
+  }
   RedfishTransportWithOverride(
       std::unique_ptr<RedfishTransport> redfish_transport,
       OverridePolicy override_policy)
@@ -107,6 +120,8 @@ class RedfishTransportWithOverride : public RedfishTransport {
   bool has_override_policy_ = false;
   OverridePolicy override_policy_;  // Use a default empty override policy.
   absl::AnyInvocable<absl::StatusOr<OverridePolicy>()> override_policy_cb_;
+  std::vector<std::pair<std::unique_ptr<RE2>, OverridePolicy::OverrideContent>>
+      override_re2_and_content_;
 };
 }  // namespace ecclesia
 #endif  // ECCLESIA_LIB_REDFISH_REDFISH_OVERRIDE_TRANSPORT_WITH_OVERRIDE_H_

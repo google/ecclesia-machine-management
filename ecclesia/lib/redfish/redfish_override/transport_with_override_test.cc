@@ -808,7 +808,9 @@ TEST_F(RedfishOverrideTest, OverrideGottenOnceOnly) {
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get2->body));
   EXPECT_THAT(std::get<nlohmann::json>(res_get2->body), Eq(expected_get));
   EXPECT_THAT(res_get2->code, Eq(200));
-  EXPECT_THAT(count, Eq(1));
+  // We expect the count to be 2 since it should be gotten once to do the
+  // precompiling of the regex.
+  EXPECT_THAT(count, Eq(2));
 }
 
 TEST_F(RedfishOverrideTest, FailedGetNoOverride) {
@@ -823,7 +825,9 @@ TEST_F(RedfishOverrideTest, FailedGetNoOverride) {
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/my/test/uri");
   ASSERT_THAT(res_get, IsStatusInternal());
-  EXPECT_THAT(count, Eq(0));
+  // We expect the count to be 1 since it should be gotten once to do the
+  // precompiling of the regex.
+  EXPECT_THAT(count, Eq(1));
 }
 
 TEST_F(RedfishOverrideTest, GetReplaceValueFailedOverride) {
@@ -887,7 +891,7 @@ TEST_F(RedfishOverrideTest, GetReplaceValueFailedOverrideTryAgain) {
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
       std::move(transport_),
       [&policy, &count]() -> absl::StatusOr<OverridePolicy> {
-        if (count++ == 0) {
+        if (count++ == 1) {
           return absl::InternalError("test fail");
         }
         return policy;

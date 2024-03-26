@@ -24,6 +24,7 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/log.h"
@@ -49,7 +50,8 @@ namespace ecclesia {
 namespace {
 using OverrideValue = OverrideField::OverrideValue;
 using IndividualObjectIdentifier = ObjectIdentifier::IndividualObjectIdentifier;
-
+using RE2AndOverrideContext = std::vector<
+    std::pair<std::unique_ptr<RE2>, OverridePolicy::OverrideContent>>;
 constexpr absl::string_view kTargetKey = "target";
 constexpr absl::string_view kResourceKey = "redfish-resource";
 
@@ -298,7 +300,8 @@ absl::Status ResultUpdateHelper(const OverrideField &field,
 }
 
 absl::Status ResultExpandUpdateHelper(
-    const OverridePolicy &override_policy, nlohmann::json *json,
+    const OverridePolicy &override_policy,
+    const RE2AndOverrideContext &re2_and_override_context, nlohmann::json *json,
     RedfishTransport *transport,
     absl::flat_hash_set<nlohmann::json *> &visited_json) {
   if (visited_json.contains(json)) {
@@ -329,9 +332,8 @@ absl::Status ResultExpandUpdateHelper(
         }
       }
     }
-    for (const auto &[uri_regex, override_content] :
-         override_policy.override_content_map_regex()) {
-      if (!RE2::FullMatch(checked_path, uri_regex)) {
+    for (const auto &[uri_re2, override_content] : re2_and_override_context) {
+      if (!RE2::FullMatch(checked_path, *uri_re2)) {
         continue;
       }
       for (const auto &field : override_content.override_field()) {
@@ -346,8 +348,9 @@ absl::Status ResultExpandUpdateHelper(
   }
 
   for (nlohmann::json &subjson : *json) {
-    if (absl::Status status = ResultExpandUpdateHelper(
-            override_policy, &subjson, transport, visited_json);
+    if (absl::Status status =
+            ResultExpandUpdateHelper(override_policy, re2_and_override_context,
+                                     &subjson, transport, visited_json);
         !status.ok()) {
       return absl::InternalError(
           absl::StrCat("Applying expand failed: ", status.message()));
@@ -461,7 +464,8 @@ RedfishTransportWithOverride::TryApplyingOverride(
   }
   absl::flat_hash_set<nlohmann::json *> visited_json;
   if (auto status = ResultExpandUpdateHelper(
-          override_policy_, &json, redfish_transport_.get(), visited_json);
+          override_policy_, override_re2_and_content_, &json,
+          redfish_transport_.get(), visited_json);
       !status.ok()) {
     LOG(WARNING) << "Override apply failed: " << status;
   }
