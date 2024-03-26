@@ -40,6 +40,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/status/test_macros.h"
 #include "ecclesia/lib/testing/status.h"
+#include "google/protobuf/text_format.h"
 
 namespace ecclesia {
 namespace {
@@ -157,7 +158,8 @@ class QueryRouterTest : public testing::Test {
   template <typename T>
   void CreateFile(absl::string_view dir, absl::string_view filename,
                   const T &item) {
-    std::string contents = item.ShortDebugString();
+    std::string contents;
+    google::protobuf::TextFormat::PrintToString(item, &contents);
     fs_.WriteFile(absl::StrCat(dir, filename), contents);
   }
 

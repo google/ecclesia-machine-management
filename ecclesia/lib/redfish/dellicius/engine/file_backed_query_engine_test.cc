@@ -31,6 +31,7 @@
 #include "ecclesia/lib/status/test_macros.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
+#include "google/protobuf/text_format.h"
 
 namespace ecclesia {
 namespace {
@@ -67,7 +68,8 @@ class FileBackedQueryEngineTest : public testing::Test {
 
   void CreateQueryResultFile(absl::string_view filename,
                              const QueryResult &result) {
-    std::string contents = result.ShortDebugString();
+    std::string contents;
+    google::protobuf::TextFormat::PrintToString(result, &contents);
     fs_.WriteFile(absl::StrCat(kRootDir, filename), contents);
   }
 

@@ -30,6 +30,7 @@
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/time/clock_fake.h"
+#include "google/protobuf/text_format.h"
 
 namespace ecclesia {
 namespace {
@@ -67,9 +68,12 @@ TEST(QuerySpecTest, ConvertFromQueryContextPass) {
            }
       )pb");
 
-  std::string query_a_contents = query_a.ShortDebugString();
-  std::string query_b_contents = query_b.ShortDebugString();
-  std::string rule_contents = query_rules.ShortDebugString();
+  std::string query_a_contents;
+  std::string query_b_contents;
+  std::string rule_contents;
+  google::protobuf::TextFormat::PrintToString(query_a, &query_a_contents);
+  google::protobuf::TextFormat::PrintToString(query_b, &query_b_contents);
+  google::protobuf::TextFormat::PrintToString(query_rules, &rule_contents);
 
   std::vector<EmbeddedFile> queries = {
       EmbeddedFile{.name = "query_a.textproto", .data = query_a_contents},
@@ -106,7 +110,8 @@ TEST(QuerySpecTest, ConvertFromQueryContextDuplicateQueries) {
            property_sets { properties { property: "property_1" type: STRING } }
       )pb");
 
-  std::string query_a_contents = query_a.ShortDebugString();
+  std::string query_a_contents;
+  google::protobuf::TextFormat::PrintToString(query_a, &query_a_contents);
 
   std::vector<EmbeddedFile> queries = {
       EmbeddedFile{.name = "query_a.textproto", .data = query_a_contents},
@@ -131,7 +136,8 @@ TEST(QuerySpecTest, ConvertFromQueryContextUnableToReadQueryRule) {
            property_sets { properties { property: "property_1" type: STRING } }
       )pb");
 
-  std::string query_a_contents = query_a.ShortDebugString();
+  std::string query_a_contents;
+  google::protobuf::TextFormat::PrintToString(query_a, &query_a_contents);
 
   std::vector<EmbeddedFile> queries = {
       EmbeddedFile{.name = "query_a.textproto", .data = query_a_contents},
@@ -179,9 +185,12 @@ TEST_F(QuerySpecConvertTest, ConvertFromQueryFilesPass) {
            }
       )pb");
 
-  std::string query_a_contents = query_a.ShortDebugString();
-  std::string query_b_contents = query_b.ShortDebugString();
-  std::string rule_contents = query_rules.ShortDebugString();
+  std::string query_a_contents;
+  std::string query_b_contents;
+  std::string rule_contents;
+  google::protobuf::TextFormat::PrintToString(query_a, &query_a_contents);
+  google::protobuf::TextFormat::PrintToString(query_b, &query_b_contents);
+  google::protobuf::TextFormat::PrintToString(query_rules, &rule_contents);
 
   fs_.CreateFile("/tmp/test/query_a.textproto", query_a_contents);
   fs_.CreateFile("/tmp/test/query_b.textproto", query_b_contents);
@@ -224,8 +233,10 @@ TEST_F(QuerySpecConvertTest, ConvertFromQueryFilesDuplicateQueries) {
            }
       )pb");
 
-  std::string query_a_contents = query_a.ShortDebugString();
-  std::string rule_contents = query_rules.ShortDebugString();
+  std::string query_a_contents;
+  std::string rule_contents;
+  google::protobuf::TextFormat::PrintToString(query_a, &query_a_contents);
+  google::protobuf::TextFormat::PrintToString(query_rules, &rule_contents);
 
   fs_.CreateFile("/tmp/test/query_a.textproto", query_a_contents);
   fs_.CreateFile("/tmp/test/query_b.textproto", query_a_contents);
@@ -252,7 +263,8 @@ TEST_F(QuerySpecConvertTest, ConvertFromQueryFilesUnableToReadQueryRule) {
            property_sets { properties { property: "property_1" type: STRING } }
       )pb");
 
-  std::string query_a_contents = query_a.ShortDebugString();
+  std::string query_a_contents;
+  google::protobuf::TextFormat::PrintToString(query_a, &query_a_contents);
 
   fs_.CreateFile("/tmp/test/query_a.textproto", query_a_contents);
   fs_.CreateFile("/tmp/test/query_rule.textproto", "UNKNOWN");
