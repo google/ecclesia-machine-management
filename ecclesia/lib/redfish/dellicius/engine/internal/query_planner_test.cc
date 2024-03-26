@@ -175,8 +175,8 @@ class QueryPlannerTestRunner : public ::testing::Test {
       query_result.value().clear_start_timestamp();
       query_result.value().clear_end_timestamp();
     }
-    EXPECT_THAT(intent_output, ecclesia::IgnoringRepeatedFieldOrdering(
-                    ecclesia::EqualsProto(query_result.value())));
+    EXPECT_THAT(*query_result, ecclesia::IgnoringRepeatedFieldOrdering(
+                    ecclesia::EqualsProto(intent_output)));
   }
 
   std::unique_ptr<FakeRedfishServer> server_;

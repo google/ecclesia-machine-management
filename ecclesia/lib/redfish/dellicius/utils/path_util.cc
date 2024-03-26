@@ -25,6 +25,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/ascii.h"
+#include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_replace.h"
@@ -45,7 +46,7 @@ namespace {
 //   The second example has segments "outer", "inner", "2" and "child" where "2"
 //   is an invalid segment.
 constexpr LazyRE2 kValidPropertyPathSegment = {
-    "^([a-zA-Z#@][0-9a-zA-Z#@.]+)(?:\\[([0-9]+)\\]|)$"};
+    "^([a-zA-Z#@][\\w#@.]+)(?:\\[([0-9]+)\\]|)$"};
 
 // Splits node expression containing name and index into pair of name and index
 // Example: node_name[i] -> [node_name, i]
@@ -124,21 +125,24 @@ absl::StatusOr<nlohmann::json> ResolveRedPathNodeToJson(
 
   auto process_node_name = [&json_object_out](absl::string_view name,
                                               const nlohmann::json &obj) {
-    std::optional<std::pair<std::string, int>> name_and_index =
-        SplitNodeNameIfArrayType(name);
     int index = -1;
-    if (name_and_index.has_value()) {
-      name = name_and_index->first;
-      index = name_and_index->second;
+    std::string node_name = std::string(name);
+    if (absl::EndsWith(name, "]")) {
+      std::optional<std::pair<std::string, int>> name_and_index =
+          SplitNodeNameIfArrayType(name);
+      if (name_and_index.has_value()) {
+        node_name = name_and_index->first;
+        index = name_and_index->second;
+      }
     }
-    auto it = obj.find(name);
+    auto it = obj.find(node_name);
     if (it != obj.end()) {
       // Ideally the second call to `process_node_name` can move the *it to
       // `json_object_out`.
       json_object_out = *it;
     } else {
       return absl::InternalError(
-          absl::StrCat("Node ", name, " not found in json object"));
+          absl::StrCat("Node ", node_name, " not found in json object"));
     }
     if (index >= 0) {
       json_object_out = std::move(json_object_out[index]);
