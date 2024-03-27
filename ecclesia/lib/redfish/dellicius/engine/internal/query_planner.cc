@@ -84,6 +84,7 @@ using RedPathStep = std::pair<std::string, std::string>;
 // the overall query execution process; used to tag redfish jsons when logging.
 struct TraceInfo {
   std::string redpath_prefix;
+  std::string query_string;
   std::string query_id;
   std::vector<std::string> subquery_ids;
 };
@@ -168,6 +169,7 @@ std::unique_ptr<RedfishObject> GetRedfishObjectWithFreshness(
   if (trace_info.has_value()) {
     LOG(INFO) << "Redfish Object Trace:"
               << "\nredpath prefix: " << trace_info->redpath_prefix
+              << "\nquery string: " << trace_info->query_string
               << "\nquery_id: " << trace_info->query_id << "\nsubquery_ids: "
               << absl::StrJoin(trace_info->subquery_ids, ", ") << '\n'
               << redfish_object->GetContentAsJson().dump(1);
@@ -1130,6 +1132,7 @@ void ExecuteRedPathStepFromEachSubquery(
     std::optional<TraceInfo> trace_info = std::nullopt;
     if (execution_flags.log_redfish_traces) {
       trace_info = {.redpath_prefix = redpath_to_execute,
+                    .query_string = get_params_for_redpath.ToString(),
                     .query_id = result.query_id()};
       std::vector<std::string> redpath_ctx_multiple_ids;
       for (const RedPathContext &ctx : redpath_ctx_multiple) {
@@ -1224,6 +1227,7 @@ void ExecuteRedPathStepFromEachSubquery(
       }
       if (trace_info.has_value()) {
         trace_info->redpath_prefix = redpath_to_execute;
+        trace_info->query_string = redpath_params.ToString();
       }
       std::unique_ptr<RedfishObject> indexed_node_as_object =
           GetRedfishObjectWithFreshness(indexed_node, redpath_params,
