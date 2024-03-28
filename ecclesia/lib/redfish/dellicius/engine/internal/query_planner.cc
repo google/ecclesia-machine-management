@@ -168,8 +168,8 @@ std::unique_ptr<RedfishObject> GetRedfishObjectWithFreshness(
   if (!redfish_object) return nullptr;
   if (trace_info.has_value()) {
     LOG(INFO) << "Redfish Object Trace:"
-              << "\nredpath prefix: " << trace_info->redpath_prefix
-              << "\nquery string: " << trace_info->query_string
+              << "\nredpath_prefix: " << trace_info->redpath_prefix
+              << "\nquery_string: " << trace_info->query_string
               << "\nquery_id: " << trace_info->query_id << "\nsubquery_ids: "
               << absl::StrJoin(trace_info->subquery_ids, ", ") << '\n'
               << redfish_object->GetContentAsJson().dump(1);
