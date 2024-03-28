@@ -131,5 +131,36 @@ TEST(PatchableMockupServer, CanPatchViaCrawl) {
   EXPECT_TRUE(chassis_found);
 }
 
+TEST(PatchableMockupServer, ExportsProtocolFeaturesSupportedCorrectly) {
+  static constexpr absl::string_view expected_value = R"json(
+    {
+      "ExpandQuery": {
+        "ExpandAll": true,
+        "Levels": true,
+        "Links": true,
+        "MaxLevels": 6,
+        "NoLinks": true
+      },
+      "FilterQuery": true,
+      "TopSkipQuery": true
+    }
+  )json";
+
+  FakeRedfishServer server("indus_hmb_cn/mockup.shar");
+  server.EnableAllParamsGetHandler();
+  auto redfish_intf = server.RedfishClientInterface();
+  RedfishVariant root = redfish_intf->GetRoot();
+  std::unique_ptr<RedfishObject> root_object = root.AsObject();
+  ASSERT_TRUE(root_object);
+  std::unique_ptr<RedfishObject> expand_features_json =
+      (*root_object)[kProtocolFeaturesSupported].AsObject();
+  EXPECT_TRUE(expand_features_json);
+
+  nlohmann::json expected_json = nlohmann::json::parse(expected_value);
+  nlohmann::json protocol_features_supported =
+      expand_features_json->GetContentAsJson();
+  EXPECT_EQ(protocol_features_supported, expected_json);
+}
+
 }  // namespace
 }  // namespace ecclesia

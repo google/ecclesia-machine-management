@@ -321,7 +321,7 @@ void FakeRedfishServer::EnableAllParamsGetHandler(ExpandQuery expand_query,
     json_res = obj_res->GetContentAsJson();
   }
   nlohmann::json root_response;
-  root_response["ExpandQuery"]["ExpandALL"] = expand_query.ExpandAll;
+  root_response["ExpandQuery"]["ExpandAll"] = expand_query.ExpandAll;
   root_response["ExpandQuery"]["Levels"] = expand_query.Levels;
   root_response["ExpandQuery"]["Links"] = expand_query.Links;
   root_response["ExpandQuery"]["MaxLevels"] = expand_query.MaxLevels;

@@ -364,7 +364,7 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
                .redfish_metrics()
                .uri_to_metrics_map()) {
         // Expected systems only fetched only once from the redfish server.
-        if (uri_x_metric.first == "/redfish/v1/Systems") {
+        if (uri_x_metric.first == "/redfish/v1/Systems?$expand=*($levels=1)") {
           systems_fetched_counter++;
           for (const auto &metadata :
                uri_x_metric.second.request_type_to_metadata()) {

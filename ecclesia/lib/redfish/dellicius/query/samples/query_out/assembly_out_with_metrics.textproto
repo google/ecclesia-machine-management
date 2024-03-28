@@ -30,18 +30,7 @@ results {
           }
         }
         uri_to_metrics_map {
-          key: "/redfish/v1/Systems"
-          value {
-            request_type_to_metadata {
-              key: "GET"
-              value {
-                request_count: 1
-              }
-            }
-          }
-        }
-        uri_to_metrics_map {
-          key: "/redfish/v1/Systems/system"
+          key: "/redfish/v1/Systems?$expand=*($levels=1)"
           value {
             request_type_to_metadata {
               key: "GET"
