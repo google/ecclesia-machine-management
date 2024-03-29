@@ -38,6 +38,46 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "redpath_subscription",
+    srcs = ["redpath_subscription.cc"],
+    hdrs = ["redpath_subscription.h"],
+    deps = [
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/transport:interface",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/functional:any_invocable",
+        "@com_google_absl//absl/functional:function_ref",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_json//:json",
+    ],
+)
+
+cc_test(
+    name = "redpath_subscription_test",
+    srcs = ["redpath_subscription_test.cc"],
+    deps = [
+        ":redpath_subscription",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/testing:json_mockup",
+        "//ecclesia/lib/redfish/transport:interface",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/functional:any_invocable",
+        "@com_google_absl//absl/functional:function_ref",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+        "@com_json//:json",
+    ],
+)
+
 cc_test(
     name = "query_spec_test",
     srcs = ["query_spec_test.cc"],
