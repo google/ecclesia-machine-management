@@ -44,7 +44,8 @@ class NormalizerImplDefault final : public Normalizer::ImplInterface {
   // with fallback to default CSDL bundle.
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
-                         SubqueryDataSet &data_set) override;
+                         SubqueryDataSet &data_set,
+                         const NormalizerOptions &normalizer_options) override;
 
  private:
   std::vector<DelliciusQuery::Subquery::RedfishProperty> additional_properties_;
@@ -59,7 +60,8 @@ class NormalizerImplAddDevpath final : public Normalizer::ImplInterface {
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
-                         SubqueryDataSet &data_set) override;
+                         SubqueryDataSet &data_set,
+                         const NormalizerOptions &normalizer_options) override;
 
   absl::StatusOr<const NodeTopology *> GetNodeTopology() override {
     return &topology_;
@@ -82,7 +84,8 @@ class NormalizerImplAddMachineBarepath final
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
-                         SubqueryDataSet &data_set) override {
+                         SubqueryDataSet &data_set,
+                         const NormalizerOptions &normalizer_options) override {
     // Root devpath is assigned to the root Chassis, to do this we need to track
     // if the resource is Chassis type and has no redfish location.
     bool is_root = false;

@@ -1,0 +1,625 @@
+# proto-file: ecclesia/lib/redfish/redpath/definitions/query_result/query_result.proto
+# proto-message: ecclesia.QueryIdToResult
+results: {
+  key: "AssemblyCollectorWithPropertyNameNormalization"
+  value: {
+    query_id: "AssemblyCollectorWithPropertyNameNormalization"
+    stats {
+      start_time { seconds: 10 }
+      end_time { seconds: 10 }
+    }
+    data {
+      fields {
+        key: "Chassis"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "part_number"
+                  value { string_value: "1043652-02" }
+                }
+                fields {
+                  key: "serial_number"
+                  value { string_value: "MBBQTW194106556" }
+                }
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Chassis/chassis"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "Memory"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/0"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7032B000"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/1"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B001"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/2"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B002"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/3"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B003"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/4"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B004"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/5"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B005"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/6"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B006"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/7"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B007"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/8"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B008"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/9"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B009"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/10"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B010"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/11"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B011"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/12"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B012"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/13"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B013"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/14"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B014"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/15"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B015"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/16"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B016"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/17"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B017"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/18"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B018"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/19"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B019"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/20"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B020"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/21"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B021"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/22"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B022"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Memory/23"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "KF27000122-001"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "7030B023"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "Processors"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Processors/0"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "cascadelake"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "0x016b61948b27a116"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_uri_"
+                  value {
+                    string_value: "/redfish/v1/Systems/system/Processors/1"
+                  }
+                }
+                fields {
+                  key: "part_number"
+                  value {
+                    string_value: "cascadelake"
+                  }
+                }
+                fields {
+                  key: "serial_number"
+                  value {
+                    string_value: "0x016b61948b27a117"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

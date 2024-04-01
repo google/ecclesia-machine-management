@@ -31,11 +31,13 @@
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/proto.h"
 #include "single_include/nlohmann/json.hpp"
@@ -235,8 +237,8 @@ NormalizerImplDefault::NormalizerImplDefault()
 
 absl::Status NormalizerImplDefault::Normalize(
     const RedfishObject &redfish_object,
-    const DelliciusQuery::Subquery &subquery,
-    SubqueryDataSet &data_set_local) {
+    const DelliciusQuery::Subquery &subquery, SubqueryDataSet &data_set_local,
+    const NormalizerOptions &normalizer_options) {
   const nlohmann::json json_content = redfish_object.GetContentAsJson();
   for (const DelliciusQuery::Subquery::RedfishProperty &property :
        subquery.properties()) {
@@ -285,12 +287,20 @@ absl::Status NormalizerImplDefault::Normalize(
       }
     }
   }
+
+  if (normalizer_options.enable_url_annotation) {
+    std::string odata_id;
+    if (redfish_object[ecclesia::PropertyOdataId::Name].GetValue(&odata_id)) {
+      data_set_local.set_uri_annotation(std::move(odata_id));
+    }
+  }
   return absl::OkStatus();
 }
 
 absl::Status NormalizerImplAddDevpath::Normalize(
     const RedfishObject &redfish_object,
-    const DelliciusQuery::Subquery &subquery, SubqueryDataSet &data_set) {
+    const DelliciusQuery::Subquery &subquery, SubqueryDataSet &data_set,
+    const NormalizerOptions &normalizer_options) {
   // Prioritize devpath populated by default normalizer.
   if (data_set.has_devpath()) {
     return absl::OkStatus();

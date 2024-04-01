@@ -14,7 +14,10 @@ cc_library(
     name = "query_engine_features",
     hdrs = ["query_engine_features.h"],
     visibility = ["//visibility:public"],
-    deps = [":query_engine_features_cc_proto"],
+    deps = [
+        ":query_engine_features_cc_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/passkey:annotation_passkey",
+    ],
 )
 
 cc_library(

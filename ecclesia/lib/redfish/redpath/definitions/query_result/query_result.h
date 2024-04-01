@@ -35,6 +35,7 @@ namespace ecclesia {
 
 // Key for Identifier type QueryValues when part of QueryResultData.
 inline static constexpr absl::string_view kIdentifierTag = "_id_";
+inline static constexpr absl::string_view kUriAnnotationTag = "_uri_";
 
 // A builder class for ecclesia::QueryValue.
 class QueryValueBuilder {

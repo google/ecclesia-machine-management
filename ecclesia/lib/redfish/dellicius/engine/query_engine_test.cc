@@ -329,10 +329,12 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
-                              {.devpath = FakeQueryEngine::Devpath::kDisable,
-                               .metrics = FakeQueryEngine::Metrics::kEnable,
-                               .cache = FakeQueryEngine::Cache::kInfinite}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .metrics = FakeQueryEngine::Metrics::kEnable,
+           .annotations = FakeQueryEngine::Annotations::kDisable,
+           .cache = FakeQueryEngine::Cache::kInfinite}));
 
   {
     // Query assemblies 3 times in a row. Cache is cold only for the 1st query.
@@ -405,10 +407,12 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusHmbCnMockup,
-                              {.devpath = FakeQueryEngine::Devpath::kDisable,
-                               .metrics = FakeQueryEngine::Metrics::kEnable,
-                               .cache = FakeQueryEngine::Cache::kInfinite}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusHmbCnMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .metrics = FakeQueryEngine::Metrics::kEnable,
+           .annotations = FakeQueryEngine::Annotations::kDisable,
+           .cache = FakeQueryEngine::Cache::kInfinite}));
 
   // Hold all the metrics collected from each query execution to validate
   // later.
@@ -481,6 +485,32 @@ TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
 
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_output_service_root)});
+}
+
+TEST(QueryEngineTest, QueryEngineWithUrlAnnotations) {
+  QueryIdToResult intent_output_assembly =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/assembly_out_with_annotations.textproto")));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusHmbCnMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .metrics = FakeQueryEngine::Metrics::kDisable,
+           .annotations = FakeQueryEngine::Annotations::kEnable,
+           .cache = FakeQueryEngine::Cache::kInfinite}));
+
+  QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
+      {"AssemblyCollectorWithPropertyNameNormalization"});
+
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_output_assembly)});
 }
 
 TEST(QueryEngineTest, QueryEngineTestCustomServiceRoot) {

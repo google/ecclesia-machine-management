@@ -36,6 +36,7 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/passkey/annotation_passkey.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
@@ -50,11 +51,13 @@ class FakeQueryEngine : public QueryEngineIntf {
  public:
   enum class Devpath : uint8_t { kEnable = 0, kDisable };
   enum class Metrics : uint8_t { kEnable = 0, kDisable };
+  enum class Annotations : uint8_t { kEnable = 0, kDisable };
   enum class Cache : uint8_t { kDisable = 0, kInfinite };
 
   struct Params {
     Devpath devpath = Devpath::kEnable;
     Metrics metrics = Metrics::kDisable;
+    Annotations annotations = Annotations::kDisable;
     Cache cache = Cache::kInfinite;
     std::optional<std::string> entity_tag;
     std::unique_ptr<IdAssigner> id_assigner;
@@ -119,11 +122,18 @@ class FakeQueryEngine : public QueryEngineIntf {
                                       transport, absl::InfiniteDuration());
                                 });
 
-    QueryEngineFeatures features = DefaultQueryEngineFeatures();
+    QueryEngineFeatures features;
+    if (params.annotations == Annotations::kEnable) {
+      features = EnableQueryEngineFeatures(
+          RedfishAnnotationsPasskeyFactory::GetPassKey());
+    } else {
+      features = DefaultQueryEngineFeatures();
+    }
     features.set_enable_redfish_metrics(params.metrics == Metrics::kEnable);
 
+    std::unique_ptr<QueryEngineIntf> query_engine;
     ECCLESIA_ASSIGN_OR_RETURN(
-        auto query_engine,
+        query_engine,
         QueryEngine::Create(
             std::move(query_spec),
             {.transport = redfish_server_.RedfishClientTransport(),
@@ -132,7 +142,6 @@ class FakeQueryEngine : public QueryEngineIntf {
              .stable_id_type = stable_id_type,
              .features = std::move(features)},
             std::move(params.id_assigner)));
-
     query_engine_ = std::move(query_engine);
     return absl::OkStatus();
   }

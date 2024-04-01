@@ -389,8 +389,9 @@ void QueryPlanner::TryNormalize(
   CHECK(find_subquery != subquery_id_to_subquery_.end());
 
   // Normalize Redfish Object into query result.
+  // annotations feature.
   absl::StatusOr<SubqueryDataSet> subquery_dataset = normalizer_->Normalize(
-      *query_execution_context->redfish_object, *find_subquery->second);
+      *query_execution_context->redfish_object, *find_subquery->second, {});
   if (!subquery_dataset.ok()) {
     DLOG(INFO)
         << "Cannot find queried properties in Redfish Object.\n"

@@ -17,6 +17,9 @@
 #ifndef ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_ENGINE_QUERY_ENGINE_FEATURES_H_
 #define ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_ENGINE_QUERY_ENGINE_FEATURES_H_
 
+#include <type_traits>
+
+#include "ecclesia/lib/redfish/redpath/definitions/passkey/annotation_passkey.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.pb.h"
 
 namespace ecclesia {
@@ -24,6 +27,20 @@ namespace ecclesia {
 inline QueryEngineFeatures DefaultQueryEngineFeatures() {
   QueryEngineFeatures features;
   features.set_fail_on_first_error(true);
+  return features;
+}
+
+template <typename... Passkeys>
+inline QueryEngineFeatures EnableQueryEngineFeatures(
+    Passkeys... list_passkeys) {
+  QueryEngineFeatures features = DefaultQueryEngineFeatures();
+  for (const auto p : {list_passkeys...}) {
+    using T = std::decay_t<decltype(p)>;
+    if constexpr (std::is_same_v<T, RedfishAnnotationsPasskey>) {
+      features.set_enable_url_annotation(true);
+    }
+  }
+
   return features;
 }
 

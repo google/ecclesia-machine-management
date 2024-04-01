@@ -1,0 +1,277 @@
+# proto-file: ecclesia/lib/redfish/dellicius/query/query_result.proto
+# proto-message: DelliciusQueryResult
+
+query_id: "SensorCollector"
+subquery_output_by_id {
+  key: "Sensors"
+  value {
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/indus_fan0_rpm"
+      properties {
+        name: "Name"
+        string_value: "fan0"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/indus_fan1_rpm"
+      properties {
+        name: "Name"
+        string_value: "fan1"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/indus_fan2_rpm"
+      properties {
+        name: "Name"
+        string_value: "fan2"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/indus_fan3_rpm"
+      properties {
+        name: "Name"
+        string_value: "fan3"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/indus_fan4_rpm"
+      properties {
+        name: "Name"
+        string_value: "fan4"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/indus_fan5_rpm"
+      properties {
+        name: "Name"
+        string_value: "fan5"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/indus_fan6_rpm"
+      properties {
+        name: "Name"
+        string_value: "fan6"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 16115
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm"
+      properties {
+        name: "Name"
+        string_value: "fan7"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Rotational"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "RPM"
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/indus_eat_temp"
+      properties {
+        name: "Name"
+        string_value: "indus_eat_temp"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "Cel"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 28
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/indus_latm_temp"
+      properties {
+        name: "Name"
+        string_value: "indus_latm_temp"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "Cel"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 35
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu0_pwmon"
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Power"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "W"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 30
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon"
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Power"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "W"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 30
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/i_cpu0_t"
+      properties {
+        name: "Name"
+        string_value: "CPU0"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "Cel"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 60
+      }
+    }
+    data_sets {
+      uri_annotation: "/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t"
+      properties {
+        name: "Name"
+        string_value: "CPU1"
+      }
+      properties {
+        name: "ReadingType"
+        string_value: "Temperature"
+      }
+      properties {
+        name: "ReadingUnits"
+        string_value: "Cel"
+      }
+      properties {
+        name: "Reading"
+        int64_value: 60
+      }
+    }
+  }
+}
+start_timestamp {
+  seconds: 10
+}
+end_timestamp {
+  seconds: 10
+}

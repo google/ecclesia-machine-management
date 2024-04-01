@@ -164,10 +164,12 @@ std::vector<DelliciusQueryResult> QueryEngine::ExecuteQuery(
     }
     DelliciusQueryResult result_single;
     ExecutionFlags planner_execution_flags{
-        features_.fail_on_first_error()
-            ? ExecutionFlags::ExecutionMode::kFailOnFirstError
-            : ExecutionFlags::ExecutionMode::kContinueOnSubqueryErrors,
-        features_.log_redfish_traces()};
+        .execution_mode =
+            features_.fail_on_first_error()
+                ? ExecutionFlags::ExecutionMode::kFailOnFirstError
+                : ExecutionFlags::ExecutionMode::kContinueOnSubqueryErrors,
+        .log_redfish_traces = features_.log_redfish_traces(),
+        .enable_url_annotation = features_.enable_url_annotation()};
     {
       auto query_timer = QueryTimestamp(&result_single, clock_);
       if (service_root_uri == QueryEngine::ServiceRootType::kCustom) {

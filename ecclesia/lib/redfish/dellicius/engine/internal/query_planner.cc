@@ -448,6 +448,7 @@ class SubqueryHandle final {
   absl::StatusOr<SubqueryDataSet *> Normalize(
       const RedfishObject &redfish_object, DelliciusQueryResult &result,
       SubqueryDataSet *parent_subquery_dataset,
+      const NormalizerOptions &normalizer_options,
       const std::function<bool(const DelliciusQueryResult &result)> &callback =
           nullptr);
 
@@ -755,7 +756,7 @@ std::vector<RedPathContext> ExecutePredicateFromEachSubquery(
 std::vector<RedPathContext> PopulateResultOrContinueQuery(
     const RedfishObject &redfish_object,
     const std::vector<RedPathContext> &redpath_ctx_multiple,
-    DelliciusQueryResult &result) {
+    const NormalizerOptions &normalizer_options, DelliciusQueryResult &result) {
   std::vector<RedPathContext> redpath_ctx_unresolved;
   if (redpath_ctx_multiple.empty()) return redpath_ctx_unresolved;
   for (const auto &redpath_ctx : redpath_ctx_multiple) {
@@ -777,7 +778,7 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
     if (is_end_of_redpath && !subquery_handle->HasChildSubqueries()) {
       subquery_handle
           ->Normalize(redfish_object, result, redpath_ctx.root_redpath_dataset,
-                      redpath_ctx.callback)
+                      normalizer_options, redpath_ctx.callback)
           .IgnoreError();
       continue;
     }
@@ -787,7 +788,7 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
       absl::StatusOr<SubqueryDataSet *> last_normalized_dataset;
       if (last_normalized_dataset = subquery_handle->Normalize(
               redfish_object, result, redpath_ctx.root_redpath_dataset,
-              redpath_ctx.callback);
+              normalizer_options, redpath_ctx.callback);
           !last_normalized_dataset.ok()) {
         continue;
       }
@@ -863,10 +864,9 @@ NodeNameToRedPathContexts DeduplicateNodeNamesAcrossSubqueries(
 // each mapped RedPath expression.
 // Returns Context Node with an updated RedPath list whose predicate expressions
 // filter criteria is met by the mapped context node.
-ContextNode ExecutePredicateExpression(const int node_index,
-                                       const size_t node_count,
-                                       ContextNode context_node,
-                                       DelliciusQueryResult &result) {
+ContextNode ExecutePredicateExpression(
+    const int node_index, const size_t node_count, ContextNode context_node,
+    const NormalizerOptions &normalizer_options, DelliciusQueryResult &result) {
   // At this step only those RedPath contexts will be returned whose filter
   // criteria is met by the RedfishObject.
   std::vector<RedPathContext> redpath_ctx_filtered =
@@ -875,7 +875,8 @@ ContextNode ExecutePredicateExpression(const int node_index,
                                        node_count);
   if (redpath_ctx_filtered.empty()) return context_node;
   redpath_ctx_filtered = PopulateResultOrContinueQuery(
-      *context_node.redfish_object, redpath_ctx_filtered, result);
+      *context_node.redfish_object, redpath_ctx_filtered, normalizer_options,
+      result);
   // Prepare the RedfishObject to serve as ContextNode for remaining
   // unresolved RedPath expressions.
   context_node.redpath_ctx_multiple = std::move(redpath_ctx_filtered);
@@ -1158,8 +1159,10 @@ void ExecuteRedPathStepFromEachSubquery(
       }
 
       std::vector<RedPathContext> redpath_ctx_filtered =
-          PopulateResultOrContinueQuery(*node_as_object,
-                                        redpath_ctx_no_predicate, result);
+          PopulateResultOrContinueQuery(
+              *node_as_object, redpath_ctx_no_predicate,
+              {.enable_url_annotation = execution_flags.enable_url_annotation},
+              result);
       ContextNode new_context_node{
           .redfish_object = std::move(node_as_object),
           .redpath_ctx_multiple = std::move(redpath_ctx_filtered),
@@ -1198,6 +1201,7 @@ void ExecuteRedPathStepFromEachSubquery(
           {.redfish_object = std::move(node_as_object),
            .redpath_ctx_multiple = redpath_ctx_multiple,
            .last_executed_redpath = redpath_to_execute},
+          {.enable_url_annotation = execution_flags.enable_url_annotation},
           result);
       context_nodes.push_back(std::move(new_context_node));
       continue;
@@ -1238,6 +1242,7 @@ void ExecuteRedPathStepFromEachSubquery(
           {.redfish_object = std::move(indexed_node_as_object),
            .redpath_ctx_multiple = redpath_ctx_multiple,
            .last_executed_redpath = redpath_to_execute},
+          {.enable_url_annotation = execution_flags.enable_url_annotation},
           result);
       context_nodes.push_back(std::move(new_context_node));
     }
@@ -1256,10 +1261,12 @@ void ExecuteRedPathStepFromEachSubquery(
 absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(
     const RedfishObject &redfish_object, DelliciusQueryResult &result,
     SubqueryDataSet *parent_subquery_dataset,
+    const NormalizerOptions &normalizer_options,
     const std::function<bool(const DelliciusQueryResult &result)> &callback) {
   auto id = subquery_.subquery_id();
-  ECCLESIA_ASSIGN_OR_RETURN(SubqueryDataSet subquery_dataset,
-                            normalizer_->Normalize(redfish_object, subquery_));
+  ECCLESIA_ASSIGN_OR_RETURN(
+      SubqueryDataSet subquery_dataset,
+      normalizer_->Normalize(redfish_object, subquery_, normalizer_options));
   // Insert normalized data in the parent Subquery dataset if provided.
   // Otherwise, add the dataset in the query result.
   SubqueryOutput *subquery_output = nullptr;
@@ -1336,7 +1343,9 @@ void QueryPlanner::ProcessSubqueries(
       // A special case where properties need to be queried from service root
       // itself.
       redpath_ctx_multiple = PopulateResultOrContinueQuery(
-          *context_node.redfish_object, redpath_ctx_multiple, result);
+          *context_node.redfish_object, redpath_ctx_multiple,
+          {.enable_url_annotation = execution_flags.enable_url_annotation},
+          result);
     }
     // Update ContextNode with RedPath contexts created for the subquery.
     context_node.redpath_ctx_multiple.insert(

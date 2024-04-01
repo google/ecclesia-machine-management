@@ -9,4 +9,6 @@ message QueryEngineFeatures {
   bool fail_on_first_error = 2;
   // Flag to control tracing
   bool log_redfish_traces = 3;
+  // Flag to control adding odata.id by default as _url_
+  bool enable_url_annotation = 4;
 }

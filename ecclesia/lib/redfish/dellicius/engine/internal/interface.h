@@ -52,6 +52,10 @@ struct QueryTracker {
   RedPathRedfishQueryParams redpaths_queried;
 };
 
+struct NormalizerOptions {
+  bool enable_url_annotation = false;
+};
+
 // Provides an interface for normalizing a redfish response into SubqueryDataSet
 // for the property specification in a Dellicius Subquery.
 // Normalizer is a thread-safe class: It's OK to call const and non-const
@@ -62,9 +66,10 @@ class Normalizer {
    public:
     virtual ~ImplInterface() = default;
 
-    virtual absl::Status Normalize(const RedfishObject &redfish_object,
-                                   const DelliciusQuery::Subquery &query,
-                                   SubqueryDataSet &data_set) = 0;
+    virtual absl::Status Normalize(
+        const RedfishObject &redfish_object,
+        const DelliciusQuery::Subquery &query, SubqueryDataSet &data_set,
+        const NormalizerOptions &normalizer_options) = 0;
 
     virtual absl::StatusOr<const NodeTopology *> GetNodeTopology() {
       return absl::UnimplementedError("");
@@ -75,7 +80,8 @@ class Normalizer {
   // and empty dataset on one level can be extended in outer normalizers.
   absl::StatusOr<SubqueryDataSet> Normalize(
       const RedfishObject &redfish_object,
-      const DelliciusQuery::Subquery &query) {
+      const DelliciusQuery::Subquery &query,
+      const NormalizerOptions &normalizer_options) {
     // It's ok to use a simple mutex here. If we ever detect lock contention
     // and we know that the writes are less frequent, we can convert this mutex
     // to Reader-writer lock.
@@ -85,7 +91,7 @@ class Normalizer {
 
     for (const auto &impl : impl_chain_) {
       ECCLESIA_RETURN_IF_ERROR(
-          impl->Normalize(redfish_object, query, data_set));
+          impl->Normalize(redfish_object, query, data_set, normalizer_options));
     }
 
     // Return an error if data set is empty - no field and no devpath
@@ -123,6 +129,7 @@ struct ExecutionFlags {
   };
   ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError;
   bool log_redfish_traces = false;
+  bool enable_url_annotation = false;
 };
 // Provides an interface for executing a Dellicius Query plan.
 class QueryPlannerInterface {
@@ -137,7 +144,8 @@ class QueryPlannerInterface {
       const QueryVariables &variables, const RedfishMetrics *metrics = nullptr,
       ExecutionFlags execution_flags = {
           .execution_mode = ExecutionFlags::ExecutionMode::kFailOnFirstError,
-          .log_redfish_traces = false}) = 0;
+          .log_redfish_traces = false,
+          .enable_url_annotation = false}) = 0;
   // Executes query plan using RedfishVariant as root.
   // The RedfishVariant can be the service root (redfish/v1) or any redfish
   // resource acting as local root for redfish subtree.
@@ -148,7 +156,8 @@ class QueryPlannerInterface {
       const QueryVariables &variables, const RedfishMetrics *metrics = nullptr,
       ExecutionFlags execution_flags = {
           .execution_mode = ExecutionFlags::ExecutionMode::kFailOnFirstError,
-          .log_redfish_traces = false}) = 0;
+          .log_redfish_traces = false,
+          .enable_url_annotation = false}) = 0;
   // Executes query plan using RedfishVariant as root and calls the client
   // callback with results.
   // The RedfishVariant can be the service root (redfish/v1) or any redfish

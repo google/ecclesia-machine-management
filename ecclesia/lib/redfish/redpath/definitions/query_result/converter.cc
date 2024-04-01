@@ -109,6 +109,10 @@ void AddChildSubQuery(QueryResultDataBuilder& builder,
       value_builder[kIdentifierTag] = std::move(identifier);
     }
 
+    if (data_set.has_uri_annotation()) {
+      value_builder[kUriAnnotationTag] = data_set.uri_annotation();
+    }
+
     for (const ecclesia::SubqueryDataSet::Property& property :
          data_set.properties()) {
       if (property.has_string_value()) {

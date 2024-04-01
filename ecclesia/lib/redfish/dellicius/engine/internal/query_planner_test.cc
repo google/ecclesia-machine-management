@@ -153,9 +153,13 @@ class QueryPlannerTestRunner : public ::testing::Test {
     clock_ = std::make_unique<FakeClock>(duration);
   }
 
-  void TestQuery(const std::string &query_in_path,
-                 const std::string &query_out_path, Normalizer *normalizer,
-                 bool check_timestamp = false) {
+  void TestQuery(
+      const std::string &query_in_path, const std::string &query_out_path,
+      Normalizer *normalizer, bool check_timestamp = false,
+      ExecutionFlags execution_flags = {
+          .execution_mode = ExecutionFlags::ExecutionMode::kFailOnFirstError,
+          .log_redfish_traces = false,
+          .enable_url_annotation = false}) {
     CHECK(server_ != nullptr && intf_ != nullptr && clock_ != nullptr)
         << "Test parameters not set!";
     DelliciusQuery query =
@@ -165,7 +169,8 @@ class QueryPlannerTestRunner : public ::testing::Test {
                                  normalizer, nullptr);
     ASSERT_TRUE(qp.ok());
     absl::StatusOr<DelliciusQueryResult> query_result =
-        (*qp)->Run(intf_->GetRoot(), *clock_, nullptr, {});
+        (*qp)->Run(intf_->GetRoot(), *clock_, /*tracker=*/nullptr,
+                   /*variables=*/{}, /*metrics=*/nullptr, execution_flags);
     ASSERT_TRUE(query_result.ok());
     DelliciusQueryResult intent_output =
         ParseTextFileAsProtoOrDie<DelliciusQueryResult>(query_out_path);
@@ -238,6 +243,23 @@ TEST_F(QueryPlannerTestRunner, DefaultNormalizerWithDevpaths) {
       CreateTopologyFromRedfish(intf_.get()));
   // Query Sensor
   TestQuery(sensor_in_path, sensor_out_path, normalizer_with_devpath.get());
+}
+
+TEST_F(QueryPlannerTestRunner, DefaultNormalizerWithUrlAnnotations) {
+  std::string sensor_in_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_in/sensor_in.textproto"));
+  std::string sensor_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation,
+                    "query_out/legacy/legacy_annotation_sensor_out.textproto"));
+  SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
+  // Instantiate a passthrough normalizer with devpath extension.
+  auto default_normalizer = BuildDefaultNormalizer();
+  // Query Sensor
+  TestQuery(sensor_in_path, sensor_out_path, default_normalizer.get(),
+            /*check_timestamp=*/false,
+            {.execution_mode = ExecutionFlags::ExecutionMode::kFailOnFirstError,
+             .log_redfish_traces = false,
+             .enable_url_annotation = true});
 }
 
 TEST_F(QueryPlannerTestRunner,
