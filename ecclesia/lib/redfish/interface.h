@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -47,14 +48,14 @@
 
 namespace ecclesia {
 
-enum class ServiceRootUri { kRedfish, kGoogle };
+enum class ServiceRootUri : uint8_t { kRedfish, kGoogle };
 
 // Forward declare the typed view classes
 class RedfishIterable;
 class RedfishObject;
 
 // Return value for iterator functions passed to Redfish interface functions.
-enum class RedfishIterReturnValue {
+enum class RedfishIterReturnValue : uint8_t {
   // Continue searching for additional resources and invoking the callback.
   kContinue = 0,
   // Stop searching for resources. The callback will not be invoked again.
@@ -117,20 +118,20 @@ class GetParamQueryInterface {
 // See RedFish spec 7.3.1. Use of the $expand query parameter
 class RedfishQueryParamExpand : public GetParamQueryInterface {
  public:
-  enum ExpandType { kBoth, kNotLinks, kLinks };
+  enum ExpandType : uint8_t { kBoth, kNotLinks, kLinks };
 
   struct Params {
     ExpandType type = ExpandType::kNotLinks;
     size_t levels = 1;
   };
 
-  RedfishQueryParamExpand(Params params);
+  explicit RedfishQueryParamExpand(Params params);
 
   // Validates if redfish agent supports the Expand query args.
   // Redfish agent is supposed to return ProtocolFeaturesSupported as part of
   // the /redfish/v1 object
   absl::Status ValidateRedfishSupport(
-      const absl::optional<RedfishSupportedFeatures> &features) const;
+      const std::optional<RedfishSupportedFeatures> &features) const;
 
   std::string ToString() const override;
 
@@ -160,10 +161,10 @@ class RedfishQueryParamTop : public GetParamQueryInterface {
 
   std::string ToString() const override;
 
-  size_t numMembers() const { return numMembers_; }
+  size_t numMembers() const { return num_members_; }
 
  private:
-  size_t numMembers_;
+  size_t num_members_;
 };
 
 // Defines Filter parameter
@@ -195,7 +196,7 @@ class RedfishQueryParamFilter : public GetParamQueryInterface {
 
 // Struct to be used as a parameter to RedfishInterface implementations
 struct GetParams {
-  enum class Freshness { kOptional, kRequired };
+  enum class Freshness : uint8_t { kOptional, kRequired };
 
   std::vector<const GetParamQueryInterface *> GetQueryParams() const {
     std::vector<const GetParamQueryInterface *> query_params;
@@ -211,7 +212,7 @@ struct GetParams {
     return query_params;
   }
 
-  std::string ToString() {
+  std::string ToString() const {
     std::string result;
     for (const auto *query_param : GetQueryParams()) {
       if (!result.empty()) result.append("&");
@@ -274,7 +275,11 @@ class RedfishVariant final {
   // object with expand query parameters, if available
   // kDisableAutoResolve is the most restrictive iterable mode in which the
   // navigation properties are left unresolved.
-  enum class IterableMode { kAllowExpand, kDisableExpand, kDisableAutoResolve };
+  enum class IterableMode : uint8_t {
+    kAllowExpand,
+    kDisableExpand,
+    kDisableAutoResolve
+  };
   // ImplIntf is provided as the interface for subclasses to be implemented with
   // the PImpl idiom.
 
@@ -313,7 +318,8 @@ class RedfishVariant final {
    public:
     IndexHelper() = delete;
     explicit IndexHelper(const RedfishVariant &root) : root_(root) {}
-    IndexHelper(const RedfishVariant &root, IndexType index) : root_(root) {
+    IndexHelper(const RedfishVariant &root, const IndexType &index)
+        : root_(root) {
       AppendIndex(index);
     }
 
@@ -358,11 +364,11 @@ class RedfishVariant final {
 
   // Construct from Status.
   explicit RedfishVariant(absl::Status status)
-      : RedfishVariant(nullptr, std::move(status), absl::nullopt, {}) {}
+      : RedfishVariant(nullptr, std::move(status), std::nullopt, {}) {}
 
   // Construct from ptr: the Redfish data is valid and there were no errors.
   explicit RedfishVariant(std::unique_ptr<ImplIntf> ptr)
-      : RedfishVariant(std::move(ptr), absl::OkStatus(), absl::nullopt, {}) {}
+      : RedfishVariant(std::move(ptr), absl::OkStatus(), std::nullopt, {}) {}
 
   // Construct from httpcode + error object. A Status is constructed by
   // converting the provided httpcode.
@@ -481,9 +487,9 @@ class RedfishVariant final {
       std::optional<ecclesia::HttpResponseCode> httpcode,
       std::optional<absl::flat_hash_map<std::string, std::string>> httpheaders)
       : ptr_(std::move(ptr)),
-        status_(status),
+        status_(std::move(status)),
         httpcode_(httpcode),
-        httpheaders_(httpheaders) {}
+        httpheaders_(std::move(httpheaders)) {}
 
   std::unique_ptr<ImplIntf> ptr_;
   absl::Status status_;
@@ -495,7 +501,7 @@ class RedfishVariant final {
 // a Redfish Collection or a Redfish Array.
 class RedfishIterable {
  public:
-  RedfishIterable() {}
+  RedfishIterable() = default;
   virtual ~RedfishIterable() {}
   // Returns the number of elements in the Collection or Array.
   virtual size_t Size() = 0;
@@ -551,11 +557,11 @@ class RedfishIterable {
   Iterator end() { return Iterator(this, Size()); }
 };
 
-// RedfishObject provides an interafce for accessing properties of Redfish
+// RedfishObject provides an interface for accessing properties of Redfish
 // Objects.
 class RedfishObject {
  public:
-  RedfishObject() {}
+  RedfishObject() = default;
   virtual ~RedfishObject() {}
   // Returns the payload for a given named property node. If the value of
   // the node is an "@odata.id" field, the RedfishInterface will be queried
@@ -650,16 +656,16 @@ class RedfishInterface {
     LOG(FATAL) << "Unexpected value for Service Root";
   }
 
-  virtual ~RedfishInterface() {}
+  virtual ~RedfishInterface() = default;
 
   // An endpoint is trusted if all of the information coming from the endpoint
   // can be reliably assumed to be from a Google-controlled source.
   // Examples of trusted endpoints are attested BMCs and prodimage running in
   // caretaker mode.
-  enum TrustedEndpoint { kTrusted, kUntrusted };
+  enum TrustedEndpoint : uint8_t { kTrusted, kUntrusted };
 
   // Updates the transport for sending Redfish requests.
-  // API is deprected and the recommended way is to recreate the transport
+  // API is deprecated and the recommended way is to recreate the transport
   ABSL_DEPRECATED("Create a new instance instead")
   virtual void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
                                TrustedEndpoint trusted) = 0;

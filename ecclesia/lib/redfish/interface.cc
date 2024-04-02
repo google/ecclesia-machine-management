@@ -29,12 +29,11 @@
 
 namespace ecclesia {
 
-RedfishQueryParamTop::RedfishQueryParamTop(
-    size_t numMembers)
-    : numMembers_(numMembers) {}
+RedfishQueryParamTop::RedfishQueryParamTop(size_t numMembers)
+    : num_members_(numMembers) {}
 
 std::string RedfishQueryParamTop::ToString() const {
-  return absl::StrCat("$top=", numMembers_);
+  return absl::StrCat("$top=", num_members_);
 }
 
 absl::Status RedfishQueryParamTop::ValidateRedfishSupport(
