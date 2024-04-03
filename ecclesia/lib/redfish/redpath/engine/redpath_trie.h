@@ -47,7 +47,8 @@ struct RedPathExpression {
     kNodeName = 0,
     kPredicate,
     kPredicateTemplate,
-    kNodeNameJsonPointer
+    kNodeNameJsonPointer,
+    kNodeNameUriPointer
   };
   Type type;
   std::string expression;

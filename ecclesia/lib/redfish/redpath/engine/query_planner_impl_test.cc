@@ -482,6 +482,98 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
                   ecclesia::EqualsProto(query_result.value())));
 }
 
+TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesUriCorrectly) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "SensorsSubTreeTest"
+        subquery {
+          subquery_id: "Sensors"
+          uri: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon"
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "SensorsSubTreeTest"
+    data {
+      fields {
+        key: "Sensors"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU1" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
+      query, RedPathRedfishQueryParams{}, normalizer.get(), intf_.get());
+  EXPECT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  absl::StatusOr<QueryResult> query_result = (*qp)->Run({args1});
+
+  EXPECT_THAT(query_result, IsOk());
+  EXPECT_THAT(expected_query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(query_result.value())));
+}
+
+TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterForUriFromRules) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "SensorTest"
+        service_root: "/redfish/v1"
+        subquery {
+          subquery_id: "SensorsEqual"
+          uri: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon"
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+
+  std::string filter_string1 = "ReadingType%20eq%20Power";
+  auto filter = RedfishQueryParamFilter(filter_string1);
+  RedPathRedfishQueryParams redpath_redfish_query_params = {
+      {"/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon",
+       {.filter = filter}}};
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  bool filter_requested1 = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/Sensors/"
+      "indus_cpu1_pwmon?$filter=ReadingType%20eq%20Power",
+      [&](ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        filter_requested1 = true;
+        req->WriteResponseString(R"json({"@odata.id": "uri"})json");
+        req->Reply();
+      });
+  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner(query, std::move(redpath_redfish_query_params),
+                        normalizer.get(), intf_.get());
+  EXPECT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  EXPECT_THAT((*qp)->Run({args1}), IsOk());
+  // Since the order in which the predicates are passed to the $filter string
+  // construction method is non-deterministic, the Redfish request can be in two
+  // possible forms.
+  EXPECT_TRUE(filter_requested1);
+}
+
 }  // namespace
 
 }  // namespace ecclesia

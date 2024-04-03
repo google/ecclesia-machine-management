@@ -131,6 +131,9 @@ absl::Status RedPathTrieBuilder::ProcessSubquerySequence(
       redpath_expressions.push_back(
           {RedPathExpression::Type::kNodeNameJsonPointer,
            normalized_node_name});
+    } else if (subquery->has_uri()) {
+      redpath_expressions.push_back(
+          {RedPathExpression::Type::kNodeNameUriPointer, subquery->uri()});
     }
     // Insert RedPath Expression
     current_node = InsertRedPathExpressions(current_node, redpath_expressions);

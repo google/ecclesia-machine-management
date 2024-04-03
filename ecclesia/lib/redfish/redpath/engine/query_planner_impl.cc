@@ -510,6 +510,12 @@ QueryPlanner::ExecuteQueryExpression(
       }
       redfish_variant =
           redfish_interface_->CachedGetUri(node_name, get_params_for_redpath);
+    } else if (expression.type ==
+               RedPathExpression::Type::kNodeNameUriPointer) {
+      get_params_for_redpath = GetQueryParamsForRedPath(expression.expression);
+
+      redfish_variant = redfish_interface_->CachedGetUri(
+          expression.expression, get_params_for_redpath);
     }
     ECCLESIA_RETURN_IF_ERROR(redfish_variant.status());
 

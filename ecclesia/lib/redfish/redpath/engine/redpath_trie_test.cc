@@ -273,6 +273,40 @@ TEST(RedPathTrieTest, RedPathTrieToStringIsAsExpected) {
                   absl::StrSplit(expected_redpath_trie_string, '\n')));
 }
 
+TEST(RedPathTrieTest, RedPathTrieIsBuiltJsonAndUriCorrectly) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "SensorsSubTreeTest"
+        subquery {
+          subquery_id: "Sensors"
+          uri: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon"
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+
+  // Expected Trie Structure
+  //                 <Root>
+  //                  /
+  //            /redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon
+
+  RedPathTrieBuilder redpath_trie_builder(&query);
+  absl::StatusOr<std::unique_ptr<RedPathTrieNode>> redpath_trie =
+      redpath_trie_builder.CreateRedPathTrie();
+  EXPECT_THAT(redpath_trie, IsOk());
+  EXPECT_TRUE(*redpath_trie != nullptr);
+
+  // Validate Root node has uri path as child node and the node marks the
+  // end of a RedPath expression by having subquery_id `Sensors`.
+  auto sensors_uri_node =
+      (*redpath_trie)
+          ->expression_to_trie_node.find(RedPathExpression(
+              RedPathExpression::Type::kNodeNameUriPointer,
+              "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon"));
+  EXPECT_TRUE(sensors_uri_node !=
+              (*redpath_trie)->expression_to_trie_node.end());
+  EXPECT_THAT(sensors_uri_node->second->subquery_id, "Sensors");
+}
+
 }  // namespace
 
 }  // namespace ecclesia
