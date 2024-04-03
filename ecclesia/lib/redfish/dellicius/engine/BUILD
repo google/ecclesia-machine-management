@@ -166,9 +166,7 @@ filegroup(
 bzl_library(
     name = "redpath_query_bzl",
     srcs = ["redpath_query.bzl"],
-    visibility = [
-        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
-    ],
+    visibility = ["//visibility:private"],
     deps = [
         "//ecclesia/build_defs:embed",
         "//ecclesia/build_defs:proto",

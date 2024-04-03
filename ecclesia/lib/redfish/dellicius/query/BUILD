@@ -69,9 +69,7 @@ cc_proto_library(
 
 py_proto_library(
     name = "query_py_pb2",
-    visibility = [
-        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
-    ],
+    visibility = ["//visibility:private"],
     deps = [":query_proto"],
 )
 
