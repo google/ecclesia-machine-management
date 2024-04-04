@@ -45,6 +45,7 @@ cc_library(
     name = "redpath_subscription",
     srcs = ["redpath_subscription.cc"],
     hdrs = ["redpath_subscription.h"],
+    visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/transport:interface",

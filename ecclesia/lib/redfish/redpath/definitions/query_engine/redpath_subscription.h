@@ -44,7 +44,7 @@ class RedPathSubscription {
   // Subscription Configuration provided by QueryEngine.
   struct Configuration {
     std::string query_id;
-    std::string subquery_id;
+    std::string redpath;
 
     // URIs to subscribe.
     std::vector<std::string> uris;

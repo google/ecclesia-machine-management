@@ -19,10 +19,16 @@ message RedPathPrefixWithQueryParams {
   message TopConfiguration {
     uint64 num_members = 1;
   }
+
+  // RedPath prefix.
+  // This is an absolute RedPath expression (Relative to service root).
+  // Predicate specific rules are not supported.
+  // User should use `[*]` predicate.
   string redpath = 1;
   optional ExpandConfiguration expand_configuration = 2;
   optional TopConfiguration top_configuration = 3;
   bool filter_enabled = 4;
+  bool subscribe = 5;
 }
 
 // Collection of Prefix Set with QueryParams.
@@ -34,12 +40,21 @@ message RedPathPrefixSetWithQueryParamsCollection {
 
 // Message encapsulating RedPath query execution rules for one or more queries.
 message QueryRules {
-  // Collection of RedPath prefixes along with expand configuration.
-  // A redpath query consists of one or more subqueries each having a RedPath
-  // Expression. QueryEngine executes a reduced set of RedPaths after
-  // deduplicating RedPath prefixes across subqueries.
-  // This message encapsulates all the RedPath prefixes executed by query
-  // planner and tuned Redfish Query Params.
+  // Collection of absolute RedPath prefixes along with rules - Expand, Filter,
+  // Top, Subscribe etc.
+  // A Redpath query consists of one or more subqueries each having either a
+  // `relative` RedPath Expression (executed relative to a another expression)
+  // or an `absolute` RedPath expression (executed relative to service root).
+  //
+  // In this message, the user provides rules for all the `absolute` RedPath
+  // prefixes that are expected to be executed by QueryEngine.
+  //
+  // Note: User shall not configure a rule for specific predicate. This is
+  // because for Redfish Resource Collection, QueryEngine applies rules to all
+  // members in the collection and not to specific instance. Hence it is advised
+  // to replace all predicate in RedPath prefix with `[*]` when writing rules.
+  // Example:
+  //  /Chassis[Name=Indus] shall be configured as /Chassis[*] in QueryRules.
   message RedPathPrefixSetWithQueryParams {
     repeated RedPathPrefixWithQueryParams redpath_prefix_with_params = 1;
   }

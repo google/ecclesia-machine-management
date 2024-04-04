@@ -17,26 +17,69 @@
 #ifndef ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_H_
 #define ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_H_
 
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
+#include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/redpath_trie.h"
 
 namespace ecclesia {
 
 // Provides an interface for planning and executing a RedPath Query.
 class QueryPlannerIntf {
  public:
-  // Configuration for the QueryPlanner.
+  // Context provided by QueryPlanner to create an event subscription.
+  struct SubscriptionContext {
+    // RedPath expression and corresponding query planner trie node.
+    // This mapping is used by query planner to resume query execution on an
+    // event.
+    absl::flat_hash_map<std::string, RedPathTrieNode *> redpath_to_trie_node;
+    // Subscription configuration for each RedPath expression.
+    std::vector<RedPathSubscription::Configuration> subscription_configs;
+    // Copy of query variables to be used for templated queries.
+    QueryVariables query_variables;
+  };
+
+  // Configures a query execution.
   struct QueryExecutionOptions {
     QueryVariables &variables;
   };
 
+  // Configures a query resume operation.
+  struct QueryResumeOptions {
+    const RedPathTrieNode *trie_node;
+    const RedfishVariant &redfish_variant;
+    const QueryVariables &variables;
+  };
+
+  // QueryPlan execution output.
+  // Optionally contains a valid `subscription_context` when QueryPlan involves
+  // subscribing to RedfishEvents.
+  struct QueryExecutionResult {
+    QueryResult query_result;
+    std::unique_ptr<SubscriptionContext> subscription_context = nullptr;
+  };
+
   virtual ~QueryPlannerIntf() = default;
 
-  // Plans and executes query plan relative to the service root specified in the
-  // redpath query.
-  virtual absl::StatusOr<QueryResult> Run(QueryExecutionOptions config) = 0;
+  // Executes query plan based on `query_execution_options` and returns
+  // `QueryExecutionResult`.
+  // If query plan includes subscription, returns `RedPathSubscription` along
+  // with a partial `QueryResult` in `QueryExecutionResult` for RedPath
+  // expressions that are polled as part of subscription sequence.
+  virtual absl::StatusOr<QueryExecutionResult> Run(
+      QueryExecutionOptions query_execution_options) = 0;
+
+  // Resumes a query execution after an event.
+  virtual absl::StatusOr<QueryResult> Resume(
+      QueryResumeOptions query_resume_options) = 0;
 };
 
 }  // namespace ecclesia

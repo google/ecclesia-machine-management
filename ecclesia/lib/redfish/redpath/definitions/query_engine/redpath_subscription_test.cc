@@ -63,7 +63,7 @@ TEST(RedPathSubscriptionImplTest, SubscriptionIsCreated) {
   MockRedfishClientInterface redfish_interface;
   Configuration config;
   config.uris = {"bar", "baz"};
-  config.subquery_id = "foo";
+  config.redpath = "foo";
   config.query_id = "id";
 
   EXPECT_CALL(redfish_interface, Subscribe)
@@ -84,7 +84,7 @@ TEST(RedPathSubscriptionImplTest, CancelSubscriptionReturnsOk) {
   MockRedfishClientInterface redfish_interface;
   Configuration config;
   config.uris = {"bar", "baz"};
-  config.subquery_id = "foo";
+  config.redpath = "foo";
   config.query_id = "id";
 
   auto mock_event_stream = std::make_unique<MockRedfishEventStream>();
@@ -113,7 +113,7 @@ TEST(RedPathSubscriptionImplTest, SubscriptionIsNotCreated) {
   {
     Configuration config;
     config.uris = {"bar", "baz"};
-    config.subquery_id = "foo";
+    config.redpath = "foo";
     config.query_id = "id";
     EXPECT_CALL(redfish_interface, Subscribe)
         .WillOnce([&](absl::string_view,
@@ -132,7 +132,7 @@ TEST(RedPathSubscriptionImplTest, SubscriptionIsNotCreated) {
   // When URIs are not present.
   {
     Configuration config;
-    config.subquery_id = "foo";
+    config.redpath = "foo";
     config.query_id = "id";
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
         redpath_subscription = RedPathSubscriptionImpl::Create(
@@ -159,7 +159,7 @@ TEST(RedPathSubscriptionImplTest, SubscriptionIsNotCreated) {
   {
     Configuration config;
     config.uris = {"bar", "baz"};
-    config.subquery_id = "foo";
+    config.redpath = "foo";
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
         redpath_subscription = RedPathSubscriptionImpl::Create(
             {config}, redfish_interface,
@@ -173,7 +173,7 @@ TEST(RedPathSubscriptionImplTest, SubscriptionRequestFormattedCorrectly) {
   MockRedfishClientInterface redfish_interface;
   Configuration config;
   config.uris = {"bar", "baz"};
-  config.subquery_id = "foo";
+  config.redpath = "foo";
   config.query_id = "id";
   config.predicate = "Reading>10";
 
@@ -254,7 +254,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsInvokedForEachOriginOfCondition) {
   MockRedfishClientInterface redfish_interface;
   Configuration config;
   config.uris = {"bar", "baz"};
-  config.subquery_id = "foo";
+  config.redpath = "foo";
   config.query_id = "id";
   EXPECT_CALL(redfish_interface, Subscribe)
       .WillOnce(
@@ -282,7 +282,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
   MockRedfishClientInterface redfish_interface;
   Configuration config;
   config.uris = {"bar", "baz"};
-  config.subquery_id = "foo";
+  config.redpath = "foo";
   config.query_id = "id";
 
   // When `Context` is missing in event.
@@ -477,7 +477,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsInvokedOnStop) {
   MockRedfishClientInterface redfish_interface;
   Configuration config;
   config.uris = {"bar", "baz"};
-  config.subquery_id = "foo";
+  config.redpath = "foo";
   config.query_id = "id";
 
   EXPECT_CALL(redfish_interface, Subscribe)

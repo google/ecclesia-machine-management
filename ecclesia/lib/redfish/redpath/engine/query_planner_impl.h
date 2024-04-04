@@ -19,6 +19,8 @@
 
 #include <memory>
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -28,11 +30,21 @@
 
 namespace ecclesia {
 
-absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
-    const DelliciusQuery &query,
-    RedPathRedfishQueryParams redpath_to_query_params, Normalizer *normalizer,
-    RedfishInterface *redfish_interface);
+// Configures query planner.
+struct QueryPlannerOptions {
+  struct RedPathRules {
+    absl::flat_hash_map<std::string /* RedPath */, GetParams>
+        redpath_to_query_params;
+    absl::flat_hash_set<std::string /* RedPath */> redpaths_to_subscribe;
+  };
+  const DelliciusQuery &query;
+  RedPathRules redpath_rules;
+  Normalizer *normalizer;
+  RedfishInterface *redfish_interface;
+};
 
+absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
+    QueryPlannerOptions query_planner_options);
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_IMPL_H_

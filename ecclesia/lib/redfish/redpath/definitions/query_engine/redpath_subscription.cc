@@ -49,14 +49,13 @@ absl::StatusOr<nlohmann::json> CreateTrigger(
   if (config.query_id.empty()) {
     return absl::InvalidArgumentError("No query id provided");
   }
-  if (config.subquery_id.empty()) {
+  if (config.redpath.empty()) {
     return absl::InvalidArgumentError("No subquery id provided");
   }
   for (const auto &uri : config.uris) {
     origin_resources.push_back({{"@odata.id", uri}});
   }
-  std::string trigger_id =
-      absl::StrCat(config.query_id, ",", config.subquery_id);
+  std::string trigger_id = absl::StrCat(config.query_id, ",", config.redpath);
 
   nlohmann::json trigger;
   trigger["OriginResources"] = origin_resources;
