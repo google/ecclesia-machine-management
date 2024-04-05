@@ -37,6 +37,7 @@
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 
 namespace ecclesia {
@@ -64,6 +65,14 @@ class FileBackedQueryEngine : public QueryEngineIntf {
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri,
       const QueryVariableSet &query_arguments) override;
+
+  absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(
+      absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments,
+      StreamingOptions streaming_options) override {
+    return absl::UnimplementedError(
+        "ExecuteSubscriptionQuery() method is not supported");
+  }
 
   ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   void ExecuteQuery(

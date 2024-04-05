@@ -24,6 +24,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/attributes.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
 #include "absl/log/check.h"
@@ -31,6 +32,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
@@ -46,8 +48,12 @@
 #include "ecclesia/lib/redfish/dellicius/utils/parsers.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
+#include "ecclesia/lib/redfish/redpath/engine/query_planner_impl.h"
 #include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
@@ -59,6 +65,8 @@
 namespace ecclesia {
 
 namespace {
+
+using QueryExecutionResult = QueryPlannerIntf::QueryExecutionResult;
 
 std::unique_ptr<Normalizer> GetMachineDevpathNormalizer(
     const QueryEngineParams &query_engine_params,
@@ -99,6 +107,7 @@ std::unique_ptr<Normalizer> BuildLocalDevpathNormalizer(
 }
 
 // RAII style wrapper to timestamp query.
+ABSL_DEPRECATED("Use RedpathQueryTimestamp instead.")
 class QueryTimestamp {
  public:
   QueryTimestamp(DelliciusQueryResult *result, const Clock *clock)
@@ -118,6 +127,32 @@ class QueryTimestamp {
 
  private:
   DelliciusQueryResult &result_;
+  const Clock &clock_;
+  absl::Time start_time_;
+};
+
+// RAII style wrapper to timestamp query.
+class RedpathQueryTimestamp {
+ public:
+  RedpathQueryTimestamp(QueryExecutionResult *result, const Clock *clock)
+      : result_(*ABSL_DIE_IF_NULL(result)),
+        clock_(*ABSL_DIE_IF_NULL(clock)),
+        start_time_(clock_.Now()) {}
+
+  ~RedpathQueryTimestamp() {
+    auto set_time = [](absl::Time time, google::protobuf::Timestamp &field) {
+      if (auto timestamp = AbslTimeToProtoTime(time); timestamp.ok()) {
+        field = *std::move(timestamp);
+      }
+    };
+    set_time(start_time_,
+             *result_.query_result.mutable_stats()->mutable_start_time());
+    set_time(clock_.Now(),
+             *result_.query_result.mutable_stats()->mutable_end_time());
+  }
+
+ private:
+  QueryExecutionResult &result_;
   const Clock &clock_;
   absl::Time start_time_;
 };
@@ -230,6 +265,102 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
       ExecuteQuery(query_ids, service_root_uri, query_arguments));
 }
 
+void QueryEngine::HandleRedfishEvent(
+    const RedfishVariant &variant,
+    const RedPathSubscription::EventContext &event_context,
+    absl::FunctionRef<
+        void(const QueryResult &result,
+             const RedPathSubscription::EventContext &event_context)>
+        on_event_callback) {
+  auto find_context = id_to_subscription_context_.find(event_context.query_id);
+  if (find_context != id_to_subscription_context_.end()) {
+    auto find_trie_node =
+        find_context->second->redpath_to_trie_node.find(event_context.redpath);
+    if (find_trie_node == find_context->second->redpath_to_trie_node.end()) {
+      LOG(ERROR) << "Cannot resume query. RedpathTrieNode not found for "
+                 << event_context.query_id;
+      return;
+    }
+
+    // Get query plan to resume query operation with the received Redfish event.
+    const std::unique_ptr<QueryPlannerIntf> &query_plan =
+        id_to_redpath_query_plans_.at(event_context.query_id);
+
+    absl::StatusOr<QueryResult> resume_query_result = query_plan->Resume({
+        .trie_node = find_trie_node->second,
+        .redfish_variant = variant,
+        .variables = std::move(find_context->second->query_variables),
+    });
+
+    if (!resume_query_result.ok()) {
+      LOG(ERROR) << "Cannot resume query. Error: "
+                 << resume_query_result.status();
+      return;
+    }
+    on_event_callback(resume_query_result.value(), event_context);
+  }
+}
+
+absl::StatusOr<SubscriptionQueryResult> QueryEngine::ExecuteSubscriptionQuery(
+    absl::Span<const absl::string_view> query_ids,
+    const QueryVariableSet &query_arguments,
+    StreamingOptions streaming_options) {
+  QueryIdToResult query_id_to_result;
+  std::vector<RedPathSubscription::Configuration> subscription_configs;
+  for (const absl::string_view query_id : query_ids) {
+    auto it = id_to_redpath_query_plans_.find(query_id);
+    if (it == id_to_redpath_query_plans_.end()) {
+      return absl::InternalError(
+          absl::StrCat("Query plan does not exist for id ", query_id));
+    }
+    QueryVariables vars = QueryVariables();
+    auto it_vars = query_arguments.find(query_id);
+    if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
+    QueryPlannerIntf::QueryExecutionResult result_single;
+    {
+      auto query_timer = RedpathQueryTimestamp(&result_single, clock_);
+      ECCLESIA_ASSIGN_OR_RETURN(result_single, it->second->Run({vars}));
+    }
+
+    query_id_to_result.mutable_results()->insert(
+        {result_single.query_result.query_id(), result_single.query_result});
+    if (result_single.subscription_context) {
+      subscription_configs.insert(
+          subscription_configs.end(),
+          result_single.subscription_context->subscription_configs.begin(),
+          result_single.subscription_context->subscription_configs.end());
+      id_to_subscription_context_[query_id] =
+          std::move(result_single.subscription_context);
+    }
+  }
+
+  if (subscription_configs.empty()) {
+    return absl::InternalError("No subscription configs found.");
+  }
+
+  // Create redfish event subscription.
+  // Here we register callbacks with SubscriptionBroker for on_event and on_stop
+  // event handling. SubscriptionBroker on successful stream creation will
+  // return a `RedPathSubscription` object.
+  ECCLESIA_ASSIGN_OR_RETURN(
+      auto subscription,
+      streaming_options.subscription_broker(
+          subscription_configs, *redfish_interface_.get(),
+          [on_event_callback = std::move(streaming_options.on_event_callback),
+           this](const RedfishVariant &variant,
+                 const RedPathSubscription::EventContext &event_context) {
+            HandleRedfishEvent(variant, event_context, on_event_callback);
+          },
+          [on_stop_callback(std::move(streaming_options.on_stop_callback))](
+              const absl::Status &status) { on_stop_callback(status); }));
+
+  // Populate subscription result.
+  SubscriptionQueryResult subscription_result;
+  subscription_result.subscription = std::move(subscription);
+  subscription_result.result = std::move(query_id_to_result);
+  return subscription_result;
+}
+
 absl::StatusOr<RedfishInterface *> QueryEngine::GetRedfishInterface(
     RedfishInterfacePasskey unused_passkey) {
   if (redfish_interface_ == nullptr) {
@@ -280,23 +411,45 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
         engine_params, std::move(id_assigner), redfish_interface.get());
   }
 
-  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
-      id_to_query_plans;
-  id_to_query_plans.reserve(query_spec.query_id_to_info.size());
+  // Build legacy query planner for non steaming query execution mode.
+  if (!engine_params.features.enable_streaming()) {
+    absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
+        id_to_query_plans;
+    id_to_query_plans.reserve(query_spec.query_id_to_info.size());
 
+    for (auto &[query_id, query_info] : query_spec.query_id_to_info) {
+      ECCLESIA_ASSIGN_OR_RETURN(
+          auto query_planner,
+          BuildDefaultQueryPlanner(
+              query_info.query,
+              ParseQueryRuleParams(std::move(query_info.rule)),
+              normalizer.get(), redfish_interface.get()));
+
+      id_to_query_plans[query_id] = std::move(query_planner);
+    }
+
+    return QueryEngine(
+        engine_params.entity_tag, std::move(id_to_query_plans),
+        query_spec.clock, std::move(normalizer), std::move(redfish_interface),
+        std::move(engine_params.features), metrical_transport_ptr);
+  }
+
+  // Build RedPath trie based query planner.
+  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
+      id_to_redpath_trie_plans;
   for (auto &[query_id, query_info] : query_spec.query_id_to_info) {
     ECCLESIA_ASSIGN_OR_RETURN(
         auto query_planner,
-        BuildDefaultQueryPlanner(
-            query_info.query, ParseQueryRuleParams(std::move(query_info.rule)),
-            normalizer.get(), redfish_interface.get()));
-
-    id_to_query_plans[query_id] = std::move(query_planner);
+        BuildQueryPlanner(
+            {.query = query_info.query,
+             .redpath_rules = CreateRedPathRules(std::move(query_info.rule)),
+             .normalizer = normalizer.get(),
+             .redfish_interface = redfish_interface.get()}));
+    id_to_redpath_trie_plans[query_id] = std::move(query_planner);
   }
-
-  return QueryEngine(engine_params.entity_tag, std::move(id_to_query_plans),
-                     query_spec.clock, std::move(normalizer),
-                     std::move(redfish_interface),
+  return QueryEngine(engine_params.entity_tag,
+                     std::move(id_to_redpath_trie_plans), query_spec.clock,
+                     std::move(normalizer), std::move(redfish_interface),
                      std::move(engine_params.features), metrical_transport_ptr);
 }
 

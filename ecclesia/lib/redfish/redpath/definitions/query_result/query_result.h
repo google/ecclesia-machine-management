@@ -18,6 +18,7 @@
 #define ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_RESULT_QUERY_RESULT_H_
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -29,6 +30,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 
 namespace ecclesia {
@@ -304,6 +306,15 @@ class QueryResultDataReader {
 
  private:
   const QueryResultData& query_result_;
+};
+
+// Encapsulates query result for a subscription query along with subscription
+// handle.
+struct SubscriptionQueryResult {
+  QueryIdToResult result;
+
+  // Subscription handle used to cancel an event subscription.
+  std::unique_ptr<RedPathSubscription> subscription;
 };
 
 // Utility functions to help process Query Results

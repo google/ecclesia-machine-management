@@ -18,6 +18,7 @@
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_QUERY_ENGINE_H_
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -27,6 +28,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/any_invocable.h"
 #include "absl/functional/function_ref.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
@@ -41,7 +43,10 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -116,6 +121,30 @@ class QueryEngineIntf {
 
   enum class ServiceRootType : uint8_t { kRedfish, kGoogle, kCustom };
 
+  // Options for creating a query stream.
+  struct StreamingOptions {
+    // Callback to stream query result on event.
+    using OnEventCallback = std::function<void(
+        const QueryResult & /*result*/,
+        const RedPathSubscription::EventContext & /*context*/)>;
+    // Callback invoked when event stream closes.
+    using OnStopCallback = std::function<void(const absl::Status &)>;
+    // Facilitates event subscription.
+    // It is responsible creating a RedfishEvent stream for given
+    // RedPathSubscription configuration object. It registers the given
+    // on_event and on_stop callbacks and invokes them asynchronously.
+    using SubscriptionBroker =
+        std::function<absl::StatusOr<std::unique_ptr<RedPathSubscription>>(
+            const std::vector<RedPathSubscription::Configuration>
+                &configurations,
+            RedfishInterface &, RedPathSubscription::OnEventCallback,
+            RedPathSubscription::OnStopCallback)>;
+
+    OnEventCallback on_event_callback;
+    OnStopCallback on_stop_callback;
+    SubscriptionBroker subscription_broker = RedPathSubscriptionImpl::Create;
+  };
+
   virtual ~QueryEngineIntf() = default;
 
   ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
@@ -152,10 +181,31 @@ class QueryEngineIntf {
     return ExecuteRedpathQuery(query_ids, service_root_uri, {});
   }
 
+  // Executes a subscription query.
+  // Takes a set of Query Identifiers along with `StreamingOptions` that contain
+  // callbacks to be invoked on event and when stream closes.
+  // This API returns a `SubscriptionQueryResult` which wraps `QueryIdToResult`
+  //  and a `RedPathSubscription` object that can be used by the user
+  // application to cancel a subscription
+  absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(
+      absl::Span<const absl::string_view> query_ids,
+      StreamingOptions streaming_options) {
+    return ExecuteSubscriptionQuery(query_ids, {},
+                                    std::move(streaming_options));
+  }
+
   virtual QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri,
       const QueryVariableSet &query_arguments) = 0;
+
+  // Executes a subscription query.
+  // Overloads ExecuteSubscriptionQuery to allow specifying `query_arguments`
+  // for templated queries in addition to `query_ids` and `streaming_options`.
+  virtual absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(
+      absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments,
+      StreamingOptions streaming_options) = 0;
 
   // QueryEngineRawInterfacePasskey is just an empty strongly-typed object
   // that one needs to provide in order to invoke the member function.
@@ -209,12 +259,18 @@ class QueryEngine : public QueryEngineIntf {
       ServiceRootType service_root_uri,
       const QueryVariableSet &query_arguments) override;
 
+  absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(
+      absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments,
+      StreamingOptions streaming_options) override;
+
   absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) override;
 
   absl::string_view GetAgentIdentifier() const override { return entity_tag_; }
 
  private:
+  ABSL_DEPRECATED("Use the constructor that uses QueryPlannerIntf instead")
   QueryEngine(
       std::string entity_tag,
       absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
@@ -231,9 +287,44 @@ class QueryEngine : public QueryEngineIntf {
         metrical_transport_(metrical_transport),
         features_(std::move(features)) {}
 
+  QueryEngine(
+      std::string entity_tag,
+      absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
+          id_to_query_plans,
+      const Clock *clock, std::unique_ptr<Normalizer> normalizer,
+      std::unique_ptr<RedfishInterface> redfish_interface,
+      QueryEngineFeatures features,
+      MetricalRedfishTransport *metrical_transport = nullptr)
+      : entity_tag_(std::move(entity_tag)),
+        id_to_redpath_query_plans_(std::move(id_to_query_plans)),
+        clock_(clock),
+        normalizer_(std::move(normalizer)),
+        redfish_interface_(std::move(redfish_interface)),
+        metrical_transport_(metrical_transport),
+        features_(std::move(features)) {}
+
+  void HandleRedfishEvent(
+      const RedfishVariant &variant,
+      const RedPathSubscription::EventContext &event_context,
+      absl::FunctionRef<
+          void(const QueryResult &result,
+               const RedPathSubscription::EventContext &event_context)>
+          on_event_callback);
+
   std::string entity_tag_;
+
+  ABSL_DEPRECATED("Use id_to_redpath_query_plans_ instead")
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
       id_to_query_plans_;
+  // Maps query id to query planner.
+  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
+      id_to_redpath_query_plans_;
+  // Maps query id to subscription context.
+  // Subscription context is used to create subscriptions and resume query
+  // operations on event.
+  absl::flat_hash_map<std::string,
+                      std::unique_ptr<QueryPlannerIntf::SubscriptionContext>>
+      id_to_subscription_context_;
   const Clock *clock_;
   std::unique_ptr<Normalizer> normalizer_;
   std::unique_ptr<RedfishInterface> redfish_interface_;

@@ -73,7 +73,7 @@ constexpr absl::string_view kServiceRootNode = "/";
 constexpr absl::string_view kDefaultRedfishServiceRoot = "/redfish/v1";
 
 using SubqueryIdToSubquery =
-    absl::flat_hash_map<std::string, const DelliciusQuery::Subquery *>;
+    absl::flat_hash_map<std::string, DelliciusQuery::Subquery>;
 using SubqueryOutputById = absl::flat_hash_map<std::string, SubqueryOutput>;
 
 // Joins next RedPath expression to given RedPath prefix.
@@ -264,7 +264,7 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> GetRedfishObjectWithFreshness(
 SubqueryIdToSubquery GetSubqueryIdToSubquery(const DelliciusQuery &query) {
   SubqueryIdToSubquery id_to_subquery;
   for (const auto &subquery : query.subquery()) {
-    id_to_subquery[subquery.subquery_id()] = &subquery;
+    id_to_subquery[subquery.subquery_id()] = subquery;
   }
   return id_to_subquery;
 }
@@ -436,13 +436,13 @@ void QueryPlanner::TryNormalize(
       query_execution_context->redfish_object_and_iterable.redfish_object;
   // annotations feature.
   absl::StatusOr<SubqueryDataSet> subquery_dataset =
-      normalizer_->Normalize(*redfish_object, *find_subquery->second, {});
+      normalizer_->Normalize(*redfish_object, find_subquery->second, {});
   if (!subquery_dataset.ok()) {
     DLOG(INFO) << "Cannot find queried properties in Redfish Object.\n"
                << "===Redfish Object===\n"
                << redfish_object->GetContentAsJson().dump(1)
                << "\n===Subquery===\n"
-               << find_subquery->second
+               << find_subquery->second.DebugString()
                << "\nError: " << subquery_dataset.status();
     return;
   }

@@ -24,6 +24,7 @@ query_id_to_params_rule {
         level: 1
         type: ONLY_LINKS
       }
+      subscribe: true
     }
     redpath_prefix_with_params {
       redpath: "/Systems[*]/Memory"
@@ -54,6 +55,7 @@ query_id_to_params_rule {
         level: 2
         type: NO_LINKS
       }
+      subscribe: true
     }
   }
 }

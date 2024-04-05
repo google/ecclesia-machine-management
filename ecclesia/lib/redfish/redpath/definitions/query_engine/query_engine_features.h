@@ -30,6 +30,13 @@ inline QueryEngineFeatures DefaultQueryEngineFeatures() {
   return features;
 }
 
+inline QueryEngineFeatures StreamingQueryEngineFeatures() {
+  QueryEngineFeatures features;
+  features.set_fail_on_first_error(true);
+  features.set_enable_streaming(true);
+  return features;
+}
+
 template <typename... Passkeys>
 inline QueryEngineFeatures EnableQueryEngineFeatures(
     Passkeys... list_passkeys) {

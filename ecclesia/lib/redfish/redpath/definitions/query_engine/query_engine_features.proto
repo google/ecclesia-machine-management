@@ -11,4 +11,6 @@ message QueryEngineFeatures {
   bool log_redfish_traces = 3;
   // Flag to control adding odata.id by default as _url_
   bool enable_url_annotation = 4;
+  // Enable subscription API
+  bool enable_streaming = 5;
 }

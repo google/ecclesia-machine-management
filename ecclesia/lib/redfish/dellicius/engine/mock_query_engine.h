@@ -27,6 +27,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 
 namespace ecclesia {
 
@@ -43,6 +44,11 @@ class MockQueryEngine : public QueryEngineIntf {
   MOCK_METHOD(std::vector<DelliciusQueryResult>, ExecuteQuery,
               (absl::Span<const absl::string_view>, ServiceRootType,
                const QueryVariableSet &),
+              (override));
+
+  MOCK_METHOD(absl::StatusOr<SubscriptionQueryResult>, ExecuteSubscriptionQuery,
+              (absl::Span<const absl::string_view>, const QueryVariableSet &,
+               StreamingOptions),
               (override));
 
   MOCK_METHOD(QueryIdToResult, ExecuteRedpathQuery,

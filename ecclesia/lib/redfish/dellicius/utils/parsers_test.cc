@@ -31,6 +31,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/query_planner_impl.h"
 #include "ecclesia/lib/testing/status.h"
 
 namespace ecclesia {
@@ -174,6 +175,34 @@ TEST(ParseQueryRuleParams, ParseQueryRuleParamsCorrectly) {
                        {.type = RedfishQueryParamExpand::ExpandType::kBoth,
                         .levels = 3})
                        .ToString()))));
+}
+
+TEST(ParseQueryRuleParams, CanCreateRedPathRules) {
+  QueryRules::RedPathPrefixSetWithQueryParams rule = ParseTextProtoOrDie(
+      R"pb(redpath_prefix_with_params {
+             redpath: "/Systems[*]/Memory"
+             expand_configuration { level: 1 type: NO_LINKS }
+             subscribe: true
+           }
+           redpath_prefix_with_params {
+             redpath: "/Undefined"
+             expand_configuration { level: 4 }
+           }
+      )pb");
+
+  QueryPlannerOptions::RedPathRules redpath_rules =
+      CreateRedPathRules(std::move(rule));
+  EXPECT_THAT(
+      redpath_rules.redpath_to_query_params,
+      UnorderedElementsAre(
+          Pair("/Systems[*]/Memory",
+               GetParamsEq(
+                   RedfishQueryParamExpand(
+                       {.type = RedfishQueryParamExpand::ExpandType::kNotLinks,
+                        .levels = 1})
+                       .ToString()))));
+  EXPECT_THAT(redpath_rules.redpaths_to_subscribe,
+              UnorderedElementsAre("/Systems[*]/Memory"));
 }
 
 }  // namespace

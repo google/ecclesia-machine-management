@@ -36,7 +36,7 @@ class RedPathSubscription {
   // Context provided to QueryEngine for each event.
   struct EventContext {
     std::string query_id;
-    std::string subquery_id;
+    std::string redpath;
     std::string event_id;
     std::string event_timestamp;
   };

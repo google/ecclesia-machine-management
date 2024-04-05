@@ -66,6 +66,10 @@ absl::StatusOr<nlohmann::json> CreateTrigger(
 
 absl::StatusOr<nlohmann::json> CreateSubscriptionRequest(
     const std::vector<RedPathSubscription::Configuration> &configurations) {
+  if (configurations.empty()) {
+    return absl::InvalidArgumentError("No configurations provided");
+  }
+
   nlohmann::json subscription_request;
 
   // Populate top-level fields.
@@ -159,7 +163,7 @@ void HandleEvent(
 
     RedPathSubscription::EventContext event_context;
     event_context.query_id = id_parts[0];
-    event_context.subquery_id = id_parts[1];
+    event_context.redpath = id_parts[1];
     event_context.event_id = *event_id;
     event_context.event_timestamp = *timestamp;
 

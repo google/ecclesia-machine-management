@@ -50,10 +50,15 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner_devpath.h"
+#include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
+#include "ecclesia/lib/redfish/testing/json_mockup.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
@@ -71,6 +76,7 @@ namespace {
 using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Not;
+using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedPointwise;
 
 constexpr absl::string_view kQuerySamplesLocation =
@@ -1135,6 +1141,418 @@ TEST(QueryEngineTest, QueryEngineFilterConfiguration) {
   auto sensors_static = results.fields().at("SensorsStatic");
   EXPECT_EQ(sensors_templated.list_value().values_size(), 6);
   EXPECT_EQ(sensors_static.list_value().values_size(), 7);
+}
+
+TEST(QueryEngineTest, CanCreateQueryEngineWithStreamingFeature) {
+  FakeRedfishServer server(kComponentIntegrityMockupPath);
+  FakeClock clock{clock_time};
+
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
+                                   .query_rules = kQueryRules,
+                                   .clock = &clock}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      QueryEngine::Create(std::move(query_spec),
+                          {.transport = std::move(transport),
+                           .features = StreamingQueryEngineFeatures()}));
+}
+
+TEST(QueryEngineTest, CanExecuteSubscriptionQuerySuccessfully) {
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
+
+  bool found_thermal_config = false;
+  bool found_assembly_collector_config = false;
+
+  // Set up callbacks for subscription query.
+  // This is what the user of query engine subscription API provides and in this
+  // test we expect these callbacks to be invoked along with the desired
+  // parameters.
+  auto client_on_event_callback =
+      [&](const QueryResult &, const RedPathSubscription::EventContext &) {};
+  auto client_on_stop_callback = [&](const absl::Status &) {};
+
+  // Set up a mock subscription broker.
+  // In this test we use this mock to inject events and close the stream.
+  // We capture callbacks provided by QueryEngine to invoke for injecting
+  // events.
+  RedPathSubscription::OnEventCallback captured_event_callback;
+  RedPathSubscription::OnStopCallback captured_stop_callback;
+  auto subscription_broker =
+      [&](const std::vector<RedPathSubscription::Configuration> &configurations,
+          RedfishInterface &,
+          RedPathSubscription::OnEventCallback event_callback,
+          RedPathSubscription::OnStopCallback stop_callback)
+      -> absl::StatusOr<std::unique_ptr<RedPathSubscription>> {
+    for (const auto &configuration : configurations) {
+      if (configuration.query_id ==
+          "AssemblyCollectorWithPropertyNameNormalization") {
+        found_assembly_collector_config = true;
+        EXPECT_THAT(
+            configuration.uris,
+            UnorderedElementsAre(
+                "/redfish/v1/Systems/system/Processors?$expand=~($levels=1)"));
+        EXPECT_THAT(configuration.predicate, "");
+        EXPECT_THAT(configuration.redpath, "/Systems[*]/Processors");
+      } else if (configuration.query_id == "Thermal") {
+        found_thermal_config = true;
+        EXPECT_THAT(
+            configuration.uris,
+            UnorderedElementsAre("/redfish/v1/Chassis?$expand=.($levels=2)"));
+        EXPECT_THAT(configuration.predicate, "");
+        EXPECT_THAT(configuration.redpath, "/Chassis");
+      }
+    }
+    captured_event_callback = std::move(event_callback);
+    captured_stop_callback = std::move(stop_callback);
+    return nullptr;
+  };
+
+  // Execute Subscription Query.
+  // 1. Setup streaming options
+  QueryEngineIntf::StreamingOptions streaming_options{
+      .on_event_callback = client_on_event_callback,
+      .on_stop_callback = client_on_stop_callback,
+      .subscription_broker = subscription_broker};
+
+  // 2. Execute subscription query
+  absl::StatusOr<SubscriptionQueryResult> subscription_query_result =
+      query_engine->ExecuteSubscriptionQuery(
+          {"AssemblyCollectorWithPropertyNameNormalization", "Thermal"},
+          streaming_options);
+  EXPECT_THAT(subscription_query_result.status(), IsOk());
+  EXPECT_TRUE(found_assembly_collector_config);
+  EXPECT_TRUE(found_thermal_config);
+
+  // Verify the query result captured in subscription query. This will have
+  // results for all subqueries that don't have a subscribe rule configured.
+  EXPECT_THAT(subscription_query_result->result.results()
+                  .at("AssemblyCollectorWithPropertyNameNormalization")
+                  .data(),
+              IgnoringRepeatedFieldOrdering(EqualsProto(R"pb(
+                fields {
+                  key: "Chassis"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "_id_"
+                            value { identifier { local_devpath: "/phys" } }
+                          }
+                          fields {
+                            key: "part_number"
+                            value { string_value: "1043652-02" }
+                          }
+                          fields {
+                            key: "serial_number"
+                            value { string_value: "MBBQTW194106556" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                fields {
+                  key: "Memory"
+                  value {}
+                }
+                fields {
+                  key: "Processors"
+                  value {}
+                }
+              )pb")));
+
+  EXPECT_THAT(subscription_query_result->result.results().at("Thermal").data(),
+              IgnoringRepeatedFieldOrdering(EqualsProto(R"pb(
+                fields {
+                  key: "Chassis"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Temperatures"
+                            value {}
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              )pb")));
+}
+
+TEST(QueryEngineTest, CanHandleEventsCorrectly) {
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
+
+  bool found_assembly_query_result = false;
+  bool found_thermal_query_result = false;
+  bool found_stream_close = false;
+
+  // Set up callbacks for subscription query.
+  // This is what the user of query engine subscription API provides and in this
+  // test we expect these callbacks to be invoked along with the desired
+  // parameters.
+  auto client_on_event_callback =
+      [&](const QueryResult &single_query_result,
+          const RedPathSubscription::EventContext &context) {
+        if (single_query_result.query_id() ==
+            "AssemblyCollectorWithPropertyNameNormalization") {
+          found_assembly_query_result = true;
+        } else if (single_query_result.query_id() == "Thermal") {
+          found_thermal_query_result = true;
+        }
+      };
+  auto client_on_stop_callback = [&](const absl::Status &status) {
+    found_stream_close = true;
+    EXPECT_THAT(status, IsOk());
+  };
+
+  // Set up a mock subscription broker.
+  // In this test we use this mock to inject events and close the stream.
+  // We capture callbacks provided by QueryEngine to invoke for injecting
+  // events.
+  RedPathSubscription::OnEventCallback captured_event_callback;
+  RedPathSubscription::OnStopCallback captured_stop_callback;
+  auto subscription_broker =
+      [&](const std::vector<RedPathSubscription::Configuration> &configurations,
+          RedfishInterface &,
+          RedPathSubscription::OnEventCallback event_callback,
+          RedPathSubscription::OnStopCallback stop_callback)
+      -> absl::StatusOr<std::unique_ptr<RedPathSubscription>> {
+    captured_event_callback = std::move(event_callback);
+    captured_stop_callback = std::move(stop_callback);
+    return nullptr;
+  };
+
+  // Execute Subscription Query.
+  // 1. Setup streaming options
+  QueryEngineIntf::StreamingOptions streaming_options{
+      .on_event_callback = client_on_event_callback,
+      .on_stop_callback = client_on_stop_callback,
+      .subscription_broker = subscription_broker};
+
+  // 2. Execute subscription query
+  absl::StatusOr<SubscriptionQueryResult> subscription_query_result =
+      query_engine->ExecuteSubscriptionQuery(
+          {"AssemblyCollectorWithPropertyNameNormalization", "Thermal"},
+          streaming_options);
+  ASSERT_THAT(subscription_query_result.status(), IsOk());
+
+  // Now send events one by one.
+  // Note that we are using a collection type resource in the mock events below
+  // but they need not be only collections. These can be any redfish resource.
+  // 1. Send event for assembly
+  // Mock event.
+  std::unique_ptr<ecclesia::RedfishInterface> processor_json =
+      NewJsonMockupInterface(R"json(
+    {
+        "@odata.context": "/redfish/v1/$metadata#ProcessorCollection.ProcessorCollection",
+        "@odata.id": "/redfish/v1/Systems/system/Processors",
+        "@odata.type": "#ProcessorCollection.ProcessorCollection",
+        "Members": [
+            {
+                "@odata.id": "/redfish/v1/Systems/system/Processors/0"
+            },
+            {
+                "@odata.id": "/redfish/v1/Systems/system/Processors/1"
+            }
+        ],
+        "Members@odata.count": 2,
+        "Name": "Processor Collection"
+    }
+  )json");
+  RedfishVariant processor_variant = processor_json->GetRoot();
+  captured_event_callback(
+      processor_variant,
+      {.query_id = "AssemblyCollectorWithPropertyNameNormalization",
+       .redpath = "/Systems[*]/Processors",
+       .event_id = "foo",
+       .event_timestamp = "bar"});
+  EXPECT_TRUE(found_assembly_query_result);
+
+  // 2. Send event for thermal
+  std::unique_ptr<ecclesia::RedfishInterface> chassis_json =
+      NewJsonMockupInterface(R"json(
+    {
+      "@odata.context":
+      "/redfish/v1/$metadata#ChassisCollection.ChassisCollection",
+      "@odata.id": "/redfish/v1/Chassis",
+      "@odata.type": "#ChassisCollection.ChassisCollection",
+      "Members": [
+          {
+              "@odata.id": "/redfish/v1/Chassis/chassis"
+          }
+      ],
+      "Members@odata.count": 1,
+      "Name": "Indus"
+    }
+  )json");
+  ecclesia::RedfishVariant chassis_variant = chassis_json->GetRoot();
+  captured_event_callback(chassis_variant, {.query_id = "Thermal",
+                                            .redpath = "/Chassis",
+                                            .event_id = "foo",
+                                            .event_timestamp = "bar"});
+  EXPECT_TRUE(found_thermal_query_result);
+
+  // 3. Close the stream
+  captured_stop_callback(absl::OkStatus());
+  EXPECT_TRUE(found_stream_close);
+}
+
+TEST(QueryEngineTest, CanHandleInvalidEvents) {
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
+
+  bool found_assembly_query_result = false;
+  bool found_thermal_query_result = false;
+
+  // Set up callbacks for subscription query.
+  // This is what the user of query engine subscription API provides and in this
+  // test we expect these callbacks to be invoked along with the desired
+  // parameters.
+  auto client_on_event_callback =
+      [&](const QueryResult &single_query_result,
+          const RedPathSubscription::EventContext &context) {
+        if (single_query_result.query_id() ==
+            "AssemblyCollectorWithPropertyNameNormalization") {
+          found_assembly_query_result = true;
+        } else if (single_query_result.query_id() == "Thermal") {
+          found_thermal_query_result = true;
+        }
+      };
+  auto client_on_stop_callback = [&](const absl::Status &) {};
+
+  // Set up a mock subscription broker.
+  // In this test we use this mock to inject events and close the stream.
+  // We capture callbacks provided by QueryEngine to invoke for injecting
+  // events.
+  RedPathSubscription::OnEventCallback captured_event_callback;
+  RedPathSubscription::OnStopCallback captured_stop_callback;
+  auto subscription_broker =
+      [&](const std::vector<RedPathSubscription::Configuration> &configurations,
+          RedfishInterface &,
+          RedPathSubscription::OnEventCallback event_callback,
+          RedPathSubscription::OnStopCallback stop_callback)
+      -> absl::StatusOr<std::unique_ptr<RedPathSubscription>> {
+    captured_event_callback = std::move(event_callback);
+    captured_stop_callback = std::move(stop_callback);
+    return nullptr;
+  };
+
+  // Execute Subscription Query.
+  // 1. Setup streaming options
+  QueryEngineIntf::StreamingOptions streaming_options{
+      .on_event_callback = client_on_event_callback,
+      .on_stop_callback = client_on_stop_callback,
+      .subscription_broker = subscription_broker};
+
+  // 2. Execute subscription query
+  absl::StatusOr<SubscriptionQueryResult> subscription_query_result =
+      query_engine->ExecuteSubscriptionQuery(
+          {"AssemblyCollectorWithPropertyNameNormalization", "Thermal"},
+          streaming_options);
+  ASSERT_THAT(subscription_query_result.status(), IsOk());
+
+  // Now send events one by one.
+  // Note that we are using a collection type resource in the mock events below
+  // but they need not be only collections. These can be any redfish resource.
+  // 1. Send invalid event for assembly - wrong redpath
+  // Mock event.
+  std::unique_ptr<ecclesia::RedfishInterface> processor_json =
+      NewJsonMockupInterface(R"json(
+    {
+    }
+  )json");
+  RedfishVariant processor_variant = processor_json->GetRoot();
+  captured_event_callback(
+      processor_variant,
+      {.query_id = "AssemblyCollectorWithPropertyNameNormalization",
+       .redpath = "/Systems",
+       .event_id = "foo",
+       .event_timestamp = "bar"});
+  EXPECT_FALSE(found_assembly_query_result);
+
+  // 2. Send invalid event for thermal - wrong query id
+  std::unique_ptr<ecclesia::RedfishInterface> chassis_json =
+      NewJsonMockupInterface(R"json(
+    {
+    }
+  )json");
+  ecclesia::RedfishVariant chassis_variant = chassis_json->GetRoot();
+  captured_event_callback(chassis_variant, {.query_id = "InvalidQueryId",
+                                            .redpath = "/Chassis",
+                                            .event_id = "foo",
+                                            .event_timestamp = "bar"});
+  EXPECT_FALSE(found_thermal_query_result);
+}
+
+TEST(QueryEngineTest, CanHandleInvalidSubscriptionRequest) {
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
+
+  // Set up callbacks for subscription query.
+  auto client_on_event_callback =
+      [&](const QueryResult &, const RedPathSubscription::EventContext &) {};
+  auto client_on_stop_callback = [&](const absl::Status &) {};
+
+  // Execute Subscription Query.
+  // 1. Setup streaming options
+  QueryEngineIntf::StreamingOptions streaming_options{
+      .on_event_callback = client_on_event_callback,
+      .on_stop_callback = client_on_stop_callback};
+
+  // 2. Execute query that does not have a subscription rule.
+  absl::StatusOr<SubscriptionQueryResult> subscription_query_result =
+      query_engine->ExecuteSubscriptionQuery({"ManagerCollector"},
+                                             streaming_options);
+  EXPECT_THAT(subscription_query_result.status(), IsStatusInternal());
 }
 
 }  // namespace

@@ -25,6 +25,7 @@
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/query_planner_impl.h"
 
 namespace ecclesia {
 
@@ -33,6 +34,14 @@ ParseQueryRulesFromEmbeddedFiles(
     const std::vector<EmbeddedFile> &embedded_query_rules);
 
 RedPathRedfishQueryParams ParseQueryRuleParams(
+    QueryRules::RedPathPrefixSetWithQueryParams rule);
+
+// Creates RedPathRules object from the given RedPathPrefixSetWithQueryParams
+// proto.
+// This is responsible for parsing Redfish Query Parameter configuration
+// `expand`, `filter`, `top` etc along with subscription configuration for each
+// RedPath prefix in given `rule` proto.
+QueryPlannerOptions::RedPathRules CreateRedPathRules(
     QueryRules::RedPathPrefixSetWithQueryParams rule);
 
 }  // namespace ecclesia

@@ -39,6 +39,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/passkey/annotation_passkey.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
@@ -53,6 +54,7 @@ class FakeQueryEngine : public QueryEngineIntf {
   enum class Metrics : uint8_t { kEnable = 0, kDisable };
   enum class Annotations : uint8_t { kEnable = 0, kDisable };
   enum class Cache : uint8_t { kDisable = 0, kInfinite };
+  enum class Streaming : uint8_t { kEnable = 0, kDisable };
 
   struct Params {
     Devpath devpath = Devpath::kEnable;
@@ -61,6 +63,7 @@ class FakeQueryEngine : public QueryEngineIntf {
     Cache cache = Cache::kInfinite;
     std::optional<std::string> entity_tag;
     std::unique_ptr<IdAssigner> id_assigner;
+    Streaming streaming = Streaming::kDisable;
   };
 
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
@@ -77,6 +80,14 @@ class FakeQueryEngine : public QueryEngineIntf {
       const QueryVariableSet &query_arguments) override {
     return query_engine_->ExecuteRedpathQuery(query_ids, service_root_uri,
                                               query_arguments);
+  }
+
+  absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(
+      absl::Span<const absl::string_view> query_ids,
+      const QueryVariableSet &query_arguments,
+      StreamingOptions streaming_options) override {
+    return query_engine_->ExecuteSubscriptionQuery(query_ids, query_arguments,
+                                                   streaming_options);
   }
 
   void ExecuteQuery(
@@ -123,7 +134,9 @@ class FakeQueryEngine : public QueryEngineIntf {
                                 });
 
     QueryEngineFeatures features;
-    if (params.annotations == Annotations::kEnable) {
+    if (params.streaming == Streaming::kEnable) {
+      features = StreamingQueryEngineFeatures();
+    } else if (params.annotations == Annotations::kEnable) {
       features = EnableQueryEngineFeatures(
           RedfishAnnotationsPasskeyFactory::GetPassKey());
     } else {
