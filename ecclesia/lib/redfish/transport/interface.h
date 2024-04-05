@@ -69,7 +69,7 @@ class RedfishTransport {
   };
 
   using EventCallback = std::function<void(const Result &)>;
-  using StopCallback = absl::FunctionRef<void(const absl::Status &)>;
+  using StopCallback = std::function<void(const absl::Status &)>;
 
   virtual ~RedfishTransport() = default;
 
@@ -96,7 +96,8 @@ class RedfishTransport {
   // Returns a Redfish event stream on success where clients can start or stop
   // the streaming.
   virtual absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
-      absl::string_view data, EventCallback &&on_event, StopCallback on_stop) {
+      absl::string_view data, EventCallback &&on_event,
+      StopCallback &&on_stop) {
     return absl::UnimplementedError("Streaming is not implemented yet.");
   }
 };
@@ -120,7 +121,7 @@ class NullTransport : public RedfishTransport {
   }
   absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
       absl::string_view data, EventCallback &&callback,
-      StopCallback on_stop) override {
+      StopCallback &&on_stop) override {
     return absl::InternalError("NullTransport");
   }
 };

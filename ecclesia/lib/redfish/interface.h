@@ -19,6 +19,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -751,8 +752,8 @@ class RedfishInterface {
   // executed at a given time.
   virtual absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
       absl::string_view data,
-      absl::FunctionRef<void(const RedfishVariant &event)> on_event,
-      absl::FunctionRef<void(const absl::Status &end_status)> on_stop) {
+      std::function<void(const RedfishVariant &event)> &&on_event,
+      std::function<void(const absl::Status &end_status)> &&on_stop) {
     return absl::UnimplementedError("Not implemented");
   }
 

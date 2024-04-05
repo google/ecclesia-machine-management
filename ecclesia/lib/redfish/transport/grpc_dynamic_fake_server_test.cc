@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/redfish/transport/grpc_dynamic_fake_server.h"
 
+#include <functional>
 #include <memory>
 #include <queue>
 #include <string>
@@ -25,7 +26,6 @@
 #include "google/protobuf/struct.pb.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -184,7 +184,7 @@ TEST(FakeServerTest, InsecureChannelStreamPredefinedEventsOk) {
       NewHttpInterface(std::move(transport.value()), std::move(cache),
                        RedfishInterface::TrustedEndpoint::kTrusted);
   int event_id = 0;
-  absl::AnyInvocable<void(const RedfishVariant &) const> on_event =
+  std::function<void(const RedfishVariant &)> on_event =
       [&event_id](const RedfishVariant &result) {
         if (event_id == 0) {
           ASSERT_TRUE(result.AsRaw());
@@ -199,14 +199,15 @@ TEST(FakeServerTest, InsecureChannelStreamPredefinedEventsOk) {
         EXPECT_LE(event_id, 3);
       };
 
-  absl::AnyInvocable<void(const absl::Status &status) const> on_stop =
+  std::function<void(const absl::Status &status)> on_stop =
       [&server_stream_ended](const absl::Status &status) {
         EXPECT_THAT(status, ecclesia::IsOk());
         server_stream_ended.Notify();
       };
 
   absl::StatusOr<std::unique_ptr<RedfishEventStream>> stream =
-      redfish_client->Subscribe("whatever", on_event, on_stop);
+      redfish_client->Subscribe("whatever", std::move(on_event),
+                                std::move(on_stop));
   ASSERT_THAT(stream, ecclesia::IsOk());
   stream.value()->StartStreaming();
 
@@ -231,7 +232,7 @@ TEST(FakeServerTest, InsecureChannelStreamRandomEventsOkUntilCancelled) {
                                  grpc::InsecureChannelCredentials());
   ASSERT_THAT(transport, ecclesia::IsOk());
 
-  absl::AnyInvocable<void(const absl::Status &) const> on_stop =
+  std::function<void(const absl::Status &)> on_stop =
       [&server_stream_ended](const absl::Status &status) {
         server_stream_ended.Notify();
         EXPECT_THAT(status, testing::Not(ecclesia::IsOk()));
@@ -250,7 +251,8 @@ TEST(FakeServerTest, InsecureChannelStreamRandomEventsOkUntilCancelled) {
       };
 
   absl::StatusOr<std::unique_ptr<RedfishEventStream>> stream =
-      (*transport)->Subscribe("whatever", std::move(on_event), on_stop);
+      (*transport)
+          ->Subscribe("whatever", std::move(on_event), std::move(on_stop));
 
   ASSERT_THAT(stream, ecclesia::IsOk());
   (*stream)->StartStreaming();

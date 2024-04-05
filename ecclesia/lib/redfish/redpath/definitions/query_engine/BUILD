@@ -71,8 +71,6 @@ cc_test(
         "//ecclesia/lib/redfish/testing:json_mockup",
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/testing:status",
-        "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/functional:any_invocable",
         "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

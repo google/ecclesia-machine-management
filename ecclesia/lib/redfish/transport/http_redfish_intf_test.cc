@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -26,7 +27,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
@@ -1519,12 +1519,10 @@ TEST_F(HttpRedfishInterfaceTest, GetUnresolvedNavigationProperty) {
 }
 
 TEST_F(HttpRedfishInterfaceTest, SubscribeReturnsUnimplementedError) {
-  absl::AnyInvocable<void(const absl::Status &) const> on_stop =
-      [](const absl::Status &) {};
-  absl::AnyInvocable<void(const RedfishVariant &) const> on_event =
-      [](const RedfishVariant &) {};
-  EXPECT_THAT(intf_->Subscribe("", on_event, on_stop),
-              ecclesia::IsStatusUnimplemented());
+  EXPECT_THAT(
+      intf_->Subscribe(
+          "", [](const RedfishVariant &) {}, [](const absl::Status &) {}),
+      ecclesia::IsStatusUnimplemented());
 }
 
 TEST_F(HttpRedfishInterfaceTest, GetWithTopSkip) {

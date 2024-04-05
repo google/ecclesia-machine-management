@@ -16,13 +16,14 @@
 
 #include "ecclesia/lib/redfish/interface.h"
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "ecclesia/lib/http/codes.h"
@@ -254,12 +255,12 @@ TEST(RedfishInterface, DefaultBehavior) {
   std::unique_ptr<RedfishInterface> interface = std::make_unique<NullRedfish>();
   EXPECT_EQ(interface->SupportedFeatures(), std::nullopt);
 
-  absl::AnyInvocable<void(const RedfishVariant &) const> on_event =
+  std::function<void(const RedfishVariant &)> on_event =
       [](const RedfishVariant &) {};
-  absl::AnyInvocable<void(const absl::Status &) const> on_stop =
-      [](const absl::Status &) {};
+  std::function<void(const absl::Status &)> on_stop = [](const absl::Status &) {
+  };
 
-  EXPECT_THAT(interface->Subscribe("", on_event, on_stop),
+  EXPECT_THAT(interface->Subscribe("", std::move(on_event), std::move(on_stop)),
               ecclesia::IsStatusUnimplemented());
 }
 

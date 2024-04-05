@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -52,8 +53,8 @@ class MockRedfishClientInterface : public NullRedfish {
  public:
   MOCK_METHOD(absl::StatusOr<std::unique_ptr<RedfishEventStream>>, Subscribe,
               (absl::string_view data,
-               absl::FunctionRef<void(const RedfishVariant &event)> on_event,
-               absl::FunctionRef<void(const absl::Status &end_status)> on_stop),
+               std::function<void(const RedfishVariant &event)> &&on_event,
+               std::function<void(const absl::Status &end_status)> &&on_stop),
               (override));
 };
 
@@ -70,8 +71,9 @@ TEST(RedPathSubscriptionImplTest, SubscriptionIsCreated) {
       .WillOnce([&](absl::string_view,
                     absl::FunctionRef<void(const RedfishVariant &event)>,
                     absl::FunctionRef<void(const absl::Status &end_status)>) {
-        return nullptr;
+        return std::make_unique<MockRedfishEventStream>();
       });
+
   absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
       redpath_subscription = RedPathSubscriptionImpl::Create(
           {config}, redfish_interface,
@@ -214,7 +216,7 @@ TEST(RedPathSubscriptionImplTest, SubscriptionRequestFormattedCorrectly) {
               absl::FunctionRef<void(const absl::Status &end_status)> on_stop) {
             nlohmann::json actual_json = nlohmann::json::parse(data);
             EXPECT_EQ(actual_json, expected_json);
-            return nullptr;
+            return std::make_unique<MockRedfishEventStream>();
           });
   absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
       redpath_subscription = RedPathSubscriptionImpl::Create(
@@ -262,7 +264,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsInvokedForEachOriginOfCondition) {
               absl::FunctionRef<void(const RedfishVariant &event)> on_event,
               absl::FunctionRef<void(const absl::Status &end_status)> on_stop) {
             on_event(event);
-            return nullptr;
+            return std::make_unique<MockRedfishEventStream>();
           });
   size_t callback_invoked = 0;
   absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
@@ -308,7 +310,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
                 absl::FunctionRef<void(const absl::Status &end_status)>
                     on_stop) {
               on_event(event);
-              return nullptr;
+              return std::make_unique<MockRedfishEventStream>();
             });
     size_t callback_invoked = 0;
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
@@ -346,7 +348,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
                 absl::FunctionRef<void(const absl::Status &end_status)>
                     on_stop) {
               on_event(event);
-              return nullptr;
+              return std::make_unique<MockRedfishEventStream>();
             });
     size_t callback_invoked = 0;
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
@@ -385,7 +387,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
                 absl::FunctionRef<void(const absl::Status &end_status)>
                     on_stop) {
               on_event(event);
-              return nullptr;
+              return std::make_unique<MockRedfishEventStream>();
             });
     size_t callback_invoked = 0;
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
@@ -420,7 +422,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
                 absl::FunctionRef<void(const absl::Status &end_status)>
                     on_stop) {
               on_event(event);
-              return nullptr;
+              return std::make_unique<MockRedfishEventStream>();
             });
     size_t callback_invoked = 0;
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
@@ -457,7 +459,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
                 absl::FunctionRef<void(const absl::Status &end_status)>
                     on_stop) {
               on_event(event);
-              return nullptr;
+              return std::make_unique<MockRedfishEventStream>();
             });
     size_t callback_invoked = 0;
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
@@ -486,7 +488,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsInvokedOnStop) {
               absl::FunctionRef<void(const RedfishVariant &event)>,
               absl::FunctionRef<void(const absl::Status &end_status)> on_stop) {
             on_stop(absl::OkStatus());
-            return nullptr;
+            return std::make_unique<MockRedfishEventStream>();
           });
   bool callback_invoked = false;
   absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>

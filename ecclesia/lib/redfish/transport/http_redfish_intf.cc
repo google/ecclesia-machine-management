@@ -775,9 +775,9 @@ class HttpRedfishInterface : public RedfishInterface {
 
   absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
       absl::string_view data,
-      absl::FunctionRef<void(const RedfishVariant &event)> on_event,
-      absl::FunctionRef<void(const absl::Status &status)> on_stop) override {
-    auto new_callback = [on_event,
+      std::function<void(const RedfishVariant &event)> &&on_event,
+      std::function<void(const absl::Status &status)> &&on_stop) override {
+    auto new_callback = [on_event = std::move(on_event),
                          this](const RedfishTransport::Result &result) {
       int code = result.code;
       absl::flat_hash_map<std::string, std::string> headers = result.headers;
@@ -787,7 +787,8 @@ class HttpRedfishInterface : public RedfishInterface {
       on_event(variant);
     };
     absl::ReaderMutexLock mu(&transport_mutex_);
-    return transport_->Subscribe(data, std::move(new_callback), on_stop);
+    return transport_->Subscribe(data, std::move(new_callback),
+                                 std::move(on_stop));
   }
 
  private:

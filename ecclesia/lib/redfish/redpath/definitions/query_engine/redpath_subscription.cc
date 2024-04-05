@@ -194,13 +194,20 @@ RedPathSubscriptionImpl::Create(
           subscription_request.dump(),
           [on_event_callback =
                std::move(on_event_callback)](const RedfishVariant &event) {
+            DLOG(INFO) << "Handle event called";
             HandleEvent(event, on_event_callback);
           },
           [on_stop_callback(std::move(on_stop_callback))](
               const absl::Status &end_status) {
+            DLOG(INFO) << "Handle stop called";
             on_stop_callback(end_status);
           }));
 
+  if (event_stream == nullptr) {
+    return absl::InternalError("Event stream is null");
+  }
+  event_stream->StartStreaming();
+  DLOG(INFO) << "Subscription created!";
   return absl::WrapUnique(new RedPathSubscriptionImpl(std::move(event_stream)));
 }
 

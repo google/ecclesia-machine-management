@@ -161,9 +161,13 @@ class GrpcRedfishSubscribeReactor
                               GrpcRedfishV1::Stub &stub,
                               const redfish::v1::Request &request,
                               RedfishTransport::EventCallback &&on_event,
-                              RedfishTransport::StopCallback on_stop)
-      : request_(request), on_event_(std::move(on_event)), on_stop_(on_stop) {
+                              RedfishTransport::StopCallback &&on_stop)
+      : request_(request),
+        on_event_(std::move(on_event)),
+        on_stop_(std::move(on_stop)) {
+    DLOG(INFO) << "Calling Subscribe!";
     stub.async()->Subscribe(&context, &request_, this);
+    DLOG(INFO) << "Start reading!";
     StartRead(&event_);
   }
 
@@ -171,6 +175,7 @@ class GrpcRedfishSubscribeReactor
   // The framework and API guarantees that there is only one |OnReadDone| will
   // be executed at a given time.
   void OnReadDone(bool ok) override {
+    DLOG(INFO) << "OnReadDone invoked!";
     if (!ok) {
       // no new read will be called
       LOG(WARNING) << "The previous event read failed!";
@@ -188,12 +193,14 @@ class GrpcRedfishSubscribeReactor
       result.body = nlohmann::json::parse(event_.json_str(), nullptr, false);
     }
     result.code = static_cast<int>(event_.code());
+    DLOG(INFO) << "Executing EventCallback.";
     on_event_(result);
     StartRead(&event_);
   }
 
   // OnDone will always take place after all other reactions.
   void OnDone(const grpc::Status &status) override {
+    DLOG(INFO) << "OnDone invoked! Executing StopCallback.";
     on_stop_(AsAbslStatus(status));
   }
 
@@ -209,11 +216,15 @@ class GrpcRedfishEventStream : public RedfishEventStream {
   GrpcRedfishEventStream(GrpcRedfishV1::Stub &stub,
                          const redfish::v1::Request &request,
                          RedfishTransport::EventCallback &&on_event,
-                         RedfishTransport::StopCallback on_stop)
+                         RedfishTransport::StopCallback &&on_stop)
       : reactor_(std::make_unique<GrpcRedfishSubscribeReactor>(
-            context_, stub, request, std::move(on_event), on_stop)) {}
+            context_, stub, request, std::move(on_event), std::move(on_stop))) {
+  }
 
-  void StartStreaming() override { reactor_->StartCall(); }
+  void StartStreaming() override {
+    DLOG(INFO) << "Start streaming!";
+    reactor_->StartCall();
+  }
   void CancelStreaming() override {
     // that a subscription is cancelled. A possible implementation is DELETE on
     // corresponding EventDestination.
@@ -316,14 +327,15 @@ class GrpcRedfishTransport : public RedfishTransport {
 
   absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
       absl::string_view data, EventCallback &&on_event,
-      StopCallback on_stop) override {
+      StopCallback &&on_stop) override {
     ::redfish::v1::Request request;
     // This header is used when authorizing peers without trust bundle.
     request.mutable_headers()->insert(
         {std::string(kHostHeader), std::string(fqdn_)});
     request.set_json_str(std::string(data));
+    DLOG(INFO) << "Subscribe request to send: " << request.DebugString();
     return std::make_unique<GrpcRedfishEventStream>(
-        *client_, request, std::move(on_event), on_stop);
+        *client_, request, std::move(on_event), std::move(on_stop));
   }
 
  private:

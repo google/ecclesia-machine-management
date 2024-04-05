@@ -21,7 +21,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "ecclesia/lib/testing/status.h"
 
@@ -37,12 +36,11 @@ TEST(NullTransport, AllRpcReturnsInternalError) {
   EXPECT_THAT(transport->Delete("", ""), ecclesia::IsStatusInternal());
   EXPECT_THAT(transport->Patch("", ""), ecclesia::IsStatusInternal());
 
-  absl::AnyInvocable<void(const absl::Status &) const> on_stop =
-      [](const absl::Status &) {};
+  RedfishTransport::StopCallback on_stop = [](const absl::Status &) {};
 
   RedfishTransport::EventCallback on_event =
       [](const RedfishTransport::Result &) {};
-  EXPECT_THAT(transport->Subscribe("", std::move(on_event), on_stop),
+  EXPECT_THAT(transport->Subscribe("", std::move(on_event), std::move(on_stop)),
               ecclesia::IsStatusInternal());
 }
 
