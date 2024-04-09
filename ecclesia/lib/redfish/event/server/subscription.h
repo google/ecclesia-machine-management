@@ -268,12 +268,12 @@ class SubscriptionBackend {
   // Performs a Redfish query at the given URL and invokes the provided callback
   // with the query result
   virtual absl::Status Query(absl::string_view url,
-                             QueryCallback query_callback) = 0;
+                             QueryCallback&& query_callback) = 0;
 
   // Subscribes to Redfish events for the given URL and invokes the callback
   // post subscription.
   virtual absl::Status Subscribe(absl::string_view url,
-                                 SubscribeCallback subscribe_callback) = 0;
+                                 SubscribeCallback&& subscribe_callback) = 0;
 };
 
 // Interface for a subscription service

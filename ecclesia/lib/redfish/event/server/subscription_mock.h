@@ -55,9 +55,8 @@ class SubscriptionStoreMock : public SubscriptionStore {
 class SubscriptionBackendMock : public SubscriptionBackend {
  public:
   MOCK_METHOD(absl::Status, Subscribe,
-              (absl::string_view url, SubscribeCallback subscribe_callback),
-              (override));
-  MOCK_METHOD(absl::Status, Query, (const absl::string_view, QueryCallback),
+              (absl::string_view, SubscribeCallback &&), (override));
+  MOCK_METHOD(absl::Status, Query, (const absl::string_view, QueryCallback &&),
               (override));
 };
 

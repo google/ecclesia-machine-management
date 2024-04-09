@@ -44,7 +44,7 @@ namespace {
 using ::testing::_;
 using ::testing::DoAll;
 using ::testing::Eq;
-using ::testing::InvokeArgument;
+using ::testing::Invoke;
 using ::testing::Return;
 using ::testing::UnorderedElementsAre;
 using ::testing::WithArg;
@@ -137,20 +137,26 @@ TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
 
   EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _))
-      .WillOnce(DoAll(
-          InvokeArgument<1>(absl::OkStatus(),
-                            std::vector<EventSourceId>(
-                                {{"1", EventSourceId::Type::kDbusObjects},
-                                 {"2", EventSourceId::Type::kDbusObjects}})),
-          Return(absl::OkStatus())));
+      .WillOnce(Invoke(
+          [](absl::string_view url,
+             SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+            subscribe_callback(absl::OkStatus(),
+                               std::vector<EventSourceId>(
+                                   {{"1", EventSourceId::Type::kDbusObjects},
+                                    {"2", EventSourceId::Type::kDbusObjects}}));
+            return absl::OkStatus();
+          }));
 
   EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _))
-      .WillOnce(DoAll(
-          InvokeArgument<1>(absl::OkStatus(),
-                            std::vector<EventSourceId>(
-                                {{"3", EventSourceId::Type::kDbusObjects}})),
-          Return(absl::OkStatus())));
+      .WillOnce(Invoke(
+          [](absl::string_view url,
+             SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+            subscribe_callback(absl::OkStatus(),
+                               std::vector<EventSourceId>(
+                                   {{"3", EventSourceId::Type::kDbusObjects}}));
+            return absl::OkStatus();
+          }));
 
   EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_))
       .WillOnce(WithArg<0>([](std::unique_ptr<SubscriptionContext> context) {
@@ -207,12 +213,16 @@ TEST_F(SubscriptionServiceImplTest,
   // Backend->Subscribe returns an error.
   {
     EXPECT_CALL(*subscription_backend_ptr_, Subscribe(_, _))
-        .WillOnce(DoAll(
-            InvokeArgument<1>(absl::OkStatus(),
-                              std::vector<EventSourceId>(
-                                  {{"1", EventSourceId::Type::kDbusObjects},
-                                   {"2", EventSourceId::Type::kDbusObjects}})),
-            Return(absl::InternalError(""))));
+        .WillOnce(Invoke(
+            [](absl::string_view url,
+               SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+              subscribe_callback(
+                  absl::OkStatus(),
+                  std::vector<EventSourceId>(
+                      {{"1", EventSourceId::Type::kDbusObjects},
+                       {"2", EventSourceId::Type::kDbusObjects}}));
+              return absl::InternalError("");
+            }));
 
     // This verifies we don't partially subscribe.
     EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
@@ -229,27 +239,37 @@ TEST_F(SubscriptionServiceImplTest,
   {
     EXPECT_CALL(*subscription_backend_ptr_,
                 Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _))
-        .WillOnce(DoAll(
-            InvokeArgument<1>(absl::OkStatus(),
-                              std::vector<EventSourceId>(
-                                  {{"1", EventSourceId::Type::kDbusObjects},
-                                   {"2", EventSourceId::Type::kDbusObjects}})),
-            InvokeArgument<1>(absl::OkStatus(),
-                              std::vector<EventSourceId>(
-                                  {{"1", EventSourceId::Type::kDbusObjects},
-                                   {"2", EventSourceId::Type::kDbusObjects}})),
-            Return(absl::OkStatus())));
+        .WillOnce(Invoke(
+            [](absl::string_view url,
+               SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+              subscribe_callback(
+                  absl::OkStatus(),
+                  std::vector<EventSourceId>(
+                      {{"1", EventSourceId::Type::kDbusObjects},
+                       {"2", EventSourceId::Type::kDbusObjects}}));
+              subscribe_callback(
+                  absl::OkStatus(),
+                  std::vector<EventSourceId>(
+                      {{"1", EventSourceId::Type::kDbusObjects},
+                       {"2", EventSourceId::Type::kDbusObjects}}));
+              return absl::OkStatus();
+            }));
 
     EXPECT_CALL(*subscription_backend_ptr_,
                 Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _))
-        .WillOnce(DoAll(
-            InvokeArgument<1>(absl::OkStatus(),
-                              std::vector<EventSourceId>(
-                                  {{"3", EventSourceId::Type::kDbusObjects}})),
-            InvokeArgument<1>(absl::OkStatus(),
-                              std::vector<EventSourceId>(
-                                  {{"3", EventSourceId::Type::kDbusObjects}})),
-            Return(absl::OkStatus())));
+        .WillOnce(Invoke(
+            [](absl::string_view url,
+               SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+              subscribe_callback(
+                  absl::OkStatus(),
+                  std::vector<EventSourceId>(
+                      {{"3", EventSourceId::Type::kDbusObjects}}));
+              subscribe_callback(
+                  absl::OkStatus(),
+                  std::vector<EventSourceId>(
+                      {{"3", EventSourceId::Type::kDbusObjects}}));
+              return absl::OkStatus();
+            }));
 
     // This verifies we don't partially subscribe.
     EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
@@ -266,20 +286,27 @@ TEST_F(SubscriptionServiceImplTest,
   {
     EXPECT_CALL(*subscription_backend_ptr_,
                 Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _))
-        .WillOnce(DoAll(
-            InvokeArgument<1>(absl::OkStatus(),
-                              std::vector<EventSourceId>(
-                                  {{"1", EventSourceId::Type::kDbusObjects},
-                                   {"2", EventSourceId::Type::kDbusObjects}})),
-            Return(absl::OkStatus())));
-
+        .WillOnce(Invoke(
+            [](absl::string_view url,
+               SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+              subscribe_callback(
+                  absl::OkStatus(),
+                  std::vector<EventSourceId>(
+                      {{"1", EventSourceId::Type::kDbusObjects},
+                       {"2", EventSourceId::Type::kDbusObjects}}));
+              return absl::OkStatus();
+            }));
     EXPECT_CALL(*subscription_backend_ptr_,
                 Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _))
-        .WillOnce(DoAll(
-            InvokeArgument<1>(absl::InternalError(""),
-                              std::vector<EventSourceId>(
-                                  {{"3", EventSourceId::Type::kDbusObjects}})),
-            Return(absl::OkStatus())));
+        .WillOnce(Invoke(
+            [](absl::string_view url,
+               SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+              subscribe_callback(
+                  absl::InternalError(""),
+                  std::vector<EventSourceId>(
+                      {{"3", EventSourceId::Type::kDbusObjects}}));
+              return absl::OkStatus();
+            }));
 
     EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
 
@@ -533,11 +560,20 @@ TEST_F(SubscriptionServiceImplTest, ShouldSendEventIfOriginOfConditionIsValid) {
           Return(absl::Span<const SubscriptionContext* const>(contexts)));
 
   EXPECT_CALL(*subscription_backend_ptr_, Query(Eq("/redfish/v1/node1"), _))
-      .WillOnce(DoAll(InvokeArgument<1>(absl::OkStatus(), query_response),
-                      Return(absl::OkStatus())))
       .WillOnce(
-          DoAll(InvokeArgument<1>(absl::InternalError(""), query_response),
-                Return(absl::OkStatus())))
+          Invoke([query_response](
+                     absl::string_view url,
+                     SubscriptionBackend::QueryCallback&& query_callback) {
+            query_callback(absl::OkStatus(), query_response);
+            return absl::OkStatus();
+          }))
+      .WillOnce(
+          Invoke([query_response](
+                     absl::string_view url,
+                     SubscriptionBackend::QueryCallback&& query_callback) {
+            query_callback(absl::InternalError(""), query_response);
+            return absl::OkStatus();
+          }))
       .WillOnce(Return(absl::OkStatus()));
 
   // Check that only 1 Redfish event is added to the store.
@@ -614,20 +650,24 @@ TEST_F(SubscriptionServiceImplTest, ShouldDispatchEventsAfterLastEventId) {
 
   EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _))
-      .WillOnce(DoAll(
-          InvokeArgument<1>(absl::OkStatus(),
-                            std::vector<EventSourceId>(
-                                {{"1", EventSourceId::Type::kDbusObjects},
-                                 {"2", EventSourceId::Type::kDbusObjects}})),
-          Return(absl::OkStatus())));
+      .WillOnce(Invoke([](absl::string_view url,
+                          SubscriptionBackend::SubscribeCallback&& callback) {
+        callback(absl::OkStatus(),
+                 std::vector<EventSourceId>(
+                     {{"1", EventSourceId::Type::kDbusObjects},
+                      {"2", EventSourceId::Type::kDbusObjects}}));
+        return absl::OkStatus();
+      }));
 
   EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _))
-      .WillOnce(DoAll(
-          InvokeArgument<1>(absl::OkStatus(),
-                            std::vector<EventSourceId>(
-                                {{"3", EventSourceId::Type::kDbusObjects}})),
-          Return(absl::OkStatus())));
+      .WillOnce(Invoke([](absl::string_view url,
+                          SubscriptionBackend::SubscribeCallback&& callback) {
+        callback(absl::OkStatus(),
+                 std::vector<EventSourceId>(
+                     {{"3", EventSourceId::Type::kDbusObjects}}));
+        return absl::OkStatus();
+      }));
 
   EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(1);
 
