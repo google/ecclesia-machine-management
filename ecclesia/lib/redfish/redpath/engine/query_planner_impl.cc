@@ -620,16 +620,7 @@ QueryPlanner::ExecuteQueryExpression(
       std::string node_name = json_obj->get<std::string>();
 
       get_params_for_redpath = GetQueryParamsForRedPath(node_name);
-      if (get_params_for_redpath.filter.has_value()) {
-        // Since filter is enabled all predicates that rely on the redfish data
-        // returned from this call need to be added to the $filter parameter
-        // that is sent to the Redfish agent.
-        absl::StatusOr<std::string> filter_string =
-            GetFilterStringFromNextNode(next_trie_node);
-        if (filter_string.ok()) {
-          get_params_for_redpath.filter->SetFilterString(filter_string.value());
-        }
-      }
+
       redfish_variant =
           redfish_interface_->CachedGetUri(node_name, get_params_for_redpath);
     } else if (expression.type ==
