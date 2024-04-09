@@ -50,9 +50,14 @@ class SubscriptionStoreImpl : public SubscriptionStore {
   // Adds a new subscription with the given subscription ID and event source IDs
   absl::Status AddNewSubscription(
       std::unique_ptr<SubscriptionContext> subscription_context) override {
-    if (!subscription_context ||
-        subscription_context->subscription_id.Id() <= 0) {
+    if (subscription_context == nullptr) {
+      return absl::InvalidArgumentError("Subscription context is null.");
+    }
+    if (subscription_context->subscription_id.Id() <= 0) {
       return absl::InvalidArgumentError("Invalid Id, must be >0");
+    }
+    if (subscription_context->event_source_to_uri.empty()) {
+      return absl::InvalidArgumentError("Event source to uri is empty.");
     }
 
     SubscriptionId subscription_id = subscription_context->subscription_id;
@@ -74,23 +79,19 @@ class SubscriptionStoreImpl : public SubscriptionStore {
     }
 
     std::vector<EventSourceId> event_source_ids_to_add;
-    // get event_source_id from Triggers.
-    for (const auto& [id, trigger] :
-         subscription_context_raw_ptr->id_to_triggers) {
-      for (const auto& [event_source_id, value] : trigger.event_source_to_uri) {
-        event_source_ids_to_add.push_back(event_source_id);
-        absl::MutexLock lock(&subscriptions_by_event_sources_mutex_);
-        auto iter = subscriptions_by_event_sources_.find(event_source_id);
-        if (iter == subscriptions_by_event_sources_.end()) {
-          std::vector<const SubscriptionContext*> subscription_contexts;
-          subscription_contexts.push_back(subscription_context_raw_ptr);
-          subscriptions_by_event_sources_.insert(
-              {event_source_id, std::move(subscription_contexts)});
-        } else {
-          iter->second.push_back(subscription_context_raw_ptr);
-        }
+    for (const auto& [event_source_id, value] :
+         subscription_context_raw_ptr->event_source_to_uri) {
+      event_source_ids_to_add.push_back(event_source_id);
+      absl::MutexLock lock(&subscriptions_by_event_sources_mutex_);
+      auto iter = subscriptions_by_event_sources_.find(event_source_id);
+      if (iter == subscriptions_by_event_sources_.end()) {
+        subscriptions_by_event_sources_.insert(
+            {event_source_id, {subscription_context_raw_ptr}});
+      } else {
+        iter->second.push_back(subscription_context_raw_ptr);
       }
     }
+
     {
       absl::MutexLock lock(&event_sources_by_subscription_mutex_);
       event_sources_by_subscription_.insert(

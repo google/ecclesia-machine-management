@@ -534,8 +534,6 @@ TEST_F(SubscriptionServiceImplTest, ShouldSendEventIfOriginOfConditionIsValid) {
 
   // Create event source ID
   EventSourceId event_source_id("1", EventSourceId::Type::kDbusObjects);
-  trigger_or_status->event_source_to_uri.insert(
-      {event_source_id, {"/redfish/v1/node1"}});
 
   absl::flat_hash_map<std::string, Trigger> test_id_to_triggers = {
       {"1", *trigger_or_status}};

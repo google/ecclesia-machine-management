@@ -146,20 +146,6 @@ nlohmann::json Trigger::ToJSON() const {
   origin_resources_json.insert_iterator(origin_resources_json.end(),
                                         origin_resources.begin(),
                                         origin_resources.end());
-
-  nlohmann::json& event_source_to_uri_json = json["event_source_to_uri"];
-  event_source_to_uri_json = nlohmann::json::array();
-  for (const auto& [event_source, uris] : event_source_to_uri) {
-    nlohmann::json uris_as_json_array = nlohmann::json::array();
-    for (const auto& uri : uris) {
-      uris_as_json_array.push_back(uri);
-    }
-    nlohmann::json event_source_to_uri_single;
-    event_source_to_uri_single["event_source"] = event_source.ToJSON();
-    event_source_to_uri_single["uris"] = uris_as_json_array;
-    event_source_to_uri_json.push_back(event_source_to_uri_single);
-  }
-
   json["predicate"] = predicate;
   json["mask"] = mask;
   return json;

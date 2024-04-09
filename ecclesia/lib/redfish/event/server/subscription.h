@@ -151,9 +151,6 @@ struct Trigger {
   // List of origin resources associated with the Trigger
   absl::flat_hash_set<std::string> origin_resources;
 
-  // Map of event source to Redfish resource URI
-  EventSourceToUri event_source_to_uri;
-
   // Predicate expression for determining when to trigger the event
   std::string predicate;
 

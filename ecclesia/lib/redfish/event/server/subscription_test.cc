@@ -227,8 +227,6 @@ TEST(SubscriptionServiceTriggerTest, ToJSON) {
   auto trigger_or_status = Trigger::Create(json_in);
 
   EventSourceId source_id("123", EventSourceId::Type::kDbusObjects);
-  trigger_or_status->event_source_to_uri[source_id] = {"/redfish/v1/node1",
-                                                       "/redfish/v1/node2"};
 
   nlohmann::json json = trigger_or_status->ToJSON();
 
@@ -237,13 +235,6 @@ TEST(SubscriptionServiceTriggerTest, ToJSON) {
               UnorderedElementsAre("/redfish/v1/node1", "/redfish/v1/node2"));
   EXPECT_EQ(json["predicate"], "Value>23");
   EXPECT_EQ(json["mask"], false);
-  EXPECT_TRUE(json["event_source_to_uri"].is_array());
-  EXPECT_EQ(json["event_source_to_uri"].size(), 1);
-  EXPECT_EQ(json["event_source_to_uri"][0]["event_source"]["key"], "123");
-  EXPECT_EQ(json["event_source_to_uri"][0]["event_source"]["type"],
-            "kDbusObjects");
-  EXPECT_EQ(json["event_source_to_uri"][0]["uris"][0], "/redfish/v1/node1");
-  EXPECT_EQ(json["event_source_to_uri"][0]["uris"][1], "/redfish/v1/node2");
 }
 
 TEST(SubscriptionServiceTriggerTest, ToString) {
@@ -265,7 +256,7 @@ TEST(SubscriptionServiceTriggerTest, ToString) {
 
   std::string output_str = trigger_or_status->ToString();
   std::string expected_str =
-      "{\"event_source_to_uri\":[],\"mask\":false,\"origin_resources\":[\"/"
+      "{\"mask\":false,\"origin_resources\":[\"/"
       "redfish/v1/node1\"],\"predicate\":\"Value>23\"}";
 
   EXPECT_EQ(output_str, expected_str);

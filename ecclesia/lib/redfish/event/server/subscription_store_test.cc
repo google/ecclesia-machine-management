@@ -71,8 +71,8 @@ class SubscriptionStoreImplTest : public ::testing::Test {
     }
 
     EventSourceId event_source_id_one("1", EventSourceId::Type::kDbusObjects);
-    trigger_or_status_one->event_source_to_uri.insert(
-        {event_source_id_one, {"/redfish/v1/Chassis/Foo/Sensors/x"}});
+    test_event_source_to_uris_[event_source_id_one] = {
+        "/redfish/v1/Chassis/Foo/Sensors/x"};
 
     test_id_to_triggers_.try_emplace("1", *trigger_or_status_one);
 
@@ -82,8 +82,8 @@ class SubscriptionStoreImplTest : public ::testing::Test {
     }
 
     EventSourceId event_source_id_two("2", EventSourceId::Type::kDbusObjects);
-    trigger_or_status_two->event_source_to_uri.insert(
-        {event_source_id_two, {"/redfish/v1/Chassis/Foo/Sensors/y"}});
+    test_event_source_to_uris_[event_source_id_two] = {
+        "/redfish/v1/Chassis/Foo/Sensors/y"};
 
     test_id_to_triggers_.try_emplace("2", *trigger_or_status_two);
     return absl::OkStatus();
@@ -109,6 +109,12 @@ TEST_F(SubscriptionStoreImplTest, CreateNewSubscriptionSuccess) {
               .value()->subscription_id.Id(), Eq(1));
 }
 
+TEST_F(SubscriptionStoreImplTest, AddNewSubscriptionFailsWithInvalidContext) {
+  ASSERT_THAT(SubscriptionStoreTestSetup(), IsOk());
+  EXPECT_THAT(subscription_store_->AddNewSubscription(nullptr),
+              IsStatusInvalidArgument());
+}
+
 TEST_F(SubscriptionStoreImplTest, BadSubscriptionFail) {
   ASSERT_THAT(SubscriptionStoreTestSetup(), IsOk());
   auto subscription_context_zero_id = std::make_unique<SubscriptionContext>(
@@ -119,6 +125,21 @@ TEST_F(SubscriptionStoreImplTest, BadSubscriptionFail) {
   EXPECT_THAT(subscription_store_->AddNewSubscription(
     std::move(subscription_context_zero_id)),
     Eq(absl::InvalidArgumentError("Invalid Id, must be >0")));
+}
+
+TEST_F(SubscriptionStoreImplTest,
+       AddNewSubscriptionFailsWithEmptyEventSourceIdToUri) {
+  ASSERT_THAT(SubscriptionStoreTestSetup(), IsOk());
+  absl::flat_hash_map<EventSourceId, absl::flat_hash_set<std::string>>
+      empty_event_source_to_uris;
+  auto subscription_context_zero_id = std::make_unique<SubscriptionContext>(
+      SubscriptionId(0), empty_event_source_to_uris, test_id_to_triggers_,
+      [](const nlohmann::json& event) {});
+
+  // Reject subscription creation.
+  EXPECT_THAT(subscription_store_->AddNewSubscription(
+                  std::move(subscription_context_zero_id)),
+              IsStatusInvalidArgument());
 }
 
 TEST_F(SubscriptionStoreImplTest, CreateDupSubscriptionFail) {
