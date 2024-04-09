@@ -187,6 +187,7 @@ void Sysmodel::QueryAllResourceInternal(
 
 // StorageController:
 // "​redfish/​v1/​Systems/​{id}/​Storage/​{id}/​Controllers/​{id}"
+// "/​redfish/​v1/​Storage/​{id}/​Controllers/​{id}"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceStorageController> /*unused*/, ResultCallback result_callback,
     const QueryParams &query_params) {
@@ -195,6 +196,17 @@ void Sysmodel::QueryAllResourceInternal(
       .Get(kRfPropertySystems,
            {.expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()
+      .Get(kRfPropertyStorage,
+           {.freshness = query_params.freshness,
+            .auto_adjust_levels = false,
+            .expand = RedfishQueryParamExpand({.levels = 0})})
+      .Each()[kRfPropertyControllers]
+      .Each()
+      .Do([&](std::unique_ptr<RedfishObject> &ctrl_obj) {
+        return result_callback(std::move(ctrl_obj));
+      });
+
+  root.AsIndexHelper()
       .Get(kRfPropertyStorage,
            {.freshness = query_params.freshness,
             .auto_adjust_levels = false,
