@@ -85,6 +85,9 @@ struct RedPathExpression {
       case RedPathExpression::Type::kNodeNameJsonPointer:
         type_str = "node_name_json_pointer";
         break;
+      case RedPathExpression::Type::kNodeNameUriPointer:
+        type_str = "node_name_uri_pointer";
+        break;
     }
     absl::Format(&sink, "{ type: \"%s\" expression: \"%s\"}", type_str,
                  expr.expression);
