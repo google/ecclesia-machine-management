@@ -265,20 +265,26 @@ class SubscriptionServiceImpl
       }
     }
 
+    auto on_subscribe = std::make_shared<
+        std::function<void(const absl::StatusOr<SubscriptionId> &)>>(
+        std::move(on_subscribe_callback));
     auto on_async_subscribe_complete =
-        [&](const absl::Status &status,
-            const absl::flat_hash_map<EventSourceId,
-                                      absl::flat_hash_set<std::string>>
-                &event_source_to_origin_resources) {
+        [on_subscribe(on_subscribe), google_obj(*find_google),
+         on_event_callback(std::move(on_event_callback)),
+         trigger_id_to_trigger_obj, request,
+         this](const absl::Status &status,
+               const absl::flat_hash_map<EventSourceId,
+                                         absl::flat_hash_set<std::string>>
+                   &event_source_to_origin_resources) mutable {
           if (!status.ok()) {
-            on_subscribe_callback(status);
+            (*on_subscribe)(status);
             return;
           }
 
           // If subscriber requested to stream events queued after given
           // `last_event_id`, pull the events from the event store and dispatch.
-          if (auto find_last_event_id = find_google->find(kPropertyLastEventId);
-              find_last_event_id != find_google->end()) {
+          if (auto find_last_event_id = google_obj.find(kPropertyLastEventId);
+              find_last_event_id != google_obj.end()) {
             // Dispatch events since last event id.
             absl::c_for_each(
                 event_store_->GetEventsSince(find_last_event_id->get<size_t>()),
@@ -300,14 +306,14 @@ class SubscriptionServiceImpl
                   std::move(subscription_context));
 
           if (!new_subscription_status.ok()) {
-            on_subscribe_callback(new_subscription_status);
+            (*on_subscribe)(new_subscription_status);
             return;
           }
 
           // If we reach this point, we have created a subscription
           // successfully. Invoke the callback to complete the subscription
           // sequence.
-          on_subscribe_callback(subscription_id);
+          (*on_subscribe)(subscription_id);
         };
 
     // Now we invoke subscribe on the subscription backend. This should send
@@ -325,7 +331,7 @@ class SubscriptionServiceImpl
                                                       event_source_ids);
           });
       if (!status.ok()) {
-        on_subscribe_callback(status);
+        (*on_subscribe)(status);
         return;
       }
     }
