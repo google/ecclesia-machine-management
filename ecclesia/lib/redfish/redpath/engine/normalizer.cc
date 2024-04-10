@@ -36,6 +36,8 @@
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/property_definitions.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/proto.h"
@@ -219,7 +221,8 @@ NormalizerImplDefault::NormalizerImplDefault()
 absl::Status NormalizerImplDefault::Normalize(
     const ecclesia::RedfishObject &redfish_object,
     const DelliciusQuery::Subquery &subquery,
-    ecclesia::QueryResultData &data_set_local) {
+    ecclesia::QueryResultData &data_set_local,
+    const NormalizerOptions &options) {
   const nlohmann::json json_content = redfish_object.GetContentAsJson();
   for (const DelliciusQuery::Subquery::RedfishProperty &property :
        subquery.properties()) {
@@ -268,13 +271,24 @@ absl::Status NormalizerImplDefault::Normalize(
       (*data_set_local.mutable_fields())[name] = query_value;
     }
   }
+
+  if (options.enable_url_annotation) {
+    if (auto it = json_content.find(ecclesia::PropertyOdataId::Name);
+        it != json_content.end()) {
+      QueryValue query_value;
+      query_value.set_string_value(it->get<std::string>());
+      (*data_set_local.mutable_fields())[kUriAnnotationTag] =
+          std::move(query_value);
+    }
+  }
   return absl::OkStatus();
 }
 
 absl::Status NormalizerImplAddDevpath::Normalize(
     const RedfishObject &redfish_object,
     const DelliciusQuery::Subquery &subquery,
-    ecclesia::QueryResultData &data_set_local) {
+    ecclesia::QueryResultData &data_set_local,
+    const NormalizerOptions &options) {
   // Prioritize devpath populated by default normalizer.
   if (data_set_local.fields().contains(kLocalDevpath)) {
     return absl::OkStatus();
@@ -295,7 +309,8 @@ absl::Status NormalizerImplAddDevpath::Normalize(
 absl::Status NormalizerImplAddMachineBarepath::Normalize(
     const RedfishObject &redfish_object,
     const DelliciusQuery::Subquery &subquery,
-    ecclesia::QueryResultData &data_set_local) {
+    ecclesia::QueryResultData &data_set_local,
+    const NormalizerOptions &options) {
   //  We will now try to map a local devpath to machine devpath
   if (!(data_set_local.fields().contains(kLocalDevpath))) {
     return absl::OkStatus();

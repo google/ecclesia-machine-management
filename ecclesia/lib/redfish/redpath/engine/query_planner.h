@@ -50,6 +50,7 @@ class QueryPlannerIntf {
   // Configures a query execution.
   struct QueryExecutionOptions {
     QueryVariables &variables;
+    bool enable_url_annotation = false;
   };
 
   // Configures a query resume operation.
@@ -57,6 +58,7 @@ class QueryPlannerIntf {
     const RedPathTrieNode *trie_node;
     const RedfishVariant &redfish_variant;
     const QueryVariables &variables;
+    bool enable_url_annotation = false;
   };
 
   // QueryPlan execution output.

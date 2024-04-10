@@ -36,6 +36,11 @@
 #include "ecclesia/lib/status/macros.h"
 
 namespace ecclesia {
+
+struct NormalizerOptions {
+  bool enable_url_annotation = false;
+};
+
 // Provides an interface for normalizing a redfish response into QueryResultData
 // for the property specification in a Dellicius Subquery.
 class Normalizer {
@@ -46,14 +51,15 @@ class Normalizer {
 
     virtual absl::Status Normalize(const RedfishObject &redfish_object,
                                    const DelliciusQuery::Subquery &query,
-                                   ecclesia::QueryResultData &data_set) = 0;
+                                   ecclesia::QueryResultData &data_set,
+                                   const NormalizerOptions &options) = 0;
   };
 
   // Returns normalized dataset, possibly empty. Normalizers can be nested
   // and empty dataset on one level can be extended in outer normalizers.
   absl::StatusOr<ecclesia::QueryResultData> Normalize(
       const RedfishObject &redfish_object,
-      const DelliciusQuery::Subquery &query) {
+      const DelliciusQuery::Subquery &query, const NormalizerOptions &options) {
     // It's ok to use a simple mutex here. If we ever detect lock contention
     // and we know that the writes are less frequent, we can convert this mutex
     // to Reader-writer lock.
@@ -63,7 +69,7 @@ class Normalizer {
 
     for (const auto &impl : impl_chain_) {
       ECCLESIA_RETURN_IF_ERROR(
-          impl->Normalize(redfish_object, query, data_set));
+          impl->Normalize(redfish_object, query, data_set, options));
     }
 
     // Return an error if data set is empty - no field and no devpath
@@ -92,7 +98,8 @@ class NormalizerImplDefault final : public Normalizer::ImplInterface {
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
-                         ecclesia::QueryResultData &data_set) override;
+                         ecclesia::QueryResultData &data_set,
+                         const NormalizerOptions &options) override;
 
  private:
   std::vector<DelliciusQuery::Subquery::RedfishProperty> additional_properties_;
@@ -107,7 +114,8 @@ class NormalizerImplAddDevpath final : public Normalizer::ImplInterface {
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
-                         ecclesia::QueryResultData &data_set) override;
+                         ecclesia::QueryResultData &data_set,
+                         const NormalizerOptions &options) override;
 
  private:
   NodeTopology topology_;
@@ -124,7 +132,8 @@ class NormalizerImplAddMachineBarepath final
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
-                         ecclesia::QueryResultData &data_set) override;
+                         ecclesia::QueryResultData &data_set,
+                         const NormalizerOptions &options) override;
 
  private:
   std::unique_ptr<IdAssigner> id_assigner_;

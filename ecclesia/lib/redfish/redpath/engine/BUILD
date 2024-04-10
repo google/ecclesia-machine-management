@@ -122,6 +122,7 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:path_util",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/time:proto",

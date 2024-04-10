@@ -509,6 +509,131 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
                   ecclesia::EqualsProto(result->query_result)));
 }
 
+TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesWithUrlAnnotations) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "Assembly"
+          root_subquery_ids: "Chassis"
+          redpath: "/Assembly/Assemblies[Name=indus]"
+          properties { property: "Name" type: STRING }
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[Name=CPU1]"
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "ChassisSubTreeTest"
+    data {
+      fields {
+        key: "Chassis"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Assembly"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Name"
+                            value { string_value: "indus" }
+                          }
+                          fields {
+                            key: "_uri_"
+                            value {
+                              string_value: "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                fields {
+                  key: "Id"
+                  value { string_value: "chassis" }
+                }
+                fields {
+                  key: "Sensors"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Name"
+                            value { string_value: "CPU1" }
+                          }
+                          fields {
+                            key: "_uri_"
+                            value {
+                              string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon"
+                            }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Name"
+                            value { string_value: "CPU1" }
+                          }
+                          fields {
+                            key: "_uri_"
+                            value {
+                              string_value: "/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                fields {
+                  key: "_uri_"
+                  value { string_value: "/redfish/v1/Chassis/chassis" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get()});
+
+  EXPECT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  absl::StatusOr<QueryExecutionResult> result =
+      (*qp)->Run({.variables = args1, .enable_url_annotation = true});
+
+  EXPECT_THAT(result, IsOk());
+  EXPECT_THAT(expected_query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(result->query_result)));
+}
+
 DelliciusQuery GetSubscriptionQuery() {
   return ParseTextProtoOrDie(
       R"pb(
