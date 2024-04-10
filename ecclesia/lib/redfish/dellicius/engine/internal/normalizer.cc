@@ -24,7 +24,10 @@
 #include <vector>
 
 #include "google/protobuf/timestamp.pb.h"
+#include "google/rpc/code.pb.h"
+#include "google/rpc/status.pb.h"
 #include "google/protobuf/descriptor.pb.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -176,37 +179,61 @@ absl::StatusOr<SubqueryDataSet::Property> GetPropertyFromRedfishObject(
       RedfishProperty::COLLECTION_PRIMITIVE) {
     ECCLESIA_RETURN_IF_ERROR(GetCollectionPropertyFromRedfishObject(
         property, json_obj, property_out));
-  } else {
+  } else if (!json_obj.is_null()) {
     // clients to use new property value fields.
     switch (property.type()) {
       case RedfishProperty::STRING: {
-        if (json_obj.is_string()) {
-          property_out.set_string_value(json_obj.get<std::string>());
+        if (!json_obj.is_string()) {
+          std::string error_message = absl::StrCat(
+              "Error querying property ", property.property(),
+              " as a string from non string object: ", json_obj.dump());
+          LOG(ERROR) << error_message;
+          return absl::InvalidArgumentError(error_message);
         }
+        property_out.set_string_value(json_obj.get<std::string>());
         break;
       }
       case RedfishProperty::BOOLEAN: {
-        if (json_obj.is_boolean()) {
-          property_out.set_boolean_value(json_obj.get<bool>());
+        if (!json_obj.is_boolean()) {
+          std::string error_message = absl::StrCat(
+              "Error querying property ", property.property(),
+              " as a boolean from non boolean object: ", json_obj.dump());
+          LOG(ERROR) << error_message;
+          return absl::InvalidArgumentError(error_message);
         }
+        property_out.set_boolean_value(json_obj.get<bool>());
         break;
       }
       case RedfishProperty::DOUBLE: {
-        if (json_obj.is_number()) {
-          property_out.set_double_value(json_obj.get<double>());
+        if (!json_obj.is_number()) {
+          std::string error_message = absl::StrCat(
+              "Error querying property ", property.property(),
+              " as a number from non number object: ", json_obj.dump());
+          LOG(ERROR) << error_message;
+          return absl::InvalidArgumentError(error_message);
         }
+        property_out.set_double_value(json_obj.get<double>());
         break;
       }
       case RedfishProperty::INT64: {
-        if (json_obj.is_number()) {
-          property_out.set_int64_value(json_obj.get<int64_t>());
+        if (!json_obj.is_number()) {
+          std::string error_message = absl::StrCat(
+              "Error querying property ", property.property(),
+              " as a number from non number object: ", json_obj.dump());
+          LOG(ERROR) << error_message;
+          return absl::InvalidArgumentError(error_message);
         }
+        property_out.set_int64_value(json_obj.get<int64_t>());
         break;
       }
       case RedfishProperty::DATE_TIME_OFFSET: {
         absl::Time timevalue;
         if (!json_obj.is_string()) {
-          break;
+          std::string error_message = absl::StrCat(
+              "Error querying property ", property.property(),
+              " as a timestamp from non string object: ", json_obj.dump());
+          LOG(ERROR) << error_message;
+          return absl::InvalidArgumentError(error_message);
         }
         if (absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", json_obj.get<std::string>(),
                             &timevalue, nullptr)) {
@@ -222,10 +249,6 @@ absl::StatusOr<SubqueryDataSet::Property> GetPropertyFromRedfishObject(
         break;
       }
     }
-  }
-  if (!(property_out.value_case() || property_out.has_primitive_value() ||
-        property_out.has_collection_value())) {
-    return absl::InvalidArgumentError("Invalid property type");
   }
   return property_out;
 }
@@ -246,6 +269,9 @@ absl::Status NormalizerImplDefault::Normalize(
     // It is not an error if normalizer fails to normalize a property if
     // required property is not part of Resource attributes.
     if (!property_out.ok()) {
+      if (property_out.status().code() == absl::StatusCode::kInvalidArgument) {
+        return property_out.status();
+      }
       continue;
     }
     // By default, name of the queried property is set as name if the client

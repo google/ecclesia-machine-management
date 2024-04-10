@@ -365,9 +365,9 @@ class QueryPlanner final : public QueryPlannerIntf {
   // Normalization of Redfish Object into query result is a best effort process
   // which does not error out if requested properties are not found in Redfish
   // Object.
-  void TryNormalize(absl::string_view subquery_id,
-                    QueryExecutionContext *query_execution_context,
-                    const NormalizerOptions &normalizer_options) const;
+  absl::Status TryNormalize(absl::string_view subquery_id,
+                            QueryExecutionContext *query_execution_context,
+                            const NormalizerOptions &normalizer_options) const;
 
   // Joins subquery output with parent subquery output.
   void JoinSubqueryOutput(SubqueryOutputById subquery_output_by_id,
@@ -426,12 +426,16 @@ GetParams QueryPlanner::GetQueryParamsForRedPath(
   return params;
 }
 
-void QueryPlanner::TryNormalize(
+absl::Status QueryPlanner::TryNormalize(
     absl::string_view subquery_id,
     QueryExecutionContext *query_execution_context,
     const NormalizerOptions &normalizer_options) const {
   auto find_subquery = subquery_id_to_subquery_.find(subquery_id);
-  CHECK(find_subquery != subquery_id_to_subquery_.end());
+  if (find_subquery == subquery_id_to_subquery_.end()) {
+    return absl::NotFoundError(
+        absl::StrCat("Subquery for subquery id ", subquery_id,
+                     " not found in query execution context."));
+  }
 
   // Normalize Redfish Object into query result.
   const std::unique_ptr<RedfishObject> &redfish_object =
@@ -440,20 +444,29 @@ void QueryPlanner::TryNormalize(
   absl::StatusOr<SubqueryDataSet> subquery_dataset = normalizer_->Normalize(
       *redfish_object, find_subquery->second, normalizer_options);
   if (!subquery_dataset.ok()) {
+    if (subquery_dataset.status().code() != absl::StatusCode::kNotFound) {
+      return subquery_dataset.status();
+    }
+    // Not finding a property is not a halting error.
     DLOG(INFO) << "Cannot find queried properties in Redfish Object.\n"
                << "===Redfish Object===\n"
                << redfish_object->GetContentAsJson().dump(1)
                << "\n===Subquery===\n"
                << find_subquery->second.DebugString()
                << "\nError: " << subquery_dataset.status();
-    return;
+    return absl::OkStatus();
   }
   auto find_subquery_output =
       query_execution_context->subquery_output_by_id->find(subquery_id);
-  CHECK(find_subquery_output !=
-        query_execution_context->subquery_output_by_id->end());
+  if (find_subquery_output ==
+      query_execution_context->subquery_output_by_id->end()) {
+    return absl::NotFoundError(
+        absl::StrCat("Subquery output for subquery id ", subquery_id,
+                     " not found in query execution context."));
+  }
   find_subquery_output->second.mutable_data_sets()->Add(
       std::move(*subquery_dataset));
+  return absl::OkStatus();
 }
 
 absl::StatusOr<bool> ExecutePredicateExpression(
@@ -735,9 +748,9 @@ absl::StatusOr<QueryResult> QueryPlanner::Resume(
   // expression in the trie.
   if (!execution_context.redpath_trie_node->subquery_id.empty() &&
       execution_context.redfish_object_and_iterable.redfish_object != nullptr) {
-    TryNormalize(
+    ECCLESIA_RETURN_IF_ERROR(TryNormalize(
         execution_context.redpath_trie_node->subquery_id, &execution_context,
-        {.enable_url_annotation = query_resume_options.enable_url_annotation});
+        {.enable_url_annotation = query_resume_options.enable_url_annotation}));
   }
 
   // Begin BFS traversal of the trie.
@@ -765,9 +778,10 @@ absl::StatusOr<QueryResult> QueryPlanner::Resume(
         const std::unique_ptr<RedfishObject> &object =
             new_execution_context.redfish_object_and_iterable.redfish_object;
         if (!subquery_id.empty() && object != nullptr) {
-          TryNormalize(subquery_id, &new_execution_context,
-                       {.enable_url_annotation =
-                            query_resume_options.enable_url_annotation});
+          ECCLESIA_RETURN_IF_ERROR(
+              TryNormalize(subquery_id, &new_execution_context,
+                           {.enable_url_annotation =
+                                query_resume_options.enable_url_annotation}));
         }
         node_queue.push(std::move(new_execution_context));
       }
@@ -888,9 +902,10 @@ absl::StatusOr<QueryPlannerIntf::QueryExecutionResult> QueryPlanner::Run(
         const std::unique_ptr<RedfishObject> &redfish_object =
             execution_context.redfish_object_and_iterable.redfish_object;
         if (!subquery_id.empty() && redfish_object != nullptr) {
-          TryNormalize(subquery_id, &execution_context,
-                       {.enable_url_annotation =
-                            query_execution_options.enable_url_annotation});
+          ECCLESIA_RETURN_IF_ERROR(TryNormalize(
+              subquery_id, &execution_context,
+              {.enable_url_annotation =
+                   query_execution_options.enable_url_annotation}));
         }
         node_queue.push(std::move(execution_context));
       }
