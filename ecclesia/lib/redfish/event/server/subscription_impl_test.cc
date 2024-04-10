@@ -21,6 +21,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -136,10 +137,12 @@ TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
   ASSERT_TRUE(!request.is_discarded());
 
   EXPECT_CALL(*subscription_backend_ptr_,
-              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _))
-      .WillOnce(Invoke(
-          [](absl::string_view url,
-             SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _,
+                        UnorderedElementsAre("Privilege123")))
+      .WillOnce(
+          Invoke([](absl::string_view url,
+                    SubscriptionBackend::SubscribeCallback&& subscribe_callback,
+                    const std::unordered_set<std::string>& privileges) {
             subscribe_callback(absl::OkStatus(),
                                std::vector<EventSourceId>(
                                    {{"1", EventSourceId::Type::kDbusObjects},
@@ -148,10 +151,12 @@ TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
           }));
 
   EXPECT_CALL(*subscription_backend_ptr_,
-              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _))
-      .WillOnce(Invoke(
-          [](absl::string_view url,
-             SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _,
+                        UnorderedElementsAre("Privilege123")))
+      .WillOnce(
+          Invoke([](absl::string_view url,
+                    SubscriptionBackend::SubscribeCallback&& subscribe_callback,
+                    const std::unordered_set<std::string>& privileges) {
             subscribe_callback(absl::OkStatus(),
                                std::vector<EventSourceId>(
                                    {{"3", EventSourceId::Type::kDbusObjects}}));
@@ -167,7 +172,7 @@ TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
 
   // Expect subscription creation to succeed.
   subscription_service_->CreateSubscription(
-      request,
+      request, {"Privilege123"},
       [](const absl::StatusOr<SubscriptionId>& subscription_id) {
         EXPECT_THAT(subscription_id, IsOk());
       },
@@ -212,10 +217,12 @@ TEST_F(SubscriptionServiceImplTest,
 
   // Backend->Subscribe returns an error.
   {
-    EXPECT_CALL(*subscription_backend_ptr_, Subscribe(_, _))
+    EXPECT_CALL(*subscription_backend_ptr_,
+                Subscribe(_, _, UnorderedElementsAre("Privilege123")))
         .WillOnce(Invoke(
             [](absl::string_view url,
-               SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+               SubscriptionBackend::SubscribeCallback&& subscribe_callback,
+               const std::unordered_set<std::string>& privileges) {
               subscribe_callback(
                   absl::OkStatus(),
                   std::vector<EventSourceId>(
@@ -228,7 +235,7 @@ TEST_F(SubscriptionServiceImplTest,
     EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
 
     subscription_service_->CreateSubscription(
-        request,
+        request, {"Privilege123"},
         [](const absl::StatusOr<SubscriptionId>& subscription_id) {
           EXPECT_THAT(subscription_id, IsStatusInternal());
         },
@@ -238,10 +245,12 @@ TEST_F(SubscriptionServiceImplTest,
   // Backend->Subscribe returns unexpected responses.
   {
     EXPECT_CALL(*subscription_backend_ptr_,
-                Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _))
+                Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _,
+                          UnorderedElementsAre("Privilege123")))
         .WillOnce(Invoke(
             [](absl::string_view url,
-               SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+               SubscriptionBackend::SubscribeCallback&& subscribe_callback,
+               const std::unordered_set<std::string>& privileges) {
               subscribe_callback(
                   absl::OkStatus(),
                   std::vector<EventSourceId>(
@@ -256,10 +265,12 @@ TEST_F(SubscriptionServiceImplTest,
             }));
 
     EXPECT_CALL(*subscription_backend_ptr_,
-                Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _))
+                Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _,
+                          UnorderedElementsAre("Privilege123")))
         .WillOnce(Invoke(
             [](absl::string_view url,
-               SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+               SubscriptionBackend::SubscribeCallback&& subscribe_callback,
+               const std::unordered_set<std::string>& privileges) {
               subscribe_callback(
                   absl::OkStatus(),
                   std::vector<EventSourceId>(
@@ -275,7 +286,7 @@ TEST_F(SubscriptionServiceImplTest,
     EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
 
     subscription_service_->CreateSubscription(
-        request,
+        request, {"Privilege123"},
         [](const absl::StatusOr<SubscriptionId>& subscription_id) {
           EXPECT_THAT(subscription_id, IsStatusInternal());
         },
@@ -285,10 +296,12 @@ TEST_F(SubscriptionServiceImplTest,
   // Backend->Subscribe returns an error in callback.
   {
     EXPECT_CALL(*subscription_backend_ptr_,
-                Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _))
+                Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _,
+                          UnorderedElementsAre("Privilege123")))
         .WillOnce(Invoke(
             [](absl::string_view url,
-               SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+               SubscriptionBackend::SubscribeCallback&& subscribe_callback,
+               const std::unordered_set<std::string>& privileges) {
               subscribe_callback(
                   absl::OkStatus(),
                   std::vector<EventSourceId>(
@@ -297,10 +310,12 @@ TEST_F(SubscriptionServiceImplTest,
               return absl::OkStatus();
             }));
     EXPECT_CALL(*subscription_backend_ptr_,
-                Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _))
+                Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _,
+                          UnorderedElementsAre("Privilege123")))
         .WillOnce(Invoke(
             [](absl::string_view url,
-               SubscriptionBackend::SubscribeCallback&& subscribe_callback) {
+               SubscriptionBackend::SubscribeCallback&& subscribe_callback,
+               const std::unordered_set<std::string>& privileges) {
               subscribe_callback(
                   absl::InternalError(""),
                   std::vector<EventSourceId>(
@@ -311,7 +326,7 @@ TEST_F(SubscriptionServiceImplTest,
     EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
 
     subscription_service_->CreateSubscription(
-        request,
+        request, {"Privilege123"},
         [](const absl::StatusOr<SubscriptionId>& subscription_id) {
           EXPECT_THAT(subscription_id, IsStatusInternal());
         },
@@ -430,11 +445,13 @@ TEST_F(SubscriptionServiceImplTest,
     ASSERT_TRUE(!request.is_discarded());
 
     // Verify mock calls.
-    EXPECT_CALL(*subscription_backend_ptr_, Subscribe(_, _)).Times(0);
+    EXPECT_CALL(*subscription_backend_ptr_,
+                Subscribe(_, _, UnorderedElementsAre("Privilege123")))
+        .Times(0);
     EXPECT_CALL(*subscription_store_ptr_, AddNewSubscription(_)).Times(0);
     // Expect subscription creation to fail.
     subscription_service_->CreateSubscription(
-        request,
+        request, {"Privilege123"},
         [](const absl::StatusOr<SubscriptionId>& subscription_id) {
           EXPECT_NE(subscription_id.status(), absl::OkStatus());
         },
@@ -549,7 +566,7 @@ TEST_F(SubscriptionServiceImplTest, ShouldSendEventIfOriginOfConditionIsValid) {
         EXPECT_TRUE(CompareJson(event, expected_event,
                                 {"EventId", "EventTimestamp", "Id"}));
       });
-
+  context->privileges = {"Privilege123"};
   std::vector<const SubscriptionContext*> contexts = {context.get()};
   // Expect subscription store to be queried for subscriptions.
   EXPECT_CALL(*subscription_store_ptr_,
@@ -557,18 +574,20 @@ TEST_F(SubscriptionServiceImplTest, ShouldSendEventIfOriginOfConditionIsValid) {
       .WillRepeatedly(
           Return(absl::Span<const SubscriptionContext* const>(contexts)));
 
-  EXPECT_CALL(*subscription_backend_ptr_, Query(Eq("/redfish/v1/node1"), _))
-      .WillOnce(
-          Invoke([query_response](
-                     absl::string_view url,
-                     SubscriptionBackend::QueryCallback&& query_callback) {
+  EXPECT_CALL(
+      *subscription_backend_ptr_,
+      Query(Eq("/redfish/v1/node1"), _, UnorderedElementsAre("Privilege123")))
+      .WillOnce(Invoke(
+          [query_response](absl::string_view url,
+                           SubscriptionBackend::QueryCallback&& query_callback,
+                           const std::unordered_set<std::string>& privileges) {
             query_callback(absl::OkStatus(), query_response);
             return absl::OkStatus();
           }))
-      .WillOnce(
-          Invoke([query_response](
-                     absl::string_view url,
-                     SubscriptionBackend::QueryCallback&& query_callback) {
+      .WillOnce(Invoke(
+          [query_response](absl::string_view url,
+                           SubscriptionBackend::QueryCallback&& query_callback,
+                           const std::unordered_set<std::string>& privileges) {
             query_callback(absl::InternalError(""), query_response);
             return absl::OkStatus();
           }))
@@ -647,9 +666,11 @@ TEST_F(SubscriptionServiceImplTest, ShouldDispatchEventsAfterLastEventId) {
       .WillOnce(Return(std::vector<nlohmann::json>{event1, event2}));
 
   EXPECT_CALL(*subscription_backend_ptr_,
-              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _))
+              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _,
+                        UnorderedElementsAre("Privilege123")))
       .WillOnce(Invoke([](absl::string_view url,
-                          SubscriptionBackend::SubscribeCallback&& callback) {
+                          SubscriptionBackend::SubscribeCallback&& callback,
+                          const std::unordered_set<std::string>& privileges) {
         callback(absl::OkStatus(),
                  std::vector<EventSourceId>(
                      {{"1", EventSourceId::Type::kDbusObjects},
@@ -658,9 +679,11 @@ TEST_F(SubscriptionServiceImplTest, ShouldDispatchEventsAfterLastEventId) {
       }));
 
   EXPECT_CALL(*subscription_backend_ptr_,
-              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _))
+              Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/y"), _,
+                        UnorderedElementsAre("Privilege123")))
       .WillOnce(Invoke([](absl::string_view url,
-                          SubscriptionBackend::SubscribeCallback&& callback) {
+                          SubscriptionBackend::SubscribeCallback&& callback,
+                          const std::unordered_set<std::string>& privileges) {
         callback(absl::OkStatus(),
                  std::vector<EventSourceId>(
                      {{"3", EventSourceId::Type::kDbusObjects}}));
@@ -672,7 +695,7 @@ TEST_F(SubscriptionServiceImplTest, ShouldDispatchEventsAfterLastEventId) {
   std::vector<nlohmann::json> actual_events;
   size_t callback_count = 0;
   subscription_service_->CreateSubscription(
-      request,
+      request, {"Privilege123"},
       [&callback_count](const absl::StatusOr<SubscriptionId>& subscription_id) {
         ++callback_count;
         EXPECT_THAT(subscription_id, IsOk());

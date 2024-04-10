@@ -23,6 +23,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
@@ -189,6 +190,9 @@ struct SubscriptionContext {
   // subscription's triggers. The callback function receives the event data as
   // its argument.
   std::function<void(const nlohmann::json &)> on_event_callback;
+
+  // Peer's authenticated Redfish privileges
+  std::unordered_set<std::string> privileges;
 };
 
 // Interface for an event store.
@@ -263,14 +267,20 @@ class SubscriptionBackend {
   virtual ~SubscriptionBackend() = default;
 
   // Performs a Redfish query at the given URL and invokes the provided callback
-  // with the query result
-  virtual absl::Status Query(absl::string_view url,
-                             QueryCallback&& query_callback) = 0;
+  // with the query result.
+  // `peer_privileges` is the peer's Redfish privileges that will be used to
+  // authorize the queried resources.
+  virtual absl::Status Query(
+      absl::string_view url, QueryCallback &&query_callback,
+      const std::unordered_set<std::string> &peer_privileges) = 0;
 
   // Subscribes to Redfish events for the given URL and invokes the callback
   // post subscription.
-  virtual absl::Status Subscribe(absl::string_view url,
-                                 SubscribeCallback&& subscribe_callback) = 0;
+  // `peer_privileges` is the peer's Redfish privileges that will be used to
+  // authorize the subscribed resources.
+  virtual absl::Status Subscribe(
+      absl::string_view url, SubscribeCallback &&subscribe_callback,
+      const std::unordered_set<std::string> &peer_privileges) = 0;
 };
 
 // Interface for a subscription service
@@ -284,6 +294,7 @@ class SubscriptionService {
   // be called once at a time. No parallel call will be allowed!
   virtual void CreateSubscription(
       const nlohmann::json &request,
+      const std::unordered_set<std::string> &peer_privileges,
       std::function<void(const absl::StatusOr<SubscriptionId> &)>
           on_subscribe_callback,
       std::function<void(const nlohmann::json &)> on_event_callback) = 0;

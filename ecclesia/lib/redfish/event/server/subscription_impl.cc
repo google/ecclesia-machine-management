@@ -22,6 +22,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -210,6 +211,7 @@ class SubscriptionServiceImpl
   // invoked to dispatch events to the subscriber.
   void CreateSubscription(
       const nlohmann::json &request,
+      const std::unordered_set<std::string> &peer_privileges,
       std::function<void(const absl::StatusOr<SubscriptionId> &)>
           on_subscribe_callback,
       std::function<void(const nlohmann::json &)> on_event_callback) override {
@@ -272,7 +274,8 @@ class SubscriptionServiceImpl
         [on_subscribe(on_subscribe), google_obj(*find_google),
          on_event_callback(std::move(on_event_callback)),
          trigger_id_to_trigger_obj, request,
-         this](const absl::Status &status,
+         this, privileges = peer_privileges](
+            const absl::Status &status,
                const absl::flat_hash_map<EventSourceId,
                                          absl::flat_hash_set<std::string>>
                    &event_source_to_origin_resources) mutable {
@@ -299,6 +302,7 @@ class SubscriptionServiceImpl
           auto subscription_context = std::make_unique<SubscriptionContext>(
               subscription_id, event_source_to_origin_resources,
               trigger_id_to_trigger_obj, std::move(on_event_callback));
+          subscription_context->privileges = privileges;
 
           // Add subscription to subscription store.
           absl::Status new_subscription_status =
@@ -329,7 +333,8 @@ class SubscriptionServiceImpl
               const std::vector<EventSourceId> &event_source_ids) {
             async_subscribe_response->ProcessResponse(origin_resource, status,
                                                       event_source_ids);
-          });
+          },
+          peer_privileges);
       if (!status.ok()) {
         (*on_subscribe)(status);
         return;
@@ -337,7 +342,7 @@ class SubscriptionServiceImpl
     }
   }
 
-  void DeleteSubscription(const SubscriptionId& subscription_id) override {
+  void DeleteSubscription(const SubscriptionId &subscription_id) override {
     subscription_store_->DeleteSubscription(subscription_id);
   }
 
@@ -386,7 +391,8 @@ class SubscriptionServiceImpl
   absl::Status BuildOriginOfCondition(
       const std::vector<std::string> &uri_collection,
       std::function<void(absl::Status, nlohmann::json::array_t &)>
-          &&done_callback) {
+          &&done_callback,
+      const std::unordered_set<std::string> &peer_privileges) {
     const std::size_t uri_count = uri_collection.size();
 
     // Aggregates query responses from each origin resource.
@@ -397,16 +403,18 @@ class SubscriptionServiceImpl
 
     for (const std::string &uri : uri_collection) {
       ECCLESIA_RETURN_IF_ERROR(subscription_backend_->Query(
-          uri, [uri, aggregated_response](
-                   const absl::Status &sc,
-                   const nlohmann::json &query_response) mutable {
+          uri,
+          [uri, aggregated_response](
+              const absl::Status &sc,
+              const nlohmann::json &query_response) mutable {
             if (!sc.ok()) {
               LOG(ERROR) << "Cannot create RedfishEvent for uri: " << uri
                          << " error: " << sc.message();
               return;
             }
             aggregated_response->AddQueryResponse(query_response);
-          }));
+          },
+          peer_privileges));
     }
     return absl::OkStatus();
   }
@@ -441,7 +449,8 @@ class SubscriptionServiceImpl
 
             // Send event to the destination.
             context.on_event_callback(redfish_event_obj);
-          }));
+          },
+          context.privileges));
     }
     return absl::OkStatus();
   }

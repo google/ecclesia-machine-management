@@ -23,6 +23,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -55,8 +56,12 @@ class SubscriptionStoreMock : public SubscriptionStore {
 class SubscriptionBackendMock : public SubscriptionBackend {
  public:
   MOCK_METHOD(absl::Status, Subscribe,
-              (absl::string_view, SubscribeCallback &&), (override));
-  MOCK_METHOD(absl::Status, Query, (const absl::string_view, QueryCallback &&),
+              (absl::string_view, SubscribeCallback &&,
+               const std::unordered_set<std::string> &),
+              (override));
+  MOCK_METHOD(absl::Status, Query,
+              (const absl::string_view, QueryCallback &&,
+               const std::unordered_set<std::string> &),
               (override));
 };
 
@@ -83,10 +88,9 @@ class SubscriptionServiceMock : public SubscriptionService {
   int NumNotifications() const { return num_notifications_; }
 
   MOCK_METHOD(void, CreateSubscription,
-              (const nlohmann::json &request,
-               std::function<void(const absl::StatusOr<SubscriptionId> &)>
-                   on_subscribe_callback,
-               std::function<void(const nlohmann::json &)> on_event_callback),
+              (const nlohmann::json &, const std::unordered_set<std::string> &,
+               std::function<void(const absl::StatusOr<SubscriptionId> &)>,
+               std::function<void(const nlohmann::json &)>),
               (override));
 
   MOCK_METHOD(void, DeleteSubscription, (const SubscriptionId &subscription_id),
