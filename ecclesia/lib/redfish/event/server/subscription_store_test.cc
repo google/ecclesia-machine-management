@@ -245,6 +245,11 @@ TEST_F(SubscriptionStoreImplTest, DeleteSubscriptionSuccess) {
   subscription_store_->DeleteSubscription(SubscriptionId(1));
   EXPECT_THAT(subscription_store_->GetSubscription(SubscriptionId(1)).status(),
     absl::NotFoundError("Subscription with ID 1 not found."));
+
+  // Expect subscriptions to not be returned.
+  auto result = subscription_store_->GetSubscriptionsByEventSourceId(
+      EventSourceId("1", EventSourceId::Type::kDbusObjects));
+  EXPECT_THAT(result, IsStatusNotFound());
 }
 
 TEST_F(SubscriptionStoreImplTest, DeleteUnknownSubscriptionNoop) {

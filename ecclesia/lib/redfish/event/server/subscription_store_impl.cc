@@ -167,10 +167,14 @@ class SubscriptionStoreImpl : public SubscriptionStore {
         subscriptions_by_event_sources_[event_source_id];
     for (auto iter = subscription_contexts.begin();
          iter != subscription_contexts.end(); ++iter) {
-      if ((*iter)->subscription_id == subscription_id) {
-        subscription_contexts.erase(iter);
-        return;
+      if ((*iter)->subscription_id != subscription_id) {
+        continue;
       }
+      subscription_contexts.erase(iter);
+      if (subscription_contexts.empty()) {
+        subscriptions_by_event_sources_.erase(event_source_id);
+      }
+      return;
     }
   }
 
