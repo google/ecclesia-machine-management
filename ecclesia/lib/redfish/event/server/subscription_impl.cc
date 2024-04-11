@@ -140,7 +140,6 @@ class AsyncSubscribeResponse {
   // Tracks async subscribe responses received from Subscription Backend.
   // Response can be valid or invalid.
   absl::flat_hash_set<std::string> responses_pending_ ABSL_GUARDED_BY(mutex_);
-  ;
 };
 
 // Aggregates responses received from querying each URI in OriginResources.
@@ -148,7 +147,7 @@ class AsyncSubscribeResponse {
 class AggregatedQueryResponse {
  public:
   AggregatedQueryResponse(
-      int max_origin_resources,
+      size_t max_origin_resources,
       std::function<void(absl::Status, nlohmann::json::array_t &)>
           &&done_callback)
       : max_origin_resources_(max_origin_resources),
