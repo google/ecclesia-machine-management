@@ -45,12 +45,14 @@ class QueryPlannerIntf {
     std::vector<RedPathSubscription::Configuration> subscription_configs;
     // Copy of query variables to be used for templated queries.
     QueryVariables query_variables;
+    bool log_redfish_traces = false;
   };
 
   // Configures a query execution.
   struct QueryExecutionOptions {
     QueryVariables &variables;
     bool enable_url_annotation = false;
+    bool log_redfish_traces = false;
   };
 
   // Configures a query resume operation.
@@ -59,6 +61,7 @@ class QueryPlannerIntf {
     const RedfishVariant &redfish_variant;
     const QueryVariables &variables;
     bool enable_url_annotation = false;
+    bool log_redfish_traces = false;
   };
 
   // QueryPlan execution output.
