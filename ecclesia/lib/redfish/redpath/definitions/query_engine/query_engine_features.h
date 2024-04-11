@@ -20,6 +20,8 @@
 #include <type_traits>
 
 #include "ecclesia/lib/redfish/redpath/definitions/passkey/annotation_passkey.h"
+#include "ecclesia/lib/redfish/redpath/definitions/passkey/log_redfish_traces_passkey.h"
+#include "ecclesia/lib/redfish/redpath/definitions/passkey/metrics_passkey.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.pb.h"
 
 namespace ecclesia {
@@ -45,6 +47,12 @@ inline QueryEngineFeatures EnableQueryEngineFeatures(
     using T = std::decay_t<decltype(p)>;
     if constexpr (std::is_same_v<T, RedfishAnnotationsPasskey>) {
       features.set_enable_url_annotation(true);
+    }
+    if constexpr (std::is_same_v<T, RedfishMetricsPasskey>) {
+      features.set_enable_redfish_metrics(true);
+    }
+    if constexpr (std::is_same_v<T, RedfishLogRedfishTracesPasskey>) {
+      features.set_log_redfish_traces(true);
     }
   }
 

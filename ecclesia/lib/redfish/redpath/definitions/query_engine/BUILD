@@ -17,6 +17,8 @@ cc_library(
     deps = [
         ":query_engine_features_cc_proto",
         "//ecclesia/lib/redfish/redpath/definitions/passkey:annotation_passkey",
+        "//ecclesia/lib/redfish/redpath/definitions/passkey:log_redfish_traces_passkey",
+        "//ecclesia/lib/redfish/redpath/definitions/passkey:metrics_passkey",
     ],
 )
 

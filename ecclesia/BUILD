@@ -82,6 +82,24 @@ package_group(
     ],
 )
 
+# Query Engine users that want metrics per query.
+package_group(
+    name = "query_metrics",
+    packages = [
+        "//ecclesia/lib/redfish/dellicius/engine/...",
+        "//ecclesia/lib/redfish/redpath/definitions/query_engine/...",
+    ],
+)
+
+# Query Engine users that want to log the redfish traces.
+package_group(
+    name = "log_redfish_traces",
+    packages = [
+        "//ecclesia/lib/redfish/dellicius/engine/...",
+        "//ecclesia/lib/redfish/redpath/definitions/query_engine/...",
+    ],
+)
+
 # Jinja2 users.
 #
 # Jinja requires common infrastructure such as a file accessor implementation. Users of jinja2 in
