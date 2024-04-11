@@ -61,7 +61,7 @@ std::string PropertyNotPopulatedError(absl::string_view property) {
   return absl::StrCat(property, " not populated");
 }
 
-// Constructs a RedfishEvent from |query_response|
+// Constructs a RedfishEvent from `query_response`
 void BuildRedfishEvent(const nlohmann::json &query_response,
                        nlohmann::json &redfish_event) {
   // Generate Event Id
