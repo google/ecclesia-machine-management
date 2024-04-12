@@ -265,14 +265,14 @@ absl::StatusOr<QueryValue> GetPropertyFromRedfishObject(
 
 }  // namespace
 
-NormalizerImplDefault::NormalizerImplDefault()
+RedpathNormalizerImplDefault::RedpathNormalizerImplDefault()
     : additional_properties_(GetAdditionalProperties()) {}
 
-absl::Status NormalizerImplDefault::Normalize(
+absl::Status RedpathNormalizerImplDefault::Normalize(
     const ecclesia::RedfishObject &redfish_object,
     const DelliciusQuery::Subquery &subquery,
     ecclesia::QueryResultData &data_set_local,
-    const NormalizerOptions &options) {
+    const RedpathNormalizerOptions &options) {
   const nlohmann::json json_content = redfish_object.GetContentAsJson();
   for (const DelliciusQuery::Subquery::RedfishProperty &property :
        subquery.properties()) {
@@ -340,11 +340,11 @@ absl::Status NormalizerImplDefault::Normalize(
   return absl::OkStatus();
 }
 
-absl::Status NormalizerImplAddDevpath::Normalize(
+absl::Status RedpathNormalizerImplAddDevpath::Normalize(
     const RedfishObject &redfish_object,
     const DelliciusQuery::Subquery &subquery,
     ecclesia::QueryResultData &data_set_local,
-    const NormalizerOptions &options) {
+    const RedpathNormalizerOptions &options) {
   // Prioritize devpath populated by default normalizer.
   if (data_set_local.fields().contains(kLocalDevpath)) {
     return absl::OkStatus();
@@ -362,11 +362,11 @@ absl::Status NormalizerImplAddDevpath::Normalize(
   return absl::OkStatus();
 }
 
-absl::Status NormalizerImplAddMachineBarepath::Normalize(
+absl::Status RedpathNormalizerImplAddMachineBarepath::Normalize(
     const RedfishObject &redfish_object,
     const DelliciusQuery::Subquery &subquery,
     ecclesia::QueryResultData &data_set_local,
-    const NormalizerOptions &options) {
+    const RedpathNormalizerOptions &options) {
   //  We will now try to map a local devpath to machine devpath
   if (!(data_set_local.fields().contains(kLocalDevpath))) {
     return absl::OkStatus();

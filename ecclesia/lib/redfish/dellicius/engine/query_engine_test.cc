@@ -1257,7 +1257,7 @@ TEST(QueryEngineTest, CanExecuteSubscriptionQuerySuccessfully) {
                       values {
                         subquery_value {
                           fields {
-                            key: "_id_"
+                            key: "__LocalDevpath__"
                             value { identifier { local_devpath: "/phys" } }
                           }
                           fields {
@@ -1273,34 +1273,10 @@ TEST(QueryEngineTest, CanExecuteSubscriptionQuerySuccessfully) {
                     }
                   }
                 }
-                fields {
-                  key: "Memory"
-                  value {}
-                }
-                fields {
-                  key: "Processors"
-                  value {}
-                }
               )pb")));
 
   EXPECT_THAT(subscription_query_result->result.results().at("Thermal").data(),
-              IgnoringRepeatedFieldOrdering(EqualsProto(R"pb(
-                fields {
-                  key: "Chassis"
-                  value {
-                    list_value {
-                      values {
-                        subquery_value {
-                          fields {
-                            key: "Temperatures"
-                            value {}
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              )pb")));
+              IgnoringRepeatedFieldOrdering(EqualsProto(R"pb()pb")));
 }
 
 TEST(QueryEngineTest, CanHandleEventsCorrectly) {
@@ -1377,7 +1353,8 @@ TEST(QueryEngineTest, CanHandleEventsCorrectly) {
   std::unique_ptr<ecclesia::RedfishInterface> processor_json =
       NewJsonMockupInterface(R"json(
     {
-        "@odata.context": "/redfish/v1/$metadata#ProcessorCollection.ProcessorCollection",
+        "@odata.context":
+"/redfish/v1/$metadata#ProcessorCollection.ProcessorCollection",
         "@odata.id": "/redfish/v1/Systems/system/Processors",
         "@odata.type": "#ProcessorCollection.ProcessorCollection",
         "Members": [

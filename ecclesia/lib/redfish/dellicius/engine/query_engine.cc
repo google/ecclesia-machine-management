@@ -52,6 +52,8 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/id_assigner.h"
+#include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner_impl.h"
 #include "ecclesia/lib/redfish/topology.h"
@@ -68,6 +70,46 @@ namespace {
 
 using QueryExecutionResult = QueryPlannerIntf::QueryExecutionResult;
 
+std::unique_ptr<RedpathNormalizer> GetMachineDevpathRedpathNormalizer(
+    const QueryEngineParams &query_engine_params,
+    std::unique_ptr<RedpathEngineIdAssigner> id_assigner,
+    RedfishInterface *redfish_interface) {
+  switch (query_engine_params.stable_id_type) {
+    case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
+      return BuildRedpathNormalizerWithMachineDevpath(std::move(id_assigner));
+    case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
+      if (query_engine_params.redfish_topology_config_name.empty()) {
+        return BuildRedpathNormalizerWithMachineDevpath(
+            std::move(id_assigner),
+            CreateTopologyFromRedfish(redfish_interface));
+      }
+      return BuildRedpathNormalizerWithMachineDevpath(
+          std::move(id_assigner),
+          CreateTopologyFromRedfish(
+              redfish_interface,
+              query_engine_params.redfish_topology_config_name));
+  }
+}
+
+std::unique_ptr<RedpathNormalizer> BuildLocalDevpathRedpathNormalizer(
+    RedfishInterface *redfish_interface,
+    const QueryEngineParams &query_engine_params) {
+  switch (query_engine_params.stable_id_type) {
+    case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
+      return BuildDefaultRedpathNormalizer();
+    case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
+      if (!query_engine_params.redfish_topology_config_name.empty()) {
+        return BuildDefaultRedpathNormalizerWithLocalDevpath(
+            CreateTopologyFromRedfish(
+                redfish_interface,
+                query_engine_params.redfish_topology_config_name));
+      }
+      return BuildDefaultRedpathNormalizerWithLocalDevpath(
+          CreateTopologyFromRedfish(redfish_interface));
+  }
+}
+
+ABSL_DEPRECATED("Use BuildRedpathNormalizerWithMachineDevpath instead.")
 std::unique_ptr<Normalizer> GetMachineDevpathNormalizer(
     const QueryEngineParams &query_engine_params,
     std::unique_ptr<IdAssigner> id_assigner,
@@ -89,6 +131,7 @@ std::unique_ptr<Normalizer> GetMachineDevpathNormalizer(
   }
 }
 
+ABSL_DEPRECATED("Use BuildDefaultRedpathNormalizer instead.")
 std::unique_ptr<Normalizer> BuildLocalDevpathNormalizer(
     RedfishInterface *redfish_interface,
     const QueryEngineParams &query_engine_params) {
@@ -372,17 +415,20 @@ absl::StatusOr<RedfishInterface *> QueryEngine::GetRedfishInterface(
 
 absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
     QuerySpec query_spec, QueryEngineParams params,
-    std::unique_ptr<IdAssigner> id_assigner) {
+    std::unique_ptr<IdAssigner> id_assigner,
+    std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner) {
   ECCLESIA_ASSIGN_OR_RETURN(
       QueryEngine engine,
       QueryEngine::CreateLegacy(std::move(query_spec), std::move(params),
-                                std::move(id_assigner)));
+                                std::move(id_assigner),
+                                std::move(redpath_engine_id_assigner)));
   return std::make_unique<QueryEngine>(std::move(engine));
 }
 
 absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
     QuerySpec query_spec, QueryEngineParams engine_params,
-    std::unique_ptr<IdAssigner> id_assigner) {
+    std::unique_ptr<IdAssigner> id_assigner,
+    std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner) {
   std::unique_ptr<RedfishInterface> redfish_interface;
   MetricalRedfishTransport *metrical_transport_ptr = nullptr;
   if (engine_params.features.enable_redfish_metrics()) {
@@ -411,6 +457,16 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
         engine_params, std::move(id_assigner), redfish_interface.get());
   }
 
+  std::unique_ptr<RedpathNormalizer> redpath_normalizer;
+  if (redpath_engine_id_assigner == nullptr) {
+    redpath_normalizer = BuildLocalDevpathRedpathNormalizer(
+        redfish_interface.get(), engine_params);
+  } else {
+    redpath_normalizer = GetMachineDevpathRedpathNormalizer(
+        engine_params, std::move(redpath_engine_id_assigner),
+        redfish_interface.get());
+  }
+
   // Build legacy query planner for non steaming query execution mode.
   if (!engine_params.features.enable_streaming()) {
     absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
@@ -430,36 +486,42 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
 
     return QueryEngine(
         engine_params.entity_tag, std::move(id_to_query_plans),
-        query_spec.clock, std::move(normalizer), std::move(redfish_interface),
-        std::move(engine_params.features), metrical_transport_ptr);
+        query_spec.clock, std::move(normalizer), std::move(redpath_normalizer),
+        std::move(redfish_interface), std::move(engine_params.features),
+        metrical_transport_ptr);
   }
 
   // Build RedPath trie based query planner.
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
       id_to_redpath_trie_plans;
   for (auto &[query_id, query_info] : query_spec.query_id_to_info) {
+    QueryPlannerOptions query_planner_options = {
+        .query = query_info.query,
+        .redpath_rules = CreateRedPathRules(std::move(query_info.rule)),
+        .normalizer = redpath_normalizer.get(),
+        .redfish_interface = redfish_interface.get()};
+
     ECCLESIA_ASSIGN_OR_RETURN(
         auto query_planner,
-        BuildQueryPlanner(
-            {.query = query_info.query,
-             .redpath_rules = CreateRedPathRules(std::move(query_info.rule)),
-             .normalizer = normalizer.get(),
-             .redfish_interface = redfish_interface.get()}));
+        BuildQueryPlanner(std::move(query_planner_options)));
     id_to_redpath_trie_plans[query_id] = std::move(query_planner);
   }
   return QueryEngine(engine_params.entity_tag,
                      std::move(id_to_redpath_trie_plans), query_spec.clock,
-                     std::move(normalizer), std::move(redfish_interface),
+                     std::move(normalizer), std::move(redpath_normalizer),
+                     std::move(redfish_interface),
                      std::move(engine_params.features), metrical_transport_ptr);
 }
 
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
-    std::unique_ptr<IdAssigner> id_assigner) {
+    std::unique_ptr<IdAssigner> id_assigner,
+    std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner) {
   ECCLESIA_ASSIGN_OR_RETURN(QuerySpec query_spec,
                             QuerySpec::FromQueryContext(query_context));
   return QueryEngine::CreateLegacy(
-      std::move(query_spec), std::move(engine_params), std::move(id_assigner));
+      std::move(query_spec), std::move(engine_params), std::move(id_assigner),
+      std::move(redpath_engine_id_assigner));
 }
 
 }  // namespace ecclesia

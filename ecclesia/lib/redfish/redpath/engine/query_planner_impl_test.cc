@@ -23,18 +23,17 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/container/flat_hash_set.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/protobuf/parse.h"
-#include "ecclesia/lib/redfish/dellicius/engine/factory.h"
-#include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/testing/json_mockup.h"
@@ -48,6 +47,9 @@
 namespace ecclesia {
 
 namespace {
+
+using RedPathRedfishQueryParams =
+    absl::flat_hash_map<std::string /* RedPath */, GetParams>;
 
 using ::tensorflow::serving::net_http::ServerRequestInterface;
 using ::tensorflow::serving::net_http::SetContentType;
@@ -84,16 +86,16 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
           properties { property: "Id" type: STRING }
         }
         subquery {
-          subquery_id: "Assembly"
+          subquery_id: "Sensors"
           root_subquery_ids: "Chassis"
-          redpath: "/Assembly/Assemblies[Name=indus]"
+          redpath: "/Sensors[ReadingUnits=RPM]"
           properties { property: "Name" type: STRING }
         }
         subquery {
-          subquery_id: "Sensors"
-          root_subquery_ids: "Chassis"
-          redpath: "/Sensors[Name=CPU1]"
-          properties { property: "Name" type: STRING }
+          subquery_id: "Assembly"
+          root_subquery_ids: "Sensors"
+          redpath: "/RelatedItem[0]"
+          properties { property: "MemberId" type: STRING }
         }
         subquery {
           subquery_id: "UnknownPropertySubquery"
@@ -119,21 +121,6 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
             values {
               subquery_value {
                 fields {
-                  key: "Assembly"
-                  value {
-                    list_value {
-                      values {
-                        subquery_value {
-                          fields {
-                            key: "Name"
-                            value { string_value: "indus" }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-                fields {
                   key: "Id"
                   value { string_value: "chassis" }
                 }
@@ -144,33 +131,189 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
                       values {
                         subquery_value {
                           fields {
-                            key: "Name"
-                            value { string_value: "CPU1" }
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "1" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
                           }
                           fields {
-                            key: "UnknownNodeNameSubquery"
-                            value {}
+                            key: "Name"
+                            value { string_value: "fan0" }
                           }
                         }
                       }
                       values {
                         subquery_value {
                           fields {
-                            key: "Name"
-                            value { string_value: "CPU1" }
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "2" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
                           }
                           fields {
-                            key: "UnknownNodeNameSubquery"
-                            value {}
+                            key: "Name"
+                            value { string_value: "fan1" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "4" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan2" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "5" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan3" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "6" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan4" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "7" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan5" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "8" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan6" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "9" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan7" }
                           }
                         }
                       }
                     }
                   }
-                }
-                fields {
-                  key: "UnknownPropertySubquery"
-                  value {}
                 }
               }
             }
@@ -181,7 +324,8 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
   )pb");
 
   SetTestParams("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
       BuildQueryPlanner({.query = query,
@@ -247,11 +391,13 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFreshnessFromQuery) {
 
   std::unique_ptr<RedfishTransport> base_transport =
       server_->RedfishClientTransport();
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
   std::unique_ptr<RedfishCachedGetterInterface> cache =
       TimeBasedCache::Create(base_transport.get(), absl::InfiniteDuration());
   auto intf = NewHttpInterface(std::move(base_transport), std::move(cache),
                                RedfishInterface::kTrusted);
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
       BuildQueryPlanner({.query = query,
                          .redpath_rules = {},
@@ -306,7 +452,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesExpandFromRules) {
         req->WriteResponseString(R"json({"@odata.id": "uri"})json");
         req->Reply();
       });
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
       BuildQueryPlanner({.query = query,
                          .redpath_rules = std::move(redpath_rules),
@@ -363,7 +512,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterFromRules) {
         req->WriteResponseString(R"json({"@odata.id": "uri"})json");
         req->Reply();
       });
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
       BuildQueryPlanner({.query = query,
                          .redpath_rules = std::move(redpath_rules),
@@ -457,18 +609,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
                             key: "Reading"
                             value { int_value: 35 }
                           }
-                          fields {
-                            key: "UnknownNodeNameSubquery"
-                            value {}
-                          }
                         }
                       }
                     }
                   }
-                }
-                fields {
-                  key: "UnknownPropertySubquery"
-                  value {}
                 }
               }
             }
@@ -479,7 +623,9 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
   )pb");
 
   SetTestParams("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
       BuildQueryPlanner({.query = query,
@@ -615,7 +761,9 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesWithUrlAnnotations) {
   )pb");
 
   SetTestParams("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
       BuildQueryPlanner({.query = query,
@@ -671,16 +819,8 @@ TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
             values {
               subquery_value {
                 fields {
-                  key: "Assembly"
-                  value {}
-                }
-                fields {
                   key: "Id"
                   value { string_value: "chassis" }
-                }
-                fields {
-                  key: "Sensors"
-                  value {}
                 }
               }
             }
@@ -691,9 +831,11 @@ TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
   )pb");
 
   SetTestParams("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
 
   DelliciusQuery subscription_query = GetSubscriptionQuery();
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
       {.query = subscription_query,
        .redpath_rules =
@@ -778,9 +920,11 @@ TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
 // Subscribe to non navigational property fails.
 TEST_F(QueryPlannerTestRunner, SubscriptionToNonNavigationalPropertyFails) {
   SetTestParams("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
 
   DelliciusQuery subscription_query = GetSubscriptionQuery();
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
       {.query = subscription_query,
        .redpath_rules = {.redpaths_to_subscribe = {std::string(
@@ -797,7 +941,6 @@ TEST_F(QueryPlannerTestRunner, SubscriptionToNonNavigationalPropertyFails) {
 // Subscribe to unknown property fails.
 TEST_F(QueryPlannerTestRunner, SubscriptionToUnknownPropertyFails) {
   SetTestParams("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
 
   DelliciusQuery subscription_query = ParseTextProtoOrDie(
       R"pb(
@@ -808,6 +951,9 @@ TEST_F(QueryPlannerTestRunner, SubscriptionToUnknownPropertyFails) {
           properties { property: "Id" type: STRING }
         }
       )pb");
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
       {.query = subscription_query,
@@ -825,10 +971,12 @@ TEST_F(QueryPlannerTestRunner, SubscriptionToUnknownPropertyFails) {
 // Successful Resume
 TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
   SetTestParams("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
 
   // Setup: Build query planner and Execute query to create subscription.
   DelliciusQuery subscription_query = GetSubscriptionQuery();
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
       {.query = subscription_query,
        .redpath_rules = {.redpaths_to_subscribe = {std::string(kSensorRedPath),
@@ -887,33 +1035,18 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
       query_id: "SubscriptionTest"
       data {
         fields {
-          key: "Chassis"
+          key: "Sensors"
           value {
             list_value {
               values {
                 subquery_value {
                   fields {
-                    key: "Assembly"
-                    value {}
+                    key: "Name"
+                    value { string_value: "fan3" }
                   }
                   fields {
-                    key: "Sensors"
-                    value {
-                      list_value {
-                        values {
-                          subquery_value {
-                            fields {
-                              key: "Name"
-                              value { string_value: "fan3" }
-                            }
-                            fields {
-                              key: "Reading"
-                              value { double_value: 16115 }
-                            }
-                          }
-                        }
-                      }
-                    }
+                    key: "Reading"
+                    value { double_value: 16115 }
                   }
                 }
               }
@@ -983,29 +1116,14 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
       query_id: "SubscriptionTest"
       data {
         fields {
-          key: "Chassis"
+          key: "Assembly"
           value {
             list_value {
               values {
                 subquery_value {
                   fields {
-                    key: "Assembly"
-                    value {
-                      list_value {
-                        values {
-                          subquery_value {
-                            fields {
-                              key: "Name"
-                              value { string_value: "indus" }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                  fields {
-                    key: "Sensors"
-                    value {}
+                    key: "Name"
+                    value { string_value: "indus" }
                   }
                 }
               }
@@ -1024,10 +1142,12 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
 
 TEST_F(QueryPlannerTestRunner, CannotNormalizeInvalidEvent) {
   SetTestParams("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
 
   // Setup: Build query planner and Execute query to create subscription.
   DelliciusQuery subscription_query = GetSubscriptionQuery();
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
       {.query = subscription_query,
        .redpath_rules = {.redpaths_to_subscribe = {std::string(kSensorRedPath),
@@ -1070,27 +1190,6 @@ TEST_F(QueryPlannerTestRunner, CannotNormalizeInvalidEvent) {
 
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "SubscriptionTest"
-    data {
-      fields {
-        key: "Chassis"
-        value {
-          list_value {
-            values {
-              subquery_value {
-                fields {
-                  key: "Assembly"
-                  value {}
-                }
-                fields {
-                  key: "Sensors"
-                  value {}
-                }
-              }
-            }
-          }
-        }
-      }
-    }
   )pb");
 
   // Verify query result.
@@ -1132,7 +1231,8 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesUriCorrectly) {
   )pb");
 
   SetTestParams("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
       BuildQueryPlanner({.query = query,
@@ -1181,7 +1281,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterForUriFromRules) {
         req->WriteResponseString(R"json({"@odata.id": "uri"})json");
         req->Reply();
       });
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
       BuildQueryPlanner({.query = query,
                          .redpath_rules = {.redpath_to_query_params = std::move(
@@ -1196,34 +1299,6 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterForUriFromRules) {
   // construction method is non-deterministic, the Redfish request can be in two
   // possible forms.
   EXPECT_TRUE(filter_requested1);
-}
-
-TEST_F(QueryPlannerTestRunner, QueryPlannerHaltsOnWrongPropertyType) {
-  DelliciusQuery query = ParseTextProtoOrDie(
-      R"pb(
-        query_id: "ChassisTestWrongPropertyType"
-        subquery {
-          subquery_id: "Chassis"
-          redpath: "/Chassis[*]"
-          properties { property: "Id" type: STRING }
-          properties { property: "Name" type: INT64 }
-        }
-      )pb");
-
-  SetTestParams("indus_hmb_shim/mockup.shar");
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
-  EXPECT_THAT(qp, IsOk());
-
-  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
-
-  EXPECT_THAT(result.status().code(),
-              testing::Eq(absl::StatusCode::kInvalidArgument));
 }
 
 }  // namespace

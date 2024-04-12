@@ -37,13 +37,13 @@
 
 namespace ecclesia {
 
-struct NormalizerOptions {
+struct RedpathNormalizerOptions {
   bool enable_url_annotation = false;
 };
 
 // Provides an interface for normalizing a redfish response into QueryResultData
 // for the property specification in a Dellicius Subquery.
-class Normalizer {
+class RedpathNormalizer {
  public:
   class ImplInterface {
    public:
@@ -52,14 +52,15 @@ class Normalizer {
     virtual absl::Status Normalize(const RedfishObject &redfish_object,
                                    const DelliciusQuery::Subquery &query,
                                    ecclesia::QueryResultData &data_set,
-                                   const NormalizerOptions &options) = 0;
+                                   const RedpathNormalizerOptions &options) = 0;
   };
 
-  // Returns normalized dataset, possibly empty. Normalizers can be nested
-  // and empty dataset on one level can be extended in outer normalizers.
+  // Returns normalized dataset, possibly empty. RedpathNormalizers can be
+  // nested and empty dataset on one level can be extended in outer normalizers.
   absl::StatusOr<ecclesia::QueryResultData> Normalize(
       const RedfishObject &redfish_object,
-      const DelliciusQuery::Subquery &query, const NormalizerOptions &options) {
+      const DelliciusQuery::Subquery &query,
+      const RedpathNormalizerOptions &options) {
     // It's ok to use a simple mutex here. If we ever detect lock contention
     // and we know that the writes are less frequent, we can convert this mutex
     // to Reader-writer lock.
@@ -79,7 +80,7 @@ class Normalizer {
     return data_set;
   }
 
-  void AddNormalizer(std::unique_ptr<ImplInterface> impl) {
+  void AddRedpathNormalizer(std::unique_ptr<ImplInterface> impl) {
     absl::MutexLock l(&impl_chain_mu_);
     impl_chain_.push_back(std::move(impl));
   }
@@ -91,92 +92,102 @@ class Normalizer {
 };
 
 // Populates the Subquery output using property requirements in the subquery.
-class NormalizerImplDefault final : public Normalizer::ImplInterface {
+class RedpathNormalizerImplDefault final
+    : public RedpathNormalizer::ImplInterface {
  public:
-  NormalizerImplDefault();
+  RedpathNormalizerImplDefault();
 
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
                          ecclesia::QueryResultData &data_set,
-                         const NormalizerOptions &options) override;
+                         const RedpathNormalizerOptions &options) override;
 
  private:
   std::vector<DelliciusQuery::Subquery::RedfishProperty> additional_properties_;
 };
 
 // Adds devpath to subquery output.
-class NormalizerImplAddDevpath final : public Normalizer::ImplInterface {
+class RedpathNormalizerImplAddDevpath final
+    : public RedpathNormalizer::ImplInterface {
  public:
-  explicit NormalizerImplAddDevpath(NodeTopology node_topology)
+  explicit RedpathNormalizerImplAddDevpath(NodeTopology node_topology)
       : topology_(std::move(node_topology)) {}
 
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
                          ecclesia::QueryResultData &data_set,
-                         const NormalizerOptions &options) override;
+                         const RedpathNormalizerOptions &options) override;
 
  private:
   NodeTopology topology_;
 };
 
 // Adds machine level barepath to subquery output.
-class NormalizerImplAddMachineBarepath final
-    : public Normalizer::ImplInterface {
+class RedpathNormalizerImplAddMachineBarepath final
+    : public RedpathNormalizer::ImplInterface {
  public:
-  explicit NormalizerImplAddMachineBarepath(
-      std::unique_ptr<IdAssigner> id_assigner)
+  explicit RedpathNormalizerImplAddMachineBarepath(
+      std::unique_ptr<RedpathEngineIdAssigner> id_assigner)
       : id_assigner_(std::move(id_assigner)) {}
 
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
                          const DelliciusQuery::Subquery &subquery,
                          ecclesia::QueryResultData &data_set,
-                         const NormalizerOptions &options) override;
+                         const RedpathNormalizerOptions &options) override;
 
  private:
-  std::unique_ptr<IdAssigner> id_assigner_;
+  std::unique_ptr<RedpathEngineIdAssigner> id_assigner_;
 };
 
 // Builds normalizer that transparently returns queried redfish property without
 // normalization for client variables or devpaths.
-inline std::unique_ptr<Normalizer> BuildDefaultNormalizer() {
-  auto normalizer = std::make_unique<Normalizer>();
-  normalizer->AddNormalizer(std::make_unique<NormalizerImplDefault>());
+inline std::unique_ptr<RedpathNormalizer> BuildDefaultRedpathNormalizer() {
+  auto normalizer = std::make_unique<RedpathNormalizer>();
+  normalizer->AddRedpathNormalizer(
+      std::make_unique<RedpathNormalizerImplDefault>());
   return normalizer;
 }
 
 // Builds normalizer that transparently returns queried redfish property but
 // extends the QueryPlanner to construct devpath for normalized subquery output.
-inline std::unique_ptr<Normalizer> BuildDefaultNormalizerWithLocalDevpath(
-    NodeTopology node_topology) {
-  auto normalizer = BuildDefaultNormalizer();
-  normalizer->AddNormalizer(
-      std::make_unique<NormalizerImplAddDevpath>(std::move(node_topology)));
+inline std::unique_ptr<RedpathNormalizer>
+BuildDefaultRedpathNormalizerWithLocalDevpath(NodeTopology node_topology) {
+  auto normalizer = BuildDefaultRedpathNormalizer();
+  normalizer->AddRedpathNormalizer(
+      std::make_unique<RedpathNormalizerImplAddDevpath>(
+          std::move(node_topology)));
   return normalizer;
 }
 
 // Extends default normalizer to populate machine devpaths using Redfish stable
 // identifier.
-inline std::unique_ptr<Normalizer> BuildNormalizerWithMachineDevpath(
-    std::unique_ptr<IdAssigner> id_assigner) {
-  std::unique_ptr<Normalizer> normalizer = BuildDefaultNormalizer();
+inline std::unique_ptr<RedpathNormalizer>
+BuildRedpathNormalizerWithMachineDevpath(
+    std::unique_ptr<RedpathEngineIdAssigner> id_assigner) {
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
 
-  normalizer->AddNormalizer(std::make_unique<NormalizerImplAddMachineBarepath>(
-      std::move(id_assigner)));
+  normalizer->AddRedpathNormalizer(
+      std::make_unique<RedpathNormalizerImplAddMachineBarepath>(
+          std::move(id_assigner)));
   return normalizer;
 }
 
 // Extends default normalizer with local devpath to populate machine devpaths
 // using Redfish stable identifier.
-inline std::unique_ptr<Normalizer> BuildNormalizerWithMachineDevpath(
-    std::unique_ptr<IdAssigner> id_assigner, NodeTopology node_topology) {
-  std::unique_ptr<Normalizer> normalizer =
-      BuildDefaultNormalizerWithLocalDevpath(std::move(node_topology));
+inline std::unique_ptr<RedpathNormalizer>
+BuildRedpathNormalizerWithMachineDevpath(
+    std::unique_ptr<RedpathEngineIdAssigner> id_assigner,
+    NodeTopology node_topology) {
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizerWithLocalDevpath(std::move(node_topology));
 
-  normalizer->AddNormalizer(std::make_unique<NormalizerImplAddMachineBarepath>(
-      std::move(id_assigner)));
+  normalizer->AddRedpathNormalizer(
+      std::make_unique<RedpathNormalizerImplAddMachineBarepath>(
+          std::move(id_assigner)));
   return normalizer;
 }
 

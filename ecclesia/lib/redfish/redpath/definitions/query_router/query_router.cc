@@ -90,7 +90,7 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
         auto query_engine,
         query_engine_factory(std::move(query_spec),
                              std::move(query_engine_params),
-                             std::move(server_spec.id_assigner)));
+                             std::move(server_spec.id_assigner), nullptr));
 
     routing_table.push_back({
         .server_info = std::move(server_spec.server_info),

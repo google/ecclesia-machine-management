@@ -30,9 +30,9 @@
 
 namespace ecclesia {
 // Generic interface which assigns an identifier to a QueryResultData output.
-class IdAssigner {
+class RedpathEngineIdAssigner {
  public:
-  virtual ~IdAssigner() = default;
+  virtual ~RedpathEngineIdAssigner() = default;
 
   // Assign an identifier based on local devpath in the data_set.
   // Return absl::NotFoundError if a translation does not exist.
@@ -41,7 +41,7 @@ class IdAssigner {
 };
 
 template <typename LocalIdMapT>
-class LocalIdMapBasedDevpathAssigner : public IdAssigner {
+class LocalIdMapBasedDevpathAssigner : public RedpathEngineIdAssigner {
  public:
   LocalIdMapBasedDevpathAssigner(LocalIdMapT local_id_map,
                                  absl::string_view entity_tag)

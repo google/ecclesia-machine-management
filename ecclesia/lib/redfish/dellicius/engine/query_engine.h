@@ -46,6 +46,8 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/id_assigner.h"
+#include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
@@ -227,12 +229,16 @@ class QueryEngine : public QueryEngineIntf {
   // Creates query engine for machine devpath decorator extensions.
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
       QuerySpec query_spec, QueryEngineParams params,
-      std::unique_ptr<IdAssigner> id_assigner = nullptr);
+      std::unique_ptr<IdAssigner> id_assigner = nullptr,
+      std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner =
+          nullptr);
 
   ABSL_DEPRECATED("Use Create Instead")
   static absl::StatusOr<QueryEngine> CreateLegacy(
       QuerySpec query_spec, QueryEngineParams params,
-      std::unique_ptr<IdAssigner> id_assigner = nullptr);
+      std::unique_ptr<IdAssigner> id_assigner = nullptr,
+      std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner =
+          nullptr);
 
   QueryEngine(const QueryEngine &) = delete;
   QueryEngine &operator=(const QueryEngine &) = delete;
@@ -276,6 +282,7 @@ class QueryEngine : public QueryEngineIntf {
       absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
           id_to_query_plans,
       const Clock *clock, std::unique_ptr<Normalizer> normalizer,
+      std::unique_ptr<RedpathNormalizer> redpath_normalizer,
       std::unique_ptr<RedfishInterface> redfish_interface,
       QueryEngineFeatures features,
       MetricalRedfishTransport *metrical_transport = nullptr)
@@ -283,6 +290,7 @@ class QueryEngine : public QueryEngineIntf {
         id_to_query_plans_(std::move(id_to_query_plans)),
         clock_(clock),
         normalizer_(std::move(normalizer)),
+        redpath_normalizer_(std::move(redpath_normalizer)),
         redfish_interface_(std::move(redfish_interface)),
         metrical_transport_(metrical_transport),
         features_(std::move(features)) {}
@@ -292,6 +300,7 @@ class QueryEngine : public QueryEngineIntf {
       absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
           id_to_query_plans,
       const Clock *clock, std::unique_ptr<Normalizer> normalizer,
+      std::unique_ptr<RedpathNormalizer> redpath_normalizer,
       std::unique_ptr<RedfishInterface> redfish_interface,
       QueryEngineFeatures features,
       MetricalRedfishTransport *metrical_transport = nullptr)
@@ -299,6 +308,7 @@ class QueryEngine : public QueryEngineIntf {
         id_to_redpath_query_plans_(std::move(id_to_query_plans)),
         clock_(clock),
         normalizer_(std::move(normalizer)),
+        redpath_normalizer_(std::move(redpath_normalizer)),
         redfish_interface_(std::move(redfish_interface)),
         metrical_transport_(metrical_transport),
         features_(std::move(features)) {}
@@ -327,6 +337,7 @@ class QueryEngine : public QueryEngineIntf {
       id_to_subscription_context_;
   const Clock *clock_;
   std::unique_ptr<Normalizer> normalizer_;
+  std::unique_ptr<RedpathNormalizer> redpath_normalizer_;
   std::unique_ptr<RedfishInterface> redfish_interface_;
   // Used during query metrics collection.
   MetricalRedfishTransport *metrical_transport_ = nullptr;
@@ -340,7 +351,9 @@ class QueryEngine : public QueryEngineIntf {
 ABSL_DEPRECATED("Use QueryEngine::Create Instead")
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
-    std::unique_ptr<IdAssigner> id_assigner = nullptr);
+    std::unique_ptr<IdAssigner> id_assigner = nullptr,
+    std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner =
+        nullptr);
 
 // Factory for creating different variants of query engine.
 //
@@ -349,7 +362,8 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
 using QueryEngineFactory =
     absl::AnyInvocable<absl::StatusOr<std::unique_ptr<QueryEngineIntf>>(
         QuerySpec query_spec, QueryEngineParams engine_params,
-        std::unique_ptr<IdAssigner> id_assigner)>;
+        std::unique_ptr<IdAssigner> id_assigner,
+        std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner)>;
 
 }  // namespace ecclesia
 
