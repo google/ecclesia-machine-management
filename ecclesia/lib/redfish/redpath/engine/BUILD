@@ -128,6 +128,7 @@ cc_library(
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/log",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

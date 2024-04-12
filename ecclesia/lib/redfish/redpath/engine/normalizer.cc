@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <utility>
@@ -25,6 +26,7 @@
 
 #include "google/protobuf/timestamp.pb.h"
 #include "google/protobuf/descriptor.pb.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -91,26 +93,53 @@ absl::Status GetCollectionPropertyFromRedfishObject(
   }
   switch (property.type()) {
     case DelliciusQuery::Subquery::RedfishProperty::STRING: {
+      if (!std::all_of(
+              json_obj.begin(), json_obj.end(),
+              [](const nlohmann::json &el) { return el.is_string(); })) {
+        return absl::InvalidArgumentError(
+            absl::StrCat("Error querying property ", property.property(),
+                         " as string array from object: ", json_obj.dump()));
+      }
       for (const std::string &value :
            json_obj.get<std::vector<std::string>>()) {
         query_value.mutable_list_value()->add_values()->set_string_value(value);
       }
       break;
     }
-
     case DelliciusQuery::Subquery::RedfishProperty::BOOLEAN: {
+      if (!std::all_of(
+              json_obj.begin(), json_obj.end(),
+              [](const nlohmann::json &el) { return el.is_boolean(); })) {
+        return absl::InvalidArgumentError(
+            absl::StrCat("Error querying property ", property.property(),
+                         " as boolean array from object: ", json_obj.dump()));
+      }
       for (const bool value : json_obj.get<std::vector<bool>>()) {
         query_value.mutable_list_value()->add_values()->set_bool_value(value);
       }
       break;
     }
     case DelliciusQuery::Subquery::RedfishProperty::DOUBLE: {
+      if (!std::all_of(
+              json_obj.begin(), json_obj.end(),
+              [](const nlohmann::json &el) { return el.is_number(); })) {
+        return absl::InvalidArgumentError(
+            absl::StrCat("Error querying property ", property.property(),
+                         " as number array from object: ", json_obj.dump()));
+      }
       for (const double value : json_obj.get<std::vector<double>>()) {
         query_value.mutable_list_value()->add_values()->set_double_value(value);
       }
       break;
     }
     case DelliciusQuery::Subquery::RedfishProperty::INT64: {
+      if (!std::all_of(
+              json_obj.begin(), json_obj.end(),
+              [](const nlohmann::json &el) { return el.is_number(); })) {
+        return absl::InvalidArgumentError(
+            absl::StrCat("Error querying property ", property.property(),
+                         " as number array from object: ", json_obj.dump()));
+      }
       for (const int64_t value : json_obj.get<std::vector<int64_t>>()) {
         query_value.mutable_list_value()->add_values()->set_int_value(value);
       }
@@ -119,7 +148,10 @@ absl::Status GetCollectionPropertyFromRedfishObject(
     case DelliciusQuery::Subquery::RedfishProperty::DATE_TIME_OFFSET: {
       for (const auto &json_value : json_obj) {
         if (!json_value.is_string()) {
-          break;
+          return absl::InvalidArgumentError(
+              absl::StrCat("Error querying property ", property.property(),
+                           " as a timestamp string from non string object: ",
+                           json_obj.dump()));
         }
         absl::Time timevalue;
         if (absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z",
@@ -161,36 +193,54 @@ absl::StatusOr<QueryValue> GetPropertyFromRedfishObject(
       RedfishProperty::COLLECTION_PRIMITIVE) {
     ECCLESIA_RETURN_IF_ERROR(GetCollectionPropertyFromRedfishObject(
         property, json_obj, query_value));
+  } else if (json_obj.is_null()) {
+    LOG(INFO) << "Encoutnered null property value during normalization: "
+              << json_obj.dump();
   } else {
     switch (property.type()) {
       case RedfishProperty::STRING: {
-        if (json_obj.is_string()) {
-          query_value.set_string_value(json_obj.get<std::string>());
+        if (!json_obj.is_string()) {
+          return absl::InvalidArgumentError(absl::StrCat(
+              "Error querying property ", property.property(),
+              " as a string from non string object: ", json_obj.dump()));
         }
+        query_value.set_string_value(json_obj.get<std::string>());
         break;
       }
       case RedfishProperty::BOOLEAN: {
-        if (json_obj.is_boolean()) {
-          query_value.set_bool_value(json_obj.get<bool>());
+        if (!json_obj.is_boolean()) {
+          return absl::InvalidArgumentError(absl::StrCat(
+              "Error querying property ", property.property(),
+              " as a boolean from non boolean object: ", json_obj.dump()));
         }
+        query_value.set_bool_value(json_obj.get<bool>());
         break;
       }
       case RedfishProperty::DOUBLE: {
-        if (json_obj.is_number()) {
-          query_value.set_double_value(json_obj.get<double>());
+        if (!json_obj.is_number()) {
+          return absl::InvalidArgumentError(absl::StrCat(
+              "Error querying property ", property.property(),
+              " as a number from non number object: ", json_obj.dump()));
         }
+        query_value.set_double_value(json_obj.get<double>());
         break;
       }
       case RedfishProperty::INT64: {
-        if (json_obj.is_number()) {
-          query_value.set_int_value(json_obj.get<int64_t>());
+        if (!json_obj.is_number()) {
+          return absl::InvalidArgumentError(absl::StrCat(
+              "Error querying property ", property.property(),
+              " as an number from non number object: ", json_obj.dump()));
         }
+        query_value.set_int_value(json_obj.get<int64_t>());
         break;
       }
       case RedfishProperty::DATE_TIME_OFFSET: {
         absl::Time timevalue;
         if (!json_obj.is_string()) {
-          break;
+          return absl::InvalidArgumentError(
+              absl::StrCat("Error querying property ", property.property(),
+                           " as a timestamp string from non string object: ",
+                           json_obj.dump()));
         }
         if (absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", json_obj.get<std::string>(),
                             &timevalue, nullptr)) {
@@ -230,6 +280,9 @@ absl::Status NormalizerImplDefault::Normalize(
     // It is not an error if normalizer fails to normalize a property if
     // required property is not part of Resource attributes.
     if (!property_out.ok()) {
+      if (property_out.status().code() == absl::StatusCode::kInvalidArgument) {
+        return property_out.status();
+      }
       continue;
     }
     // By default, name of the queried property is set as name if the client
@@ -251,6 +304,9 @@ absl::Status NormalizerImplDefault::Normalize(
        additional_properties_) {
     auto property_out = GetPropertyFromRedfishObject(json_content, property);
     if (!property_out.ok()) {
+      if (property_out.status().code() == absl::StatusCode::kInvalidArgument) {
+        return property_out.status();
+      }
       continue;
     }
     std::string name = property.name();
