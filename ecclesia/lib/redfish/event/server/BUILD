@@ -25,6 +25,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":subscription",
+        "//ecclesia/lib/redfish/redpath/definitions/query_predicates:predicates",
         "//ecclesia/lib/status:macros",
         "@com_google_absl//absl/algorithm:container",
         "@com_google_absl//absl/base:core_headers",

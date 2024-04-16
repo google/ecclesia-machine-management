@@ -76,10 +76,11 @@ class EventStoreMock : public EventStore {
 
 class SubscriptionServiceMock : public SubscriptionService {
  public:
-  absl::Status Notify(EventSourceId key, const absl::Status &status) override {
+  absl::Status Notify(EventSourceId event_source_id,
+                      const absl::Status &status) override {
     // to appease the compiler - this code path will not be called
     if (!status.ok()) {
-      LOG(WARNING) << "Bad status for " << key.ToString();
+      LOG(WARNING) << "Bad status for " << event_source_id.ToString();
     }
     ++num_notifications_;
     return absl::OkStatus();

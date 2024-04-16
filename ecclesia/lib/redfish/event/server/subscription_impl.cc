@@ -16,7 +16,6 @@
 
 #include "ecclesia/lib/redfish/event/server/subscription_impl.h"
 
-#include <atomic>
 #include <cstddef>
 #include <ctime>
 #include <functional>
@@ -27,7 +26,6 @@
 #include <vector>
 
 #include "absl/algorithm/container.h"
-#include "absl/base/attributes.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -43,6 +41,7 @@
 #include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/event/server/subscription.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_predicates/predicates.h"
 #include "ecclesia/lib/status/macros.h"
 #include "single_include/nlohmann/json.hpp"
 
@@ -61,12 +60,13 @@ std::string PropertyNotPopulatedError(absl::string_view property) {
   return absl::StrCat(property, " not populated");
 }
 
-// Constructs a RedfishEvent from `query_response`
-void BuildRedfishEvent(const nlohmann::json &query_response,
+// Constructs a RedfishEvent from `query_response`.
+void BuildRedfishEvent(const Trigger &trigger,
+                       const nlohmann::json &query_response,
                        nlohmann::json &redfish_event) {
   // Generate Event Id
   size_t event_id = absl::HashOf(absl::Now(), query_response.dump());
-  redfish_event["EventId"] = event_id;
+  redfish_event["EventId"] = absl::StrCat(event_id);
 
   // Get ISO extended string for timestamp
   redfish_event["EventTimestamp"] =
@@ -74,6 +74,55 @@ void BuildRedfishEvent(const nlohmann::json &query_response,
 
   // Add origin of condition.
   redfish_event["OriginOfCondition"] = query_response;
+
+  // Add trigger id as context.
+  redfish_event["Context"] = trigger.id;
+}
+
+// Constructs RedfishEvents for redfish resources meeting trigger criteria.
+void BuildRedfishEventsForTrigger(
+    const Trigger &trigger,
+    const absl::flat_hash_map<std::string, nlohmann::json> &uri_to_response,
+    std::vector<nlohmann::json> &events) {
+  for (const auto &[uri, response] : uri_to_response) {
+    // Skip event if URI is not part of the trigger origin resources.
+    if (!trigger.origin_resources.contains(uri)) {
+      continue;
+    }
+
+    // Apply predicate in trigger to check if event meets the user defined
+    // criteria.
+    if (!trigger.predicate.empty()) {
+      absl::StatusOr<bool> predicate_result =
+          ApplyPredicateRule(response, {.predicate = trigger.predicate,
+                                        .node_index = 0,
+                                        .node_set_size = 1});
+      if (!predicate_result.ok()) {
+        LOG(ERROR) << "Cannot apply trigger predicate rule for URI: " << uri
+                   << " error: " << predicate_result.status();
+        continue;
+      }
+
+      if (!*predicate_result) {
+        // Skip event if predicate is not satisfied.
+        continue;
+      }
+    }
+
+    // Construct RedfishEvent.
+    BuildRedfishEvent(trigger, response, events.emplace_back());
+  }
+}
+
+// Constructs RedfishEvents for a given subscription.
+std::vector<nlohmann::json> BuildRedfishEventsForSubscription(
+    const SubscriptionContext &subscription_context,
+    const absl::flat_hash_map<std::string, nlohmann::json> &uri_to_response) {
+  std::vector<nlohmann::json> events;
+  for (const auto &[id, trigger] : subscription_context.id_to_triggers) {
+    BuildRedfishEventsForTrigger(trigger, uri_to_response, events);
+  }
+  return events;
 }
 
 // Captures asynchronous responses received on subscribing each OriginResource.
@@ -142,49 +191,46 @@ class AsyncSubscribeResponse {
   absl::flat_hash_set<std::string> responses_pending_ ABSL_GUARDED_BY(mutex_);
 };
 
-// Aggregates responses received from querying each URI in OriginResources.
-// Invokes |done_callback| when all OriginResources are queried.
+// Aggregates responses received from querying multiple URIs asynchronously.
+// Invokes `done_callback` when all OriginResources are queried.
 class AggregatedQueryResponse {
  public:
   AggregatedQueryResponse(
-      size_t max_origin_resources,
-      std::function<void(absl::Status, nlohmann::json::array_t &)>
-          &&done_callback)
-      : max_origin_resources_(max_origin_resources),
+      const absl::flat_hash_set<std::string> &unique_resources_to_query,
+      std::function<void(absl::flat_hash_map<std::string, nlohmann::json>)>
+          done_callback)
+      : responses_pending_(unique_resources_to_query.begin(),
+                           unique_resources_to_query.end()),
         done_callback_(std::move(done_callback)) {}
 
-  void AddQueryResponse(const nlohmann::json &query_response) {
-    // Tracks received responses.
-    ++responses_received_;
+  void AddQueryResponse(absl::string_view uri, const absl::Status &status,
+                        const nlohmann::json &query_response) {
+    absl::MutexLock lock(&query_mutex_);
+    if (responses_pending_.erase(uri) == 0) {
+      LOG(ERROR) << "Received unexpected response for URI: " << uri;
+      return;
+    }
 
-    // Redfish Event to format using the query response.
-    nlohmann::json redfish_event;
-    BuildRedfishEvent(query_response, redfish_event);
-    {
-      absl::MutexLock lock(&events_mutex_);
-      events_.push_back(std::move(redfish_event));
+    if (!status.ok()) {
+      LOG(ERROR) << "Cannot create RedfishEvent for uri: " << uri
+                 << " error: " << status.message();
+      return;
+    }
+    uri_to_response_[uri] = query_response;
 
-      if (responses_received_ == max_origin_resources_) {
-        done_callback_(absl::OkStatus(), events_);
-      }
+    if (responses_pending_.empty()) {
+      done_callback_(uri_to_response_);
     }
   }
 
  private:
-  // Counts response to sync/async query requests sent via Subscription Backend.
-  // Response can be valid or invalid.
-  std::atomic_size_t responses_received_{0};
-
-  // Maximum number of OriginResources to be queried.
-  size_t max_origin_resources_;
-
-  std::function<void(absl::Status, nlohmann::json::array_t &)> done_callback_;
-
-  absl::Mutex events_mutex_;
-
-  // Redfish Events containing full RedfishResource as OriginOfCondition if
-  // requested.
-  nlohmann::json::array_t events_ ABSL_GUARDED_BY(events_mutex_);
+  absl::Mutex query_mutex_;
+  absl::flat_hash_set<std::string> responses_pending_
+      ABSL_GUARDED_BY(query_mutex_);
+  absl::flat_hash_map<std::string, nlohmann::json> uri_to_response_
+      ABSL_GUARDED_BY(query_mutex_);
+  std::function<void(absl::flat_hash_map<std::string, nlohmann::json>)>
+      done_callback_;
 };
 
 // Concrete implementation of SubscriptionService.
@@ -354,19 +400,46 @@ class SubscriptionServiceImpl
   // Invoked by Redfish event sources which are typically implementations that
   // monitor sources like DBus monitor, file i/o, socket ingress etc.
   //
-  // Notify function is invoked with |key| that uniquely identifies event source
-  // and |status| to indicate the subscription service of an error condition at
-  // the event source which would trigger delete subscription sequence.
-  absl::Status Notify(EventSourceId key,
+  // Notify function is invoked with `event_source_id` that uniquely identifies
+  // event source and `status` to indicate the subscription service of an error
+  // condition at the event source which would trigger delete subscription
+  // sequence.
+  absl::Status Notify(EventSourceId event_source_id,
                       [[maybe_unused]] const absl::Status &status) override {
     // Pull subscription context from Subscription Store
     ECCLESIA_ASSIGN_OR_RETURN(
         auto contexts,
-        subscription_store_->GetSubscriptionsByEventSourceId(key));
+        subscription_store_->GetSubscriptionsByEventSourceId(event_source_id));
 
+    auto event_source_id_new =
+        std::make_shared<EventSourceId>(std::move(event_source_id));
     for (const SubscriptionContext *subscription_context : contexts) {
-      ECCLESIA_RETURN_IF_ERROR(
-          HandleEventsForSubscription(*subscription_context, key));
+      // Find URIs to query.
+      // A subscription context is always expected to have a set of URIs
+      // associated with event source. Therefore, we don't handle the not found
+      // case here.
+      auto find_uris_to_query =
+          subscription_context->event_source_to_uri.find(*event_source_id_new);
+      auto aggregated_response = std::make_shared<AggregatedQueryResponse>(
+          find_uris_to_query->second,
+          [this, subscription_context, event_source_id_new](
+              const absl::flat_hash_map<std::string, nlohmann::json>
+                  &uri_to_response) {
+            HandleEventsForSubscription(*subscription_context,
+                                        *event_source_id_new, uri_to_response);
+          });
+
+      // Query Redfish URIs to build origin of condition.
+      for (const std::string &uri : find_uris_to_query->second) {
+        ECCLESIA_RETURN_IF_ERROR(subscription_backend_->Query(
+            uri,
+            [uri, aggregated_response](
+                const absl::Status &sc,
+                const nlohmann::json &query_response) mutable {
+              aggregated_response->AddQueryResponse(uri, sc, query_response);
+            },
+            subscription_context->privileges));
+      }
     }
     return absl::OkStatus();
   }
@@ -380,78 +453,31 @@ class SubscriptionServiceImpl
   }
 
  private:
-  // Builds Redfish Resources necessary for embedding OriginOfCondition in
-  // Redfish event.
-  // Returns error if OriginOfCondition cannot be built for an event.
-  //
-  // This function is designed to execute Redfish queries to backend
-  // asynchronously hence the careful use of std::shared_ptr to aggregate
-  // resources and managing lifetime.
-  absl::Status BuildOriginOfCondition(
-      const std::vector<std::string> &uri_collection,
-      std::function<void(absl::Status, nlohmann::json::array_t &)>
-          &&done_callback,
-      const std::unordered_set<std::string> &peer_privileges) {
-    const std::size_t uri_count = uri_collection.size();
+  void HandleEventsForSubscription(
+      const SubscriptionContext &context, const EventSourceId &source_id,
+      const absl::flat_hash_map<std::string, nlohmann::json> &uri_to_response) {
+    // Create event id as a function of source id and time.
+    EventId event_id(context.subscription_id, source_id, absl::Now());
 
-    // Aggregates query responses from each origin resource.
-    // Shared pointer is used to allow OriginOfCondition to build asynchronously
-    // if needed to for Redfish backends that use async mode of execution.
-    auto aggregated_response = std::make_shared<AggregatedQueryResponse>(
-        uri_count, std::move(done_callback));
+    // Construct RedfishEvents for subscription.
+    std::vector<nlohmann::json> events =
+        BuildRedfishEventsForSubscription(context, uri_to_response);
 
-    for (const std::string &uri : uri_collection) {
-      ECCLESIA_RETURN_IF_ERROR(subscription_backend_->Query(
-          uri,
-          [uri, aggregated_response](
-              const absl::Status &sc,
-              const nlohmann::json &query_response) mutable {
-            if (!sc.ok()) {
-              LOG(ERROR) << "Cannot create RedfishEvent for uri: " << uri
-                         << " error: " << sc.message();
-              return;
-            }
-            aggregated_response->AddQueryResponse(query_response);
-          },
-          peer_privileges));
-    }
-    return absl::OkStatus();
-  }
+    // If there are no events to dispatch, Redfish Event response is not
+    // created and we return early.
+    if (events.empty()) return;
 
-  absl::Status HandleEventsForSubscription(const SubscriptionContext &context,
-                                           const EventSourceId &source_id) {
-    // Check if given SubscriptionContext subscribes to given source_id for
-    // events
-    if (auto origin_resources = context.event_source_to_uri.find(source_id);
-        origin_resources != context.event_source_to_uri.end()) {
-      ECCLESIA_RETURN_IF_ERROR(BuildOriginOfCondition(
-          std::vector<std::string>(origin_resources->second.begin(),
-                                   origin_resources->second.end()),
-          [source_id, context, this](const absl::Status &sc,
-                                     nlohmann::json::array_t &events) mutable {
-            if (!sc.ok()) {
-              LOG(ERROR) << "Cannot create RedfishEvent for event source_id"
-                         << source_id.ToString();
-              return;
-            }
+    nlohmann::json redfish_event_obj;
+    redfish_event_obj["Id"] = event_id.redfish_event_id;
+    redfish_event_obj["@odata.type"] = "#Event.v1_7_0.Event";
+    redfish_event_obj["Name"] = "RedfishEvent";
+    redfish_event_obj["Events"] = events;
 
-            // Create event id as a function of source id and time.
-            EventId event_id(context.subscription_id, source_id, absl::Now());
+    // Add constructed Redfish event to event store.
+    event_store_->AddNewEvent(event_id, redfish_event_obj);
 
-            nlohmann::json redfish_event_obj;
-            redfish_event_obj["Id"] = event_id.redfish_event_id;
-            redfish_event_obj["@odata.type"] = "#Event.v1_7_0.Event";
-            redfish_event_obj["Name"] = "RedfishEvent";
-            redfish_event_obj["Events"] = events;
-
-            event_store_->AddNewEvent(event_id, redfish_event_obj);
-
-            // Send event to the destination.
-            context.on_event_callback(redfish_event_obj);
-          },
-          context.privileges));
-    }
-    return absl::OkStatus();
+    // Send event to the destination.
+    context.on_event_callback(redfish_event_obj);
   }
 
   std::unique_ptr<SubscriptionBackend> subscription_backend_;
