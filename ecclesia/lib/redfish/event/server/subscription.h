@@ -121,6 +121,17 @@ struct EventId {
     return H::combine(std::move(h), n.redfish_event_id);
   }
 
+  bool operator==(EventId const& event_id) const {
+    return ((event_id.source_id == this->source_id) &&
+            (event_id.timestamp == this->timestamp) &&
+            (event_id.subscription_id == this->subscription_id) &&
+            (event_id.redfish_event_id == this->redfish_event_id));
+  }
+
+  bool operator!=(EventId const& event_id) const {
+    return !(*this == event_id);
+  }
+
   EventSourceId source_id;
   absl::Time timestamp;
   SubscriptionId subscription_id;
@@ -216,6 +227,18 @@ class EventStore {
   // in chronological order.
   virtual std::vector<nlohmann::json> GetEventsSince(
       std::optional<size_t> redfish_event_id) = 0;
+
+  // Retrieves the event with the given event id.
+  virtual nlohmann::json GetEvent(const EventId &event_id) = 0;
+
+  // Report all events in the JSON format.
+  virtual nlohmann::json ToJSON() = 0;
+
+  // Report all events in the string format.
+  virtual std::string ToString() = 0;
+
+  // Cleat all events from the store.
+  virtual void Clear() = 0;
 };
 
 // Interface for a subscription store
@@ -310,6 +333,15 @@ class SubscriptionService {
 
   // Returns all subscriptions in a string format.
   virtual std::string GetSubscriptionsToString() = 0;
+
+  // Returns all subscriptions in a JSON format.
+  virtual nlohmann::json GetEventsToJSON() = 0;
+
+  // Returns all subscriptions in a string format.
+  virtual std::string GetEventsToString() = 0;
+
+  // clear/flush all events.
+  virtual void ClearAllEvents() = 0;
 
   // Invoked by an EventSource to notify SubscriptionService about an event
   // occurrence.

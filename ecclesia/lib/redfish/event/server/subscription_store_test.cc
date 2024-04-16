@@ -220,7 +220,6 @@ TEST_F(SubscriptionStoreImplTest, ToJSONAndToString) {
 
   // Verify the range of subscriptions as the iteration order of flat_hash_map
   // is non-deterministic.
-
   nlohmann::json json = subscription_store_->ToJSON();
   EXPECT_THAT(json["NumSubscriptions"], Eq(2));
   nlohmann::json json_0 = json["Subscriptions"][0];

@@ -406,6 +406,18 @@ class SubscriptionServiceImpl
     return subscription_store_->ToString();
   }
 
+  nlohmann::json GetEventsToJSON() override {
+    return event_store_->ToJSON();
+  }
+
+  std::string GetEventsToString() override {
+    return event_store_->ToString();
+  }
+
+  void ClearAllEvents() override {
+    this->event_store_->Clear();
+  }
+
   // Invoked by Redfish event sources which are typically implementations that
   // monitor sources like DBus monitor, file i/o, socket ingress etc.
   //

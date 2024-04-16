@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
@@ -93,6 +94,40 @@ class EventStoreImpl : public EventStore {
     }
 
     return events_to_return;
+  }
+
+  nlohmann::json GetEvent(const EventId &event_id) override {
+    absl::MutexLock lock(&event_contexts_mutex_);
+    for (auto it = event_contexts_.begin(); it != event_contexts_.end(); ++it) {
+      if (it->event_id == event_id) {
+        return it->event;
+      }
+    }
+    return {};
+  }
+
+  nlohmann::json ToJSON() override {
+    nlohmann::json json;
+    nlohmann::json& events_json = json["Events"];
+    events_json = nlohmann::json::array();
+    absl::MutexLock lock(&event_contexts_mutex_);
+    for (auto it = event_contexts_.begin(); it != event_contexts_.end(); ++it) {
+      nlohmann::json event;
+      event["EventId"] = it->event_id.ToJSON();
+      event["Event"] = it->event;
+      events_json.push_back(event);
+    }
+    json["NumEvents"] = events_json.size();
+    return json;
+  }
+
+  // Converts EventStore to string format
+  std::string ToString() override { return ToJSON().dump(); }
+
+  // Clear all events
+  void Clear() override {
+    absl::MutexLock lock(&event_contexts_mutex_);
+    event_contexts_.clear();
   }
 
  private:

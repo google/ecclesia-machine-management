@@ -72,6 +72,10 @@ class EventStoreMock : public EventStore {
               (override));
   MOCK_METHOD(std::vector<nlohmann::json>, GetEventsSince,
               (std::optional<size_t> redfish_event_id), (override));
+  MOCK_METHOD(nlohmann::json, GetEvent, (const EventId &event_id), (override));
+  MOCK_METHOD(nlohmann::json, ToJSON, (), (override));
+  MOCK_METHOD(std::string, ToString, (), (override));
+  MOCK_METHOD(void, Clear, (), (override));
 };
 
 class SubscriptionServiceMock : public SubscriptionService {
@@ -109,6 +113,15 @@ class SubscriptionServiceMock : public SubscriptionService {
               (override));
 
   MOCK_METHOD(std::string, GetSubscriptionsToString, (),
+              (override));
+
+  MOCK_METHOD(nlohmann::json, GetEventsToJSON, (),
+              (override));
+
+  MOCK_METHOD(std::string, GetEventsToString, (),
+              (override));
+
+  MOCK_METHOD(void, ClearAllEvents, (),
               (override));
 
  private:
