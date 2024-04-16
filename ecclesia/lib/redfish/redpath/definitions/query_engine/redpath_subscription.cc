@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
 
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -23,6 +24,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
 #include "absl/log/log.h"
 #include "absl/memory/memory.h"
@@ -40,28 +42,40 @@ namespace ecclesia {
 
 namespace {
 
-absl::StatusOr<nlohmann::json> CreateTrigger(
-    const RedPathSubscription::Configuration &config) {
-  nlohmann::json origin_resources;
-  if (config.uris.empty()) {
-    return absl::InvalidArgumentError("No uris provided");
-  }
-  if (config.query_id.empty()) {
-    return absl::InvalidArgumentError("No query id provided");
-  }
-  if (config.redpath.empty()) {
-    return absl::InvalidArgumentError("No subquery id provided");
-  }
-  for (const auto &uri : config.uris) {
-    origin_resources.push_back({{"@odata.id", uri}});
-  }
-  std::string trigger_id = absl::StrCat(config.query_id, ",", config.redpath);
+absl::StatusOr<nlohmann::json> CreateTriggers(
+    const std::vector<RedPathSubscription::Configuration> &configurations) {
+  nlohmann::json triggers = nlohmann::json::array();
+  absl::flat_hash_map<std::string, size_t> unique_triggers;
+  for (const auto &config : configurations) {
+    nlohmann::json origin_resources;
+    if (config.uris.empty()) {
+      return absl::InvalidArgumentError("No uris provided");
+    }
+    if (config.query_id.empty()) {
+      return absl::InvalidArgumentError("No query id provided");
+    }
+    if (config.redpath.empty()) {
+      return absl::InvalidArgumentError("No redpath provided");
+    }
+    for (const auto &uri : config.uris) {
+      origin_resources.push_back({{"@odata.id", uri}});
+    }
 
-  nlohmann::json trigger;
-  trigger["OriginResources"] = origin_resources;
-  trigger["Id"] = trigger_id;
-  trigger["Predicate"] = config.predicate;
-  return trigger;
+    // Create trigger id.
+    std::string trigger_id = absl::StrCat(config.query_id, "-", config.redpath);
+    auto &trigger_occurences = unique_triggers[trigger_id];
+
+    // Suffix is used to differentiate triggers with same query id and redpath.
+    std::string suffix = absl::StrCat(trigger_occurences);
+    ++trigger_occurences;
+
+    nlohmann::json trigger;
+    trigger["OriginResources"] = origin_resources;
+    trigger["Id"] = absl::StrCat(trigger_id, "-", suffix);
+    trigger["Predicate"] = config.predicate;
+    triggers.push_back(std::move(trigger));
+  }
+  return triggers;
 }
 
 absl::StatusOr<nlohmann::json> CreateSubscriptionRequest(
@@ -83,11 +97,7 @@ absl::StatusOr<nlohmann::json> CreateSubscriptionRequest(
   // Add `Triggers` to `Google` object.
   nlohmann::json google_object;
   nlohmann::json &triggers = google_object["Triggers"];
-  triggers = nlohmann::json::array();
-  for (const auto &config : configurations) {
-    ECCLESIA_ASSIGN_OR_RETURN(nlohmann::json trigger, CreateTrigger(config));
-    triggers.push_back(std::move(trigger));
-  }
+  ECCLESIA_ASSIGN_OR_RETURN(triggers, CreateTriggers(configurations));
 
   // Add `Google` to `Oem` object.
   nlohmann::json oem_object;
@@ -141,9 +151,11 @@ void HandleEvent(
       return;
     }
 
-    std::vector<std::string> id_parts = absl::StrSplit(*context, ',');
-    if (id_parts.size() != 2) {
-      LOG(ERROR) << "Invalid context format: " << *context;
+    std::vector<std::string> id_parts = absl::StrSplit(*context, '-');
+    if (id_parts.size() != 3) {
+      LOG(ERROR) << "Invalid context format: " << *context
+                 << ", expected splits: " << 3
+                 << ", actual: " << id_parts.size();
       return;
     }
 

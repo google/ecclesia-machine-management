@@ -179,6 +179,12 @@ TEST(RedPathSubscriptionImplTest, SubscriptionRequestFormattedCorrectly) {
   config.query_id = "id";
   config.predicate = "Reading>10";
 
+  Configuration config2;
+  config2.uris = {"xyz"};
+  config2.redpath = "foo";
+  config2.query_id = "id";
+  config2.predicate = "Reading>25";
+
   // Subscription request we expect to send out to RedfishInterface.
   nlohmann::json expected_json = nlohmann::json::parse(R"json(
     {
@@ -190,7 +196,7 @@ TEST(RedPathSubscriptionImplTest, SubscriptionRequestFormattedCorrectly) {
         "Google": {
           "Triggers": [
             {
-              "Id": "id,foo",
+              "Id": "id-foo-0",
               "OriginResources": [
                 {
                   "@odata.id": "bar"
@@ -200,6 +206,15 @@ TEST(RedPathSubscriptionImplTest, SubscriptionRequestFormattedCorrectly) {
                 }
               ],
               "Predicate": "Reading>10"
+            },
+            {
+              "Id": "id-foo-1",
+              "OriginResources": [
+                {
+                  "@odata.id": "xyz"
+                }
+              ],
+              "Predicate": "Reading>25"
             }
           ]
         }
@@ -220,7 +235,7 @@ TEST(RedPathSubscriptionImplTest, SubscriptionRequestFormattedCorrectly) {
           });
   absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
       redpath_subscription = RedPathSubscriptionImpl::Create(
-          {config}, redfish_interface,
+          {config, config2}, redfish_interface,
           [](const RedfishVariant &variant, const EventContext &context) {},
           [](const absl::Status &status) {});
   EXPECT_THAT(redpath_subscription, IsOk());
@@ -233,7 +248,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsInvokedForEachOriginOfCondition) {
       "@odata.id": "ODATA_ID_1",
       "Events": [
         {
-          "Context": "Foo,Bar",
+          "Context": "Foo-Bar-0",
           "EventId": "ABC132489713478812346",
           "EventTimestamp": "2019-08-22T10:35:16+06:00",
           "OriginOfCondition": {
@@ -241,7 +256,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsInvokedForEachOriginOfCondition) {
           }
         },
         {
-          "Context": "Foo,Bar2",
+          "Context": "Foo-Bar-1",
           "EventId": "ABC132489713478812347",
           "EventTimestamp": "2019-08-22T10:35:16+06:00",
           "OriginOfCondition": {
@@ -332,7 +347,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
         "@odata.id": "ODATA_ID_1",
         "Events": [
           {
-            "Context": "Foo,Bar2",
+            "Context": "Foo-Bar2",
             "OriginOfCondition": {
               "@odata.id": "ODATA_ID_1"
             }
@@ -370,7 +385,7 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
         "@odata.id": "ODATA_ID_1",
         "Events": [
           {
-            "Context": "Foo,Bar2",
+            "Context": "Foo-Bar2",
             "EventId": "ABC132489713478812347",
             "OriginOfCondition": {
               "@odata.id": "ODATA_ID_1"
