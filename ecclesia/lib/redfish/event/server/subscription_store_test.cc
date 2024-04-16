@@ -220,15 +220,37 @@ TEST_F(SubscriptionStoreImplTest, ToJSONAndToString) {
 
   // Verify the range of subscriptions as the iteration order of flat_hash_map
   // is non-deterministic.
+
   nlohmann::json json = subscription_store_->ToJSON();
-  EXPECT_THAT(json["subscriptions"][0],
+  EXPECT_THAT(json["NumSubscriptions"], Eq(2));
+  nlohmann::json json_0 = json["Subscriptions"][0];
+  nlohmann::json json_1 = json["Subscriptions"][1];
+
+  EXPECT_THAT(json_0["SubscriptionId"],
               testing::AllOf(testing::Ge(1), testing::Le(2)));
-  EXPECT_THAT(json["subscriptions"][1],
+  EXPECT_THAT(json_1["SubscriptionId"],
               testing::AllOf(testing::Ge(1), testing::Le(2)));
 
-  std::string result = subscription_store_->ToString();
-  EXPECT_THAT(result, AllOf(MatchesRegex(".*subscriptions.*"),
-                            MatchesRegex(".*[1-2],[1-2].*")));
+  EXPECT_THAT(json_0["URI"],
+              testing::UnorderedElementsAre("/redfish/v1/Chassis/Foo/Sensors/x",
+              "/redfish/v1/Chassis/Foo/Sensors/y"));
+  EXPECT_THAT(json_1["URI"],
+              testing::UnorderedElementsAre("/redfish/v1/Chassis/Foo/Sensors/x",
+              "/redfish/v1/Chassis/Foo/Sensors/y"));
+
+  for (int i = 0; i < 2; i++) {
+    auto trigger_json = json_0["Triggers"];
+    if (i == 1) {
+      trigger_json = json_1["Triggers"];
+    }
+    for (int j = 0; j < 2; ++j) {
+      auto trigger_0 = trigger_json[j];
+      EXPECT_THAT(trigger_0["mask"], Eq(true));
+      EXPECT_THAT(trigger_0["origin_resources"],
+      testing::UnorderedElementsAre("/redfish/v1/node2", "/redfish/v1/node1"));
+      EXPECT_THAT(trigger_0["predicate"], Eq(""));
+    }
+  }
 }
 
 TEST_F(SubscriptionStoreImplTest, DeleteSubscriptionSuccess) {

@@ -305,6 +305,12 @@ class SubscriptionService {
   // Retrieves all subscriptions managed by the service.
   virtual absl::Span<const SubscriptionContext> GetAllSubscriptions() = 0;
 
+  // Returns all subscriptions in a JSON format.
+  virtual nlohmann::json GetSubscriptionsToJSON() = 0;
+
+  // Returns all subscriptions in a string format.
+  virtual std::string GetSubscriptionsToString() = 0;
+
   // Invoked by an EventSource to notify SubscriptionService about an event
   // occurrence.
   // Returns error if notification cannot be processed, typically used to

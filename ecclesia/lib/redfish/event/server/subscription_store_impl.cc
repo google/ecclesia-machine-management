@@ -44,7 +44,7 @@ constexpr absl::string_view kPropertyId = "Id";
 constexpr absl::string_view kPropertyLastEventId = "LastEventId";
 
 // Concrete implementation of SubscriptionStore.
-// Not Thread safe
+// Thread safe
 class SubscriptionStoreImpl : public SubscriptionStore {
  public:
   // Adds a new subscription with the given subscription ID and event source IDs
@@ -146,12 +146,29 @@ class SubscriptionStoreImpl : public SubscriptionStore {
   // Converts SubscriptionStore to JSON format
   nlohmann::json ToJSON() override {
     nlohmann::json json;
-    nlohmann::json& subscriptions_json = json["subscriptions"];
+    nlohmann::json& subscriptions_json = json["Subscriptions"];
     subscriptions_json = nlohmann::json::array();
     absl::MutexLock lock(&subscriptions_mutex_);
     for (const auto& key_value_pair : subscriptions_) {
-      subscriptions_json.push_back(key_value_pair.first.Id());
+      nlohmann::json subscription_json;
+      subscription_json["SubscriptionId"] = key_value_pair.first.Id();
+      nlohmann::json& uri_json = subscription_json["URI"];
+      uri_json = nlohmann::json::array();
+      for (const auto& [event_source_id, set_of_uris] :
+          key_value_pair.second->event_source_to_uri) {
+        for (const auto& uri : set_of_uris) {
+          uri_json.push_back(uri);
+        }
+      }
+      nlohmann::json& trigger_json = subscription_json["Triggers"];
+      trigger_json = nlohmann::json::array();
+      for (const auto& [trigger_id, trigger] :
+          key_value_pair.second->id_to_triggers) {
+          trigger_json.push_back(trigger.ToJSON());
+      }
+      subscriptions_json.push_back(subscription_json);
     }
+    json["NumSubscriptions"] = subscriptions_json.size();
     return json;
   }
 

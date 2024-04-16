@@ -105,6 +105,12 @@ class SubscriptionServiceMock : public SubscriptionService {
                const nlohmann::json &data),
               (override));
 
+  MOCK_METHOD(nlohmann::json, GetSubscriptionsToJSON, (),
+              (override));
+
+  MOCK_METHOD(std::string, GetSubscriptionsToString, (),
+              (override));
+
  private:
   std::atomic_int num_notifications_ = 0;
 };

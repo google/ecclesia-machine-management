@@ -118,8 +118,32 @@ TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
     }
   )json";
 
+  static constexpr absl::string_view valid_subscriptions = R"json(
+    {
+      "NumSubscriptions": 2,
+      "Subscriptions": [
+        {
+          "SubscriptionId": 1,
+          "URI": [
+              "/redfish/v1/Chassis/Foo/Sensors/x",
+              "/redfish/v1/Chassis/Foo/Sensors/y"
+            ]
+        },
+        {
+          "SubscriptionId": 2,
+          "URI": [
+              "/redfish/v1/Chassis/Foo/Sensors/x",
+              "/redfish/v1/Chassis/Foo/Sensors/y"
+            ]
+        }
+      ]
+    })json";
+
   nlohmann::json request = nlohmann::json::parse(valid_request);
   ASSERT_TRUE(!request.is_discarded());
+
+  nlohmann::json response = nlohmann::json::parse(valid_subscriptions);
+  ASSERT_TRUE(!response.is_discarded());
 
   EXPECT_CALL(*subscription_backend_ptr_,
               Subscribe(Eq("/redfish/v1/Chassis/Foo/Sensors/x"), _,
@@ -155,6 +179,9 @@ TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
         return absl::OkStatus();
       }));
 
+  EXPECT_CALL(*subscription_store_ptr_, ToJSON()).WillRepeatedly(
+      testing::Return(response));
+
   // Expect subscription creation to succeed.
   subscription_service_->CreateSubscription(
       request, {"Privilege123"},
@@ -162,6 +189,23 @@ TEST_F(SubscriptionServiceImplTest, ShouldCreateSubscriptionOnValidRequest) {
         EXPECT_THAT(subscription_id, IsOk());
       },
       [](const std::string&) {});
+
+  auto json = subscription_service_->GetSubscriptionsToJSON();
+  EXPECT_THAT(json["NumSubscriptions"], Eq(2));
+  nlohmann::json json_0 = json["Subscriptions"][0];
+  nlohmann::json json_1 = json["Subscriptions"][1];
+
+  EXPECT_THAT(json_0["SubscriptionId"],
+              testing::AllOf(testing::Ge(1), testing::Le(2)));
+  EXPECT_THAT(json_1["SubscriptionId"],
+              testing::AllOf(testing::Ge(1), testing::Le(2)));
+
+  EXPECT_THAT(json_0["URI"],
+              testing::UnorderedElementsAre("/redfish/v1/Chassis/Foo/Sensors/x",
+              "/redfish/v1/Chassis/Foo/Sensors/y"));
+  EXPECT_THAT(json_1["URI"],
+              testing::UnorderedElementsAre("/redfish/v1/Chassis/Foo/Sensors/x",
+              "/redfish/v1/Chassis/Foo/Sensors/y"));
 }
 
 TEST_F(SubscriptionServiceImplTest,
