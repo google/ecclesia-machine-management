@@ -142,6 +142,85 @@ TEST(ApplyPredicateRuleTest, ShouldApplySpecicalPredicatesCorrectly) {
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
 }
 
+TEST(ApplyPredicateRuleTest, ShouldWorkWithParenthesis) {
+  nlohmann::json obj = {{"MemorySize", 8},
+                        {"BoolProperty", true},
+                        {"Status", {{"State", "Warning"}}},
+                        {"ComponentTemp", 15}};
+
+  PredicateOptions options;
+  // same as (false and false) or false
+  options.predicate =
+      "(MemorySize>16 and Status.State=Enabled) or ComponentTemp<20";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+  // same as (true or (false and true))
+  options.predicate =
+      "(ComponentTemp<20 or (BoolProperty=false and MemorySize<10))";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+  // same as (false and (false or true))
+  options.predicate =
+      "(ComponentTemp>20 and (Status.State=Enabled or MemorySize<10))";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+  // same as (true or (false and (false or true)))
+  options.predicate =
+      "(BoolProperty=true or (ComponentTemp>20 and (Status.State=Enabled or "
+      "MemorySize<10)))";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+  // same as (true and (false or (false and true))) or true
+  options.predicate =
+      "(ComponentTemp>10 and (ComponentTemp<20 or (BoolProperty=false and "
+      "MemorySize<10))) or "
+      "Status.State=Enabled";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+  // same as false or (false and true)
+  options.predicate =
+      "(ComponentTemp>20 or (BoolProperty=false and MemorySize<10))";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+  // same as true and (false and true)
+  options.predicate =
+      "(ComponentTemp<20 and (Status.State=disabled and MemorySize=8))";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+  // same as (false and true) or (true and false)
+  options.predicate =
+      "(ComponentTemp<15 and MemorySize>10) or (ComponentTemp=30 and "
+      "Status.State=Disabled)";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+  // same as (false and true) or (false and false)
+  options.predicate =
+      "(ComponentTemp<15 and MemorySize>10) or ((ComponentTemp=30) and "
+      "Status.State=Disabled)";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+
+  // tests with last()
+  options.node_index = 2;
+  options.node_set_size = 3;
+  options.predicate =
+      "(ComponentTemp<15 and MemorySize>10) or last()";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+  options.node_index = 2;
+  options.node_set_size = 3;
+  options.predicate = "ComponentTemp<16 and (MemorySize>100 or last())";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+  options.node_set_size = 6;
+  options.predicate =
+      "(ComponentTemp<15 and MemorySize>10) or last()";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+
+  // Invalid Parenthesis Cases
+  // extra opening parenthesis
+  options.predicate =
+      "((MemorySize>16 and Status.State=Enabled) or ComponentTemp<20 or last()";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsStatusInvalidArgument());
+  // extra closing parenthesis
+  options.predicate =
+      "(MemorySize>16 and Status.State=Enabled) or ComponentTemp<20)";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsStatusInvalidArgument());
+  // malformed predicate with parenthesis
+  options.predicate =
+      "(MemorySize>16and Status.State=Enabled) or ComponentTemp<20)";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsStatusInvalidArgument());
+}
+
 TEST(ApplyPredicateRuleTest, ShouldReturnErrorOnInvalidPredicates) {
   nlohmann::json obj = {{"MemorySize", 32},
                         {"Status", {{"State", "Enabled"}}},

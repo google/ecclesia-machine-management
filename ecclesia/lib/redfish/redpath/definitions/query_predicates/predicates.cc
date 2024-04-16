@@ -19,7 +19,9 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <deque>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "absl/log/check.h"
@@ -56,6 +58,8 @@ constexpr absl::string_view kBinaryOperandTrue = "true";
 constexpr absl::string_view kBinaryOperandFalse = "false";
 constexpr absl::string_view kLogicalOperatorAnd = "and";
 constexpr absl::string_view kLogicalOperatorOr = "or";
+constexpr absl::string_view kLeftParen = "(";
+constexpr absl::string_view kRightParen = ")";
 
 // Supported relational operators
 constexpr std::array<const char *, 6> kRelationsOperators = {
@@ -202,7 +206,6 @@ bool PredicateFilterByNodeName(const nlohmann::json &json_object,
 }
 
 }  // namespace
-
 absl::StatusOr<bool> ApplyPredicateRule(const nlohmann::json &json_object,
                                         const PredicateOptions &options) {
   if (options.predicate.empty()) {
@@ -215,9 +218,44 @@ absl::StatusOr<bool> ApplyPredicateRule(const nlohmann::json &json_object,
   bool is_filter_success = true;
   std::vector<absl::string_view> expressions =
       SplitExprByDelimiterWithEscape(options.predicate, " ", '\\');
+
+  // When we detect a "(", the state of the predicate evaluation so far and the
+  // operator to use on the saved expression is pushed onto the stack.
+  std::deque<std::pair<bool, absl::string_view>> expression_state_stack;
+  // Tracks current depth of the parenthesis, to detect mismatches.
+  int paren_depth = 0;
   for (absl::string_view expr : expressions) {
+    // When we see "(", remove them, increment the parenthesis depth,
+    // and save the state of the evaluated predicate so far on the stack.
+    if (absl::StartsWith(expr, kLeftParen)) {
+      int paren_idx = 0;
+      while (expr[paren_idx] == '(') {
+        paren_depth++, paren_idx++;
+        // default to using logical AND for the operator to use, if there is
+        // none before the parenthesis, as it will just AND it with true.
+        expression_state_stack.push_front(std::make_pair(
+            is_filter_success, logical_operation.empty() ? kLogicalOperatorAnd
+                                                         : logical_operation));
+      }
+      expr = expr.substr(paren_idx);
+      // Reset to default before evaluating the expression inside parenthesis.
+      is_filter_success = true;
+      logical_operation = kLogicalOperatorAnd;
+    }
+    // When expr ends with ")", remove them. For each parenthesis we close, we
+    // will pop and apply one more saved (state, operator) pair from the top of
+    // the stack to the current state.
+    int saved_state_count = 0;
+    if (absl::EndsWith(expr, kRightParen) &&
+        expr != kPredicateSelectLastIndex) {
+      while (expr[expr.size() - 1] == ')' &&
+             expr != kPredicateSelectLastIndex) {
+        saved_state_count++, paren_depth--;
+        expr = expr.substr(0, expr.size() - 1);
+      }
+    }
     // If expression is a logical operator, capture it and move to next
-    // expression
+    // expression.
     if (expr == kLogicalOperatorAnd || expr == kLogicalOperatorOr) {
       // A binary operator is parsed only when last operator has been applied.
       // If `logical_operation` is not empty, last operator is not applied
@@ -278,6 +316,28 @@ absl::StatusOr<bool> ApplyPredicateRule(const nlohmann::json &json_object,
 
     // Reset logical operation
     logical_operation = "";
+
+    // If we are closed parenthesis, apply necessary saved states and operators.
+    for (int i = 0; i < saved_state_count; ++i) {
+      if (expression_state_stack.empty()) {
+        return absl::InvalidArgumentError(
+            absl::StrCat("Invalid predicate with mismatched parenthesis: ",
+                         options.predicate));
+      }
+      const auto [saved_state, saved_op] = expression_state_stack.front();
+      expression_state_stack.pop_front();
+      // Apply logical operation.
+      if (saved_op == kLogicalOperatorAnd) {
+        is_filter_success &= saved_state;
+      } else {
+        is_filter_success |= saved_state;
+      }
+    }
+  }
+  if (paren_depth != 0) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Invalid predicate with mismatched parenthesis: ",
+                      options.predicate));
   }
   return is_filter_success;
 }
