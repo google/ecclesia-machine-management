@@ -41,7 +41,8 @@
 #include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/event/server/subscription.h"
-#include "ecclesia/lib/redfish/redpath/definitions/query_predicates/predicates.h"
+// #include
+// "ecclesia/lib/redfish/redpath/definitions/query_predicates/predicates.h"
 #include "ecclesia/lib/status/macros.h"
 #include "single_include/nlohmann/json.hpp"
 
@@ -90,24 +91,24 @@ void BuildRedfishEventsForTrigger(
       continue;
     }
 
-    // Apply predicate in trigger to check if event meets the user defined
-    // criteria.
-    if (!trigger.predicate.empty()) {
-      absl::StatusOr<bool> predicate_result =
-          ApplyPredicateRule(response, {.predicate = trigger.predicate,
-                                        .node_index = 0,
-                                        .node_set_size = 1});
-      if (!predicate_result.ok()) {
-        LOG(ERROR) << "Cannot apply trigger predicate rule for URI: " << uri
-                   << " error: " << predicate_result.status();
-        continue;
-      }
+    // // Apply predicate in trigger to check if event meets the user defined
+    // // criteria.
+    // if (!trigger.predicate.empty()) {
+    //   absl::StatusOr<bool> predicate_result =
+    //       ApplyPredicateRule(response, {.predicate = trigger.predicate,
+    //                                     .node_index = 0,
+    //                                     .node_set_size = 1});
+    //   if (!predicate_result.ok()) {
+    //     LOG(ERROR) << "Cannot apply trigger predicate rule for URI: " << uri
+    //                << " error: " << predicate_result.status();
+    //     continue;
+    //   }
 
-      if (!*predicate_result) {
-        // Skip event if predicate is not satisfied.
-        continue;
-      }
-    }
+    //   if (!*predicate_result) {
+    //     // Skip event if predicate is not satisfied.
+    //     continue;
+    //   }
+    // }
 
     // Construct RedfishEvent.
     BuildRedfishEvent(trigger, response, events.emplace_back());
