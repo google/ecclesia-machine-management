@@ -1301,6 +1301,35 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterForUriFromRules) {
   EXPECT_TRUE(filter_requested1);
 }
 
+TEST_F(QueryPlannerTestRunner, QueryPlannerHaltsOnWrongPropertyType) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisTestWrongPropertyType"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+          properties { property: "Name" type: INT64 }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get()});
+  EXPECT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+
+  EXPECT_THAT(result.status().code(),
+              testing::Eq(absl::StatusCode::kInvalidArgument));
+}
+
 }  // namespace
 
 }  // namespace ecclesia
