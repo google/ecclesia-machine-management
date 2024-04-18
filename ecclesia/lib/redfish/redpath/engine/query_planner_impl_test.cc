@@ -1330,6 +1330,86 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerHaltsOnWrongPropertyType) {
               testing::Eq(absl::StatusCode::kInvalidArgument));
 }
 
+// Test Query Planner's ability to generate sub-fru stable IDs.
+TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "EmbeddedResource"
+        service_root: "/redfish/v1"
+        subquery {
+          subquery_id: "Embedded"
+          uri: "/redfish/v1/embedded/logical/resource"
+          properties { property: "Id" type: STRING }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler("/redfish/v1/embedded/logical/resource",
+                             [&](ServerRequestInterface *req) {
+                               SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
+                               req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/embedded/logical/resource",
+          "Id": "resource",
+          "Oem": {
+            "Google": {
+              "LocationContext": {
+                "ServiceLabel": "chassis",
+                "EmbeddedLocationContext": ["embedded", "logical"]
+              }
+            }
+          }
+        })json");
+                               req->Reply();
+                             });
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get()});
+  EXPECT_THAT(qp, IsOk());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  auto result = (*qp)->Run({args1});
+  EXPECT_THAT(result, IsOk());
+  QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "EmbeddedResource"
+    data {
+      fields {
+        key: "Embedded"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Id"
+                  value { string_value: "resource" }
+                }
+                fields {
+                  key: "__EmbeddedLocationContext__"
+                  value {
+                    identifier {
+                      embedded_location_context: "/embedded/logical"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  // Verify query result.
+  EXPECT_THAT(expect_query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto((*result).query_result)));
+}
+
 }  // namespace
 
 }  // namespace ecclesia
