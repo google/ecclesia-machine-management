@@ -19,6 +19,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -86,6 +87,7 @@ class QueryRouter : public QueryRouterIntf {
     ServerInfo server_info;
     std::unique_ptr<RedfishTransport> transport = nullptr;
     std::unique_ptr<IdAssigner> id_assigner = nullptr;
+    std::optional<std::string> node_local_system_id = std::nullopt;
 
     ServerSpec() = default;
     ServerSpec(const ServerSpec&) = delete;
