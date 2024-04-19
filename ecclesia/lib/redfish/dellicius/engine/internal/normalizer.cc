@@ -54,6 +54,7 @@ constexpr absl::string_view kPartLocationContext = "__PartLocationContext__";
 constexpr absl::string_view kEmbeddedLocationContext =
     "__EmbeddedLocationContext__";
 constexpr absl::string_view kLocalDevpath = "__LocalDevpath__";
+constexpr absl::string_view kRFC3339DateTime = "%Y-%m-%d%ET%H:%M:%E*S%Ez";
 
 std::vector<DelliciusQuery::Subquery::RedfishProperty>
 GetAdditionalProperties() {
@@ -141,7 +142,7 @@ absl::Status GetCollectionPropertyFromRedfishObject(
           break;
         }
         absl::Time timevalue;
-        if (absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z",
+        if (absl::ParseTime(kRFC3339DateTime,
                             json_value.get<std::string>(), &timevalue,
                             nullptr)) {
           absl::StatusOr<google::protobuf::Timestamp> timestamp =
@@ -238,7 +239,7 @@ absl::StatusOr<SubqueryDataSet::Property> GetPropertyFromRedfishObject(
           LOG(ERROR) << error_message;
           return absl::InvalidArgumentError(error_message);
         }
-        if (absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", json_obj.get<std::string>(),
+        if (absl::ParseTime(kRFC3339DateTime, json_obj.get<std::string>(),
                             &timevalue, nullptr)) {
           absl::StatusOr<google::protobuf::Timestamp> timestamp =
               AbslTimeToProtoTime(timevalue);

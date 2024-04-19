@@ -45,6 +45,7 @@ cc_test(
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
+        "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",

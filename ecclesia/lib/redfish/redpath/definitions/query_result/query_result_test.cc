@@ -30,6 +30,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
+#include "ecclesia/lib/time/proto.h"
 
 namespace ecclesia {
 namespace {
@@ -77,6 +78,36 @@ TEST_F(QueryValueBuilderTest, TimestampTest) {
   builder_ = std::move(ts);
   ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kTimestampValue);
   ASSERT_THAT(value_.timestamp_value(), EqualsProto("seconds: 10 nanos: 1000"));
+}
+
+// To test cl/625768839
+TEST_F(QueryValueBuilderTest, OldDateTimeOffsetTest) {
+  std::string time_str("2024-04-16T05:31:39.068778+00:00");
+  absl::Time time;
+  absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", time_str, &time, nullptr);
+  absl::StatusOr<google::protobuf::Timestamp> timestamp =
+              AbslTimeToProtoTime(time);
+  google::protobuf::Timestamp ts = timestamp.value();
+  builder_ = std::move(ts);
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kTimestampValue);
+  // No fractional seconds in the timestamp
+  ASSERT_THAT(value_.timestamp_value(),
+              EqualsProto("seconds: 1713245499 nanos: 0"));
+}
+
+// To test cl/625768839
+TEST_F(QueryValueBuilderTest, NewDateTimeOffsetTest) {
+  std::string time_str("2024-04-16T05:31:39.068778+00:00");
+  absl::Time time;
+  absl::ParseTime(absl::RFC3339_full, time_str, &time, nullptr);
+  absl::StatusOr<google::protobuf::Timestamp> timestamp =
+              AbslTimeToProtoTime(time);
+  google::protobuf::Timestamp ts = timestamp.value();
+  builder_ = std::move(ts);
+  ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kTimestampValue);
+  // Fractional seconds are retained in the timestamp
+  ASSERT_THAT(value_.timestamp_value(),
+              EqualsProto("seconds: 1713245499 nanos: 68778000"));
 }
 
 TEST_F(QueryValueBuilderTest, StringTest) {
