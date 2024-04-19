@@ -77,6 +77,7 @@ inline constexpr char kRfPropertyManagerDiagnosticData[] =
 inline constexpr char kRfPropertyDedicatedNetworkPorts[] =
     "DedicatedNetworkPorts";
 inline constexpr char kRfPropertyNetworking[] = "Networking";
+inline constexpr char kRfPropertyNetworkAdapters[] = "NetworkAdapters";
 inline constexpr char kRfPropertyBootInfo[] = "BootInfo";
 inline constexpr char kRfPropertyEthernetInterfaces[] = "EthernetInterfaces";
 inline constexpr char kRfPropertyEthernet[] = "Ethernet";
