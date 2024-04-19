@@ -67,6 +67,8 @@ message Identifier {
   optional string machine_devpath = 2;
   // Sub-Fru location context
   optional string embedded_location_context = 3;
+  // Stable identifier under embedded location context.
+  optional string stable_name = 4;
 }
 
 message Statistics {

@@ -42,6 +42,7 @@ namespace {
 constexpr char kLocalDevpathTag[] = "_local_devpath_";
 constexpr char kMachineDevpathTag[] = "_machine_devpath_";
 constexpr char kEmbeddedLocationContextTag[] = "_embedded_location_context_";
+constexpr char kStableNameTag[] = "_stable_name_";
 
 absl::Status Validate(const google::protobuf::Timestamp& t) {
   const auto sec = t.seconds();
@@ -103,9 +104,14 @@ void AddChildSubQuery(QueryResultDataBuilder& builder,
         identifier.set_embedded_location_context(
             data_set.decorators().embedded_location_context());
       }
+      if (data_set.decorators().has_stable_name() &&
+          !data_set.decorators().stable_name().empty()) {
+        identifier.set_stable_name(data_set.decorators().stable_name());
+      }
     }
     if (identifier.has_local_devpath() || identifier.has_machine_devpath() ||
-        identifier.has_embedded_location_context()) {
+        identifier.has_embedded_location_context() ||
+        identifier.has_stable_name()) {
       value_builder[kIdentifierTag] = std::move(identifier);
     }
 
@@ -260,6 +266,9 @@ nlohmann::json IdentifierValueToJson(const Identifier& value) {
       !value.embedded_location_context().empty()) {
     json[kEmbeddedLocationContextTag] = value.embedded_location_context();
   }
+  if (value.has_stable_name() && !value.stable_name().empty()) {
+    json[kStableNameTag] = value.stable_name();
+  }
   return json;
 }
 
@@ -376,10 +385,12 @@ std::optional<Identifier> JsonToIdentifierValue(const nlohmann::json& json) {
         id.set_machine_devpath(value.get<std::string>());
       } else if (key == kEmbeddedLocationContextTag) {
         id.set_embedded_location_context(value.get<std::string>());
+      } else if (key == kStableNameTag) {
+        id.set_stable_name(value.get<std::string>());
       }
     }
     if (id.has_local_devpath() || id.has_machine_devpath() ||
-        id.has_embedded_location_context()) {
+        id.has_embedded_location_context() || id.has_stable_name()) {
       return id;
     }
   }

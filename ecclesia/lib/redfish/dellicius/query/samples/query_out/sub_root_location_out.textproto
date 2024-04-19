@@ -2,12 +2,12 @@
 # proto-message: ecclesia.QueryIdToResult
 
 results: {
-  key: "EmbeddedResource"
+  key: "SubRootResource"
   value: {
-    query_id: "EmbeddedResource"
+    query_id: "SubRootResource"
     data {
       fields {
-        key: "EmbeddedResource"
+        key: "SubRootResource"
         value {
           list_value {
             values {
@@ -22,7 +22,6 @@ results: {
                   key: "_id_"
                   value {
                     identifier {
-                      embedded_location_context: "sub-fru/logical"
                       stable_name: "resource"
                     }
                   }

@@ -49,11 +49,13 @@ namespace ecclesia {
 
 namespace {
 
+constexpr absl::string_view kStableName = "__StableName__";
 constexpr absl::string_view kServiceLabel = "__ServiceLabel__";
 constexpr absl::string_view kPartLocationContext = "__PartLocationContext__";
 constexpr absl::string_view kEmbeddedLocationContext =
     "__EmbeddedLocationContext__";
 constexpr absl::string_view kLocalDevpath = "__LocalDevpath__";
+constexpr absl::string_view kSubFru = "__SubFru__";
 constexpr absl::string_view kRFC3339DateTime = "%Y-%m-%d%ET%H:%M:%E*S%Ez";
 
 std::vector<DelliciusQuery::Subquery::RedfishProperty>
@@ -74,6 +76,11 @@ GetAdditionalProperties() {
       result.push_back(std::move(new_prop));
     }
   };
+
+  // Implicit collection of Name property to be used for stable IDs only if
+  // LocationContext.ServiceLabel is present.
+  add_property(kStableName, {"Name"});
+  add_property(kSubFru, {"Oem.Google.LocationContext.ServiceLabel"});
 
   add_property(kServiceLabel, {"Location.PartLocation.ServiceLabel",
                                "PhysicalLocation.PartLocation.ServiceLabel",
@@ -291,7 +298,9 @@ absl::Status NormalizerImplDefault::Normalize(
   }
 
   // We add additional properties to populate stable id based on Redfish
-  // Location.
+  // Location. Only add stable name if a LocationContext is present.
+  bool is_sub_fru = false;
+  std::string sub_fru_name;
   for (const DelliciusQuery::Subquery::RedfishProperty &property :
        additional_properties_) {
     auto property_out = GetPropertyFromRedfishObject(json_content, property);
@@ -315,7 +324,20 @@ absl::Status NormalizerImplDefault::Normalize(
              ->mutable_embedded_location_context()
              ->Add() = value.string_value();
       }
+    } else if (name == kStableName) {
+      sub_fru_name = std::move(*property_out->mutable_string_value());
     }
+    // This flag is set when a LocationContext is present with a ServiceLabel
+    // field.
+    if (name == kSubFru) {
+      is_sub_fru = true;
+    }
+  }
+
+  // Add stable name if a LocationContext is present.
+  if (is_sub_fru) {
+    *data_set_local.mutable_redfish_location()->mutable_stable_name() =
+        std::move(sub_fru_name);
   }
 
   if (normalizer_options.enable_url_annotation) {

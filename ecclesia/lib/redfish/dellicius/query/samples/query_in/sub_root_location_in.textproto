@@ -1,0 +1,9 @@
+# proto-file: ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "SubRootResource"
+subquery {
+  subquery_id: "SubRootResource"
+  uri: "/redfish/v1/root/resource"
+  properties { property: "Id" type: STRING }
+}

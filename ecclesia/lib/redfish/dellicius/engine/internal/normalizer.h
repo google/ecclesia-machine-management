@@ -107,6 +107,13 @@ class NormalizerImplAddMachineBarepath final
           absl::StrJoin(data_set.redfish_location().embedded_location_context(),
                         "/"));
     }
+    // Assign the stable name for sub-fru resources. The resource will be
+    // determined as sub-fru within the default normalizer method.
+    if (data_set.has_redfish_location() &&
+        !data_set.redfish_location().stable_name().empty()) {
+      data_set.mutable_decorators()->set_stable_name(
+          data_set.redfish_location().stable_name());
+    }
 
     absl::StatusOr<std::string> machine_devpath =
         id_assigner_->IdForRedfishLocationInDataSet(data_set, is_root);

@@ -1352,6 +1352,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
                                req->WriteResponseString(R"json({
           "@odata.id": "/redfish/v1/embedded/logical/resource",
           "Id": "resource",
+          "Name": "resource",
           "Oem": {
             "Google": {
               "LocationContext": {
@@ -1395,6 +1396,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
                       embedded_location_context: "/embedded/logical"
                     }
                   }
+                }
+                fields {
+                  key: "__StableName__"
+                  value { identifier { stable_name: "resource" } }
                 }
               }
             }

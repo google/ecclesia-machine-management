@@ -1026,6 +1026,7 @@ TEST(QueryEngineTest, QueryEngineLocationContextSuccess) {
             {
               "@odata.id": "/redfish/v1/deeply/nested/resource",
               "Id": "resource",
+              "Name": "resource",
               "Oem": {
                 "Google": {
                   "LocationContext": {
@@ -1067,6 +1068,60 @@ TEST(QueryEngineTest, QueryEngineLocationContextSuccess) {
   ASSERT_EQ(response_entries.results().size(), 1);
   VerifyQueryResults(std::move(response_entries),
                      {std::move(intent_output_embedded_location)});
+}
+
+TEST(QueryEngineTest, QueryEngineSubRootStableId) {
+  QueryIdToResult intent_output_sub_root_location =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
+          JoinFilePaths(kQuerySamplesLocation,
+                        "query_out/sub_root_location_out.textproto")));
+  FakeRedfishServer server(kIndusMockup);
+  std::string sub_root_resource_uri = "/redfish/v1/root/resource";
+  std::string sub_root_resource_data = R"json(
+            {
+              "@odata.id": "/redfish/v1/root_chassis/resource",
+              "Id": "resource",
+              "Name": "resource",
+              "Oem": {
+                "Google": {
+                  "LocationContext": {
+                    "ServiceLabel": ""
+                  }
+                }
+              }
+            }
+           )json";
+  server.AddHttpGetHandlerWithData(sub_root_resource_uri,
+                                   sub_root_resource_data);
+  // Set up Query Engine with ID assigner. This is needed for the normalizer to
+  // assign the stable id fields.
+  absl::flat_hash_map<std::string, std::string> devpath_map = {};
+  auto id_assigner = NewMapBasedDevpathAssigner(devpath_map);
+  FakeClock clock{clock_time};
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
+  // Set up Query Engine with query files and query rules.
+  QueryContext query_context{.query_files = kDelliciusQueries,
+                             .query_rules = kQueryRules,
+                             .clock = &clock};
+  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
+      query_context,
+      {.transport = std::move(transport),
+       .stable_id_type =
+           QueryEngineParams::RedfishStableIdType::kRedfishLocation},
+      std::move(id_assigner));
+  ASSERT_TRUE(query_engine.ok());
+  QueryIdToResult response_entries =
+      query_engine->ExecuteRedpathQuery({"SubRootResource"});
+  ASSERT_EQ(response_entries.results().size(), 1);
+  VerifyQueryResults(std::move(response_entries),
+                     {std::move(intent_output_sub_root_location)});
 }
 
 TEST(QueryEngineTest, QueryEngineCreateUsingQuerySpec) {

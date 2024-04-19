@@ -19,6 +19,7 @@ filegroup(
         "query_in/service_root_custom.textproto",
         "query_in/service_root_google_in.textproto",
         "query_in/service_root_in.textproto",
+        "query_in/sub_root_location_in.textproto",
         "query_in/thermal_in.textproto",
     ],
     visibility = ["//visibility:public"],

@@ -53,6 +53,8 @@ constexpr absl::string_view kEmbeddedLocationContext =
     "__EmbeddedLocationContext__";
 constexpr absl::string_view kLocalDevpath = "__LocalDevpath__";
 constexpr absl::string_view kMachineDevpath = "__MachineDevpath__";
+constexpr absl::string_view kStableName = "__StableName__";
+constexpr absl::string_view kSubFru = "__SubFru__";
 
 std::vector<DelliciusQuery::Subquery::RedfishProperty>
 GetAdditionalProperties() {
@@ -72,7 +74,10 @@ GetAdditionalProperties() {
       result.push_back(std::move(new_prop));
     }
   };
-
+  // Implicit collection of Name property to be used for stable IDs only if
+  // LocationContext.ServiceLabel is present.
+  add_property(kStableName, {"Name"});
+  add_property(kSubFru, {"Oem.Google.LocationContext.ServiceLabel"});
   add_property(kEmbeddedLocationContext,
                {"Oem.Google.LocationContext.EmbeddedLocationContext"}, true);
 
@@ -299,7 +304,9 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
   }
 
   // We add additional properties to populate stable id based on Redfish
-  // Location.
+  // Location. Only add stable name if a LocationContext is present.
+  bool is_sub_fru = false;
+  std::string sub_fru_name;
   for (const DelliciusQuery::Subquery::RedfishProperty &property :
        additional_properties_) {
     auto property_out = GetPropertyFromRedfishObject(json_content, property);
@@ -325,7 +332,21 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
       query_value.mutable_identifier()->set_embedded_location_context(
           embedded_location_context);
       (*data_set_local.mutable_fields())[name] = query_value;
+    } else if (name == kStableName) {
+      sub_fru_name = std::move(*property_out->mutable_string_value());
     }
+    // This flag is set when a LocationContext is present with a ServiceLabel
+    // field.
+    if (name == kSubFru) {
+      is_sub_fru = true;
+    }
+  }
+
+  // Add stable name if a LocationContext is present.
+  if (is_sub_fru) {
+    QueryValue query_value;
+    query_value.mutable_identifier()->set_stable_name(sub_fru_name);
+    (*data_set_local.mutable_fields())[kStableName] = query_value;
   }
 
   if (options.enable_url_annotation) {
