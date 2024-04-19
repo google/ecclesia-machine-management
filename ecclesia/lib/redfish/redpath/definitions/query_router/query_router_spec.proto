@@ -65,4 +65,14 @@ message QueryRouterSpec {
   int64 cache_duration_ms = 3;
   // Pattern for issuing the query to all the query engine instances
   QueryPattern query_pattern = 4;
+
+  enum QueryRouterType {
+    TYPE_UNSPECIFIED = 0;
+    TYPE_DEFAULT = 1;
+    TYPE_NODE_LOCAL_ON_MACHINE = 2;
+    TYPE_NODE_LOCAL_OFF_MACHINE = 3;
+    TYPE_NODE_LOCAL_SYSTEM_ID_SPEC = 4;
+  }
+  // Indicates what type of query router should be constructed for this spec.
+  QueryRouterType query_router_type = 5;
 }
