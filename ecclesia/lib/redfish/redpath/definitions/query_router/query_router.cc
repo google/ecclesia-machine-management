@@ -34,7 +34,9 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_router/default_template_variable_names.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/util.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
@@ -42,6 +44,29 @@
 #include "ecclesia/lib/status/macros.h"
 
 namespace ecclesia {
+
+namespace {
+
+// Makes new QueryVariableSet from query_arguments with SYSTEM_ID variable set.
+QueryEngineIntf::QueryVariableSet CreateQueryArgumentsWithSystemId(
+    const QueryEngineIntf::QueryVariableSet &query_arguments,
+    const std::vector<absl::string_view> &query_ids,
+    const std::string &node_local_system_id) {
+  if (query_arguments.contains(kNodeLocalSystemIdVariableName)) {
+    return query_arguments;
+  }
+  QueryEngineIntf::QueryVariableSet query_arguments_with_system_id =
+      query_arguments;
+  QueryVariables::VariableValue system_id_value;
+  system_id_value.set_name(std::string(kNodeLocalSystemIdVariableName));
+  system_id_value.set_value(std::string(node_local_system_id));
+  for (absl::string_view query_id : query_ids) {
+    *query_arguments_with_system_id[std::string(query_id)].add_values() =
+        system_id_value;
+  }
+  return query_arguments_with_system_id;
+}
+}  // namespace
 
 absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
     const QueryRouterSpec &router_spec, std::vector<ServerSpec> server_specs,
@@ -96,6 +121,7 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
         .server_info = std::move(server_spec.server_info),
         .query_engine = std::move(query_engine),
         .query_ids = std::move(query_ids),
+        .node_local_system_id = std::move(server_spec.node_local_system_id),
     });
   }
 
@@ -117,8 +143,16 @@ void QueryRouter::ExecuteQuery(
     if (queries.empty()) {
       continue;
     }
-    QueryIdToResult result = routing_info.query_engine->ExecuteRedpathQuery(
-        queries, QueryEngine::ServiceRootType::kCustom, query_arguments);
+    QueryIdToResult result;
+    if (routing_info.node_local_system_id.has_value()) {
+      result = routing_info.query_engine->ExecuteRedpathQuery(
+          queries, QueryEngine::ServiceRootType::kCustom,
+          CreateQueryArgumentsWithSystemId(query_arguments, queries,
+                                           *routing_info.node_local_system_id));
+    } else {
+      result = routing_info.query_engine->ExecuteRedpathQuery(
+          queries, QueryEngine::ServiceRootType::kCustom, query_arguments);
+    }
     for (auto &[query_id, query_result] : *result.mutable_results()) {
       callback(routing_info.server_info, std::move(query_result));
     }

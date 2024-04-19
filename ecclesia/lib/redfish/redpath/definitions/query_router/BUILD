@@ -21,6 +21,7 @@ cc_library(
     hdrs = ["query_router.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":default_template_variable_names",
         ":query_router_spec_cc_proto",
         ":util",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
@@ -28,6 +29,7 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_engine_features",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_engine_features_cc_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_spec",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
         "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:interface",
@@ -49,13 +51,16 @@ cc_test(
     name = "query_router_test",
     srcs = ["query_router_test.cc"],
     deps = [
+        ":default_template_variable_names",
         ":query_router",
         ":query_router_spec_cc_proto",
         "//ecclesia/lib/apifs",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish/dellicius/engine:file_backed_query_engine",
+        "//ecclesia/lib/redfish/dellicius/engine:mock_query_engine",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
+        "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_spec",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
@@ -102,6 +107,17 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "default_template_variable_definitions",
+    deprecation = "This rule probably does not need to be depended on.",
+)
+
+cc_library(
+    name = "default_template_variable_names",
+    hdrs = ["default_template_variable_names.h"],
+    deps = ["@com_google_absl//absl/strings"],
+)
+
 cc_test(
     name = "util_test",
     srcs = ["util_test.cc"],
@@ -121,4 +137,9 @@ cc_test(
         "@com_google_googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",
     ],
+)
+
+exports_files(
+    ["default_template_variables.textproto"],
+    visibility = ["//visibility:public"],
 )

@@ -34,10 +34,13 @@
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/engine/file_backed_query_engine.h"
+#include "ecclesia/lib/redfish/dellicius/engine/mock_query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
+#include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_router/default_template_variable_names.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/redpath/engine/id_assigner.h"
 #include "ecclesia/lib/status/test_macros.h"
@@ -47,10 +50,22 @@
 namespace ecclesia {
 namespace {
 
+using ::testing::_;
 using ::testing::IsEmpty;
 
 constexpr absl::string_view kRootDir = "/test/";
 constexpr absl::string_view kQueryResultDir = "/test/query_result/";
+
+MATCHER_P(ContainsSystemIdAsQueryVariable, expected_id, "") {
+  for (const auto &[query_id, query_vars] : arg) {
+    for (const auto &var_value : query_vars.values()) {
+      if (var_value.name() == kNodeLocalSystemIdVariableName) {
+        return var_value.value() == expected_id;
+      }
+    }
+  }
+  return false;
+}
 
 // Struct to hold the callback parameters to set expectations.
 struct QueryRouterCallbacks {
@@ -327,6 +342,77 @@ TEST_F(QueryRouterTest, CreateSuccessTest) {
 
     EXPECT_THAT(expected_callbacks, IsEmpty());
   }
+}
+
+TEST_F(QueryRouterTest, CreateSuccessWithSystemIdQueryRouterTest) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_SERIAL_ALL
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select {
+                server_type: SERVER_TYPE_BMCWEB
+                server_tag: "server_1"
+                server_tag: "server_2"
+              }
+              query_and_rule_path {
+                query_path: "$0/query_a.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+          }
+        }
+        selection_specs {
+          key: "query_b"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path {
+                query_path: "$0/query_b.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+          }
+        }
+        selection_specs {
+          key: "query_c"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB }
+              query_and_rule_path { query_path: "$0/query_c.textproto" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  auto server_spec = GetServerSpec("server_1");
+  server_spec.node_local_system_id = "system1";
+  server_specs.push_back(std::move(server_spec));
+  auto mock_qe = std::make_unique<MockQueryEngine>();
+
+  EXPECT_CALL(*mock_qe, ExecuteRedpathQuery(
+                            _, _, ContainsSystemIdAsQueryVariable("system1")))
+      .Times(1);
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_router,
+      QueryRouter::Create(
+          router_spec, std::move(server_specs),
+          [&](const QuerySpec &, const QueryEngineParams &params,
+              std::unique_ptr<IdAssigner>,
+              std::unique_ptr<RedpathEngineIdAssigner>)
+              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+            EXPECT_FALSE(params.features.enable_redfish_metrics());
+            EXPECT_TRUE(params.features.fail_on_first_error());
+            EXPECT_FALSE(params.features.log_redfish_traces());
+            return std::move(mock_qe);
+          }));
+
+  query_router->ExecuteQuery({"query_a"}, {});
 }
 
 TEST_F(QueryRouterTest, DisjointServerAndQuerySpec) {

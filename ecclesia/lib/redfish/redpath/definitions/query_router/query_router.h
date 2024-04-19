@@ -118,6 +118,7 @@ class QueryRouter : public QueryRouterIntf {
     ServerInfo server_info;
     std::unique_ptr<QueryEngineIntf> query_engine;
     absl::flat_hash_set<std::string> query_ids;
+    std::optional<std::string> node_local_system_id = std::nullopt;
   };
 
   using RoutingTable = std::vector<QueryRoutingInfo>;

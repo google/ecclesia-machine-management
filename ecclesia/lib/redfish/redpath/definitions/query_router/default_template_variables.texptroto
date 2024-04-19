@@ -1,0 +1,7 @@
+# proto-file: third_party/ecclesia/lib/redfish/dellicius/query/query_variables.proto
+# proto-message: QueryVariables
+
+# Required name for all templated queries wishing to use the node local system id.
+values: {
+  name: "SYSTEM_ID"
+}
