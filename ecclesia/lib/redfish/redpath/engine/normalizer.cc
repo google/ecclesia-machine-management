@@ -74,10 +74,10 @@ GetAdditionalProperties() {
       result.push_back(std::move(new_prop));
     }
   };
-  // Implicit collection of Name property to be used for stable IDs only if
-  // LocationContext.ServiceLabel is present.
+  // Implicit collection of Name property to be used for stable IDs.
   add_property(kStableName, {"Name"});
-  add_property(kSubFru, {"Oem.Google.LocationContext.ServiceLabel"});
+  add_property(kSubFru, {"Oem.Google.LocationContext.ServiceLabel",
+                         "Oem.Google.LocationContext.Devpath"});
   add_property(kEmbeddedLocationContext,
                {"Oem.Google.LocationContext.EmbeddedLocationContext"}, true);
 

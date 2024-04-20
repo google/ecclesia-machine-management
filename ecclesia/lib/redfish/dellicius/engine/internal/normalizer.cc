@@ -78,9 +78,10 @@ GetAdditionalProperties() {
   };
 
   // Implicit collection of Name property to be used for stable IDs only if
-  // LocationContext.ServiceLabel is present.
+  // LocationContext.ServiceLabel or LocationContext.Devpath is present.
   add_property(kStableName, {"Name"});
-  add_property(kSubFru, {"Oem.Google.LocationContext.ServiceLabel"});
+  add_property(kSubFru, {"Oem.Google.LocationContext.ServiceLabel",
+                         "Oem.Google.LocationContext.Devpath"});
 
   add_property(kServiceLabel, {"Location.PartLocation.ServiceLabel",
                                "PhysicalLocation.PartLocation.ServiceLabel",

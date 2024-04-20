@@ -1337,26 +1337,52 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
         query_id: "EmbeddedResource"
         service_root: "/redfish/v1"
         subquery {
-          subquery_id: "Embedded"
-          uri: "/redfish/v1/embedded/logical/resource"
+          subquery_id: "EmbeddedServiceLabel"
+          uri: "/redfish/v1/embedded/logical/resource1"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "EmbeddedDevpath"
+          uri: "/redfish/v1/embedded/logical/resource2"
           properties { property: "Id" type: STRING }
         }
       )pb");
 
   SetTestParams("indus_hmb_shim/mockup.shar");
-  server_->AddHttpGetHandler("/redfish/v1/embedded/logical/resource",
+  server_->AddHttpGetHandler("/redfish/v1/embedded/logical/resource1",
                              [&](ServerRequestInterface *req) {
                                SetContentType(req, "application/json");
                                req->OverwriteResponseHeader("OData-Version",
                                                             "4.0");
                                req->WriteResponseString(R"json({
-          "@odata.id": "/redfish/v1/embedded/logical/resource",
-          "Id": "resource",
-          "Name": "resource",
+          "@odata.id": "/redfish/v1/embedded/logical/resource1",
+          "Id": "resource1",
+          "Name": "resource1",
           "Oem": {
             "Google": {
               "LocationContext": {
                 "ServiceLabel": "chassis",
+                "EmbeddedLocationContext": ["embedded", "logical"]
+              }
+            }
+          }
+        })json");
+                               req->Reply();
+                             });
+
+  server_->AddHttpGetHandler("/redfish/v1/embedded/logical/resource2",
+                             [&](ServerRequestInterface *req) {
+                               SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
+                               req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/embedded/logical/resource2",
+          "Id": "resource2",
+          "Name": "resource2",
+          "Oem": {
+            "Google": {
+              "LocationContext": {
+                "Devpath": "/phys",
                 "EmbeddedLocationContext": ["embedded", "logical"]
               }
             }
@@ -1380,14 +1406,14 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
     query_id: "EmbeddedResource"
     data {
       fields {
-        key: "Embedded"
+        key: "EmbeddedServiceLabel"
         value {
           list_value {
             values {
               subquery_value {
                 fields {
                   key: "Id"
-                  value { string_value: "resource" }
+                  value { string_value: "resource1" }
                 }
                 fields {
                   key: "__EmbeddedLocationContext__"
@@ -1399,7 +1425,38 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
                 }
                 fields {
                   key: "__StableName__"
-                  value { identifier { stable_name: "resource" } }
+                  value { identifier { stable_name: "resource1" } }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "EmbeddedDevpath"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Id"
+                  value { string_value: "resource2" }
+                }
+                fields {
+                  key: "__EmbeddedLocationContext__"
+                  value {
+                    identifier {
+                      embedded_location_context: "/embedded/logical"
+                    }
+                  }
+                }
+                fields {
+                  key: "__LocalDevpath__"
+                  value { identifier { local_devpath: "/phys" } }
+                }
+                fields {
+                  key: "__StableName__"
+                  value { identifier { stable_name: "resource2" } }
                 }
               }
             }
