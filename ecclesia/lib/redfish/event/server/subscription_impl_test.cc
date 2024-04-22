@@ -658,6 +658,243 @@ TEST_F(SubscriptionServiceImplTest, ShouldSendEventIfOriginOfConditionIsValid) {
   EXPECT_EQ(on_event_callback_count, 1);
 }
 
+TEST_F(SubscriptionServiceImplTest, ShouldCallClearOnClearEventStore) {
+  static constexpr absl::string_view mock_query_response = R"json(
+    {
+       "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/current_cpu0_pvccd_hv_Output_Current",
+        "@odata.type": "#Sensor.v1_2_0.Sensor",
+        "Id": "Sensors_cpu0_pvccd_hv_Output_Current",
+        "Name": "cpu0 pvccd hv Output Current",
+        "Reading": 3.7,
+        "ReadingRangeMax": 38.0,
+        "ReadingRangeMin": -6.0,
+        "ReadingType": "Current",
+        "ReadingUnits": "A",
+        "Status": {
+            "Health": "OK",
+            "State": "Enabled"
+        },
+        "Thresholds": {
+            "LowerCritical": {
+                "Reading": -5.0
+            },
+            "UpperCritical": {
+                "Reading": 39.9
+            }
+        }
+      }
+  )json";
+
+  static constexpr absl::string_view mock_trigger_str = R"json(
+    {
+      "Id": "123",
+      "OriginResources":[
+        {
+          "@odata.id": "/redfish/v1/node1"
+        },
+        {
+          "@odata.id": "/redfish/v1/node2"
+        }
+      ],
+      "Predicate": "Reading>2"
+    }
+  )json";
+
+  static constexpr absl::string_view expected_event_str = R"json(
+    {
+      "@odata.type": "#Event.v1_7_0.Event",
+      "Events": [
+        {
+          "Context": "123",
+          "OriginOfCondition": {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/current_cpu0_pvccd_hv_Output_Current",
+            "@odata.type": "#Sensor.v1_2_0.Sensor",
+            "Id": "Sensors_cpu0_pvccd_hv_Output_Current",
+            "Name": "cpu0 pvccd hv Output Current",
+            "Reading": 3.7,
+            "ReadingRangeMax": 38,
+            "ReadingRangeMin": -6,
+            "ReadingType": "Current",
+            "ReadingUnits": "A",
+            "Status": {
+              "Health": "OK",
+              "State": "Enabled"
+            },
+            "Thresholds": {
+              "LowerCritical": {
+                "Reading": -5
+              },
+              "UpperCritical": {
+                "Reading": 39.9
+              }
+            }
+          }
+        }
+      ],
+      "Name": "RedfishEvent"
+    }
+  )json";
+
+  auto query_response = nlohmann::json::parse(mock_query_response);
+  ASSERT_TRUE(!query_response.is_discarded());
+
+  auto trigger = nlohmann::json::parse(mock_trigger_str);
+  ASSERT_TRUE(!trigger.is_discarded());
+
+  auto trigger_internal = Trigger::Create(trigger);
+  ASSERT_TRUE(trigger_internal.ok());
+
+  auto expected_event = nlohmann::json::parse(expected_event_str);
+  ASSERT_TRUE(!expected_event.is_discarded());
+
+  // Create event source ID
+  EventSourceId event_source_id("1", EventSourceId::Type::kDbusObjects);
+
+  absl::flat_hash_map<std::string, Trigger> test_id_to_triggers = {
+      {"1", *trigger_internal}};
+
+  int on_event_callback_count = 0;
+  absl::flat_hash_map<EventSourceId, absl::flat_hash_set<std::string>>
+      test_event_source_to_uris;
+  test_event_source_to_uris[event_source_id] = {"/redfish/v1/node1"};
+  const auto context = std::make_unique<SubscriptionContext>(
+      SubscriptionId(1), test_event_source_to_uris, test_id_to_triggers,
+      [&on_event_callback_count, expected_event](const nlohmann::json& event) {
+        ++on_event_callback_count;
+
+        // We want to ignore Id, EventId and EventTimestamp for comparison with
+        // expected event since these are random hash values.
+        // But we also want to make sure these fields are presents.
+        // So we create a copy of the event and remove these fields after
+        // checking they are present.
+        nlohmann::json event_scrubbed = event;
+        EXPECT_TRUE(event_scrubbed.contains("Id"));
+        auto find_events = event_scrubbed.find("Events");
+        ASSERT_TRUE(find_events != event_scrubbed.end());
+        ASSERT_EQ(find_events->size(), 1);
+        EXPECT_TRUE(find_events->begin()->contains("EventId"));
+        EXPECT_TRUE(find_events->begin()->contains("EventTimestamp"));
+        event_scrubbed.erase("Id");
+        find_events->begin()->erase("EventId");
+        find_events->begin()->erase("EventTimestamp");
+
+        // Finally, compare the event with expected event.
+        EXPECT_EQ(event_scrubbed, expected_event);
+      });
+  context->privileges = {"Privilege123"};
+  std::vector<const SubscriptionContext*> contexts = {context.get()};
+  // Expect subscription store to be queried for subscriptions.
+  EXPECT_CALL(*subscription_store_ptr_,
+              GetSubscriptionsByEventSourceId(event_source_id))
+      .WillRepeatedly(
+          Return(absl::Span<const SubscriptionContext* const>(contexts)));
+
+  EXPECT_CALL(
+      *subscription_backend_ptr_,
+      Query(Eq("/redfish/v1/node1"), _, UnorderedElementsAre("Privilege123")))
+      .WillOnce(Invoke(
+          [query_response](absl::string_view url,
+                           SubscriptionBackend::QueryCallback&& query_callback,
+                           const std::unordered_set<std::string>& privileges) {
+            query_callback(absl::OkStatus(), query_response);
+            return absl::OkStatus();
+          }));
+
+  // Check that only 1 Redfish event is added to the store.
+  EXPECT_CALL(*event_store_ptr_, AddNewEvent).Times(1);
+  // 1. Origin of condition is built, event is sent to the subscriber.
+  ASSERT_THAT(subscription_service_->Notify(event_source_id, absl::OkStatus()),
+              absl::OkStatus());
+
+  // Clear event store.
+  EXPECT_CALL(*event_store_ptr_, Clear).Times(1);
+  subscription_service_->ClearEventStore();
+}
+
+TEST_F(SubscriptionServiceImplTest, TestGetEventsBySubscriptionId) {
+  static constexpr absl::string_view mock_trigger_str = R"json(
+    {
+      "Id": "123",
+      "OriginResources":[
+        {
+          "@odata.id": "/redfish/v1/node1"
+        },
+        {
+          "@odata.id": "/redfish/v1/node2"
+        }
+      ],
+      "Predicate": "Reading>2"
+    }
+  )json";
+
+  static constexpr absl::string_view expected_event_str = R"json(
+    {
+      "@odata.type": "#Event.v1_7_0.Event",
+      "Events": [
+        {
+          "Context": "123",
+          "OriginOfCondition": {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/current_cpu0_pvccd_hv_Output_Current",
+            "@odata.type": "#Sensor.v1_2_0.Sensor",
+            "Id": "Sensors_cpu0_pvccd_hv_Output_Current",
+            "Name": "cpu0 pvccd hv Output Current",
+            "Reading": 3.7,
+            "ReadingRangeMax": 38,
+            "ReadingRangeMin": -6,
+            "ReadingType": "Current",
+            "ReadingUnits": "A",
+            "Status": {
+              "Health": "OK",
+              "State": "Enabled"
+            },
+            "Thresholds": {
+              "LowerCritical": {
+                "Reading": -5
+              },
+              "UpperCritical": {
+                "Reading": 39.9
+              }
+            }
+          }
+        }
+      ],
+      "Name": "RedfishEvent"
+    }
+  )json";
+
+  auto trigger = nlohmann::json::parse(mock_trigger_str);
+  ASSERT_TRUE(!trigger.is_discarded());
+
+  auto trigger_internal = Trigger::Create(trigger);
+  ASSERT_TRUE(trigger_internal.ok());
+
+  auto expected_event = nlohmann::json::parse(expected_event_str);
+  ASSERT_TRUE(!expected_event.is_discarded());
+
+  // Create event source ID
+  EventSourceId event_source_id("1", EventSourceId::Type::kDbusObjects);
+
+  absl::flat_hash_map<std::string, Trigger> test_id_to_triggers = {
+      {"1", *trigger_internal}};
+
+  absl::flat_hash_map<EventSourceId, absl::flat_hash_set<std::string>>
+      test_event_source_to_uris;
+  test_event_source_to_uris[event_source_id] = {"/redfish/v1/node1"};
+  const auto context = std::make_unique<SubscriptionContext>(
+      SubscriptionId(1), test_event_source_to_uris, test_id_to_triggers,
+      [](const nlohmann::json& event) {});
+  context->privileges = {"Privilege123"};
+  std::vector<const SubscriptionContext*> contexts = {context.get()};
+  // Expect subscription store to be queried for subscriptions.
+  EXPECT_CALL(*subscription_store_ptr_,
+              GetSubscription(SubscriptionId(1)))
+      .WillRepeatedly(
+          Return(absl::StatusOr<const SubscriptionContext*>(context.get())));
+  // Expect event store to be queried for events.
+  EXPECT_CALL(*event_store_ptr_, GetEventsBySubscriptionId).Times(1);
+  subscription_service_->GetEventsBySubscriptionIdToJSON(1);
+}
+
 TEST_F(SubscriptionServiceImplTest, GetAllSubscriptions_ReturnsEmpty) {
   EXPECT_EQ(subscription_service_->GetAllSubscriptions().size(), 0);
 }

@@ -249,6 +249,33 @@ TEST(EventStoreImplTest, GetEventReturnsValidResult) {
   EXPECT_THAT(event_2, Eq(nlohmann::json{}));
 }
 
+TEST(EventStoreImplTest, TestGetEventsBySubscriptionId) {
+  std::unique_ptr<EventStore> event_store = CreateEventStore(10);
+
+  // Prefill 2 events per subscriber
+  for (size_t i = 0; i < 2; ++i) {
+    event_store->AddNewEvent(
+        EventId{SubscriptionId(/*subscription_id_in=*/1),
+                {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
+                absl::Now()},
+        {{"key01", i}});
+  }
+  for (size_t i = 0; i < 2; ++i) {
+    event_store->AddNewEvent(
+        EventId{SubscriptionId(/*subscription_id_in=*/2),
+                {/*key_in=*/ "1", EventSourceId::Type::kDbusObjects},
+                absl::Now()},
+        {{"key02", i}});
+  }
+  nlohmann::json json = event_store->GetEventsBySubscriptionId(1);
+  EXPECT_THAT(json[0], Eq(nlohmann::json{{"key01", 0}}));
+  EXPECT_THAT(json[1], Eq(nlohmann::json{{"key01", 1}}));
+
+  json = event_store->GetEventsBySubscriptionId(2);
+  EXPECT_THAT(json[0], Eq(nlohmann::json{{"key02", 0}}));
+  EXPECT_THAT(json[1], Eq(nlohmann::json{{"key02", 1}}));
+}
+
 TEST(EventStoreImplTest, ClearEventStore) {
   std::unique_ptr<EventStore> event_store = CreateEventStore(kEventStoreSize);
 

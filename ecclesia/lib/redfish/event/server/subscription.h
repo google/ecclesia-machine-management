@@ -231,6 +231,9 @@ class EventStore {
   // Retrieves the event with the given event id.
   virtual nlohmann::json GetEvent(const EventId &event_id) = 0;
 
+  virtual std::vector<nlohmann::json> GetEventsBySubscriptionId(
+      size_t subscription_id) = 0;
+
   // Report all events in the JSON format.
   virtual nlohmann::json ToJSON() = 0;
 
@@ -340,8 +343,11 @@ class SubscriptionService {
   // Returns all subscriptions in a string format.
   virtual std::string GetEventsToString() = 0;
 
-  // clear/flush all events.
-  virtual void ClearAllEvents() = 0;
+  // clear/flush all events in the event store.
+  virtual void ClearEventStore() = 0;
+
+  virtual nlohmann::json GetEventsBySubscriptionIdToJSON(
+      size_t subscriber_id) = 0;
 
   // Invoked by an EventSource to notify SubscriptionService about an event
   // occurrence.

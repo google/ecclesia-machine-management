@@ -414,10 +414,24 @@ class SubscriptionServiceImpl
     return event_store_->ToString();
   }
 
-  void ClearAllEvents() override {
-    this->event_store_->Clear();
+  void ClearEventStore() override {
+    event_store_->Clear();
   }
 
+  nlohmann::json GetEventsBySubscriptionIdToJSON(
+      size_t subscription_id) override {
+    nlohmann::json json;
+    // Check if the subscription_id is valid
+    absl::StatusOr<const SubscriptionContext*> sc =
+        subscription_store_->GetSubscription(SubscriptionId(subscription_id));
+    if (!sc.ok()) {
+      json["Error"] = "Invalid subscription id";
+      return json;
+    }
+    json["SubscriptionId"] = subscription_id;
+    json["Events"] = event_store_->GetEventsBySubscriptionId(subscription_id);
+    return json;
+  }
   // Invoked by Redfish event sources which are typically implementations that
   // monitor sources like DBus monitor, file i/o, socket ingress etc.
   //

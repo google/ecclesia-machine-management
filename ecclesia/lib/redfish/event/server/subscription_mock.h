@@ -76,6 +76,8 @@ class EventStoreMock : public EventStore {
   MOCK_METHOD(nlohmann::json, ToJSON, (), (override));
   MOCK_METHOD(std::string, ToString, (), (override));
   MOCK_METHOD(void, Clear, (), (override));
+  MOCK_METHOD(std::vector<nlohmann::json>, GetEventsBySubscriptionId,
+              (size_t id), (override));
 };
 
 class SubscriptionServiceMock : public SubscriptionService {
@@ -121,7 +123,10 @@ class SubscriptionServiceMock : public SubscriptionService {
   MOCK_METHOD(std::string, GetEventsToString, (),
               (override));
 
-  MOCK_METHOD(void, ClearAllEvents, (),
+  MOCK_METHOD(nlohmann::json, GetEventsBySubscriptionIdToJSON, (size_t id),
+              (override));
+
+  MOCK_METHOD(void, ClearEventStore, (),
               (override));
 
  private:

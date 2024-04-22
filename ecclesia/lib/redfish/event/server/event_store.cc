@@ -106,6 +106,18 @@ class EventStoreImpl : public EventStore {
     return {};
   }
 
+  std::vector<nlohmann::json> GetEventsBySubscriptionId(
+      const size_t subscription_id) override {
+    std::vector<nlohmann::json> events_to_return = {};
+    absl::MutexLock lock(&event_contexts_mutex_);
+    for (auto it = event_contexts_.begin(); it != event_contexts_.end(); ++it) {
+      if (it->event_id.subscription_id.Id() == subscription_id) {
+        events_to_return.push_back(it->event);
+      }
+    }
+    return events_to_return;
+  }
+
   nlohmann::json ToJSON() override {
     nlohmann::json json;
     nlohmann::json& events_json = json["Events"];
