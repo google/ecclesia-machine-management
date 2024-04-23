@@ -503,7 +503,8 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
       std::optional<std::string> location_type =
           node_location->GetNodeValue<PropertyLocationType>();
       if (!location_type.has_value()) {
-        LOG(ERROR) << "Location type missing at URI: " << *current_uri;
+        LOG_FIRST_N(ERROR, 200)
+            << "Location type missing at URI: " << *current_uri;
         continue;
       }
 
