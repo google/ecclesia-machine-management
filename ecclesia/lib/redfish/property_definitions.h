@@ -185,6 +185,8 @@ inline constexpr char kRfOemPropertyPf0[] = "PF0";
 inline constexpr char kRfOemPropertyPf1[] = "PF1";
 inline constexpr char kRfOemPropertyLocationContext[] = "LocationContext";
 inline constexpr char kRfOemPropertyLatencyHistogram[] = "LatencyHistogram";
+inline constexpr char kRfOemPropertyTimeoutCount[] = "TimeoutCount";
+inline constexpr char kRfOemPropertyWatchdog[] = "Watchdog";
 
 inline constexpr char kRfPropertyMediaTypeSsd[] = "SSD";
 inline constexpr char kRfPropertyMemberId[] = "MemberId";
@@ -481,6 +483,8 @@ DEFINE_REDFISH_PROPERTY(PropertyLoaderTimeSeconds, double, "LoaderTimeSeconds");
 DEFINE_REDFISH_PROPERTY(PropertyInitrdTimeSeconds, double, "InitrdTimeSeconds");
 DEFINE_REDFISH_PROPERTY(PropertyUserSpaceTimeSeconds, double,
                         "UserSpaceTimeSeconds");
+DEFINE_REDFISH_PROPERTY(PropertySystemName, std::string, "SystemName");
+DEFINE_REDFISH_PROPERTY(PropertyTimeoutCount, int, "TimeoutCount");
 
 // OEM Google properties
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
