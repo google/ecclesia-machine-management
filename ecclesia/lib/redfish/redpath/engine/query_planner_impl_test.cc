@@ -40,8 +40,10 @@
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
+#include "ecclesia/lib/time/clock.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -1014,7 +1016,8 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
           "ReadingType": "Rotational",
           "RelatedItem": [
               {
-                  "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/5"
+                  "@odata.id":
+"/redfish/v1/Chassis/chassis/Assembly#/Assemblies/5"
               }
           ],
           "Status": {
@@ -1470,6 +1473,625 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
   EXPECT_THAT(expect_query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
                   ecclesia::EqualsProto((*result).query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[ReadingUnits=RPM]"
+          properties { property: "Name" type: STRING }
+        }
+        subquery {
+          subquery_id: "Assembly"
+          root_subquery_ids: "Sensors"
+          redpath: "/RelatedItem[0]"
+          properties { property: "MemberId" type: STRING }
+        }
+        subquery {
+          subquery_id: "UnknownPropertySubquery"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[*]"
+          properties { property: "UnknownProperty" type: STRING }
+        }
+        subquery {
+          subquery_id: "UnknownNodeNameSubquery"
+          root_subquery_ids: "Sensors"
+          redpath: "/UnknownNodeName"
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+
+  /* Expected query result - here for just reference;
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "ChassisSubTreeTest"
+    stats {
+      redfish_metrics {
+        uri_to_metrics_map {
+          key: "/redfish/v1"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 6.556167
+                min_response_time_ms: 6.556167
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 7.140871
+                min_response_time_ms: 7.140871
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 6.924295
+                min_response_time_ms: 6.924295
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/1"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 47.991727
+                min_response_time_ms: 47.991727
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/2"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 27.222683
+                min_response_time_ms: 27.222683
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/4"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 35.618979
+                min_response_time_ms: 35.618979
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/5"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 20.266004
+                min_response_time_ms: 20.266004
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/6"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 22.556055
+                min_response_time_ms: 22.556055
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/7"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 23.725464
+                min_response_time_ms: 23.725464
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/8"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 24.299672
+                min_response_time_ms: 24.299672
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/9"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 28.325148
+                min_response_time_ms: 28.325148
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 22.062998
+                min_response_time_ms: 22.062998
+                request_count: 1
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/i_cpu0_t"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 17.257873
+                min_response_time_ms: 14.314382
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/i_cpu1_t"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 14.200718
+                min_response_time_ms: 9.346057
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu0_pwmon"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 20.064532
+                min_response_time_ms: 17.189137
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 22.454166
+                min_response_time_ms: 13.069837
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/indus_eat_temp"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 17.508497
+                min_response_time_ms: 14.023694
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan0_rpm"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 51.705523
+                min_response_time_ms: 14.958351
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan1_rpm"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 22.619286
+                min_response_time_ms: 20.15042
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan2_rpm"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 13.301133
+                min_response_time_ms: 9.266185
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan3_rpm"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 17.896466
+                min_response_time_ms: 10.218635
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan4_rpm"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 22.867223
+                min_response_time_ms: 14.362638
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan5_rpm"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 22.123926
+                min_response_time_ms: 15.940624
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan6_rpm"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 20.975509
+                min_response_time_ms: 9.882122
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 20.086548
+                min_response_time_ms: 17.435537
+                request_count: 2
+              }
+            }
+          }
+        }
+        uri_to_metrics_map {
+          key: "/redfish/v1/Chassis/chassis/Sensors/indus_latm_temp"
+          value {
+            request_type_to_metadata {
+              key: "GET"
+              value {
+                max_response_time_ms: 13.242509
+                min_response_time_ms: 9.777162
+                request_count: 2
+              }
+            }
+          }
+        }
+      }
+    }
+    data {
+      fields {
+        key: "Chassis"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Id"
+                  value { string_value: "chassis" }
+                }
+                fields {
+                  key: "Sensors"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "1" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan0" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "2" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan1" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "4" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan2" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "5" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan3" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "6" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan4" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "7" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan5" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "8" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan6" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "9" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan7" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+  */
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
+
+  auto transport = std::make_unique<MetricalRedfishTransport>(
+      server_->RedfishClientTransport(), Clock::RealClock());
+  metrical_transport_ptr = transport.get();
+  auto cache = std::make_unique<NullCache>(transport.get());
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf.get(),
+                         .metrical_transport = metrical_transport_ptr});
+
+  EXPECT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+
+  EXPECT_THAT(result, IsOk());
+  ASSERT_TRUE(result->query_result.has_stats());
+  ASSERT_TRUE(result->query_result.stats().has_redfish_metrics());
 }
 
 }  // namespace

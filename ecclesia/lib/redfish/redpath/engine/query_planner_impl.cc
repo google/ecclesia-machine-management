@@ -54,6 +54,7 @@
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/redpath/engine/redpath_trie.h"
+#include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/status/macros.h"
 #include "single_include/nlohmann/json.hpp"
 #include "re2/re2.h"
@@ -342,6 +343,7 @@ class QueryPlanner final : public QueryPlannerIntf {
     std::unique_ptr<RedPathTrieNode> redpath_trie_node = nullptr;
     QueryPlannerOptions::RedPathRules redpath_rules;
     absl::flat_hash_set<std::vector<std::string>> subquery_sequences;
+    MetricalRedfishTransport *metrical_transport = nullptr;
   };
 
   explicit QueryPlanner(Options options_in)
@@ -361,7 +363,8 @@ class QueryPlanner final : public QueryPlannerIntf {
                           ? query_->service_root()
                           : std::string(kDefaultRedfishServiceRoot)),
         subquery_id_to_subquery_(GetSubqueryIdToSubquery(*query_)),
-        subquery_sequences_(std::move(options_in.subquery_sequences)) {}
+        subquery_sequences_(std::move(options_in.subquery_sequences)),
+        metrical_transport_(options_in.metrical_transport) {}
 
   GetParams GetQueryParamsForRedPath(absl::string_view redpath_prefix);
 
@@ -407,6 +410,8 @@ class QueryPlanner final : public QueryPlannerIntf {
   const std::string service_root_;
   const SubqueryIdToSubquery subquery_id_to_subquery_;
   const absl::flat_hash_set<std::vector<std::string>> subquery_sequences_;
+  // Used during query metrics collection.
+  MetricalRedfishTransport *metrical_transport_ = nullptr;
 };
 
 GetParams QueryPlanner::GetQueryParamsForRedPath(
@@ -810,7 +815,6 @@ absl::StatusOr<QueryResult> QueryPlanner::Resume(
       }
     }
   }
-
   return result;
 }
 
@@ -860,6 +864,11 @@ void QueryPlanner::PopulateSubscriptionContext(
 
 absl::StatusOr<QueryPlanner::QueryExecutionResult> QueryPlanner::Run(
     QueryExecutionOptions query_execution_options) {
+  const RedfishMetrics *metrics = nullptr;
+  // Each metrical_transport object has a thread local RedfishMetrics object.
+  if (metrical_transport_ != nullptr) {
+    metrics = MetricalRedfishTransport::GetConstMetrics();
+  }
   // Get Query Parameters to use for service root
   GetParams get_params = GetQueryParamsForRedPath(kServiceRootNode);
 
@@ -941,10 +950,16 @@ absl::StatusOr<QueryPlanner::QueryExecutionResult> QueryPlanner::Run(
       }
     }
   }
-
+  if (metrics != nullptr) {
+    *result.mutable_stats()->mutable_redfish_metrics() = *metrics;
+  }
   QueryExecutionResult execution_result;
   execution_result.query_result = result;
+
   execution_result.subscription_context = std::move(subscription_context);
+  if (metrical_transport_ != nullptr) {
+    MetricalRedfishTransport::ResetMetrics();
+  }
   return execution_result;
 }
 
@@ -969,7 +984,8 @@ absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
       .redfish_interface = query_planner_options.redfish_interface,
       .redpath_trie_node = std::move(redpath_trie),
       .redpath_rules = std::move(query_planner_options.redpath_rules),
-      .subquery_sequences = *subquery_sequences});
+      .subquery_sequences = *subquery_sequences,
+      .metrical_transport = query_planner_options.metrical_transport});
 }
 
 }  // namespace ecclesia

@@ -28,6 +28,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
+#include "ecclesia/lib/redfish/transport/metrical_transport.h"
 
 namespace ecclesia {
 
@@ -42,6 +43,7 @@ struct QueryPlannerOptions {
   RedPathRules redpath_rules;
   RedpathNormalizer *normalizer;
   RedfishInterface *redfish_interface;
+  MetricalRedfishTransport *metrical_transport;
 };
 
 absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
