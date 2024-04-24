@@ -316,40 +316,6 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             ],
         )
 
-    if not native.existing_rule("ipmitool"):
-        patch_files = [
-            "ipmitool.include_ipmitool_ipmi_intf.h.patch",
-            "ipmitool.src_ipmitool.c.patch",
-            "ipmitool.include_ipmitool_helper.h.patch",
-            "ipmitool.include_ipmitool_ipmi_sel.h.patch",
-            "ipmitool.lib_ipmi_sel.c.patch",
-            "ipmitool.src_plugins_ipmi_intf.c.patch",
-            "ipmitool.src_plugins_lanplus_lanplus.c.patch",
-            "ipmitool.src_ipmiext.c.patch",
-            "ipmitool.lib_ipmi_main.c.patch",
-            "ipmitool.include_ipmitool_ipmi_sdr.h.patch",
-            "ipmitool.lib_ipmi_raw.c.patch",
-            "ipmitool.include_ipmitool_ipmi.h.patch",
-            "ipmitool.lib_ipmi_sdr.c.patch",
-            "ipmitool.include_ipmitool_ipmi_user.h.patch",
-            "ipmitool.lib_ipmi_user.c.patch",
-        ]
-        http_archive(
-            name = "ipmitool",
-            build_file = _format_oss_path("ipmitool.BUILD", package_name),
-            patch_cmds = [
-                "./bootstrap",
-                "./configure CFLAGS=-fPIC CXXFLAGS=-fPIC --enable-shared=no",
-                "cp ./config.h include",
-            ],
-            patches = _make_patch_paths("ipmitool.patches", patch_files, package_name),
-            sha256 = "c8549064def9c38acd8d3d9bf976952e792b714206285c9c4b9ff6c9c56a17fc",
-            strip_prefix = "ipmitool-c3939dac2c060651361fc71516806f9ab8c38901",
-            urls = [
-                "https://github.com/ipmitool/ipmitool/archive/c3939dac2c060651361fc71516806f9ab8c38901.tar.gz",
-            ],
-        )
-
     if not native.existing_rule("curl"):
         http_archive(
             name = "curl",
