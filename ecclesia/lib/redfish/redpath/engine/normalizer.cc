@@ -199,7 +199,7 @@ absl::StatusOr<QueryValue> GetPropertyFromRedfishObject(
     ECCLESIA_RETURN_IF_ERROR(GetCollectionPropertyFromRedfishObject(
         property, json_obj, query_value));
   } else if (json_obj.is_null()) {
-    LOG(INFO) << "Encoutnered null property value during normalization: "
+    LOG(INFO) << "Encountered null property value during normalization: "
               << json_obj.dump();
   } else {
     switch (property.type()) {
