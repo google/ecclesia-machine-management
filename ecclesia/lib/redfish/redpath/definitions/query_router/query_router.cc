@@ -59,10 +59,10 @@ QueryEngineIntf::QueryVariableSet CreateQueryArgumentsWithSystemId(
       query_arguments;
   QueryVariables::VariableValue system_id_value;
   system_id_value.set_name(std::string(kNodeLocalSystemIdVariableName));
-  system_id_value.set_value(std::string(node_local_system_id));
+  system_id_value.add_values(node_local_system_id);
   for (absl::string_view query_id : query_ids) {
-    *query_arguments_with_system_id[std::string(query_id)].add_values() =
-        system_id_value;
+    *query_arguments_with_system_id[std::string(query_id)]
+         .add_variable_values() = system_id_value;
   }
   return query_arguments_with_system_id;
 }

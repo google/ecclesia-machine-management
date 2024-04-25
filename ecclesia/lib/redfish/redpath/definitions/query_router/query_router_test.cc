@@ -58,9 +58,11 @@ constexpr absl::string_view kQueryResultDir = "/test/query_result/";
 
 MATCHER_P(ContainsSystemIdAsQueryVariable, expected_id, "") {
   for (const auto &[query_id, query_vars] : arg) {
-    for (const auto &var_value : query_vars.values()) {
+    for (const auto &var_value : query_vars.variable_values()) {
       if (var_value.name() == kNodeLocalSystemIdVariableName) {
-        return var_value.value() == expected_id;
+        const auto &values = var_value.values();
+        return std::find(values.begin(), values.end(), expected_id) !=
+               values.end();
       }
     }
   }

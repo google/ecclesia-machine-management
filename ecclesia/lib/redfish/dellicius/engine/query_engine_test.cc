@@ -549,16 +549,16 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedQuery) {
   QueryVariables::VariableValue val2;
   QueryVariables::VariableValue val3;
   val1.set_name("Type");
-  val1.set_value("Temperature");
+  *val1.add_values() = "Temperature";
   val2.set_name("Units");
-  val2.set_value("Cel");
+  *val2.add_values() = "Cel";
   val3.set_name("Threshold");
-  val3.set_value("40");
+  *val3.add_values() = "40";
   QueryEngineIntf::QueryVariableSet test_args;
   QueryVariables args1 = QueryVariables();
-  *args1.add_values() = val1;
-  *args1.add_values() = val2;
-  *args1.add_values() = val3;
+  *args1.add_variable_values() = val1;
+  *args1.add_variable_values() = val2;
+  *args1.add_variable_values() = val3;
   test_args["SensorCollectorTemplate"] = args1;
 
   ECCLESIA_ASSIGN_OR_FAIL(
@@ -586,14 +586,14 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedUnfilledVars) {
   QueryVariables::VariableValue val1;
   QueryVariables::VariableValue val2;
   val1.set_name("Units");
-  val1.set_value("Cel");
+  *val1.add_values() = "Cel";
   // Type and units will remain unset
   QueryEngineIntf::QueryVariableSet test_args;
   QueryVariables args1 = QueryVariables();
-  *args1.add_values() = val1;
+  *args1.add_variable_values() = val1;
   // Pass in an empty value to make sure it doesn't mess up the variable
   // substitution.
-  *args1.add_values() = val2;
+  *args1.add_variable_values() = val2;
   test_args["SensorCollectorTemplate"] = args1;
 
   ECCLESIA_ASSIGN_OR_FAIL(
@@ -628,12 +628,12 @@ TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
   QueryVariables::VariableValue val1;
   QueryVariables::VariableValue val2;
   val1.set_name("Units");
-  val1.set_value("Cel");
+  *val1.add_values() = "Cel";
   // Type and units will remain unset
   QueryEngineIntf::QueryVariableSet test_args;
   QueryVariables args1 = QueryVariables();
-  *args1.add_values() = val1;
-  *args1.add_values() = val2;
+  *args1.add_variable_values() = val1;
+  *args1.add_variable_values() = val2;
   test_args["SensorCollectorTemplate"] = args1;
 
   // Set the variables for filter criteria #2
@@ -641,16 +641,16 @@ TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
   QueryVariables::VariableValue val4;
   QueryVariables::VariableValue val5;
   val3.set_name("Type");
-  val3.set_value("Temperature");
+  *val3.add_values() = "Temperature";
   val4.set_name("Units");
-  val4.set_value("Cel");
+  *val4.add_values() = "Cel";
   val5.set_name("Threshold");
-  val5.set_value("40");
+  *val5.add_values() = "40";
   QueryEngineIntf::QueryVariableSet test_args_filtered;
   QueryVariables args2 = QueryVariables();
-  *args2.add_values() = val3;
-  *args2.add_values() = val4;
-  *args2.add_values() = val5;
+  *args2.add_variable_values() = val3;
+  *args2.add_variable_values() = val4;
+  *args2.add_variable_values() = val5;
   test_args_filtered["SensorCollectorTemplate"] = args2;
 
   ECCLESIA_ASSIGN_OR_FAIL(
@@ -1229,10 +1229,10 @@ TEST(QueryEngineTest, QueryEngineFilterConfiguration) {
 
   QueryVariables::VariableValue val1;
   val1.set_name("Ceiling");
-  val1.set_value("95");
+  *val1.add_values() = "95";
   QueryEngineIntf::QueryVariableSet test_args;
   QueryVariables args1 = QueryVariables();
-  *args1.add_values() = val1;
+  *args1.add_variable_values() = val1;
   test_args["FilteredSensorCollector"] = args1;
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(

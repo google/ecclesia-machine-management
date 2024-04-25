@@ -514,21 +514,63 @@ absl::Status QueryPlanner::TryNormalize(
   return query_result_data.status();
 }
 
+std::string ReplaceMultiValueVariables(
+    std::string &new_predicate, absl::string_view variable_name,
+    const size_t var_pos, const int values_count,
+    const google::protobuf::RepeatedPtrField<std::string> &var_values) {
+  // /For variables with multiple values, we expand the expression with the
+  // variable into an expression surrounded by parenthesis, with ORs.
+  // ex: A and B=$VAR -> A and (B=var_val0 or B=var_val1)
+  size_t last_space_pos = new_predicate.substr(0, var_pos).find_last_of(' ');
+  // the substring between the last space and the variable name is the
+  // "property_name=" portion of the templated expression.
+  if (last_space_pos == absl::string_view::npos) {
+    last_space_pos = new_predicate.find_first_not_of('(');
+  } else {
+    last_space_pos++;
+  }
+  std::string property_with_op =
+      new_predicate.substr(last_space_pos, var_pos - last_space_pos);
+  // Build up new expression, starting with an open parenthesis.
+  std::string new_expression = "(";
+  for (int i = 0; i < values_count - 1; ++i) {
+    absl::StrAppend(&new_expression,
+                    // Reading<$Threshold and Name=$SensorName
+                    property_with_op, var_values[i], " or ");
+  }
+  // Append last expression and a closing parenthesis.
+  absl::StrAppend(&new_expression, property_with_op,
+                  var_values[values_count - 1], ")");
+  // Replace "templated_prop=$variable" with the new expression.
+  return absl::StrReplaceAll(
+      new_predicate,
+      {{absl::StrCat(property_with_op, variable_name), new_expression}});
+}
+
 absl::StatusOr<bool> ExecutePredicateExpression(
     const PredicateOptions &predicate_options,
     QueryExecutionContext &current_execution_context,
     const std::unique_ptr<RedfishObject> &redfish_object) {
   std::string new_predicate = predicate_options.predicate;
   for (const auto &value :
-       current_execution_context.query_variables->values()) {
+       current_execution_context.query_variables->variable_values()) {
     if (value.name().empty()) continue;
     std::string variable_name = absl::StrCat("$", value.name());
-    if (absl::StrContains(new_predicate, variable_name)) {
+    const size_t var_pos = new_predicate.find(variable_name);
+    if (var_pos == absl::string_view::npos) continue;
+    int values_count = value.values_size();
+    const auto &var_values = value.values();
+    if (values_count == 1) {
       new_predicate =
-          absl::StrReplaceAll(new_predicate, {{variable_name, value.value()}});
+          absl::StrReplaceAll(new_predicate, {{variable_name, var_values[0]}});
+    } else if (values_count == 0) {
+      return absl::InvalidArgumentError(
+          absl::StrCat("No values provided for variable ", variable_name));
+    } else {
+      new_predicate = ReplaceMultiValueVariables(
+          new_predicate, variable_name, var_pos, values_count, var_values);
     }
   }
-
   ECCLESIA_ASSIGN_OR_RETURN(
       bool predicate_rule_result,
       ApplyPredicateRule(redfish_object->GetContentAsJson(),
@@ -978,7 +1020,7 @@ absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
   CHECK(subquery_sequences != nullptr);
 
   // Create QueryPlanner
-  return std::make_unique<QueryPlanner>(QueryPlanner::Options{
+  return std::make_unique<ecclesia::QueryPlanner>(QueryPlanner::Options{
       .query = &query_planner_options.query,
       .normalizer = query_planner_options.normalizer,
       .redfish_interface = query_planner_options.redfish_interface,

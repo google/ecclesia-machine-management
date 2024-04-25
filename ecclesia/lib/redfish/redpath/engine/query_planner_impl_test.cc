@@ -24,7 +24,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
@@ -641,21 +640,326 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
   ecclesia::QueryVariables::VariableValue val2;
   ecclesia::QueryVariables::VariableValue val3;
   val1.set_name("Threshold");
-  val1.set_value("60");
+  *val1.add_values() = "60";
   val2.set_name("Name");
-  val2.set_value("indus_latm_temp");
+  *val2.add_values() = "indus_latm_temp";
   val3.set_name("Type");
-  val3.set_value("Rotational");
+  *val3.add_values() = "Rotational";
 
-  *args1.add_values() = val1;
-  *args1.add_values() = val2;
-  *args1.add_values() = val3;
+  *args1.add_variable_values() = val1;
+  *args1.add_variable_values() = val2;
+  *args1.add_variable_values() = val3;
   absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
 
   EXPECT_THAT(result, IsOk());
-  EXPECT_THAT(expect_query_result,
+  EXPECT_THAT(result->query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
-                  ecclesia::EqualsProto(result->query_result)));
+                  ecclesia::EqualsProto(expect_query_result)));
+
+  ecclesia::QueryVariables multi_value_args = ecclesia::QueryVariables();
+  ecclesia::QueryVariables::VariableValue multi_value1;
+  ecclesia::QueryVariables::VariableValue multi_value2;
+  multi_value1.set_name("Threshold");
+  *multi_value1.add_values() = "60";
+  *multi_value1.add_values() = "60";
+  val2.set_name("Name");
+  *val2.add_values() = "indus_latm_temp";
+  val3.set_name("Type");
+  *val3.add_values() = "Rotational";
+
+  result = (*qp)->Run({args1});
+  EXPECT_THAT(result, IsOk());
+  EXPECT_THAT(result->query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(expect_query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerExecutesTemplatedQueryWithMultiValueVarsCorrectly) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[Id=$ChassisId]"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[Reading<$Threshold and Name=$SensorName]"
+          properties { property: "Name" type: STRING }
+          properties { property: "Reading" type: INT64 }
+        }
+      )pb");
+
+  QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "ChassisSubTreeTest"
+    data {
+      fields {
+        key: "Chassis"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Id"
+                  value { string_value: "chassis" }
+                }
+                fields {
+                  key: "Sensors"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Name"
+                            value { string_value: "CPU0" }
+                          }
+                          fields {
+                            key: "Reading"
+                            value { int_value: 30 }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Name"
+                            value { string_value: "indus_eat_temp" }
+                          }
+                          fields {
+                            key: "Reading"
+                            value { int_value: 28 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get()});
+  EXPECT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables multi_value_args = ecclesia::QueryVariables();
+  ecclesia::QueryVariables::VariableValue chassis_id_val;
+  ecclesia::QueryVariables::VariableValue sensor_name_val;
+  ecclesia::QueryVariables::VariableValue threshold_val;
+  chassis_id_val.set_name("ChassisId");
+  *chassis_id_val.add_values() = "chassis";
+  *chassis_id_val.add_values() = "chassis_id_2";
+  sensor_name_val.set_name("SensorName");
+  *sensor_name_val.add_values() = "indus_latm_temp";
+  *sensor_name_val.add_values() = "CPU0";
+  *sensor_name_val.add_values() = "indus_eat_temp";
+  threshold_val.set_name("Threshold");
+  *threshold_val.add_values() = "34";
+
+  *multi_value_args.add_variable_values() = chassis_id_val;
+  *multi_value_args.add_variable_values() = sensor_name_val;
+  *multi_value_args.add_variable_values() = threshold_val;
+
+  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({multi_value_args});
+  EXPECT_THAT(result, IsOk());
+  EXPECT_THAT(result->query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(expect_query_result)));
+}
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerExecutesTemplatedQueryWithParenAndMultiValueVarsCorrectly) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[Id=$ChassisId]"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[(Name=$SensorName or Reading=60) or (!Reading and Id=$SensorId)]"
+          properties { property: "Name" type: STRING }
+          properties { property: "Id" type: STRING }
+          properties { property: "Reading" type: INT64 }
+        }
+      )pb");
+
+  QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "ChassisSubTreeTest"
+    data {
+      fields {
+        key: "Chassis"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Id"
+                  value { string_value: "chassis" }
+                }
+                fields {
+                  key: "Sensors"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Id"
+                            value { string_value: "indus_fan7_rpm" }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan7" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Id"
+                            value { string_value: "indus_eat_temp" }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "indus_eat_temp" }
+                          }
+                          fields {
+                            key: "Reading"
+                            value { int_value: 28 }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Id"
+                            value { string_value: "indus_latm_temp" }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "indus_latm_temp" }
+                          }
+                          fields {
+                            key: "Reading"
+                            value { int_value: 35 }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Id"
+                            value { string_value: "indus_cpu0_pwmon" }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "CPU0" }
+                          }
+                          fields {
+                            key: "Reading"
+                            value { int_value: 30 }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Id"
+                            value { string_value: "i_cpu0_t" }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "CPU0" }
+                          }
+                          fields {
+                            key: "Reading"
+                            value { int_value: 60 }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Id"
+                            value { string_value: "i_cpu1_t" }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "CPU1" }
+                          }
+                          fields {
+                            key: "Reading"
+                            value { int_value: 60 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get()});
+  EXPECT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables multi_value_args = ecclesia::QueryVariables();
+  ecclesia::QueryVariables::VariableValue chassis_id_val;
+  ecclesia::QueryVariables::VariableValue sensor_name_val;
+  ecclesia::QueryVariables::VariableValue sensor_id_val;
+  chassis_id_val.set_name("ChassisId");
+  *chassis_id_val.add_values() = "chassis";
+  *chassis_id_val.add_values() = "chassis_id_2";
+  sensor_name_val.set_name("SensorName");
+  *sensor_name_val.add_values() = "indus_latm_temp";
+  *sensor_name_val.add_values() = "CPU0";
+  *sensor_name_val.add_values() = "indus_eat_temp";
+  sensor_id_val.set_name("SensorId");
+  *sensor_id_val.add_values() = "i_cpu0_t";
+  *sensor_id_val.add_values() = "indus_fan7_rpm";
+
+  *multi_value_args.add_variable_values() = chassis_id_val;
+  *multi_value_args.add_variable_values() = sensor_name_val;
+  *multi_value_args.add_variable_values() = sensor_id_val;
+  // Sensors predicate expands to:
+  //  ((Name=indus_latm_temp or Name=CPU0 or Name=indus_eat_temp) or Reading=60)
+  //  or (!Reading and (Id=i_cpu0_t or Id=indus_fan7_rpm))
+  // which translates to ANY sensor with:
+  //  Name = indus_latm_temp, indus_eat_temp or CPU,
+  //  Reading = 60
+  //  No Reading value and Id = i_cpu0_t or indus_fan7_rpm
+  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({multi_value_args});
+  EXPECT_THAT(result, IsOk());
+  EXPECT_THAT(result->query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(expect_query_result)));
 }
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesWithUrlAnnotations) {
@@ -968,6 +1272,33 @@ TEST_F(QueryPlannerTestRunner, SubscriptionToUnknownPropertyFails) {
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
   EXPECT_THAT(result, IsStatusInternal());
+}
+
+// Subscribe to unknown property fails.
+TEST_F(QueryPlannerTestRunner, TemplatedQueryWithNoVarsFails) {
+  SetTestParams("indus_hmb_shim/mockup.shar");
+
+  DelliciusQuery subscription_query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "SubscriptionTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[Id=$ChassisId]"
+          properties { property: "Id" type: STRING }
+        }
+      )pb");
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = subscription_query,
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get()});
+  ASSERT_THAT(qp, IsOk());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+  EXPECT_THAT(result, IsStatusInvalidArgument());
 }
 
 // Successful Resume

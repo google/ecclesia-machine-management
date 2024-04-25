@@ -5,13 +5,11 @@ package ecclesia;
 message QueryVariables {
   message VariableValue {
     string name = 1;
-    // Legacy field to be removed and replaced with repeated value.
-    string value = 2;
     // The possible values the variable can take on. These will be ORed together
     // when being used in the redpath predicate.
     repeated string values = 3;
+    reserved 2;
   }
-  // Legacy field to be renamed.
-  repeated VariableValue values = 1;
   repeated VariableValue variable_values = 2;
+  reserved 1;
 }

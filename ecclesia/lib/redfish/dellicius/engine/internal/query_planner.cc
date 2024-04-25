@@ -477,13 +477,16 @@ class SubqueryHandle final {
   // steps.
   RedPathSteps SubstituteVariables(const QueryVariables &variables) {
     std::vector<std::pair<std::string, std::string>> replacements;
-    replacements.reserve(variables.values_size());
+    replacements.reserve(variables.variable_values_size());
     // Build the list of replacements that will be passed into StrReplaceAll.
-    for (const auto &value : variables.values()) {
+    for (const auto &value : variables.variable_values()) {
       if (value.name().empty()) continue;
       std::string result;
       std::string variable_name = absl::StrCat("$", value.name());
-      replacements.push_back(std::make_pair(variable_name, value.value()));
+      if (value.values_size() == 0) continue;
+      // In legacy query planner, we don't support multiple query values,
+      // so we just pick the first value.
+      replacements.push_back(std::make_pair(variable_name, value.values()[0]));
     }
 
     // The `new_predicates` variable is a concrete version of `predicates_`
