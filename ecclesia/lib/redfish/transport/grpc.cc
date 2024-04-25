@@ -18,6 +18,7 @@
 
 #include <cctype>
 #include <chrono>  // NOLINT We have to chromo to make upstream code compile
+#include <climits>
 #include <cstddef>
 #include <map>
 #include <memory>
@@ -45,11 +46,13 @@
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/status/rpc.h"
 #include "ecclesia/lib/time/clock.h"
+#include "grpc/grpc.h"
 #include "grpc/grpc_security_constants.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/auth_context.h"
 #include "grpcpp/security/credentials.h"
+#include "grpcpp/support/channel_arguments.h"
 #include "grpcpp/support/client_callback.h"
 #include "grpcpp/support/config.h"
 #include "grpcpp/support/status.h"
@@ -171,7 +174,8 @@ class GrpcRedfishSubscribeReactor
     StartRead(&event_);
   }
 
-  // NOLINT See https://github.com/grpc/proposal/blob/master/L67-cpp-callback-api.md#reactor-model
+  // NOLINT See
+  // https://github.com/grpc/proposal/blob/master/L67-cpp-callback-api.md#reactor-model
   // The framework and API guarantees that there is only one |OnReadDone| will
   // be executed at a given time.
   void OnReadDone(bool ok) override {
@@ -376,7 +380,20 @@ absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
     absl::string_view endpoint, const GrpcTransportParams &params,
     const std::shared_ptr<grpc::ChannelCredentials> &creds) {
   ECCLESIA_RETURN_IF_ERROR(ValidateEndpoint(endpoint));
-  auto channel = grpc::CreateChannel(std::string(endpoint), creds);
+
+  // Set keepalive parameters according to default values of the OSS version.
+  // Reference:
+  // 1. OSS https://grpc.github.io/grpc/core/md_doc_keepalive.html
+  // copybara:strip_begin(g3 only comments)
+  // 2. /net/grpc
+  // http://google3/net/grpc/public/src/core/surface/init.cc;l=121;rcl=625188626
+  // copybara:strip_end
+  grpc::ChannelArguments args;
+  args.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS, INT_MAX);
+  args.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS, 20 * 1000 /*20 sec*/);
+  args.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 0);
+  auto channel = grpc::CreateCustomChannel(std::string(endpoint), creds, args);
+
   std::optional<absl::Duration> timeout = params.wait_for_connected_timeout;
   if (timeout.has_value()) {
     std::chrono::system_clock::time_point deadline =
