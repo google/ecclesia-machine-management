@@ -48,11 +48,18 @@ class QueryPlannerIntf {
     bool log_redfish_traces = false;
   };
 
+  // Tracks the execution of Redpath queries.
+  struct RedpathQueryTracker {
+    absl::flat_hash_map<std::string, GetParams>
+        executed_redpath_prefixes_and_params;
+  };
+
   // Configures a query execution.
   struct QueryExecutionOptions {
     QueryVariables &variables;
     bool enable_url_annotation = false;
     bool log_redfish_traces = false;
+    RedpathQueryTracker *redpath_query_tracker = nullptr;
   };
 
   // Configures a query resume operation.
@@ -62,6 +69,7 @@ class QueryPlannerIntf {
     const QueryVariables &variables;
     bool enable_url_annotation = false;
     bool log_redfish_traces = false;
+    RedpathQueryTracker *redpath_query_tracker = nullptr;
   };
 
   // QueryPlan execution output.

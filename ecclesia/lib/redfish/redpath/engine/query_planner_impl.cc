@@ -266,14 +266,6 @@ SubqueryIdToSubquery GetSubqueryIdToSubquery(const DelliciusQuery &query) {
   return id_to_subquery;
 }
 
-// Tracks RedPath prefixes executed along with Redfish QueryParameters used
-// in QueryExecution.
-struct RedPathPrefixTracker {
-  absl::flat_hash_map<std::string, GetParams>
-      *executed_redpath_prefixes_and_params = nullptr;
-  std::string last_redpath_prefix;
-};
-
 // Describes the Redfish resource relative to which RedPath expressions execute.
 struct RedfishObjectAndIterable {
   // A singleton Redfish resource.
@@ -281,6 +273,12 @@ struct RedfishObjectAndIterable {
   // Redfish collection or any iterable Redfish object - collection of primitive
   // or complex types.
   std::unique_ptr<RedfishIterable> redfish_iterable;
+};
+
+// Tracks RedPath prefixes executed along with Redfish QueryParameters used
+// in QueryExecution.
+struct RedPathPrefixTracker {
+  std::string last_redpath_prefix;
 };
 
 // Describes the context used to execute a RedPath expression.
@@ -302,8 +300,10 @@ struct QueryExecutionContext {
   const RedPathTrieNode *redpath_trie_node;
   // QueryVariables used to execute a RedPath expression.
   const QueryVariables *query_variables;
-  // Tracks RedPath prefixes executed along with Redfish QueryParameters.
+  // Tracks RedPath prefixes executed.
   RedPathPrefixTracker redpath_prefix_tracker;
+  // Tracks RedPath prefixes and the Params
+  QueryPlannerIntf::RedpathQueryTracker *redpath_query_tracker = nullptr;
   // Redfish resource relative to which RedPath expressions execute.
   RedfishObjectAndIterable redfish_object_and_iterable;
 
@@ -316,6 +316,7 @@ struct QueryExecutionContext {
       const RedPathTrieNode *redpath_trie_node_in,
       const QueryVariables *query_variables_in,
       RedPathPrefixTracker redpath_prefix_tracker_in,
+      QueryPlannerIntf::RedpathQueryTracker *redpath_query_tracker_in,
       RedfishObjectAndIterable redfish_object_and_iterable_in = {
           /*redfish_object=*/nullptr, /*redfish_iterable=*/nullptr})
       : result(ABSL_DIE_IF_NULL(result_in)),
@@ -323,6 +324,7 @@ struct QueryExecutionContext {
         redpath_trie_node(ABSL_DIE_IF_NULL(redpath_trie_node_in)),
         query_variables(ABSL_DIE_IF_NULL(query_variables_in)),
         redpath_prefix_tracker(std::move(redpath_prefix_tracker_in)),
+        redpath_query_tracker(redpath_query_tracker_in),
         redfish_object_and_iterable(std::move(redfish_object_and_iterable_in)) {
   }
 };
@@ -645,14 +647,22 @@ QueryPlanner::ExecuteQueryExpression(
                                      indexed_node_as_object));
 
       if (predicate_rule_result) {
+        if (current_execution_context.redpath_query_tracker != nullptr) {
+          (current_execution_context.redpath_query_tracker
+               ->executed_redpath_prefixes_and_params)
+              .insert({new_redpath_prefix, get_params_for_redpath});
+        }
+
         RedPathPrefixTracker new_redpath_prefix_tracker =
             current_execution_context.redpath_prefix_tracker;
         new_redpath_prefix_tracker.last_redpath_prefix = new_redpath_prefix;
+
         QueryExecutionContext new_execution_context(
             current_execution_context.result,
             current_execution_context.parent_subquery_result, next_trie_node,
             current_execution_context.query_variables,
             std::move(new_redpath_prefix_tracker),
+            current_execution_context.redpath_query_tracker,
             {std::move(indexed_node_as_object), nullptr});
         execution_contexts.push_back(std::move(new_execution_context));
       }
@@ -669,7 +679,6 @@ QueryPlanner::ExecuteQueryExpression(
         current_execution_context.redpath_prefix_tracker;
     std::string new_redpath_prefix = AddExpressionToRedPath(
         redpath_prefix_tracker.last_redpath_prefix, expression);
-
     // Get query parameters for the RedPath expression we are about to
     // execute.
     GetParams get_params_for_redpath =
@@ -767,9 +776,9 @@ QueryPlanner::ExecuteQueryExpression(
     }
 
     // Add the last executed RedPath to the record.
-    if (redpath_prefix_tracker.executed_redpath_prefixes_and_params !=
-        nullptr) {
-      (*redpath_prefix_tracker.executed_redpath_prefixes_and_params)
+    if (current_execution_context.redpath_query_tracker != nullptr) {
+      (current_execution_context.redpath_query_tracker
+           ->executed_redpath_prefixes_and_params)
           .insert({new_redpath_prefix, get_params_for_redpath});
     }
 
@@ -781,6 +790,7 @@ QueryPlanner::ExecuteQueryExpression(
         current_execution_context.parent_subquery_result, next_trie_node,
         current_execution_context.query_variables,
         std::move(new_redpath_prefix_tracker),
+        current_execution_context.redpath_query_tracker,
         {std::move(redfish_object), std::move(redfish_iterable)});
 
     execution_contexts.push_back(std::move(new_execution_context));
@@ -804,7 +814,7 @@ absl::StatusOr<QueryResult> QueryPlanner::Resume(
   // expression.
   QueryExecutionContext execution_context(
       &result, nullptr, next_trie_node, &query_resume_options.variables,
-      RedPathPrefixTracker(),
+      RedPathPrefixTracker(), query_resume_options.redpath_query_tracker,
       {std::move(redfish_object), std::move(redfish_iterable)});
 
   std::optional<TraceInfo> trace_info = std::nullopt;
@@ -885,7 +895,6 @@ void QueryPlanner::PopulateSubscriptionContext(
       expression);
   subscription.redpath = redpath_subscribed;
   subscription.query_id = plan_id_;
-
   // Populate uris.
   subscription.uris = {current_execution_context.uris_to_subscribe.begin(),
                        current_execution_context.uris_to_subscribe.end()};
@@ -929,6 +938,7 @@ absl::StatusOr<QueryPlanner::QueryExecutionResult> QueryPlanner::Run(
   QueryExecutionContext query_execution_context(
       &result, nullptr, redpath_trie_node_.get(),
       &query_execution_options.variables, RedPathPrefixTracker(),
+      query_execution_options.redpath_query_tracker,
       {std::move(service_root_object), nullptr});
 
   std::queue<QueryExecutionContext> node_queue;
@@ -992,7 +1002,7 @@ absl::StatusOr<QueryPlanner::QueryExecutionResult> QueryPlanner::Run(
       }
     }
   }
-  if (metrics != nullptr) {
+  if (metrics != nullptr && result.IsInitialized()) {
     *result.mutable_stats()->mutable_redfish_metrics() = *metrics;
   }
   QueryExecutionResult execution_result;

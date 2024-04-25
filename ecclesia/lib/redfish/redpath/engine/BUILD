@@ -19,7 +19,6 @@ cc_library(
         "//ecclesia/lib/redfish/redpath/definitions/query_predicates:filter",
         "//ecclesia/lib/redfish/redpath/definitions/query_predicates:predicates",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
-        "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:metrical_transport",
         "//ecclesia/lib/status:macros",
         "@com_google_absl//absl/container:btree",
