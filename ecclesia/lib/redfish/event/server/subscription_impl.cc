@@ -444,7 +444,7 @@ class SubscriptionServiceImpl
     // Pull subscription context from Subscription Store
     ECCLESIA_ASSIGN_OR_RETURN(
         auto contexts,
-        subscription_store_->GetSubscriptionsByEventSourceId(event_source_id));
+        subscription_store_->GetSubscriptionsByEventSourceId(event_source_id))
 
     auto event_source_id_new =
         std::make_shared<EventSourceId>(std::move(event_source_id));
