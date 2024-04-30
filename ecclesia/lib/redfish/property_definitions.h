@@ -513,6 +513,8 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyNerf, std::string, "NERF");
 DEFINE_REDFISH_PROPERTY(OemPropertyRootOfTrust, std::string, "RootOfTrust");
 DEFINE_REDFISH_PROPERTY(OemPropertyEmbeddedLocationContext,
                         std::vector<std::string>, "EmbeddedLocationContext");
+DEFINE_REDFISH_PROPERTY(OemPropertyControllerType, std::string,
+                        "ControllerType");
 
 // Redfish Task properties.
 DEFINE_REDFISH_PROPERTY(PropertyTaskStatus, std::string, "TaskStatus");
