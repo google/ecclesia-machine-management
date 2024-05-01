@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ECCLESIA_LIB_REDFISH_EVENT_SERVER_SUBSCRIPTION_MOCK_H_
-#define ECCLESIA_LIB_REDFISH_EVENT_SERVER_SUBSCRIPTION_MOCK_H_
+#ifndef ECCLESIA_LIB_REDFISH_EVENT_SERVER_EVENT_STORE_H_
+#define ECCLESIA_LIB_REDFISH_EVENT_SERVER_EVENT_STORE_H_
 
 #include <cstddef>
 #include <memory>
@@ -29,4 +29,4 @@ std::unique_ptr<EventStore> CreateEventStore(size_t store_size);
 
 }  // namespace ecclesia
 
-#endif  // ECCLESIA_LIB_REDFISH_EVENT_SERVER_SUBSCRIPTION_MOCK_H_
+#endif  // ECCLESIA_LIB_REDFISH_EVENT_SERVER_EVENT_STORE_H_
