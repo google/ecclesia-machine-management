@@ -83,6 +83,7 @@ cc_library(
     name = "event_store",
     srcs = ["event_store.cc"],
     hdrs = ["event_store.h"],
+    visibility = ["//visibility:public"],
     deps = [
         ":subscription",
         "@com_google_absl//absl/base:core_headers",
