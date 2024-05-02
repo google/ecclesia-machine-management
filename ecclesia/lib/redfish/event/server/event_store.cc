@@ -120,7 +120,7 @@ class EventStoreImpl : public EventStore {
 
   nlohmann::json ToJSON() override {
     nlohmann::json json;
-    nlohmann::json& events_json = json["Events"];
+    nlohmann::json& events_json = json["EventStore"];
     events_json = nlohmann::json::array();
     absl::MutexLock lock(&event_contexts_mutex_);
     for (auto it = event_contexts_.begin(); it != event_contexts_.end(); ++it) {

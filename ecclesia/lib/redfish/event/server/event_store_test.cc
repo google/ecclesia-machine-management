@@ -212,8 +212,8 @@ TEST(EventStoreImplTest, ShouldReturnValidJSON) {
   }
   nlohmann::json json = event_store->ToJSON();
   EXPECT_THAT(json["NumEvents"], Eq(2));
-  nlohmann::json json_0 = json["Events"][0];
-  nlohmann::json json_1 = json["Events"][1];
+  nlohmann::json json_0 = json["EventStore"][0];
+  nlohmann::json json_1 = json["EventStore"][1];
   EXPECT_THAT(json_0["Event"], Eq(nlohmann::json{{"key1", 0}}));
   EXPECT_THAT(json_1["Event"], Eq(nlohmann::json{{"key1", 1}}));
 }
@@ -237,8 +237,8 @@ TEST(EventStoreImplTest, GetEventReturnsValidResult) {
 
   nlohmann::json json = event_store->ToJSON();
   EXPECT_THAT(json["NumEvents"], Eq(2));
-  nlohmann::json json_0 = json["Events"][0];
-  nlohmann::json json_1 = json["Events"][1];
+  nlohmann::json json_0 = json["EventStore"][0];
+  nlohmann::json json_1 = json["EventStore"][1];
   EXPECT_THAT(json_0["Event"], Eq(nlohmann::json{{"key1", 0}}));
   EXPECT_THAT(json_1["Event"], Eq(nlohmann::json{{"key1", 1}}));
   nlohmann::json event_0 = event_store->GetEvent(event_id_0);
@@ -289,8 +289,8 @@ TEST(EventStoreImplTest, ClearEventStore) {
   }
   nlohmann::json json = event_store->ToJSON();
   EXPECT_THAT(json["NumEvents"], Eq(2));
-  nlohmann::json json_0 = json["Events"][0];
-  nlohmann::json json_1 = json["Events"][1];
+  nlohmann::json json_0 = json["EventStore"][0];
+  nlohmann::json json_1 = json["EventStore"][1];
   EXPECT_THAT(json_0["Event"], Eq(nlohmann::json{{"key1", 0}}));
   EXPECT_THAT(json_1["Event"], Eq(nlohmann::json{{"key1", 1}}));
   event_store->Clear();
