@@ -181,6 +181,7 @@ class QueryResultDataBuilder {
     return QueryValueBuilder(
         &(*query_result_.mutable_fields())[std::string(key)]);
   }
+
  private:
   QueryResultData& query_result_;
 };
@@ -204,6 +205,24 @@ class QueryValueReader {
   // Returns a QueryValueReader for the underlying subquery result for the given
   // key; or an error if the key is not found.
   absl::StatusOr<QueryValueReader> Get(absl::string_view key) const;
+
+  // Returns the appropriately-typed value for the given `PropertyDefinition`.
+  template <typename PropertyDefinitionT>
+  absl::StatusOr<typename PropertyDefinitionT::type> GetValue() const {
+    if constexpr (std::is_same_v<typename PropertyDefinitionT::type,
+                                 std::string>) {
+      return GetStringValue(PropertyDefinitionT::Name);
+    }
+    if constexpr (std::is_same_v<typename PropertyDefinitionT::type, int>) {
+      return GetIntValue(PropertyDefinitionT::Name);
+    }
+    if constexpr (std::is_same_v<typename PropertyDefinitionT::type, double>) {
+      return GetDoubleValue(PropertyDefinitionT::Name);
+    }
+    if constexpr (std::is_same_v<typename PropertyDefinitionT::type, bool>) {
+      return GetBoolValue(PropertyDefinitionT::Name);
+    }
+  }
 
   // Returns the string value for a given key; returns error if the key is not
   // present.

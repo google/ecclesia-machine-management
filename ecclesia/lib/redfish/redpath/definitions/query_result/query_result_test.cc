@@ -27,6 +27,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/protobuf/parse.h"
+#include "ecclesia/lib/redfish/property.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
@@ -37,6 +38,20 @@ namespace {
 
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
+
+DEFINE_REDFISH_PROPERTY(TestPropertyBool, bool, "bool_val");
+DEFINE_REDFISH_PROPERTY(TestPropertyDouble, double, "double_val");
+DEFINE_REDFISH_PROPERTY(TestPropertyInt, int, "int_val");
+DEFINE_REDFISH_PROPERTY(TestPropertyString, std::string, "str_val");
+
+// Redfish properties that -- if not defined in the injected `QueryValue` -- can
+// be used to test handling of requesting non-existent values.
+DEFINE_REDFISH_PROPERTY(TestPropertyBoolInvalid, bool, "invalid_bool_val");
+DEFINE_REDFISH_PROPERTY(TestPropertyDoubleInvalid, double,
+                        "invalid_double_val");
+DEFINE_REDFISH_PROPERTY(TestPropertyIntInvalid, int, "invalid_int_val");
+DEFINE_REDFISH_PROPERTY(TestPropertyStringInvalid, std::string,
+                        "invalid_str_val");
 
 class QueryValueBuilderTest : public testing::Test {
  protected:
@@ -86,7 +101,7 @@ TEST_F(QueryValueBuilderTest, OldDateTimeOffsetTest) {
   absl::Time time;
   absl::ParseTime("%Y-%m-%dT%H:%M:%S%Z", time_str, &time, nullptr);
   absl::StatusOr<google::protobuf::Timestamp> timestamp =
-              AbslTimeToProtoTime(time);
+      AbslTimeToProtoTime(time);
   google::protobuf::Timestamp ts = timestamp.value();
   builder_ = std::move(ts);
   ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kTimestampValue);
@@ -101,7 +116,7 @@ TEST_F(QueryValueBuilderTest, NewDateTimeOffsetTest) {
   absl::Time time;
   absl::ParseTime(absl::RFC3339_full, time_str, &time, nullptr);
   absl::StatusOr<google::protobuf::Timestamp> timestamp =
-              AbslTimeToProtoTime(time);
+      AbslTimeToProtoTime(time);
   google::protobuf::Timestamp ts = timestamp.value();
   builder_ = std::move(ts);
   ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kTimestampValue);
@@ -191,7 +206,7 @@ TEST_F(QueryValueBuilderTest, ModifyListElementsTest) {
                                  key: "value"
                                  value { string_value: "value1" }
                                })pb"));
-  builder_["list_value"].at(0) = static_cast<int64_t> (200);
+  builder_["list_value"].at(0) = static_cast<int64_t>(200);
   builder_["list_value"].at(1) = "value";
   ASSERT_THAT(value_.subquery_value(),
               EqualsProto(R"pb(fields {
@@ -448,6 +463,41 @@ TEST(QueryValueReaderTest, SubqueryGetValueTest) {
 
   ASSERT_THAT(reader.GetIdentifier(),
               IsOkAndHolds(EqualsProto(R"pb(local_devpath: "/phys")pb")));
+}
+
+TEST(QueryValueReaderTest, SubqueryGetValueViaPropertyDefinition) {
+  QueryValue data = ParseTextProtoOrDie(R"pb(
+    subquery_value {
+      fields {
+        key: "bool_val"
+        value { bool_value: true }
+      }
+      fields {
+        key: "double_val"
+        value { double_value: 3.14 }
+      }
+      fields {
+        key: "int_val"
+        value { int_value: 42 }
+      }
+      fields {
+        key: "str_val"
+        value { string_value: "abcd" }
+      }
+    })pb");
+
+  QueryValueReader reader(&data);
+  ASSERT_THAT(reader.GetValue<TestPropertyBool>(), IsOkAndHolds(true));
+  ASSERT_THAT(reader.GetValue<TestPropertyBoolInvalid>(), IsStatusNotFound());
+
+  ASSERT_THAT(reader.GetValue<TestPropertyDouble>(), IsOkAndHolds(3.14));
+  ASSERT_THAT(reader.GetValue<TestPropertyDoubleInvalid>(), IsStatusNotFound());
+
+  ASSERT_THAT(reader.GetValue<TestPropertyInt>(), IsOkAndHolds(42));
+  ASSERT_THAT(reader.GetValue<TestPropertyIntInvalid>(), IsStatusNotFound());
+
+  ASSERT_THAT(reader.GetValue<TestPropertyString>(), IsOkAndHolds("abcd"));
+  ASSERT_THAT(reader.GetValue<TestPropertyStringInvalid>(), IsStatusNotFound());
 }
 
 TEST(QueryValueReaderTest, SubqueryGetWrongValueTypeTest) {
