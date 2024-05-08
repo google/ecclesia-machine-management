@@ -29,6 +29,7 @@
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
+#include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
 
@@ -44,6 +45,7 @@ struct QueryPlannerOptions {
   RedpathNormalizer *normalizer;
   RedfishInterface *redfish_interface;
   MetricalRedfishTransport *metrical_transport;
+  Clock *clock;
 };
 
 absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(

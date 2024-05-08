@@ -18,6 +18,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -40,6 +41,7 @@
 #include "absl/strings/str_replace.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_errors.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
@@ -56,6 +58,8 @@
 #include "ecclesia/lib/redfish/redpath/engine/redpath_trie.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/status/macros.h"
+#include "ecclesia/lib/time/clock.h"
+#include "ecclesia/lib/time/proto.h"
 #include "single_include/nlohmann/json.hpp"
 #include "re2/re2.h"
 
@@ -346,6 +350,7 @@ class QueryPlanner final : public QueryPlannerIntf {
     QueryPlannerOptions::RedPathRules redpath_rules;
     absl::flat_hash_set<std::vector<std::string>> subquery_sequences;
     MetricalRedfishTransport *metrical_transport = nullptr;
+    const Clock *clock = nullptr;
   };
 
   explicit QueryPlanner(Options options_in)
@@ -366,7 +371,8 @@ class QueryPlanner final : public QueryPlannerIntf {
                           : std::string(kDefaultRedfishServiceRoot)),
         subquery_id_to_subquery_(GetSubqueryIdToSubquery(*query_)),
         subquery_sequences_(std::move(options_in.subquery_sequences)),
-        metrical_transport_(options_in.metrical_transport) {}
+        metrical_transport_(options_in.metrical_transport),
+        clock_(options_in.clock) {}
 
   GetParams GetQueryParamsForRedPath(absl::string_view redpath_prefix);
 
@@ -414,6 +420,7 @@ class QueryPlanner final : public QueryPlannerIntf {
   const absl::flat_hash_set<std::vector<std::string>> subquery_sequences_;
   // Used during query metrics collection.
   MetricalRedfishTransport *metrical_transport_ = nullptr;
+  const Clock *clock_ = nullptr;
 };
 
 GetParams QueryPlanner::GetQueryParamsForRedPath(
@@ -934,6 +941,15 @@ absl::StatusOr<QueryPlanner::QueryExecutionResult> QueryPlanner::Run(
   QueryResult result;
   result.set_query_id(plan_id_);
 
+  auto set_time = [](absl::Time time, google::protobuf::Timestamp &field) {
+    if (auto timestamp = AbslTimeToProtoTime(time); timestamp.ok()) {
+      field = *std::move(timestamp);
+    }
+  };
+  if (clock_ != nullptr) {
+    set_time(clock_->Now(), *result.mutable_stats()->mutable_start_time());
+  }
+
   // Initialize query execution context to execute next RedPath expression.
   QueryExecutionContext query_execution_context(
       &result, nullptr, redpath_trie_node_.get(),
@@ -1004,6 +1020,23 @@ absl::StatusOr<QueryPlanner::QueryExecutionResult> QueryPlanner::Run(
   }
   if (metrics != nullptr && result.IsInitialized()) {
     *result.mutable_stats()->mutable_redfish_metrics() = *metrics;
+    uint64_t request_count = 0;
+    for (const auto &uri_x_metric : metrics->uri_to_metrics_map()) {
+      for (const auto &[request_type, metadata] :
+           uri_x_metric.second.request_type_to_metadata()) {
+        request_count += metadata.request_count();
+      }
+    }
+
+    result.mutable_stats()->set_num_requests(
+        static_cast<int64_t>(request_count));
+  }
+
+  result.mutable_stats()->set_payload_size(
+      static_cast<int64_t>(result.ByteSizeLong()));
+
+  if (clock_ != nullptr) {
+    set_time(clock_->Now(), *result.mutable_stats()->mutable_end_time());
   }
   QueryExecutionResult execution_result;
   execution_result.query_result = result;
@@ -1037,7 +1070,8 @@ absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
       .redpath_trie_node = std::move(redpath_trie),
       .redpath_rules = std::move(query_planner_options.redpath_rules),
       .subquery_sequences = *subquery_sequences,
-      .metrical_transport = query_planner_options.metrical_transport});
+      .metrical_transport = query_planner_options.metrical_transport,
+      .clock = query_planner_options.clock});
 }
 
 }  // namespace ecclesia

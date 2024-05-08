@@ -43,6 +43,8 @@
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/time/clock.h"
+#include "ecclesia/lib/time/clock_fake.h"
+#include "ecclesia/lib/time/proto.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -114,6 +116,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
+    stats { payload_size: 540 }
     data {
       fields {
         key: "Chassis"
@@ -570,6 +573,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
 
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
+    stats { payload_size: 160 }
     data {
       fields {
         key: "Chassis"
@@ -695,6 +699,7 @@ TEST_F(QueryPlannerTestRunner,
 
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
+    stats { payload_size: 157 }
     data {
       fields {
         key: "Chassis"
@@ -802,6 +807,7 @@ TEST_F(QueryPlannerTestRunner,
 
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
+    stats { payload_size: 435 }
     data {
       fields {
         key: "Chassis"
@@ -987,6 +993,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesWithUrlAnnotations) {
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
+    stats { payload_size: 386 }
     data {
       fields {
         key: "Chassis"
@@ -1117,6 +1124,7 @@ DelliciusQuery GetSubscriptionQuery() {
 TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "SubscriptionTest"
+    stats { payload_size: 58 }
     data {
       fields {
         key: "Chassis"
@@ -1545,6 +1553,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesUriCorrectly) {
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "SensorsSubTreeTest"
+    stats { payload_size: 59 }
     data {
       fields {
         key: "Sensors"
@@ -1738,6 +1747,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
   EXPECT_THAT(result, IsOk());
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "EmbeddedResource"
+    stats { payload_size: 331 }
     data {
       fields {
         key: "EmbeddedServiceLabel"
@@ -2408,12 +2418,16 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
+  absl::Time test_time = absl::UnixEpoch() + absl::Seconds(50);
+  FakeClock clock(test_time);
+
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
       BuildQueryPlanner({.query = query,
                          .redpath_rules = {},
                          .normalizer = normalizer.get(),
                          .redfish_interface = intf.get(),
-                         .metrical_transport = metrical_transport_ptr});
+                         .metrical_transport = metrical_transport_ptr,
+                         .clock = &clock});
 
   EXPECT_THAT(qp, IsOk());
 
@@ -2423,6 +2437,12 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
   EXPECT_THAT(result, IsOk());
   ASSERT_TRUE(result->query_result.has_stats());
   ASSERT_TRUE(result->query_result.stats().has_redfish_metrics());
+  EXPECT_THAT(result->query_result.stats().num_requests(), 40);
+
+  auto timestamp = AbslTimeToProtoTime(clock.Now());
+  EXPECT_THAT(result->query_result.stats().start_time(),
+              EqualsProto(*timestamp));
+  EXPECT_THAT(result->query_result.stats().end_time(), EqualsProto(*timestamp));
 }
 
 }  // namespace
