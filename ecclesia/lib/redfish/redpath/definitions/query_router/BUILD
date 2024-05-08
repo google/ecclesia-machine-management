@@ -115,6 +115,7 @@ cc_library(
 cc_library(
     name = "default_template_variable_names",
     hdrs = ["default_template_variable_names.h"],
+    visibility = ["//visibility:public"],
     deps = ["@com_google_absl//absl/strings"],
 )
 
