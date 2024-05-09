@@ -24,6 +24,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
@@ -116,7 +117,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 540 }
+    stats { payload_size: 540 num_cache_misses: 56 }
     data {
       fields {
         key: "Chassis"
@@ -573,7 +574,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
 
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 160 }
+    stats { payload_size: 160 num_cache_misses: 47 }
     data {
       fields {
         key: "Chassis"
@@ -699,7 +700,7 @@ TEST_F(QueryPlannerTestRunner,
 
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 157 }
+    stats { payload_size: 157 num_cache_misses: 18 }
     data {
       fields {
         key: "Chassis"
@@ -785,6 +786,7 @@ TEST_F(QueryPlannerTestRunner,
               ecclesia::IgnoringRepeatedFieldOrdering(
                   ecclesia::EqualsProto(expect_query_result)));
 }
+
 TEST_F(QueryPlannerTestRunner,
        QueryPlannerExecutesTemplatedQueryWithParenAndMultiValueVarsCorrectly) {
   DelliciusQuery query = ParseTextProtoOrDie(
@@ -807,7 +809,7 @@ TEST_F(QueryPlannerTestRunner,
 
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 435 }
+    stats { payload_size: 435 num_cache_misses: 18 }
     data {
       fields {
         key: "Chassis"
@@ -993,7 +995,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesWithUrlAnnotations) {
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 386 }
+    stats { payload_size: 386 num_cache_misses: 32 }
     data {
       fields {
         key: "Chassis"
@@ -1124,7 +1126,7 @@ DelliciusQuery GetSubscriptionQuery() {
 TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "SubscriptionTest"
-    stats { payload_size: 58 }
+    stats { payload_size: 58 num_cache_misses: 18 }
     data {
       fields {
         key: "Chassis"
@@ -1553,7 +1555,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesUriCorrectly) {
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "SensorsSubTreeTest"
-    stats { payload_size: 59 }
+    stats { payload_size: 59 num_cache_misses: 2 }
     data {
       fields {
         key: "Sensors"
@@ -1747,7 +1749,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
   EXPECT_THAT(result, IsOk());
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "EmbeddedResource"
-    stats { payload_size: 331 }
+    stats { payload_size: 331 num_cache_misses: 3 }
     data {
       fields {
         key: "EmbeddedServiceLabel"
@@ -2405,7 +2407,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
       }
     }
   )pb");
-  */
+*/
   SetTestParams("indus_hmb_shim/mockup.shar");
   MetricalRedfishTransport *metrical_transport_ptr = nullptr;
 
@@ -2443,6 +2445,149 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
   EXPECT_THAT(result->query_result.stats().start_time(),
               EqualsProto(*timestamp));
   EXPECT_THAT(result->query_result.stats().end_time(), EqualsProto(*timestamp));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerExecutesCacheMetricsNullCacheCorrectly) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[ReadingUnits=RPM]"
+          properties { property: "Name" type: STRING }
+        }
+        subquery {
+          subquery_id: "Assembly"
+          root_subquery_ids: "Sensors"
+          redpath: "/RelatedItem[0]"
+          properties { property: "MemberId" type: STRING }
+        }
+        subquery {
+          subquery_id: "UnknownPropertySubquery"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[*]"
+          properties { property: "UnknownProperty" type: STRING }
+        }
+        subquery {
+          subquery_id: "UnknownNodeNameSubquery"
+          root_subquery_ids: "Sensors"
+          redpath: "/UnknownNodeName"
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
+
+  auto transport = std::make_unique<MetricalRedfishTransport>(
+      server_->RedfishClientTransport(), Clock::RealClock());
+  metrical_transport_ptr = transport.get();
+  auto cache = std::make_unique<NullCache>(transport.get());
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf.get(),
+                         .metrical_transport = metrical_transport_ptr});
+
+  EXPECT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+
+  EXPECT_THAT(result, IsOk());
+  ASSERT_TRUE(result->query_result.has_stats());
+  ASSERT_TRUE(result->query_result.stats().has_redfish_metrics());
+  EXPECT_THAT(result->query_result.stats().num_cache_hits(), 0);
+  EXPECT_THAT(result->query_result.stats().num_cache_misses(), 56);
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerExecutesCacheMetricsTimeBasedCacheCorrectly) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[ReadingUnits=RPM]"
+          properties { property: "Name" type: STRING }
+        }
+        subquery {
+          subquery_id: "Assembly"
+          root_subquery_ids: "Sensors"
+          redpath: "/RelatedItem[0]"
+          properties { property: "MemberId" type: STRING }
+        }
+        subquery {
+          subquery_id: "UnknownPropertySubquery"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[*]"
+          properties { property: "UnknownProperty" type: STRING }
+        }
+        subquery {
+          subquery_id: "UnknownNodeNameSubquery"
+          root_subquery_ids: "Sensors"
+          redpath: "/UnknownNodeName"
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
+
+  auto transport = std::make_unique<MetricalRedfishTransport>(
+      server_->RedfishClientTransport(), Clock::RealClock());
+  metrical_transport_ptr = transport.get();
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  std::unique_ptr<RedfishCachedGetterInterface> cache =
+      TimeBasedCache::Create(transport.get(), absl::InfiniteDuration());
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf.get(),
+                         .metrical_transport = metrical_transport_ptr});
+
+  EXPECT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+
+  EXPECT_THAT(result, IsOk());
+  ASSERT_TRUE(result->query_result.has_stats());
+  ASSERT_TRUE(result->query_result.stats().has_redfish_metrics());
+
+  absl::StatusOr<QueryExecutionResult> result_repeat = (*qp)->Run({args1});
+
+  EXPECT_THAT(result_repeat, IsOk());
+  ASSERT_TRUE(result_repeat->query_result.has_stats());
+  ASSERT_TRUE(result_repeat->query_result.stats().has_redfish_metrics());
+  EXPECT_THAT(result_repeat->query_result.stats().num_cache_hits(), 56);
+  EXPECT_THAT(result_repeat->query_result.stats().num_cache_misses(), 0);
 }
 
 }  // namespace

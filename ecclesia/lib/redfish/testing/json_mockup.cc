@@ -52,6 +52,8 @@ class JsonMockupVariantImpl : public RedfishVariant::ImplIntf {
   }
   std::string DebugString() const override;
 
+  CacheState IsFresh() const override { return CacheState::kUnknown; }
+
   bool GetValue(std::string *val) const override {
     if (!json_view_.is_string()) return false;
     *val = json_view_.get<std::string>();

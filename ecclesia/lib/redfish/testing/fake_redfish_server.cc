@@ -69,8 +69,8 @@ std::unique_ptr<RedfishTransport> MakeHttpRedfishTransport(
 }
 
 std::unique_ptr<RedfishInterface> MakeHttpRedfishInterface(
-    std::unique_ptr<RedfishTransport> transport) {
-  auto cache = std::make_unique<NullCache>(transport.get());
+    std::unique_ptr<RedfishTransport> transport,
+    std::unique_ptr<RedfishCachedGetterInterface> cache) {
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
   CHECK(intf != nullptr) << "can connect to the redfish proxy server";
@@ -214,10 +214,18 @@ void FakeRedfishServer::AddHttpDeleteHandler(std::string uri,
   http_delete_handlers_[uri] = std::move(handler);
 }
 
-std::unique_ptr<RedfishInterface> FakeRedfishServer::RedfishClientInterface() {
+std::unique_ptr<RedfishInterface> FakeRedfishServer::RedfishClientInterface(
+    bool is_cached) {
   std::unique_ptr<RedfishTransport> transport =
       MakeHttpRedfishTransport(proxy_server_.get());
-  return MakeHttpRedfishInterface(std::move(transport));
+  std::unique_ptr<RedfishCachedGetterInterface> cache;
+  if (is_cached) {
+    cache = TimeBasedCache::Create(transport.get(), absl::InfiniteDuration());
+  } else {
+    cache = std::make_unique<NullCache>(transport.get());
+  }
+
+  return MakeHttpRedfishInterface(std::move(transport), std::move(cache));
 }
 
 std::unique_ptr<RedfishTransport> FakeRedfishServer::RedfishClientTransport() {

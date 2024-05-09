@@ -51,6 +51,16 @@ namespace ecclesia {
 
 enum class ServiceRootUri : uint8_t { kRedfish, kGoogle };
 
+// Represents whether the data in a RedfishVariant originated from a backend
+// or from a cached copy.
+enum class CacheState : uint8_t {
+  // The data originated from a Redfish backend.
+  kIsFresh = 0,
+  // The data originated from a cached copy.
+  kIsCached = 1,
+  kUnknown = 2
+};
+
 // Forward declare the typed view classes
 class RedfishIterable;
 class RedfishObject;
@@ -299,6 +309,7 @@ class RedfishVariant final {
     virtual bool GetValue(absl::Time *val) const = 0;
     virtual std::string DebugString() const = 0;
     virtual void PrintDebugString() const {}
+    virtual CacheState IsFresh() const = 0;
   };
 
   // Helper structures used with IndexHelper class
@@ -395,6 +406,11 @@ class RedfishVariant final {
 
   IndexHelper Each() const {
     return IndexHelper(*this, IndexType(IndexEach()));
+  }
+
+  CacheState IsFresh() const {
+    if (!ptr_) return CacheState::kUnknown;
+    return ptr_->IsFresh();
   }
 
   std::unique_ptr<RedfishObject> AsObject() const {

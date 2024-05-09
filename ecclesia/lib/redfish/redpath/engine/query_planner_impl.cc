@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/redpath/engine/query_planner_impl.h"
 
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -241,7 +242,8 @@ RedPathRedfishQueryParams CombineQueryParams(
 // required.
 absl::StatusOr<std::unique_ptr<RedfishObject>> GetRedfishObjectWithFreshness(
     const GetParams &params, const RedfishVariant &variant,
-    const std::optional<TraceInfo> &trace_info) {
+    const std::optional<TraceInfo> &trace_info,
+    std::atomic<int64_t> *cache_miss) {
   std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
   if (!redfish_object) return nullptr;
   if (trace_info.has_value()) {
@@ -258,6 +260,11 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> GetRedfishObjectWithFreshness(
   }
   absl::StatusOr<std::unique_ptr<RedfishObject>> refetch_obj =
       redfish_object->EnsureFreshPayload();
+  // If the variant is not fresh, then we do an uncached get and hence we need
+  // to increase cache miss counter; ow no-op.
+  if (variant.IsFresh() == CacheState::kIsCached) {
+    (*cache_miss) = (*cache_miss) + 1;
+  }
   if (!refetch_obj.ok()) return nullptr;
   return std::move(refetch_obj.value());
 }
@@ -421,6 +428,8 @@ class QueryPlanner final : public QueryPlannerIntf {
   // Used during query metrics collection.
   MetricalRedfishTransport *metrical_transport_ = nullptr;
   const Clock *clock_ = nullptr;
+  std::atomic<int64_t> cache_miss_{0};
+  std::atomic<int64_t> cache_hit_{0};
 };
 
 GetParams QueryPlanner::GetQueryParamsForRedPath(
@@ -622,6 +631,11 @@ QueryPlanner::ExecuteQueryExpression(
     size_t node_count = current_redfish_iterable->Size();
     for (int node_index = 0; node_index < node_count; ++node_index) {
       RedfishVariant indexed_node = (*current_redfish_iterable)[node_index];
+      if (indexed_node.IsFresh() == CacheState::kIsFresh) {
+        cache_miss_ = cache_miss_ + 1;
+      } else if (indexed_node.IsFresh() == CacheState::kIsCached) {
+        cache_hit_ = cache_hit_ + 1;
+      }
       ECCLESIA_RETURN_IF_ERROR(indexed_node.status());
       if (trace_info.has_value()) {
         trace_info->redpath_prefix = new_redpath_prefix;
@@ -631,7 +645,7 @@ QueryPlanner::ExecuteQueryExpression(
       ECCLESIA_ASSIGN_OR_RETURN(
           std::unique_ptr<RedfishObject> indexed_node_as_object,
           GetRedfishObjectWithFreshness(get_params_for_redpath, indexed_node,
-                                        trace_info));
+                                        trace_info, &cache_miss_));
 
       // We don't create new execution context when a subscription is required.
       // Instead, we store each URI of the resource collection in the given
@@ -748,12 +762,18 @@ QueryPlanner::ExecuteQueryExpression(
 
       redfish_variant =
           redfish_interface_->CachedGetUri(node_name, get_params_for_redpath);
+
     } else if (expression.type ==
                RedPathExpression::Type::kNodeNameUriPointer) {
       get_params_for_redpath = GetQueryParamsForRedPath(expression.expression);
 
       redfish_variant = redfish_interface_->CachedGetUri(
           expression.expression, get_params_for_redpath);
+    }
+    if (redfish_variant.IsFresh() == CacheState::kIsFresh) {
+      cache_miss_ = cache_miss_ + 1;
+    } else if (redfish_variant.IsFresh() == CacheState::kIsCached) {
+      cache_hit_ = cache_hit_ + 1;
     }
     ECCLESIA_RETURN_IF_ERROR(redfish_variant.status());
 
@@ -775,11 +795,12 @@ QueryPlanner::ExecuteQueryExpression(
         trace_info->redpath_query = get_params_for_redpath.ToString();
         trace_info->redpath_node = next_trie_node->ToString();
       }
+
       // Get fresh Redfish Object if user has requested in the query rule.
       ECCLESIA_ASSIGN_OR_RETURN(
           redfish_object,
           GetRedfishObjectWithFreshness(get_params_for_redpath, redfish_variant,
-                                        trace_info));
+                                        trace_info, &cache_miss_));
     }
 
     // Add the last executed RedPath to the record.
@@ -934,9 +955,15 @@ absl::StatusOr<QueryPlanner::QueryExecutionResult> QueryPlanner::Run(
   // Get service root
   RedfishVariant variant =
       redfish_interface_->GetRoot(GetParams{}, service_root_);
+  if (variant.IsFresh() == CacheState::kIsFresh) {
+    cache_miss_ = cache_miss_ + 1;
+  } else if (variant.IsFresh() == CacheState::kIsCached) {
+    cache_hit_ = cache_hit_ + 1;
+  }
   ECCLESIA_ASSIGN_OR_RETURN(
       std::unique_ptr<RedfishObject> service_root_object,
-      GetRedfishObjectWithFreshness(get_params, variant, std::nullopt));
+      GetRedfishObjectWithFreshness(get_params, variant, std::nullopt,
+                                    &cache_miss_));
 
   QueryResult result;
   result.set_query_id(plan_id_);
@@ -1039,12 +1066,20 @@ absl::StatusOr<QueryPlanner::QueryExecutionResult> QueryPlanner::Run(
     set_time(clock_->Now(), *result.mutable_stats()->mutable_end_time());
   }
   QueryExecutionResult execution_result;
-  execution_result.query_result = result;
 
   execution_result.subscription_context = std::move(subscription_context);
   if (metrical_transport_ != nullptr) {
     MetricalRedfishTransport::ResetMetrics();
   }
+
+  result.mutable_stats()->set_num_cache_misses(cache_miss_);
+  cache_miss_ = 0;
+
+  result.mutable_stats()->set_num_cache_hits(cache_hit_);
+  cache_hit_ = 0;
+
+  execution_result.query_result = result;
+
   return execution_result;
 }
 

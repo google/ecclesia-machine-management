@@ -46,7 +46,7 @@ cc_test(
         "//ecclesia/lib/http:codes",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/testing:status",
-        "@com_google_absl//absl/functional:any_invocable",
+        "@com_google_absl//absl/log",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",

@@ -135,6 +135,7 @@ class MockableObjectRedfishVariantImpl : public RedfishVariant::ImplIntf {
   bool GetValue(bool *val) const override { return false; }
   bool GetValue(absl::Time *val) const override { return false; }
   std::string DebugString() const override { return str_value_; }
+  CacheState IsFresh() const override { return CacheState::kUnknown; }
 
  private:
   std::string str_value_;

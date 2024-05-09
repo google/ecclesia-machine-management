@@ -24,6 +24,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "ecclesia/lib/http/codes.h"
@@ -283,6 +284,35 @@ TEST(RedfishVariant, ValidateRedfishTopSupportFail) {
       RedfishQueryParamTop(/*num_members*/ 100)
           .ValidateRedfishSupport(std::nullopt),
       ecclesia::IsStatusInternal());
+}
+
+TEST(RedfishVariant, ValidateIsFresh) {
+  ecclesia::FakeRedfishServer mockup("barebones_session_auth/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+
+  auto chassis = raw_intf->GetRoot()[kRfPropertyChassis][0];
+  EXPECT_THAT(chassis.status(), ecclesia::IsOk());
+  EXPECT_THAT(chassis.httpcode(),
+              ecclesia::HttpResponseCode::HTTP_CODE_REQUEST_OK);
+  EXPECT_THAT(chassis.IsFresh(), Eq(CacheState::kIsFresh));
+}
+
+TEST(RedfishVariant, ValidateIsCached) {
+  ecclesia::FakeRedfishServer mockup("barebones_session_auth/mockup.shar");
+
+  auto raw_intf = mockup.RedfishClientInterface(true);
+
+  auto chassis = raw_intf->CachedGetUri("/redfish/v1/Chassis/chassis");
+  EXPECT_THAT(chassis.status(), ecclesia::IsOk());
+  EXPECT_THAT(chassis.httpcode(),
+              ecclesia::HttpResponseCode::HTTP_CODE_REQUEST_OK);
+  EXPECT_THAT(chassis.IsFresh(), Eq(CacheState::kIsFresh));
+
+  auto chassis_repeat = raw_intf->CachedGetUri("/redfish/v1/Chassis/chassis");
+  EXPECT_THAT(chassis_repeat.status(), ecclesia::IsOk());
+  EXPECT_THAT(chassis_repeat.httpcode(),
+              ecclesia::HttpResponseCode::HTTP_CODE_REQUEST_OK);
+  EXPECT_THAT(chassis_repeat.IsFresh(), Eq(CacheState::kIsCached));
 }
 
 }  // namespace

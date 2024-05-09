@@ -53,15 +53,6 @@
 namespace ecclesia {
 namespace {
 
-// Represents whether the data in a RedfishVariant originated from a backend
-// or from a cached copy.
-enum CacheState {
-  // The data originated from a Redfish backend.
-  kIsFresh = 0,
-  // The data originated from a cached copy.
-  kIsCached = 1
-};
-
 //
 // Struct tracks the origin of the HttpIntfVariantImpl.
 // For instance for the object
@@ -141,6 +132,8 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
       RedfishVariant::IterableMode mode,
       GetParams::Freshness freshness) const override;
   std::optional<RedfishTransport::bytes> AsRaw() const override;
+
+  CacheState IsFresh() const override { return cache_state_; }
 
   bool GetValue(std::string *val) const override {
     if (!std::holds_alternative<nlohmann::json>(result_.body)) {
@@ -380,7 +373,7 @@ class HttpIntfObjectImpl : public RedfishObject {
 
   absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
       GetParams params) {
-    if (cache_state_ == kIsFresh) {
+    if (cache_state_ == CacheState::kIsFresh) {
       return std::make_unique<HttpIntfObjectImpl>(intf_, path_, result_,
                                                   cache_state_);
     }
@@ -705,7 +698,8 @@ class HttpRedfishInterface : public RedfishInterface {
     return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
                               this, RedfishExtendedPath{std::string(uri)},
                               *std::move(post_result.result),
-                              post_result.is_fresh ? kIsFresh : kIsCached),
+                              post_result.is_fresh ? CacheState::kIsFresh
+                                                   : CacheState::kIsCached),
                           ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
@@ -719,7 +713,7 @@ class HttpRedfishInterface : public RedfishInterface {
     absl::flat_hash_map<std::string, std::string> headers = result->headers;
     return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
                               this, RedfishExtendedPath{std::string(uri)},
-                              std::move(*result), kIsFresh),
+                              std::move(*result), CacheState::kIsFresh),
                           ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
@@ -739,7 +733,7 @@ class HttpRedfishInterface : public RedfishInterface {
     absl::flat_hash_map<std::string, std::string> headers = result->headers;
     return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
                               this, RedfishExtendedPath{std::string(uri)},
-                              std::move(*result), kIsFresh),
+                              std::move(*result), CacheState::kIsFresh),
                           ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
@@ -759,7 +753,7 @@ class HttpRedfishInterface : public RedfishInterface {
     absl::flat_hash_map<std::string, std::string> headers = result->headers;
     return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
                               this, RedfishExtendedPath{std::string(uri)},
-                              std::move(*result), kIsFresh),
+                              std::move(*result), CacheState::kIsFresh),
                           ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
@@ -781,9 +775,10 @@ class HttpRedfishInterface : public RedfishInterface {
                          this](const RedfishTransport::Result &result) {
       int code = result.code;
       absl::flat_hash_map<std::string, std::string> headers = result.headers;
-      RedfishVariant variant(std::make_unique<HttpIntfVariantImpl>(
-                                 this, RedfishExtendedPath{}, result, kIsFresh),
-                             ecclesia::HttpResponseCodeFromInt(code), headers);
+      RedfishVariant variant(
+          std::make_unique<HttpIntfVariantImpl>(this, RedfishExtendedPath{},
+                                                result, CacheState::kIsFresh),
+          ecclesia::HttpResponseCodeFromInt(code), headers);
       on_event(variant);
     };
     absl::ReaderMutexLock mu(&transport_mutex_);
@@ -811,7 +806,7 @@ class HttpRedfishInterface : public RedfishInterface {
           std::make_unique<HttpIntfVariantImpl>(
               this, RedfishExtendedPath{.uri = std::string(uri)},
               *std::move(get_res.result),
-              get_res.is_fresh ? kIsFresh : kIsCached),
+              get_res.is_fresh ? CacheState::kIsFresh : CacheState::kIsCached),
           ecclesia::HttpResponseCodeFromInt(code), headers);
     }
     if (!std::holds_alternative<nlohmann::json>(get_res.result->body)) {
@@ -828,7 +823,7 @@ class HttpRedfishInterface : public RedfishInterface {
         std::make_unique<HttpIntfVariantImpl>(
             this, RedfishExtendedPath{.uri = std::string(uri)},
             *std::move(get_res.result),
-            get_res.is_fresh ? kIsFresh : kIsCached),
+            get_res.is_fresh ? CacheState::kIsFresh : CacheState::kIsCached),
         ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 

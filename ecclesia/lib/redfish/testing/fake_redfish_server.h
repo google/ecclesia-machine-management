@@ -80,7 +80,8 @@ class FakeRedfishServer {
       ::tensorflow::serving::net_http::ServerRequestInterface *req)>;
 
   // Returns a new RedfishInterface connected to the proxy server.
-  std::unique_ptr<RedfishInterface> RedfishClientInterface();
+  std::unique_ptr<RedfishInterface> RedfishClientInterface(
+      bool is_cached = false);
 
   // Returns a new RedfishTransport configured for interfacing with the proxy
   // server.
