@@ -85,6 +85,7 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
     QueryEngineParams query_engine_params = {
         .transport = std::move(server_spec.transport),
         .entity_tag = server_info.server_tag,
+        .stable_id_type = server_spec.stable_id_type,
     };
 
     if (router_spec.has_features()) {

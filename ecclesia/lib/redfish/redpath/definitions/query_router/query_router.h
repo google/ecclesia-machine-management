@@ -85,6 +85,8 @@ class QueryRouter : public QueryRouterIntf {
   // communicate with.
   struct ServerSpec {
     ServerInfo server_info;
+    QueryEngineParams::RedfishStableIdType stable_id_type =
+        QueryEngineParams::RedfishStableIdType::kRedfishLocation;
     std::unique_ptr<RedfishTransport> transport = nullptr;
     std::unique_ptr<IdAssigner> id_assigner = nullptr;
     std::optional<std::string> node_local_system_id = std::nullopt;
