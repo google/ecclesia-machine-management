@@ -58,6 +58,8 @@ class MockQueryEngine : public QueryEngineIntf {
 
   MOCK_METHOD(absl::StatusOr<RedfishInterface *>, GetRedfishInterface,
               (RedfishInterfacePasskey), (override));
+
+  MOCK_METHOD(absl::string_view, GetAgentIdentifier, (), (const, override));
 };
 
 }  // namespace ecclesia

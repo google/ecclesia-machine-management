@@ -112,6 +112,10 @@ class FakeQueryEngine : public QueryEngineIntf {
     return query_engine_->GetRedfishInterface(unused_passkey);
   }
 
+  absl::string_view GetAgentIdentifier() const override {
+    return query_engine_->GetAgentIdentifier();
+  }
+
  private:
   explicit FakeQueryEngine(absl::string_view mockup_name)
       : redfish_server_(mockup_name) {
