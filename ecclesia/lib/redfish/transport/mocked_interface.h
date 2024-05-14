@@ -18,6 +18,8 @@
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_MOCKED_INTERFACE_H_
 
 #include "gmock/gmock.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 
 namespace ecclesia {

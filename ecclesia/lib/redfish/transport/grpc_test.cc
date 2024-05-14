@@ -29,9 +29,9 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/clock.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/network/testing.h"
-#include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/testing/grpc_dynamic_mockup_server.h"
 #include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
@@ -89,6 +89,77 @@ TEST(GrpcRedfishTransport, Get) {
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
   EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected));
   EXPECT_THAT(res_get->code, Eq(200));
+}
+
+TEST(GrpcRedfishTransport, GetWithTimeout) {
+  absl::flat_hash_map<std::string, std::string> headers;
+  GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
+                                        "localhost", 0);
+  StaticBufferBasedTlsOptions options;
+  options.SetToInsecure();
+  auto port = mockup_server.Port();
+  ASSERT_TRUE(port.has_value());
+  auto transport = CreateGrpcRedfishTransport(
+      absl::StrCat("localhost:", *port), {}, options.GetChannelCredentials());
+  ASSERT_THAT(transport, IsOk());
+  absl::string_view expected_str = R"json({
+    "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+    "@odata.id": "/redfish/v1",
+    "@odata.type": "#ServiceRoot.v1_5_0.ServiceRoot",
+    "Chassis": {
+      "@odata.id": "/redfish/v1/Chassis"
+    },
+    "EventService": {
+        "@odata.id": "/redfish/v1/EventService"
+    },
+    "Id": "RootService",
+    "Links": {
+      "Sessions": {
+          "@odata.id": "/redfish/v1/SessionService/Sessions"
+      }
+    },
+    "Name": "Root Service",
+    "RedfishVersion": "1.6.1"
+  })json";
+  nlohmann::json expected = nlohmann::json::parse(std::string(expected_str),
+                                                  nullptr, false);
+  // Get with 0 or infinite timeout should return invalid argument error.
+  ASSERT_THAT(
+      (*transport)->Get("/redfish/v1", absl::ZeroDuration()).status().code(),
+      Eq(absl::StatusCode::kInvalidArgument));
+  ASSERT_THAT((*transport)
+                  ->Get("/redfish/v1", absl::InfiniteDuration())
+                  .status()
+                  .code(),
+              Eq(absl::StatusCode::kInvalidArgument));
+  // If timeout is a large finite amount, the GET should succeed.
+  absl::StatusOr<RedfishTransport::Result> get_success =
+      (*transport)->Get("/redfish/v1", absl::Seconds(1000));
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(get_success->body));
+  EXPECT_THAT(std::get<nlohmann::json>(get_success->body), Eq(expected));
+  EXPECT_THAT(get_success->code, Eq(200));
+  // Get with 2 sec timeout should fail if server doesn't respond for 3 secs.
+  mockup_server.AddHttpGetHandler(
+      "/redfish/v1",
+      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
+          Response *response) {
+        absl::SleepFor(absl::Seconds(3));
+        response->set_json_str(std::string(expected_str));
+        response->set_code(200);
+        return grpc::Status::OK;
+      });
+  ASSERT_THAT(
+      (*transport)->Get("/redfish/v1", absl::Seconds(2)).status().code(),
+      Eq(absl::StatusCode::kDeadlineExceeded));
+  // Ensure that Get succeeds with a long enough but non-infinite timeout.
+  absl::StatusOr<RedfishTransport::Result> get_success_with_timeout =
+      (*transport)->Get("/redfish/v1", absl::Seconds(5));
+  ASSERT_THAT(get_success_with_timeout, IsOk());
+  ASSERT_TRUE(
+      std::holds_alternative<nlohmann::json>(get_success_with_timeout->body));
+  EXPECT_THAT(std::get<nlohmann::json>(get_success_with_timeout->body),
+              Eq(expected));
+  EXPECT_THAT(get_success_with_timeout->code, Eq(200));
 }
 
 TEST(GrpcRedfishTransport, PostPatchGetDelete) {

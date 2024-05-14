@@ -9,10 +9,10 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
         "@com_json//:json",
     ],
 )
@@ -24,6 +24,8 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":interface",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",
     ],
 )
@@ -233,7 +235,6 @@ cc_test(
         ":interface",
         ":struct_proto_conversion",
         "//ecclesia/lib/network:testing",
-        "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish:utils",
         "//ecclesia/lib/redfish/proto:redfish_v1_cc_proto",
         "//ecclesia/lib/redfish/testing:grpc_dynamic_mockup_server",

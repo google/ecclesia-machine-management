@@ -25,10 +25,10 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
@@ -80,6 +80,11 @@ class RedfishTransport {
   // These return a Status if the operation failed to be sent/received.
   // The application-level success or failure is captured in Result.code.
   virtual absl::StatusOr<Result> Get(absl::string_view path) = 0;
+  virtual absl::StatusOr<Result> Get(absl::string_view path,
+                                     absl::Duration timeout) {
+    return absl::UnimplementedError(
+        "GET request with timeout is not implemented yet.");
+  }
   virtual absl::StatusOr<Result> Post(absl::string_view path,
                                       absl::string_view data) = 0;
   virtual absl::StatusOr<Result> Patch(absl::string_view path,

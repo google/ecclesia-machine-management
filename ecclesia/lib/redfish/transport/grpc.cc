@@ -283,6 +283,31 @@ class GrpcRedfishTransport : public RedfishTransport {
           return client_->Get(&context, request, response);
         });
   }
+
+  absl::StatusOr<Result> Get(absl::string_view path,
+                             absl::Duration duration) override {
+    if (duration == absl::ZeroDuration() ||
+        duration == absl::InfiniteDuration()) {
+      return absl::InvalidArgumentError(
+          "Timeout for GET request cannot be zero or infinite");
+    }
+    return DoRpc(
+        path, std::nullopt, fqdn_, params_,
+        [this, path, duration](
+            grpc::ClientContext &context, const redfish::v1::Request &request,
+            ::redfish::v1::Response *response) -> grpc::Status {
+          // Use timeout if set.
+          context.set_deadline(
+              absl::ToChronoTime(params_.clock->Now() + duration));
+          context.set_credentials(
+              grpc::experimental::MetadataCredentialsFromPlugin(
+                  std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                      std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
+                  GRPC_SECURITY_NONE));
+          return client_->Get(&context, request, response);
+        });
+  }
+
   absl::StatusOr<Result> Post(absl::string_view path,
                               absl::string_view data) override {
     return DoRpc(
