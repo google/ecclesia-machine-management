@@ -500,7 +500,8 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
         .redpath_rules = CreateRedPathRules(std::move(query_info.rule)),
         .normalizer = redpath_normalizer.get(),
         .redfish_interface = redfish_interface.get(),
-        .metrical_transport = metrical_transport_ptr};
+        .metrical_transport = metrical_transport_ptr,
+        .clock = query_spec.clock};
 
     ECCLESIA_ASSIGN_OR_RETURN(
         auto query_planner,

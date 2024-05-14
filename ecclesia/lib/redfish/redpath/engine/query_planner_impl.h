@@ -45,7 +45,7 @@ struct QueryPlannerOptions {
   RedpathNormalizer *normalizer;
   RedfishInterface *redfish_interface;
   MetricalRedfishTransport *metrical_transport;
-  Clock *clock;
+  const Clock *clock;
 };
 
 absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
