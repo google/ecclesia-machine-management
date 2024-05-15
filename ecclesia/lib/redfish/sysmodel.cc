@@ -345,7 +345,9 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceFan> /*unused*/,
       .Get(kRfPropertyChassis,
            {.freshness = query_params.freshness,
             .expand = RedfishQueryParamExpand({.levels = 1})})
-      .Each()[kRfPropertyThermal][kRfPropertyFans]
+      .Each()
+      .Get(kRfPropertyThermal,
+           {.freshness = query_params.freshness})[kRfPropertyFans]
       .Each()
       .Do([&](std::unique_ptr<RedfishObject> &temp_obj) {
         return result_callback(std::move(temp_obj));
