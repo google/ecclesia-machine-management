@@ -24,7 +24,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
@@ -46,6 +45,7 @@
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/clock_fake.h"
 #include "ecclesia/lib/time/proto.h"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -55,6 +55,7 @@ namespace {
 using RedPathRedfishQueryParams =
     absl::flat_hash_map<std::string /* RedPath */, GetParams>;
 
+using ::tensorflow::serving::net_http::HTTPStatusCode;
 using ::tensorflow::serving::net_http::ServerRequestInterface;
 using ::tensorflow::serving::net_http::SetContentType;
 using ::testing::NotNull;
@@ -341,12 +342,12 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+  QueryExecutionResult result = (*qp)->Run({args1});
 
-  EXPECT_THAT(result, IsOk());
+  EXPECT_FALSE(result.query_result.has_status());
   EXPECT_THAT(expected_query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
-                  ecclesia::EqualsProto(result->query_result)));
+                  ecclesia::EqualsProto(result.query_result)));
 }
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFreshnessFromQuery) {
@@ -410,8 +411,8 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFreshnessFromQuery) {
                          .redfish_interface = intf.get()});
   EXPECT_THAT(qp, IsOk());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  EXPECT_THAT((*qp)->Run({args1}), IsOk());
-  EXPECT_THAT((*qp)->Run({args1}), IsOk());
+  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
+  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
 
   // We expect Chassis to be queried twice due to freshness requirement.
   EXPECT_EQ(chassis_query_count, 2);
@@ -469,7 +470,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesExpandFromRules) {
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  EXPECT_THAT((*qp)->Run({args1}), IsOk());
+  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
   EXPECT_TRUE(expand_requested);
 }
 
@@ -529,7 +530,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterFromRules) {
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  EXPECT_THAT((*qp)->Run({args1}), IsOk());
+  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
   // Since the order in which the predicates are passed to the $filter string
   // construction method is non-deterministic, the Redfish request can be in two
   // possible forms.
@@ -654,10 +655,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
   *args1.add_variable_values() = val1;
   *args1.add_variable_values() = val2;
   *args1.add_variable_values() = val3;
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+  QueryExecutionResult result = (*qp)->Run({args1});
 
-  EXPECT_THAT(result, IsOk());
-  EXPECT_THAT(result->query_result,
+  EXPECT_FALSE(result.query_result.has_status());
+  EXPECT_THAT(result.query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
                   ecclesia::EqualsProto(expect_query_result)));
 
@@ -673,8 +674,8 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
   *val3.add_values() = "Rotational";
 
   result = (*qp)->Run({args1});
-  EXPECT_THAT(result, IsOk());
-  EXPECT_THAT(result->query_result,
+  EXPECT_FALSE(result.query_result.has_status());
+  EXPECT_THAT(result.query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
                   ecclesia::EqualsProto(expect_query_result)));
 }
@@ -780,9 +781,9 @@ TEST_F(QueryPlannerTestRunner,
   *multi_value_args.add_variable_values() = sensor_name_val;
   *multi_value_args.add_variable_values() = threshold_val;
 
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({multi_value_args});
-  EXPECT_THAT(result, IsOk());
-  EXPECT_THAT(result->query_result,
+  QueryExecutionResult result = (*qp)->Run({multi_value_args});
+  EXPECT_FALSE(result.query_result.has_status());
+  EXPECT_THAT(result.query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
                   ecclesia::EqualsProto(expect_query_result)));
 }
@@ -963,9 +964,9 @@ TEST_F(QueryPlannerTestRunner,
   //  Name = indus_latm_temp, indus_eat_temp or CPU,
   //  Reading = 60
   //  No Reading value and Id = i_cpu0_t or indus_fan7_rpm
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({multi_value_args});
-  EXPECT_THAT(result, IsOk());
-  EXPECT_THAT(result->query_result,
+  QueryExecutionResult result = (*qp)->Run({multi_value_args});
+  EXPECT_FALSE(result.query_result.has_status());
+  EXPECT_THAT(result.query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
                   ecclesia::EqualsProto(expect_query_result)));
 }
@@ -1089,13 +1090,13 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesWithUrlAnnotations) {
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result =
+  QueryExecutionResult result =
       (*qp)->Run({.variables = args1, .enable_url_annotation = true});
 
-  EXPECT_THAT(result, IsOk());
+  EXPECT_FALSE(result.query_result.has_status());
   EXPECT_THAT(expected_query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
-                  ecclesia::EqualsProto(result->query_result)));
+                  ecclesia::EqualsProto(result.query_result)));
 }
 
 DelliciusQuery GetSubscriptionQuery() {
@@ -1167,16 +1168,16 @@ TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+  QueryExecutionResult result = (*qp)->Run({args1});
 
-  EXPECT_THAT(result, IsOk());
+  EXPECT_FALSE(result.query_result.has_status());
   EXPECT_THAT(expect_query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
-                  ecclesia::EqualsProto(result->query_result)));
+                  ecclesia::EqualsProto(result.query_result)));
 
   // Verify Subscription context is valid.
   const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
-      result->subscription_context;
+      result.subscription_context;
   EXPECT_THAT(context, NotNull());
 
   // Check if context contains trie node for `Sensors` subquery.
@@ -1250,8 +1251,10 @@ TEST_F(QueryPlannerTestRunner, SubscriptionToNonNavigationalPropertyFails) {
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
-  EXPECT_THAT(result, IsStatusInternal());
+  QueryExecutionResult result = (*qp)->Run({args1});
+  EXPECT_TRUE(result.query_result.has_status());
+  EXPECT_THAT(result.query_result.status().error_code(),
+              ecclesia::ErrorCode::ERROR_INTERNAL);
 }
 
 // Subscribe to unknown property fails.
@@ -1280,8 +1283,10 @@ TEST_F(QueryPlannerTestRunner, SubscriptionToUnknownPropertyFails) {
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
-  EXPECT_THAT(result, IsStatusInternal());
+  QueryExecutionResult result = (*qp)->Run({args1});
+  EXPECT_TRUE(result.query_result.has_status());
+  EXPECT_THAT(result.query_result.status().error_code(),
+              ecclesia::ErrorCode::ERROR_INTERNAL);
 }
 
 // Subscribe to unknown property fails.
@@ -1307,8 +1312,10 @@ TEST_F(QueryPlannerTestRunner, TemplatedQueryWithNoVarsFails) {
                          .redfish_interface = intf_.get()});
   ASSERT_THAT(qp, IsOk());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
-  EXPECT_THAT(result, IsStatusInvalidArgument());
+  QueryExecutionResult result = (*qp)->Run({args1});
+  EXPECT_TRUE(result.query_result.has_status());
+  EXPECT_THAT(result.query_result.status().error_code(),
+              ecclesia::ErrorCode::ERROR_INTERNAL);
 }
 
 // Successful Resume
@@ -1330,9 +1337,9 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+  QueryExecutionResult result = (*qp)->Run({args1});
   const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
-      result->subscription_context;
+      result.subscription_context;
   ASSERT_THAT(context, NotNull());
 
   // Case1: Sensor RedPath query resumes on receiving an event on specific
@@ -1502,9 +1509,9 @@ TEST_F(QueryPlannerTestRunner, CannotNormalizeInvalidEvent) {
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+  QueryExecutionResult result = (*qp)->Run({args1});
   const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
-      result->subscription_context;
+      result.subscription_context;
   ASSERT_THAT(context, NotNull());
 
   // Setup: Make sure we have a trie node to resume Sensor RedPath query.
@@ -1588,12 +1595,12 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesUriCorrectly) {
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> query_result = (*qp)->Run({args1});
+  QueryExecutionResult query_result = (*qp)->Run({args1});
 
-  EXPECT_THAT(query_result, IsOk());
+  EXPECT_FALSE(query_result.query_result.has_status());
   EXPECT_THAT(expected_query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
-                  ecclesia::EqualsProto(query_result->query_result)));
+                  ecclesia::EqualsProto(query_result.query_result)));
 }
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterForUriFromRules) {
@@ -1639,7 +1646,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterForUriFromRules) {
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  EXPECT_THAT((*qp)->Run({args1}), IsOk());
+  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
   // Since the order in which the predicates are passed to the $filter string
   // construction method is non-deterministic, the Redfish request can be in two
   // possible forms.
@@ -1669,10 +1676,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerHaltsOnWrongPropertyType) {
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+  QueryExecutionResult result = (*qp)->Run({args1});
 
-  EXPECT_THAT(result.status().code(),
-              testing::Eq(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT(result.query_result.status().error_code(),
+              testing::Eq(ecclesia::ErrorCode::ERROR_INTERNAL));
 }
 
 // Test Query Planner's ability to generate sub-fru stable IDs.
@@ -1746,7 +1753,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
   EXPECT_THAT(qp, IsOk());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   auto result = (*qp)->Run({args1});
-  EXPECT_THAT(result, IsOk());
+  EXPECT_FALSE(result.query_result.has_status());
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "EmbeddedResource"
     stats { payload_size: 331 num_cache_misses: 3 }
@@ -1815,7 +1822,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
   // Verify query result.
   EXPECT_THAT(expect_query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
-                  ecclesia::EqualsProto((*result).query_result)));
+                  ecclesia::EqualsProto(result.query_result)));
 }
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
@@ -2434,17 +2441,17 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+  QueryExecutionResult result = (*qp)->Run({args1});
 
-  EXPECT_THAT(result, IsOk());
-  ASSERT_TRUE(result->query_result.has_stats());
-  ASSERT_TRUE(result->query_result.stats().has_redfish_metrics());
-  EXPECT_THAT(result->query_result.stats().num_requests(), 40);
+  EXPECT_FALSE(result.query_result.has_status());
+  ASSERT_TRUE(result.query_result.has_stats());
+  ASSERT_TRUE(result.query_result.stats().has_redfish_metrics());
+  EXPECT_THAT(result.query_result.stats().num_requests(), 40);
 
   auto timestamp = AbslTimeToProtoTime(clock.Now());
-  EXPECT_THAT(result->query_result.stats().start_time(),
+  EXPECT_THAT(result.query_result.stats().start_time(),
               EqualsProto(*timestamp));
-  EXPECT_THAT(result->query_result.stats().end_time(), EqualsProto(*timestamp));
+  EXPECT_THAT(result.query_result.stats().end_time(), EqualsProto(*timestamp));
 }
 
 TEST_F(QueryPlannerTestRunner,
@@ -2505,13 +2512,13 @@ TEST_F(QueryPlannerTestRunner,
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+  QueryExecutionResult result = (*qp)->Run({args1});
 
-  EXPECT_THAT(result, IsOk());
-  ASSERT_TRUE(result->query_result.has_stats());
-  ASSERT_TRUE(result->query_result.stats().has_redfish_metrics());
-  EXPECT_THAT(result->query_result.stats().num_cache_hits(), 0);
-  EXPECT_THAT(result->query_result.stats().num_cache_misses(), 56);
+  EXPECT_FALSE(result.query_result.has_status());
+  ASSERT_TRUE(result.query_result.has_stats());
+  ASSERT_TRUE(result.query_result.stats().has_redfish_metrics());
+  EXPECT_THAT(result.query_result.stats().num_cache_hits(), 0);
+  EXPECT_THAT(result.query_result.stats().num_cache_misses(), 56);
 }
 
 TEST_F(QueryPlannerTestRunner,
@@ -2575,19 +2582,53 @@ TEST_F(QueryPlannerTestRunner,
   EXPECT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  absl::StatusOr<QueryExecutionResult> result = (*qp)->Run({args1});
+  QueryExecutionResult result = (*qp)->Run({args1});
 
-  EXPECT_THAT(result, IsOk());
-  ASSERT_TRUE(result->query_result.has_stats());
-  ASSERT_TRUE(result->query_result.stats().has_redfish_metrics());
+  EXPECT_FALSE(result.query_result.has_status());
+  ASSERT_TRUE(result.query_result.has_stats());
+  ASSERT_TRUE(result.query_result.stats().has_redfish_metrics());
 
-  absl::StatusOr<QueryExecutionResult> result_repeat = (*qp)->Run({args1});
+  QueryExecutionResult result_repeat = (*qp)->Run({args1});
 
-  EXPECT_THAT(result_repeat, IsOk());
-  ASSERT_TRUE(result_repeat->query_result.has_stats());
-  ASSERT_TRUE(result_repeat->query_result.stats().has_redfish_metrics());
-  EXPECT_THAT(result_repeat->query_result.stats().num_cache_hits(), 56);
-  EXPECT_THAT(result_repeat->query_result.stats().num_cache_misses(), 0);
+  EXPECT_FALSE(result_repeat.query_result.has_status());
+  ASSERT_TRUE(result_repeat.query_result.has_stats());
+  ASSERT_TRUE(result_repeat.query_result.stats().has_redfish_metrics());
+  EXPECT_THAT(result_repeat.query_result.stats().num_cache_hits(), 56);
+  EXPECT_THAT(result_repeat.query_result.stats().num_cache_misses(), 0);
+}
+
+TEST_F(QueryPlannerTestRunner, CheckQueryPlannerPopulatesStatus) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandlerWithStatus("/redfish/v1/Chassis", "",
+                                       HTTPStatusCode::SERVICE_UNAV);
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get()});
+  EXPECT_THAT(qp, IsOk());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = (*qp)->Run({args1});
+
+  EXPECT_THAT(result.query_result.status().error_code(),
+              testing::Eq(ecclesia::ErrorCode::ERROR_INTERNAL));
+  EXPECT_THAT(
+      result.query_result.status().errors().at(0),
+      testing::HasSubstr(
+          "Cannot resolve NodeName Chassis to valid Redfish object at path . "
+          "Redfish Request failed with error: Service Unavailable"));
 }
 
 }  // namespace

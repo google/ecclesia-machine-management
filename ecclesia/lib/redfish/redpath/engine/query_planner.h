@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -87,12 +86,11 @@ class QueryPlannerIntf {
   // If query plan includes subscription, returns `RedPathSubscription` along
   // with a partial `QueryResult` in `QueryExecutionResult` for RedPath
   // expressions that are polled as part of subscription sequence.
-  virtual absl::StatusOr<QueryExecutionResult> Run(
+  virtual QueryExecutionResult Run(
       QueryExecutionOptions query_execution_options) = 0;
 
   // Resumes a query execution after an event.
-  virtual absl::StatusOr<QueryResult> Resume(
-      QueryResumeOptions query_resume_options) = 0;
+  virtual QueryResult Resume(QueryResumeOptions query_resume_options) = 0;
 };
 
 }  // namespace ecclesia

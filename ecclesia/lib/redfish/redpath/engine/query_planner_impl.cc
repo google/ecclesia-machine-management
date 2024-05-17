@@ -406,12 +406,11 @@ class QueryPlanner final : public QueryPlannerIntf {
           &subscription_context);
 
   // Executes Query Plan per given `query_execution_options`.
-  absl::StatusOr<QueryExecutionResult> Run(
+  QueryExecutionResult Run(
       QueryExecutionOptions query_execution_options) override;
 
   // Resumes execution of a RedPath expression on receiving event.
-  absl::StatusOr<QueryResult> Resume(
-      QueryResumeOptions query_resume_options) override;
+  QueryResult Resume(QueryResumeOptions query_resume_options) override;
 
  private:
   const DelliciusQuery *query_;
@@ -826,9 +825,27 @@ QueryPlanner::ExecuteQueryExpression(
   return execution_contexts;
 }
 
+// Populates the result with the subquery error status that occurs.
+void PopulateSubqueryErrorStatus(const absl::Status &node_status,
+                                 QueryExecutionContext &execution_context,
+                                 const RedPathExpression &expression) {
+  ErrorCode error_code = ecclesia::ErrorCode::ERROR_INTERNAL;
+  absl::StatusCode code = node_status.code();
+  std::string node_name = expression.expression;
+  std::string last_executed_redpath =
+      execution_context.redpath_prefix_tracker.last_redpath_prefix;
+  std::string error_message = absl::StrCat(
+      "Cannot resolve NodeName ", node_name,
+      " to valid Redfish object at path ", last_executed_redpath,
+      ". Redfish Request failed with error: ", node_status.message());
+  if (code == absl::StatusCode::kUnauthenticated) {
+    error_code = ecclesia::ErrorCode::ERROR_UNAUTHENTICATED;
+  }
+  execution_context.result->mutable_status()->add_errors(error_message);
+  execution_context.result->mutable_status()->set_error_code(error_code);
+}
 
-absl::StatusOr<QueryResult> QueryPlanner::Resume(
-    QueryResumeOptions query_resume_options) {
+QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
   const RedfishVariant &redfish_variant = query_resume_options.redfish_variant;
   const RedPathTrieNode *next_trie_node = query_resume_options.trie_node;
   std::unique_ptr<RedfishObject> redfish_object = redfish_variant.AsObject();
@@ -856,9 +873,16 @@ absl::StatusOr<QueryResult> QueryPlanner::Resume(
   // expression in the trie.
   if (!execution_context.redpath_trie_node->subquery_id.empty() &&
       execution_context.redfish_object_and_iterable.redfish_object != nullptr) {
-    ECCLESIA_RETURN_IF_ERROR(TryNormalize(
+    absl::Status normalize_status = TryNormalize(
         execution_context.redpath_trie_node->subquery_id, &execution_context,
-        {.enable_url_annotation = query_resume_options.enable_url_annotation}));
+        {.enable_url_annotation = query_resume_options.enable_url_annotation});
+    if (!normalize_status.ok()) {
+      result.mutable_status()->add_errors(absl::StrCat(
+          "Unable to normalize resumed query: ", normalize_status.message()));
+      result.mutable_status()->set_error_code(
+          ecclesia::ErrorCode::ERROR_INTERNAL);
+      return result;
+    }
   }
 
   // Begin BFS traversal of the trie.
@@ -876,20 +900,33 @@ absl::StatusOr<QueryResult> QueryPlanner::Resume(
       // if the node marks the end of a RedPath expression else it would be
       // empty.
       absl::string_view subquery_id = trie_node->subquery_id;
-      ECCLESIA_ASSIGN_OR_RETURN(
-          std::vector<QueryExecutionContext> execution_contexts,
+      absl::StatusOr<std::vector<QueryExecutionContext>> execution_contexts =
           ExecuteQueryExpression(expression, current_execution_context,
-                                 trie_node.get(), trace_info));
+                                 trie_node.get(), trace_info);
+      if (!execution_contexts.ok()) {
+        if (execution_contexts.status().code() == absl::StatusCode::kNotFound) {
+          continue;
+        }
+        PopulateSubqueryErrorStatus(execution_contexts.status(),
+                                    current_execution_context, expression);
+      }
 
-      for (auto &new_execution_context : execution_contexts) {
+      for (auto &new_execution_context : *execution_contexts) {
         // Populate subquery data before processing next expression
         const std::unique_ptr<RedfishObject> &object =
             new_execution_context.redfish_object_and_iterable.redfish_object;
         if (!subquery_id.empty() && object != nullptr) {
-          ECCLESIA_RETURN_IF_ERROR(
+          absl::Status normalize_status =
               TryNormalize(subquery_id, &new_execution_context,
                            {.enable_url_annotation =
-                                query_resume_options.enable_url_annotation}));
+                                query_resume_options.enable_url_annotation});
+          if (!normalize_status.ok()) {
+            result.mutable_status()->add_errors(absl::StrCat(
+                "Unable to normalize: ", normalize_status.message()));
+            result.mutable_status()->set_error_code(
+                ecclesia::ErrorCode::ERROR_INTERNAL);
+            return result;
+          }
         }
         node_queue.push(std::move(new_execution_context));
       }
@@ -941,7 +978,7 @@ void QueryPlanner::PopulateSubscriptionContext(
       query_execution_options.log_redfish_traces;
 }
 
-absl::StatusOr<QueryPlanner::QueryExecutionResult> QueryPlanner::Run(
+QueryPlanner::QueryExecutionResult QueryPlanner::Run(
     QueryExecutionOptions query_execution_options) {
   const RedfishMetrics *metrics = nullptr;
   // Each metrical_transport object has a thread local RedfishMetrics object.
@@ -960,10 +997,9 @@ absl::StatusOr<QueryPlanner::QueryExecutionResult> QueryPlanner::Run(
   } else if (variant.IsFresh() == CacheState::kIsCached) {
     cache_hit_ = cache_hit_ + 1;
   }
-  ECCLESIA_ASSIGN_OR_RETURN(
-      std::unique_ptr<RedfishObject> service_root_object,
+  absl::StatusOr<std::unique_ptr<RedfishObject>> service_root_object =
       GetRedfishObjectWithFreshness(get_params, variant, std::nullopt,
-                                    &cache_miss_));
+                                    &cache_miss_);
 
   QueryResult result;
   result.set_query_id(plan_id_);
@@ -976,13 +1012,23 @@ absl::StatusOr<QueryPlanner::QueryExecutionResult> QueryPlanner::Run(
   if (clock_ != nullptr) {
     set_time(clock_->Now(), *result.mutable_stats()->mutable_start_time());
   }
-
+  // If service root is unreachable populate the error and return the result.
+  if (!service_root_object.ok()) {
+    result.mutable_status()->add_errors(
+        absl::StrCat("Unable to query service root: ",
+                     service_root_object.status().message()));
+    result.mutable_status()->set_error_code(
+        ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE);
+    QueryExecutionResult execution_result;
+    execution_result.query_result = result;
+    return execution_result;
+  }
   // Initialize query execution context to execute next RedPath expression.
   QueryExecutionContext query_execution_context(
       &result, nullptr, redpath_trie_node_.get(),
       &query_execution_options.variables, RedPathPrefixTracker(),
       query_execution_options.redpath_query_tracker,
-      {std::move(service_root_object), nullptr});
+      {std::move(*service_root_object), nullptr});
 
   std::queue<QueryExecutionContext> node_queue;
   node_queue.push(std::move(query_execution_context));
@@ -1020,26 +1066,49 @@ absl::StatusOr<QueryPlanner::QueryExecutionResult> QueryPlanner::Run(
       // if the node marks the end of a RedPath expression else it would be
       // empty.
       absl::string_view subquery_id = next_trie_node->subquery_id;
-      ECCLESIA_ASSIGN_OR_RETURN(
-          std::vector<QueryExecutionContext> execution_contexts,
+
+      absl::StatusOr<std::vector<QueryExecutionContext>> execution_contexts =
           ExecuteQueryExpression(expression, current_execution_context,
-                                 next_trie_node.get(), trace_info));
+                                 next_trie_node.get(), trace_info);
+      // Exit query execution and populate error if querying fails. If the error
+      // is due to the resource not being found continue as this is allowed by
+      // query engine.
+      if (!execution_contexts.ok()) {
+        if (execution_contexts.status().code() == absl::StatusCode::kNotFound) {
+          continue;
+        }
+        PopulateSubqueryErrorStatus(execution_contexts.status(),
+                                    current_execution_context, expression);
+
+        QueryExecutionResult execution_result;
+        execution_result.query_result = *current_execution_context.result;
+        return execution_result;
+      }
 
       // Handle subscription request.
       PopulateSubscriptionContext(
-          execution_contexts, current_execution_context, expression,
+          *execution_contexts, current_execution_context, expression,
           next_trie_node.get(), query_execution_options, subscription_context);
 
-      for (auto &execution_context : execution_contexts) {
+      for (auto &execution_context : *execution_contexts) {
         // Populate subquery data before processing next expression
         const std::unique_ptr<RedfishObject> &redfish_object =
             execution_context.redfish_object_and_iterable.redfish_object;
 
         if (!subquery_id.empty() && redfish_object != nullptr) {
-          ECCLESIA_RETURN_IF_ERROR(TryNormalize(
-              subquery_id, &execution_context,
-              {.enable_url_annotation =
-                   query_execution_options.enable_url_annotation}));
+          absl::Status normalize_status =
+              TryNormalize(subquery_id, &execution_context,
+                           {.enable_url_annotation =
+                                query_execution_options.enable_url_annotation});
+          if (!normalize_status.ok()) {
+            result.mutable_status()->add_errors(absl::StrCat(
+                "Unable to normalize: ", normalize_status.message()));
+            result.mutable_status()->set_error_code(
+                ecclesia::ErrorCode::ERROR_INTERNAL);
+            QueryExecutionResult execution_result;
+            execution_result.query_result = result;
+            return execution_result;
+          }
         }
         node_queue.push(std::move(execution_context));
       }

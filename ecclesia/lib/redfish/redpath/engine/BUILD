@@ -69,11 +69,11 @@ cc_test(
         "//ecclesia/lib/time:clock_fake",
         "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
         "@com_google_googletest//:gtest_main",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/public:shared_files",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
     ],
 )
@@ -90,7 +90,6 @@ cc_library(
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:redpath_subscription",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
         "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/status:statusor",
     ],
 )
 

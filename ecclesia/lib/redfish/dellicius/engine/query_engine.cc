@@ -329,18 +329,20 @@ void QueryEngine::HandleRedfishEvent(
     const std::unique_ptr<QueryPlannerIntf> &query_plan =
         id_to_redpath_query_plans_.at(event_context.query_id);
 
-    absl::StatusOr<QueryResult> resume_query_result = query_plan->Resume({
+    QueryResult resume_query_result = query_plan->Resume({
         .trie_node = find_trie_node->second,
         .redfish_variant = variant,
         .variables = std::move(find_context->second->query_variables),
     });
 
-    if (!resume_query_result.ok()) {
-      LOG(ERROR) << "Cannot resume query. Error: "
-                 << resume_query_result.status();
+    if (resume_query_result.has_status()) {
+      std::string error_message = resume_query_result.status().errors().empty()
+                                      ? ""
+                                      : resume_query_result.status().errors(0);
+      LOG(ERROR) << "Cannot resume query. Error: " << error_message;
       return;
     }
-    on_event_callback(resume_query_result.value(), event_context);
+    on_event_callback(resume_query_result, event_context);
   }
 }
 
@@ -362,7 +364,16 @@ absl::StatusOr<SubscriptionQueryResult> QueryEngine::ExecuteSubscriptionQuery(
     QueryPlannerIntf::QueryExecutionResult result_single;
     {
       auto query_timer = RedpathQueryTimestamp(&result_single, clock_);
-      ECCLESIA_ASSIGN_OR_RETURN(result_single, it->second->Run({vars}));
+      result_single = it->second->Run({vars});
+      if (result_single.query_result.has_status()) {
+        std::string error_message =
+            result_single.query_result.status().errors().empty()
+                ? ""
+                : result_single.query_result.status().errors(0);
+        return absl::InternalError(
+            absl::StrCat("Query execution failed for id ", query_id,
+                         ", message: ", error_message));
+      }
     }
 
     query_id_to_result.mutable_results()->insert(
