@@ -1,7 +1,7 @@
 # proto-file: third_party/ecclesia/lib/redfish/topology_config.proto
 # proto-message: TopologyConfig
 
-# This text proto represents the valid linkages for DMTF Redfish version 2022.3 
+# This text proto represents the valid linkages for DMTF Redfish version 2022.3
 # that handles multi host machine.
 
 find_root_node {
@@ -80,6 +80,7 @@ resource_to_config {
   value {
     first_class_attributes {
       array_attributes: "StorageControllers"
+      array_attributes: "Controllers"
       array_attributes: "Drives"
     }
   }
