@@ -64,12 +64,14 @@ class RedfishCachedGetterInterface {
   // Returns a result from a GET to a path. May return a cached result depending
   // on an implementation-specific cache policy. May also cause a cache to be
   // updated.
-  OperationResult CachedGet(absl::string_view path) {
+  OperationResult CachedGet(
+      absl::string_view path,
+      std::optional<absl::Duration> timeout = std::nullopt) {
     if (manager_.has_value()) {
       (*manager_)->RecordDownstreamCall(
           ApiComplexityContext::CallType::kCachedRedfish);
     }
-    return CachedGetInternal(path);
+    return CachedGetInternal(path, timeout);
   }
 
   // Returns a result from a GET to a path. The result should be fetched
@@ -77,12 +79,13 @@ class RedfishCachedGetterInterface {
   OperationResult UncachedGet(
       absl::string_view path,
       RedfishCachedGetterInterface::Relevance relevance =
-          RedfishCachedGetterInterface::Relevance::kRelevant) {
+          RedfishCachedGetterInterface::Relevance::kRelevant,
+      std::optional<absl::Duration> timeout = std::nullopt) {
     if (manager_.has_value()) {
       (*manager_)->RecordDownstreamCall(
           ApiComplexityContext::CallType::kUncachedRedfish);
     }
-    return UncachedGetInternal(path, relevance);
+    return UncachedGetInternal(path, relevance, timeout);
   }
 
   // Returns a result from a POST to a path and a payload. May return a cached
@@ -100,11 +103,14 @@ class RedfishCachedGetterInterface {
  protected:
   // Methods implement the cache specific logic for CachedGet and UncachedGet
   // public methods
-  virtual OperationResult CachedGetInternal(absl::string_view path) = 0;
+  virtual OperationResult CachedGetInternal(
+      absl::string_view path,
+      std::optional<absl::Duration> timeout = std::nullopt) = 0;
   virtual OperationResult UncachedGetInternal(
       absl::string_view path,
       RedfishCachedGetterInterface::Relevance relevance =
-          RedfishCachedGetterInterface::Relevance::kRelevant) = 0;
+          RedfishCachedGetterInterface::Relevance::kRelevant,
+      std::optional<absl::Duration> timeout = std::nullopt) = 0;
   virtual OperationResult CachedPostInternal(absl::string_view path,
                                        absl::string_view payload,
                                        absl::Duration duration) = 0;
@@ -130,11 +136,14 @@ class NullCache : public RedfishCachedGetterInterface {
       : RedfishCachedGetterInterface(manager), transport_(transport) {}
 
  protected:
-  OperationResult CachedGetInternal(absl::string_view path) override;
+  OperationResult CachedGetInternal(
+      absl::string_view path,
+      std::optional<absl::Duration> timeout = std::nullopt) override;
   OperationResult UncachedGetInternal(
       absl::string_view path,
       RedfishCachedGetterInterface::Relevance relevance =
-          RedfishCachedGetterInterface::Relevance::kNotRelevant) override;
+          RedfishCachedGetterInterface::Relevance::kNotRelevant,
+      std::optional<absl::Duration> timeout = std::nullopt) override;
   OperationResult CachedPostInternal(absl::string_view path,
                                absl::string_view payload,
                                absl::Duration duration) override;
@@ -162,10 +171,14 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
         get_max_age_(max_age) {}
 
  protected:
-  OperationResult CachedGetInternal(absl::string_view path) override;
+  OperationResult CachedGetInternal(
+      absl::string_view path,
+      std::optional<absl::Duration> timeout = std::nullopt) override;
   OperationResult UncachedGetInternal(
       absl::string_view path,
-      RedfishCachedGetterInterface::Relevance relevance) override;
+      RedfishCachedGetterInterface::Relevance relevance =
+          RedfishCachedGetterInterface::Relevance::kRelevant,
+      std::optional<absl::Duration> timeout = std::nullopt) override;
   OperationResult CachedPostInternal(absl::string_view path,
                                absl::string_view payload,
                                absl::Duration duration) override;
@@ -192,7 +205,8 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
       bool is_fresh;
     };
 
-    ResultAndFreshness CachedRead() {
+    ResultAndFreshness CachedRead(
+        std::optional<absl::Duration> timeout = std::nullopt) {
       std::unique_ptr<absl::Notification> local_notification = nullptr;
       {
         absl::MutexLock mu(&mutex_);
@@ -204,12 +218,13 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
       }
       // No notification:
       // This thread is the one responsible for doing the update.
-      if (!local_notification) return DoUpdateAndNotifyOthers();
+      if (!local_notification) return DoUpdateAndNotifyOthers(timeout);
       // Otherwise another thread is responsible for doing the update.
       return WaitForNotificationAndUseCachedResult(*local_notification);
     }
 
-    ResultAndFreshness UncachedRead() {
+    ResultAndFreshness UncachedRead(
+        std::optional<absl::Duration> timeout = std::nullopt) {
       std::unique_ptr<absl::Notification> local_notification = nullptr;
       {
         absl::MutexLock mu(&mutex_);
@@ -217,7 +232,7 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
       }
       // No notification:
       // This thread is the one responsible for doing the update.
-      if (!local_notification) return DoUpdateAndNotifyOthers();
+      if (!local_notification) return DoUpdateAndNotifyOthers(timeout);
       // Otherwise another thread is responsible for doing the update.
       return WaitForNotificationAndUseCachedResult(*local_notification);
     }
@@ -236,7 +251,8 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
       return notification;
     }
 
-    ResultAndFreshness DoUpdateAndNotifyOthers()
+    ResultAndFreshness DoUpdateAndNotifyOthers(
+        std::optional<absl::Duration> timeout = std::nullopt)
         ABSL_LOCKS_EXCLUDED(mutex_) {
       // transport_->Get() or Post() might be slow so do not hold any locks
       // here.
@@ -244,7 +260,8 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
       if (post_payload_.has_value()) {
         result = transport_->Post(path_, *post_payload_);
       } else {
-        result = transport_->Get(path_);
+        result = timeout.has_value() ? transport_->Get(path_, *timeout)
+                                     : transport_->Get(path_);
       }
 
       // For successful return, if this is Post operation, we cache the result

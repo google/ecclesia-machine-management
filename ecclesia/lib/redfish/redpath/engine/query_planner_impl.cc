@@ -775,7 +775,6 @@ QueryPlanner::ExecuteQueryExpression(
       cache_hit_ = cache_hit_ + 1;
     }
     ECCLESIA_RETURN_IF_ERROR(redfish_variant.status());
-
     std::unique_ptr<RedfishObject> redfish_object = nullptr;
     std::unique_ptr<RedfishIterable> redfish_iterable = nullptr;
     if (redfish_iterable = redfish_variant.AsIterable(); !redfish_iterable) {

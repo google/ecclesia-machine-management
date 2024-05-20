@@ -225,11 +225,16 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
     LOG(INFO) << "Variant:\n" << DebugString();
   }
 
+  std::optional<absl::Duration> GetTimeout() const override { return timeout_; }
+
+  void SetTimeout(absl::Duration timeout) override { timeout_ = timeout; }
+
  private:
   RedfishInterface *intf_;
   RedfishExtendedPath path_;
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
+  std::optional<absl::Duration> timeout_;
 };
 
 // Helper function for automatically fetching an @odata.id reference using
@@ -282,16 +287,18 @@ class HttpIntfObjectImpl : public RedfishObject {
  public:
   explicit HttpIntfObjectImpl(RedfishInterface *intf, RedfishExtendedPath path,
                               ecclesia::RedfishTransport::Result result,
-                              CacheState cache_state)
+                              CacheState cache_state,
+                          std::optional<absl::Duration> timeout = std::nullopt)
       : intf_(intf),
         path_(std::move(path)),
         result_(std::move(result)),
-        cache_state_(cache_state) {}
+        cache_state_(cache_state),
+        timeout_(timeout){}
   HttpIntfObjectImpl(const HttpIntfObjectImpl &) = delete;
   HttpIntfObjectImpl &operator=(const HttpIntfObjectImpl &) = delete;
 
   RedfishVariant operator[](const std::string &node_name) const override {
-    return Get(node_name, GetParams{});
+    return Get(node_name, GetParams{.timeout = timeout_});
   }
 
   RedfishVariant Get(const std::string &node_name,
@@ -372,7 +379,7 @@ class HttpIntfObjectImpl : public RedfishObject {
   }
 
   absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
-      GetParams params) {
+      GetParams params) override {
     if (cache_state_ == CacheState::kIsFresh) {
       return std::make_unique<HttpIntfObjectImpl>(intf_, path_, result_,
                                                   cache_state_);
@@ -389,7 +396,7 @@ class HttpIntfObjectImpl : public RedfishObject {
 
   void ForEachProperty(absl::FunctionRef<RedfishIterReturnValue(
                            absl::string_view, RedfishVariant value)>
-                           itr_func) {
+                           itr_func) override {
     if (!std::holds_alternative<nlohmann::json>(result_.body)) {
       return;
     }
@@ -419,6 +426,7 @@ class HttpIntfObjectImpl : public RedfishObject {
   RedfishExtendedPath path_;
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
+  std::optional<absl::Duration> timeout_;
 };
 
 // HttpIntfArrayIterableImpl implements the RedfishIterable interface with a
@@ -431,13 +439,15 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
                                      ecclesia::RedfishTransport::Result result,
                                      CacheState cache_state,
                                      RedfishVariant::IterableMode mode,
-                                     GetParams::Freshness freshness)
+                                     GetParams::Freshness freshness,
+                          std::optional<absl::Duration> timeout = std::nullopt)
       : intf_(intf),
         path_(std::move(path)),
         result_(std::move(result)),
         cache_state_(cache_state),
         mode_(mode),
-        freshness_(freshness) {}
+        freshness_(freshness),
+        timeout_(timeout){}
 
   HttpIntfArrayIterableImpl(const HttpIntfArrayIterableImpl &) = delete;
   HttpIntfObjectImpl &operator=(const HttpIntfArrayIterableImpl &) = delete;
@@ -474,7 +484,8 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
     }
     return ResolveReference(result_.code, json[index], result_.headers, intf_,
                             std::move(new_path), cache_state_,
-                            GetParams{.freshness = freshness_});
+                            GetParams{.freshness = freshness_,
+                                     .timeout = timeout_});
   }
 
  private:
@@ -484,6 +495,7 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
   CacheState cache_state_;
   RedfishVariant::IterableMode mode_;
   GetParams::Freshness freshness_;
+  std::optional<absl::Duration> timeout_;
 };
 
 // HttpIntfCollectionIterableImpl implements the RedfishIterable interface
@@ -495,13 +507,15 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
   explicit HttpIntfCollectionIterableImpl(
       RedfishInterface *intf, RedfishExtendedPath path,
       ecclesia::RedfishTransport::Result result, CacheState cache_state,
-      RedfishVariant::IterableMode mode, GetParams::Freshness freshness)
+      RedfishVariant::IterableMode mode, GetParams::Freshness freshness,
+      std::optional<absl::Duration> timeout = std::nullopt)
       : intf_(intf),
         path_(std::move(path)),
         result_(std::move(result)),
         cache_state_(cache_state),
         mode_(mode),
-        freshness_(freshness) {}
+        freshness_(freshness),
+        timeout_(timeout){}
   HttpIntfCollectionIterableImpl(const HttpIntfCollectionIterableImpl &) =
       delete;
   HttpIntfObjectImpl &operator=(const HttpIntfCollectionIterableImpl &) =
@@ -549,9 +563,10 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
                             ecclesia::HttpResponseCodeFromInt(result_.code),
                             result_.headers);
     }
-    return ResolveReference(result_.code, itr.value()[index], result_.headers,
-                            intf_, std::move(new_path), cache_state_,
-                            GetParams{.freshness = freshness_});
+    return ResolveReference(
+        result_.code, itr.value()[index], result_.headers, intf_,
+        std::move(new_path), cache_state_,
+        GetParams{.freshness = freshness_, .timeout = timeout_});
   }
 
  private:
@@ -561,6 +576,8 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
   CacheState cache_state_;
   RedfishVariant::IterableMode mode_;
   GetParams::Freshness freshness_;
+  std::optional<absl::Duration> timeout_;
+  absl::Time query_start_time_;
 };
 
 std::unique_ptr<RedfishObject> HttpIntfVariantImpl::AsObject() const {
@@ -589,7 +606,7 @@ std::unique_ptr<RedfishIterable> HttpIntfVariantImpl::AsIterable(
   // Check if the object is a Redfish collection.
   if (is_collection_iterable) {
     return std::make_unique<HttpIntfCollectionIterableImpl>(
-        intf_, path_, result_, cache_state_, mode, freshness);
+        intf_, path_, result_, cache_state_, mode, freshness, timeout_);
   }
   return nullptr;
 }
@@ -664,8 +681,8 @@ class HttpRedfishInterface : public RedfishInterface {
                               GetParams params) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
     std::string full_redfish_path = GetUriWithQueryParameters(uri, params);
-    auto result = GetUriHelper(uri, std::move(params),
-                               cache_->CachedGet(full_redfish_path));
+    auto result = GetUriHelper(
+        uri, params, cache_->CachedGet(full_redfish_path, params.timeout));
     return result;
   }
 
@@ -673,7 +690,8 @@ class HttpRedfishInterface : public RedfishInterface {
                                 GetParams params) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
     std::string full_redfish_path = GetUriWithQueryParameters(uri, params);
-    auto get_result = cache_->UncachedGet(full_redfish_path, params.relevance);
+    auto get_result = cache_->UncachedGet(full_redfish_path, params.relevance,
+                                         params.timeout);
     return GetUriHelper(uri, std::move(params), std::move(get_result));
   }
 

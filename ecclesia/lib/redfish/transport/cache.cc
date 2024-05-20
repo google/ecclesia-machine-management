@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/transport/cache.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -28,15 +29,22 @@
 namespace ecclesia {
 
 RedfishCachedGetterInterface::OperationResult NullCache::CachedGetInternal(
-    absl::string_view path) {
+    absl::string_view path, std::optional<absl::Duration> timeout) {
   // Report uncached call as this is null cache
-  return {.result = transport_->Get(path), .is_fresh = true};
+  return {.result = timeout.has_value() ? transport_->Get(path, *timeout)
+                                        : transport_->Get(path),
+          .is_fresh = true};
 }
 
 RedfishCachedGetterInterface::OperationResult NullCache::UncachedGetInternal(
     absl::string_view path,
-    RedfishCachedGetterInterface::Relevance /* relevance */) {
-  return {.result = transport_->Get(path), .is_fresh = true};
+    RedfishCachedGetterInterface::Relevance /* relevance */,
+    std::optional<absl::Duration> timeout) {
+  return {
+      .result = timeout.has_value() ? transport_->Get(path, *timeout)
+                                    : transport_->Get(path),
+      .is_fresh = true,
+  };
 }
 
 RedfishCachedGetterInterface::OperationResult NullCache::CachedPostInternal(
@@ -76,23 +84,24 @@ TimeBasedCache::CacheNode &TimeBasedCache::RetrieveCacheNode(
 }
 
 RedfishCachedGetterInterface::OperationResult TimeBasedCache::CachedGetInternal(
-    absl::string_view path) {
+    absl::string_view path, std::optional<absl::Duration> timeout) {
   TimeBasedCache::CacheNode &store = RetrieveCacheNode(path);
-  auto result = store.CachedRead();
+  auto result = store.CachedRead(timeout);
   return {.result = std::move(result.result), .is_fresh = result.is_fresh};
 }
 
 RedfishCachedGetterInterface::OperationResult
 TimeBasedCache::UncachedGetInternal(
-    absl::string_view path,
-    RedfishCachedGetterInterface::Relevance relevance =
-        RedfishCachedGetterInterface::Relevance::kRelevant) {
+    absl::string_view path, RedfishCachedGetterInterface::Relevance relevance,
+    std::optional<absl::Duration> timeout) {
   // Bypass cache node retrieval if caller has indicated cache irrelevance.
   if (relevance == RedfishCachedGetterInterface::Relevance::kNotRelevant) {
-    return {.result = transport_->Get(path), .is_fresh = true};
+    return {.result = timeout.has_value() ? transport_->Get(path, *timeout)
+                                          : transport_->Get(path),
+            .is_fresh = true};
   }
   TimeBasedCache::CacheNode &store = RetrieveCacheNode(path);
-  auto result = store.UncachedRead();
+  auto result = store.UncachedRead(timeout);
   return {.result = std::move(result.result), .is_fresh = result.is_fresh};
 }
 

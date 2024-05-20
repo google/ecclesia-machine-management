@@ -239,6 +239,7 @@ struct GetParams {
   std::optional<RedfishQueryParamTop> top;
   std::optional<RedfishQueryParamExpand> expand;
   std::optional<RedfishQueryParamFilter> filter;
+  std::optional<absl::Duration> timeout;
 };
 
 // RedfishVariant is the standard return type for all Redfish interfaces.
@@ -310,6 +311,13 @@ class RedfishVariant final {
     virtual std::string DebugString() const = 0;
     virtual void PrintDebugString() const {}
     virtual CacheState IsFresh() const = 0;
+    // Mehods to get and set the request timeout that will apply to the server
+    // requests via RedfishTransport. that occur as part of the [] operator for
+    // RedfishIterables and EnsureFreshPayload() calls for RedfishObjects.
+    virtual std::optional<absl::Duration> GetTimeout() const {
+      return std::nullopt;
+    }
+    virtual void SetTimeout(absl::Duration timeout) {}
   };
 
   // Helper structures used with IndexHelper class
@@ -496,6 +504,12 @@ class RedfishVariant final {
   void PrintDebugString() const {
     if (!ptr_) return;
     ptr_->PrintDebugString();
+  }
+
+  void SetTimeout(absl::Duration timeout) const { ptr_->SetTimeout(timeout); }
+
+  std::optional<absl::Duration> GetTimeout() const {
+    return ptr_->GetTimeout();
   }
 
  private:
