@@ -52,6 +52,7 @@ namespace {
 
 using ::testing::_;
 using ::testing::IsEmpty;
+using ::testing::Values;
 
 constexpr absl::string_view kRootDir = "/test/";
 constexpr absl::string_view kQueryResultDir = "/test/query_result/";
@@ -198,10 +199,15 @@ class QueryRouterTest : public testing::Test {
   ApifsDirectory apifs_;
 };
 
-TEST_F(QueryRouterTest, CreateSuccessTest) {
+class QueryRouterSuccessTest
+    : public QueryRouterTest,
+      public testing::WithParamInterface<absl::string_view> {};
+
+TEST_P(QueryRouterSuccessTest, CreateSuccess) {
   QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
       R"pb(
-        query_pattern: PATTERN_SERIAL_ALL
+        query_pattern: $1
+        max_concurrent_threads: 3
         selection_specs {
           key: "query_a"
           value {
@@ -240,7 +246,7 @@ TEST_F(QueryRouterTest, CreateSuccessTest) {
           }
         }
       )pb",
-      apifs_.GetPath()));
+      apifs_.GetPath(), GetParam()));
 
   std::vector<QueryRouter::ServerSpec> server_specs;
   server_specs.push_back(GetServerSpec("server_1"));
@@ -349,6 +355,10 @@ TEST_F(QueryRouterTest, CreateSuccessTest) {
     EXPECT_THAT(expected_callbacks, IsEmpty());
   }
 }
+
+INSTANTIATE_TEST_SUITE_P(CheckQueryRouterCreate, QueryRouterSuccessTest,
+                         Values("PATTERN_SERIAL_ALL", "PATTERN_SERIAL_AGENT",
+                                "PATTERN_PARALLEL_ALL"));
 
 TEST_F(QueryRouterTest, CreateSuccessWithSystemIdQueryRouterTest) {
   QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
@@ -594,6 +604,44 @@ TEST_F(QueryRouterTest, UnsupportedQueryPattern) {
                   }),
               IsStatusFailedPrecondition());
 }
+
+class QueryRouterFailureTest
+    : public QueryRouterTest,
+      public testing::WithParamInterface<absl::string_view> {};
+
+TEST_P(QueryRouterFailureTest, WithoutMaxThreadValue) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: $0
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$1/does_not_exist.textproto" }
+            }
+          }
+        }
+      )pb",
+      GetParam(), apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+  EXPECT_THAT(QueryRouter::Create(
+                  router_spec, std::move(server_specs),
+                  [&](const QuerySpec &, const QueryEngineParams &,
+                      std::unique_ptr<IdAssigner>,
+                      std::unique_ptr<RedpathEngineIdAssigner>)
+                      -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+                    return FileBackedQueryEngine::Create(
+                        fs_.GetTruePath(kQueryResultDir));
+                  }),
+              IsStatusFailedPrecondition());
+}
+
+INSTANTIATE_TEST_SUITE_P(CheckQueryRouterCreateFailure, QueryRouterFailureTest,
+                         Values("PATTERN_SERIAL_AGENT",
+                                "PATTERN_PARALLEL_ALL"));
 
 TEST_F(QueryRouterTest, QueryEngineCreateFailure) {
   QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(

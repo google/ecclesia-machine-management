@@ -26,6 +26,7 @@
 
 #include "absl/container/flat_hash_set.h"
 #include "absl/functional/any_invocable.h"
+#include "absl/log/die_if_null.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
@@ -49,31 +50,31 @@ class QueryRouterIntf {
     SelectionSpec::SelectionClass::ServerType server_type;
 
     template <typename H>
-    friend H AbslHashValue(H h, const ServerInfo& s) {
+    friend H AbslHashValue(H h, const ServerInfo &s) {
       return H::combine(std::move(h), s.server_tag, s.server_type);
     }
 
-    bool operator==(const ServerInfo& other) const {
+    bool operator==(const ServerInfo &other) const {
       return server_tag == other.server_tag && server_type == other.server_type;
     }
   };
 
-  using ResultCallback = std::function<void(const ServerInfo& /* server_info */,
-                                            QueryResult /* result */)>;
+  using ResultCallback = std::function<void(
+      const ServerInfo &/* server_info */, QueryResult /* result */)>;
 
   virtual ~QueryRouterIntf() = default;
 
   // Overloaded function for executing non-templated queries
   void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
-                    const ResultCallback& callback) const {
+                    const ResultCallback &callback) const {
     ExecuteQuery(query_ids, {}, callback);
   }
 
   // Pure-virtual functions that must be overridden by concrete implementations.
   virtual void ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
-      const QueryEngineIntf::QueryVariableSet& query_arguments,
-      const ResultCallback& callback) const = 0;
+      const QueryEngineIntf::QueryVariableSet &query_arguments,
+      const ResultCallback &callback) const = 0;
 };
 
 // Concrete implementation of Query Router Interface that routes the queries
@@ -93,25 +94,29 @@ class QueryRouter : public QueryRouterIntf {
 
     ServerSpec() = default;
     ServerSpec(const ServerSpec&) = delete;
-    ServerSpec& operator=(const ServerSpec&) = delete;
+    ServerSpec &operator=(const ServerSpec &) = delete;
     ServerSpec(ServerSpec&&) = default;
-    ServerSpec& operator=(ServerSpec&&) = default;
+    ServerSpec &operator=(ServerSpec &&) = default;
   };
 
   // Factory method to create a QueryRouter instance. The servers involved in
   // the instance will be an intersection of the Servers specified in the
   // QueryRouterSpec and the list of ServerSpecs specified.
   static absl::StatusOr<std::unique_ptr<QueryRouterIntf>> Create(
-      const QueryRouterSpec& router_spec, std::vector<ServerSpec> server_specs,
+      const QueryRouterSpec &router_spec, std::vector<ServerSpec> server_specs,
       QueryEngineFactory query_engine_factory = QueryEngine::Create);
 
   ~QueryRouter() override = default;
 
   // Execute the list of queries as per the QueryRouterSpec. `callback` will be
-  // called for each QueryResult.
+  // called for each QueryResult and is thread safe when the queries are
+  // executed in parallel (PATTERN_SERIAL_AGENT, PATTERN_PARALLEL_ALL).
+  // `callback` is guaranteed to be executed non-concurrently and clients don't
+  // need to independently guard against concurrent access to any of their data
+  // structures that are accessed by the callback.
   void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
-                    const QueryEngineIntf::QueryVariableSet& query_arguments,
-                    const ResultCallback& callback) const override;
+                    const QueryEngineIntf::QueryVariableSet &query_arguments,
+                    const ResultCallback &callback) const override;
 
  private:
   // Defines the core elements of the routing table - server info, query engine
@@ -123,12 +128,54 @@ class QueryRouter : public QueryRouterIntf {
     std::optional<std::string> node_local_system_id = std::nullopt;
   };
 
+  // Defines the elements to be sent as a batch to the query engine for parallel
+  // execution.
+  struct QueryBatch {
+    explicit QueryBatch(const QueryRoutingInfo* routing_info)
+        : routing_info(*ABSL_DIE_IF_NULL(routing_info)) {}
+
+    std::vector<absl::string_view> queries;
+    const QueryRoutingInfo &routing_info;
+  };
+
   using RoutingTable = std::vector<QueryRoutingInfo>;
 
-  explicit QueryRouter(RoutingTable routing_table)
-      : routing_table_(std::move(routing_table)) {}
+  using ExecuteFunction = std::function<void(
+      absl::Span<const absl::string_view>,
+      const QueryEngineIntf::QueryVariableSet&, const ResultCallback&)>;
+
+  QueryRouter(RoutingTable routing_table, QueryPattern query_pattern,
+              int max_concurrent_threads);
+
+  // All queries will be executed in series across all agents.
+  void ExecuteQuerySerialAll(
+      absl::Span<const absl::string_view> query_ids,
+      const QueryEngineIntf::QueryVariableSet &query_arguments,
+      const ResultCallback &callback) const;
+
+  // All queries will be execute in series for an agent, but queries across
+  // agents are executed in parallel
+  void ExecuteQuerySerialAgent(
+      absl::Span<const absl::string_view> query_ids,
+      const QueryEngineIntf::QueryVariableSet &query_arguments,
+      const ResultCallback &callback) const;
+
+  // All queries will be executed in parallel across all agents.
+  void ExecuteQueryParallelAll(
+      absl::Span<const absl::string_view> query_ids,
+      const QueryEngineIntf::QueryVariableSet &query_arguments,
+      const ResultCallback &callback) const;
+
+  // Each query set in the query_batches list is executed in its own individual
+  // thread.
+  void ExecuteQueryBatches(
+      absl::Span<const QueryBatch> query_batches,
+      const QueryEngineIntf::QueryVariableSet &query_arguments,
+      const ResultCallback &callback) const;
 
   RoutingTable routing_table_;
+  ExecuteFunction execute_function_;
+  int max_concurrent_threads_;
 };
 
 // Factory for creating different variants of query router.

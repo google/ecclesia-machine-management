@@ -75,4 +75,9 @@ message QueryRouterSpec {
   }
   // Indicates what type of query router should be constructed for this spec.
   QueryRouterType query_router_type = 5;
+
+  // Specifies the maximum number of concurrent threads when using query
+  // patterns PATTERN_SERIAL_AGENT or PATTERN_PARALLEL_ALL. For
+  // PATTERN_SERIAL_ALL, this value has no effect.
+  int32 max_concurrent_threads = 6;
 }

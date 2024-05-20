@@ -34,14 +34,18 @@ cc_library(
         "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/status:macros",
+        "//ecclesia/lib/thread:thread_pool",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/functional:any_invocable",
+        "@com_google_absl//absl/functional:bind_front",
         "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:die_if_null",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
     ],
@@ -105,11 +109,6 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_protobuf//:protobuf",
     ],
-)
-
-cc_library(
-    name = "default_template_variable_definitions",
-    deprecation = "This rule probably does not need to be depended on.",
 )
 
 cc_library(
