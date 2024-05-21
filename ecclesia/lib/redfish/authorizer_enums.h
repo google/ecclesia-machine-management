@@ -93,6 +93,7 @@ enum class ResourceEntity : int {
   kFacilityCollection,
   kFan,
   kFanCollection,
+  kGoogleBareMetalInstance,
   kGoogleErrorCounter,
   kGoogleErrorCounterCollection,
   kGoogleManagedObjectStoreMetrics,
