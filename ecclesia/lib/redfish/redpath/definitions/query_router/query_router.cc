@@ -31,12 +31,15 @@
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
+#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
@@ -281,6 +284,20 @@ void QueryRouter::ExecuteQueryBatches(
                      routing_info.node_local_system_id, callback_mutex);
     });
   }
+}
+
+absl::StatusOr<RedfishInterface *> QueryRouter::GetRedfishInterface(
+    const ServerInfo &server_info,
+    RedfishInterfacePasskey unused_passkey) const {
+  for (const QueryRoutingInfo &routing_info : routing_table_) {
+    if (routing_info.server_info == server_info) {
+      return routing_info.query_engine->GetRedfishInterface(unused_passkey);
+    }
+  }
+  return absl::NotFoundError(absl::StrCat(
+      "RedfishInterface not found for server: ", server_info.server_tag,
+      " and server type: ",
+      SelectionSpec::SelectionClass::ServerType_Name(server_info.server_type)));
 }
 
 }  // namespace ecclesia

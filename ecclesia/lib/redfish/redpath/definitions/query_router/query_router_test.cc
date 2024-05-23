@@ -34,10 +34,12 @@
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/engine/file_backed_query_engine.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/mock_query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
+#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/default_template_variable_names.h"
@@ -52,6 +54,8 @@ namespace {
 
 using ::testing::_;
 using ::testing::IsEmpty;
+using ::testing::NotNull;
+using ::testing::Return;
 using ::testing::Values;
 
 constexpr absl::string_view kRootDir = "/test/";
@@ -780,6 +784,109 @@ TEST_F(QueryRouterTest, CheckLocationDerivedStableIdConfiguration) {
                         fs_.GetTruePath(kQueryResultDir));
                   }),
               IsOk());
+}
+
+TEST_F(QueryRouterTest, GetRedfishInterfaceSuccess) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_SERIAL_ALL
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+  auto mock_qe = std::make_unique<MockQueryEngine>();
+  NullRedfish redfish_interface;
+  EXPECT_CALL(*mock_qe, GetRedfishInterface)
+      .WillOnce(Return(&redfish_interface));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_router,
+      QueryRouter::Create(
+          router_spec, std::move(server_specs),
+          [&](const QuerySpec &, const QueryEngineParams &params,
+              std::unique_ptr<IdAssigner>,
+              std::unique_ptr<RedpathEngineIdAssigner>)
+              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+            EXPECT_FALSE(params.features.enable_redfish_metrics());
+            EXPECT_TRUE(params.features.fail_on_first_error());
+            EXPECT_FALSE(params.features.log_redfish_traces());
+            return std::move(mock_qe);
+          }));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      RedfishInterface * intf,
+      query_router->GetRedfishInterface(
+          QueryRouter::ServerInfo{
+              .server_tag = "server_1",
+              .server_type = SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          },
+          RedfishInterfacePasskeyFactory::GetPassKey()));
+  ASSERT_THAT(intf, NotNull());
+}
+
+TEST_F(QueryRouterTest, GetRedfishInterfaceFailure) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_SERIAL_ALL
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+  auto mock_qe = std::make_unique<MockQueryEngine>();
+  EXPECT_CALL(*mock_qe, GetRedfishInterface).Times(0);
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_router,
+      QueryRouter::Create(
+          router_spec, std::move(server_specs),
+          [&](const QuerySpec &, const QueryEngineParams &params,
+              std::unique_ptr<IdAssigner>,
+              std::unique_ptr<RedpathEngineIdAssigner>)
+              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+            EXPECT_FALSE(params.features.enable_redfish_metrics());
+            EXPECT_TRUE(params.features.fail_on_first_error());
+            EXPECT_FALSE(params.features.log_redfish_traces());
+            return std::move(mock_qe);
+          }));
+
+  ASSERT_THAT(
+      query_router->GetRedfishInterface(
+          QueryRouter::ServerInfo{
+              .server_tag = "unknown_server",
+              .server_type = SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          },
+          RedfishInterfacePasskeyFactory::GetPassKey()),
+      IsStatusNotFound());
+
+  ASSERT_THAT(
+      query_router->GetRedfishInterface(
+          QueryRouter::ServerInfo{
+              .server_tag = "server_1",
+              .server_type =
+                  SelectionSpec::SelectionClass::SERVER_TYPE_UNSPECIFIED,
+          },
+          RedfishInterfacePasskeyFactory::GetPassKey()),
+      IsStatusNotFound());
 }
 
 }  // namespace

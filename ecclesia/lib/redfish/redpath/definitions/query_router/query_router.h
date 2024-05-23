@@ -30,9 +30,11 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
+#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -75,6 +77,10 @@ class QueryRouterIntf {
       absl::Span<const absl::string_view> query_ids,
       const QueryEngineIntf::QueryVariableSet &query_arguments,
       const ResultCallback &callback) const = 0;
+
+  virtual absl::StatusOr<RedfishInterface *> GetRedfishInterface(
+      const ServerInfo &server_info,
+      RedfishInterfacePasskey unused_passkey) const = 0;
 };
 
 // Concrete implementation of Query Router Interface that routes the queries
@@ -117,6 +123,14 @@ class QueryRouter : public QueryRouterIntf {
   void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
                     const QueryEngineIntf::QueryVariableSet &query_arguments,
                     const ResultCallback &callback) const override;
+
+  // Returns the RedfishInterface for the given ServerInfo.
+  // QueryEngineRawInterfacePasskey is just an empty strongly-typed object that
+  // one needs to provide in order to get access to the underlying
+  // RedfishInterface.
+  absl::StatusOr<RedfishInterface *> GetRedfishInterface(
+      const ServerInfo &server_info,
+      RedfishInterfacePasskey unused_passkey) const override;
 
  private:
   // Defines the core elements of the routing table - server info, query engine

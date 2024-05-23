@@ -20,9 +20,12 @@
 #include <memory>
 
 #include "gmock/gmock.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
+#include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
+#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router.h"
 
 namespace ecclesia {
@@ -39,6 +42,9 @@ class QueryRouterMock : public QueryRouterIntf {
               (absl::Span<const absl::string_view>,
                const QueryEngineIntf::QueryVariableSet&, const ResultCallback&),
               (const, override));
+
+  MOCK_METHOD(absl::StatusOr<RedfishInterface *>, GetRedfishInterface,
+              (const ServerInfo &, RedfishInterfacePasskey), (const, override));
 };
 
 }  // namespace ecclesia

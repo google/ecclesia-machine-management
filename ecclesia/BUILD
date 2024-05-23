@@ -70,6 +70,7 @@ package_group(
     packages = [
         "//ecclesia/lib/redfish/dellicius/engine/...",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine/...",
+        "//ecclesia/lib/redfish/redpath/definitions/query_router/...",
     ],
 )
 
