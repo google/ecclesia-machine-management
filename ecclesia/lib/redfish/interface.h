@@ -43,6 +43,7 @@
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/http/codes.h"
+#include "ecclesia/lib/redfish/timing/query_timeout_manager.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "single_include/nlohmann/json.hpp"
@@ -240,6 +241,7 @@ struct GetParams {
   std::optional<RedfishQueryParamExpand> expand;
   std::optional<RedfishQueryParamFilter> filter;
   std::optional<absl::Duration> timeout;
+  std::optional<ecclesia::QueryTimeoutManager *> timeout_manager;
 };
 
 // RedfishVariant is the standard return type for all Redfish interfaces.

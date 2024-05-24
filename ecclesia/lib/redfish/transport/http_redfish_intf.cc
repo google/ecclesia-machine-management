@@ -680,19 +680,42 @@ class HttpRedfishInterface : public RedfishInterface {
   RedfishVariant CachedGetUri(absl::string_view uri,
                               GetParams params) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
-    std::string full_redfish_path = GetUriWithQueryParameters(uri, params);
-    auto result = GetUriHelper(
-        uri, params, cache_->CachedGet(full_redfish_path, params.timeout));
-    return result;
+    if (params.timeout_manager.has_value() &&
+        *params.timeout_manager != nullptr) {
+      if ((*params.timeout_manager)->ProbeTimeout().code() ==
+          absl::StatusCode::kDeadlineExceeded) {
+        return RedfishVariant(absl::DeadlineExceededError(
+            absl::StrCat("Deadline exceeded while getting uri:", uri)));
+      }
+      return GetUriHelper(
+          uri, params,
+          cache_->CachedGet(GetUriWithQueryParameters(uri, params),
+                            (*params.timeout_manager)->GetRemainingTimeout()));
+    }
+    return GetUriHelper(
+        uri, params, cache_->CachedGet(GetUriWithQueryParameters(uri, params)));
   }
 
   RedfishVariant UncachedGetUri(absl::string_view uri,
                                 GetParams params) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
-    std::string full_redfish_path = GetUriWithQueryParameters(uri, params);
-    auto get_result = cache_->UncachedGet(full_redfish_path, params.relevance,
-                                         params.timeout);
-    return GetUriHelper(uri, std::move(params), std::move(get_result));
+    if (params.timeout_manager.has_value() &&
+        *params.timeout_manager != nullptr) {
+      if ((*params.timeout_manager)->ProbeTimeout().code() ==
+          absl::StatusCode::kDeadlineExceeded) {
+        return RedfishVariant(absl::DeadlineExceededError(
+            absl::StrCat("Deadline exceeded while getting uri:", uri)));
+      }
+      return GetUriHelper(
+          uri, params,
+          cache_->UncachedGet(
+              GetUriWithQueryParameters(uri, params), params.relevance,
+              (*params.timeout_manager)->GetRemainingTimeout()));
+    }
+    return GetUriHelper(
+        uri, params,
+        cache_->UncachedGet(GetUriWithQueryParameters(uri, params),
+                            params.relevance));
   }
 
   RedfishVariant PostUri(

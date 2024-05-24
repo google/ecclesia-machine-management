@@ -18,6 +18,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/http:codes",
+        "//ecclesia/lib/redfish/timing:query_timeout_manager",
         "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:interface",
         "@com_google_absl//absl/base:core_headers",
