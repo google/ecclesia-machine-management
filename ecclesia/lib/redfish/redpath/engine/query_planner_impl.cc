@@ -57,6 +57,7 @@
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/redpath/engine/redpath_trie.h"
+#include "ecclesia/lib/redfish/timing/query_timeout_manager.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
@@ -374,7 +375,13 @@ QueryPlanner::QueryPlanner(ImplOptions options_in)
       subquery_id_to_subquery_(GetSubqueryIdToSubquery(query_)),
       subquery_sequences_(std::move(options_in.subquery_sequences)),
       metrical_transport_(options_in.metrical_transport),
-      clock_(options_in.clock) {}
+      clock_(options_in.clock),
+      timeout_manager_(
+          options_in.query_timeout.has_value()
+              ? std::make_unique<QueryTimeoutManager>(
+                    clock_ == nullptr ? *ecclesia::Clock::RealClock() : *clock_,
+                    *options_in.query_timeout)
+              : nullptr) {}
 
 GetParams QueryPlanner::GetQueryParamsForRedPath(
     absl::string_view redpath_prefix) {
@@ -1029,7 +1036,8 @@ absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
       .redpath_rules = std::move(query_planner_options.redpath_rules),
       .subquery_sequences = *subquery_sequences,
       .metrical_transport = query_planner_options.metrical_transport,
-      .clock = query_planner_options.clock});
+      .clock = query_planner_options.clock,
+      .query_timeout = query_planner_options.query_timeout});
 }
 
 }  // namespace ecclesia

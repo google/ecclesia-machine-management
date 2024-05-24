@@ -27,16 +27,19 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/log/check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/redpath/engine/redpath_trie.h"
+#include "ecclesia/lib/redfish/timing/query_timeout_manager.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/time/clock.h"
 
@@ -58,6 +61,7 @@ struct QueryPlannerOptions {
   RedfishInterface *redfish_interface;
   MetricalRedfishTransport *metrical_transport;
   const Clock *clock;
+  const std::optional<absl::Duration> query_timeout;
 };
 
 // Describes the Redfish resource relative to which RedPath expressions execute.
@@ -150,6 +154,7 @@ class QueryPlanner final : public QueryPlannerIntf {
     absl::flat_hash_set<std::vector<std::string>> subquery_sequences;
     MetricalRedfishTransport *metrical_transport = nullptr;
     const Clock *clock = nullptr;
+    const std::optional<absl::Duration> query_timeout = std::nullopt;
   };
 
   explicit QueryPlanner(ImplOptions options_in);
@@ -202,6 +207,7 @@ class QueryPlanner final : public QueryPlannerIntf {
   const Clock *clock_ = nullptr;
   std::atomic<int64_t> cache_miss_{0};
   std::atomic<int64_t> cache_hit_{0};
+  std::unique_ptr<QueryTimeoutManager> timeout_manager_ = nullptr;
 };
 
 absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
