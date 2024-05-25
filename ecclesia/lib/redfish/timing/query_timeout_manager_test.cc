@@ -21,7 +21,9 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/base/thread_annotations.h"
 #include "absl/status/status.h"
+#include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/thread/thread.h"
@@ -93,11 +95,13 @@ TEST(QueryTimeoutManagerTest, QueryTimeoutManagerHandlesMisuse) {
 
 TEST(QueryTimeoutManagerTest, QueryTimeoutManagerThreadSafetyTest) {
   static constexpr int kNumThreads = 5;
-  ecclesia::FakeClock clock;
+  absl::Mutex clock_mutex;
+  ecclesia::FakeClock ABSL_GUARDED_BY(clock_mutex) clock;
   absl::Duration timeout = absl::Seconds(10);
   QueryTimeoutManager query_timeout_manager(clock, timeout);
   ASSERT_THAT(query_timeout_manager.StartTiming(), IsOk());
   auto request_simulating_func = [&]() {
+    absl::MutexLock lock(&clock_mutex);
     clock.AdvanceTime(absl::Seconds(1));
     ASSERT_THAT(query_timeout_manager.ProbeTimeout(), IsOk());
   };
