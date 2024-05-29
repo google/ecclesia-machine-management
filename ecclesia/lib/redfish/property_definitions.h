@@ -187,7 +187,9 @@ inline constexpr char kRfOemPropertyLocationContext[] = "LocationContext";
 inline constexpr char kRfOemPropertyLatencyHistogram[] = "LatencyHistogram";
 inline constexpr char kRfOemPropertyTimeoutCount[] = "TimeoutCount";
 inline constexpr char kRfOemPropertyWatchdog[] = "Watchdog";
-
+inline constexpr char kRfOemPropertyWatchdogSystemResets[] =
+    "WatchdogSystemResets";
+inline constexpr char kRfOemPropertyMctpSerial[] = "MctpSerial";
 inline constexpr char kRfPropertyMediaTypeSsd[] = "SSD";
 inline constexpr char kRfPropertyMemberId[] = "MemberId";
 inline constexpr char kRfPropertyReading[] = "Reading";
@@ -511,6 +513,13 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyTcgOpalAdditionalDataStoreRawData,
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyBareMetal, std::string, "BareMetal");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyNerf, std::string, "NERF");
 DEFINE_REDFISH_PROPERTY(OemPropertyRootOfTrust, std::string, "RootOfTrust");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyWatchdogSystemResets, int,
+                        "WatchdogSystemResets");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyBusName, std::string,
+                        "BusName");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyRxErrorCount, int, "RxErrorCount");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyTotalRxPackets, int, "TotalRxPackets");
+
 DEFINE_REDFISH_PROPERTY(OemPropertyEmbeddedLocationContext,
                         std::vector<std::string>, "EmbeddedLocationContext");
 DEFINE_REDFISH_PROPERTY(OemPropertyControllerType, std::string,
