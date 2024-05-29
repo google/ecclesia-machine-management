@@ -25,24 +25,30 @@
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
+#include "ecclesia/lib/redfish/timing/query_timeout_manager.h"
 
 namespace ecclesia {
 
 RedfishCachedGetterInterface::OperationResult NullCache::CachedGetInternal(
-    absl::string_view path, std::optional<absl::Duration> timeout) {
+    absl::string_view path,
+    std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr) {
   // Report uncached call as this is null cache
-  return {.result = timeout.has_value() ? transport_->Get(path, *timeout)
-                                        : transport_->Get(path),
+  return {.result =
+              timeout_mgr.has_value()
+                  ? transport_->Get(path, (*timeout_mgr)->GetRemainingTimeout())
+                  : transport_->Get(path),
           .is_fresh = true};
 }
 
 RedfishCachedGetterInterface::OperationResult NullCache::UncachedGetInternal(
     absl::string_view path,
     RedfishCachedGetterInterface::Relevance /* relevance */,
-    std::optional<absl::Duration> timeout) {
+    std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr) {
   return {
-      .result = timeout.has_value() ? transport_->Get(path, *timeout)
-                                    : transport_->Get(path),
+      .result =
+          timeout_mgr.has_value()
+              ? transport_->Get(path, (*timeout_mgr)->GetRemainingTimeout())
+              : transport_->Get(path),
       .is_fresh = true,
   };
 }
@@ -84,24 +90,27 @@ TimeBasedCache::CacheNode &TimeBasedCache::RetrieveCacheNode(
 }
 
 RedfishCachedGetterInterface::OperationResult TimeBasedCache::CachedGetInternal(
-    absl::string_view path, std::optional<absl::Duration> timeout) {
+    absl::string_view path,
+    std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr) {
   TimeBasedCache::CacheNode &store = RetrieveCacheNode(path);
-  auto result = store.CachedRead(timeout);
+  auto result = store.CachedRead(timeout_mgr);
   return {.result = std::move(result.result), .is_fresh = result.is_fresh};
 }
 
 RedfishCachedGetterInterface::OperationResult
 TimeBasedCache::UncachedGetInternal(
     absl::string_view path, RedfishCachedGetterInterface::Relevance relevance,
-    std::optional<absl::Duration> timeout) {
+    std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr) {
   // Bypass cache node retrieval if caller has indicated cache irrelevance.
   if (relevance == RedfishCachedGetterInterface::Relevance::kNotRelevant) {
-    return {.result = timeout.has_value() ? transport_->Get(path, *timeout)
-                                          : transport_->Get(path),
+    return {.result = timeout_mgr.has_value()
+                          ? transport_->Get(
+                                path, (*timeout_mgr)->GetRemainingTimeout())
+                          : transport_->Get(path),
             .is_fresh = true};
   }
   TimeBasedCache::CacheNode &store = RetrieveCacheNode(path);
-  auto result = store.UncachedRead(timeout);
+  auto result = store.UncachedRead(timeout_mgr);
   return {.result = std::move(result.result), .is_fresh = result.is_fresh};
 }
 

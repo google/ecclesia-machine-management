@@ -45,6 +45,7 @@
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/json_ptr.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
+#include "ecclesia/lib/redfish/timing/query_timeout_manager.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/utils.h"
@@ -225,16 +226,23 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
     LOG(INFO) << "Variant:\n" << DebugString();
   }
 
-  std::optional<absl::Duration> GetTimeout() const override { return timeout_; }
+  std::optional<absl::Duration> GetTimeout() const override {
+    if (timeout_mgr_.has_value()) {
+      return (*timeout_mgr_)->GetRemainingTimeout();
+    }
+    return std::nullopt;
+  }
 
-  void SetTimeout(absl::Duration timeout) override { timeout_ = timeout; }
+  void SetTimeoutManager(ecclesia::QueryTimeoutManager *timeout_mgr) override {
+    timeout_mgr_ = timeout_mgr;
+  }
 
  private:
   RedfishInterface *intf_;
   RedfishExtendedPath path_;
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
-  std::optional<absl::Duration> timeout_;
+  std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr_;
 };
 
 // Helper function for automatically fetching an @odata.id reference using
@@ -285,20 +293,20 @@ RedfishVariant ResolveReference(
 
 class HttpIntfObjectImpl : public RedfishObject {
  public:
-  explicit HttpIntfObjectImpl(RedfishInterface *intf, RedfishExtendedPath path,
-                              ecclesia::RedfishTransport::Result result,
-                              CacheState cache_state,
-                          std::optional<absl::Duration> timeout = std::nullopt)
+  explicit HttpIntfObjectImpl(
+      RedfishInterface *intf, RedfishExtendedPath path,
+      ecclesia::RedfishTransport::Result result, CacheState cache_state,
+      std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr = std::nullopt)
       : intf_(intf),
         path_(std::move(path)),
         result_(std::move(result)),
         cache_state_(cache_state),
-        timeout_(timeout){}
+        timeout_mgr_(timeout_mgr) {}
   HttpIntfObjectImpl(const HttpIntfObjectImpl &) = delete;
   HttpIntfObjectImpl &operator=(const HttpIntfObjectImpl &) = delete;
 
   RedfishVariant operator[](const std::string &node_name) const override {
-    return Get(node_name, GetParams{.timeout = timeout_});
+    return Get(node_name, GetParams{.timeout_manager = timeout_mgr_});
   }
 
   RedfishVariant Get(const std::string &node_name,
@@ -426,7 +434,7 @@ class HttpIntfObjectImpl : public RedfishObject {
   RedfishExtendedPath path_;
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
-  std::optional<absl::Duration> timeout_;
+  std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr_;
 };
 
 // HttpIntfArrayIterableImpl implements the RedfishIterable interface with a
@@ -434,20 +442,18 @@ class HttpIntfObjectImpl : public RedfishObject {
 // verified before constructing this class.
 class HttpIntfArrayIterableImpl : public RedfishIterable {
  public:
-  explicit HttpIntfArrayIterableImpl(RedfishInterface *intf,
-                                     RedfishExtendedPath path,
-                                     ecclesia::RedfishTransport::Result result,
-                                     CacheState cache_state,
-                                     RedfishVariant::IterableMode mode,
-                                     GetParams::Freshness freshness,
-                          std::optional<absl::Duration> timeout = std::nullopt)
+  explicit HttpIntfArrayIterableImpl(
+      RedfishInterface *intf, RedfishExtendedPath path,
+      ecclesia::RedfishTransport::Result result, CacheState cache_state,
+      RedfishVariant::IterableMode mode, GetParams::Freshness freshness,
+      std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr = std::nullopt)
       : intf_(intf),
         path_(std::move(path)),
         result_(std::move(result)),
         cache_state_(cache_state),
         mode_(mode),
         freshness_(freshness),
-        timeout_(timeout){}
+        timeout_mgr_(timeout_mgr) {}
 
   HttpIntfArrayIterableImpl(const HttpIntfArrayIterableImpl &) = delete;
   HttpIntfObjectImpl &operator=(const HttpIntfArrayIterableImpl &) = delete;
@@ -482,10 +488,10 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
                             ecclesia::HttpResponseCodeFromInt(result_.code),
                             result_.headers);
     }
-    return ResolveReference(result_.code, json[index], result_.headers, intf_,
-                            std::move(new_path), cache_state_,
-                            GetParams{.freshness = freshness_,
-                                     .timeout = timeout_});
+    return ResolveReference(
+        result_.code, json[index], result_.headers, intf_, std::move(new_path),
+        cache_state_,
+        GetParams{.freshness = freshness_, .timeout_manager = timeout_mgr_});
   }
 
  private:
@@ -495,7 +501,7 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
   CacheState cache_state_;
   RedfishVariant::IterableMode mode_;
   GetParams::Freshness freshness_;
-  std::optional<absl::Duration> timeout_;
+  std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr_;
 };
 
 // HttpIntfCollectionIterableImpl implements the RedfishIterable interface
@@ -508,14 +514,14 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
       RedfishInterface *intf, RedfishExtendedPath path,
       ecclesia::RedfishTransport::Result result, CacheState cache_state,
       RedfishVariant::IterableMode mode, GetParams::Freshness freshness,
-      std::optional<absl::Duration> timeout = std::nullopt)
+      std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr = std::nullopt)
       : intf_(intf),
         path_(std::move(path)),
         result_(std::move(result)),
         cache_state_(cache_state),
         mode_(mode),
         freshness_(freshness),
-        timeout_(timeout){}
+        timeout_mgr_(timeout_mgr) {}
   HttpIntfCollectionIterableImpl(const HttpIntfCollectionIterableImpl &) =
       delete;
   HttpIntfObjectImpl &operator=(const HttpIntfCollectionIterableImpl &) =
@@ -566,7 +572,7 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
     return ResolveReference(
         result_.code, itr.value()[index], result_.headers, intf_,
         std::move(new_path), cache_state_,
-        GetParams{.freshness = freshness_, .timeout = timeout_});
+        GetParams{.freshness = freshness_, .timeout_manager = timeout_mgr_});
   }
 
  private:
@@ -576,7 +582,7 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
   CacheState cache_state_;
   RedfishVariant::IterableMode mode_;
   GetParams::Freshness freshness_;
-  std::optional<absl::Duration> timeout_;
+  std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr_;
   absl::Time query_start_time_;
 };
 
@@ -601,12 +607,12 @@ std::unique_ptr<RedfishIterable> HttpIntfVariantImpl::AsIterable(
                                 json[PropertyMembers::Name].is_array();
   if (json.is_array()) {
     return std::make_unique<HttpIntfArrayIterableImpl>(
-        intf_, path_, result_, cache_state_, mode, freshness);
+        intf_, path_, result_, cache_state_, mode, freshness, timeout_mgr_);
   }
   // Check if the object is a Redfish collection.
   if (is_collection_iterable) {
     return std::make_unique<HttpIntfCollectionIterableImpl>(
-        intf_, path_, result_, cache_state_, mode, freshness, timeout_);
+        intf_, path_, result_, cache_state_, mode, freshness, timeout_mgr_);
   }
   return nullptr;
 }
@@ -687,13 +693,11 @@ class HttpRedfishInterface : public RedfishInterface {
         return RedfishVariant(absl::DeadlineExceededError(
             absl::StrCat("Deadline exceeded while getting uri:", uri)));
       }
-      return GetUriHelper(
-          uri, params,
-          cache_->CachedGet(GetUriWithQueryParameters(uri, params),
-                            (*params.timeout_manager)->GetRemainingTimeout()));
     }
     return GetUriHelper(
-        uri, params, cache_->CachedGet(GetUriWithQueryParameters(uri, params)));
+        uri, params,
+        cache_->CachedGet(GetUriWithQueryParameters(uri, params),
+                          params.timeout_manager));
   }
 
   RedfishVariant UncachedGetUri(absl::string_view uri,
@@ -706,16 +710,11 @@ class HttpRedfishInterface : public RedfishInterface {
         return RedfishVariant(absl::DeadlineExceededError(
             absl::StrCat("Deadline exceeded while getting uri:", uri)));
       }
-      return GetUriHelper(
-          uri, params,
-          cache_->UncachedGet(
-              GetUriWithQueryParameters(uri, params), params.relevance,
-              (*params.timeout_manager)->GetRemainingTimeout()));
     }
     return GetUriHelper(
         uri, params,
         cache_->UncachedGet(GetUriWithQueryParameters(uri, params),
-                            params.relevance));
+                            params.relevance, params.timeout_manager));
   }
 
   RedfishVariant PostUri(

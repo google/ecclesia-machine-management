@@ -123,10 +123,11 @@ TEST(GrpcRedfishTransport, GetWithTimeout) {
   })json";
   nlohmann::json expected = nlohmann::json::parse(std::string(expected_str),
                                                   nullptr, false);
-  // Get with 0 or infinite timeout should return invalid argument error.
+  // Get with 0 timeout should return deadline exceeded.
   ASSERT_THAT(
       (*transport)->Get("/redfish/v1", absl::ZeroDuration()).status().code(),
-      Eq(absl::StatusCode::kInvalidArgument));
+      Eq(absl::StatusCode::kDeadlineExceeded));
+  // Get with infinite timeout should return invalid argument.
   ASSERT_THAT((*transport)
                   ->Get("/redfish/v1", absl::InfiniteDuration())
                   .status()

@@ -42,6 +42,7 @@
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/testing/grpc_dynamic_mockup_server.h"
+#include "ecclesia/lib/redfish/timing/query_timeout_manager.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/grpc.h"
 #include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
@@ -65,6 +66,9 @@ using ::testing::UnorderedElementsAre;
 
 using ::tensorflow::serving::net_http::ServerRequestInterface;
 using ::tensorflow::serving::net_http::SetContentType;
+
+constexpr absl::string_view kSystemUri = "/redfish/v1/Systems/system";
+constexpr char kChassisUri[] = "/redfish/v1/Chassis/chassis";
 
 TEST(HttpRedfishInterfaceMultithreadedTest, NoMultithreadedIssuesOnGet) {
   // Number of threads to test with.
@@ -204,23 +208,20 @@ TEST_F(HttpRedfishInterfaceTest, UpdateTransport) {
   "Description": "My Test Resource"
 })json";
   int called_count = 0;
-  server2->AddHttpGetHandler(
-      "/redfish/v1/Chassis/chassis", [&](ServerRequestInterface *req) {
-        called_count++;
-        SetContentType(req, "application/json");
-        req->OverwriteResponseHeader("OData-Version", "4.0");
-        req->WriteResponseString(kSecondServerResponse);
-        req->Reply();
-      });
+  server2->AddHttpGetHandler(kChassisUri, [&](ServerRequestInterface *req) {
+    called_count++;
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    req->WriteResponseString(kSecondServerResponse);
+    req->Reply();
+  });
 
   // First GET should fetch from the original server.
   EXPECT_TRUE(intf_->IsTrusted());
-  EXPECT_THAT(
-      nlohmann::json::parse(
-          intf_->CachedGetUri("/redfish/v1/Chassis/chassis").DebugString(),
-          nullptr,
-          /*allow_exceptions=*/false),
-      Eq(nlohmann::json::parse(R"json({
+  EXPECT_THAT(nlohmann::json::parse(
+                  intf_->CachedGetUri(kChassisUri).DebugString(), nullptr,
+                  /*allow_exceptions=*/false),
+              Eq(nlohmann::json::parse(R"json({
     "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
     "@odata.id": "/redfish/v1/Chassis/chassis",
     "@odata.type": "#Chassis.v1_10_0.Chassis",
@@ -244,31 +245,25 @@ TEST_F(HttpRedfishInterfaceTest, UpdateTransport) {
   }
   // Subsequent GET should fetch from the new server. The cache should be wiped.
   EXPECT_FALSE(intf_->IsTrusted());
-  EXPECT_THAT(
-      nlohmann::json::parse(
-          intf_->CachedGetUri("/redfish/v1/Chassis/chassis").DebugString(),
-          nullptr,
-          /*allow_exceptions=*/false),
-      Eq(nlohmann::json::parse(kSecondServerResponse)));
+  EXPECT_THAT(nlohmann::json::parse(
+                  intf_->CachedGetUri(kChassisUri).DebugString(), nullptr,
+                  /*allow_exceptions=*/false),
+              Eq(nlohmann::json::parse(kSecondServerResponse)));
   EXPECT_THAT(called_count, Eq(1));
 
   // Cache policy should be followed. Verify the cached copy is returned.
-  EXPECT_THAT(
-      nlohmann::json::parse(
-          intf_->CachedGetUri("/redfish/v1/Chassis/chassis").DebugString(),
-          nullptr,
-          /*allow_exceptions=*/false),
-      Eq(nlohmann::json::parse(kSecondServerResponse)));
+  EXPECT_THAT(nlohmann::json::parse(
+                  intf_->CachedGetUri(kChassisUri).DebugString(), nullptr,
+                  /*allow_exceptions=*/false),
+              Eq(nlohmann::json::parse(kSecondServerResponse)));
   EXPECT_THAT(called_count, Eq(1));
 
   // Verify after advancing time, a fresh copy is returned.
   clock_.AdvanceTime(absl::Minutes(2));
-  EXPECT_THAT(
-      nlohmann::json::parse(
-          intf_->CachedGetUri("/redfish/v1/Chassis/chassis").DebugString(),
-          nullptr,
-          /*allow_exceptions=*/false),
-      Eq(nlohmann::json::parse(kSecondServerResponse)));
+  EXPECT_THAT(nlohmann::json::parse(
+                  intf_->CachedGetUri(kChassisUri).DebugString(), nullptr,
+                  /*allow_exceptions=*/false),
+              Eq(nlohmann::json::parse(kSecondServerResponse)));
   EXPECT_THAT(called_count, Eq(2));
 }
 
@@ -319,11 +314,13 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest, GetRootWithTimeout) {
    })json";
   // Test that request is successful when a timeout is set.
   // copy the string here since json::parse does a std::forward.
-  RedfishVariant root = intf_->GetRoot({.timeout = absl::Seconds(100)});
+  ecclesia::QueryTimeoutManager timeout_mgr(clock_, absl::Seconds(100));
+  ASSERT_THAT(timeout_mgr.StartTiming(), IsOk());
+  RedfishVariant root = intf_->GetRoot({.timeout_manager = &timeout_mgr});
   EXPECT_THAT(nlohmann::json::parse(root.DebugString(), nullptr,
                                     /*allow_exceptions=*/false),
               Eq(nlohmann::json::parse(std::string(expected_str))));
-
+  ASSERT_THAT(timeout_mgr.EndTiming(), ecclesia::IsOk());
   // Make the server wait till after the timeout to return the response.
   clock_.Sleep(cache_duration_);
   server_->AddHttpGetHandler(
@@ -336,9 +333,10 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest, GetRootWithTimeout) {
         notification_.WaitForNotification();
         return grpc::Status::OK;
       });
-
+  ecclesia::QueryTimeoutManager timeout_mgr2(clock_, absl::Milliseconds(100));
+  ASSERT_THAT(timeout_mgr2.StartTiming(), IsOk());
   RedfishVariant second_root_request =
-      intf_->GetRoot({.timeout = absl::Milliseconds(100)});
+      intf_->GetRoot({.timeout_manager = &timeout_mgr2});
   EXPECT_THAT(second_root_request.status().code(),
               Eq(absl::StatusCode::kDeadlineExceeded));
   notification_.Notify();
@@ -400,7 +398,7 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest,
 })json")));
   // Make the server request triggered by the [] operator wait past the timeout.
   server_->AddHttpGetHandler(
-      "/redfish/v1/Chassis/chassis",
+      kChassisUri,
       [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
           redfish::v1::Response *response) {
         response->set_code(200);
@@ -408,8 +406,10 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest,
         notification_.WaitForNotification();
         return grpc::Status::OK;
       });
+  ecclesia::QueryTimeoutManager timeout_mgr(clock_, absl::Milliseconds(500));
+  ASSERT_THAT(timeout_mgr.StartTiming(), IsOk());
   // Set a timeout for the next request made from the [] operator.
-  chassis_collection.SetTimeout(absl::Milliseconds(500));
+  chassis_collection.SetTimeoutManager(&timeout_mgr);
   RedfishVariant chassis_timeout = chassis_collection[0];
   EXPECT_THAT(chassis_timeout.status().code(),
               Eq(absl::StatusCode::kDeadlineExceeded));
@@ -419,17 +419,18 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest,
 TEST_F(HttpRedfishInterfaceWithGrpcTest, GetAndSetTimeoutInRedfishVariant) {
   RedfishVariant root = intf_->GetRoot();
   // Set a timeout for the next request made from the [] operator.
-  absl::Duration timeout = absl::Milliseconds(500);
-  root.SetTimeout(timeout);
+  ecclesia::QueryTimeoutManager timeout_mgr(clock_, absl::Seconds(10));
+  ASSERT_THAT(timeout_mgr.StartTiming(), IsOk());
+  root.SetTimeoutManager(&timeout_mgr);
   // Test that timeout is set in the RF Variant.
-  std::optional<absl::Duration> get_timeout =
-      root.GetTimeout();
+  clock_.AdvanceTime(absl::Seconds(5));
+  std::optional<absl::Duration> get_timeout = root.GetTimeout();
   ASSERT_TRUE(get_timeout.has_value());
-  EXPECT_THAT(*get_timeout, Eq(timeout));
+  EXPECT_THAT(*get_timeout, Eq(absl::Seconds(5)));
 }
 
 TEST_F(HttpRedfishInterfaceTest, GetUri) {
-  auto chassis = intf_->UncachedGetUri("/redfish/v1/Chassis/chassis");
+  auto chassis = intf_->UncachedGetUri(kChassisUri);
   EXPECT_THAT(nlohmann::json::parse(chassis.DebugString(), nullptr,
                                     /*allow_exceptions=*/false),
               Eq(nlohmann::json::parse(R"json({
@@ -446,8 +447,10 @@ TEST_F(HttpRedfishInterfaceTest, GetUri) {
 
 TEST_F(HttpRedfishInterfaceWithGrpcTest, UncachedGetUriWithTimeout) {
   // Test that request is successful when a timeout is set.
-  RedfishVariant chassis = intf_->UncachedGetUri(
-      "/redfish/v1/Chassis/chassis", {.timeout = absl::Seconds(100)});
+  ecclesia::QueryTimeoutManager timeout_mgr(clock_, absl::Seconds(1));
+  ASSERT_THAT(timeout_mgr.StartTiming(), IsOk());
+  RedfishVariant chassis =
+      intf_->UncachedGetUri(kChassisUri, {.timeout_manager = &timeout_mgr});
   std::string expected_str = R"json({
       "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
       "@odata.id": "/redfish/v1/Chassis/chassis",
@@ -463,7 +466,7 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest, UncachedGetUriWithTimeout) {
               Eq(nlohmann::json::parse(std::string(expected_str))));
   // Make server delay response till after timeout.
   server_->AddHttpGetHandler(
-      "/redfish/v1/Chassis/chassis",
+      kChassisUri,
       [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
           redfish::v1::Response *response) {
         response->set_json_str(std::string(expected_str));
@@ -472,11 +475,62 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest, UncachedGetUriWithTimeout) {
         return grpc::Status::OK;
       });
 
-    RedfishVariant chassis_timeout = intf_->UncachedGetUri(
-        "/redfish/v1/Chassis/chassis", {.timeout = absl::Seconds(1)});
-    EXPECT_THAT(chassis_timeout.status().code(),
-                Eq(absl::StatusCode::kDeadlineExceeded));
-    notification_.Notify();
+  RedfishVariant chassis_timeout =
+      intf_->UncachedGetUri(kChassisUri, {.timeout_manager = &timeout_mgr});
+  EXPECT_THAT(chassis_timeout.status().code(),
+              Eq(absl::StatusCode::kDeadlineExceeded));
+  notification_.Notify();
+}
+
+TEST_F(HttpRedfishInterfaceWithGrpcTest,
+       UncachedGetUriWithTimeoutMultipleGets) {
+  // Test that request is successful when a timeout is set.
+  ecclesia::FakeClock clock;
+  absl::Duration original_timeout = absl::Seconds(10);
+  absl::Duration system_query_response_time = absl::Seconds(1);
+  ecclesia::QueryTimeoutManager timeout_mgr(clock, original_timeout);
+  ASSERT_THAT(timeout_mgr.StartTiming(), IsOk());
+
+  // Make server delay response till after timeout for chassis.
+  server_->AddHttpGetHandler(
+      kChassisUri,
+      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
+          redfish::v1::Response *response) {
+        response->set_json_str(R"json({
+              "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
+          })json");
+        response->set_code(200);
+        notification_.WaitForNotification();
+        return grpc::Status::OK;
+      });
+
+  // Make server return with simulated time passing of 5 sec for systems query.
+  server_->AddHttpGetHandler(
+      kSystemUri,
+      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
+          redfish::v1::Response *response) {
+        clock.AdvanceTime(system_query_response_time);
+        response->set_json_str(R"json({
+              "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
+          })json");
+        response->set_code(200);
+        return grpc::Status::OK;
+      });
+  // Make multiple requests that each take 1 sec, there should be no timeout,
+  // and the remaining timeout should be updated.
+  for (int req_count = 1; req_count <= 5; ++req_count) {
+    RedfishVariant chassis_timeout =
+        intf_->UncachedGetUri(kSystemUri, {.timeout_manager = &timeout_mgr});
+    EXPECT_THAT(chassis_timeout.status(), IsOk());
+    EXPECT_THAT(timeout_mgr.GetRemainingTimeout(),
+                Eq(original_timeout - system_query_response_time * req_count));
+  }
+  // The chassis request should make us exceed the timeout.
+  RedfishVariant chassis_timeout =
+      intf_->UncachedGetUri(kChassisUri, {.timeout_manager = &timeout_mgr});
+  EXPECT_THAT(chassis_timeout.status().code(),
+              Eq(absl::StatusCode::kDeadlineExceeded));
+  notification_.Notify();
 }
 
 TEST_F(HttpRedfishInterfaceTest, GetUriFragmentString) {
@@ -505,7 +559,7 @@ TEST_F(HttpRedfishInterfaceTest, EachTest) {
 }
 
 TEST_F(HttpRedfishInterfaceTest, ForEachPropertyTest) {
-  auto chassis = intf_->UncachedGetUri("/redfish/v1/Chassis/chassis");
+  auto chassis = intf_->UncachedGetUri(kChassisUri);
   std::vector<std::pair<std::string, std::string>> all_properties;
   chassis.AsObject()->ForEachProperty(
       [&all_properties](absl::string_view name, RedfishVariant value) {
@@ -526,7 +580,7 @@ TEST_F(HttpRedfishInterfaceTest, ForEachPropertyTest) {
 }
 
 TEST_F(HttpRedfishInterfaceTest, ForEachPropertyTestStop) {
-  auto chassis = intf_->UncachedGetUri("/redfish/v1/Chassis/chassis");
+  auto chassis = intf_->UncachedGetUri(kChassisUri);
   std::vector<std::pair<std::string, std::string>> all_properties;
   int called = 0;
   chassis.AsObject()->ForEachProperty(
@@ -581,8 +635,10 @@ TEST_F(HttpRedfishInterfaceTest, CachedGet) {
 
 TEST_F(HttpRedfishInterfaceWithGrpcTest, CachedGetUriWithTimeout) {
   // Ensure CachedGetUri succeeds when timeout is sufficient.
-  RedfishVariant chassis = intf_->CachedGetUri("/redfish/v1/Chassis/chassis",
-                                               {.timeout = absl::Seconds(100)});
+  ecclesia::QueryTimeoutManager timeout_mgr(clock_, absl::Seconds(1));
+  ASSERT_THAT(timeout_mgr.StartTiming(), IsOk());
+  RedfishVariant chassis =
+      intf_->CachedGetUri(kChassisUri, {.timeout_manager = &timeout_mgr});
   EXPECT_THAT(nlohmann::json::parse(chassis.DebugString(), nullptr,
                                     /*allow_exceptions=*/false),
               Eq(nlohmann::json::parse(
@@ -601,20 +657,20 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest, CachedGetUriWithTimeout) {
   // timeout should succeed, even though the server is configured to delay the
   // response past the timeout.
   server_->AddHttpGetHandler(
-      "/redfish/v1/Chassis/chassis",
+      kChassisUri,
       [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
           redfish::v1::Response *response) {
         response->set_code(200);
         notification_.WaitForNotification();
         return grpc::Status::OK;
       });
-  RedfishVariant chassis_again = intf_->CachedGetUri(
-      "/redfish/v1/Chassis/chassis", {.timeout = absl::Seconds(1)});
+  RedfishVariant chassis_again =
+      intf_->CachedGetUri(kChassisUri, {.timeout_manager = &timeout_mgr});
   EXPECT_THAT(chassis_again.IsFresh(), Eq(CacheState::kIsCached));
   // Make sure cache is stale.
-  clock_.Sleep(cache_duration_);
-  RedfishVariant chassis_timeout = intf_->CachedGetUri(
-      "/redfish/v1/Chassis/chassis", {.timeout = absl::Seconds(1)});
+  clock_.AdvanceTime(cache_duration_);
+  RedfishVariant chassis_timeout =
+      intf_->CachedGetUri(kChassisUri, {.timeout_manager = &timeout_mgr});
   EXPECT_THAT(chassis_timeout.status().code(),
               Eq(absl::StatusCode::kDeadlineExceeded));
   notification_.Notify();
@@ -1267,14 +1323,13 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetWithIterable) {
         req->WriteResponseString(json_parent.dump());
         req->Reply();
       });
-  server_->AddHttpGetHandler(
-      "/redfish/v1/Chassis/chassis", [&](ServerRequestInterface *req) {
-        child_called_count++;
-        SetContentType(req, "application/json");
-        req->OverwriteResponseHeader("OData-Version", "4.0");
-        req->WriteResponseString(json_child.dump());
-        req->Reply();
-      });
+  server_->AddHttpGetHandler(kChassisUri, [&](ServerRequestInterface *req) {
+    child_called_count++;
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    req->WriteResponseString(json_child.dump());
+    req->Reply();
+  });
 
   // The first GET will need to hit the backend as the cache is empty.
   auto parent = intf_->CachedGetUri("/redfish/v1/Chassis", GetParams{});
@@ -1726,7 +1781,7 @@ TEST_F(HttpRedfishInterfaceTest, GetUnresolvedNavigationProperty) {
   EXPECT_THAT(obj->GetContentAsJson(), Eq(result_json));
   std::optional<std::string> odata_id = obj->GetNodeValue<PropertyOdataId>();
   ASSERT_TRUE(odata_id.has_value());
-  EXPECT_EQ("/redfish/v1/Chassis/chassis", odata_id.value());
+  EXPECT_EQ(kChassisUri, odata_id.value());
 }
 
 TEST_F(HttpRedfishInterfaceTest, SubscribeReturnsUnimplementedError) {

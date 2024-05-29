@@ -240,7 +240,6 @@ struct GetParams {
   std::optional<RedfishQueryParamTop> top;
   std::optional<RedfishQueryParamExpand> expand;
   std::optional<RedfishQueryParamFilter> filter;
-  std::optional<absl::Duration> timeout;
   std::optional<ecclesia::QueryTimeoutManager *> timeout_manager;
 };
 
@@ -319,7 +318,13 @@ class RedfishVariant final {
     virtual std::optional<absl::Duration> GetTimeout() const {
       return std::nullopt;
     }
-    virtual void SetTimeout(absl::Duration timeout) {}
+    // Sets a timeout manager for the RedfishVariant. The timeout manager
+    // governs a total timeout for all the server requests made via the
+    // RedfishVariant. This includes all GET requests that originate from the []
+    // operator for RedfishIterables and EnsureFreshPayload() calls for
+    // RedfishObjects.
+    virtual void SetTimeoutManager(
+        ecclesia::QueryTimeoutManager *timeout_manager) {}
   };
 
   // Helper structures used with IndexHelper class
@@ -508,7 +513,9 @@ class RedfishVariant final {
     ptr_->PrintDebugString();
   }
 
-  void SetTimeout(absl::Duration timeout) const { ptr_->SetTimeout(timeout); }
+  void SetTimeoutManager(ecclesia::QueryTimeoutManager *timeout_manager) const {
+    ptr_->SetTimeoutManager(timeout_manager);
+  }
 
   std::optional<absl::Duration> GetTimeout() const {
     return ptr_->GetTimeout();

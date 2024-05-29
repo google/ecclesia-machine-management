@@ -110,6 +110,7 @@ cc_library(
     deps = [
         ":interface",
         "//ecclesia/lib/complexity_tracker",
+        "//ecclesia/lib/redfish/timing:query_timeout_manager",
         "//ecclesia/lib/time:clock",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",
@@ -264,6 +265,7 @@ cc_library(
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:json_ptr",
         "//ecclesia/lib/redfish:utils",
+        "//ecclesia/lib/redfish/timing:query_timeout_manager",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/functional:function_ref",
@@ -298,6 +300,7 @@ cc_test(
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/redfish/testing:grpc_dynamic_mockup_server",
+        "//ecclesia/lib/redfish/timing:query_timeout_manager",
         "//ecclesia/lib/testing:status",
         "//ecclesia/lib/thread",
         "//ecclesia/lib/time:clock_fake",
