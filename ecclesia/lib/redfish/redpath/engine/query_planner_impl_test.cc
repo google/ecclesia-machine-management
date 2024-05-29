@@ -24,19 +24,27 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/log/check.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
+#include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
+#include "ecclesia/lib/redfish/testing/grpc_dynamic_mockup_server.h"
 #include "ecclesia/lib/redfish/testing/json_mockup.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
+#include "ecclesia/lib/redfish/transport/grpc.h"
+#include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
@@ -45,6 +53,8 @@
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/clock_fake.h"
 #include "ecclesia/lib/time/proto.h"
+#include "grpcpp/server_context.h"
+#include "grpcpp/support/status.h"
 #include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -79,6 +89,35 @@ class QueryPlannerTestRunner : public ::testing::Test {
 
   std::unique_ptr<FakeRedfishServer> server_;
   std::unique_ptr<RedfishInterface> intf_;
+};
+
+class QueryPlannerGrpcTestRunner : public ::testing::Test {
+ protected:
+  QueryPlannerGrpcTestRunner() = default;
+  void SetTestParams(absl::string_view mockup) {
+    int port = ecclesia::FindUnusedPortOrDie();
+    server_ = std::make_unique<ecclesia::GrpcDynamicMockupServer>(
+        mockup, "localhost", port);
+    StaticBufferBasedTlsOptions options;
+    options.SetToInsecure();
+    absl::StatusOr<std::unique_ptr<RedfishTransport>> transport =
+        CreateGrpcRedfishTransport(absl::StrCat("localhost:", port),
+                                   {.clock = &clock_},
+                                   options.GetChannelCredentials());
+    CHECK_OK(transport.status());
+    auto cache_factory = [this](RedfishTransport *transport) {
+      return std::make_unique<ecclesia::TimeBasedCache>(transport, &clock_,
+                                                        cache_duration_);
+    };
+    intf_ = NewHttpInterface(std::move(*transport), cache_factory,
+                             RedfishInterface::kTrusted);
+  }
+
+  ecclesia::FakeClock clock_;
+  std::unique_ptr<ecclesia::GrpcDynamicMockupServer> server_;
+  std::unique_ptr<RedfishInterface> intf_;
+  absl::Duration cache_duration_ = absl::Seconds(1);
+  absl::Notification notification_;
 };
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
@@ -2629,6 +2668,164 @@ TEST_F(QueryPlannerTestRunner, CheckQueryPlannerPopulatesStatus) {
       testing::HasSubstr(
           "Cannot resolve NodeName Chassis to valid Redfish object at path . "
           "Redfish Request failed with error: Service Unavailable"));
+}
+
+
+TEST_F(QueryPlannerGrpcTestRunner, CheckQueryPlannerRespectsTimeoutOnGetRoot) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::string expected_str = R"json({
+    "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+    "@odata.id": "/redfish/v1",
+   })json";
+  // Make root request wait past the timeout.
+  server_->AddHttpGetHandler(
+      "/redfish/v1",
+      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
+          redfish::v1::Response *response) {
+        response->set_json_str(std::string(expected_str));
+        response->set_code(200);
+        notification_.WaitForNotification();
+        return grpc::Status::OK;
+      });
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get(),
+                         .query_timeout = absl::Seconds(1)});
+  EXPECT_THAT(qp, IsOk());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = (*qp)->Run({args1});
+  EXPECT_THAT(result.query_result.status().error_code(),
+              testing::Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
+  EXPECT_THAT(result.query_result.status().errors().at(0),
+              testing::HasSubstr("Timed out while querying service root"));
+  notification_.Notify();
+}
+
+TEST_F(QueryPlannerGrpcTestRunner,
+       CheckQueryPlannerTimesOutWhenOneRequestHangs) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+          properties { property: "Name" type: STRING }
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[ReadingUnits=RPM]"
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  // Make just one of the sensor requests hang so we timeout.
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm",
+      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
+          redfish::v1::Response *response) {
+        response->set_code(200);
+        notification_.WaitForNotification();
+        return grpc::Status::OK;
+      });
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get(),
+                         .query_timeout = absl::Seconds(1)});
+  EXPECT_THAT(qp, IsOk());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = (*qp)->Run({args1});
+  EXPECT_THAT(result.query_result.status().error_code(),
+              testing::Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
+  notification_.Notify();
+}
+
+TEST_F(QueryPlannerGrpcTestRunner,
+       CheckQueryPlannerExecutesWithinTimeoutCorrecly) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+          properties { property: "Name" type: STRING }
+          freshness: REQUIRED
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[ReadingUnits=RPM]"
+          properties { property: "Name" type: STRING }
+          freshness: REQUIRED
+        }
+      )pb");
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  // For 3 of the sensor requests, advance the clock by 1 second.
+  for (absl::string_view uri :
+       {"/redfish/v1/Chassis/chassis/Sensors/indus_fan2_rpm",
+        "/redfish/v1/Chassis/chassis/Sensors/indus_fan3_rpm",
+        "/redfish/v1/Chassis/chassis/Sensors/indus_fan4_rpm"}) {
+    server_->AddHttpGetHandler(uri, [&](grpc::ServerContext *context,
+                                        const ::redfish::v1::Request *request,
+                                        redfish::v1::Response *response) {
+      clock_.AdvanceTime(absl::Seconds(1));
+      response->set_json_str(R"json({
+        "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/fan_x",
+        "@odata.type": "#Fan.v1_5_0.Fan",
+        "Id": "Fan",
+        "Name": "Fan",
+        "ReadingUnits": "RPM"
+      })json");
+      response->set_code(200);
+      return grpc::Status::OK;
+    });
+  }
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get(),
+                         .clock = &clock_,
+                         .query_timeout = absl::Seconds(10)});
+  EXPECT_THAT(qp, IsOk());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = (*qp)->Run({args1});
+  EXPECT_FALSE(result.query_result.has_status());
+
+  // Execute the query again with a QP with only 1 sec timeout, it should fail.
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp2 =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get(),
+                         .clock = &clock_,
+                         .query_timeout = absl::Seconds(2)});
+  EXPECT_THAT(qp2, IsOk());
+  QueryExecutionResult timeout_result = (*qp2)->Run({args1});
+  EXPECT_THAT(timeout_result.query_result.status().error_code(),
+              testing::Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
 }
 
 }  // namespace

@@ -249,7 +249,8 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> GetRedfishObjectWithFreshness(
     return redfish_object;
   }
   absl::StatusOr<std::unique_ptr<RedfishObject>> refetch_obj =
-      redfish_object->EnsureFreshPayload();
+      redfish_object->EnsureFreshPayload(
+          {.timeout_manager = params.timeout_manager});
   // If the variant is not fresh, then we do an uncached get and hence we need
   // to increase cache miss counter; ow no-op.
   if (variant.IsFresh() == CacheState::kIsCached) {
@@ -350,6 +351,9 @@ void PopulateSubqueryErrorStatus(const absl::Status &node_status,
   if (code == absl::StatusCode::kUnauthenticated) {
     error_code = ecclesia::ErrorCode::ERROR_UNAUTHENTICATED;
   }
+  if (code == absl::StatusCode::kDeadlineExceeded) {
+    error_code = ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT;
+  }
   execution_context.result.mutable_status()->add_errors(error_message);
   execution_context.result.mutable_status()->set_error_code(error_code);
 }
@@ -391,11 +395,14 @@ GetParams QueryPlanner::GetQueryParamsForRedPath(
   auto params = GetParams{.freshness = GetParams::Freshness::kOptional,
                           .expand = std::nullopt,
                           .filter = std::nullopt};
-
   // Get RedPath specific configuration for expand and freshness
   if (auto iter = redpath_rules_.redpath_to_query_params.find(redpath_prefix);
       iter != redpath_rules_.redpath_to_query_params.end()) {
     params = iter->second;
+  }
+  // Set timeout manager if it is available.
+  if (timeout_manager_ != nullptr) {
+    params.timeout_manager = timeout_manager_.get();
   }
   return params;
 }
@@ -658,7 +665,13 @@ QueryPlanner::ExecuteQueryExpression(
     } else if (redfish_variant.IsFresh() == CacheState::kIsCached) {
       cache_hit_ = cache_hit_ + 1;
     }
+    // If a timeout occurred, it will be reported here.
     ECCLESIA_RETURN_IF_ERROR(redfish_variant.status());
+    // Set timeout manager if it is available for the Variant so that requests
+    // triggered by the variant can count against the query level timeout.
+    if (timeout_manager_ != nullptr) {
+      redfish_variant.SetTimeoutManager(timeout_manager_.get());
+    }
     std::unique_ptr<RedfishObject> redfish_object = nullptr;
     std::unique_ptr<RedfishIterable> redfish_iterable = nullptr;
     if (redfish_iterable = redfish_variant.AsIterable(); !redfish_iterable) {
@@ -843,6 +856,16 @@ void QueryPlanner::PopulateSubscriptionContext(
 
 QueryPlanner::QueryExecutionResult QueryPlanner::Run(
     QueryExecutionOptions query_execution_options) {
+  QueryResult result;
+  if (timeout_manager_ != nullptr && !timeout_manager_->StartTiming().ok()) {
+    result.mutable_status()->add_errors(
+        "Timed out before query execution could start");
+    result.mutable_status()->set_error_code(
+        ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT);
+    QueryExecutionResult execution_result;
+    execution_result.query_result = std::move(result);
+    return execution_result;
+  }
   const RedfishMetrics *metrics = nullptr;
   // Each metrical_transport object has a thread local RedfishMetrics object.
   if (metrical_transport_ != nullptr) {
@@ -852,20 +875,28 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
   GetParams get_params = GetQueryParamsForRedPath(kServiceRootNode);
 
 
+  result.set_query_id(plan_id_);
   // Get service root
-  RedfishVariant variant =
-      redfish_interface_.GetRoot(GetParams{}, service_root_);
+  RedfishVariant variant = redfish_interface_.GetRoot(
+      GetParams{.timeout_manager = get_params.timeout_manager}, service_root_);
   if (variant.IsFresh() == CacheState::kIsFresh) {
     cache_miss_ = cache_miss_ + 1;
   } else if (variant.IsFresh() == CacheState::kIsCached) {
     cache_hit_ = cache_hit_ + 1;
   }
+  if (variant.status().code() == absl::StatusCode::kDeadlineExceeded) {
+    result.mutable_status()->add_errors(
+        "Timed out while querying service root");
+    result.mutable_status()->set_error_code(
+        ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT);
+    QueryExecutionResult execution_result;
+    execution_result.query_result = std::move(result);
+    return execution_result;
+  }
   absl::StatusOr<std::unique_ptr<RedfishObject>> service_root_object =
       GetRedfishObjectWithFreshness(get_params, variant, std::nullopt,
                                     &cache_miss_);
 
-  QueryResult result;
-  result.set_query_id(plan_id_);
 
   auto set_time = [](absl::Time time, google::protobuf::Timestamp &field) {
     if (auto timestamp = AbslTimeToProtoTime(time); timestamp.ok()) {
@@ -881,9 +912,12 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
         absl::StrCat("Unable to query service root: ",
                      service_root_object.status().message()));
     result.mutable_status()->set_error_code(
-        ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE);
+        service_root_object.status().code() ==
+                absl::StatusCode::kDeadlineExceeded
+            ? ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT
+            : ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE);
     QueryExecutionResult execution_result;
-    execution_result.query_result = result;
+    execution_result.query_result = std::move(result);
     return execution_result;
   }
   // Initialize query execution context to execute next RedPath expression.

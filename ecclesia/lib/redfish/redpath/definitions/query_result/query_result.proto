@@ -100,6 +100,8 @@ enum ErrorCode {
   // query execution.
   ERROR_UNAUTHENTICATED = 3;
   ERROR_INTERNAL = 4;
+  // Occurs when the query execution is aborted due to timeout.
+  ERROR_QUERY_TIMEOUT = 5;
 }
 
 message Status {
