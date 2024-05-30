@@ -41,6 +41,7 @@ message SelectionSpec {
       QueryAndRule query_and_rule = 3;
     }
     google.protobuf.Duration timeout = 4;
+    reserved 5;
   }
 
   repeated QuerySelectionSpec query_selection_specs = 1;
