@@ -107,7 +107,9 @@ absl::Status JoinSubqueries(
     const DelliciusQuery& query,
     absl::flat_hash_set<std::vector<std::string>>& all_joined_subqueries) {
   absl::flat_hash_set<std::string> root_subqueries = GetRootSubqueries(query);
-
+  if (root_subqueries.empty()) {
+    return absl::InvalidArgumentError("No root subqueries found in the query");
+  }
   absl::flat_hash_map<std::string, absl::flat_hash_set<std::string>>
       parent_child_subquery_map = BuildParentChildSubqueryMap(query);
 

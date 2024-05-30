@@ -25,6 +25,7 @@
 #include "absl/status/status.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/testing/status.h"
 
 namespace ecclesia {
 
@@ -108,6 +109,30 @@ TEST(JoinTest, TestSubqueryLoopDetectedError) {
 
   EXPECT_EQ(JoinSubqueries(query, all_joined_subqueries).code(),
             absl::StatusCode::kInternal);
+}
+
+TEST(JoinTest, TestNoRootSubqueryError) {
+  DelliciusQuery query = ParseTextAsProtoOrDie<DelliciusQuery>(R"pb(
+    query_id: "SensorCollectorWithChassisLinks"
+    subquery {
+      subquery_id: "ThermalSensorCollector"
+      root_subquery_ids: "ChassisAssembly"
+      root_subquery_ids: "SensorRelatedItem"
+      redpath: "/Sensors[ReadingType=Temperature]"
+      properties { property: "Name" type: STRING }
+    }
+    subquery {
+      subquery_id: "SensorRelatedItem"
+      root_subquery_ids: "ThermalSensorCollector"
+      redpath: "/RelatedItem"
+      properties { property: "Name" type: STRING }
+    }
+  )pb");
+
+  absl::flat_hash_set<std::vector<std::string>> all_joined_subqueries;
+  auto status = JoinSubqueries(query, all_joined_subqueries);
+  EXPECT_THAT(status, IsStatusInvalidArgument());
+  EXPECT_EQ(status.message(), "No root subqueries found in the query");
 }
 
 }  // namespace

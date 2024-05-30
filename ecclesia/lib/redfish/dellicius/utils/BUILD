@@ -187,6 +187,7 @@ cc_test(
         ":join",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/status",
         "@com_google_googletest//:gtest_main",
