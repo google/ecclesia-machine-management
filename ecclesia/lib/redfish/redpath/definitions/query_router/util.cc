@@ -19,12 +19,15 @@
 #include <string>
 #include <utility>
 
+#include "google/protobuf/duration.pb.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/status/macros.h"
 #include "google/protobuf/text_format.h"
@@ -45,13 +48,22 @@ absl::StatusOr<T> GetProto(const std::string& filename) {
   return std::move(proto);
 }
 
+void AddTimeoutFromSelectionSpec(
+    const SelectionSpec::QuerySelectionSpec& selection_spec,
+    QuerySpec::QueryInfo& query_info) {
+  if (selection_spec.has_timeout()) {
+    query_info.timeout =
+        absl::Seconds(selection_spec.timeout().seconds()) +
+        absl::Nanoseconds(selection_spec.timeout().nanos());
+  }
+}
+
 }  // namespace
 
 absl::StatusOr<QuerySpec> GetQuerySpec(
     const QueryRouterSpec& router_spec, absl::string_view server_tag,
     SelectionSpec::SelectionClass::ServerType server_type) {
   QuerySpec query_spec;
-
   auto add_to_query_spec =
       [&query_spec](absl::string_view query_id,
                     const SelectionSpec::QuerySelectionSpec& selection_spec)
@@ -74,6 +86,7 @@ absl::StatusOr<QuerySpec> GetQuerySpec(
 
       QuerySpec::QueryInfo& query_info = query_spec.query_id_to_info[query_id];
       query_info.query = std::move(query);
+      AddTimeoutFromSelectionSpec(selection_spec, query_info);
 
       if (query_and_rule_path.rule_path().empty()) {
         return absl::OkStatus();
@@ -93,8 +106,8 @@ absl::StatusOr<QuerySpec> GetQuerySpec(
       if (selection_spec.query_and_rule().has_rule()) {
         query_info.rule = selection_spec.query_and_rule().rule();
       }
+      AddTimeoutFromSelectionSpec(selection_spec, query_info);
     }
-
     return absl::OkStatus();
   };
 

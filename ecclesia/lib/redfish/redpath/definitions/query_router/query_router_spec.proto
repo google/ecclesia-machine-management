@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package ecclesia;
 
+import "google/protobuf/duration.proto";
 import "ecclesia/lib/redfish/dellicius/engine/query_rules.proto";
 import "ecclesia/lib/redfish/dellicius/query/query.proto";
 import "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.proto";
@@ -39,6 +40,7 @@ message SelectionSpec {
       QueryAndRulePath query_and_rule_path = 2;
       QueryAndRule query_and_rule = 3;
     }
+    google.protobuf.Duration timeout = 4;
   }
 
   repeated QuerySelectionSpec query_selection_specs = 1;

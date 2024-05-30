@@ -17,10 +17,12 @@
 #ifndef ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_ENGINE_QUERY_SPEC_H_
 #define ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_ENGINE_QUERY_SPEC_H_
 
+#include <optional>
 #include <string>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
+#include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
@@ -46,6 +48,7 @@ struct QuerySpec {
   struct QueryInfo {
     DelliciusQuery query;
     QueryRules::RedPathPrefixSetWithQueryParams rule;
+    std::optional<absl::Duration> timeout;
   };
 
   // Map of query id to query info.

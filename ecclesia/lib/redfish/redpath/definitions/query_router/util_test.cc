@@ -23,12 +23,13 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/protobuf/parse.h"
-#include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/status/test_macros.h"
 #include "ecclesia/lib/testing/proto.h"
@@ -39,17 +40,24 @@ namespace ecclesia {
 namespace {
 
 using ::testing::ElementsAre;
+using ::testing::Eq;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
 constexpr absl::string_view kRootDir = "/test/";
+constexpr int kQueryATimeoutSecs = 10;
+constexpr int kQueryATimeoutNanos = 500;
 
 // Custom matcher to match QueryInfo struct.
 MATCHER_P(QueryInfoEq, query_info, "") {
   return ExplainMatchResult(EqualsProto(query_info.query), arg.query,
                             result_listener) &&
          ExplainMatchResult(EqualsProto(query_info.rule), arg.rule,
-                            result_listener);
+                            result_listener) &&
+         (query_info.timeout.has_value()
+              ? ExplainMatchResult(Eq(*query_info.timeout), arg.timeout,
+                                   result_listener)
+              : true);
 }
 
 class GetQuerySpecTest : public testing::Test {
@@ -163,6 +171,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithServerType) {
                 query_path: "$0/query_a.textproto"
                 rule_path: "$0/query_rules.textproto"
               }
+              timeout { seconds: $1 nanos: $2 }
             }
           }
         }
@@ -192,21 +201,22 @@ TEST_F(GetQuerySpecTest, RouterSpecWithServerType) {
           }
         }
       )pb",
-      apifs_.GetPath()));
+      apifs_.GetPath(), kQueryATimeoutSecs, kQueryATimeoutNanos));
 
   // All queries are applicable for server_1
   ECCLESIA_ASSIGN_OR_FAIL(
       QuerySpec query_spec,
       GetQuerySpec(router_spec, "server_1",
                    SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB));
-
   EXPECT_THAT(
       query_spec.query_id_to_info,
       UnorderedElementsAre(
-          Pair("query_a", QueryInfoEq(QuerySpec::QueryInfo{
-                              .query = query_a_,
-                              .rule = query_rules_.query_id_to_params_rule().at(
-                                  "query_a")})),
+          Pair("query_a",
+               QueryInfoEq(QuerySpec::QueryInfo{
+                   .query = query_a_,
+                   .rule = query_rules_.query_id_to_params_rule().at("query_a"),
+                   .timeout = absl::Seconds(kQueryATimeoutSecs) +
+                              absl::Nanoseconds(kQueryATimeoutNanos)})),
           Pair("query_b", QueryInfoEq(QuerySpec::QueryInfo{
                               .query = query_b_,
                               .rule = query_rules_.query_id_to_params_rule().at(
@@ -376,7 +386,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithServerSpecificQueries) {
 }
 
 TEST_F(GetQuerySpecTest, RouterSpecWithEmbeddedQueries) {
-  QueryRouterSpec router_spec = ParseTextProtoOrDie(
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
       R"pb(
         selection_specs {
           key: "query_a"
@@ -396,6 +406,7 @@ TEST_F(GetQuerySpecTest, RouterSpecWithEmbeddedQueries) {
                   }
                 }
               }
+              timeout { seconds: $0 nanos: $1 }
             }
             query_selection_specs {
               select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_2" }
@@ -415,7 +426,8 @@ TEST_F(GetQuerySpecTest, RouterSpecWithEmbeddedQueries) {
             }
           }
         }
-      )pb");
+      )pb",
+      kQueryATimeoutSecs, kQueryATimeoutNanos));
 
   // For server_1, query_a should point to query_a and query_a rule
   ECCLESIA_ASSIGN_OR_FAIL(
@@ -425,11 +437,13 @@ TEST_F(GetQuerySpecTest, RouterSpecWithEmbeddedQueries) {
 
   EXPECT_THAT(
       query_spec.query_id_to_info,
-      UnorderedElementsAre(Pair(
-          "query_a",
-          QueryInfoEq(QuerySpec::QueryInfo{
-              .query = query_a_,
-              .rule = query_rules_.query_id_to_params_rule().at("query_a")}))));
+      UnorderedElementsAre(
+          Pair("query_a",
+               QueryInfoEq(QuerySpec::QueryInfo{
+                   .query = query_a_,
+                   .rule = query_rules_.query_id_to_params_rule().at("query_a"),
+                   .timeout = absl::Seconds(kQueryATimeoutSecs) +
+                              absl::Nanoseconds(kQueryATimeoutNanos)}))));
 
   // For server_2, query_a should point to query_a_other and query_a_other rule
   ECCLESIA_ASSIGN_OR_FAIL(
