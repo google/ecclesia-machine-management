@@ -907,7 +907,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
     set_time(clock_->Now(), *result.mutable_stats()->mutable_start_time());
   }
   // If service root is unreachable populate the error and return the result.
-  if (!service_root_object.ok()) {
+  if (!service_root_object.ok() || *service_root_object == nullptr) {
     result.mutable_status()->add_errors(
         absl::StrCat("Unable to query service root: ",
                      service_root_object.status().message()));

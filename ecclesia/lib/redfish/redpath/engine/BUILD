@@ -46,6 +46,7 @@ cc_test(
         "//ecclesia/lib/redfish/dellicius/query/samples:sample_malformed_queries_in",
         "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_in",
         "//ecclesia/lib/redfish/dellicius/query/samples:sample_queries_out",
+        "//ecclesia/redfish_mockups/indus_hmb_cn:mockup.shar",
         "//ecclesia/redfish_mockups/indus_hmb_shim:mockup.shar",
     ],
     visibility = ["//visibility:public"],
@@ -69,6 +70,7 @@ cc_test(
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:metrical_transport",
+        "//ecclesia/lib/status:macros",
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
         "//ecclesia/lib/time:clock",
@@ -77,6 +79,7 @@ cc_test(
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
@@ -84,6 +87,7 @@ cc_test(
         "@com_google_googletest//:gtest_main",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/public:shared_files",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
+        "@com_json//:json",
     ],
 )
 

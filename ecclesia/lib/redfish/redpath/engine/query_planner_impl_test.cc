@@ -25,6 +25,7 @@
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/check.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
@@ -48,6 +49,7 @@
 #include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
+#include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/time/clock.h"
@@ -55,6 +57,7 @@
 #include "ecclesia/lib/time/proto.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
+#include "single_include/nlohmann/json.hpp"
 #include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
@@ -68,6 +71,7 @@ using RedPathRedfishQueryParams =
 using ::tensorflow::serving::net_http::HTTPStatusCode;
 using ::tensorflow::serving::net_http::ServerRequestInterface;
 using ::tensorflow::serving::net_http::SetContentType;
+using ::testing::HasSubstr;
 using ::testing::NotNull;
 using ::testing::UnorderedElementsAre;
 using QueryExecutionResult = QueryPlannerIntf::QueryExecutionResult;
@@ -85,6 +89,22 @@ class QueryPlannerTestRunner : public ::testing::Test {
     server_ = std::make_unique<FakeRedfishServer>(mockup);
     server_->EnableAllParamsGetHandler();
     intf_ = server_->RedfishClientInterface();
+  }
+
+  absl::StatusOr<QueryExecutionResult> PlanAndExecuteQuery(
+      const DelliciusQuery &query) {
+    CHECK(server_ != nullptr && intf_ != nullptr) << "Test parameters not set!";
+    std::unique_ptr<RedpathNormalizer> normalizer =
+        BuildDefaultRedpathNormalizer();
+
+    ECCLESIA_ASSIGN_OR_RETURN(
+        std::unique_ptr<QueryPlannerIntf> qp,
+        BuildQueryPlanner({.query = query,
+                           .redpath_rules = {},
+                           .normalizer = normalizer.get(),
+                           .redfish_interface = intf_.get()}));
+    ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+    return qp->Run({args1});
   }
 
   std::unique_ptr<FakeRedfishServer> server_;
@@ -2665,11 +2685,283 @@ TEST_F(QueryPlannerTestRunner, CheckQueryPlannerPopulatesStatus) {
               testing::Eq(ecclesia::ErrorCode::ERROR_INTERNAL));
   EXPECT_THAT(
       result.query_result.status().errors().at(0),
-      testing::HasSubstr(
+      HasSubstr(
           "Cannot resolve NodeName Chassis to valid Redfish object at path . "
           "Redfish Request failed with error: Service Unavailable"));
 }
 
+TEST_F(QueryPlannerTestRunner, TestNestedNodeNameInQueryProperty) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "ManagerCollector"
+           subquery {
+             subquery_id: "GetManagersIdAndResetType"
+             redpath: "/Managers[*]"
+             properties { property: "@odata\\.id" type: STRING }
+             properties {
+               property: "Actions.#Manager\\.Reset.ResetType@Redfish\\.AllowableValues[0]"
+               type: STRING
+             }
+           })pb");
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "ManagerCollector"
+    stats { payload_size: 236 num_cache_misses: 4 }
+    data {
+      fields {
+        key: "GetManagersIdAndResetType"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "@odata.id"
+                  value { string_value: "/redfish/v1/Managers/ec" }
+                }
+                fields {
+                  key: "Actions.#Manager.Reset.ResetType@Redfish.AllowableValues[0]"
+                  value { string_value: "PowerCycle" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "@odata.id"
+                  value { string_value: "/redfish/v1/Managers/ecclesia_agent" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  SetTestParams("indus_hmb_cn/mockup.shar");
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result, IsOk());
+  EXPECT_FALSE(result->query_result.has_status());
+  EXPECT_THAT(expected_query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(result->query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       CheckQueryPlannerInitFailsWithInvalidSubqueryLinks) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "ServiceRoot"
+           subquery {
+             subquery_id: "ChassisLinked1"
+             root_subquery_ids: "ChassisLinked2"
+             redpath: "/Chassis[*]"
+             properties {
+               name: "serial_number"
+               property: "SerialNumber"
+               type: STRING
+             }
+             properties {
+               name: "part_number"
+               property: "PartNumber"
+               type: STRING
+             }
+           }
+           subquery {
+             subquery_id: "ChassisLinked2"
+             root_subquery_ids: "ChassisLinked1"
+             redpath: "/Chassis[*]"
+             properties {
+               name: "serial_number"
+               property: "SerialNumber"
+               type: STRING
+             }
+             properties {
+               name: "part_number"
+               property: "PartNumber"
+               type: STRING
+             }
+           })pb");
+
+  SetTestParams("indus_hmb_cn/mockup.shar");
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  EXPECT_THAT(result, IsStatusInvalidArgument());
+  EXPECT_EQ(result.status().message(), "No root subqueries found in the query");
+}
+
+TEST_F(QueryPlannerTestRunner,
+       CheckQueryPlannerInitFailsWithMalforedRedPathsInSubqueries) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "TestMalformedQuery"
+           # Malformed NodeName Expressions
+           subquery {
+             subquery_id: "MalformedNodeName"
+             redpath: "/Chass~is/Sensors[1]"
+             properties { property: "@odata.id" type: STRING }
+           }
+           # Malformed Predicate Expressions
+           subquery {
+             subquery_id: "MalformedPredicate"
+             redpath: "/Chassis[/Sensors[*]"
+             properties { property: "@odata.id" type: STRING }
+           })pb");
+
+  SetTestParams("indus_hmb_cn/mockup.shar");
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result.status(), IsStatusInvalidArgument());
+}
+
+TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        service_root: "/redfish/v1"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "Assembly"
+          root_subquery_ids: "Chassis"
+          redpath: "/Assembly/Assemblies[Name=indus]"
+          freshness: REQUIRED
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+
+  // Set up context node for dellicius query.
+  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
+  // Instantiate a passthrough normalizer.
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  // Create metrical transport and issue queries.
+  std::unique_ptr<RedfishTransport> base_transport =
+      std::make_unique<NullTransport>();
+  auto transport = std::make_unique<MetricalRedfishTransport>(
+      std::move(base_transport), Clock::RealClock());
+
+  // This metrics object is owned and populated by the metrical transport.
+  // Use
+  // it to populate metrics in the QueryPlanner result.
+  const RedfishMetrics *metrics = MetricalRedfishTransport::GetConstMetrics();
+  ASSERT_NE(metrics, nullptr);
+
+  auto cache = std::make_unique<NullCache>(transport.get());
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf.get()});
+  EXPECT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  auto result = (*qp)->Run({args1});
+  EXPECT_THAT(result.query_result.status().error_code(),
+              testing::Eq(ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE));
+
+  // Redfish Metrics should indicate 1 failed GET request to service root.
+  EXPECT_EQ(metrics->uri_to_metrics_map().size(), 1);
+  EXPECT_TRUE(metrics->uri_to_metrics_map().contains("/redfish/v1"));
+  EXPECT_EQ(metrics->uri_to_metrics_map()
+                .at("/redfish/v1")
+                .request_type_to_metadata_failures_size(),
+            1);
+  EXPECT_TRUE(metrics->uri_to_metrics_map()
+                  .at("/redfish/v1")
+                  .request_type_to_metadata_failures()
+                  .contains("GET"));
+  EXPECT_EQ(metrics->uri_to_metrics_map()
+                .at("/redfish/v1")
+                .request_type_to_metadata_size(),
+            0);
+}
+
+TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulatedCollectionResource) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "ManagerCollector"
+           subquery {
+             subquery_id: "GetManagersIdAndResetType"
+             redpath: "/Managers[*]"
+             properties { property: "@odata\\.id" type: STRING }
+             properties {
+               property: "Actions.#Manager\\.Reset.ResetType@Redfish\\.AllowableValues[0]"
+               type: STRING
+             }
+           })pb");
+  SetTestParams("indus_hmb_cn/mockup.shar");
+
+  auto result_json = nlohmann::json::parse(R"json({
+  "error": {
+    "code": "Base.1.0.GeneralError",
+    "message": "A general error has occurred.  See Resolution for information on how to resolve the error, or @Message.ExtendedInfo if Resolution is not provided."
+  }
+})json");
+
+  bool called = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Managers/ecclesia_agent", [&](ServerRequestInterface *req) {
+        called = true;
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(result_json.dump());
+        req->ReplyWithStatus(HTTPStatusCode::UNAUTHORIZED);
+      });
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+
+  // Ensure that after encountering a NOT_FOUND error, the query status is
+  // OK and no error summaries are populated.
+  ASSERT_THAT(result, IsOk());
+  EXPECT_TRUE(called);
+  EXPECT_EQ(result->query_result.status().error_code(),
+            ErrorCode::ERROR_UNAUTHENTICATED);
+  EXPECT_THAT(
+      result->query_result.status().errors().at(0),
+      HasSubstr(
+          "Cannot resolve NodeName * to valid Redfish object at path /Managers."
+          " Redfish Request failed with error: Unauthorized"));
+}
+
+TEST_F(QueryPlannerTestRunner, CheckUnresolvedNodeIsNotAnError) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "ManagerCollector"
+           subquery {
+             subquery_id: "GetManagersIdAndResetType"
+             redpath: "/Managers[*]"
+             properties { property: "@odata\\.id" type: STRING }
+             properties {
+               property: "Actions.#Manager\\.Reset.ResetType@Redfish\\.AllowableValues[0]"
+               type: STRING
+             }
+           })pb");
+  SetTestParams("indus_hmb_cn/mockup.shar");
+
+  auto result_json = nlohmann::json::parse(R"json({
+  "error": {
+    "code": "Base.1.0.GeneralError",
+    "message": "A general error has occurred.  See Resolution for information on how to resolve the error, or @Message.ExtendedInfo if Resolution is not provided."
+  }
+})json");
+
+  bool called = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Managers", [&](ServerRequestInterface *req) {
+        called = true;
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(result_json.dump());
+        req->ReplyWithStatus(HTTPStatusCode::NOT_FOUND);
+      });
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+
+  // Ensure that after encountering a NOT_FOUND error, the query status is
+  // OK and no error summaries are populated.
+  ASSERT_THAT(result, IsOk());
+  EXPECT_FALSE(result->query_result.has_status());
+  EXPECT_TRUE(called);
+}
 
 TEST_F(QueryPlannerGrpcTestRunner, CheckQueryPlannerRespectsTimeoutOnGetRoot) {
   DelliciusQuery query = ParseTextProtoOrDie(
