@@ -862,9 +862,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
         "Timed out before query execution could start");
     result.mutable_status()->set_error_code(
         ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT);
-    QueryExecutionResult execution_result;
-    execution_result.query_result = std::move(result);
-    return execution_result;
+    return QueryExecutionResult{.query_result = std::move(result)};
   }
   const RedfishMetrics *metrics = nullptr;
   // Each metrical_transport object has a thread local RedfishMetrics object.
@@ -889,9 +887,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
         "Timed out while querying service root");
     result.mutable_status()->set_error_code(
         ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT);
-    QueryExecutionResult execution_result;
-    execution_result.query_result = std::move(result);
-    return execution_result;
+    return QueryExecutionResult{.query_result = std::move(result)};
   }
   absl::StatusOr<std::unique_ptr<RedfishObject>> service_root_object =
       GetRedfishObjectWithFreshness(get_params, variant, std::nullopt,
@@ -916,9 +912,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
                 absl::StatusCode::kDeadlineExceeded
             ? ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT
             : ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE);
-    QueryExecutionResult execution_result;
-    execution_result.query_result = std::move(result);
-    return execution_result;
+    return QueryExecutionResult{.query_result = std::move(result)};
   }
   // Initialize query execution context to execute next RedPath expression.
   QueryExecutionContext query_execution_context(
@@ -926,6 +920,23 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
       &query_execution_options.variables, RedPathPrefixTracker(),
       query_execution_options.redpath_query_tracker,
       {std::move(*service_root_object), nullptr});
+
+  // Populate subquery data from root node.
+  if (!query_execution_context.redpath_trie_node.subquery_id.empty()) {
+    absl::Status normalize_status =
+        TryNormalize(query_execution_context.redpath_trie_node.subquery_id,
+                     &query_execution_context,
+                     {.enable_url_annotation =
+                          query_execution_options.enable_url_annotation});
+    if (!normalize_status.ok()) {
+      result.mutable_status()->add_errors(
+          absl::StrCat("Unable to query data from service root: ",
+                       normalize_status.message()));
+      result.mutable_status()->set_error_code(
+          ecclesia::ErrorCode::ERROR_INTERNAL);
+      return QueryExecutionResult{.query_result = std::move(result)};
+    }
+  }
 
   std::queue<QueryExecutionContext> node_queue;
   node_queue.push(std::move(query_execution_context));
@@ -976,10 +987,8 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
         }
         PopulateSubqueryErrorStatus(execution_contexts.status(),
                                     current_execution_context, expression);
-
-        QueryExecutionResult execution_result;
-        execution_result.query_result = current_execution_context.result;
-        return execution_result;
+        return QueryExecutionResult{
+            .query_result = std::move(current_execution_context.result)};
       }
 
       // Handle subscription request.
@@ -1002,9 +1011,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
                 "Unable to normalize: ", normalize_status.message()));
             result.mutable_status()->set_error_code(
                 ecclesia::ErrorCode::ERROR_INTERNAL);
-            QueryExecutionResult execution_result;
-            execution_result.query_result = result;
-            return execution_result;
+            return QueryExecutionResult{.query_result = std::move(result)};
           }
         }
         node_queue.push(std::move(execution_context));

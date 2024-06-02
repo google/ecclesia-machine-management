@@ -2963,6 +2963,89 @@ TEST_F(QueryPlannerTestRunner, CheckUnresolvedNodeIsNotAnError) {
   EXPECT_TRUE(called);
 }
 
+TEST_F(QueryPlannerTestRunner, TestServiceRootQuery) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "ServiceRoot"
+           subquery {
+             subquery_id: "RedfishVersion"
+             redpath: "/"
+             properties { name: "Uri" property: "@odata\\.id" type: STRING }
+             properties: {
+               name: "RedfishSoftwareVersion"
+               property: "RedfishVersion"
+               type: STRING
+             }
+           }
+           subquery {
+             subquery_id: "ChassisLinked"
+             root_subquery_ids: "RedfishVersion"
+             redpath: "/Chassis[*]"
+             properties {
+               name: "serial_number"
+               property: "SerialNumber"
+               type: STRING
+             }
+             properties {
+               name: "part_number"
+               property: "PartNumber"
+               type: STRING
+             }
+           })pb");
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "ServiceRoot"
+    stats { payload_size: 196 num_cache_misses: 3 }
+    data {
+      fields {
+        key: "RedfishVersion"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "ChassisLinked"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "part_number"
+                            value { string_value: "1043652-02" }
+                          }
+                          fields {
+                            key: "serial_number"
+                            value { string_value: "MBBQTW194106556" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                fields {
+                  key: "RedfishSoftwareVersion"
+                  value { string_value: "1.6.1" }
+                }
+                fields {
+                  key: "Uri"
+                  value { string_value: "/redfish/v1" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  SetTestParams("indus_hmb_cn/mockup.shar");
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result, IsOk());
+  EXPECT_FALSE(result->query_result.has_status());
+  EXPECT_THAT(result->query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(expected_query_result)));
+}
+
 TEST_F(QueryPlannerGrpcTestRunner, CheckQueryPlannerRespectsTimeoutOnGetRoot) {
   DelliciusQuery query = ParseTextProtoOrDie(
       R"pb(
