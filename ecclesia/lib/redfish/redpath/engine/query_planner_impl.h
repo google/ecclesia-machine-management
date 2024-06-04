@@ -40,29 +40,12 @@
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/redpath/engine/redpath_trie.h"
 #include "ecclesia/lib/redfish/timing/query_timeout_manager.h"
-#include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
 
 using SubqueryIdToSubquery =
     absl::flat_hash_map<std::string, DelliciusQuery::Subquery>;
-
-// Configures query planner.
-struct QueryPlannerOptions {
-  struct RedPathRules {
-    absl::flat_hash_map<std::string /* RedPath */, GetParams>
-        redpath_to_query_params;
-    absl::flat_hash_set<std::string /* RedPath */> redpaths_to_subscribe;
-  };
-  const DelliciusQuery &query;
-  RedPathRules redpath_rules;
-  RedpathNormalizer *normalizer;
-  RedfishInterface *redfish_interface;
-  MetricalRedfishTransport *metrical_transport;
-  const Clock *clock;
-  const std::optional<absl::Duration> query_timeout;
-};
 
 // Describes the Redfish resource relative to which RedPath expressions execute.
 struct RedfishObjectAndIterable {
@@ -150,9 +133,8 @@ class QueryPlanner final : public QueryPlannerIntf {
     RedpathNormalizer *normalizer = nullptr;
     RedfishInterface *redfish_interface = nullptr;
     std::unique_ptr<RedPathTrieNode> redpath_trie_node = nullptr;
-    QueryPlannerOptions::RedPathRules redpath_rules;
+    RedPathRules redpath_rules;
     absl::flat_hash_set<std::vector<std::string>> subquery_sequences;
-    MetricalRedfishTransport *metrical_transport = nullptr;
     const Clock *clock = nullptr;
     const std::optional<absl::Duration> query_timeout = std::nullopt;
   };
@@ -196,14 +178,12 @@ class QueryPlanner final : public QueryPlannerIntf {
   // RedpathNormalizer is thread safe.
   RedpathNormalizer &normalizer_;
   const std::unique_ptr<RedPathTrieNode> redpath_trie_node_;
-  const QueryPlannerOptions::RedPathRules redpath_rules_;
+  const RedPathRules redpath_rules_;
   // Redfish interface is thread safe.
   RedfishInterface &redfish_interface_;
   const std::string service_root_;
   const SubqueryIdToSubquery subquery_id_to_subquery_;
   const absl::flat_hash_set<std::vector<std::string>> subquery_sequences_;
-  // Used during query metrics collection.
-  MetricalRedfishTransport *metrical_transport_ = nullptr;
   const Clock *clock_ = nullptr;
   std::atomic<int64_t> cache_miss_{0};
   std::atomic<int64_t> cache_hit_{0};
@@ -211,7 +191,7 @@ class QueryPlanner final : public QueryPlannerIntf {
 };
 
 absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
-    QueryPlannerOptions query_planner_options);
+    QueryPlannerIntf::QueryPlannerOptions query_planner_options);
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_IMPL_H_

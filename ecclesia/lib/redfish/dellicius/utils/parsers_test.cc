@@ -31,7 +31,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
-#include "ecclesia/lib/redfish/redpath/engine/query_planner_impl.h"
+#include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/testing/status.h"
 
 namespace ecclesia {
@@ -190,8 +190,7 @@ TEST(ParseQueryRuleParams, CanCreateRedPathRules) {
            }
       )pb");
 
-  QueryPlannerOptions::RedPathRules redpath_rules =
-      CreateRedPathRules(std::move(rule));
+  RedPathRules redpath_rules = CreateRedPathRules(std::move(rule));
   EXPECT_THAT(
       redpath_rules.redpath_to_query_params,
       UnorderedElementsAre(

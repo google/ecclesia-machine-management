@@ -506,12 +506,11 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
       id_to_redpath_trie_plans;
   for (auto &[query_id, query_info] : query_spec.query_id_to_info) {
-    QueryPlannerOptions query_planner_options = {
+    QueryPlannerIntf::QueryPlannerOptions query_planner_options = {
         .query = query_info.query,
         .redpath_rules = CreateRedPathRules(std::move(query_info.rule)),
         .normalizer = redpath_normalizer.get(),
         .redfish_interface = redfish_interface.get(),
-        .metrical_transport = metrical_transport_ptr,
         .clock = query_spec.clock};
 
     ECCLESIA_ASSIGN_OR_RETURN(

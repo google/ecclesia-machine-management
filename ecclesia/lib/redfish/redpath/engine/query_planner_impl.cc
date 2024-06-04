@@ -378,7 +378,6 @@ QueryPlanner::QueryPlanner(ImplOptions options_in)
                         : std::string(kDefaultRedfishServiceRoot)),
       subquery_id_to_subquery_(GetSubqueryIdToSubquery(query_)),
       subquery_sequences_(std::move(options_in.subquery_sequences)),
-      metrical_transport_(options_in.metrical_transport),
       clock_(options_in.clock),
       timeout_manager_(
           options_in.query_timeout.has_value()
@@ -864,14 +863,11 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
         ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT);
     return QueryExecutionResult{.query_result = std::move(result)};
   }
-  const RedfishMetrics *metrics = nullptr;
   // Each metrical_transport object has a thread local RedfishMetrics object.
-  if (metrical_transport_ != nullptr) {
-    metrics = MetricalRedfishTransport::GetConstMetrics();
-  }
+  const RedfishMetrics *metrics = MetricalRedfishTransport::GetConstMetrics();
+
   // Get Query Parameters to use for service root
   GetParams get_params = GetQueryParamsForRedPath(kServiceRootNode);
-
 
   result.set_query_id(plan_id_);
   // Get service root
@@ -1018,7 +1014,8 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
       }
     }
   }
-  if (metrics != nullptr && result.IsInitialized()) {
+  if (metrics != nullptr && !metrics->uri_to_metrics_map().empty() &&
+      result.IsInitialized()) {
     *result.mutable_stats()->mutable_redfish_metrics() = *metrics;
     uint64_t request_count = 0;
     for (const auto &uri_x_metric : metrics->uri_to_metrics_map()) {
@@ -1041,9 +1038,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
   QueryExecutionResult execution_result;
 
   execution_result.subscription_context = std::move(subscription_context);
-  if (metrical_transport_ != nullptr) {
-    MetricalRedfishTransport::ResetMetrics();
-  }
+  MetricalRedfishTransport::ResetMetrics();
 
   result.mutable_stats()->set_num_cache_misses(cache_miss_);
   cache_miss_ = 0;
@@ -1059,7 +1054,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
 // Builds query plan for given query and returns QueryPlanner instance to the
 // caller which can be used to execute the QueryPlan.
 absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
-    QueryPlannerOptions query_planner_options) {
+    QueryPlannerIntf::QueryPlannerOptions query_planner_options) {
   RedPathTrieBuilder redpath_trie_builder(&query_planner_options.query);
   ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<RedPathTrieNode> redpath_trie,
                             redpath_trie_builder.CreateRedPathTrie());
@@ -1076,7 +1071,6 @@ absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
       .redpath_trie_node = std::move(redpath_trie),
       .redpath_rules = std::move(query_planner_options.redpath_rules),
       .subquery_sequences = *subquery_sequences,
-      .metrical_transport = query_planner_options.metrical_transport,
       .clock = query_planner_options.clock,
       .query_timeout = query_planner_options.query_timeout});
 }

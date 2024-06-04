@@ -18,22 +18,43 @@
 #define ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_H_
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/redpath_trie.h"
+#include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
+
+struct RedPathRules {
+  absl::flat_hash_map<std::string /* RedPath */, GetParams>
+      redpath_to_query_params;
+  absl::flat_hash_set<std::string /* RedPath */> redpaths_to_subscribe;
+};
 
 // Provides an interface for planning and executing a RedPath Query.
 class QueryPlannerIntf {
  public:
+  // Configures query planner.
+  struct QueryPlannerOptions {
+    const DelliciusQuery &query;
+    RedPathRules redpath_rules;
+    RedpathNormalizer *normalizer;
+    RedfishInterface *redfish_interface;
+    const Clock *clock;
+    const std::optional<absl::Duration> query_timeout;
+  };
+
   // Context provided by QueryPlanner to create an event subscription.
   struct SubscriptionContext {
     // RedPath expression and corresponding query planner trie node.

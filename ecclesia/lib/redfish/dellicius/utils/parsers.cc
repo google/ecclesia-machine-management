@@ -30,7 +30,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/redpath/engine/query_planner_impl.h"
+#include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "google/protobuf/text_format.h"
 
 namespace ecclesia {
@@ -105,9 +105,9 @@ ParseQueryRulesFromEmbeddedFiles(
   return std::move(parsed_query_rules);
 }
 
-QueryPlannerOptions::RedPathRules CreateRedPathRules(
+RedPathRules CreateRedPathRules(
     QueryRules::RedPathPrefixSetWithQueryParams rule) {
-  QueryPlannerOptions::RedPathRules redpath_rules;
+  RedPathRules redpath_rules;
   for (auto &redpath_prefix_with_query_params :
        *rule.mutable_redpath_prefix_with_params()) {
     if (redpath_prefix_with_query_params.subscribe()) {

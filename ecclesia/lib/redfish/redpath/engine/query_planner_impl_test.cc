@@ -75,6 +75,7 @@ using ::testing::HasSubstr;
 using ::testing::NotNull;
 using ::testing::UnorderedElementsAre;
 using QueryExecutionResult = QueryPlannerIntf::QueryExecutionResult;
+using QueryPlannerOptions = QueryPlannerIntf::QueryPlannerOptions;
 
 constexpr absl::string_view kSensorRedPath = "/Chassis[*]/Sensors[*]";
 constexpr absl::string_view kAssemblyRedPath = "/Chassis[*]/Assembly";
@@ -499,7 +500,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesExpandFromRules) {
         }
       )pb");
 
-  QueryPlannerOptions::RedPathRules redpath_rules = {
+  RedPathRules redpath_rules = {
       .redpath_to_query_params = {
           {"/Chassis",
            {.expand = RedfishQueryParamExpand(
@@ -550,7 +551,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterFromRules) {
         }
       )pb");
 
-  QueryPlannerOptions::RedPathRules redpath_rules = {
+  RedPathRules redpath_rules = {
       .redpath_to_query_params = {
           {"/Chassis[*]/Sensors", {.filter = RedfishQueryParamFilter("")}}}};
 
@@ -2494,7 +2495,6 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
                          .redpath_rules = {},
                          .normalizer = normalizer.get(),
                          .redfish_interface = intf.get(),
-                         .metrical_transport = metrical_transport_ptr,
                          .clock = &clock});
 
   EXPECT_THAT(qp, IsOk());
@@ -2565,8 +2565,7 @@ TEST_F(QueryPlannerTestRunner,
       BuildQueryPlanner({.query = query,
                          .redpath_rules = {},
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get(),
-                         .metrical_transport = metrical_transport_ptr});
+                         .redfish_interface = intf.get()});
 
   EXPECT_THAT(qp, IsOk());
 
@@ -2635,8 +2634,7 @@ TEST_F(QueryPlannerTestRunner,
       BuildQueryPlanner({.query = query,
                          .redpath_rules = {},
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get(),
-                         .metrical_transport = metrical_transport_ptr});
+                         .redfish_interface = intf.get()});
 
   EXPECT_THAT(qp, IsOk());
 
@@ -2651,7 +2649,6 @@ TEST_F(QueryPlannerTestRunner,
 
   EXPECT_FALSE(result_repeat.query_result.has_status());
   ASSERT_TRUE(result_repeat.query_result.has_stats());
-  ASSERT_TRUE(result_repeat.query_result.stats().has_redfish_metrics());
   EXPECT_THAT(result_repeat.query_result.stats().num_cache_hits(), 56);
   EXPECT_THAT(result_repeat.query_result.stats().num_cache_misses(), 0);
 }
@@ -3044,6 +3041,57 @@ TEST_F(QueryPlannerTestRunner, TestServiceRootQuery) {
   EXPECT_THAT(result->query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
                   ecclesia::EqualsProto(expected_query_result)));
+}
+
+TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "SensorCollector"
+           subquery {
+             subquery_id: "Sensors"
+             redpath: "/Chassis[*]/Sensors[*]"
+             properties { property: "Name" type: STRING }
+             properties { property: "ReadingType" type: STRING }
+             properties { property: "ReadingUnits" type: STRING }
+             properties { property: "Reading" type: INT64 }
+           })pb");
+
+  // Set up context node for dellicius query.
+  FakeRedfishServer server("indus_hmb_shim/mockup.shar");
+  // Instantiate a passthrough normalizer.
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  // Create metrical transport and issue queries.
+  std::unique_ptr<RedfishTransport> base_transport =
+      server.RedfishClientTransport();
+  auto transport = std::make_unique<MetricalRedfishTransport>(
+      std::move(base_transport), Clock::RealClock());
+
+  auto cache = std::make_unique<NullCache>(transport.get());
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = query,
+                         .redpath_rules = {},
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf.get()});
+  ASSERT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = (*qp)->Run({args1});
+  // Metrics should be auto-populated in the query result.
+  ASSERT_TRUE(result.query_result.stats().has_redfish_metrics());
+  // For each type of redfish request for each URI, validate that the
+  // QueryPlanner sends only 1 request.
+  for (const auto &uri_x_metric : *result.query_result.mutable_stats()
+                                       ->mutable_redfish_metrics()
+                                       ->mutable_uri_to_metrics_map()) {
+    for (const auto &metadata :
+         uri_x_metric.second.request_type_to_metadata()) {
+      EXPECT_EQ(metadata.second.request_count(), 1);
+    }
+  }
 }
 
 TEST_F(QueryPlannerGrpcTestRunner, CheckQueryPlannerRespectsTimeoutOnGetRoot) {
