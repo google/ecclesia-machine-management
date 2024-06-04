@@ -288,7 +288,7 @@ absl::Status NormalizerImplDefault::Normalize(
     }
     // By default, name of the queried property is set as name if the client
     // application does not provide a name to map the parsed property to.
-    if (property.has_name()) {
+    if (!(property.name().empty())) {
       property_out->set_name(property.name());
     } else {
       std::string prop_name = property.property();

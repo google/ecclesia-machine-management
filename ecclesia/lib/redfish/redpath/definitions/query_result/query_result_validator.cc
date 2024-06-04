@@ -52,7 +52,7 @@ absl::Status TraverseQueryConfig(
     for (const DelliciusQuery::Subquery::RedfishProperty& property :
          subquery_config.config->properties()) {
       std::string property_name = property.property();
-      if (property.has_name()) {
+      if (!(property.name().empty())) {
         property_name = property.name();
       }
 

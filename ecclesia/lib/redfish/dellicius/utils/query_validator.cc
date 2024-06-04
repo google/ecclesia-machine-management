@@ -150,7 +150,7 @@ void TestForConflictingIds(const DelliciusQuery& redpath_query,
     property_names.reserve(subquery.properties_size());
     for (const Subquery::RedfishProperty& property : subquery.properties()) {
       absl::string_view effective_name =
-          property.has_name() ? property.name() : property.property();
+          property.name().empty() ? property.property() : property.name();
       if (property_names.contains(effective_name)) {
         errors.push_back(Issue{
             .type = Issue::Type::kConflictingIds,

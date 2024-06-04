@@ -293,7 +293,7 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
     // By default, name of the queried property is set as name if the client
     // application does not provide a name to map the parsed property to.
     std::string prop_name;
-    if (property.has_name()) {
+    if (!(property.name().empty())) {
       prop_name = property.name();
     } else {
       prop_name = property.property();
