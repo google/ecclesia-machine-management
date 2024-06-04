@@ -41,31 +41,6 @@ TEST(RedfishVariant, RedfishQueryParamFilter) {
   EXPECT_EQ(*filter2, "Prop1%20gt%2042%20and%20Prop1%20lt%2084");
 }
 
-TEST(RedfishVariant, RedfishQueryParamFilterInvalid) {
-  // Invalid operator (wrong equality)
-  EXPECT_THAT(BuildFilterFromRedpathPredicate("Prop1==42"),
-              IsStatusInvalidArgument());
-  // Invalid operator
-  EXPECT_THAT(BuildFilterFromRedpathPredicate("Prop1>>42"),
-              IsStatusInvalidArgument());
-  // Spaces on left
-  EXPECT_THAT(BuildFilterFromRedpathPredicate("Bad Property>42"),
-              IsStatusInvalidArgument());
-
-  // Special characters in operands
-  std::string predicate4 = "Prop<erty1=42";
-  std::string predicate5 = "Property2=4>2";
-  EXPECT_THAT(BuildFilterFromRedpathPredicateList({predicate4, predicate5}),
-              IsStatusInvalidArgument());
-  // One side of a logical exp is bad. Try both sides.
-  std::string predicate6 = "Property2=42";
-  std::string predicate7 = "Prop<erty1=42";
-  EXPECT_THAT(BuildFilterFromRedpathPredicateList({predicate6, predicate7}),
-              IsStatusInvalidArgument());
-  EXPECT_THAT(BuildFilterFromRedpathPredicateList({predicate7, predicate6}),
-              IsStatusInvalidArgument());
-}
-
 TEST(RedfishVariant, RedfishQueryParamFilterPredicateList) {
   std::string predicate1 = "Prop1<=42";
   std::string predicate2 = "Prop1!=42";

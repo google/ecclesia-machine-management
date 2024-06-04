@@ -17,120 +17,21 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_predicates/filter.h"
 
 #include <algorithm>
-#include <cstddef>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
-#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_predicates/predicate_object.h"
 #include "ecclesia/lib/status/macros.h"
-#include "re2/re2.h"
-
-// Pattern for expression [lhs][operator][rhs]
-constexpr LazyRE2 kRelationalExpressionRegex = {
-    "^(?P<left>[^\\s<=>!]+)(?:(<=|>=|!=|>|<|=)(?P<right>[^<=>!]+))$"};
 
 namespace ecclesia {
 namespace {
-
-// A simple structure containing the information in a relational expression.
-struct RelationalExpression {
-  std::string lhs;
-  std::string rel_operator;
-  std::string rhs;
-};
-
-// Contains all of the information contained in a predicate. The ordering of the
-// operators and the expressions are important. Each logical operator goes
-// between two expressions. Here is a visualization:
-// logical_operators: {and, or}
-// expressions: {exp1, exp2, exp3}
-// This would turn into "exp1 and exp2 or exp3".
-struct EncodedPredicate {
-  std::vector<std::string> logical_operators;
-  std::vector<RelationalExpression> expressions;
-};
-
-absl::StatusOr<RelationalExpression> EncodeRelationalExpression(
-    absl::string_view expression) {
-  RelationalExpression relational_expression;
-
-  // Regex match the expression. The operator must be a valid relational
-  // operator and the right hand side must not have spaces or characters
-  // included in relation operators.
-  std::string lhs;
-  std::string op;
-  std::string rhs;
-  if (RE2::FullMatch(expression, *kRelationalExpressionRegex, &lhs, &op,
-                     &rhs)) {
-    relational_expression.lhs = lhs;
-    relational_expression.rel_operator = op;
-    relational_expression.rhs = rhs;
-    return relational_expression;
-  }
-  return absl::InvalidArgumentError("Invalid expression");
-}
-
-// Takes a Redpath format predicate and turns it into a machine readable object
-// that will be used later for $filter transforms.
-// Example: "Prop1<=42 or Prop1>84"
-//   logical_operators = [" or "]
-//   expressions = [[lhs: "Prop1", rel_operator: "<=", rhs: "42"],
-//                  [lhs: "Prop1", rel_operator: ">", rhs: "84"]
-//                 ]
-// Property existence check predicates are not supported by the $filter
-// specification. For example: !Property or Property.SubProperty
-absl::StatusOr<EncodedPredicate> EncodePredicate(absl::string_view predicate) {
-  // The high level logic of this function is to break down the predicate into
-  // logical operators (or/and) and the relational expressions (prop>value).
-  // After breaking them up go through the relational expressions and break them
-  // down into parts and turn them into objects.
-  EncodedPredicate encoded_predicate;
-  std::vector<std::string> logical_split;
-  // Break up by logical operators
-  std::vector<std::string> or_blocks = absl::StrSplit(predicate, " or ");
-  // Number of "or" elements to include in the split
-  size_t or_count = or_blocks.size() - 1;
-  for (const std::string &block : or_blocks) {
-    std::vector<std::string> and_blocks = absl::StrSplit(block, " and ");
-    if (and_blocks.size() > 1) {
-      // Number of "and" elements to include in the split
-      size_t and_count = and_blocks.size() - 1;
-      // Add the and blocks delimited by " and "
-      for (const std::string &and_block : and_blocks) {
-        logical_split.push_back(and_block);
-        if (and_count > 0) {
-          and_count--;
-          encoded_predicate.logical_operators.push_back(" and ");
-        }
-      }
-    } else {
-      logical_split.push_back(block);
-    }
-    if (or_count > 0) {
-      or_count--;
-      encoded_predicate.logical_operators.push_back(" or ");
-    }
-  }
-  // Go through relational expressions and encode them.
-  for (const std::string &expression : logical_split) {
-    auto encoded_expression = EncodeRelationalExpression(expression);
-    if (encoded_expression.ok()) {
-      encoded_predicate.expressions.push_back(encoded_expression.value());
-    } else {
-      // Invalid expression, return an error
-      return absl::InvalidArgumentError(encoded_expression.status().message());
-    }
-  }
-  return encoded_predicate;
-}
 
 // Encodes special characters in predicates. Special characters are derived
 // from https://datatracker.ietf.org/doc/html/rfc3986#section-2.2
@@ -184,7 +85,7 @@ RelationalExpression ApplyTransformsToExpression(
 
 // Takes a EncodedPredicate in $filter form and returns a $filter string that
 // abides by the Redfish Specification 7.3.4
-std::string GenerateFilterString(const EncodedPredicate &predicate_object) {
+std::string GenerateFilterString(const PredicateObject &predicate_object) {
   std::vector<RelationalExpression> expressions;
   expressions.reserve(predicate_object.expressions.size());
   // Before creating the $filter string, all of the differences between Redpath
@@ -213,8 +114,8 @@ std::string GenerateFilterString(const EncodedPredicate &predicate_object) {
 
 absl::StatusOr<std::string> BuildFilterFromRedpathPredicate(
     absl::string_view predicate) {
-  ECCLESIA_ASSIGN_OR_RETURN(EncodedPredicate encoded_predicate,
-                            EncodePredicate(predicate));
+  ECCLESIA_ASSIGN_OR_RETURN(PredicateObject encoded_predicate,
+                            CreatePredicateObject(predicate));
   return GenerateFilterString(encoded_predicate);
 }
 
@@ -223,8 +124,8 @@ absl::StatusOr<std::string> BuildFilterFromRedpathPredicateList(
   std::vector<std::string> filter_strings;
   filter_strings.reserve(predicates.size());
   for (absl::string_view predicate : predicates) {
-    ECCLESIA_ASSIGN_OR_RETURN(EncodedPredicate encoded_predicate,
-                              EncodePredicate(predicate));
+    ECCLESIA_ASSIGN_OR_RETURN(PredicateObject encoded_predicate,
+                              CreatePredicateObject(predicate));
     filter_strings.push_back(GenerateFilterString(encoded_predicate));
   }
   return absl::StrJoin(filter_strings, "%20or%20");

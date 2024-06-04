@@ -36,11 +36,10 @@ cc_library(
     hdrs = ["filter.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":predicate_object",
         "//ecclesia/lib/status:macros",
-        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@com_googlesource_code_re2//:re2",
     ],
 )
 
@@ -50,6 +49,31 @@ cc_test(
     visibility = ["//visibility:public"],
     deps = [
         ":filter",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "predicate_object",
+    srcs = ["predicate_object.cc"],
+    hdrs = ["predicate_object.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_googlesource_code_re2//:re2",
+    ],
+)
+
+cc_test(
+    name = "predicate_object_test",
+    srcs = ["predicate_object_test.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":predicate_object",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_main",
