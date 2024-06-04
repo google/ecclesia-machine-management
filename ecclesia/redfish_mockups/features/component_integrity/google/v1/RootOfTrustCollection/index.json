@@ -4,7 +4,10 @@
   "Members": [
     {
       "@odata.id": "/google/v1/RootOfTrustCollection/Hoth"
+    },
+    {
+      "@odata.id": "/google/v1/RootOfTrustCollection/tpu0"
     }
   ],
-  "Members@odata.count": 1
+  "Members@odata.count": 2
 }

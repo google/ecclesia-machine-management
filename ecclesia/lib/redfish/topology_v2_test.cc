@@ -355,6 +355,7 @@ TEST(TopologyTestRunner, GoogleRootCoexistsWithRedfishRoot) {
       Node{"erot-gpu2", "erot-gpu2", "/phys:device:erot-gpu2",
            NodeType::kDevice},
       Node{"hoth", "hoth", "/phys:device:hoth", NodeType::kDevice},
+      Node{"tpu0", "tpu0", "/phys:device:tpu0", NodeType::kDevice},
   };
 
   std::vector<Node> actual_nodes;

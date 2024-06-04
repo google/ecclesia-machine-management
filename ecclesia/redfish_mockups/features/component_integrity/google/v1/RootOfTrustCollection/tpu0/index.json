@@ -1,0 +1,41 @@
+{
+  "@odata.id": "/google/v1/RootOfTrustCollection/tpu0",
+  "@odata.type": "#RootOfTrust.v1_0_0.RootOfTrust",
+  "Actions": {
+    "#RootOfTrust.SendCommand": {
+      "target": "/google/v1/RootOfTrustCollection/tpu0/Actions/RootOfTrust.SendCommand"
+    }
+  },
+  "Description": "Google Root Of Trust",
+  "Id": "tpu0",
+  "Links": {
+    "ActiveSoftwareImage": {
+      "@odata.id": "/redfish/v1/UpdateService/FirmwareInventory/hoth_tpu0_rw"
+    }
+  },
+  "Location": {
+    "PartLocation": {
+      "LocationType": "Embedded",
+      "ServiceLabel": "tpu0"
+    }
+  },
+  "Model": "tpu0",
+  "Name": "tpu0",
+  "Status": {
+    "Oem": {
+      "BootloaderUpdateFailureCode": 0,
+      "FirmwareUpdateFailedMinor": 0,
+      "FirmwareUpdateFailureCode": 0,
+      "HasPersistentPanicInfo": false,
+      "Payload": {
+        "ConfirmFailureCode": 43,
+        "UpdateFailureCode": 0
+      },
+      "ResetFlags": 0,
+      "RoInfoStrikes": 0,
+      "RwInfoStrikes": 0,
+      "UpTime": 214548884
+    },
+    "State": "Enabled"
+  }
+}

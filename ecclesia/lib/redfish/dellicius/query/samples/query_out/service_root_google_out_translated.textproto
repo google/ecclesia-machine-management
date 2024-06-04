@@ -40,6 +40,40 @@ results {
                 }
               }
             }
+            values {
+              subquery_value {
+                fields {
+                  key: "LocationType"
+                  value {
+                    string_value: "Embedded"
+                  }
+                }
+                fields {
+                  key: "Model"
+                  value {
+                    string_value: "tpu0"
+                  }
+                }
+                fields {
+                  key: "Name"
+                  value {
+                    string_value: "tpu0"
+                  }
+                }
+                fields {
+                  key: "ServiceLabel"
+                  value {
+                    string_value: "tpu0"
+                  }
+                }
+                fields {
+                  key: "State"
+                  value {
+                    string_value: "Enabled"
+                  }
+                }
+              }
+            }
           }
         }
       }

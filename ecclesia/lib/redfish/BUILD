@@ -221,7 +221,6 @@ cc_test(
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/redfish/testing:node_topology_testing",
         "@com_google_absl//absl/functional:function_ref",
-        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )
