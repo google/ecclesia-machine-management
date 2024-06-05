@@ -34,14 +34,15 @@ namespace ecclesia {
 namespace {
 
 // Encodes special characters in predicates. Special characters are derived
-// from https://datatracker.ietf.org/doc/html/rfc3986#section-2.2
+// from https://datatracker.ietf.org/doc/html/rfc3986#section-2.2. Since all
+// special characters are encoded escape characters will be removed as well.
 std::string EncodeSpecialCharacters(absl::string_view filter_string) {
   std::vector<std::pair<std::string, std::string>> special_character_encodings =
       {
           {"+", "%2B"}, {" ", "%20"}, {":", "%3A"}, {"/", "%2F"}, {"?", "%3F"},
           {"#", "%25"}, {"[", "%5B"}, {"]", "%5D"}, {"@", "%40"}, {"!", "%21"},
           {"$", "%24"}, {"&", "%26"}, {"'", "%27"}, {"(", "%28"}, {")", "%29"},
-          {"*", "%2A"}, {",", "%2C"}, {";", "%3B"}, {"=", "%3D"},
+          {"*", "%2A"}, {",", "%2C"}, {";", "%3B"}, {"=", "%3D"}, {"\\", ""},
       };
   return absl::StrReplaceAll(filter_string, special_character_encodings);
 }
@@ -83,27 +84,38 @@ RelationalExpression ApplyTransformsToExpression(
   return new_expression;
 }
 
-// Takes a EncodedPredicate in $filter form and returns a $filter string that
+// Takes a PredicateObject in redpath form and returns a $filter string that
 // abides by the Redfish Specification 7.3.4
 std::string GenerateFilterString(const PredicateObject &predicate_object) {
   std::vector<RelationalExpression> expressions;
-  expressions.reserve(predicate_object.expressions.size());
-  // Before creating the $filter string, all of the differences between Redpath
-  // and $filter format need to be applied
-  for (const RelationalExpression &expression : predicate_object.expressions) {
-    expressions.push_back(ApplyTransformsToExpression(expression));
-  }
-  // Combine the transformed expressions to the $filter string joined with the
-  // logical operators if necessary.
   std::string filter_string;
-  int logical_index = 0;
-  for (const RelationalExpression &expression : expressions) {
-    absl::StrAppend(&filter_string, expression.lhs, expression.rel_operator,
-                    expression.rhs);
-    if (logical_index < predicate_object.logical_operators.size()) {
-      absl::StrAppend(&filter_string,
-                      predicate_object.logical_operators[logical_index]);
-      logical_index++;
+  if (predicate_object.child_predicates.empty()) {
+    RelationalExpression new_expression =
+        ApplyTransformsToExpression(predicate_object.relational_expression);
+    filter_string = absl::StrCat(
+        new_expression.lhs, new_expression.rel_operator, new_expression.rhs);
+  } else {
+    int logical_index = 0;
+    // If the predicate object has children recurse over them.
+    for (const PredicateObject &child_predicate :
+         predicate_object.child_predicates) {
+      // Don't recurse if a "leaf" is found as it will add extraneous
+      // parenthesis.
+      if (child_predicate.child_predicates.empty()) {
+        RelationalExpression new_expression =
+            ApplyTransformsToExpression(child_predicate.relational_expression);
+        absl::StrAppend(&filter_string, new_expression.lhs,
+                        new_expression.rel_operator, new_expression.rhs);
+      } else {
+        absl::StrAppend(&filter_string, "(",
+                        GenerateFilterString(child_predicate), ")");
+      }
+      // Append logical operator if not at end of logical expression.
+      if (logical_index < predicate_object.logical_operators.size()) {
+        absl::StrAppend(&filter_string,
+                        predicate_object.logical_operators[logical_index]);
+        logical_index++;
+      }
     }
   }
   // Substitute special characters with encodings

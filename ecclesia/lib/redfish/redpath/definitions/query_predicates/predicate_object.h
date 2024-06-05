@@ -24,6 +24,7 @@
 #include "absl/strings/string_view.h"
 
 namespace ecclesia {
+
 // A simple structure containing the information in a relational expression.
 struct RelationalExpression {
   std::string lhs;
@@ -32,22 +33,28 @@ struct RelationalExpression {
 };
 
 // Contains all of the information contained in a predicate. The ordering of the
-// operators and the expressions are important. Each logical operator goes
+// operators and the expressions is important. Each logical operator goes
 // between two expressions. Here is a visualization:
+//
 // logical_operators: {and, or}
-// expressions: {exp1, exp2, exp3}
+// child_predicates: {exp1, exp2, exp3}
 // This would turn into "exp1 and exp2 or exp3".
+//
+// If the PredicateObject doesn't have logical operators that means it is a
+// single relational expression, therefore the logical_operators and
+// child_predicates lists will be empty.
 struct PredicateObject {
+  RelationalExpression relational_expression;
   std::vector<std::string> logical_operators;
-  std::vector<RelationalExpression> expressions;
+  std::vector<PredicateObject> child_predicates;
 };
 
 // Takes a Redpath format predicate and turns it into a machine readable object.
 // Example: "Prop1<=42 or Prop1>84"
 //   logical_operators = [" or "]
-//   expressions = [[lhs: "Prop1", rel_operator: "<=", rhs: "42"],
-//                  [lhs: "Prop1", rel_operator: ">", rhs: "84"]
-//                 ]
+//   child_predicates = [[lhs: "Prop1", rel_operator: "<=", rhs: "42"],
+//                       [lhs: "Prop1", rel_operator: ">", rhs: "84"]
+//                      ]
 // Property existence check predicates are not supported by this method
 // currently. For example: !Property or Property.SubProperty
 absl::StatusOr<PredicateObject> CreatePredicateObject(

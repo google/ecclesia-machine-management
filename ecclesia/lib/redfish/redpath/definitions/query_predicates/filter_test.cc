@@ -41,6 +41,17 @@ TEST(RedfishVariant, RedfishQueryParamFilter) {
   EXPECT_EQ(*filter2, "Prop1%20gt%2042%20and%20Prop1%20lt%2084");
 }
 
+TEST(RedfishVariant, RedfishQueryParamFilterWithGrouping) {
+  // Spaces between logical operator.
+  std::string predicate1 = "Prop1>42 and (Prop1<84 or Prop3=Status.test)";
+  absl::StatusOr<std::string> filter1 =
+      BuildFilterFromRedpathPredicate(predicate1);
+  ASSERT_TRUE(filter1.ok());
+  EXPECT_EQ(*filter1,
+            "Prop1%20gt%2042%20and%20%28Prop1%20lt%2084%20or%20Prop3%20eq%20%"
+            "27Status.test%27%29");
+}
+
 TEST(RedfishVariant, RedfishQueryParamFilterPredicateList) {
   std::string predicate1 = "Prop1<=42";
   std::string predicate2 = "Prop1!=42";
@@ -51,16 +62,8 @@ TEST(RedfishVariant, RedfishQueryParamFilterPredicateList) {
   EXPECT_EQ(*filter1, "Prop1%20le%2042%20or%20Prop1%20ne%2042");
 }
 
-TEST(RedfishVariant, RedfishQueryParamFilterStringQuote) {
-  std::string predicate1 = "Prop1='this is a test'";
-  absl::StatusOr<std::string> filter1 =
-                       BuildFilterFromRedpathPredicate(predicate1);
-  ASSERT_TRUE(filter1.ok());
-  EXPECT_EQ(*filter1, "Prop1%20eq%20%27this%20is%20a%20test%27");
-}
-
 TEST(RedfishVariant, RedfishQueryParamFilterStringNoQuote) {
-  std::string predicate1 = "Prop1=this is a test";
+  std::string predicate1 = "Prop1=this\\ is\\ a\\ test";
   absl::StatusOr<std::string> filter1 =
                        BuildFilterFromRedpathPredicate(predicate1);
   ASSERT_TRUE(filter1.ok());

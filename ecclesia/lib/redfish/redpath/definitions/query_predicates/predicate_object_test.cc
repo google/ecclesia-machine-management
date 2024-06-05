@@ -30,7 +30,7 @@ TEST(RedfishVariant, SingleExpressionPredicate) {
   std::string predicate1 = "Prop1<=42";
   absl::StatusOr<PredicateObject> object = CreatePredicateObject(predicate1);
   ASSERT_TRUE(object.ok());
-  EXPECT_EQ((*object).expressions.size(), 1);
+  EXPECT_EQ((*object).child_predicates.size(), 0);
   EXPECT_EQ((*object).logical_operators.size(), 0);
   absl::StatusOr<std::string> assembled_predicate =
       PredicateObjectToString(*object);
@@ -41,7 +41,7 @@ TEST(RedfishVariant, LogicalOperatorPredicate) {
   std::string predicate1 = "Prop1<=42 or Prop2>10";
   absl::StatusOr<PredicateObject> object = CreatePredicateObject(predicate1);
   ASSERT_TRUE(object.ok());
-  EXPECT_EQ((*object).expressions.size(), 2);
+  EXPECT_EQ((*object).child_predicates.size(), 2);
   EXPECT_EQ((*object).logical_operators.size(), 1);
   absl::StatusOr<std::string> assembled_predicate =
       PredicateObjectToString(*object);
@@ -49,10 +49,10 @@ TEST(RedfishVariant, LogicalOperatorPredicate) {
 }
 
 TEST(RedfishVariant, DoubleLogicalOperatorPredicate) {
-  std::string predicate1 = "Prop1<=42 or Prop2>10 and Prop3='test'";
+  std::string predicate1 = "Prop1<=42 or Prop2>10 and Prop3=test";
   absl::StatusOr<PredicateObject> object = CreatePredicateObject(predicate1);
   ASSERT_TRUE(object.ok());
-  EXPECT_EQ((*object).expressions.size(), 3);
+  EXPECT_EQ((*object).child_predicates.size(), 3);
   EXPECT_EQ((*object).logical_operators.size(), 2);
   absl::StatusOr<std::string> assembled_predicate =
       PredicateObjectToString(*object);
@@ -74,6 +74,10 @@ TEST(RedfishVariant, InvalidPredicate) {
   // One side of a logical exp is bad. Try both sides.
   std::string predicate7 = "Prop<erty1=42";
   EXPECT_THAT(CreatePredicateObject(predicate7), IsStatusInvalidArgument());
+  std::string predicate8 = "Prop<erty1=42 or Prop1>42";
+  EXPECT_THAT(CreatePredicateObject(predicate8), IsStatusInvalidArgument());
+  std::string predicate9 = "Property1=42 or Prop1>>42";
+  EXPECT_THAT(CreatePredicateObject(predicate9), IsStatusInvalidArgument());
 }
 
 // Currently existence checks are not supported by the predicate objects.
@@ -85,6 +89,49 @@ TEST(RedfishVariant, PredicateExistenceUnsupported) {
   std::string predicate3 = "Prop1.sub_prop";
   EXPECT_THAT(CreatePredicateObject(predicate3), IsStatusInvalidArgument());
   std::string predicate4 = "!Prop1.sub_prop";
+  EXPECT_THAT(CreatePredicateObject(predicate4), IsStatusInvalidArgument());
+}
+
+TEST(RedfishVariant, PredicateParsingParens) {
+  std::string predicate1 = "(Prop1<=42 or Prop2>10) and Prop3=test";
+  absl::StatusOr<PredicateObject> object = CreatePredicateObject(predicate1);
+  ASSERT_TRUE(object.ok());
+  EXPECT_EQ((*object).child_predicates.size(), 2);
+  EXPECT_EQ((*object).logical_operators.size(), 1);
+  std::string assembled_predicate = PredicateObjectToString(*object);
+  EXPECT_EQ(assembled_predicate, predicate1);
+}
+
+TEST(RedfishVariant, PredicateParsingEscapedSpace) {
+  std::string predicate1 = "Prop1=hello\\ world and Prop3=test";
+  absl::StatusOr<PredicateObject> object = CreatePredicateObject(predicate1);
+  ASSERT_TRUE(object.ok());
+  EXPECT_EQ((*object).child_predicates.size(), 2);
+  EXPECT_EQ((*object).logical_operators.size(), 1);
+  std::string assembled_predicate = PredicateObjectToString(*object);
+  EXPECT_EQ(assembled_predicate, predicate1);
+}
+
+TEST(RedfishVariant, PredicateParsingRemovesExtraParens) {
+  std::string predicate1 = "(Prop1<=42 or (Prop2>10)) and Prop3=test";
+  absl::StatusOr<PredicateObject> object = CreatePredicateObject(predicate1);
+  ASSERT_TRUE(object.ok());
+  EXPECT_EQ((*object).child_predicates.size(), 2);
+  EXPECT_EQ((*object).logical_operators.size(), 1);
+  absl::StatusOr<std::string> assembled_predicate =
+      PredicateObjectToString((*object));
+  ASSERT_TRUE(assembled_predicate.ok());
+  EXPECT_EQ(*assembled_predicate, "(Prop1<=42 or Prop2>10) and Prop3=test");
+}
+
+TEST(RedfishVariant, PredicateParsingBadParens) {
+  std::string predicate1 = "(Prop1<=42 or Prop2>10)) and Prop3=test'";
+  EXPECT_THAT(CreatePredicateObject(predicate1), IsStatusInvalidArgument());
+  std::string predicate2 = "((Prop1<=42 or Prop2>10) and Prop3=test";
+  EXPECT_THAT(CreatePredicateObject(predicate2), IsStatusInvalidArgument());
+  std::string predicate3 = "(Prop1<=42 or Prop2>10 and Prop3=test";
+  EXPECT_THAT(CreatePredicateObject(predicate3), IsStatusInvalidArgument());
+  std::string predicate4 = "()Prop1<=42 or Prop2>10 and Prop3=test";
   EXPECT_THAT(CreatePredicateObject(predicate4), IsStatusInvalidArgument());
 }
 
