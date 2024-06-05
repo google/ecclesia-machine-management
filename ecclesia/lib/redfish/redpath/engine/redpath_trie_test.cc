@@ -35,7 +35,8 @@ namespace ecclesia {
 
 namespace {
 
-using testing::UnorderedElementsAreArray;
+using ::testing::HasSubstr;
+using ::testing::UnorderedElementsAreArray;
 
 // MATCHER comparing flat_hash_set<vector<string>>
 MATCHER_P(FlatHashSetOfStringVectorsEq, expected, "") {
@@ -195,6 +196,57 @@ TEST(RedPathTrieTest, RedPathTrieDoesNotBuildOnSubqueryLooop) {
 
   RedPathTrieBuilder redpath_trie_builder(&query);
   EXPECT_THAT(redpath_trie_builder.CreateRedPathTrie(), IsStatusInternal());
+}
+
+TEST(RedPathTrieTest, RedPathTrieDoesNotBuildWhenSubqueriesHaveDuplicatePath) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "ServiceRoot"
+           subquery {
+             subquery_id: "RedfishVersion"
+             redpath: "/"
+             properties { name: "Uri" property: "@odata\\.id" type: STRING }
+             properties: {
+               name: "RedfishSoftwareVersion"
+               property: "RedfishVersion"
+               type: STRING
+             }
+           }
+           subquery {
+             subquery_id: "ChassisLinked"
+             root_subquery_ids: "RedfishVersion"
+             redpath: "/Chassis[*]"
+             properties {
+               name: "serial_number"
+               property: "SerialNumber"
+               type: STRING
+             }
+             properties {
+               name: "part_number"
+               property: "PartNumber"
+               type: STRING
+             }
+           }
+           subquery {
+             subquery_id: "ChassisNotLinked"
+             redpath: "/Chassis[*]"
+             properties {
+               name: "serial_number"
+               property: "SerialNumber"
+               type: STRING
+             }
+             properties {
+               name: "part_number"
+               property: "PartNumber"
+               type: STRING
+             }
+           })pb");
+
+  RedPathTrieBuilder redpath_trie_builder(&query);
+  auto redpath_trie = redpath_trie_builder.CreateRedPathTrie();
+  EXPECT_THAT(redpath_trie.status(), IsStatusInvalidArgument());
+  EXPECT_THAT(
+      std::string(redpath_trie.status().message()),
+      HasSubstr("Same RedPath found in multiple subqueries. Check subqueries"));
 }
 
 TEST(RedPathTrieTest, RedPathTrieBuildsExecutionSequenceCorrectly) {

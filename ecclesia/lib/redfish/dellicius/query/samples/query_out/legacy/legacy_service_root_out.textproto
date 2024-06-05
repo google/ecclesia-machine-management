@@ -32,21 +32,6 @@ subquery_output_by_id {
     }
   }
 }
-subquery_output_by_id {
-  key: "ChassisNotLinked"
-  value {
-    data_sets {
-      properties {
-        name: "serial_number"
-        string_value: "MBBQTW194106556"
-      }
-      properties {
-        name: "part_number"
-        string_value: "1043652-02"
-      }
-    }
-  }
-}
 start_timestamp {
   seconds: 10
 }

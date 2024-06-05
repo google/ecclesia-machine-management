@@ -9,10 +9,10 @@ subquery {
   properties { property: "SerialNumber" type: STRING }
   properties { property: "PartNumber" type: STRING }
 }
-# Returns "Manufacturer" and "Model" for all Chassis Resources
+# Returns "Manufacturer" and "Model" for Chassis Resource.
 subquery {
   subquery_id: "ChassisMakeModel"
-  redpath: "/Chassis[*]"
+  redpath: "/Chassis[0]"
   properties { property: "Manufacturer" type: STRING }
   properties { property: "Model" type: STRING }
 }

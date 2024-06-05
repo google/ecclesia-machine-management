@@ -15,9 +15,3 @@ subquery {
   properties { name: "serial_number" property: "SerialNumber" type: STRING }
   properties { name: "part_number" property: "PartNumber" type: STRING }
 }
-subquery {
-  subquery_id: "ChassisNotLinked"
-  redpath: "/Chassis[*]"
-  properties { name: "serial_number" property: "SerialNumber" type: STRING }
-  properties { name: "part_number" property: "PartNumber" type: STRING }
-}

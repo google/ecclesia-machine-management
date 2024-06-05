@@ -138,6 +138,12 @@ absl::Status RedPathTrieBuilder::ProcessSubquerySequence(
     // Insert RedPath Expression
     current_node = InsertRedPathExpressions(current_node, redpath_expressions);
 
+    if (!current_node->subquery_id.empty() &&
+        current_node->subquery_id != subquery_id) {
+      return absl::InvalidArgumentError(absl::StrCat(
+          "Same RedPath found in multiple subqueries. Check subqueries ",
+          current_node->subquery_id, " and ", subquery_id));
+    }
     current_node->subquery_id = subquery_id;
   }
   return absl::OkStatus();
