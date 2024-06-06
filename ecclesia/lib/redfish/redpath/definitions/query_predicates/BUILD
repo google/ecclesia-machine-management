@@ -38,6 +38,7 @@ cc_library(
     deps = [
         ":predicate_object",
         "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],

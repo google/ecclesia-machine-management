@@ -34,11 +34,19 @@ namespace {
 // Pattern for expression [lhs][operator][rhs]
 constexpr LazyRE2 kRelationalExpressionRegex = {
     "^(?P<left>[^\\s<=>!]+)(?:(<=|>=|!=|>|<|=)(?P<right>[^<=>!]+))$"};
+// A property existence check must start with a capital letter preceded by an
+// exclamation point if applicable. The rest of the property must be
+// alpha-numeric with possible periods for sub-properties.
+constexpr LazyRE2 kPropertyExistenceRegex = {"^(![A-Z]|[A-Z])[a-zA-Z0-9.]*$"};
 
 absl::StatusOr<RelationalExpression> EncodeRelationalExpression(
     absl::string_view expression) {
   RelationalExpression relational_expression;
 
+  if (RE2::FullMatch(expression, *kPropertyExistenceRegex)) {
+    relational_expression.property_name = expression;
+    return relational_expression;
+  }
   // Regex match the expression. The operator must be a valid relational
   // operator and the right hand side must not have spaces or characters
   // included in relation operators.
@@ -55,8 +63,16 @@ absl::StatusOr<RelationalExpression> EncodeRelationalExpression(
   return absl::InvalidArgumentError("Invalid expression");
 }
 
+std::string RelationalExpressionToString(const RelationalExpression &relexp) {
+  if (!relexp.property_name.empty()) {
+    return relexp.property_name;
+  }
+  return absl::StrCat(relexp.lhs, relexp.rel_operator, relexp.rhs);
+}
+
 bool IsRelationalExpression(absl::string_view expression) {
-  return RE2::FullMatch(expression, *kRelationalExpressionRegex);
+  return RE2::FullMatch(expression, *kRelationalExpressionRegex) ||
+         RE2::FullMatch(expression, *kPropertyExistenceRegex);
 }
 
 // Iterates over the given string, capturing everything within the first open
@@ -178,9 +194,7 @@ std::string PredicateObjectToString(const PredicateObject &predicate_object) {
   // This is the "base case", as in there are no children so we just construct
   // the relational expression and return.
   if (predicate_object.child_predicates.empty()) {
-    return absl::StrCat(predicate_object.relational_expression.lhs,
-                        predicate_object.relational_expression.rel_operator,
-                        predicate_object.relational_expression.rhs);
+    return RelationalExpressionToString(predicate_object.relational_expression);
   }
   std::string predicate_string;
   int logical_index = 0;
@@ -189,10 +203,9 @@ std::string PredicateObjectToString(const PredicateObject &predicate_object) {
        predicate_object.child_predicates) {
     // Don't recurse if a "leaf" is found as it will add extraneous parenthesis.
     if (child_predicate.child_predicates.empty()) {
-      absl::StrAppend(&predicate_string,
-                      child_predicate.relational_expression.lhs,
-                      child_predicate.relational_expression.rel_operator,
-                      child_predicate.relational_expression.rhs);
+      absl::StrAppend(
+          &predicate_string,
+          RelationalExpressionToString(child_predicate.relational_expression));
     } else {
       absl::StrAppend(&predicate_string, "(",
                       PredicateObjectToString(child_predicate), ")");

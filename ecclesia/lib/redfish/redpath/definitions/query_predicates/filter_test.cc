@@ -112,11 +112,14 @@ TEST(RedfishVariant, RedfishQueryParamFilterExistence) {
   std::string predicate2 = "!Prop1";
   EXPECT_THAT(BuildFilterFromRedpathPredicate(predicate2),
               IsStatusInvalidArgument());
-  std::string predicate3 = "Prop1.sub_prop";
+  std::string predicate3 = "Prop1.SubProp";
   EXPECT_THAT(BuildFilterFromRedpathPredicate(predicate3),
               IsStatusInvalidArgument());
-  std::string predicate4 = "!Prop1.sub_prop";
+  std::string predicate4 = "!Prop1.SubProp";
   EXPECT_THAT(BuildFilterFromRedpathPredicate(predicate4),
+              IsStatusInvalidArgument());
+  std::string predicate5 = "!Prop1.SubProp or Status.Something>=6.8";
+  EXPECT_THAT(BuildFilterFromRedpathPredicate(predicate5),
               IsStatusInvalidArgument());
 }
 

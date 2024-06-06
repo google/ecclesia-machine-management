@@ -30,6 +30,9 @@ struct RelationalExpression {
   std::string lhs;
   std::string rel_operator;
   std::string rhs;
+  // Populated only if the relational expression is checking if a property is
+  // present or not.
+  std::string property_name;
 };
 
 // Contains all of the information contained in a predicate. The ordering of the

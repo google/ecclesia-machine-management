@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
@@ -32,6 +33,15 @@
 
 namespace ecclesia {
 namespace {
+
+absl::StatusOr<std::string> RelationalExpressionToString(
+    const RelationalExpression &relexp) {
+  if (!relexp.property_name.empty()) {
+    return absl::InvalidArgumentError(
+        "Property existence is not supported by $filter");
+  }
+  return absl::StrCat(relexp.lhs, relexp.rel_operator, relexp.rhs);
+}
 
 // Encodes special characters in predicates. Special characters are derived
 // from https://datatracker.ietf.org/doc/html/rfc3986#section-2.2. Since all
@@ -86,14 +96,15 @@ RelationalExpression ApplyTransformsToExpression(
 
 // Takes a PredicateObject in redpath form and returns a $filter string that
 // abides by the Redfish Specification 7.3.4
-std::string GenerateFilterString(const PredicateObject &predicate_object) {
+absl::StatusOr<std::string> GenerateFilterString(
+    const PredicateObject &predicate_object) {
   std::vector<RelationalExpression> expressions;
   std::string filter_string;
   if (predicate_object.child_predicates.empty()) {
     RelationalExpression new_expression =
         ApplyTransformsToExpression(predicate_object.relational_expression);
-    filter_string = absl::StrCat(
-        new_expression.lhs, new_expression.rel_operator, new_expression.rhs);
+    ECCLESIA_ASSIGN_OR_RETURN(filter_string,
+                              RelationalExpressionToString(new_expression));
   } else {
     int logical_index = 0;
     // If the predicate object has children recurse over them.
@@ -104,11 +115,13 @@ std::string GenerateFilterString(const PredicateObject &predicate_object) {
       if (child_predicate.child_predicates.empty()) {
         RelationalExpression new_expression =
             ApplyTransformsToExpression(child_predicate.relational_expression);
-        absl::StrAppend(&filter_string, new_expression.lhs,
-                        new_expression.rel_operator, new_expression.rhs);
+        ECCLESIA_ASSIGN_OR_RETURN(std::string child_filter_string,
+                                  RelationalExpressionToString(new_expression));
+        absl::StrAppend(&filter_string, child_filter_string);
       } else {
-        absl::StrAppend(&filter_string, "(",
-                        GenerateFilterString(child_predicate), ")");
+        ECCLESIA_ASSIGN_OR_RETURN(std::string child_filter_string,
+                                  GenerateFilterString(child_predicate));
+        absl::StrAppend(&filter_string, "(", child_filter_string, ")");
       }
       // Append logical operator if not at end of logical expression.
       if (logical_index < predicate_object.logical_operators.size()) {
@@ -138,7 +151,9 @@ absl::StatusOr<std::string> BuildFilterFromRedpathPredicateList(
   for (absl::string_view predicate : predicates) {
     ECCLESIA_ASSIGN_OR_RETURN(PredicateObject encoded_predicate,
                               CreatePredicateObject(predicate));
-    filter_strings.push_back(GenerateFilterString(encoded_predicate));
+    ECCLESIA_ASSIGN_OR_RETURN(std::string filter_string,
+                              GenerateFilterString(encoded_predicate));
+    filter_strings.push_back(filter_string);
   }
   return absl::StrJoin(filter_strings, "%20or%20");
 }
