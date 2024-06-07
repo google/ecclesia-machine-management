@@ -7,9 +7,10 @@ very simple numeric and string data this provides a much simpler and lighter
 weight mechanism that something like protocol buffers.
 """
 
-load("@bazel_skylib//lib:types.bzl", "types")
-load(":file.bzl", "write_file")
 load("//third_party/bazel_rules/rules_python/python:py_library.bzl", "py_library")
+load("@bazel_skylib//lib:types.bzl", "types")
+
+load(":file.bzl", "write_file")
 
 def constant(
         value,

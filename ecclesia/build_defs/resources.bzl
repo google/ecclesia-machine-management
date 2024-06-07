@@ -1,6 +1,7 @@
 """Helper macro for defining resource protos"""
 
 load("//devtools/build_cleaner/skylark:build_defs.bzl", "register_extension_info")
+load("//tools/build_defs/go:go_proto_library.bzl", "go_proto_library")
 load("//tools/build_defs/proto/cpp:cc_proto_library.bzl", "cc_proto_library")
 
 _DEFAULT_VISIBILITY = ["//ecclesia:mmanager_users"]
@@ -39,8 +40,7 @@ def resource_proto(resource, name, srcs, deps = None):
         deps = [":" + name + "_proto"],
         visibility = _DEFAULT_VISIBILITY,
     )
-
-    native.go_proto_library(
+    go_proto_library(
         name = name + "_go_proto",
         deps = [":" + name + "_proto"],
         visibility = _DEFAULT_VISIBILITY,
