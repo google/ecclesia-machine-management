@@ -1318,7 +1318,8 @@ TEST_F(QueryPlannerTestRunner, SubscriptionToNonNavigationalPropertyFails) {
 }
 
 // Subscribe to unknown property fails.
-TEST_F(QueryPlannerTestRunner, SubscriptionToUnknownPropertyFails) {
+TEST_F(QueryPlannerTestRunner,
+       SubscriptionToUnknownPropertyDoesNotReturnError) {
   SetTestParams("indus_hmb_shim/mockup.shar");
 
   DelliciusQuery subscription_query = ParseTextProtoOrDie(
@@ -1344,9 +1345,7 @@ TEST_F(QueryPlannerTestRunner, SubscriptionToUnknownPropertyFails) {
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result = (*qp)->Run({args1});
-  EXPECT_TRUE(result.query_result.has_status());
-  EXPECT_THAT(result.query_result.status().error_code(),
-              ecclesia::ErrorCode::ERROR_INTERNAL);
+  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
 }
 
 // Subscribe to unknown property fails.

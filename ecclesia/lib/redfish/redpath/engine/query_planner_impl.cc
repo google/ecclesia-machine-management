@@ -601,9 +601,12 @@ QueryPlanner::ExecuteQueryExpression(
       nlohmann::json json = current_redfish_obj->GetContentAsJson();
       auto find_node_name = json.find(expression.expression);
       if (find_node_name == json.end()) {
-        return absl::InternalError(
-            "Cannot find navigational property in Redfish Object for "
-            "subscription.");
+        // It is not an error if a property to subscribe is not in a resource.
+        // Eventually, if no properties are subscribed to, the subscription
+        // query will fail. So there is no need to fail prematurely here.
+        DLOG(INFO) << "Cannot find navigational property in Redfish Object for "
+                   << "subscription.";
+        return execution_contexts;
       }
 
       auto find_navigational_property =
