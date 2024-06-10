@@ -1124,7 +1124,7 @@ void ExecuteRedPathStepFromEachSubquery(
           ExecutionFlags::ExecutionMode::kFailOnFirstError) {
         LOG(ERROR) << "Halting Query Execution early due to error: "
                    << node_set_as_variant.status().message();
-        LOG(ERROR) << "Querying node name: \"" << node_name
+        LOG(INFO) << "Failed when querying node name: \"" << node_name
                    << "\" relative to Redfish object:\n"
                    << context_node.redfish_object->DebugString();
         return;
