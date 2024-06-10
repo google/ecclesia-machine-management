@@ -5,5 +5,5 @@ query_id: "CablesCollection"
 subquery {
   subquery_id: "Cables"
   redpath: "/Cables[*]"
-  properties { property: "Id" type: STRING }
+  properties { property: "Id" name: "Id" type: STRING }
 }

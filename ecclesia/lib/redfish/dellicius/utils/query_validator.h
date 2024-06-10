@@ -59,7 +59,9 @@ class RedPathQueryValidator {
       // Occurs when querying more than 5 RedPathResources.
       kDeepQuery,
       // Occurs when a query has more than 5 nodes in one Redpath.
-      kDeepRedPath
+      kDeepRedPath,
+      // Occurs when a query has sub-quer(ies) with no name in properties.
+      kRedPathNoName
     };
 
     static absl::string_view GetDescriptor(Type type) {

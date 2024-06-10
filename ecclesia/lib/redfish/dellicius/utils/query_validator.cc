@@ -254,6 +254,25 @@ void TestForDeepQuery(const DelliciusQuery& redpath_query,
   }
 }
 
+void TestForNamePresent(const DelliciusQuery& redpath_query,
+                        absl::string_view path, std::vector<Issue>& warnings) {
+  absl::flat_hash_set<std::string> redpaths_no_names;
+  for (const Subquery& subquery : redpath_query.subquery()) {
+    for (const Subquery::RedfishProperty& property : subquery.properties()) {
+      if (property.name().empty()) {
+        redpaths_no_names.insert(subquery.redpath());
+      }
+    }
+  }
+  // Issue warnings for subqueries without names in properties.
+  if (!redpaths_no_names.empty()) {
+    warnings.push_back(
+        Issue{.type = Issue::Type::kRedPathNoName,
+              .message = "There are properties without names in this query.",
+              .path = std::string(path)});
+  }
+}
+
 void TestForWideBranching(const DelliciusQuery& redpath_query,
                           absl::string_view path,
                           std::vector<Issue>& warnings) {
@@ -290,6 +309,7 @@ void TestForWarningLevelIssues(const DelliciusQuery& redpath_query,
   TestForDeepRedPath(redpath_query, path, warnings);
   TestForDeepQuery(redpath_query, path, warnings);
   TestForWideBranching(redpath_query, path, warnings);
+  TestForNamePresent(redpath_query, path, warnings);
 }
 
 }  // namespace

@@ -48,18 +48,18 @@ const char kValidQueryDeepQueryFileContents[] = R"pb(
   subquery {
     subquery_id: "Processors"
     redpath: "/Systems[*]/Processors[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "Chassis"
     redpath: "/Chassis[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "ComputerSystems"
     root_subquery_ids: "Chassis"
     redpath: "/Links/ComputerSystems[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "PCIeDevices"
@@ -81,7 +81,7 @@ const char kValidQueryDeepRedPathFileContents[] = R"pb(
   subquery {
     subquery_id: "SubProcessors"
     redpath: "/Systems[*]/Processors[*]/SubProcessors[*]/SubProcessors[*]/SubProcessors[Id=1]"
-    properties { property: "Id" type: STRING }
+    properties { property: "Id" name: "Id" type: STRING }
   })pb";
 
 constexpr absl::string_view kPathToValidQueryWideBranching =
@@ -91,25 +91,25 @@ const char kValidQueryWideBranchingFileContents[] = R"pb(
   subquery {
     subquery_id: "Chassis"
     redpath: "/Chassis[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "Contains"
     root_subquery_ids: "Chassis"
     redpath: "/Links/Contains[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "Processors"
     root_subquery_ids: "Chassis"
     redpath: "/Links/Processors[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "ComputerSystems"
     root_subquery_ids: "Chassis"
     redpath: "/Links/ComputerSystems[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   })pb";
 
 // Should trigger both wide branching and deep query warnings.
@@ -120,24 +120,24 @@ const char kValidQueryMixedWarningsFileContents[] = R"pb(
   subquery {
     subquery_id: "Processors"
     redpath: "/Systems[*]/Processors[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "Chassis"
     redpath: "/Chassis[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "ComputerSystems"
     root_subquery_ids: "Chassis"
     redpath: "/Links/ComputerSystems[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "Storage"
     root_subquery_ids: "Chassis"
     redpath: "/Links/Storage[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "PCIeDevices"
@@ -159,12 +159,12 @@ const char kInvalidQueryConflictingSubqueryIdsFileContents[] = R"pb(
   subquery {
     subquery_id: "Query1"
     redpath: "/Systems[*]/Processors[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "Query1"
     redpath: "/Chassis[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
 )pb";
 
@@ -189,14 +189,14 @@ const char kInvalidQueryConflictingIdPropertyFileContents[] = R"pb(
   subquery {
     subquery_id: "Query1"
     redpath: "/Systems[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
     properties { name: "Query2" property: "LocationType" type: STRING }
   }
   subquery {
     subquery_id: "Query2"
     root_subquery_ids: "Query1"
     redpath: "/Chassis[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
 )pb";
 
@@ -207,27 +207,27 @@ const char kToInvalidQueryInvalidPredicateFileContents[] = R"pb(
   subquery {
     subquery_id: "Query1"
     redpath: "/Systems[*]/Processors[ProcessorType=$type and $another_predicate]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "Query2"
     redpath: "/Chassis[*]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "Query3"
     redpath: "/Chassis[last()]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "Query4"
     redpath: "/Chassis[Id=xyz]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
   subquery {
     subquery_id: "Query5"
     redpath: "/Chassis[*]/Links/Memory[$memory_location_predicate]"
-    properties { property: "@odata\\.id" type: STRING }
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
   }
 )pb";
 
@@ -236,6 +236,108 @@ constexpr absl::string_view kPathToMissingQuery = "/path/to/missing/query/";
 constexpr absl::string_view kPathToInvalidQuery =
     "lib/redfish/dellicius/utils/"
     "query_validator_test_invalid_query.textproto";
+
+// Constants for valid RedPathQuery tests that trigger warnings.
+constexpr absl::string_view kPathToValidQueryNamePresent =
+    "/path/to/valid/deep_query";
+const char kPathToValidQueryNamePresentFileContents[] = R"pb(
+  query_id: "ChassisQuery"
+  subquery {
+    subquery_id: "Processors"
+    redpath: "/Systems[*]/Processors[*]"
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "Chassis"
+    redpath: "/Chassis[*]"
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "ComputerSystems"
+    root_subquery_ids: "Chassis"
+    redpath: "/Links/ComputerSystems[*]"
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "PCIeDevices"
+    root_subquery_ids: "ComputerSystems"
+    redpath: "/PCIeDevices[*]"
+    properties { name: "uri" property: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "PCIeFunctions"
+    root_subquery_ids: "PCIeDevices"
+    redpath: "/PCIeFunctions[*]"
+    properties { name: "uri" property: "@odata\\.id" type: STRING }
+  })pb";
+
+// Constants for valid RedPathQuery tests that trigger warnings.
+constexpr absl::string_view kPathToValidQueryErrorNamePresent =
+    "/path/to/valid/deep_query";
+const char kPathToValidQueryErrorNamePresentFileContents[] = R"pb(
+  query_id: "ChassisQuery"
+  subquery {
+    subquery_id: "Processors"
+    redpath: "/Systems[*]/Processors[*]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "Chassis"
+    redpath: "/Chassis[*]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "ComputerSystems"
+    root_subquery_ids: "Chassis"
+    redpath: "/Links/ComputerSystems[*]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "PCIeDevices"
+    root_subquery_ids: "ComputerSystems"
+    redpath: "/PCIeDevices[*]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "PCIeFunctions"
+    root_subquery_ids: "PCIeDevices"
+    redpath: "/PCIeFunctions[*]"
+    properties { property: "@odata\\.id" type: STRING }
+  })pb";
+
+// Constants for valid RedPathQuery tests that trigger warnings.
+constexpr absl::string_view kPathToValidQueryMixedNamePresent =
+    "/path/to/valid/deep_query";
+const char kPathToValidQueryMixedNamePresentFileContents[] = R"pb(
+  query_id: "ChassisQuery"
+  subquery {
+    subquery_id: "Processors"
+    redpath: "/Systems[*]/Processors[*]"
+    properties { property: "@odata\\.id" name: "" type: STRING }
+  }
+  subquery {
+    subquery_id: "Chassis"
+    redpath: "/Chassis[*]"
+    properties { property: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "ComputerSystems"
+    root_subquery_ids: "Chassis"
+    redpath: "/Links/ComputerSystems[*]"
+    properties { property: "@odata\\.id" name: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "PCIeDevices"
+    root_subquery_ids: "ComputerSystems"
+    redpath: "/PCIeDevices[*]"
+    properties { name: "uri" property: "@odata\\.id" type: STRING }
+  }
+  subquery {
+    subquery_id: "PCIeFunctions"
+    root_subquery_ids: "PCIeDevices"
+    redpath: "/PCIeFunctions[*]"
+    properties { name: "uri" property: "@odata\\.id" type: STRING }
+  })pb";
 
 TEST(RedPathQueryValidationTest, ReadAndValdiateValidQueryFileSuccess) {
   RedPathQueryValidator validator;
@@ -399,6 +501,57 @@ TEST(RedPathQueryValidationTest, InvalidQueryWithInvalidPredicate) {
                       StartsWith(
                           "Disallowed predicate: $memory_location_predicate")),
                 Field(&Issue::path, Eq(kPathToInvalidQueryInvalidPredicate)))));
+}
+
+TEST(RedPathQueryValidationTest, ValidQueryWithNamePresent) {
+  RedPathQueryValidator validator(
+      [&](absl::string_view path) -> absl::StatusOr<DelliciusQuery> {
+        EXPECT_THAT(path, Eq(kPathToValidQueryNamePresent));
+        return ParseTextAsProtoOrDie<DelliciusQuery>(
+            kPathToValidQueryNamePresentFileContents);
+      });
+  EXPECT_THAT(validator.ValidateQueryFile(kPathToValidQueryNamePresent),
+              IsOk());
+  EXPECT_THAT(
+      validator.GetWarnings(),
+      ElementsAre(AllOf(Field(&Issue::type, Eq(Issue::Type::kDeepQuery)),
+                        Field(&Issue::path, Eq(kPathToValidQueryDeepQuery)))));
+}
+
+TEST(RedPathQueryValidationTest, ValidQueryWithMixedNamePresent) {
+  RedPathQueryValidator validator(
+      [&](absl::string_view path) -> absl::StatusOr<DelliciusQuery> {
+        EXPECT_THAT(path, Eq(kPathToValidQueryMixedNamePresent));
+        return ParseTextAsProtoOrDie<DelliciusQuery>(
+            kPathToValidQueryMixedNamePresentFileContents);
+      });
+  EXPECT_THAT(validator.ValidateQueryFile(kPathToValidQueryMixedNamePresent),
+              IsOk());
+  EXPECT_THAT(
+      validator.GetWarnings(),
+      ElementsAre(
+          AllOf(Field(&Issue::type, Eq(Issue::Type::kDeepQuery)),
+                Field(&Issue::path, Eq(kPathToValidQueryDeepQuery))),
+          AllOf(Field(&Issue::type, Eq(Issue::Type::kRedPathNoName)),
+                Field(&Issue::path, Eq(kPathToValidQueryMixedNamePresent)))));
+}
+
+TEST(RedPathQueryValidationTest, ValidQueryWithErrorNamePresent) {
+  RedPathQueryValidator validator(
+      [&](absl::string_view path) -> absl::StatusOr<DelliciusQuery> {
+        EXPECT_THAT(path, Eq(kPathToValidQueryErrorNamePresent));
+        return ParseTextAsProtoOrDie<DelliciusQuery>(
+            kPathToValidQueryErrorNamePresentFileContents);
+      });
+  EXPECT_THAT(validator.ValidateQueryFile(kPathToValidQueryErrorNamePresent),
+              IsOk());
+  EXPECT_THAT(
+      validator.GetWarnings(),
+      ElementsAre(
+          AllOf(Field(&Issue::type, Eq(Issue::Type::kDeepQuery)),
+                Field(&Issue::path, Eq(kPathToValidQueryDeepQuery))),
+          AllOf(Field(&Issue::type, Eq(Issue::Type::kRedPathNoName)),
+                Field(&Issue::path, Eq(kPathToValidQueryMixedNamePresent)))));
 }
 
 }  // namespace
