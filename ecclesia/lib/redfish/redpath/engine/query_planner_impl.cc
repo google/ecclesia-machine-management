@@ -39,7 +39,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/str_replace.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
@@ -53,6 +52,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_predicates/filter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_predicates/predicates.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_predicates/variable_substitution.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
@@ -268,63 +268,14 @@ SubqueryIdToSubquery GetSubqueryIdToSubquery(const DelliciusQuery &query) {
   return id_to_subquery;
 }
 
-std::string ReplaceMultiValueVariables(
-    std::string &new_predicate, absl::string_view variable_name,
-    const size_t var_pos, const int values_count,
-    const google::protobuf::RepeatedPtrField<std::string> &var_values) {
-  // /For variables with multiple values, we expand the expression with the
-  // variable into an expression surrounded by parenthesis, with ORs.
-  // ex: A and B=$VAR -> A and (B=var_val0 or B=var_val1)
-  size_t last_space_pos = new_predicate.substr(0, var_pos).find_last_of(' ');
-  // the substring between the last space and the variable name is the
-  // "property_name=" portion of the templated expression.
-  if (last_space_pos == absl::string_view::npos) {
-    last_space_pos = new_predicate.find_first_not_of('(');
-  } else {
-    last_space_pos++;
-  }
-  std::string property_with_op =
-      new_predicate.substr(last_space_pos, var_pos - last_space_pos);
-  // Build up new expression, starting with an open parenthesis.
-  std::string new_expression = "(";
-  for (int i = 0; i < values_count - 1; ++i) {
-    absl::StrAppend(&new_expression,
-                    // Reading<$Threshold and Name=$SensorName
-                    property_with_op, var_values[i], " or ");
-  }
-  // Append last expression and a closing parenthesis.
-  absl::StrAppend(&new_expression, property_with_op,
-                  var_values[values_count - 1], ")");
-  // Replace "templated_prop=$variable" with the new expression.
-  return absl::StrReplaceAll(
-      new_predicate,
-      {{absl::StrCat(property_with_op, variable_name), new_expression}});
-}
-
 absl::StatusOr<bool> ExecutePredicateExpression(
     const PredicateOptions &predicate_options,
     QueryExecutionContext &current_execution_context,
     const std::unique_ptr<RedfishObject> &redfish_object) {
-  std::string new_predicate = predicate_options.predicate;
-  for (const auto &value :
-       current_execution_context.query_variables.variable_values()) {
-    if (value.name().empty()) continue;
-    std::string variable_name = absl::StrCat("$", value.name());
-    const size_t var_pos = new_predicate.find(variable_name);
-    if (var_pos == absl::string_view::npos) continue;
-    int values_count = value.values_size();
-    const auto &var_values = value.values();
-    if (values_count == 1) {
-      new_predicate =
-          absl::StrReplaceAll(new_predicate, {{variable_name, var_values[0]}});
-    } else if (values_count == 0) {
-      return absl::InvalidArgumentError(
-          absl::StrCat("No values provided for variable ", variable_name));
-    } else {
-      new_predicate = ReplaceMultiValueVariables(
-          new_predicate, variable_name, var_pos, values_count, var_values);
-    }
-  }
+  ECCLESIA_ASSIGN_OR_RETURN(
+      std::string new_predicate,
+      SubstituteVariables(predicate_options.predicate,
+                          current_execution_context.query_variables));
   ECCLESIA_ASSIGN_OR_RETURN(
       bool predicate_rule_result,
       ApplyPredicateRule(redfish_object->GetContentAsJson(),

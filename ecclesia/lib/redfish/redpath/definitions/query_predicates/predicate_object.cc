@@ -194,6 +194,12 @@ std::string PredicateObjectToString(const PredicateObject &predicate_object) {
   // This is the "base case", as in there are no children so we just construct
   // the relational expression and return.
   if (predicate_object.child_predicates.empty()) {
+    // If there are no child predicates and no relational expression then this
+    // predicate is a "select-all".
+    if (predicate_object.relational_expression.property_name.empty() &&
+        predicate_object.relational_expression.rel_operator.empty()) {
+      return "*";
+    }
     return RelationalExpressionToString(predicate_object.relational_expression);
   }
   std::string predicate_string;
@@ -207,8 +213,18 @@ std::string PredicateObjectToString(const PredicateObject &predicate_object) {
           &predicate_string,
           RelationalExpressionToString(child_predicate.relational_expression));
     } else {
-      absl::StrAppend(&predicate_string, "(",
-                      PredicateObjectToString(child_predicate), ")");
+      // If the child contains only a single relational expression, just add it
+      // to avoid extra parenthesis.
+      if (child_predicate.child_predicates.size() == 1 &&
+          child_predicate.child_predicates.at(0).child_predicates.empty()) {
+        absl::StrAppend(
+            &predicate_string,
+            RelationalExpressionToString(
+                child_predicate.child_predicates.at(0).relational_expression));
+      } else {
+        absl::StrAppend(&predicate_string, "(",
+                        PredicateObjectToString(child_predicate), ")");
+      }
     }
     if (logical_index < predicate_object.logical_operators.size()) {
       absl::StrAppend(&predicate_string,

@@ -81,3 +81,30 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "variable_substitution",
+    srcs = ["variable_substitution.cc"],
+    hdrs = ["variable_substitution.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":predicate_object",
+        "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "variable_substitution_test",
+    srcs = ["variable_substitution_test.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":variable_substitution",
+        "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
