@@ -903,10 +903,11 @@ ContextNode ExecutePredicateExpression(
     return ::google::rpc::Code::NOT_FOUND;
   }
   // Unless the error is NOT_FOUND, we want to propagate it up to QueryResult.
-  if (code == absl::StatusCode::kDeadlineExceeded) {
+  if (code == absl::StatusCode::kUnavailable) {
+    error_code = ::google::rpc::Code::UNAVAILABLE;
+  } else if (code == absl::StatusCode::kDeadlineExceeded) {
     error_code = ::google::rpc::Code::DEADLINE_EXCEEDED;
-  }
-  if (code == absl::StatusCode::kUnauthenticated) {
+  } else if (code == absl::StatusCode::kUnauthenticated) {
     error_code = ::google::rpc::Code::UNAUTHENTICATED;
   }
   result.mutable_status()->set_code(error_code);

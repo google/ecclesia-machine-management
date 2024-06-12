@@ -76,6 +76,7 @@ using ::testing::NotNull;
 using ::testing::UnorderedElementsAre;
 using QueryExecutionResult = QueryPlannerIntf::QueryExecutionResult;
 using QueryPlannerOptions = QueryPlannerIntf::QueryPlannerOptions;
+using ::testing::Eq;
 
 constexpr absl::string_view kSensorRedPath = "/Chassis[*]/Sensors[*]";
 constexpr absl::string_view kAssemblyRedPath = "/Chassis[*]/Assembly";
@@ -1736,7 +1737,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerHaltsOnWrongPropertyType) {
   QueryExecutionResult result = (*qp)->Run({args1});
 
   EXPECT_THAT(result.query_result.status().error_code(),
-              testing::Eq(ecclesia::ErrorCode::ERROR_INTERNAL));
+              Eq(ecclesia::ErrorCode::ERROR_INTERNAL));
 }
 
 // Test Query Planner's ability to generate sub-fru stable IDs.
@@ -2676,7 +2677,7 @@ TEST_F(QueryPlannerTestRunner, CheckQueryPlannerPopulatesStatus) {
   QueryExecutionResult result = (*qp)->Run({args1});
 
   EXPECT_THAT(result.query_result.status().error_code(),
-              testing::Eq(ecclesia::ErrorCode::ERROR_INTERNAL));
+              Eq(ecclesia::ErrorCode::ERROR_UNAVAILABLE));
   EXPECT_THAT(
       result.query_result.status().errors().at(0),
       HasSubstr(
@@ -2854,7 +2855,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   auto result = (*qp)->Run({args1});
   EXPECT_THAT(result.query_result.status().error_code(),
-              testing::Eq(ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE));
+              Eq(ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE));
 
   // Redfish Metrics should indicate 1 failed GET request to service root.
   EXPECT_EQ(metrics->uri_to_metrics_map().size(), 1);
@@ -3129,7 +3130,7 @@ TEST_F(QueryPlannerGrpcTestRunner, CheckQueryPlannerRespectsTimeoutOnGetRoot) {
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result = (*qp)->Run({args1});
   EXPECT_THAT(result.query_result.status().error_code(),
-              testing::Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
+              Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
   EXPECT_THAT(result.query_result.status().errors().at(0),
               testing::HasSubstr("Timed out while querying service root"));
   notification_.Notify();
@@ -3175,7 +3176,7 @@ TEST_F(QueryPlannerGrpcTestRunner,
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result = (*qp)->Run({args1});
   EXPECT_THAT(result.query_result.status().error_code(),
-              testing::Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
+              Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
   notification_.Notify();
 }
 
@@ -3245,7 +3246,7 @@ TEST_F(QueryPlannerGrpcTestRunner,
   EXPECT_THAT(qp2, IsOk());
   QueryExecutionResult timeout_result = (*qp2)->Run({args1});
   EXPECT_THAT(timeout_result.query_result.status().error_code(),
-              testing::Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
+              Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
 }
 
 }  // namespace

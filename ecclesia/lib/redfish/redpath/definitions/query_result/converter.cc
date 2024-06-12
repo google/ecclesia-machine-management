@@ -206,6 +206,8 @@ ErrorCode RpcCodeToQueryResultErrorCode(int code) {
       return ErrorCode::ERROR_NETWORK;
     case google::rpc::UNAUTHENTICATED:
       return ErrorCode::ERROR_UNAUTHENTICATED;
+    case google::rpc::UNAVAILABLE:
+      return ErrorCode::ERROR_UNAVAILABLE;
     default:
       return ErrorCode::ERROR_INTERNAL;
   }

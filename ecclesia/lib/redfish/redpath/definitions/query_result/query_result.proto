@@ -102,6 +102,8 @@ enum ErrorCode {
   ERROR_INTERNAL = 4;
   // Occurs when the query execution is aborted due to timeout.
   ERROR_QUERY_TIMEOUT = 5;
+  // Occurs when the query execution is aborted due to 503 Service Unavailable.
+  ERROR_UNAVAILABLE = 6;
 }
 
 message Status {

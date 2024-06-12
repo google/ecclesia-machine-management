@@ -73,6 +73,7 @@ namespace ecclesia {
 
 namespace {
 
+using ::tensorflow::serving::net_http::HTTPStatusCode;
 using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Not;
@@ -860,12 +861,10 @@ TEST(QueryEngineTest, QueryEngineNoHaltOnFirstFailure) {
   std::string rotational_sensor_uri =
       "/redfish/v1/Chassis/chassis/Sensors/indus_fan4_rpm";
   // Ensure two subqueries return errors.
-  server.AddHttpGetHandlerWithStatus(
-      temp_sensor_uri, "",
-      tensorflow::serving::net_http::HTTPStatusCode::SERVICE_UNAV);
-  server.AddHttpGetHandlerWithStatus(
-      rotational_sensor_uri, "",
-      tensorflow::serving::net_http::HTTPStatusCode::SERVICE_UNAV);
+  server.AddHttpGetHandlerWithStatus(temp_sensor_uri, "",
+                                     HTTPStatusCode::SERVICE_UNAV);
+  server.AddHttpGetHandlerWithStatus(rotational_sensor_uri, "",
+                                     HTTPStatusCode::SERVICE_UNAV);
   // Set up query engine with redfish metrics and to not halt on first error.
   FakeClock clock{clock_time};
   FakeRedfishServer::Config config = server.GetConfig();
@@ -1639,6 +1638,37 @@ TEST(QueryEngineTest, CanHandleInvalidSubscriptionRequest) {
       query_engine->ExecuteSubscriptionQuery({"ManagerCollector"},
                                              streaming_options);
   EXPECT_THAT(subscription_query_result.status(), IsStatusInternal());
+}
+
+TEST(QueryEngineTest, QueryEngineFailsOnServiceUnavailability) {
+  FakeRedfishServer server(kIndusMockup);
+  std::string rotational_sensor_uri =
+      "/redfish/v1/Chassis/chassis/Sensors/indus_fan4_rpm";
+  server.AddHttpGetHandlerWithStatus(rotational_sensor_uri, "",
+                                     HTTPStatusCode::SERVICE_UNAV);
+  FakeClock clock{clock_time};
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
+
+  QueryContext query_context{.query_files = kDelliciusQueries,
+                             .query_rules = kQueryRules,
+                             .clock = &clock};
+  absl::StatusOr<QueryEngine> query_engine =
+      CreateQueryEngine(query_context, {.transport = std::move(transport)});
+  ASSERT_TRUE(query_engine.ok());
+  QueryIdToResult query_result =
+      query_engine->ExecuteRedpathQuery({"SensorCollectorWithChassisLinks"});
+  EXPECT_THAT(query_result.results()
+                  .at("SensorCollectorWithChassisLinks")
+                  .status()
+                  .error_code(),
+              Eq(ecclesia::ErrorCode::ERROR_UNAVAILABLE));
 }
 
 }  // namespace

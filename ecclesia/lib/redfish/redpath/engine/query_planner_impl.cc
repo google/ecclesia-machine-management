@@ -299,6 +299,9 @@ void PopulateSubqueryErrorStatus(const absl::Status &node_status,
       "Cannot resolve NodeName ", node_name,
       " to valid Redfish object at path ", last_executed_redpath,
       ". Redfish Request failed with error: ", node_status.message());
+  if (code == absl::StatusCode::kUnavailable) {
+    error_code = ecclesia::ErrorCode::ERROR_UNAVAILABLE;
+  }
   if (code == absl::StatusCode::kUnauthenticated) {
     error_code = ecclesia::ErrorCode::ERROR_UNAUTHENTICATED;
   }
