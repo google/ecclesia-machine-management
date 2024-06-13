@@ -17,12 +17,28 @@
 #ifndef ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_ROUTER_UTIL_H_
 #define ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_ROUTER_UTIL_H_
 
+
+#include "absl/functional/any_invocable.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 
 namespace ecclesia {
+
+// The process_fn callback is invoked to handle the Query Selection Spec found
+// in the Query Router spec, based on the specified server_tag and server_type.
+//
+// Returns an error if the selection spec is empty or the selection criteria in
+// the Query Router spec is not valid; if the callback function returns an
+// error.
+absl::Status ProcessQueryRouterSpec(
+    const QueryRouterSpec& router_spec, absl::string_view server_tag,
+    SelectionSpec::SelectionClass::ServerType server_type,
+    absl::AnyInvocable<absl::Status(absl::string_view,
+                                    const SelectionSpec::QuerySelectionSpec&)>
+        process_fn);
 
 // Returns the QuerySpec from the Query Router Spec for the given `server_tag`
 // and `server_type`.

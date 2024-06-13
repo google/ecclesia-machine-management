@@ -20,6 +20,7 @@
 #include <utility>
 
 #include "google/protobuf/duration.pb.h"
+#include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -59,6 +60,46 @@ void AddTimeoutFromSelectionSpec(
 }
 
 }  // namespace
+absl::Status ProcessQueryRouterSpec(
+    const QueryRouterSpec& router_spec, absl::string_view server_tag,
+    SelectionSpec::SelectionClass::ServerType server_type,
+    absl::AnyInvocable<absl::Status(absl::string_view,
+                                    const SelectionSpec::QuerySelectionSpec&)>
+        process_fn) {
+  for (const auto& [query_id, select_spec] : router_spec.selection_specs()) {
+    for (const SelectionSpec::QuerySelectionSpec& query_select_spec :
+         select_spec.query_selection_specs()) {
+      if (query_select_spec.select().empty()) {
+        return absl::FailedPreconditionError(absl::StrCat(
+            "Both server tag and server type not specified for query: ",
+            query_id));
+      }
+      for (const SelectionSpec::SelectionClass& select :
+           query_select_spec.select()) {
+        if (select.has_server_type()) {
+          if (select.server_type() ==
+              SelectionSpec::SelectionClass::SERVER_TYPE_UNSPECIFIED) {
+            return absl::FailedPreconditionError(absl::StrCat(
+                "Server type is not specified for query: ", query_id));
+          }
+          if (select.server_type() != server_type) {
+            continue;
+          }
+        }
+        if (select.server_tag().empty()) {
+          ECCLESIA_RETURN_IF_ERROR(process_fn(query_id, query_select_spec));
+          continue;
+        }
+        for (absl::string_view tag : select.server_tag()) {
+          if (tag == server_tag) {
+            ECCLESIA_RETURN_IF_ERROR(process_fn(query_id, query_select_spec));
+          }
+        }
+      }
+    }
+  }
+  return absl::OkStatus();
+}
 
 absl::StatusOr<QuerySpec> GetQuerySpec(
     const QueryRouterSpec& router_spec, absl::string_view server_tag,
@@ -110,41 +151,8 @@ absl::StatusOr<QuerySpec> GetQuerySpec(
     }
     return absl::OkStatus();
   };
-
-  for (const auto& [query_id, select_spec] : router_spec.selection_specs()) {
-    for (const SelectionSpec::QuerySelectionSpec& query_select_spec :
-         select_spec.query_selection_specs()) {
-      if (query_select_spec.select().empty()) {
-        return absl::FailedPreconditionError(absl::StrCat(
-            "Both server tag and server type not specified for query: ",
-            query_id));
-      }
-      for (const SelectionSpec::SelectionClass& select :
-           query_select_spec.select()) {
-        if (select.has_server_type()) {
-          if (select.server_type() ==
-              SelectionSpec::SelectionClass::SERVER_TYPE_UNSPECIFIED) {
-            return absl::FailedPreconditionError(absl::StrCat(
-                "Server type is not specified for query: ", query_id));
-          }
-          if (select.server_type() != server_type) {
-            continue;
-          }
-        }
-        if (select.server_tag().empty()) {
-          ECCLESIA_RETURN_IF_ERROR(
-              add_to_query_spec(query_id, query_select_spec));
-          continue;
-        }
-        for (absl::string_view tag : select.server_tag()) {
-          if (tag == server_tag) {
-            ECCLESIA_RETURN_IF_ERROR(
-                add_to_query_spec(query_id, query_select_spec));
-          }
-        }
-      }
-    }
-  }
+  ECCLESIA_RETURN_IF_ERROR(ProcessQueryRouterSpec(
+      router_spec, server_tag, server_type, add_to_query_spec));
   return std::move(query_spec);
 }
 
