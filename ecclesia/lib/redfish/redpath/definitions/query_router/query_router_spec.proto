@@ -32,6 +32,7 @@ message SelectionSpec {
     // or the other.
     optional ServerType server_type = 1;
     repeated string server_tag = 2;
+    reserved 3;
   }
 
   message QuerySelectionSpec {
