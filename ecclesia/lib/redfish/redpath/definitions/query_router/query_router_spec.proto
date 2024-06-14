@@ -26,13 +26,27 @@ message SelectionSpec {
       reserved 2 to 99;
     }
 
+    enum ServerClass {
+      SERVER_CLASS_UNSPECIFIED = 0;
+      // Nodes in the Compute Arena
+      SERVER_CLASS_COMPUTE = 1;
+      reserved 2 to 99;
+    }
+
     // We recommend setting either server_type or server_tag. If both are set,
     // AND operation will be applied and the query will execute only on those
     // nodes that satisfy both the criteria and miss the nodes that satisfy one
     // or the other.
     optional ServerType server_type = 1;
     repeated string server_tag = 2;
-    reserved 3;
+    // We also support the concept of a "server class". This is a more general
+    // concept than a server tag, and allows us to select a group of servers of
+    // the same class. Please note that this field can be set instead of
+    // server_type and/or server_tag fields. The AND operation still applies; if
+    // all are set, all server criteria must be met. Ideally, this field can be
+    // used in conjection with server_tag to select a specific server within a
+    // class.
+    repeated ServerClass server_class = 3;
   }
 
   message QuerySelectionSpec {
