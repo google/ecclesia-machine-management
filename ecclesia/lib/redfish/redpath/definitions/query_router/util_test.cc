@@ -329,6 +329,94 @@ TEST_F(GetQuerySpecTest, RouterSpecWithServerTagsOnly) {
               .rule = query_rules_.query_id_to_params_rule().at("query_b")}))));
 }
 
+TEST_F(GetQuerySpecTest, RouterSpecWithServerClassOnly) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_class: [ SERVER_CLASS_COMPUTE ] }
+              query_and_rule_path {
+                query_path: "$0/query_a.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+          }
+        }
+        selection_specs {
+          key: "query_b"
+          value {
+            query_selection_specs {
+              select { server_class: [ SERVER_CLASS_COMPUTE ] }
+              query_and_rule_path {
+                query_path: "$0/query_b.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  // Both query_a and query_b are applicable for server_1
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      GetQuerySpec(router_spec, "server_1",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                   SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE));
+
+  EXPECT_THAT(
+      query_spec.query_id_to_info,
+      UnorderedElementsAre(
+          Pair("query_a", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = query_a_,
+                              .rule = query_rules_.query_id_to_params_rule().at(
+                                  "query_a")})),
+          Pair("query_b", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = query_b_,
+                              .rule = query_rules_.query_id_to_params_rule().at(
+                                  "query_b")}))));
+
+  // Both query_a and query_b are applicable for server_2
+  ECCLESIA_ASSIGN_OR_FAIL(
+      query_spec,
+      GetQuerySpec(router_spec, "server_2",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                   SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE));
+
+  EXPECT_THAT(
+      query_spec.query_id_to_info,
+      UnorderedElementsAre(
+          Pair("query_a", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = query_a_,
+                              .rule = query_rules_.query_id_to_params_rule().at(
+                                  "query_a")})),
+          Pair("query_b", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = query_b_,
+                              .rule = query_rules_.query_id_to_params_rule().at(
+                                  "query_b")}))));
+
+  // Both query_a and query_b are applicable for server_3
+  ECCLESIA_ASSIGN_OR_FAIL(
+      query_spec,
+      GetQuerySpec(router_spec, "server_3",
+                   SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                   SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE));
+
+  EXPECT_THAT(
+      query_spec.query_id_to_info,
+      UnorderedElementsAre(
+          Pair("query_a", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = query_a_,
+                              .rule = query_rules_.query_id_to_params_rule().at(
+                                  "query_a")})),
+          Pair("query_b", QueryInfoEq(QuerySpec::QueryInfo{
+                              .query = query_b_,
+                              .rule = query_rules_.query_id_to_params_rule().at(
+                                  "query_b")}))));
+}
+
 TEST_F(GetQuerySpecTest, RouterSpecWithServerSpecificQueries) {
   QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
       R"pb(
@@ -482,6 +570,30 @@ TEST_F(GetQuerySpecTest, RouterSpecWithNoSelectionSpec) {
               IsStatusFailedPrecondition());
 }
 
+TEST_F(GetQuerySpecTest, RouterSpecWithEmptySelectionSpec) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select {}
+              query_and_rule_path {
+                query_path: "$0/query_a.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  EXPECT_THAT(GetQuerySpec(router_spec, "server_1",
+                           SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                           SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE),
+              IsStatusFailedPrecondition());
+}
+
 TEST_F(GetQuerySpecTest, RouterSpecWithIncorrectQueryId) {
   // query_b textproto is set for query_a spec.
   QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
@@ -526,6 +638,34 @@ TEST_F(GetQuerySpecTest, RouterSpecWithUnspecifiedServerType) {
 
   EXPECT_THAT(GetQuerySpec(router_spec, "server_1",
                            SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB),
+              IsStatusFailedPrecondition());
+}
+
+TEST_F(GetQuerySpecTest, RouterSpecWithUnspecifiedServerClass) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select {
+                server_type: SERVER_TYPE_BMCWEB
+                server_tag: "server_1"
+                server_class: [ SERVER_CLASS_UNSPECIFIED ]
+              }
+              query_and_rule_path {
+                query_path: "$0/query_a.textproto"
+                rule_path: "$0/query_rules.textproto"
+              }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  EXPECT_THAT(GetQuerySpec(router_spec, "server_1",
+                           SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                           SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE),
               IsStatusFailedPrecondition());
 }
 

@@ -21,6 +21,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -50,14 +51,17 @@ class QueryRouterIntf {
   struct ServerInfo {
     std::string server_tag;
     SelectionSpec::SelectionClass::ServerType server_type;
+    SelectionSpec::SelectionClass::ServerClass server_class;
 
     template <typename H>
     friend H AbslHashValue(H h, const ServerInfo &s) {
-      return H::combine(std::move(h), s.server_tag, s.server_type);
+      return H::combine(std::move(h), s.server_tag, s.server_type,
+                        s.server_class);
     }
 
     bool operator==(const ServerInfo &other) const {
-      return server_tag == other.server_tag && server_type == other.server_type;
+      return std::tie(server_tag, server_type, server_class) ==
+             std::tie(other.server_tag, other.server_type, other.server_class);
     }
   };
 

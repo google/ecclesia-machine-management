@@ -195,6 +195,8 @@ class QueryRouterTest : public testing::Test {
     server_spec.server_info.server_tag = server_tag;
     server_spec.server_info.server_type =
         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB;
+    server_spec.server_info.server_class =
+        SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE;
     server_spec.stable_id_type = stable_id;
     return server_spec;
   };
@@ -274,9 +276,11 @@ TEST_P(QueryRouterSuccessTest, CreateSuccess) {
   {
     absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
         {"query_a",
-         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}},
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
         {"query_a",
-         {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}}};
+         {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
 
     query_router->ExecuteQuery(
         {"query_a"},
@@ -294,7 +298,8 @@ TEST_P(QueryRouterSuccessTest, CreateSuccess) {
   {
     absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
         {"query_b",
-         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}}};
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
 
     query_router->ExecuteQuery(
         {"query_b"},
@@ -312,11 +317,14 @@ TEST_P(QueryRouterSuccessTest, CreateSuccess) {
   {
     absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
         {"query_c",
-         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}},
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
         {"query_c",
-         {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}},
+         {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
         {"query_c",
-         {"server_3", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}}};
+         {"server_3", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
 
     query_router->ExecuteQuery(
         {"query_c"},
@@ -334,17 +342,23 @@ TEST_P(QueryRouterSuccessTest, CreateSuccess) {
   {
     absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
         {"query_a",
-         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}},
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
         {"query_b",
-         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}},
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
         {"query_c",
-         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}},
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
         {"query_a",
-         {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}},
+         {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
         {"query_c",
-         {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}},
+         {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
         {"query_c",
-         {"server_3", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}}};
+         {"server_3", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
 
     query_router->ExecuteQuery(
         {"query_a", "query_b", "query_c"},
@@ -500,6 +514,7 @@ TEST_F(QueryRouterTest, QueryAndServerSpecPartialIntersect) {
             query_selection_specs {
               select {
                 server_type: SERVER_TYPE_BMCWEB
+                server_class: SERVER_CLASS_COMPUTE
                 server_tag: "server_1"
                 server_tag: "server_2"
               }
@@ -532,7 +547,8 @@ TEST_F(QueryRouterTest, QueryAndServerSpecPartialIntersect) {
   {
     absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
         {"query_a",
-         {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB}}};
+         {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
 
     query_router->ExecuteQuery(
         {"query_a"},
@@ -829,7 +845,8 @@ TEST_F(QueryRouterTest, GetRedfishInterfaceSuccess) {
           QueryRouter::ServerInfo{
               .server_tag = "server_1",
               .server_type = SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
-          },
+              .server_class =
+                  SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE},
           RedfishInterfacePasskeyFactory::GetPassKey()));
   ASSERT_THAT(intf, NotNull());
 }

@@ -31,7 +31,7 @@
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
@@ -148,9 +148,10 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
           };
     }
 
-    ECCLESIA_ASSIGN_OR_RETURN(QuerySpec query_spec,
-                              GetQuerySpec(router_spec, server_info.server_tag,
-                                           server_info.server_type));
+    ECCLESIA_ASSIGN_OR_RETURN(
+        QuerySpec query_spec,
+        GetQuerySpec(router_spec, server_info.server_tag,
+                     server_info.server_type, server_info.server_class));
     absl::flat_hash_set<std::string> query_ids;
     query_ids.reserve(query_spec.query_id_to_info.size());
     for (const auto &[query_id, info] : query_spec.query_id_to_info) {
@@ -294,10 +295,13 @@ absl::StatusOr<RedfishInterface *> QueryRouter::GetRedfishInterface(
       return routing_info.query_engine->GetRedfishInterface(unused_passkey);
     }
   }
-  return absl::NotFoundError(absl::StrCat(
-      "RedfishInterface not found for server: ", server_info.server_tag,
-      " and server type: ",
-      SelectionSpec::SelectionClass::ServerType_Name(server_info.server_type)));
+  return absl::NotFoundError(absl::StrFormat(
+      "RedfishInterface not found for server: %s server type: %s server class: "
+      "%s",
+      server_info.server_tag,
+      SelectionSpec::SelectionClass::ServerType_Name(server_info.server_type),
+      SelectionSpec::SelectionClass::ServerClass_Name(
+          server_info.server_class)));
 }
 
 }  // namespace ecclesia
