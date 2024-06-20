@@ -19,8 +19,11 @@
 
 #include <string>
 
+#include "absl/base/attributes.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 
 namespace ecclesia {
 
@@ -31,13 +34,29 @@ class IdAssigner {
 
   // Assign an identifier based on local devpath in the data_set.
   // Return absl::NotFoundError if a translation does not exist.
+  ABSL_DEPRECATED("Use IdForLocalDevpathInQueryResult instead")
   virtual absl::StatusOr<std::string> IdForLocalDevpathInDataSet(
       const SubqueryDataSet &data_set) = 0;
 
   // Assign an identifier based on Redfish location in the data_set.
   // Return absl::NotFoundError if a translation does not exist.
+  ABSL_DEPRECATED("Use IdForRedfishLocationInQueryResult instead")
   virtual absl::StatusOr<std::string> IdForRedfishLocationInDataSet(
       const SubqueryDataSet &data_set, bool is_root = false) = 0;
+
+  // Assign an identifier based on local devpath in the QueryResult.
+  // Return absl::NotFoundError if a translation does not exist.
+  virtual absl::StatusOr<std::string> IdForLocalDevpathInQueryResult(
+      const QueryResultData &query_result) {
+    return absl::UnimplementedError("");
+  }
+
+  // Assign an identifier based on Redfish location in the QueryResult.
+  // Return absl::NotFoundError if a translation does not exist.
+  virtual absl::StatusOr<std::string> IdForRedfishLocationInQueryResult(
+      const QueryResultData &query_result, bool is_root) {
+    return absl::UnimplementedError("");
+  }
 };
 
 }  // namespace ecclesia

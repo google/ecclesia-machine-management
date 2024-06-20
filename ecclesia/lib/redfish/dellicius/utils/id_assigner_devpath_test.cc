@@ -73,5 +73,87 @@ TEST(IdDevpath, CannotMapWithoutMatchingEntry) {
               IsStatusNotFound());
 }
 
+TEST(IdDevpath, CanMapDevpathInQueryResult) {
+  absl::flat_hash_map<std::string, std::string> map;
+  map["/fru1"] = "/global/fru1";
+  map["/fru2"] = "/global/fru2";
+  auto assigner = NewMapBasedDevpathAssigner(std::move(map));
+
+  EXPECT_THAT(assigner->IdForLocalDevpathInQueryResult(ParseTextProtoOrDie(R"pb(
+    fields {
+      key: "Name"
+      value { string_value: "fru1" }
+    }
+    fields {
+      key: "_id_"
+      value { identifier { local_devpath: "/fru1" } }
+    }
+  )pb")),
+              IsOkAndHolds("/global/fru1"));
+  EXPECT_THAT(assigner->IdForLocalDevpathInQueryResult(ParseTextProtoOrDie(R"pb(
+    fields {
+      key: "Name"
+      value { string_value: "fru2" }
+    }
+    fields {
+      key: "_id_"
+      value { identifier { local_devpath: "/fru2" } }
+    }
+  )pb")),
+              IsOkAndHolds("/global/fru2"));
+}
+
+TEST(IdDevpath, CannotMapWithoutDevpathInQueryResult) {
+  absl::flat_hash_map<std::string, std::string> map;
+  map["/fru1"] = "/global/fru1";
+  auto assigner = NewMapBasedDevpathAssigner(std::move(map));
+
+  EXPECT_THAT(assigner->IdForLocalDevpathInQueryResult(ParseTextProtoOrDie(R"pb(
+    fields {
+      key: "Name"
+      value { string_value: "fru1" }
+    }
+  )pb")),
+              IsStatusNotFound());
+}
+
+TEST(IdDevpath, CannotMapDevpathWithoutMatchingEntryInMap) {
+  absl::flat_hash_map<std::string, std::string> map;
+  map["/fru1"] = "/global/fru1";
+  auto assigner = NewMapBasedDevpathAssigner(std::move(map));
+
+  EXPECT_THAT(assigner->IdForLocalDevpathInQueryResult(ParseTextProtoOrDie(R"pb(
+    fields {
+      key: "Name"
+      value { string_value: "fru2" }
+    }
+    fields {
+      key: "__id__"
+      value { identifier { local_devpath: "/node0/fru2" } }
+    }
+  )pb")),
+              IsStatusNotFound());
+}
+
+TEST(IdDevpath, CannotHandleRedfishLocation) {
+  absl::flat_hash_map<std::string, std::string> map;
+  map["/fru1"] = "/global/fru1";
+  auto assigner = NewMapBasedDevpathAssigner(std::move(map));
+
+  EXPECT_THAT(assigner->IdForRedfishLocationInQueryResult(
+                  ParseTextProtoOrDie(R"pb(
+                    fields {
+                      key: "Name"
+                      value { string_value: "fru2" }
+                    }
+                    fields {
+                      key: "_id_"
+                      value { identifier { local_devpath: "/fru1" } }
+                    }
+                  )pb"),
+                  false),
+              IsStatusUnimplemented());
+}
+
 }  // namespace
 }  // namespace ecclesia

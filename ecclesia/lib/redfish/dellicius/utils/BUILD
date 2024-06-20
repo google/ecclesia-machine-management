@@ -31,6 +31,9 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
     ],
 )
@@ -43,9 +46,13 @@ cc_library(
     deps = [
         ":id_assigner",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "//ecclesia/lib/status:macros",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
     ],
 )
 

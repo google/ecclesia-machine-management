@@ -60,6 +60,12 @@ message ListValue {
   repeated QueryValue values = 1;
 }
 
+// Represents a Redfish Location object as defined in the Redfish spec.
+message RedfishLocation {
+  string service_label = 1;
+  optional string part_location_context = 2;
+}
+
 message Identifier {
   // Node-level devpath
   optional string local_devpath = 1;
@@ -69,6 +75,8 @@ message Identifier {
   optional string embedded_location_context = 3;
   // Stable identifier under embedded location context.
   optional string stable_name = 4;
+  // Redfish Location object as defined in the Redfish spec.
+  optional RedfishLocation redfish_location = 5;
 }
 
 message Statistics {

@@ -23,15 +23,20 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/status/macros.h"
 
 namespace ecclesia {
 namespace {
 
 class MapBasedDevpathAssigner : public IdAssigner {
  public:
-  MapBasedDevpathAssigner(absl::flat_hash_map<std::string, std::string> map)
+  explicit MapBasedDevpathAssigner(
+      absl::flat_hash_map<std::string, std::string> map)
       : map_(std::move(map)) {}
 
   virtual absl::StatusOr<std::string> IdForLocalDevpathInDataSet(
@@ -46,9 +51,30 @@ class MapBasedDevpathAssigner : public IdAssigner {
     return itr->second;
   }
 
+  absl::StatusOr<std::string> IdForLocalDevpathInQueryResult(
+      const QueryResultData& query_result) override {
+    QueryResultDataReader reader(&query_result);
+    ECCLESIA_ASSIGN_OR_RETURN(QueryValueReader query_value_reader,
+                              reader.Get(kIdentifierTag));
+    if (query_value_reader.identifier().local_devpath().empty()) {
+      return absl::NotFoundError("Cannot find local devpath in query result.");
+    }
+    auto itr = map_.find(query_value_reader.identifier().local_devpath());
+    if (itr == map_.end()) {
+      return absl::NotFoundError("Cannot find devpath in map.");
+    }
+    return itr->second;
+  }
+
   virtual absl::StatusOr<std::string> IdForRedfishLocationInDataSet(
       const SubqueryDataSet& /*data_set*/, bool /*is_root*/) override {
     return absl::NotFoundError("");
+  }
+
+  absl::StatusOr<std::string> IdForRedfishLocationInQueryResult(
+      const QueryResultData& query_result /*data_set*/,
+      bool is_root /*is_root*/) override {
+    return absl::UnimplementedError("");
   }
 
  private:
