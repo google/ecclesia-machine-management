@@ -264,8 +264,7 @@ TEST_P(QueryRouterSuccessTest, CreateSuccess) {
       QueryRouter::Create(
           router_spec, std::move(server_specs),
           [&](const QuerySpec &, const QueryEngineParams &params,
-              std::unique_ptr<IdAssigner>,
-              std::unique_ptr<RedpathEngineIdAssigner>)
+              std::unique_ptr<IdAssigner>)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
@@ -437,8 +436,7 @@ TEST_F(QueryRouterTest, CreateSuccessWithSystemIdQueryRouterTest) {
       QueryRouter::Create(
           router_spec, std::move(server_specs),
           [&](const QuerySpec &, const QueryEngineParams &params,
-              std::unique_ptr<IdAssigner>,
-              std::unique_ptr<RedpathEngineIdAssigner>)
+              std::unique_ptr<IdAssigner>)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
@@ -481,8 +479,7 @@ TEST_F(QueryRouterTest, DisjointServerAndQuerySpec) {
       QueryRouter::Create(
           router_spec, std::move(server_specs),
           [&](const QuerySpec &, const QueryEngineParams &,
-              std::unique_ptr<IdAssigner>,
-              std::unique_ptr<RedpathEngineIdAssigner>)
+              std::unique_ptr<IdAssigner>)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -537,8 +534,7 @@ TEST_F(QueryRouterTest, QueryAndServerSpecPartialIntersect) {
       QueryRouter::Create(
           router_spec, std::move(server_specs),
           [&](const QuerySpec &, const QueryEngineParams &,
-              std::unique_ptr<IdAssigner>,
-              std::unique_ptr<RedpathEngineIdAssigner>)
+              std::unique_ptr<IdAssigner>)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -586,8 +582,7 @@ TEST_F(QueryRouterTest, InvalidQuerySpec) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &,
-                      std::unique_ptr<IdAssigner>,
-                      std::unique_ptr<RedpathEngineIdAssigner>)
+                      std::unique_ptr<IdAssigner>)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
@@ -616,8 +611,7 @@ TEST_F(QueryRouterTest, UnsupportedQueryPattern) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &,
-                      std::unique_ptr<IdAssigner>,
-                      std::unique_ptr<RedpathEngineIdAssigner>)
+                      std::unique_ptr<IdAssigner>)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
@@ -650,8 +644,7 @@ TEST_P(QueryRouterFailureTest, WithoutMaxThreadValue) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &,
-                      std::unique_ptr<IdAssigner>,
-                      std::unique_ptr<RedpathEngineIdAssigner>)
+                      std::unique_ptr<IdAssigner>)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
@@ -685,8 +678,7 @@ TEST_F(QueryRouterTest, QueryEngineCreateFailure) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &,
-                      std::unique_ptr<IdAssigner>,
-                      std::unique_ptr<RedpathEngineIdAssigner>)
+                      std::unique_ptr<IdAssigner>)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     return absl::InternalError("Failed to create QueryEngine");
                   }),
@@ -720,8 +712,7 @@ TEST_F(QueryRouterTest, CheckFeatureFlags) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &params,
-                      std::unique_ptr<IdAssigner>,
-                      std::unique_ptr<RedpathEngineIdAssigner>)
+                      std::unique_ptr<IdAssigner>)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     EXPECT_TRUE(params.features.enable_redfish_metrics());
                     EXPECT_TRUE(params.features.fail_on_first_error());
@@ -754,8 +745,7 @@ TEST_F(QueryRouterTest, CheckLocationStableIdConfiguration) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &params,
-                      std::unique_ptr<IdAssigner>,
-                      std::unique_ptr<RedpathEngineIdAssigner>)
+                      std::unique_ptr<IdAssigner>)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     EXPECT_EQ(params.stable_id_type,
                               ecclesia::QueryEngineParams::RedfishStableIdType::
@@ -790,8 +780,7 @@ TEST_F(QueryRouterTest, CheckLocationDerivedStableIdConfiguration) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &params,
-                      std::unique_ptr<IdAssigner>,
-                      std::unique_ptr<RedpathEngineIdAssigner>)
+                      std::unique_ptr<IdAssigner>)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     EXPECT_EQ(params.stable_id_type,
                               ecclesia::QueryEngineParams::RedfishStableIdType::
@@ -830,8 +819,7 @@ TEST_F(QueryRouterTest, GetRedfishInterfaceSuccess) {
       QueryRouter::Create(
           router_spec, std::move(server_specs),
           [&](const QuerySpec &, const QueryEngineParams &params,
-              std::unique_ptr<IdAssigner>,
-              std::unique_ptr<RedpathEngineIdAssigner>)
+              std::unique_ptr<IdAssigner>)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
@@ -877,8 +865,7 @@ TEST_F(QueryRouterTest, GetRedfishInterfaceFailure) {
       QueryRouter::Create(
           router_spec, std::move(server_specs),
           [&](const QuerySpec &, const QueryEngineParams &params,
-              std::unique_ptr<IdAssigner>,
-              std::unique_ptr<RedpathEngineIdAssigner>)
+              std::unique_ptr<IdAssigner>)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());

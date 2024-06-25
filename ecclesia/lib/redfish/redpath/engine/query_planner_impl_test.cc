@@ -1814,7 +1814,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
   EXPECT_FALSE(result.query_result.has_status());
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "EmbeddedResource"
-    stats { payload_size: 331 num_cache_misses: 3 }
+    stats { payload_size: 211 num_cache_misses: 3 }
     data {
       fields {
         key: "EmbeddedServiceLabel"
@@ -1827,16 +1827,13 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
                   value { string_value: "resource1" }
                 }
                 fields {
-                  key: "__EmbeddedLocationContext__"
+                  key: "_id_"
                   value {
                     identifier {
+                      stable_name: "resource1"
                       embedded_location_context: "/embedded/logical"
                     }
                   }
-                }
-                fields {
-                  key: "__StableName__"
-                  value { identifier { stable_name: "resource1" } }
                 }
               }
             }
@@ -1854,20 +1851,14 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
                   value { string_value: "resource2" }
                 }
                 fields {
-                  key: "__EmbeddedLocationContext__"
+                  key: "_id_"
                   value {
                     identifier {
                       embedded_location_context: "/embedded/logical"
+                      local_devpath: "/phys"
+                      stable_name: "resource2"
                     }
                   }
-                }
-                fields {
-                  key: "__LocalDevpath__"
-                  value { identifier { local_devpath: "/phys" } }
-                }
-                fields {
-                  key: "__StableName__"
-                  value { identifier { stable_name: "resource2" } }
                 }
               }
             }

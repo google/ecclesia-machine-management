@@ -18,21 +18,18 @@
 #define ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_NORMALIZER_H_
 
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
-#include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/match.h"
 #include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
-#include "ecclesia/lib/redfish/redpath/engine/id_assigner.h"
 #include "ecclesia/lib/status/macros.h"
 
 namespace ecclesia {
@@ -129,7 +126,7 @@ class RedpathNormalizerImplAddMachineBarepath final
     : public RedpathNormalizer::ImplInterface {
  public:
   explicit RedpathNormalizerImplAddMachineBarepath(
-      std::unique_ptr<RedpathEngineIdAssigner> id_assigner)
+      std::unique_ptr<IdAssigner> id_assigner)
       : id_assigner_(std::move(id_assigner)) {}
 
  protected:
@@ -139,7 +136,7 @@ class RedpathNormalizerImplAddMachineBarepath final
                          const RedpathNormalizerOptions &options) override;
 
  private:
-  std::unique_ptr<RedpathEngineIdAssigner> id_assigner_;
+  std::unique_ptr<IdAssigner> id_assigner_;
 };
 
 // Builds normalizer that transparently returns queried redfish property without
@@ -166,7 +163,7 @@ BuildDefaultRedpathNormalizerWithLocalDevpath(NodeTopology node_topology) {
 // identifier.
 inline std::unique_ptr<RedpathNormalizer>
 BuildRedpathNormalizerWithMachineDevpath(
-    std::unique_ptr<RedpathEngineIdAssigner> id_assigner) {
+    std::unique_ptr<IdAssigner> id_assigner) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
@@ -180,8 +177,7 @@ BuildRedpathNormalizerWithMachineDevpath(
 // using Redfish stable identifier.
 inline std::unique_ptr<RedpathNormalizer>
 BuildRedpathNormalizerWithMachineDevpath(
-    std::unique_ptr<RedpathEngineIdAssigner> id_assigner,
-    NodeTopology node_topology) {
+    std::unique_ptr<IdAssigner> id_assigner, NodeTopology node_topology) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizerWithLocalDevpath(std::move(node_topology));
 

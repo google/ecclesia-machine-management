@@ -229,16 +229,12 @@ class QueryEngine : public QueryEngineIntf {
   // Creates query engine for machine devpath decorator extensions.
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
       QuerySpec query_spec, QueryEngineParams params,
-      std::unique_ptr<IdAssigner> id_assigner = nullptr,
-      std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner =
-          nullptr);
+      std::unique_ptr<IdAssigner> id_assigner = nullptr);
 
   ABSL_DEPRECATED("Use Create Instead")
   static absl::StatusOr<QueryEngine> CreateLegacy(
       QuerySpec query_spec, QueryEngineParams params,
-      std::unique_ptr<IdAssigner> id_assigner = nullptr,
-      std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner =
-          nullptr);
+      std::unique_ptr<IdAssigner> id_assigner = nullptr);
 
   QueryEngine(const QueryEngine &) = delete;
   QueryEngine &operator=(const QueryEngine &) = delete;
@@ -351,9 +347,7 @@ class QueryEngine : public QueryEngineIntf {
 ABSL_DEPRECATED("Use QueryEngine::Create Instead")
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
-    std::unique_ptr<IdAssigner> id_assigner = nullptr,
-    std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner =
-        nullptr);
+    std::unique_ptr<IdAssigner> id_assigner = nullptr);
 
 // Factory for creating different variants of query engine.
 //
@@ -362,8 +356,7 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
 using QueryEngineFactory =
     absl::AnyInvocable<absl::StatusOr<std::unique_ptr<QueryEngineIntf>>(
         QuerySpec query_spec, QueryEngineParams engine_params,
-        std::unique_ptr<IdAssigner> id_assigner,
-        std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner)>;
+        std::unique_ptr<IdAssigner> id_assigner)>;
 
 }  // namespace ecclesia
 

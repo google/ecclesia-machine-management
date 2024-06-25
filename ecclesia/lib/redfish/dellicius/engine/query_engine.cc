@@ -72,7 +72,7 @@ using QueryExecutionResult = QueryPlannerIntf::QueryExecutionResult;
 
 std::unique_ptr<RedpathNormalizer> GetMachineDevpathRedpathNormalizer(
     const QueryEngineParams &query_engine_params,
-    std::unique_ptr<RedpathEngineIdAssigner> id_assigner,
+    std::unique_ptr<IdAssigner> id_assigner,
     RedfishInterface *redfish_interface) {
   switch (query_engine_params.stable_id_type) {
     case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
@@ -426,20 +426,17 @@ absl::StatusOr<RedfishInterface *> QueryEngine::GetRedfishInterface(
 
 absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
     QuerySpec query_spec, QueryEngineParams params,
-    std::unique_ptr<IdAssigner> id_assigner,
-    std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner) {
+    std::unique_ptr<IdAssigner> id_assigner) {
   ECCLESIA_ASSIGN_OR_RETURN(
       QueryEngine engine,
       QueryEngine::CreateLegacy(std::move(query_spec), std::move(params),
-                                std::move(id_assigner),
-                                std::move(redpath_engine_id_assigner)));
+                                std::move(id_assigner)));
   return std::make_unique<QueryEngine>(std::move(engine));
 }
 
 absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
     QuerySpec query_spec, QueryEngineParams engine_params,
-    std::unique_ptr<IdAssigner> id_assigner,
-    std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner) {
+    std::unique_ptr<IdAssigner> id_assigner) {
   std::unique_ptr<RedfishInterface> redfish_interface;
   MetricalRedfishTransport *metrical_transport_ptr = nullptr;
   if (engine_params.features.enable_redfish_metrics()) {
@@ -469,12 +466,12 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
   }
 
   std::unique_ptr<RedpathNormalizer> redpath_normalizer;
-  if (redpath_engine_id_assigner == nullptr) {
+  if (id_assigner == nullptr) {
     redpath_normalizer = BuildLocalDevpathRedpathNormalizer(
         redfish_interface.get(), engine_params);
   } else {
     redpath_normalizer = GetMachineDevpathRedpathNormalizer(
-        engine_params, std::move(redpath_engine_id_assigner),
+        engine_params, std::move(id_assigner),
         redfish_interface.get());
   }
 
@@ -527,13 +524,11 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
 
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,
-    std::unique_ptr<IdAssigner> id_assigner,
-    std::unique_ptr<RedpathEngineIdAssigner> redpath_engine_id_assigner) {
+    std::unique_ptr<IdAssigner> id_assigner) {
   ECCLESIA_ASSIGN_OR_RETURN(QuerySpec query_spec,
                             QuerySpec::FromQueryContext(query_context));
   return QueryEngine::CreateLegacy(
-      std::move(query_spec), std::move(engine_params), std::move(id_assigner),
-      std::move(redpath_engine_id_assigner));
+      std::move(query_spec), std::move(engine_params), std::move(id_assigner));
 }
 
 }  // namespace ecclesia

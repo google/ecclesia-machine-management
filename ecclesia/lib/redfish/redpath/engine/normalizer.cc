@@ -29,6 +29,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
@@ -51,8 +52,9 @@ namespace {
 
 constexpr absl::string_view kEmbeddedLocationContext =
     "__EmbeddedLocationContext__";
+constexpr absl::string_view kServiceLabel = "__ServiceLabel__";
+constexpr absl::string_view kPartLocationContext = "__PartLocationContext__";
 constexpr absl::string_view kLocalDevpath = "__LocalDevpath__";
-constexpr absl::string_view kMachineDevpath = "__MachineDevpath__";
 constexpr absl::string_view kStableName = "__StableName__";
 constexpr absl::string_view kSubFru = "__SubFru__";
 
@@ -76,6 +78,10 @@ GetAdditionalProperties() {
   };
   // Implicit collection of Name property to be used for stable IDs.
   add_property(kStableName, {"Name"});
+  add_property(kServiceLabel, {"Location.PartLocation.ServiceLabel",
+                               "PhysicalLocation.PartLocation.ServiceLabel"});
+  add_property(kPartLocationContext, {"Location.PartLocationContext",
+                                      "PhysicalLocation.PartLocationContext"});
   add_property(kSubFru, {"Oem.Google.LocationContext.ServiceLabel",
                          "Oem.Google.LocationContext.Devpath"});
   add_property(kEmbeddedLocationContext,
@@ -303,6 +309,9 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
     (*data_set_local.mutable_fields())[prop_name] = *property_out;
   }
 
+  // Identifier to house stable id properties for the query result normalized.
+  Identifier identifier;
+
   // We add additional properties to populate stable id based on Redfish
   // Location. Only add stable name if a LocationContext is present.
   bool is_sub_fru = false;
@@ -317,21 +326,21 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
       continue;
     }
     std::string name = property.name();
-    if (name == kLocalDevpath) {
-      QueryValue query_value;
-      query_value.mutable_identifier()->set_local_devpath(
+    if (name == kServiceLabel) {
+      identifier.mutable_redfish_location()->set_service_label(
           property_out->string_value());
-      (*data_set_local.mutable_fields())[name] = query_value;
+    } else if (name == kPartLocationContext) {
+      identifier.mutable_redfish_location()->set_part_location_context(
+          property_out->string_value());
+    } else if (name == kLocalDevpath) {
+      identifier.set_local_devpath(property_out->string_value());
     } else if (name == kEmbeddedLocationContext) {
-      QueryValue query_value;
       std::string embedded_location_context;
       for (const auto &value : property_out->list_value().values()) {
         embedded_location_context.append("/");
         embedded_location_context.append(value.string_value());
       }
-      query_value.mutable_identifier()->set_embedded_location_context(
-          embedded_location_context);
-      (*data_set_local.mutable_fields())[name] = query_value;
+      identifier.set_embedded_location_context(embedded_location_context);
     } else if (name == kStableName) {
       sub_fru_name = std::move(*property_out->mutable_string_value());
     }
@@ -344,9 +353,13 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
 
   // Add stable name if a LocationContext is present.
   if (is_sub_fru) {
-    QueryValue query_value;
-    query_value.mutable_identifier()->set_stable_name(sub_fru_name);
-    (*data_set_local.mutable_fields())[kStableName] = query_value;
+    identifier.set_stable_name(sub_fru_name);
+  }
+
+  // Add identifier to data set if it is not empty.
+  if (identifier.ByteSizeLong() > 0) {
+    *(*data_set_local.mutable_fields())[kIdentifierTag].mutable_identifier() =
+        std::move(identifier);
   }
 
   if (options.enable_url_annotation) {
@@ -366,8 +379,12 @@ absl::Status RedpathNormalizerImplAddDevpath::Normalize(
     const DelliciusQuery::Subquery &subquery,
     ecclesia::QueryResultData &data_set_local,
     const RedpathNormalizerOptions &options) {
+  QueryResultDataReader reader(&data_set_local);
+  absl::StatusOr<QueryValueReader> query_value_reader =
+      reader.Get(kIdentifierTag);
   // Prioritize devpath populated by default normalizer.
-  if (data_set_local.fields().contains(kLocalDevpath)) {
+  if (query_value_reader.ok() &&
+      query_value_reader->identifier().has_local_devpath()) {
     return absl::OkStatus();
   }
 
@@ -376,9 +393,9 @@ absl::Status RedpathNormalizerImplAddDevpath::Normalize(
       GetDevpathForObjectAndNodeTopology(redfish_object, topology_);
 
   if (devpath.has_value()) {
-    QueryValue query_value;
-    query_value.mutable_identifier()->set_local_devpath(devpath.value());
-    (*data_set_local.mutable_fields())[kLocalDevpath] = query_value;
+    (*data_set_local.mutable_fields())[kIdentifierTag]
+        .mutable_identifier()
+        ->set_local_devpath(*devpath);
   }
   return absl::OkStatus();
 }
@@ -388,17 +405,47 @@ absl::Status RedpathNormalizerImplAddMachineBarepath::Normalize(
     const DelliciusQuery::Subquery &subquery,
     ecclesia::QueryResultData &data_set_local,
     const RedpathNormalizerOptions &options) {
-  //  We will now try to map a local devpath to machine devpath
-  if (!(data_set_local.fields().contains(kLocalDevpath))) {
+  QueryResultDataReader reader(&data_set_local);
+  absl::StatusOr<QueryValueReader> query_value_reader =
+      reader.Get(kIdentifierTag);
+  std::string service_label;
+  std::string part_location_context;
+  if (query_value_reader.ok()) {
+    service_label =
+        query_value_reader->identifier().redfish_location().service_label();
+    part_location_context = query_value_reader->identifier()
+                                .redfish_location()
+                                .part_location_context();
+  }
+
+  // Root devpath is assigned to the root Chassis, to do this we need to track
+  // if the resource is Chassis type and has no redfish location.
+  std::string resource_type;
+  redfish_object[ecclesia::PropertyOdataId::Name].GetValue(&resource_type);
+  bool is_root = absl::StrContains(resource_type, "#Chassis.") &&
+                 service_label.empty() && part_location_context.empty();
+
+  absl::StatusOr<std::string> machine_devpath_for_redfish_location =
+      id_assigner_->IdForRedfishLocationInQueryResult(data_set_local, is_root);
+  if (machine_devpath_for_redfish_location.ok()) {
+    (*data_set_local.mutable_fields())[kIdentifierTag]
+        .mutable_identifier()
+        ->set_machine_devpath(*machine_devpath_for_redfish_location);
     return absl::OkStatus();
   }
-  absl::StatusOr<std::string> machine_devpath =
-      id_assigner_->IdForLocalDevpathInDataSet(data_set_local);
-  if (machine_devpath.ok()) {
-    QueryValue query_value;
-    query_value.mutable_identifier()->set_machine_devpath(*machine_devpath);
-    (*data_set_local.mutable_fields())[kMachineDevpath] =
-        std::move(query_value);
+
+  // We reach here if we cannot derive machine devpath using Redfish Stable id
+  // - PartLocationContext + ServiceLabel. We will now try to map a local
+  // devpath to machine devpath.
+  if (!query_value_reader->identifier().has_local_devpath()) {
+    return absl::OkStatus();
+  }
+  absl::StatusOr<std::string> machine_devpath_for_local_devpath =
+      id_assigner_->IdForLocalDevpathInQueryResult(data_set_local);
+  if (machine_devpath_for_local_devpath.ok()) {
+    (*data_set_local.mutable_fields())[kIdentifierTag]
+        .mutable_identifier()
+        ->set_machine_devpath(*machine_devpath_for_local_devpath);
   }
   return absl::OkStatus();
 }

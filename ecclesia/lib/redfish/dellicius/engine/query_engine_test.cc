@@ -1365,7 +1365,7 @@ TEST(QueryEngineTest, CanExecuteSubscriptionQuerySuccessfully) {
                       values {
                         subquery_value {
                           fields {
-                            key: "__LocalDevpath__"
+                            key: "_id_"
                             value { identifier { local_devpath: "/phys" } }
                           }
                           fields {
