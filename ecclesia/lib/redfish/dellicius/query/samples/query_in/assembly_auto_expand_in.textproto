@@ -1,0 +1,11 @@
+# proto-file: ecclesia/lib/redfish/dellicius/query/query.proto
+# proto-message: DelliciusQuery
+
+query_id: "AssemblyAutoExpand"
+subquery {
+  subquery_id: "ChassisAssemblies"
+  redpath: "/Chassis[*]/Assembly/Assemblies[*]"
+  properties { property: "Name" name: "Name" type: STRING }
+  properties { property: "PartNumber" name: "PartNumber" type: STRING }
+  properties { property: "SerialNumber" name: "SerialNumber" type: STRING }
+}

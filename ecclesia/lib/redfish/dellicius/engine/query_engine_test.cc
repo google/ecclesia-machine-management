@@ -1671,5 +1671,48 @@ TEST(QueryEngineTest, QueryEngineFailsOnServiceUnavailability) {
               Eq(ecclesia::ErrorCode::ERROR_UNAVAILABLE));
 }
 
+TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnce) {
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusHmbCnMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .metrics = FakeQueryEngine::Metrics::kEnable,
+           .annotations = FakeQueryEngine::Annotations::kDisable}));
+
+  QueryIdToResult response_entries =
+      query_engine->ExecuteRedpathQuery({"AssemblyAutoExpand"});
+
+  int assembly_fetched_counter = 0;
+  for (const auto &uri_x_metric : response_entries.results()
+                                      .at("AssemblyAutoExpand")
+                                      .stats()
+                                      .redfish_metrics()
+                                      .uri_to_metrics_map()) {
+    // We expect assembly resource to be fetched.
+    if (uri_x_metric.first == "/redfish/v1/Chassis/chassis/Assembly") {
+      assembly_fetched_counter++;
+      for (const auto &metadata :
+           uri_x_metric.second.request_type_to_metadata()) {
+        EXPECT_EQ(metadata.second.request_count(), 1);
+      }
+      continue;
+    }
+
+    // We don't expect individual assemblies to be fetched since they are
+    // auto-expanded.
+    EXPECT_NE(uri_x_metric.first,
+              "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0");
+  }
+
+  // Expect only 1 assembly fetch.
+  EXPECT_THAT(assembly_fetched_counter, Eq(1));
+}
+
 }  // namespace
 }  // namespace ecclesia
