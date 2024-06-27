@@ -1004,14 +1004,15 @@ bool HasUri(const std::vector<RedPathContext> &redpath_ctx_multiple) {
 // Step expressions across subqueries followed by invoking predicate handlers
 // from each subquery to further refine the data that forms the context node
 // of next step expression in each qualified subquery.
-void ExecuteRedPathStepFromEachSubquery(
+// Returns true if the execution is successful, false otherwise.
+bool ExecuteRedPathStepFromEachSubquery(
     QueryPlanner *qp, const RedPathRedfishQueryParams &redpath_to_query_params,
     ContextNode &context_node, DelliciusQueryResult &result,
     QueryTracker *tracker, ExecutionFlags execution_flags) {
   // Return if the Context Node does not contain a valid RedfishObject.
   if (!context_node.redfish_object ||
       context_node.redpath_ctx_multiple.empty()) {
-    return;
+    return true;
   }
 
   // First, we will pull NodeName from each RedPath expression across
@@ -1025,7 +1026,7 @@ void ExecuteRedPathStepFromEachSubquery(
   // Return if there is no redpath expression left to process across
   // subqueries.
   if (node_name_to_redpath_contexts.empty()) {
-    return;
+    return true;
   }
 
   // Set of Nodes that are obtained by executing RedPath expressions relative
@@ -1128,7 +1129,7 @@ void ExecuteRedPathStepFromEachSubquery(
         LOG(INFO) << "Failed when querying node name: \"" << node_name
                    << "\" relative to Redfish object:\n"
                    << context_node.redfish_object->DebugString();
-        return;
+        return false;
       }
     }
 
@@ -1225,13 +1226,28 @@ void ExecuteRedPathStepFromEachSubquery(
       // RedfishObject.
       RedfishVariant indexed_node = (*node_as_iterable)[node_index];
       if (!indexed_node.status().ok()) {
-        PopulateSubqueryErrorStatus(indexed_node.status(), redpath_ctx_multiple,
-                                    result, node_name, redpath_to_execute);
-        DLOG(INFO)
-            << "Cannot resolve NodeName " << node_name
-            << " to valid Redfish object when executing collection redpath "
-            << redpath_to_execute;
-        continue;
+        if (PopulateSubqueryErrorStatus(
+                indexed_node.status(), redpath_ctx_multiple, result, node_name,
+                redpath_to_execute) == ::google::rpc::Code::NOT_FOUND) {
+          // It is not considered an error to not find requested nodes in the
+          // query. So here we just log and skip the iteration if that is the
+          // case. For other errors, we halt execution unless explicitly
+          // running with execution_mode = kContinueOnSubqueryErrors.
+          DLOG(INFO)
+              << "Cannot resolve NodeName " << node_name
+              << " to valid Redfish object when executing collection redpath "
+              << redpath_to_execute;
+          continue;
+        }
+        if (execution_flags.execution_mode ==
+            ExecutionFlags::ExecutionMode::kFailOnFirstError) {
+          LOG(ERROR) << "Halting Query Execution early due to error: "
+                     << node_set_as_variant.status().message();
+          LOG(INFO) << "Failed when querying node name: \"" << node_name
+                    << "\" relative to Redfish object:\n"
+                    << context_node.redfish_object->DebugString();
+          return false;
+        }
       }
       if (trace_info.has_value()) {
         trace_info->redpath_prefix = redpath_to_execute;
@@ -1256,10 +1272,13 @@ void ExecuteRedPathStepFromEachSubquery(
   // expression from all RedPath expressions, execute next RedPath Step
   // expression from every RedPath context mapped to the context node.
   for (auto &new_context_node : context_nodes) {
-    ExecuteRedPathStepFromEachSubquery(qp, redpath_to_query_params,
-                                       new_context_node, result, tracker,
-                                       execution_flags);
+    if (!ExecuteRedPathStepFromEachSubquery(qp, redpath_to_query_params,
+                                            new_context_node, result, tracker,
+                                            execution_flags)) {
+      return false;
+    }
   }
+  return true;
 }
 
 absl::StatusOr<SubqueryDataSet *> SubqueryHandle::Normalize(

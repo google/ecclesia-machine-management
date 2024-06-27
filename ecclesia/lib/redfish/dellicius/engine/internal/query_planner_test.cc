@@ -53,6 +53,7 @@
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/clock_fake.h"
 #include "single_include/nlohmann/json.hpp"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 
 namespace ecclesia {
 
@@ -593,6 +594,47 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorHaltsExecution) {
   ASSERT_TRUE(query_result.ok());
   EXPECT_THAT(query_result->status().code(),
               Eq(::google::rpc::Code::DEADLINE_EXCEEDED));
+}
+
+TEST_F(QueryPlannerTestRunner, CheckQueryHaltsIfErrorWithinOneSubquery) {
+  // The sensor query has just one subquery, that normally returns a lot of
+  // sensor entities. This test checks that if an error is encountered when
+  // executing the redpath step for one context node (one processor entity),
+  // the execution halts early and the query result has the error status.
+  std::string query_in_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_in/all_processors_in.textproto"));
+  SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
+  // Instantiate a passthrough normalizer with devpath extension.
+  auto normalizer_with_devpath = BuildDefaultNormalizerWithLocalDevpath(
+      CreateTopologyFromRedfish(intf_.get()));
+  // Create Query Planner.
+  DelliciusQuery query =
+      ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
+  absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qp =
+      BuildDefaultQueryPlanner(query, RedPathRedfishQueryParams{},
+                               normalizer_with_devpath.get());
+  // We need to test that the query planner halts execution on the FIRST error.
+  // We mock the first two processors to return different errors. In the QP,
+  // we set the error status based on the last (which should be the only) error.
+  // If QP doesn't halt on the first error, the query will continue to execute
+  // and the status will be set to the second error.
+  // GATEWAY_TO corresponds to DEADLINE_EXCEEDED.
+  server_->AddHttpGetHandlerWithStatus(
+      "/redfish/v1/Systems/system/Processors/0", "",
+      tensorflow::serving::net_http::HTTPStatusCode::GATEWAY_TO);
+  server_->AddHttpGetHandlerWithStatus(
+      "/redfish/v1/Systems/system/Processors/1", "",
+      tensorflow::serving::net_http::HTTPStatusCode::SERVICE_UNAV);
+  ASSERT_TRUE(qp.ok());
+  absl::StatusOr<DelliciusQueryResult> query_result = (*qp)->Run(
+      intf_->GetRoot(), *clock_, /*tracker=*/nullptr,
+      /*variables=*/{}, /*metrics=*/nullptr,
+      {.execution_mode = ExecutionFlags::ExecutionMode::kFailOnFirstError,
+       .log_redfish_traces = false,
+       .enable_url_annotation = false});
+  ASSERT_TRUE(query_result.ok());
+  EXPECT_THAT(query_result->status().code(),
+              Eq(google::rpc::Code::DEADLINE_EXCEEDED));
 }
 
 TEST_F(QueryPlannerTestRunner, CheckUnresolvedNodeIsNotAnError) {
