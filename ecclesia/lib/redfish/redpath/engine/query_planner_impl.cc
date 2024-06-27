@@ -736,11 +736,11 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
           ExecuteQueryExpression(expression, current_execution_context,
                                  trie_node.get(), trace_info);
       if (!execution_contexts.ok()) {
-        if (execution_contexts.status().code() == absl::StatusCode::kNotFound) {
-          continue;
+        if (execution_contexts.status().code() != absl::StatusCode::kNotFound) {
+          PopulateSubqueryErrorStatus(execution_contexts.status(),
+                                      current_execution_context, expression);
         }
-        PopulateSubqueryErrorStatus(execution_contexts.status(),
-                                    current_execution_context, expression);
+        continue;
       }
 
       for (auto &new_execution_context : *execution_contexts) {

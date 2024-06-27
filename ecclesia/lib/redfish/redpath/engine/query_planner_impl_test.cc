@@ -79,6 +79,7 @@ using QueryPlannerOptions = QueryPlannerIntf::QueryPlannerOptions;
 using ::testing::Eq;
 
 constexpr absl::string_view kSensorRedPath = "/Chassis[*]/Sensors[*]";
+constexpr absl::string_view kSensorsRedPath = "/Chassis[*]/Sensors";
 constexpr absl::string_view kAssemblyRedPath = "/Chassis[*]/Assembly";
 constexpr absl::string_view kAssembliesRedPath =
     "/Chassis[*]/Assembly/Assemblies";
@@ -1547,6 +1548,68 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
                 ecclesia::IgnoringRepeatedFieldOrdering(
                     ecclesia::EqualsProto(*resume_query_result)));
   }
+}
+
+TEST_F(QueryPlannerTestRunner,
+       ResumePopulatesErrorsCorrectlyWhenResolvingCollectionMembers) {
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  // Setup: Build query planner and Execute query to create subscription.
+  DelliciusQuery subscription_collection_query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "SubscriptionToCollectionTest"
+        subquery {
+          subquery_id: "Sensors"
+          redpath: "/Chassis[*]/Sensors"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "SensorMembers"
+          root_subquery_ids: "Sensors"
+          redpath: "/Members[*]"
+          properties { property: "Name" type: STRING }
+          properties { property: "Reading" type: DOUBLE }
+        }
+      )pb");
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
+      {.query = subscription_collection_query,
+       .redpath_rules = {.redpaths_to_subscribe = {std::string(
+                             kSensorsRedPath)}},
+       .normalizer = normalizer.get(),
+       .redfish_interface = intf_.get()});
+  ASSERT_THAT(qp, IsOk());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = (*qp)->Run({args1});
+  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
+      result.subscription_context;
+  ASSERT_THAT(context, NotNull());
+
+  // Mock one sensor in the collection to return an error.
+  server_->AddHttpGetHandlerWithStatus(
+      "/redfish/v1/Chassis/chassis/Sensors/indus_fan3_rpm", "",
+      tensorflow::serving::net_http::HTTPStatusCode::SERVICE_UNAV);
+
+  auto find_sensor_trie_node =
+      context->redpath_to_trie_node.find(kSensorsRedPath);
+  ASSERT_TRUE(find_sensor_trie_node != context->redpath_to_trie_node.end());
+  ASSERT_THAT(find_sensor_trie_node->second, NotNull());
+  // We don't want to use a JsonMock for the collection here. We need the QP
+  // to try to resolve collection members, and fail at that point.
+  ecclesia::RedfishVariant sensors_variant =
+      intf_->UncachedGetUri("/redfish/v1/Chassis/chassis/Sensors", {});
+  absl::StatusOr<QueryResult> resume_query_result = (*qp)->Resume({
+      .trie_node = find_sensor_trie_node->second,
+      .redfish_variant = sensors_variant,
+      .variables = args1,
+  });
+  EXPECT_THAT(resume_query_result, IsOk());
+
+  // Verify query result.
+  EXPECT_THAT(resume_query_result->status().error_code(),
+              Eq(ecclesia::ErrorCode::ERROR_UNAVAILABLE));
 }
 
 TEST_F(QueryPlannerTestRunner, CannotNormalizeInvalidEvent) {
