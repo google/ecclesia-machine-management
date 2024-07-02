@@ -33,7 +33,9 @@ namespace {
 
 // Pattern for expression [lhs][operator][rhs]
 constexpr LazyRE2 kRelationalExpressionRegex = {
-    "^(?P<left>[^\\s<=>!]+)(?:(<=|>=|!=|>|<|=)(?P<right>[^<=>!]+))$"};
+    "^(?P<left>[^\\s~<=>!]+)(?:(<=|>=|!=|>|<|=|~>|<~|~>=|<~=)(?P<right>[^~<=>!]"
+    "+)"
+    ")$"};
 // A property existence check must start with a capital letter preceded by an
 // exclamation point if applicable. The rest of the property must be
 // alpha-numeric with possible periods for sub-properties.
