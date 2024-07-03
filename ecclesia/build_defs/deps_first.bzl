@@ -62,12 +62,12 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
       package_name: The name of the Ecclesia external package.
     """
     if not native.existing_rule("com_google_absl"):
-        # Abseil. Latest feature not releases yet. Picked up a commit from Sep 30, 2022
+        # Abseil. Picked up Abseil LTS 20230802.2.
         http_archive(
             name = "com_google_absl",
-            sha256 = "f7d92ecdff271fc491a918d4193d02a300072a5c2d949ee0ce561067acd5c043",
-            strip_prefix = "abseil-cpp-7f3c0d781134d25b24e0b55346482a2d366bf59b",
-            urls = ["https://github.com/abseil/abseil-cpp/archive/7f3c0d781134d25b24e0b55346482a2d366bf59b.zip"],
+            sha256 = "7c11539617af1f332f0854a6fb21e296a1b29c27d03f23c7b49d4adefcd102cc",
+            strip_prefix = "abseil-cpp-20230802.2",
+            urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.2.tar.gz"],
         )
 
     if not native.existing_rule("com_google_googletest"):

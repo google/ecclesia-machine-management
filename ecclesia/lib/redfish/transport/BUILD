@@ -267,6 +267,7 @@ cc_library(
         "//ecclesia/lib/redfish:utils",
         "//ecclesia/lib/redfish/timing:query_timeout_manager",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/base:nullability",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/log",

@@ -28,6 +28,7 @@
 #include <variant>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
@@ -341,9 +342,9 @@ class HttpIntfObjectImpl : public RedfishObject {
       params.expand.reset();
     }
     // Reset top if requested but not available
-    if (params.top.has_value() &&
-        !RedfishQueryParamTop::ValidateRedfishSupport(
-              intf_->SupportedFeatures()).ok()) {
+    if (params.top.has_value() && !RedfishQueryParamTop::ValidateRedfishSupport(
+                                       intf_->SupportedFeatures())
+                                       .ok()) {
       params.top.reset();
     }
     // Reset filter if requested but not available
@@ -386,16 +387,23 @@ class HttpIntfObjectImpl : public RedfishObject {
     LOG(INFO) << "Object:\n" << DebugString();
   }
 
-  absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
-      GetParams params) override {
+  absl::StatusOr<absl::Nonnull<std::unique_ptr<RedfishObject>>>
+  EnsureFreshPayload(GetParams params) override {
     if (cache_state_ == CacheState::kIsFresh) {
       return std::make_unique<HttpIntfObjectImpl>(intf_, path_, result_,
                                                   cache_state_);
     }
     if (auto uri = GetUriString(); uri.has_value()) {
-      auto get_response = intf_->UncachedGetUri(*uri, params);
+      RedfishVariant get_response = intf_->UncachedGetUri(*uri, params);
       if (get_response.status().ok()) {
-        return get_response.AsObject();
+        std::unique_ptr<RedfishObject> response = get_response.AsObject();
+        if (response == nullptr) {
+          return absl::InternalError(
+              absl::StrFormat("Failed to get non-null payload from Redfish "
+                              "response for URI: %s with status: %s",
+                              uri.value(), get_response.status().message()));
+        }
+        return response;
       }
       return get_response.status();
     }
@@ -893,7 +901,7 @@ class HttpRedfishInterface : public RedfishInterface {
         features.expand.links = *val;
       }
       if (auto val =
-          expand_features_json->GetNodeValue<ExpandQuerykMaxLevels>();
+              expand_features_json->GetNodeValue<ExpandQuerykMaxLevels>();
           val.has_value()) {
         features.expand.max_levels = *val;
       }
@@ -902,8 +910,7 @@ class HttpRedfishInterface : public RedfishInterface {
         features.expand.no_links = *val;
       }
     }
-    auto features_json =
-        (*root_object)[kProtocolFeaturesSupported].AsObject();
+    auto features_json = (*root_object)[kProtocolFeaturesSupported].AsObject();
     if (features_json != nullptr) {
       if (auto val = features_json->GetNodeValue<TopSkipQuery>();
           val.has_value()) {
