@@ -34,6 +34,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_predicates/util.h"
 #include "ecclesia/lib/status/macros.h"
 #include "single_include/nlohmann/json.hpp"
 #include "re2/re2.h"
@@ -44,7 +45,7 @@ namespace {
 
 // Pattern for predicate formatted with relational operators:
 constexpr LazyRE2 kPredicateRegexRelationalOperator = {
-    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=))([a-zA-Z0-9._\+\-\:#\\ ]+)$)"};
+    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=|~>|<~|~>=|<~=))([a-zA-Z0-9._\+\-\:#\\ ]+)$)"};
 
 // Pattern for Redfish standard (ISO 8601) datetime string.
 // Example: 2022-03-16T15:52:00
@@ -62,8 +63,11 @@ constexpr absl::string_view kLeftParen = "(";
 constexpr absl::string_view kRightParen = ")";
 
 // Supported relational operators
-constexpr std::array<const char *, 6> kRelationsOperators = {
-    "<", ">", "!=", ">=", "<=", "="};
+constexpr std::array<const char *, 10> kRelationsOperators = {
+    "<", ">", "!=", ">=", "<=", "=", "~>", "<~", "~>=", "<~="};
+
+constexpr std::array<absl::string_view, 4> kFuzzyStringComparisonOperators = {
+    "~>", "<~", "~>=", "<~="};
 
 // Matchers for user supplied datetime formats in a predicate.
 // Redfish datetime is of Edm.DateTimeOffset type.
@@ -93,6 +97,21 @@ bool TestLogicalOp(const std::string &op, t lhs, t rhs) {
   if (op == "<") return lhs < rhs;
   if (op == "!=") return lhs != rhs;
   return lhs == rhs;
+}
+
+// Helper function used to apply a fuzzy string comparison filter. Only
+// applicable for string objects and the operators ~> and <~.
+absl::StatusOr<bool> ApplyFuzzyStringComparisonFilter(const std::string &op,
+                                                      const std::string &lhs,
+                                                      const std::string &rhs) {
+  ECCLESIA_ASSIGN_OR_RETURN(int comparison_result,
+                            FuzzyStringComparison(lhs, rhs));
+
+  return op == "~>"    ? comparison_result > 0
+         : op == "~>=" ? comparison_result >= 0
+         : op == "<~"  ? comparison_result < 0
+         : op == "<~=" ? comparison_result <= 0
+                       : false;
 }
 
 absl::StatusOr<bool> ApplyNumberComparisonFilter(const std::string &op,
@@ -160,6 +179,15 @@ absl::StatusOr<bool> PredicateFilterByNodeComparison(
     return json_obj->is_string()
                ? ApplyDateTimeComparisonFilter(op, json_obj->get<std::string>(),
                                                test_value)
+               : false;
+  }
+  // Fuzzy string comparison.
+  if (std::any_of(kFuzzyStringComparisonOperators.begin(),
+                  kFuzzyStringComparisonOperators.end(),
+                  [&](absl::string_view fuzzy_op) { return fuzzy_op == op; })) {
+    return json_obj->is_string()
+               ? ApplyFuzzyStringComparisonFilter(
+                     op, json_obj->get<std::string>(), test_value)
                : false;
   }
   // Number comparison.

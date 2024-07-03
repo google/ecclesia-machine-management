@@ -33,6 +33,8 @@ TEST(ApplyPredicateRuleTest, ShouldApplyRelationalOperatorsCorrectly) {
                         {"ComponentTemp", 30},
                         {"Created", "2023-09-16T18:50:24.633362+00:00"},
                         {"BoolProperty", true},
+                        {"Id", "CPU_1"},
+                        {"StringProperty", "TestValue1"},
                         {"NullObject", {}}};
 
   PredicateOptions options;
@@ -90,6 +92,76 @@ TEST(ApplyPredicateRuleTest, ShouldApplyRelationalOperatorsCorrectly) {
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
 
   options.predicate = "Created=2023-09-16T18:50:24.633362+00:00";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+}
+
+TEST(ApplyPredicateRuleTest, FuzzyStringComparisonPredicatesCorrectly) {
+  nlohmann::json obj = {
+      {"SerialNumber", "8"}, {"Id", "CPU_1"}, {"StringProperty", "TestValueB"}};
+
+  PredicateOptions options;
+  // Testing properties that have no digits
+  // StringProperty has value of "TestValue1"
+  options.predicate = "StringProperty<~TestValueC";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "StringProperty<~=TestValueC";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "StringProperty<~=TestValueB";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "StringProperty~>=TestValueB";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "StringProperty~>TestValueA";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "StringProperty~>=TestValueA";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "StringProperty~>=TestValueA";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+  // Test value is identical at the same positions, but is longer.
+  options.predicate = "StringProperty~>TestValueABCD";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+  // Test value is identical at the same positions, but is shorter.
+  options.predicate = "StringProperty~>TestValue";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+
+  // Testing properties that have a mix of chars and digits
+  // Id has value of "CPU_1"
+  options.predicate = "Id<~CPU_20";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "Id~>CPU_0";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "Id~>=CPU_1";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "Id~>=CPU_1_";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  // Testing properties that are all digits
+  // SerialNumber has value of "8"
+  options.predicate = "SerialNumber~>9";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+
+  options.predicate = "SerialNumber~>6";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "SerialNumber~>=8";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "SerialNumber<~=8";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  // Ensure not lexicographic comparison, so ("8" > "70") is false.
+  options.predicate = "SerialNumber~>70";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+
+  options.predicate = "SerialNumber<~70";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
 }
 
