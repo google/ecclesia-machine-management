@@ -51,8 +51,9 @@ cc_test(
     visibility = ["//visibility:public"],
     deps = [
         ":filter",
+        "//ecclesia/lib/status:test_macros",
         "//ecclesia/lib/testing:status",
-        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
         "@com_google_googletest//:gtest_main",
     ],
 )

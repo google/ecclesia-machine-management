@@ -62,8 +62,9 @@ std::string EncodeSpecialCharacters(absl::string_view filter_string) {
 RelationalExpression ApplyTransformsToExpression(
     RelationalExpression redpath_expression) {
   std::vector<std::pair<std::string, std::string>> relational_operators = {
-      {"<", " lt "},  {">", " gt "}, {"<=", " le "},
-      {">=", " ge "}, {"=", " eq "}, {"!=", " ne "}};
+      {"<", " lt "},  {">", " gt "},  {"<=", " le "}, {">=", " ge "},
+      {"=", " eq "},  {"!=", " ne "}, {"<~", " lt "}, {"<~=", " le "},
+      {"~>", " gt "}, {"~>=", " ge "}};
   RelationalExpression new_expression = std::move(redpath_expression);
   // Substitute relational operators
   new_expression.rel_operator =
