@@ -273,13 +273,9 @@ absl::StatusOr<bool> ExecutePredicateExpression(
     QueryExecutionContext &current_execution_context,
     const std::unique_ptr<RedfishObject> &redfish_object) {
   ECCLESIA_ASSIGN_OR_RETURN(
-      std::string new_predicate,
-      SubstituteVariables(predicate_options.predicate,
-                          current_execution_context.query_variables));
-  ECCLESIA_ASSIGN_OR_RETURN(
       bool predicate_rule_result,
       ApplyPredicateRule(redfish_object->GetContentAsJson(),
-                         {.predicate = new_predicate,
+                         {.predicate = predicate_options.predicate,
                           .node_index = predicate_options.node_index,
                           .node_set_size = predicate_options.node_set_size}));
 
@@ -471,6 +467,12 @@ QueryPlanner::ExecuteQueryExpression(
     GetParams get_params_for_redpath =
         GetQueryParamsForRedPath(new_redpath_prefix);
 
+    // Substitute variables in the predicate expression.
+    ECCLESIA_ASSIGN_OR_RETURN(
+        std::string new_predicate,
+        SubstituteVariables(expression.expression,
+                            current_execution_context.query_variables));
+
     // Iterate over resources in collection.
     size_t node_count = current_redfish_iterable->Size();
     for (int node_index = 0; node_index < node_count; ++node_index) {
@@ -502,10 +504,9 @@ QueryPlanner::ExecuteQueryExpression(
         }
         continue;
       }
-
       ECCLESIA_ASSIGN_OR_RETURN(
           bool predicate_rule_result,
-          ExecutePredicateExpression({.predicate = expression.expression,
+          ExecutePredicateExpression({.predicate = new_predicate,
                                       .node_index = node_index,
                                       .node_set_size = node_count},
                                      current_execution_context,
