@@ -1830,13 +1830,14 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
                                req->WriteResponseString(R"json({
           "@odata.id": "/redfish/v1/embedded/logical/resource1",
           "Id": "resource1",
-          "Name": "resource1",
-          "Oem": {
-            "Google": {
-              "LocationContext": {
-                "ServiceLabel": "chassis",
-                "EmbeddedLocationContext": ["embedded", "logical"]
+          "Location": {
+            "Oem": {
+              "Google": {
+                "EmbeddedLocationContext": "embedded/logical"
               }
+            },
+            "PartLocation": {
+              "ServiceLabel": "chassis"
             }
           }
         })json");
@@ -1851,12 +1852,15 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
                                req->WriteResponseString(R"json({
           "@odata.id": "/redfish/v1/embedded/logical/resource2",
           "Id": "resource2",
-          "Name": "resource2",
           "Oem": {
             "Google": {
-              "LocationContext": {
-                "Devpath": "/phys",
-                "EmbeddedLocationContext": ["embedded", "logical"]
+              "Location": {
+                "Oem": {
+                  "Google": {
+                    "Devpath": "/phys",
+                    "EmbeddedLocationContext": "embedded/logical"
+                  }
+                }
               }
             }
           }
@@ -1877,7 +1881,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
   EXPECT_FALSE(result.query_result.has_status());
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "EmbeddedResource"
-    stats { payload_size: 211 num_cache_misses: 3 }
+    stats { payload_size: 198 num_cache_misses: 3 }
     data {
       fields {
         key: "EmbeddedServiceLabel"
@@ -1893,8 +1897,8 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
                   key: "_id_"
                   value {
                     identifier {
-                      stable_name: "resource1"
-                      embedded_location_context: "/embedded/logical"
+                      embedded_location_context: "embedded/logical"
+                      redfish_location { service_label: "chassis" }
                     }
                   }
                 }
@@ -1917,9 +1921,8 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
                   key: "_id_"
                   value {
                     identifier {
-                      embedded_location_context: "/embedded/logical"
+                      embedded_location_context: "embedded/logical"
                       local_devpath: "/phys"
-                      stable_name: "resource2"
                     }
                   }
                 }
@@ -2528,11 +2531,9 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
   )pb");
 */
   SetTestParams("indus_hmb_shim/mockup.shar");
-  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
 
   auto transport = std::make_unique<MetricalRedfishTransport>(
       server_->RedfishClientTransport(), Clock::RealClock());
-  metrical_transport_ptr = transport.get();
   auto cache = std::make_unique<NullCache>(transport.get());
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
@@ -2602,11 +2603,8 @@ TEST_F(QueryPlannerTestRunner,
       )pb");
 
   SetTestParams("indus_hmb_shim/mockup.shar");
-  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
-
   auto transport = std::make_unique<MetricalRedfishTransport>(
       server_->RedfishClientTransport(), Clock::RealClock());
-  metrical_transport_ptr = transport.get();
   auto cache = std::make_unique<NullCache>(transport.get());
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
@@ -2668,11 +2666,9 @@ TEST_F(QueryPlannerTestRunner,
       )pb");
 
   SetTestParams("indus_hmb_shim/mockup.shar");
-  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
 
   auto transport = std::make_unique<MetricalRedfishTransport>(
       server_->RedfishClientTransport(), Clock::RealClock());
-  metrical_transport_ptr = transport.get();
 
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();

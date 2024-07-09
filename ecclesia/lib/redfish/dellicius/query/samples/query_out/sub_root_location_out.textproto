@@ -22,7 +22,7 @@ results: {
                   key: "_id_"
                   value {
                     identifier {
-                      stable_name: "resource"
+                      embedded_location_context: "resource"
                     }
                   }
                 }

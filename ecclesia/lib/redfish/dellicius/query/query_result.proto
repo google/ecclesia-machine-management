@@ -64,7 +64,8 @@ message SubqueryDataSet {
       properties: [
         "Location.PartLocation.ServiceLabel",
         "PhysicalLocation.PartLocation.ServiceLabel",
-        "Oem.Google.LocationContext.ServiceLabel"
+        "Oem.Google.Location.PartLocation.ServiceLabel",
+        "Oem.Google.PhysicalLocation.PartLocation.ServiceLabel"
       ]
     }];
     string part_location_context = 2 [(query_options) = {
@@ -72,17 +73,20 @@ message SubqueryDataSet {
       properties: [
         "Location.PartLocationContext",
         "PhysicalLocation.PartLocationContext",
-        "Oem.Google.LocationContext.PartLocationContext"
+        "Oem.Google.Location.PartLocationContext",
+        "Oem.Google.PhysicalLocation.PartLocationContext"
       ]
     }];
-    repeated string embedded_location_context = 3 [(query_options) = {
+    string embedded_location_context = 3 [(query_options) = {
       label: "__EmbeddedLocationContext__",
-      properties: [ "Oem.Google.LocationContext.EmbeddedLocationContext" ]
+      properties: [
+        "Location.Oem.Google.EmbeddedLocationContext",
+        "PhysicalLocation.Oem.Google.EmbeddedLocationContext",
+        "Oem.Google.Location.Oem.Google.EmbeddedLocationContext",
+        "Oem.Google.PhysicalLocation.Oem.Google.EmbeddedLocationContext"
+      ]
     }];
-    string stable_name = 4 [(query_options) = {
-      label: "__StableName__",
-      properties: [ "Name" ]
-    }];
+    reserved 4;
   }
 
   // Local devpath
@@ -93,7 +97,8 @@ message SubqueryDataSet {
     properties: [
       "Location.Oem.Google.Devpath",
       "PhysicalLocation.Oem.Google.Devpath",
-      "Oem.Google.LocationContext.Devpath"
+      "Oem.Google.Location.Oem.Google.Devpath",
+      "Oem.Google.PhysicalLocation.Oem.Google.Devpath"
     ]
   }];
   // Redfish properties queried.
@@ -126,7 +131,7 @@ message SubqueryDataSet {
     // Sub-Fru Embedded Location Context
     optional string embedded_location_context = 3;
     // Sub-Fru Stable Identifier
-    optional string stable_name = 4;
+    reserved 4;
   }
   DecoratorExtensions decorators = 5;
 }

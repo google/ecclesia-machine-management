@@ -100,20 +100,6 @@ MATCHER(RedPathExpandConfigsEq, "") {
          std::tie(rhs.tracked_path, rhs.query_params);
 }
 
-void VerifyTrackedPathWithParamsMatchExpected(
-    const std::vector<RedPathToQueryParams> &actual_configs) {
-  const std::vector<RedPathToQueryParams> expected_configs = {
-      RedPathToQueryParams{"/Chassis", "$expand=.($levels=1)"},
-      RedPathToQueryParams{"/Chassis[*]", ""},
-      RedPathToQueryParams{"/Systems[*]/Processors", "$expand=~($levels=1)"},
-      RedPathToQueryParams{"/Systems", "$expand=*($levels=1)"},
-      RedPathToQueryParams{"/Systems[*]", ""},
-      RedPathToQueryParams{"/Systems[*]/Memory", "$expand=*($levels=1)"},
-      RedPathToQueryParams{"/Systems[*]/Processors[*]", ""}};
-  EXPECT_THAT(actual_configs,
-              UnorderedPointwise(RedPathExpandConfigsEq(), expected_configs));
-}
-
 void RemoveTimestamps(QueryIdToResult &entries) {
   for (auto &[query_id, entry] : *entries.mutable_results()) {
     entry.mutable_stats()->clear_start_time();
@@ -436,7 +422,7 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
         response_entries.results().at("Thermal").stats().redfish_metrics();
   }
   {
-    // Query again. This time all resources upto Thermal should be served
+    // Query again. This time all resources up to Thermal should be served
     // from cache. All Thermal objects will be freshly queried.
     QueryIdToResult response_entries =
         query_engine->ExecuteRedpathQuery({"Thermal"});
@@ -1025,13 +1011,14 @@ TEST(QueryEngineTest, QueryEngineLocationContextSuccess) {
             {
               "@odata.id": "/redfish/v1/deeply/nested/resource",
               "Id": "resource",
-              "Name": "resource",
-              "Oem": {
-                "Google": {
-                  "LocationContext": {
-                    "ServiceLabel": "board1",
-                    "EmbeddedLocationContext": ["sub-fru", "logical"]
+              "Location": {
+                "Oem": {
+                  "Google": {
+                    "EmbeddedLocationContext": "sub-fru/logical"
                   }
+                },
+                "PartLocation": {
+                  "ServiceLabel": "board1"
                 }
               }
             }
@@ -1080,66 +1067,14 @@ TEST(QueryEngineTest, QueryEngineSubRootStableIdServiceLabel) {
             {
               "@odata.id": "/redfish/v1/root_chassis/resource",
               "Id": "resource",
-              "Name": "resource",
-              "Oem": {
-                "Google": {
-                  "LocationContext": {
-                    "ServiceLabel": ""
+              "Location": {
+                "Oem": {
+                  "Google": {
+                    "EmbeddedLocationContext": "resource"
                   }
-                }
-              }
-            }
-           )json";
-  server.AddHttpGetHandlerWithData(sub_root_resource_uri,
-                                   sub_root_resource_data);
-  // Set up Query Engine with ID assigner. This is needed for the normalizer to
-  // assign the stable id fields.
-  absl::flat_hash_map<std::string, std::string> devpath_map = {};
-  auto id_assigner = NewMapBasedDevpathAssigner(devpath_map);
-  FakeClock clock{clock_time};
-  FakeRedfishServer::Config config = server.GetConfig();
-  auto http_client = std::make_unique<CurlHttpClient>(
-      LibCurlProxy::CreateInstance(), HttpCredential{});
-  std::string network_endpoint =
-      absl::StrFormat("%s:%d", config.hostname, config.port);
-  std::unique_ptr<RedfishTransport> transport =
-      HttpRedfishTransport::MakeNetwork(std::move(http_client),
-                                        network_endpoint);
-  // Set up Query Engine with query files and query rules.
-  QueryContext query_context{.query_files = kDelliciusQueries,
-                             .query_rules = kQueryRules,
-                             .clock = &clock};
-  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
-      query_context,
-      {.transport = std::move(transport),
-       .stable_id_type =
-           QueryEngineParams::RedfishStableIdType::kRedfishLocation},
-      std::move(id_assigner));
-  ASSERT_TRUE(query_engine.ok());
-  QueryIdToResult response_entries =
-      query_engine->ExecuteRedpathQuery({"SubRootResource"});
-  ASSERT_EQ(response_entries.results().size(), 1);
-  VerifyQueryResults(std::move(response_entries),
-                     {std::move(intent_output_sub_root_location)});
-}
-
-TEST(QueryEngineTest, QueryEngineSubRootStableIdLocalDevpath) {
-  QueryIdToResult intent_output_sub_root_location =
-      ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
-          JoinFilePaths(kQuerySamplesLocation,
-                        "query_out/sub_root_location_out.textproto")));
-  FakeRedfishServer server(kIndusMockup);
-  std::string sub_root_resource_uri = "/redfish/v1/root/resource";
-  std::string sub_root_resource_data = R"json(
-            {
-              "@odata.id": "/redfish/v1/root_chassis/resource",
-              "Id": "resource",
-              "Name": "resource",
-              "Oem": {
-                "Google": {
-                  "LocationContext": {
-                    "Devpath": ""
-                  }
+                },
+                "PartLocation": {
+                  "ServiceLabel": ""
                 }
               }
             }

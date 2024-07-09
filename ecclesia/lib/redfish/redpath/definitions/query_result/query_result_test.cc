@@ -143,7 +143,6 @@ TEST_F(QueryValueBuilderTest, IdentifierTest) {
       ParseTextProtoOrDie(R"pb(local_devpath: "/phys/"
                                machine_devpath: "/phys/PE0"
                                embedded_location_context: "chip1/metrics"
-                               stable_name: "metric"
       )pb");
   builder_ = std::move(id);
   ASSERT_EQ(value_.kind_case(), QueryValue::KindCase::kIdentifier);
@@ -151,7 +150,6 @@ TEST_F(QueryValueBuilderTest, IdentifierTest) {
               EqualsProto(R"pb(local_devpath: "/phys/"
                                machine_devpath: "/phys/PE0"
                                embedded_location_context: "chip1/metrics"
-                               stable_name: "metric"
               )pb"));
 }
 

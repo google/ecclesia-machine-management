@@ -55,8 +55,6 @@ constexpr absl::string_view kEmbeddedLocationContext =
 constexpr absl::string_view kServiceLabel = "__ServiceLabel__";
 constexpr absl::string_view kPartLocationContext = "__PartLocationContext__";
 constexpr absl::string_view kLocalDevpath = "__LocalDevpath__";
-constexpr absl::string_view kStableName = "__StableName__";
-constexpr absl::string_view kSubFru = "__SubFru__";
 
 std::vector<DelliciusQuery::Subquery::RedfishProperty>
 GetAdditionalProperties() {
@@ -77,19 +75,28 @@ GetAdditionalProperties() {
     }
   };
   // Implicit collection of Name property to be used for stable IDs.
-  add_property(kStableName, {"Name"});
-  add_property(kServiceLabel, {"Location.PartLocation.ServiceLabel",
-                               "PhysicalLocation.PartLocation.ServiceLabel"});
-  add_property(kPartLocationContext, {"Location.PartLocationContext",
-                                      "PhysicalLocation.PartLocationContext"});
-  add_property(kSubFru, {"Oem.Google.LocationContext.ServiceLabel",
-                         "Oem.Google.LocationContext.Devpath"});
-  add_property(kEmbeddedLocationContext,
-               {"Oem.Google.LocationContext.EmbeddedLocationContext"}, true);
+  add_property(kServiceLabel,
+               {"Location.PartLocation.ServiceLabel",
+                "PhysicalLocation.PartLocation.ServiceLabel",
+                "Oem.Google.Location.PartLocation.ServiceLabel",
+                "Oem.Google.PhysicalLocation.PartLocation.ServiceLabel"});
+  add_property(
+      kPartLocationContext,
+      {"Location.PartLocationContext", "PhysicalLocation.PartLocationContext",
+       "Oem.Google.Location.PartLocationContext",
+       "Oem.Google.PhysicalLocation.PartLocationContext"});
+  add_property(
+      kEmbeddedLocationContext,
+      {"Location.Oem.Google.EmbeddedLocationContext",
+       "PhysicalLocation.Oem.Google.EmbeddedLocationContext",
+       "Oem.Google.Location.Oem.Google.EmbeddedLocationContext",
+       "Oem.Google.PhysicalLocation.Oem.Google.EmbeddedLocationContext"});
 
-  add_property(kLocalDevpath, {"Location.Oem.Google.Devpath",
-                               "PhysicalLocation.Oem.Google.Devpath",
-                               "Oem.Google.LocationContext.Devpath"});
+  add_property(
+      kLocalDevpath,
+      {"Location.Oem.Google.Devpath", "PhysicalLocation.Oem.Google.Devpath",
+       "Oem.Google.Location.Oem.Google.Devpath",
+       "Oem.Google.PhysicalLocation.Oem.Google.Devpath"});
 
   return result;
 }
@@ -313,9 +320,7 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
   Identifier identifier;
 
   // We add additional properties to populate stable id based on Redfish
-  // Location. Only add stable name if a LocationContext is present.
-  bool is_sub_fru = false;
-  std::string sub_fru_name;
+  // Location.
   for (const DelliciusQuery::Subquery::RedfishProperty &property :
        additional_properties_) {
     auto property_out = GetPropertyFromRedfishObject(json_content, property);
@@ -335,25 +340,8 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
     } else if (name == kLocalDevpath) {
       identifier.set_local_devpath(property_out->string_value());
     } else if (name == kEmbeddedLocationContext) {
-      std::string embedded_location_context;
-      for (const auto &value : property_out->list_value().values()) {
-        embedded_location_context.append("/");
-        embedded_location_context.append(value.string_value());
-      }
-      identifier.set_embedded_location_context(embedded_location_context);
-    } else if (name == kStableName) {
-      sub_fru_name = std::move(*property_out->mutable_string_value());
+      identifier.set_embedded_location_context(property_out->string_value());
     }
-    // This flag is set when a LocationContext is present with a ServiceLabel
-    // field.
-    if (name == kSubFru) {
-      is_sub_fru = true;
-    }
-  }
-
-  // Add stable name if a LocationContext is present.
-  if (is_sub_fru) {
-    identifier.set_stable_name(sub_fru_name);
   }
 
   // Add identifier to data set if it is not empty.
