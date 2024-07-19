@@ -650,6 +650,7 @@ TEST(QueryResultDataConverterTest, DataVerificationWithMetrics) {
 
   QueryResult result = ToQueryResult(legacy_result);
   Statistics expected_stats = ParseTextProtoOrDie(R"pb(
+    num_requests: 8
     redfish_metrics {
       uri_to_metrics_map {
         key: "/redfish/v1"

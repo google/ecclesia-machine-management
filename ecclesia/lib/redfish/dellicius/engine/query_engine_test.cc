@@ -78,7 +78,6 @@ using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
-using ::testing::UnorderedPointwise;
 
 constexpr absl::string_view kQuerySamplesLocation =
     "lib/redfish/dellicius/query/samples";
@@ -100,6 +99,16 @@ MATCHER(RedPathExpandConfigsEq, "") {
          std::tie(rhs.tracked_path, rhs.query_params);
 }
 
+void RemoveRequestCounts(QueryIdToResult &entries) {
+  for (auto &[query_id, entry] : *entries.mutable_results()) {
+    entry.mutable_stats()->clear_num_requests();
+  }
+}
+void RemoveMetrics(QueryIdToResult &entries) {
+  for (auto &[query_id, entry] : *entries.mutable_results()) {
+    entry.mutable_stats()->clear_redfish_metrics();
+  }
+}
 void RemoveTimestamps(QueryIdToResult &entries) {
   for (auto &[query_id, entry] : *entries.mutable_results()) {
     entry.mutable_stats()->clear_start_time();
@@ -114,11 +123,20 @@ void RemoveTimestamps(QueryIdToResult &entries) {
 
 void VerifyQueryResults(QueryIdToResult actual_entries,
                         QueryIdToResult expected_entries,
+                        bool check_num_requests = false,
                         bool check_timestamps = false,
                         bool check_metrics = false) {
   if (!check_timestamps) {
     RemoveTimestamps(actual_entries);
     RemoveTimestamps(expected_entries);
+  }
+  if (!check_metrics) {
+    RemoveMetrics(actual_entries);
+    RemoveMetrics(expected_entries);
+  }
+  if (!check_num_requests) {
+    RemoveRequestCounts(actual_entries);
+    RemoveRequestCounts(expected_entries);
   }
   EXPECT_THAT(actual_entries, EqualsProto(expected_entries));
 }
@@ -333,24 +351,38 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
     // Query assemblies 3 times in a row. Cache is cold only for the 1st query.
     QueryIdToResult first_response = query_engine->ExecuteRedpathQuery(
         {"AssemblyCollectorWithPropertyNameNormalization"});
+
+    // Expect 4 requests to be made to the redfish server - Chassis, Processors
+    // Systems, and Service Root
+    EXPECT_EQ(first_response.results()
+                  .at("AssemblyCollectorWithPropertyNameNormalization")
+                  .stats()
+                  .num_requests(),
+              4);
+
+    // For the next 2 queries, we expect 1 request to be made to the redfish
+    // server - Processors; because the other resources are served from cache.
+    // The processors collection resource is fetched fresh each time because
+    // the freshness requirement.
     QueryIdToResult second_response = query_engine->ExecuteRedpathQuery(
         {"AssemblyCollectorWithPropertyNameNormalization"});
+    EXPECT_EQ(second_response.results()
+                  .at("AssemblyCollectorWithPropertyNameNormalization")
+                  .stats()
+                  .num_requests(),
+              1);
     QueryIdToResult third_response = query_engine->ExecuteRedpathQuery(
         {"AssemblyCollectorWithPropertyNameNormalization"});
+    EXPECT_EQ(third_response.results()
+                  .at("AssemblyCollectorWithPropertyNameNormalization")
+                  .stats()
+                  .num_requests(),
+              1);
 
     int systems_fetched_counter = 0;
     int processor_collection_fetched_counter = 0;
     for (const QueryIdToResult &response_entries :
          {first_response, second_response, third_response}) {
-      // Copy stats from the expected result for data verification first.
-      *intent_output_assembly.mutable_results()
-           ->at("AssemblyCollectorWithPropertyNameNormalization")
-           .mutable_stats() =
-          response_entries.results()
-              .at("AssemblyCollectorWithPropertyNameNormalization")
-              .stats();
-      VerifyQueryResults(response_entries, intent_output_assembly);
-
       // Validate the stats are correct.
       for (const auto &uri_x_metric :
            response_entries.results()

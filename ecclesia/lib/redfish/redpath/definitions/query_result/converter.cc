@@ -226,6 +226,16 @@ QueryResult ToQueryResult(const ecclesia::DelliciusQueryResult& result_in) {
   if (result_in.has_redfish_metrics()) {
     *result.mutable_stats()->mutable_redfish_metrics() =
         result_in.redfish_metrics();
+    uint64_t request_count = 0;
+    for (const auto& uri_x_metric :
+         result_in.redfish_metrics().uri_to_metrics_map()) {
+      for (const auto& [request_type, metadata] :
+           uri_x_metric.second.request_type_to_metadata()) {
+        request_count += metadata.request_count();
+      }
+    }
+    result.mutable_stats()->set_num_requests(
+        static_cast<int64_t>(request_count));
   }
   QueryResultData data;
   QueryResultDataBuilder builder(&data);
