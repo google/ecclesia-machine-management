@@ -52,7 +52,6 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
-#include "ecclesia/lib/redfish/redpath/engine/id_assigner.h"
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner_impl.h"
@@ -268,38 +267,7 @@ std::vector<DelliciusQueryResult> QueryEngine::ExecuteQuery(
   return response_entries;
 }
 
-  // Main method for ExecuteQuery that triggers the QueryPlanner to execute
-  // queries and processes the result with a caller provided callback.
-void QueryEngine::ExecuteQuery(
-    absl::Span<const absl::string_view> query_ids,
-    absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-    QueryEngine::ServiceRootType service_root_uri,
-    const QueryVariableSet &query_arguments) {
-  if (metrical_transport_ != nullptr) {
-    MetricalRedfishTransport::ResetMetrics();
-  }
-  for (const absl::string_view query_id : query_ids) {
-    auto it = id_to_query_plans_.find(query_id);
-    if (it == id_to_query_plans_.end()) {
-      LOG(ERROR) << "Query plan does not exist for id " << query_id;
-      continue;
-    }
-    QueryVariables vars = QueryVariables();
-    auto it_vars = query_arguments.find(query_id);
-    if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
-
-    if (service_root_uri == QueryEngine::ServiceRootType::kGoogle) {
-      it->second->Run(
-          redfish_interface_->GetRoot(GetParams{}, ServiceRootUri::kGoogle),
-          *clock_, nullptr, vars, callback);
-    } else {
-      it->second->Run(redfish_interface_->GetRoot(), *clock_, nullptr, vars,
-                      callback);
-    }
-  }
-}
-
-  // Executes Redpath query and returns results in updated QueryResult format.
+// Executes Redpath query and returns results in updated QueryResult format.
 QueryIdToResult QueryEngine::ExecuteRedpathQuery(
     absl::Span<const absl::string_view> query_ids,
     QueryEngine::ServiceRootType service_root_uri,

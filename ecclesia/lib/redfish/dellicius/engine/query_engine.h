@@ -46,7 +46,6 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
-#include "ecclesia/lib/redfish/redpath/engine/id_assigner.h"
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
@@ -150,21 +149,6 @@ class QueryEngineIntf {
   virtual ~QueryEngineIntf() = default;
 
   ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-  void ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-      ServiceRootType service_root_uri = ServiceRootType::kRedfish) {
-    ExecuteQuery(query_ids, callback, service_root_uri, {});
-  }
-
-  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-  virtual void ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) = 0;
-
-  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   std::vector<DelliciusQueryResult> ExecuteQuery(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri = ServiceRootType::kCustom) {
@@ -240,15 +224,6 @@ class QueryEngine : public QueryEngineIntf {
   QueryEngine &operator=(const QueryEngine &) = delete;
   QueryEngine(QueryEngine &&other) = default;
   QueryEngine &operator=(QueryEngine &&other) = default;
-
-  // The callback will be called when SubqueryOutput exceeds the
-  // max_size_limit in the query
-  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-  void ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override;
 
   ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
   std::vector<DelliciusQueryResult> ExecuteQuery(

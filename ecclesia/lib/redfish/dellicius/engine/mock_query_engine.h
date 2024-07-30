@@ -20,7 +20,6 @@
 #include <vector>
 
 #include "gmock/gmock.h"
-#include "absl/functional/function_ref.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
@@ -34,12 +33,6 @@ namespace ecclesia {
 class MockQueryEngine : public QueryEngineIntf {
  public:
   virtual ~MockQueryEngine() = default;
-
-  MOCK_METHOD(void, ExecuteQuery,
-              (absl::Span<const absl::string_view>,
-               absl::FunctionRef<bool(const DelliciusQueryResult &result)>,
-               ServiceRootType, const QueryVariableSet &),
-              (override));
 
   MOCK_METHOD(std::vector<DelliciusQueryResult>, ExecuteQuery,
               (absl::Span<const absl::string_view>, ServiceRootType,

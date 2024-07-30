@@ -24,7 +24,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/functional/function_ref.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -88,15 +87,6 @@ class FakeQueryEngine : public QueryEngineIntf {
       StreamingOptions streaming_options) override {
     return query_engine_->ExecuteSubscriptionQuery(query_ids, query_arguments,
                                                    streaming_options);
-  }
-
-  void ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override {
-    query_engine_->ExecuteQuery(query_ids, callback, service_root_uri,
-                                query_arguments);
   }
 
   std::vector<DelliciusQueryResult> ExecuteQuery(

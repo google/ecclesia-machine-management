@@ -26,7 +26,6 @@
 #include "absl/base/attributes.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
-#include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -56,7 +55,7 @@ class FileBackedQueryEngine : public QueryEngineIntf {
   enum class Cache : uint8_t { kDisable = 0, kInfinite };
 
   // Creates an object of FileBackedQueryEngine. Returns an error if the path
-  // doesn't exists, if no query result files are present in the directory or if
+  // doesn't exist, if no query result files are present in the directory or if
   // there are duplicate files for a given query ID in the directory.
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
       absl::string_view path, Cache cache = Cache::kDisable);
@@ -72,15 +71,6 @@ class FileBackedQueryEngine : public QueryEngineIntf {
       StreamingOptions streaming_options) override {
     return absl::UnimplementedError(
         "ExecuteSubscriptionQuery() method is not supported");
-  }
-
-  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-  void ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override {
-    // ExecuteQuery() method is deprecated and is not supported
   }
 
   ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
