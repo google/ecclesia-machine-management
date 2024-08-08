@@ -228,6 +228,7 @@ enum class ResourceEntity : int {
   kThermal,
   kThermalMetrics,
   kThermalSubsystem,
+  kTlBMCDebugEndpoint,
   kTriggers,
   kTriggersCollection,
   kTrustedComponent,
