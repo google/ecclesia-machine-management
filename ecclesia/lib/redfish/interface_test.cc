@@ -265,25 +265,28 @@ TEST(RedfishInterface, DefaultBehavior) {
               ecclesia::IsStatusUnimplemented());
 }
 
+TEST(RedfishInterface, NullRedfishIsStaticInterface) {
+  std::unique_ptr<RedfishInterface> interface = std::make_unique<NullRedfish>();
+  EXPECT_THAT(interface->IsStaticInterface(), Eq(true));
+}
+
 TEST(RedfishVariant, RedfishQueryParamTop) {
   EXPECT_EQ(RedfishQueryParamTop(/*numMembers*/ 100).ToString(), "$top=100");
 }
 
 TEST(RedfishVariant, ValidateRedfishTopSupportSuccess) {
   // Test successful scenarios
-  EXPECT_THAT(
-      RedfishQueryParamTop(/*num_members*/ 1)
-          .ValidateRedfishSupport(RedfishSupportedFeatures{
-            .top_skip = {.enable = true}}),
-      ecclesia::IsOk());
+  EXPECT_THAT(RedfishQueryParamTop(/*num_members*/ 1)
+                  .ValidateRedfishSupport(
+                      RedfishSupportedFeatures{.top_skip = {.enable = true}}),
+              ecclesia::IsOk());
 }
 
 TEST(RedfishVariant, ValidateRedfishTopSupportFail) {
   // Test failure scenarios
-  EXPECT_THAT(
-      RedfishQueryParamTop(/*num_members*/ 100)
-          .ValidateRedfishSupport(std::nullopt),
-      ecclesia::IsStatusInternal());
+  EXPECT_THAT(RedfishQueryParamTop(/*num_members*/ 100)
+                  .ValidateRedfishSupport(std::nullopt),
+              ecclesia::IsStatusInternal());
 }
 
 TEST(RedfishVariant, ValidateIsFresh) {

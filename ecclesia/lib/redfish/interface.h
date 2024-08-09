@@ -713,6 +713,11 @@ class RedfishInterface {
   // Returns whether the endpoint is trusted.
   virtual bool IsTrusted() const = 0;
 
+  // Whether this interface is considered static. A static interface will return
+  // `RedfishVariant` payloads that are always the same and will not change from
+  // call to call. Normally this is only true for test or "null" interfaces.
+  virtual bool IsStaticInterface() const { return false; }
+
   // Fetches the root payload and returns it.
   virtual RedfishVariant GetRoot(
       GetParams params = {},
@@ -811,6 +816,7 @@ class NullRedfish : public RedfishInterface {
   // The null endpoint is trusted as it doesn't provide any system information,
   // so there is nothing it could lie about.
   bool IsTrusted() const override { return true; }
+  bool IsStaticInterface() const override { return true; }
   RedfishVariant GetRoot(GetParams params,
                          ServiceRootUri service_root) override {
     return RedfishVariant(absl::UnimplementedError("NullRedfish"));
