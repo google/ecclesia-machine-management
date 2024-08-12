@@ -1,0 +1,23 @@
+{
+  "@odata.id": "/redfish/v1/Chassis/child2/TrustedComponents/TC0",
+  "@odata.type": "#TrustedComponent.v1_0_0.TrustedComponent",
+  "Id": "TC0",
+  "Name": "trusted_component",
+  "Links": {
+    "ComponentIntegrity": [
+      {
+        "@odata.id": "/redfish/v1/ComponentIntegrity/CI"
+      }
+    ]
+  },
+  "ComponentsProtected": [],
+  "TrustedComponentType": "Integrated",
+  "Status": {
+    "State": "Enabled"
+  },
+  "Location": {
+    "PartLocation": {
+      "LocationType": "Embedded"
+    }
+  }
+}

@@ -28,6 +28,7 @@ resource_to_config {
       collection_attributes: "Memory"
       collection_attributes: "Drives"
       collection_attributes: "NetworkAdapters"
+      collection_attributes: "TrustedComponents"
       singular_attributes: "ThermalSubsystem"
       singular_attributes: "Assembly"
     }

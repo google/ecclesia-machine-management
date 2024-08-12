@@ -1,0 +1,11 @@
+{
+  "@odata.id": "/redfish/v1/Chassis/child2/TrustedComponents",
+  "@odata.type": "#TrustedComponentCollection.TrustedComponentCollection",
+  "Members": [
+    {
+      "@odata.id": "/redfish/v1/Chassis/child2/TrustedComponents/TC0"
+    }
+  ],
+  "Members@odata.count": 1,
+  "Name": "Trusted Component Collection"
+}

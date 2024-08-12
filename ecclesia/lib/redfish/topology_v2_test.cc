@@ -49,6 +49,8 @@ void CheckAgainstTestingMockupFullDevpaths(const NodeTopology &topology) {
       Node{"memory", "memory", "/phys/C1/DIMM", NodeType::kBoard},
       Node{"dangling_cable", "dangling_cable", "/phys/C1/QSFP",
            NodeType::kCable},
+      Node{"trusted_component", "trusted_component",
+           "/phys/C2:device:trusted_component", NodeType::kDevice},
       Node{"expansion_cable", "expansion_cable", "/phys/C2/HDMI",
            NodeType::kCable},
       Node{"controller", "controller", "/phys/SSD:device:controller",
@@ -244,7 +246,10 @@ TEST(TopologyTestRunner, TestingMockupBrokenOrCircularLink) {
             "ServiceLabel": "C2"
           }
         },
-        "Name": "child2"
+        "Name": "child2",
+        "TrustedComponents": {
+          "@odata.id": "/redfish/v1/Chassis/child2/TrustedComponents"
+        }
       }
     )json");
 
@@ -275,7 +280,10 @@ TEST(TopologyTestRunner, TestingMockupBrokenOrCircularLink) {
             "ServiceLabel": "C2"
           }
         },
-        "Name": "child2"
+        "Name": "child2",
+        "TrustedComponents": {
+          "@odata.id": "/redfish/v1/Chassis/child2/TrustedComponents"
+        }
       }
     )json");
 
@@ -383,6 +391,8 @@ TEST(TopologyTestRunner, UriUnqueryableFirstChassisBad) {
       Node{"child2", "child2", "/phys/C2", NodeType::kBoard},
       Node{"ssd", "ssd", "/phys/SSD", NodeType::kBoard},
       Node{"cpu", "cpu", "/phys/CPU", NodeType::kBoard},
+      Node{"trusted_component", "trusted_component",
+           "/phys/C2:device:trusted_component", NodeType::kDevice},
       Node{"expansion_cable", "expansion_cable", "/phys/C2/HDMI",
            NodeType::kCable},
       Node{"controller", "controller", "/phys/SSD:device:controller",

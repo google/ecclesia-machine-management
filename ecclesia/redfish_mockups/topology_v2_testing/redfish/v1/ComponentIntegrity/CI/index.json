@@ -1,0 +1,17 @@
+{
+  "@odata.id": "/redfish/v1/ComponentIntegrity/CI",
+  "@odata.type": "#ComponentIntegrity.v1_0_0.ComponentIntegrity",
+  "ChassisType": "RackMount",
+  "Id": "ComponentIntegrity-ERoT-GPU1",
+  "ComponentIntegrityType": "SPDM",
+  "ComponentIntegrityTypeVersion": "1.1.0",
+  "ComponentIntegrityEnabled": true,
+  "TargetComponentURI": "/redfish/v1/Chassis/child2/TrustedComponents/TC0",
+  "Links": {
+    "ComponentsProtected": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/child2"
+      }
+    ]
+  }
+}

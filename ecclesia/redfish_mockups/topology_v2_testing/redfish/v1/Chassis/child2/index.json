@@ -26,6 +26,9 @@
   "Thermal": {
     "@odata.id": "/redfish/v1/Chassis/child2/Thermal"
   },
+  "TrustedComponents": {
+    "@odata.id": "/redfish/v1/Chassis/child2/TrustedComponents"
+  },
   "Name": "child2",
   "Model": "child2"
 }

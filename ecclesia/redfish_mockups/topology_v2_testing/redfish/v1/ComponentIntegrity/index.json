@@ -1,0 +1,11 @@
+{
+  "@odata.id": "/redfish/v1/ComponentIntegrity",
+  "@odata.type": "#ComponentIntegrityCollection.ComponentIntegrityCollection",
+  "Members": [
+    {
+      "@odata.id": "/redfish/v1/ComponentIntegrity/CI"
+    }
+  ],
+  "Members@odata.count": 2,
+  "Name": "ComponentIntegrity Collection"
+}
