@@ -29,7 +29,6 @@ cc_library(
         "//ecclesia/lib/redfish/redpath/definitions/query_result",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:converter",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
-        "//ecclesia/lib/redfish/redpath/engine:id_assigner",
         "//ecclesia/lib/redfish/redpath/engine:normalizer",
         "//ecclesia/lib/redfish/redpath/engine:query_planner",
         "//ecclesia/lib/redfish/redpath/engine:query_planner_impl",

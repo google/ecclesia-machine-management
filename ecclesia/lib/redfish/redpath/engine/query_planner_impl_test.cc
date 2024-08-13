@@ -75,7 +75,7 @@ using ::testing::HasSubstr;
 using ::testing::NotNull;
 using ::testing::UnorderedElementsAre;
 using QueryExecutionResult = QueryPlannerIntf::QueryExecutionResult;
-using QueryPlannerOptions = QueryPlannerIntf::QueryPlannerOptions;
+using QueryPlannerOptions = QueryPlanner::ImplOptions;
 using ::testing::Eq;
 
 constexpr absl::string_view kSensorRedPath = "/Chassis[*]/Sensors[*]";
@@ -102,10 +102,10 @@ class QueryPlannerTestRunner : public ::testing::Test {
 
     ECCLESIA_ASSIGN_OR_RETURN(
         std::unique_ptr<QueryPlannerIntf> qp,
-        BuildQueryPlanner({.query = query,
-                           .redpath_rules = {},
+        BuildQueryPlanner({.query = &query,
                            .normalizer = normalizer.get(),
-                           .redfish_interface = intf_.get()}));
+                           .redfish_interface = intf_.get(),
+                           .redpath_rules = {}}));
     ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
     return qp->Run({args1});
   }
@@ -396,10 +396,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {}});
 
   ASSERT_THAT(qp, IsOk());
 
@@ -467,10 +467,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFreshnessFromQuery) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get()});
+                         .redfish_interface = intf.get(),
+                         .redpath_rules = {}});
   ASSERT_THAT(qp, IsOk());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
@@ -525,10 +525,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesExpandFromRules) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = std::move(redpath_rules),
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = std::move(redpath_rules)});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -585,10 +585,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterFromRules) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = std::move(redpath_rules),
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = std::move(redpath_rules)});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -649,10 +649,10 @@ TEST_F(QueryPlannerTestRunner,
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = std::move(redpath_rules),
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = std::move(redpath_rules)});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -761,10 +761,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -883,10 +883,10 @@ TEST_F(QueryPlannerTestRunner,
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables multi_value_args = ecclesia::QueryVariables();
@@ -1059,10 +1059,10 @@ TEST_F(QueryPlannerTestRunner,
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables multi_value_args = ecclesia::QueryVariables();
@@ -1208,10 +1208,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesWithUrlAnnotations) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {}});
 
   ASSERT_THAT(qp, IsOk());
 
@@ -1280,17 +1280,17 @@ TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
-      {.query = subscription_query,
-       .redpath_rules =
-           {.redpath_to_query_params =
-                {{std::string(kAssemblyRedPath),
-                  {.expand = RedfishQueryParamExpand(
-                       {.type = RedfishQueryParamExpand::ExpandType::kNotLinks,
-                        .levels = 1})}}},
-            .redpaths_to_subscribe = {std::string(kSensorRedPath),
-                                      std::string(kAssemblyRedPath)}},
+      {.query = &subscription_query,
        .normalizer = normalizer.get(),
-       .redfish_interface = intf_.get()});
+       .redfish_interface = intf_.get(),
+       .redpath_rules = {
+           .redpath_to_query_params =
+               {{std::string(kAssemblyRedPath),
+                 {.expand = RedfishQueryParamExpand(
+                      {.type = RedfishQueryParamExpand::ExpandType::kNotLinks,
+                       .levels = 1})}}},
+           .redpaths_to_subscribe = {std::string(kSensorRedPath),
+                                     std::string(kAssemblyRedPath)}}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -1369,11 +1369,11 @@ TEST_F(QueryPlannerTestRunner, SubscriptionToNonNavigationalPropertyFails) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
-      {.query = subscription_query,
-       .redpath_rules = {.redpaths_to_subscribe = {std::string(
-                             kAssembliesRedPath)}},
+      {.query = &subscription_query,
        .normalizer = normalizer.get(),
-       .redfish_interface = intf_.get()});
+       .redfish_interface = intf_.get(),
+       .redpath_rules = {
+           .redpaths_to_subscribe = {std::string(kAssembliesRedPath)}}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -1401,12 +1401,12 @@ TEST_F(QueryPlannerTestRunner,
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
-      {.query = subscription_query,
-       .redpath_rules = {.redpaths_to_subscribe = {std::string(
-                             kInvalidRedPath)}},
-       .normalizer = normalizer.get(),
-       .redfish_interface = intf_.get()});
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = &subscription_query,
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {.redpaths_to_subscribe = {
+                                               std::string(kInvalidRedPath)}}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -1432,7 +1432,7 @@ TEST_F(QueryPlannerTestRunner, TemplatedQueryWithNoVarsSucceeds) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = subscription_query,
+      BuildQueryPlanner({.query = &subscription_query,
                          .normalizer = normalizer.get(),
                          .redfish_interface = intf_.get()});
   ASSERT_THAT(qp, IsOk());
@@ -1451,12 +1451,13 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
-      {.query = subscription_query,
-       .redpath_rules = {.redpaths_to_subscribe = {std::string(kSensorRedPath),
-                                                   std::string(
-                                                       kAssemblyRedPath)}},
+      {.query = &subscription_query,
        .normalizer = normalizer.get(),
-       .redfish_interface = intf_.get()});
+       .redfish_interface = intf_.get(),
+       .redpath_rules = {
+           .redpaths_to_subscribe = {std::string(kSensorRedPath),
+                                     std::string(kAssemblyRedPath)}}});
+
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -1637,12 +1638,12 @@ TEST_F(QueryPlannerTestRunner,
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
-      {.query = subscription_collection_query,
-       .redpath_rules = {.redpaths_to_subscribe = {std::string(
-                             kSensorsRedPath)}},
-       .normalizer = normalizer.get(),
-       .redfish_interface = intf_.get()});
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = &subscription_collection_query,
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {.redpaths_to_subscribe = {
+                                               std::string(kSensorsRedPath)}}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -1685,12 +1686,12 @@ TEST_F(QueryPlannerTestRunner, CannotNormalizeInvalidEvent) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
-      {.query = subscription_query,
-       .redpath_rules = {.redpaths_to_subscribe = {std::string(kSensorRedPath),
-                                                   std::string(
-                                                       kAssemblyRedPath)}},
+      {.query = &subscription_query,
        .normalizer = normalizer.get(),
-       .redfish_interface = intf_.get()});
+       .redfish_interface = intf_.get(),
+       .redpath_rules = {
+           .redpaths_to_subscribe = {std::string(kSensorRedPath),
+                                     std::string(kAssemblyRedPath)}}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -1772,11 +1773,11 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesUriCorrectly) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {.redpath_to_query_params =
-                                               RedPathRedfishQueryParams{}},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {.redpath_to_query_params =
+                                               RedPathRedfishQueryParams{}}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -1823,11 +1824,11 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterForUriFromRules) {
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {.redpath_to_query_params = std::move(
-                                               redpath_redfish_query_params)},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {.redpath_to_query_params = std::move(
+                                               redpath_redfish_query_params)}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -1854,10 +1855,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerHaltsOnWrongPropertyType) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -1935,10 +1936,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {}});
   ASSERT_THAT(qp, IsOk());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   auto result = (*qp)->Run({args1});
@@ -2608,10 +2609,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
   FakeClock clock(test_time);
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
                          .redfish_interface = intf.get(),
+                         .redpath_rules = {},
                          .clock = &clock});
 
   ASSERT_THAT(qp, IsOk());
@@ -2676,10 +2677,10 @@ TEST_F(QueryPlannerTestRunner,
       BuildDefaultRedpathNormalizer();
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get()});
+                         .redfish_interface = intf.get(),
+                         .redpath_rules = {}});
 
   ASSERT_THAT(qp, IsOk());
 
@@ -2743,10 +2744,10 @@ TEST_F(QueryPlannerTestRunner,
                                RedfishInterface::kTrusted);
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get()});
+                         .redfish_interface = intf.get(),
+                         .redpath_rules = {}});
 
   ASSERT_THAT(qp, IsOk());
 
@@ -2782,10 +2783,10 @@ TEST_F(QueryPlannerTestRunner, CheckQueryPlannerPopulatesStatus) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {}});
   ASSERT_THAT(qp, IsOk());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result = (*qp)->Run({args1});
@@ -2960,10 +2961,10 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
                                RedfishInterface::kTrusted);
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get()});
+                         .redfish_interface = intf.get(),
+                         .redpath_rules = {}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -3184,10 +3185,10 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
                                RedfishInterface::kTrusted);
 
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get()});
+                         .redfish_interface = intf.get(),
+                         .redpath_rules = {}});
   ASSERT_THAT(qp, IsOk());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -3235,10 +3236,11 @@ TEST_F(QueryPlannerGrpcTestRunner, CheckQueryPlannerRespectsTimeoutOnGetRoot) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
                          .redfish_interface = intf_.get(),
+                         .redpath_rules = {},
+                         .clock = &clock_,
                          .query_timeout = absl::Seconds(1)});
   ASSERT_THAT(qp, IsOk());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -3281,10 +3283,11 @@ TEST_F(QueryPlannerGrpcTestRunner,
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
                          .redfish_interface = intf_.get(),
+                         .redpath_rules = {},
+                         .clock = &clock_,
                          .query_timeout = absl::Seconds(1)});
   ASSERT_THAT(qp, IsOk());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -3338,10 +3341,10 @@ TEST_F(QueryPlannerGrpcTestRunner,
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
                          .redfish_interface = intf_.get(),
+                         .redpath_rules = {},
                          .clock = &clock_,
                          .query_timeout = absl::Seconds(10)});
   ASSERT_THAT(qp, IsOk());
@@ -3351,10 +3354,10 @@ TEST_F(QueryPlannerGrpcTestRunner,
 
   // Execute the query again with a QP with only 1 sec timeout, it should fail.
   absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp2 =
-      BuildQueryPlanner({.query = query,
-                         .redpath_rules = {},
+      BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
                          .redfish_interface = intf_.get(),
+                         .redpath_rules = {},
                          .clock = &clock_,
                          .query_timeout = absl::Seconds(2)});
   EXPECT_THAT(qp2, IsOk());

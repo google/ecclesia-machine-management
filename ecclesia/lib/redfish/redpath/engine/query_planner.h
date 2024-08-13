@@ -45,16 +45,6 @@ struct RedPathRules {
 // Provides an interface for planning and executing a RedPath Query.
 class QueryPlannerIntf {
  public:
-  // Configures query planner.
-  struct QueryPlannerOptions {
-    const DelliciusQuery &query;
-    RedPathRules redpath_rules;
-    RedpathNormalizer *normalizer;
-    RedfishInterface *redfish_interface;
-    const Clock *clock;
-    const std::optional<absl::Duration> query_timeout;
-  };
-
   // Context provided by QueryPlanner to create an event subscription.
   struct SubscriptionContext {
     // RedPath expression and corresponding query planner trie node.

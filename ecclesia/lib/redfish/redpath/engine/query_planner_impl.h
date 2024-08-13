@@ -126,15 +126,12 @@ struct TraceInfo {
 // QueryPlannerImpl is a thread safe implementation.
 class QueryPlanner final : public QueryPlannerIntf {
  public:
-  // Options for QueryPlanner. These are private query planner options
-  // translated from QueryPlannerIntf::QueryPlannerOptions.
   struct ImplOptions {
     const DelliciusQuery *query = nullptr;
     RedpathNormalizer *normalizer = nullptr;
     RedfishInterface *redfish_interface = nullptr;
     std::unique_ptr<RedPathTrieNode> redpath_trie_node = nullptr;
     RedPathRules redpath_rules;
-    absl::flat_hash_set<std::vector<std::string>> subquery_sequences;
     const Clock *clock = nullptr;
     const std::optional<absl::Duration> query_timeout = std::nullopt;
   };
@@ -183,7 +180,6 @@ class QueryPlanner final : public QueryPlannerIntf {
   RedfishInterface &redfish_interface_;
   const std::string service_root_;
   const SubqueryIdToSubquery subquery_id_to_subquery_;
-  const absl::flat_hash_set<std::vector<std::string>> subquery_sequences_;
   const Clock *clock_ = nullptr;
   std::atomic<int64_t> cache_miss_{0};
   std::atomic<int64_t> cache_hit_{0};
@@ -191,7 +187,7 @@ class QueryPlanner final : public QueryPlannerIntf {
 };
 
 absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
-    QueryPlannerIntf::QueryPlannerOptions query_planner_options);
+    QueryPlanner::ImplOptions query_planner_options);
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_IMPL_H_

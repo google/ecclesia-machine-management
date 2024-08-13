@@ -315,19 +315,12 @@ QueryPlanner::QueryPlanner(ImplOptions options_in)
       plan_id_(options_in.query->query_id()),
       normalizer_(*ABSL_DIE_IF_NULL(options_in.normalizer)),
       redpath_trie_node_(std::move(options_in.redpath_trie_node)),
-      redpath_rules_(
-          {.redpath_to_query_params = CombineQueryParams(
-               query_,
-               std::move(options_in.redpath_rules.redpath_to_query_params),
-               options_in.subquery_sequences),
-           .redpaths_to_subscribe =
-               std::move(options_in.redpath_rules.redpaths_to_subscribe)}),
+      redpath_rules_(std::move(options_in.redpath_rules)),
       redfish_interface_(*ABSL_DIE_IF_NULL(options_in.redfish_interface)),
       service_root_(query_.has_service_root()
                         ? query_.service_root()
                         : std::string(kDefaultRedfishServiceRoot)),
       subquery_id_to_subquery_(GetSubqueryIdToSubquery(query_)),
-      subquery_sequences_(std::move(options_in.subquery_sequences)),
       clock_(options_in.clock),
       timeout_manager_(
           options_in.query_timeout.has_value()
@@ -1012,20 +1005,20 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
 // Builds query plan for given query and returns QueryPlanner instance to the
 // caller which can be used to execute the QueryPlan.
 absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
-    QueryPlannerIntf::QueryPlannerOptions query_planner_options) {
-  RedPathTrieBuilder redpath_trie_builder(&query_planner_options.query);
+    QueryPlanner::ImplOptions query_planner_options) {
+  RedPathTrieBuilder redpath_trie_builder(query_planner_options.query);
   ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<RedPathTrieNode> redpath_trie,
                             redpath_trie_builder.CreateRedPathTrie());
+
+  query_planner_options.redpath_trie_node = std::move(redpath_trie);
+  query_planner_options.redpath_rules.redpath_to_query_params =
+      CombineQueryParams(
+          *query_planner_options.query,
+          query_planner_options.redpath_rules.redpath_to_query_params,
+          redpath_trie_builder.GetSubquerySequences());
+
   // Create QueryPlanner
-  return std::make_unique<QueryPlanner>(QueryPlanner::ImplOptions{
-      .query = &query_planner_options.query,
-      .normalizer = query_planner_options.normalizer,
-      .redfish_interface = query_planner_options.redfish_interface,
-      .redpath_trie_node = std::move(redpath_trie),
-      .redpath_rules = std::move(query_planner_options.redpath_rules),
-      .subquery_sequences = redpath_trie_builder.GetSubquerySequences(),
-      .clock = query_planner_options.clock,
-      .query_timeout = query_planner_options.query_timeout});
+  return std::make_unique<QueryPlanner>(std::move(query_planner_options));
 }
 
 }  // namespace ecclesia
