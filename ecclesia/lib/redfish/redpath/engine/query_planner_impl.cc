@@ -1016,11 +1016,6 @@ absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
   RedPathTrieBuilder redpath_trie_builder(&query_planner_options.query);
   ECCLESIA_ASSIGN_OR_RETURN(std::unique_ptr<RedPathTrieNode> redpath_trie,
                             redpath_trie_builder.CreateRedPathTrie());
-  ECCLESIA_ASSIGN_OR_RETURN(
-      const absl::flat_hash_set<std::vector<std::string>> *subquery_sequences,
-      redpath_trie_builder.GetSubquerySequences());
-  CHECK(subquery_sequences != nullptr);
-
   // Create QueryPlanner
   return std::make_unique<QueryPlanner>(QueryPlanner::ImplOptions{
       .query = &query_planner_options.query,
@@ -1028,7 +1023,7 @@ absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(
       .redfish_interface = query_planner_options.redfish_interface,
       .redpath_trie_node = std::move(redpath_trie),
       .redpath_rules = std::move(query_planner_options.redpath_rules),
-      .subquery_sequences = *subquery_sequences,
+      .subquery_sequences = redpath_trie_builder.GetSubquerySequences(),
       .clock = query_planner_options.clock,
       .query_timeout = query_planner_options.query_timeout});
 }

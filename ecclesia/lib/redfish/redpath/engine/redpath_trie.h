@@ -148,8 +148,7 @@ class RedPathTrieBuilder {
   // Returns the subquery execution sequences that are derived from RedPath
   // query after resolving all `root_subquery_ids` associations between
   // subqueries.
-  absl::StatusOr<const absl::flat_hash_set<std::vector<std::string>> *>
-  GetSubquerySequences();
+  const absl::flat_hash_set<std::vector<std::string>> &GetSubquerySequences();
 
  private:
   absl::Status ProcessSubquerySequence(

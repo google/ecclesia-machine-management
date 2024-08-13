@@ -282,16 +282,11 @@ TEST(RedPathTrieTest, RedPathTrieBuildsExecutionSequenceCorrectly) {
   ASSERT_THAT(redpath_trie_builder.CreateRedPathTrie(), IsOk());
 
   // Check subquery execution sequence is ordered correctly.
-  absl::StatusOr<const absl::flat_hash_set<std::vector<std::string>>*>
-      actual_subquery_sequences = redpath_trie_builder.GetSubquerySequences();
-  EXPECT_THAT(actual_subquery_sequences, IsOk());
-  EXPECT_TRUE(*actual_subquery_sequences != nullptr);
-
   const absl::flat_hash_set<std::vector<std::string>>
       expected_subquery_sequences = {{"Processor", "ProcessorMetrics"},
                                      {"Processor", "Core", "Thread"}};
 
-  EXPECT_THAT(**actual_subquery_sequences,
+  EXPECT_THAT(redpath_trie_builder.GetSubquerySequences(),
               FlatHashSetOfStringVectorsEq(expected_subquery_sequences));
 }
 

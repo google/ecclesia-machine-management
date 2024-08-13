@@ -149,12 +149,9 @@ absl::Status RedPathTrieBuilder::ProcessSubquerySequence(
   return absl::OkStatus();
 }
 
-absl::StatusOr<const absl::flat_hash_set<std::vector<std::string>> *>
+const absl::flat_hash_set<std::vector<std::string>> &
 RedPathTrieBuilder::GetSubquerySequences() {
-  if (subquery_sequences_.empty()) {
-    return absl::InternalError("Subquery sequence is not set!");
-  }
-  return &subquery_sequences_;
+  return subquery_sequences_;
 }
 
 absl::StatusOr<std::unique_ptr<RedPathTrieNode>>
