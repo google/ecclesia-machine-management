@@ -35,6 +35,9 @@
 
 namespace ecclesia {
 
+// Forward declaration of RedPathTrieNode.
+struct RedPathTrieNode;
+
 // Describes a RedPath expression.
 struct RedPathExpression {
   // Type of RedPath expression.
@@ -52,6 +55,9 @@ struct RedPathExpression {
   };
   Type type;
   std::string expression;
+
+  // Trie node associated with the expression.
+  RedPathTrieNode *trie_node = nullptr;
 
   RedPathExpression(Type type, absl::string_view expression)
       : type(type), expression(expression) {}
@@ -100,7 +106,7 @@ struct RedPathExpression {
 //
 // Trie Structure:
 // - Each node in the trie (RedPathTrieNode) represents an expression in RedPath
-// - The 'expression_to_trie_node' map within each node establishes the
+// - The 'child_expressions' set within each node establishes the
 //   parent-child relationships forming the trie structure.
 // - Leaf nodes may contain a 'subquery_id' if a subquery terminates at that
 //   node.
@@ -126,8 +132,8 @@ struct RedPathTrieNode {
   // A node with non-empty `subquery_id` suggests that a subquery ends at this
   // node.
   std::string subquery_id;
-  absl::flat_hash_map<RedPathExpression, std::unique_ptr<RedPathTrieNode>>
-      expression_to_trie_node;
+  absl::flat_hash_set<RedPathExpression> child_expressions;
+  std::vector<std::unique_ptr<RedPathTrieNode>> child_nodes;
 
   // Converts a RedPathTrieNode to string.
   std::string ToString(absl::string_view prefix = "") const;

@@ -26,7 +26,6 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/container/flat_hash_set.h"
 #include "absl/log/check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/status/status.h"
@@ -78,7 +77,7 @@ struct QueryExecutionContext {
   QueryResultData *parent_subquery_result = nullptr;
   // RedPath Trie Node that containing next set of RedPath expressions to
   // execute.
-  const RedPathTrieNode &redpath_trie_node;
+  const RedPathTrieNode *redpath_trie_node = nullptr;
   // QueryVariables used to execute a RedPath expression.
   const QueryVariables &query_variables;
   // Tracks RedPath prefixes executed.
@@ -94,7 +93,6 @@ struct QueryExecutionContext {
 
   QueryExecutionContext(
       QueryResult *result_in, QueryResultData *parent_subquery_result_in,
-      const RedPathTrieNode *redpath_trie_node_in,
       const QueryVariables *query_variables_in,
       RedPathPrefixTracker redpath_prefix_tracker_in,
       QueryPlannerIntf::RedpathQueryTracker *redpath_query_tracker_in,
@@ -102,7 +100,6 @@ struct QueryExecutionContext {
           /*redfish_object=*/nullptr, /*redfish_iterable=*/nullptr})
       : result(*ABSL_DIE_IF_NULL(result_in)),
         parent_subquery_result(parent_subquery_result_in),
-        redpath_trie_node(*ABSL_DIE_IF_NULL(redpath_trie_node_in)),
         query_variables(*ABSL_DIE_IF_NULL(query_variables_in)),
         redpath_prefix_tracker(std::move(redpath_prefix_tracker_in)),
         redpath_query_tracker(redpath_query_tracker_in),
@@ -152,12 +149,12 @@ class QueryPlanner final : public QueryPlannerIntf {
   absl::StatusOr<std::vector<QueryExecutionContext>> ExecuteQueryExpression(
       const RedPathExpression &expression,
       QueryExecutionContext &current_execution_context,
-      RedPathTrieNode *next_trie_node, std::optional<TraceInfo> &trace_info);
+      std::optional<TraceInfo> &trace_info);
 
   void PopulateSubscriptionContext(
       const std::vector<QueryExecutionContext> &execution_contexts,
       QueryExecutionContext &current_execution_context,
-      const RedPathExpression &expression, RedPathTrieNode *next_trie_node,
+      const RedPathExpression &expression,
       const QueryPlannerIntf::QueryExecutionOptions &query_execution_options,
       std::unique_ptr<QueryPlannerIntf::SubscriptionContext>
           &subscription_context);

@@ -48,17 +48,20 @@ constexpr LazyRE2 kLocationStepRegex = {
 RedPathTrieNode *InsertRedPathExpressions(
     RedPathTrieNode *current_node,
     const std::vector<RedPathExpression> &redpath_expressions) {
-  for (const auto &expression : redpath_expressions) {
-    if (auto it = current_node->expression_to_trie_node.find(expression);
-        it == current_node->expression_to_trie_node.end()) {
+  for (const RedPathExpression &expression : redpath_expressions) {
+    if (auto it = current_node->child_expressions.find(expression);
+        it == current_node->child_expressions.end()) {
       // End of prefix. Insert the expression here.
       RedPathTrieNode *prev_node = current_node;
       auto new_node = std::make_unique<RedPathTrieNode>();
       current_node = new_node.get();
-      prev_node->expression_to_trie_node[expression] = std::move(new_node);
+      RedPathExpression expression_with_trie_node = expression;
+      expression_with_trie_node.trie_node = current_node;
+      prev_node->child_nodes.push_back(std::move(new_node));
+      prev_node->child_expressions.insert(std::move(expression_with_trie_node));
     } else {
       // Still in prefix. Look into the next node.
-      current_node = it->second.get();
+      current_node = it->trie_node;
     }
   }
   return current_node;
@@ -100,14 +103,14 @@ std::string RedPathTrieNode::ToString(absl::string_view prefix) const {
   result += "\n";
 
   absl::flat_hash_map<RedPathExpression, std::string> expression_to_log;
-  for (const auto &[expression, trie_node] : expression_to_trie_node) {
+  for (const RedPathExpression &expression : child_expressions) {
     std::string new_prefix(prefix);
     if (expression.type == RedPathExpression::Type::kPredicate) {
       new_prefix += "[" + expression.expression + "]";
     } else {
       new_prefix += "/" + expression.expression;
     }
-    result += trie_node->ToString(new_prefix);
+    result += expression.trie_node->ToString(new_prefix);
   }
   return result;
 }
