@@ -140,6 +140,27 @@ bool IsInExpandPath(absl::string_view child_redpath,
   return expand_levels <= parent_expand_levels;
 }
 
+// Returns map of subquery id to root subquery ids derived from given
+// `query`.
+// If all subqueries are root subqueries i.e subqueries don't have
+// `root_subquery_ids` property then an empty map is returned.
+absl::flat_hash_map<std::string, std::vector<std::string>>
+GetSubqueryIdToRootIds(const DelliciusQuery &query) {
+  absl::flat_hash_map<std::string, std::vector<std::string>>
+      subquery_id_to_root_ids;
+  for (const auto &subquery : query.subquery()) {
+    std::vector<std::string> root_ids;
+    for (const auto &root_id : subquery.root_subquery_ids()) {
+      root_ids.push_back(root_id);
+    }
+    if (root_ids.empty()) {
+      continue;
+    }
+    subquery_id_to_root_ids[subquery.subquery_id()] = std::move(root_ids);
+  }
+  return subquery_id_to_root_ids;
+}
+
 // Returns combined GetParams{} for RedPath expressions in the query.
 // There are 2 places where we get parameters associated with RedPath prefix:
 // 1) Expand configuration from embedded query_rule file
@@ -320,6 +341,7 @@ QueryPlanner::QueryPlanner(ImplOptions options_in)
                         ? query_.service_root()
                         : std::string(kDefaultRedfishServiceRoot)),
       subquery_id_to_subquery_(GetSubqueryIdToSubquery(query_)),
+      subquery_id_to_root_ids_(GetSubqueryIdToRootIds(query_)),
       clock_(options_in.clock),
       timeout_manager_(
           options_in.query_timeout.has_value()
@@ -381,53 +403,76 @@ absl::Status QueryPlanner::TryNormalize(
     return absl::OkStatus();
   }
 
-  QueryResultData *new_parent_result = nullptr;
+  // If the current subquery has one or more root subquery ids, we will find
+  // the result of the root subquery id so that we can nest the query result of
+  // the current subquery in it.
+  QueryResultData *root_subquery_result = nullptr;
+  auto find_parent_subqueries = subquery_id_to_root_ids_.find(subquery_id);
+  if (find_parent_subqueries != subquery_id_to_root_ids_.end()) {
+    for (const auto &root_id : find_parent_subqueries->second) {
+      auto find_parent_subquery_output =
+          query_execution_context->subquery_id_to_subquery_result.find(root_id);
+      if (find_parent_subquery_output ==
+          query_execution_context->subquery_id_to_subquery_result.end()) {
+        continue;
+      }
+      root_subquery_result = find_parent_subquery_output->second;
+      break;
+    }
+  }
 
-  // When there is no parent subquery dataset.
-  // This is typically the case when we are normalizing results for a root
-  // subquery.
-  if (query_execution_context->parent_subquery_result == nullptr) {
+  if (find_parent_subqueries == subquery_id_to_root_ids_.end() ||
+      root_subquery_result == nullptr) {
+    // There isn't a root subquery associated with current subquery or the
+    // result of root subquery is not found.
+    // This is typically the case when we are normalizing results for a root
+    // subquery itself or dealing with a resume query operation on receiving
+    // redfish event.
     auto [subquery_output, _] =
         query_execution_context->result.mutable_data()
             ->mutable_fields()
             ->insert({std::string(subquery_id), QueryValue()});
-    new_parent_result = subquery_output->second.mutable_list_value()
-                            ->add_values()
-                            ->mutable_subquery_value();
-
-    *new_parent_result = std::move(*query_result_data);
-    query_execution_context->parent_subquery_result = new_parent_result;
-    return query_result_data.status();
-  }
-
-  auto *child_subquery_output_by_id =
-      query_execution_context->parent_subquery_result->mutable_fields();
-
-  // Add normalized subquery dataset to parent subquery dataset.
-  // When the current subquery contains an output to populate in parent dataset.
-  auto find_parent_subquery_output =
-      child_subquery_output_by_id->find(subquery_id);
-  if (find_parent_subquery_output != child_subquery_output_by_id->end()) {
-    new_parent_result =
-        find_parent_subquery_output->second.mutable_list_value()
+    QueryResultData *subquery_value =
+        subquery_output->second.mutable_list_value()
             ->add_values()
             ->mutable_subquery_value();
 
-    *new_parent_result = std::move(*query_result_data);
-    query_execution_context->parent_subquery_result = new_parent_result;
+    *subquery_value = std::move(*query_result_data);
+    query_execution_context->subquery_id_to_subquery_result[subquery_id] =
+        subquery_value;
     return query_result_data.status();
   }
 
-  // When the current subquery does not have an output to populate in parent
-  // dataset.
-  QueryValue *new_parent_subquery_result =
-      &(*child_subquery_output_by_id)[subquery_id];
-  new_parent_result = new_parent_subquery_result->mutable_list_value()
-                          ->add_values()
-                          ->mutable_subquery_value();
+  auto *subquery_values_in_root_subquery_result =
+      root_subquery_result->mutable_fields();
 
-  *new_parent_result = std::move(*query_result_data);
-  query_execution_context->parent_subquery_result = new_parent_result;
+  // Add subquery result to parent subquery result.
+  auto subquery_value_iter =
+      subquery_values_in_root_subquery_result->find(subquery_id);
+  if (subquery_value_iter != subquery_values_in_root_subquery_result->end()) {
+    QueryResultData *new_query_result_data =
+        subquery_value_iter->second.mutable_list_value()
+            ->add_values()
+            ->mutable_subquery_value();
+
+    *new_query_result_data = std::move(*query_result_data);
+    query_execution_context->subquery_id_to_subquery_result[subquery_id] =
+        new_query_result_data;
+    return query_result_data.status();
+  }
+
+  // When the root subquery result does not have a subquery result linked with
+  // current subquery id, we create a new subquery output in root subquery
+  // result with current subquery id.
+  QueryValue *subquery_value =
+      &(*subquery_values_in_root_subquery_result)[subquery_id];
+  QueryResultData *new_query_result = subquery_value->mutable_list_value()
+                                          ->add_values()
+                                          ->mutable_subquery_value();
+
+  *new_query_result = std::move(*query_result_data);
+  query_execution_context->subquery_id_to_subquery_result[subquery_id] =
+      new_query_result;
   return query_result_data.status();
 }
 
@@ -517,7 +562,7 @@ QueryPlanner::ExecuteQueryExpression(
 
         QueryExecutionContext new_execution_context(
             &current_execution_context.result,
-            current_execution_context.parent_subquery_result,
+            current_execution_context.subquery_id_to_subquery_result,
             &current_execution_context.query_variables,
             std::move(new_redpath_prefix_tracker),
             current_execution_context.redpath_query_tracker,
@@ -659,7 +704,7 @@ QueryPlanner::ExecuteQueryExpression(
     new_redpath_prefix_tracker.last_redpath_prefix = new_redpath_prefix;
     QueryExecutionContext new_execution_context(
         &current_execution_context.result,
-        current_execution_context.parent_subquery_result,
+        current_execution_context.subquery_id_to_subquery_result,
         &current_execution_context.query_variables,
         std::move(new_redpath_prefix_tracker),
         current_execution_context.redpath_query_tracker,
@@ -682,7 +727,7 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
   // Initialize query execution context to execute next RedPath
   // expression.
   QueryExecutionContext execution_context(
-      &result, nullptr, &query_resume_options.variables, RedPathPrefixTracker(),
+      &result, {}, &query_resume_options.variables, RedPathPrefixTracker(),
       query_resume_options.redpath_query_tracker,
       {std::move(redfish_object), std::move(redfish_iterable)});
   execution_context.redpath_trie_node = query_resume_options.trie_node;
@@ -862,8 +907,8 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
   }
   // Initialize query execution context to execute next RedPath expression.
   QueryExecutionContext query_execution_context(
-      &result, nullptr, &query_execution_options.variables,
-      RedPathPrefixTracker(), query_execution_options.redpath_query_tracker,
+      &result, {}, &query_execution_options.variables, RedPathPrefixTracker(),
+      query_execution_options.redpath_query_tracker,
       {std::move(*service_root_object), nullptr});
   query_execution_context.redpath_trie_node = redpath_trie_node_.get();
 

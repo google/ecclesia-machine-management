@@ -159,6 +159,11 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
           properties { property: "Name" type: STRING }
         }
         subquery {
+          subquery_id: "AllSensorsNoRpm"
+          redpath: "/Chassis[*]/Sensors[ReadingUnits!=RPM]"
+          properties { property: "Name" type: STRING }
+        }
+        subquery {
           subquery_id: "Assembly"
           root_subquery_ids: "Sensors"
           redpath: "/RelatedItem[0]"
@@ -180,8 +185,63 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 540 num_cache_misses: 56 }
+    stats { payload_size: 707 num_cache_misses: 70 }
     data {
+      fields {
+        key: "AllSensorsNoRpm"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "indus_eat_temp" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "indus_latm_temp" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU0" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU1" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU0" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU1" }
+                }
+              }
+            }
+          }
+        }
+      }
       fields {
         key: "Chassis"
         value {

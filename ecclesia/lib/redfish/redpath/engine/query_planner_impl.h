@@ -69,12 +69,8 @@ struct RedPathPrefixTracker {
 struct QueryExecutionContext {
   // QueryResult obtained to store the result of the execution.
   QueryResult &result;
-  // Parent Subquery dataset.
-  // A RedPath query has multiple subqueries in Parent-Child relationship where
-  // child subquery runs relative to a result in parent subquery output. The
-  // resulting child subquery output would need to nest in the parent
-  // subquery result which this attribute describes.
-  QueryResultData *parent_subquery_result = nullptr;
+  absl::flat_hash_map<std::string, QueryResultData *>
+      subquery_id_to_subquery_result;
   // RedPath Trie Node that containing next set of RedPath expressions to
   // execute.
   const RedPathTrieNode *redpath_trie_node = nullptr;
@@ -92,14 +88,16 @@ struct QueryExecutionContext {
   std::vector<std::string> uris_to_subscribe;
 
   QueryExecutionContext(
-      QueryResult *result_in, QueryResultData *parent_subquery_result_in,
+      QueryResult *result_in,
+      const absl::flat_hash_map<std::string, QueryResultData *>
+          &subquery_id_to_subquery_result_in,
       const QueryVariables *query_variables_in,
       RedPathPrefixTracker redpath_prefix_tracker_in,
       QueryPlannerIntf::RedpathQueryTracker *redpath_query_tracker_in,
       RedfishObjectAndIterable redfish_object_and_iterable_in = {
           /*redfish_object=*/nullptr, /*redfish_iterable=*/nullptr})
       : result(*ABSL_DIE_IF_NULL(result_in)),
-        parent_subquery_result(parent_subquery_result_in),
+        subquery_id_to_subquery_result(subquery_id_to_subquery_result_in),
         query_variables(*ABSL_DIE_IF_NULL(query_variables_in)),
         redpath_prefix_tracker(std::move(redpath_prefix_tracker_in)),
         redpath_query_tracker(redpath_query_tracker_in),
@@ -177,6 +175,8 @@ class QueryPlanner final : public QueryPlannerIntf {
   RedfishInterface &redfish_interface_;
   const std::string service_root_;
   const SubqueryIdToSubquery subquery_id_to_subquery_;
+  const absl::flat_hash_map<std::string, std::vector<std::string>>
+      subquery_id_to_root_ids_;
   const Clock *clock_ = nullptr;
   std::atomic<int64_t> cache_miss_{0};
   std::atomic<int64_t> cache_hit_{0};
