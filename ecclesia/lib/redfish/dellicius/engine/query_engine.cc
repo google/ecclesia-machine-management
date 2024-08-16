@@ -332,7 +332,8 @@ absl::StatusOr<SubscriptionQueryResult> QueryEngine::ExecuteSubscriptionQuery(
     QueryPlannerIntf::QueryExecutionResult result_single;
     {
       auto query_timer = RedpathQueryTimestamp(&result_single, clock_);
-      result_single = it->second->Run({vars});
+      result_single = it->second->Run(
+          {.variables = vars, .query_type = QueryType::kSubscription});
       if (result_single.query_result.has_status()) {
         std::string error_message =
             result_single.query_result.status().errors().empty()

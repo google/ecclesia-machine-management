@@ -478,7 +478,7 @@ absl::Status QueryPlanner::TryNormalize(
 
 absl::StatusOr<std::vector<QueryExecutionContext>>
 QueryPlanner::ExecuteQueryExpression(
-    const RedPathExpression &expression,
+    QueryType query_type, const RedPathExpression &expression,
     QueryExecutionContext &current_execution_context,
     std::optional<TraceInfo> &trace_info) {
   std::vector<QueryExecutionContext> execution_contexts;
@@ -494,11 +494,6 @@ QueryPlanner::ExecuteQueryExpression(
         current_execution_context.redpath_prefix_tracker;
     std::string new_redpath_prefix = AddExpressionToRedPath(
         redpath_prefix_tracker.last_redpath_prefix, expression);
-
-    // Check if subscription is required.
-    bool subscription_required =
-        redpath_rules_.redpaths_to_subscribe.contains(new_redpath_prefix);
-    std::vector<std::string> uris_to_subscribe;
 
     // Get query parameters for the RedPath expression we are about to execute.
     GetParams get_params_for_redpath =
@@ -533,11 +528,13 @@ QueryPlanner::ExecuteQueryExpression(
       // We don't create new execution context when a subscription is required.
       // Instead, we store each URI of the resource collection in the given
       // execution context which will then be used to create event subscription.
-      if (subscription_required) {
+      if (query_type == QueryType::kSubscription &&
+          redpath_rules_.redpaths_to_subscribe.contains(new_redpath_prefix)) {
         std::optional<std::string> odata_id =
             indexed_node_as_object->GetNodeValue<PropertyOdataId>();
         if (odata_id.has_value()) {
-          uris_to_subscribe.push_back(odata_id.value());
+          current_execution_context.uris_to_subscribe.push_back(
+              odata_id.value());
         }
         continue;
       }
@@ -570,12 +567,6 @@ QueryPlanner::ExecuteQueryExpression(
         execution_contexts.push_back(std::move(new_execution_context));
       }
     }
-
-    if (subscription_required) {
-      current_execution_context.uris_to_subscribe =
-          std::move(uris_to_subscribe);
-      return execution_contexts;
-    }
   } else if (current_redfish_obj) {
     // Construct RedPath prefix to lookup associated query parameters
     RedPathPrefixTracker &redpath_prefix_tracker =
@@ -589,7 +580,8 @@ QueryPlanner::ExecuteQueryExpression(
 
     // Halt execution and capture URI if RedPath expression requires
     // event subscription.
-    if (redpath_rules_.redpaths_to_subscribe.contains(new_redpath_prefix)) {
+    if (query_type == QueryType::kSubscription &&
+        redpath_rules_.redpaths_to_subscribe.contains(new_redpath_prefix)) {
       nlohmann::json json = current_redfish_obj->GetContentAsJson();
       auto find_node_name = json.find(expression.expression);
       if (find_node_name == json.end()) {
@@ -766,8 +758,8 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
         *current_execution_context.redpath_trie_node;
     for (const auto &expression : current_redpath_trie_node.child_expressions) {
       absl::StatusOr<std::vector<QueryExecutionContext>> execution_contexts =
-          ExecuteQueryExpression(expression, current_execution_context,
-                                 trace_info);
+          ExecuteQueryExpression(QueryType::kPolling, expression,
+                                 current_execution_context, trace_info);
       if (!execution_contexts.ok()) {
         if (execution_contexts.status().code() != absl::StatusCode::kNotFound) {
           PopulateSubqueryErrorStatus(execution_contexts.status(),
@@ -966,8 +958,8 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
       absl::string_view subquery_id = expression.trie_node->subquery_id;
 
       absl::StatusOr<std::vector<QueryExecutionContext>> execution_contexts =
-          ExecuteQueryExpression(expression, current_execution_context,
-                                 trace_info);
+          ExecuteQueryExpression(query_execution_options.query_type, expression,
+                                 current_execution_context, trace_info);
       // Exit query execution and populate error if querying fails. If the error
       // is due to the resource not being found continue as this is allowed by
       // query engine.
@@ -1010,6 +1002,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
     }
   }
 
+  // Each metrical_transport object has a thread local RedfishMetrics object.
   const RedfishMetrics *metrics = MetricalRedfishTransport::GetConstMetrics();
   if (metrics != nullptr && !metrics->uri_to_metrics_map().empty() &&
       result.IsInitialized()) {

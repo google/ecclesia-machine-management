@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_H_
 #define ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_H_
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -35,6 +36,12 @@
 #include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
+
+// Describes the type of query execution.
+enum class QueryType : uint8_t {
+  kPolling = 0,
+  kSubscription,
+};
 
 struct RedPathRules {
   absl::flat_hash_map<std::string /* RedPath */, GetParams>
@@ -70,6 +77,7 @@ class QueryPlannerIntf {
     bool enable_url_annotation = false;
     bool log_redfish_traces = false;
     RedpathQueryTracker *redpath_query_tracker = nullptr;
+    QueryType query_type = QueryType::kPolling;
   };
 
   // Configures a query resume operation.

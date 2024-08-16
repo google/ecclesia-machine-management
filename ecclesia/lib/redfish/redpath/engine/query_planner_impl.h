@@ -145,7 +145,7 @@ class QueryPlanner final : public QueryPlannerIntf {
 
   // Executes a single RedPath expression.
   absl::StatusOr<std::vector<QueryExecutionContext>> ExecuteQueryExpression(
-      const RedPathExpression &expression,
+      QueryType query_type, const RedPathExpression &expression,
       QueryExecutionContext &current_execution_context,
       std::optional<TraceInfo> &trace_info);
 
