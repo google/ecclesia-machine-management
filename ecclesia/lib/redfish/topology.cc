@@ -21,13 +21,12 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
-#include "absl/memory/memory.h"
+#include "absl/hash/hash.h"
 #include "absl/meta/type_traits.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
@@ -496,31 +495,6 @@ NodeTopology CreateNodeTopologyFromAssemblies(
   return node_topology;
 }
 
-// NodeId is a data class wrapping a Node in order to provide the hash and
-// equality functions to quickly compare two Node objects.
-class NodeId {
- public:
-  explicit NodeId(const Node &node)
-      : name_(node.name),
-        local_devpath_(node.local_devpath),
-        type_(node.type) {}
-
-  bool operator==(const NodeId &o) const {
-    return std::tie(name_, local_devpath_, type_) ==
-           std::tie(o.name_, o.local_devpath_, o.type_);
-  }
-  // Support for absl::Hash.
-  template <typename H>
-  friend H AbslHashValue(H h, const NodeId &o) {
-    return H::combine(std::move(h), o.name_, o.local_devpath_, o.type_);
-  }
-
- private:
-  std::string name_;
-  std::string local_devpath_;
-  NodeType type_;
-};
-
 RedfishNodeTopologyRepresentation GetNodeTopologyReprensentation(
     RedfishInterface *redfish_intf) {
   auto service_root = redfish_intf->GetRoot().AsObject();
@@ -583,21 +557,40 @@ NodeTopology CreateTopologyFromRedfish(
       topology_config_name);
 }
 
+// Hash & equality functions for Node pointers. This is useful for using Node
+// pointers in hash sets and maps so we can avoid having to copy the Node object
+// itself into the data structure.
+struct NodePtrHashFunc {
+  size_t operator()(Node *a) const {
+    if (a == nullptr) return absl::HashOf(a);
+    return absl::HashOf(*a);
+  }
+};
+struct NodePtrEquals {
+  bool operator()(Node *a, Node *b) const {
+    if (a == nullptr && b == nullptr) return true;
+    if (a == nullptr || b == nullptr) return false;
+    return *a == *b;
+  }
+};
+
 bool NodeTopologiesHaveTheSameNodes(const NodeTopology &n1,
                                     const NodeTopology &n2) {
   // Short circuit: if the container sizes are mismatched then infer a delta.
   if (n1.nodes.size() != n2.nodes.size()) return false;
 
   // Check that all nodes exist in both topologies. This assumes that there are
-  // no duplicates of (name, devpath, type) that exist in either set of nodes.
+  // no duplicate nodes that exist in either set of nodes.
   // This would be a failed precondition and imply that something is wrong with
   // the Redfish Assemblies.
-  absl::flat_hash_set<NodeId> n1_nodes;
-  for (const auto &node : n1.nodes) {
-    n1_nodes.insert(NodeId(*node));
+  absl::flat_hash_set<Node *, NodePtrHashFunc, NodePtrEquals> n1_nodes;
+  for (const std::unique_ptr<Node> &node : n1.nodes) {
+    n1_nodes.insert(node.get());
   }
-  for (const auto &node : n2.nodes) {
-    if (n1_nodes.count(NodeId(*node)) == 0u) return false;
+  // NOLINTNEXTLINE(readability-use-anyofallof)
+  for (const std::unique_ptr<Node> &node : n2.nodes) {
+    auto itr = n1_nodes.find(node.get());
+    if (itr == n1_nodes.end()) return false;
   }
   return true;
 }

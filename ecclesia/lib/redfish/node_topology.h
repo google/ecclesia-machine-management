@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
@@ -42,6 +43,20 @@ struct Node {
   std::vector<std::string> associated_uris;
   // Whether the Node represents a part can be replaced.
   bool replaceable;
+
+  bool operator==(const Node &o) const {
+    return std::tie(name, model, local_devpath, type, associated_uris,
+                    replaceable) == std::tie(o.name, o.model, o.local_devpath,
+                                             o.type, o.associated_uris,
+                                             o.replaceable);
+  }
+  bool operator!=(const Node &o) const { return !(*this == o); }
+  // Support for absl::Hash.
+  template <typename H>
+  friend H AbslHashValue(H h, const Node &n) {
+    return H::combine(std::move(h), n.name, n.model, n.local_devpath, n.type,
+                      n.associated_uris, n.replaceable);
+  }
 };
 
 // NodeTopology represents the collection of Nodes comprising a Redfish backend.

@@ -176,9 +176,20 @@ cc_library(
         ":utils",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
-        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/hash",
         "@com_google_absl//absl/meta:type_traits",
         "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "node_topology_test",
+    srcs = ["node_topology_test.cc"],
+    deps = [
+        ":node_topology",
+        ":types",
+        "@com_google_absl//absl/hash:hash_testing",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -199,7 +210,7 @@ cc_test(
         "//ecclesia/lib/redfish/testing:json_mockup",
         "//ecclesia/lib/redfish/testing:node_topology_testing",
         "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/hash:hash_testing",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
@@ -452,7 +463,6 @@ cc_library(
     hdrs = ["node_topology.h"],
     visibility = ["//visibility:public"],
     deps = [
-        ":topology_config_cc_proto",
         ":types",
         "@com_google_absl//absl/container:flat_hash_map",
     ],

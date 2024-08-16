@@ -24,7 +24,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
-#include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
@@ -382,7 +381,7 @@ TEST(RawInterfaceTestWithMockup, IndusHmbCnMockupDevpathToNodeMapMatches) {
   NodeTopology topology = CreateTopologyFromRedfish(raw_intf.get());
 
   for (const auto &pair : topology.devpath_to_node_map) {
-    const absl::string_view &devpath = pair.first;
+    absl::string_view devpath = pair.first;
     ASSERT_THAT(pair.second, Not(IsNull()));
     EXPECT_THAT(devpath, Eq(pair.second->local_devpath));
   }
@@ -670,8 +669,8 @@ TEST(TopologyTestRunner, TestingConfigsOptionV2) {
   TestingMockupServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
 
-  NodeTopology topology = CreateTopologyFromRedfish(
-      raw_intf.get(), "redfish_test.textpb");
+  NodeTopology topology =
+      CreateTopologyFromRedfish(raw_intf.get(), "redfish_test.textpb");
   const std::vector<Node> expected_nodes = {
       Node{"root", "root", "/phys", NodeType::kBoard},
       Node{"cpu", "cpu", "/phys/CPU", NodeType::kBoard}};
