@@ -29,6 +29,14 @@ message RedPathPrefixWithQueryParams {
   optional TopConfiguration top_configuration = 3;
   bool filter_enabled = 4;
   bool subscribe = 5;
+  // Sets a custom uri prefix to work with different service roots where an
+  // implementation has URIs relative to standard service root but makes the
+  // data available using a custom root.
+  // E.g if an implementation has uri /redfish/v1/Chassis,
+  // but makes it avaialble through <CustomPrefix>/redfish/v1/Chassis.
+  // This prefix will instruct query engine to prepend the URIs with the given
+  // `uri_prefix` value before sending out the request.
+  string uri_prefix = 6;
 }
 
 // Collection of Prefix Set with QueryParams.

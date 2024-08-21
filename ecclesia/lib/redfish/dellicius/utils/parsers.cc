@@ -75,6 +75,7 @@ absl::StatusOr<GetParams> GetQueryParams(
   if (redpath_prefix_with_query_params.filter_enabled()) {
     params.filter = RedfishQueryParamFilter("");
   }
+  params.uri_prefix = redpath_prefix_with_query_params.uri_prefix();
   return params;
 }
 

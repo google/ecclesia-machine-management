@@ -71,6 +71,7 @@ TEST(ParserTest, ValidQueryRulesParseCorrectly) {
           redpath: "/Systems"
           top_configuration { num_members: 10 }
           expand_configuration { level: 1 type: BOTH }
+          uri_prefix: "/tlbmc"
         }
       }
     })pb";
@@ -84,7 +85,8 @@ TEST(ParserTest, ValidQueryRulesParseCorrectly) {
   GetParams test_params{
       .top = RedfishQueryParamTop(10),
       .expand = RedfishQueryParamExpand(
-          {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 1})};
+          {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 1}),
+      .uri_prefix = "/tlbmc"};
   ASSERT_TRUE(test_params.expand.has_value());
   ASSERT_TRUE(test_params.top.has_value());
 
