@@ -241,6 +241,15 @@ struct GetParams {
   std::optional<RedfishQueryParamExpand> expand;
   std::optional<RedfishQueryParamFilter> filter;
   std::optional<ecclesia::QueryTimeoutManager *> timeout_manager;
+
+  // Clients can set a custom uri prefix to work with different service roots.
+  // This approach allows a Redfish service to implement the data model with
+  // standard service root (i.e all resources will have odata.id with prefix
+  // /redfish/v1) but make the service available through custom root. This is
+  // a useful feature to make fast paths available for standard resources.
+  //
+  // E.g. /redfish/v1/Chassis -> <uri_prefix>/redfish/v1/Chassis
+  std::string uri_prefix;
 };
 
 // RedfishVariant is the standard return type for all Redfish interfaces.

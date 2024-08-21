@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "absl/strings/ascii.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
@@ -116,15 +117,20 @@ absl::StatusOr<std::string> GetObjectUri(const nlohmann::json &json) {
 std::string GetUriWithQueryParameters(absl::string_view uri,
                                       const GetParams &params) {
   auto query_params = params.GetQueryParams();
+  std::string new_uri(uri);
+  if (!params.uri_prefix.empty()) {
+    new_uri = absl::StrCat(params.uri_prefix, uri);
+  }
+
   if (query_params.empty()) {
-    return std::string(uri);
+    return new_uri;
   }
   std::string query_str = absl::StrJoin(
       query_params.begin(), query_params.end(), "&",
       [](std::string *output, const GetParamQueryInterface *param) {
         output->append(param->ToString());
       });
-  return absl::StrCat(uri, "?", query_str);
+  return absl::StrCat(new_uri, "?", query_str);
 }
 
 }  // namespace ecclesia

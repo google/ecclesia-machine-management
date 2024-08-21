@@ -220,5 +220,12 @@ TEST(GetUriWithQueryParameters, CanGetUriWithMultiParams) {
   }
 }
 
+TEST(GetUriWithQueryParameters, CanGetUriWithPrefix) {
+  auto params = GetParams{.uri_prefix = "/tlbmc"};
+  std::string uri = GetUriWithQueryParameters(
+      "/redfish/v1/Systems/system/Memory/dimm0", params);
+  EXPECT_EQ(uri, "/tlbmc/redfish/v1/Systems/system/Memory/dimm0");
+}
+
 }  // namespace
 }  // namespace ecclesia
