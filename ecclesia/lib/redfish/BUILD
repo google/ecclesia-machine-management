@@ -459,10 +459,34 @@ cc_library(
 )
 
 cc_library(
+    name = "location",
+    srcs = ["location.cc"],
+    hdrs = ["location.h"],
+    visibility = ["//visibility:public"],
+    deps = [":interface"],
+)
+
+cc_test(
+    name = "location_test",
+    srcs = ["location_test.cc"],
+    deps = [
+        ":interface",
+        ":location",
+        "//ecclesia/lib/redfish/testing:json_mockup",
+        "//ecclesia/lib/testing:proto",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "node_topology",
     hdrs = ["node_topology.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":location",
+        ":topology_config_cc_proto",
         ":types",
         "@com_google_absl//absl/container:flat_hash_map",
     ],
