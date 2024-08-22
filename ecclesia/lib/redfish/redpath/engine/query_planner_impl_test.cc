@@ -3446,6 +3446,60 @@ TEST_F(QueryPlannerGrpcTestRunner,
               Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
 }
 
+TEST_F(QueryPlannerTestRunner, ServiceRootQueryWithParamsSuccessful) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "ServiceRoot"
+           subquery {
+             subquery_id: "RedfishVersion"
+             redpath: "/"
+             properties { name: "Uri" property: "@odata\\.id" type: STRING }
+             properties: {
+               name: "RedfishSoftwareVersion"
+               property: "RedfishVersion"
+               type: STRING
+             }
+           })pb");
+
+  SetTestParams("indus_hmb_cn/mockup.shar");
+  auto transport = std::make_unique<MetricalRedfishTransport>(
+      server_->RedfishClientTransport(), Clock::RealClock());
+  auto cache = std::make_unique<NullCache>(transport.get());
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  absl::Time test_time = absl::UnixEpoch() + absl::Seconds(50);
+  FakeClock clock(test_time);
+
+  RedPathRules redpath_rules = {
+      .redpath_to_query_params = {
+          {"/",
+           {.expand = RedfishQueryParamExpand(
+                {.type = RedfishQueryParamExpand::ExpandType::kNotLinks,
+                 .levels = 1})}}}};
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = &query,
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf.get(),
+                         .redpath_rules = std::move(redpath_rules),
+                         .clock = &clock});
+
+  ASSERT_THAT(qp, IsOk());
+  ASSERT_THAT(*qp, NotNull());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  auto result = (*qp)->Run({args1});
+  ASSERT_TRUE(result.query_result.stats().has_redfish_metrics());
+  EXPECT_EQ(
+      result.query_result.stats().redfish_metrics().uri_to_metrics_map_size(),
+      1);
+  EXPECT_TRUE(result.query_result.stats()
+                  .redfish_metrics()
+                  .uri_to_metrics_map()
+                  .contains("/redfish/v1?$expand=.($levels=1)"));
+}
+
 }  // namespace
 
 }  // namespace ecclesia

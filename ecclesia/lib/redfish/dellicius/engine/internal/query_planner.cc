@@ -1390,7 +1390,9 @@ DelliciusQueryResult QueryPlanner::Run(const Clock &clock,
                                        ExecutionFlags execution_flags) {
   DelliciusQueryResult result;
   result.set_query_id(plan_id_);
-  ProcessSubqueries(redfish_interface_->GetRoot(GetParams{}, service_root_),
+  ProcessSubqueries(redfish_interface_->GetRoot(
+                        GetQueryParamsForRedPath(redpath_to_query_params_, "/"),
+                        service_root_),
                     query_variables, nullptr, result, tracker, execution_flags);
   if (metrics != nullptr) {
     *result.mutable_redfish_metrics() = *metrics;

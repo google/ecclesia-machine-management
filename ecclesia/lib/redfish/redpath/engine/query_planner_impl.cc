@@ -866,8 +866,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
   // Get Query Parameters to use for service root
   GetParams get_params_service_root =
       GetQueryParamsForRedPath(kServiceRootNode);
-  RedfishVariant variant = redfish_interface_.GetRoot(
-      GetParams{.timeout_manager = get_params_service_root.timeout_manager},
+  RedfishVariant variant = redfish_interface_.GetRoot(get_params_service_root,
       service_root_);
   if (variant.IsFresh() == CacheState::kIsFresh) {
     cache_miss_ = cache_miss_ + 1;

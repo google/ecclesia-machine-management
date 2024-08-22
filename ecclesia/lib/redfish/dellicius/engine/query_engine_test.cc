@@ -1785,5 +1785,45 @@ TEST(QueryEngineTest, QueryEngineExecutesQueryRuleWithUriPrefix) {
   EXPECT_EQ(systems_fetched_counter, 1);
 }
 
+TEST(QueryEngineTest, QueryEngineAppliesQueryRulesToServiceRoot) {
+  constexpr absl::string_view kQueryRuleStr = R"pb(
+    query_id_to_params_rule {
+      key: "AssemblyCollectorWithPropertyNameNormalization"
+      value {
+        redpath_prefix_with_params { redpath: "/" uri_prefix: "/tlbmc" }
+      }
+    })pb";
+
+  auto query_spec = QuerySpec::FromQueryContext(
+      {.query_files = kDelliciusQueries,
+       .query_rules = {{.name = "query_rules.pb", .data = kQueryRuleStr}}});
+  ASSERT_THAT(query_spec, IsOk());
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(
+          std::move(*query_spec), kIndusMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .metrics = FakeQueryEngine::Metrics::kEnable,
+           .annotations = FakeQueryEngine::Annotations::kDisable,
+           .cache = FakeQueryEngine::Cache::kInfinite}));
+
+  int service_root_fetch_counter = 0;
+  QueryIdToResult response = query_engine->ExecuteRedpathQuery(
+      {"AssemblyCollectorWithPropertyNameNormalization"});
+  // Validate the stats are correct.
+  for (const auto &uri_x_metric :
+       response.results()
+           .at("AssemblyCollectorWithPropertyNameNormalization")
+           .stats()
+           .redfish_metrics()
+           .uri_to_metrics_map()) {
+    // Expected systems only fetched only once from the redfish server.
+    if (uri_x_metric.first == "/tlbmc/redfish/v1") {
+      service_root_fetch_counter++;
+    }
+  }
+  EXPECT_EQ(service_root_fetch_counter, 1);
+}
+
 }  // namespace
 }  // namespace ecclesia
