@@ -475,11 +475,15 @@ class SubqueryHandle final {
 
   // Substitute variables in the predicates and return a fully resolved redpath
   // steps.
-  RedPathSteps SubstituteVariables(const QueryVariables &variables) {
+  RedPathSteps SubstituteVariables(const QueryVariables *variables) {
+    if (variables == nullptr) {
+      return this->GetRedPathSteps();
+    }
+
     std::vector<std::pair<std::string, std::string>> replacements;
-    replacements.reserve(variables.variable_values_size());
+    replacements.reserve(variables->variable_values_size());
     // Build the list of replacements that will be passed into StrReplaceAll.
-    for (const auto &value : variables.variable_values()) {
+    for (const auto &value : variables->variable_values()) {
       if (value.name().empty()) continue;
       std::string result;
       std::string variable_name = absl::StrCat("$", value.name());
@@ -608,6 +612,8 @@ struct RedPathContext {
   RedPathSteps redpath_steps;
   // Client callback to send the subquery results
   std::function<bool(const DelliciusQueryResult &result)> callback = nullptr;
+  // Query variables to use for variable substitution
+  const QueryVariables *query_variables = nullptr;
 };
 
 // A ContextNode describes the RedfishObject relative to which one or more
@@ -800,10 +806,15 @@ std::vector<RedPathContext> PopulateResultOrContinueQuery(
       for (const auto &child_subquery_handle :
            subquery_handle->GetChildSubqueryHandles()) {
         if (child_subquery_handle == nullptr) continue;
-        RedPathSteps redpath_steps = child_subquery_handle->GetRedPathSteps();
+        // Substitute any variables with their values provided by the query
+        // engine.
+        RedPathSteps redpath_steps =
+            child_subquery_handle->SubstituteVariables(
+                redpath_ctx.query_variables);
         redpath_ctx_unresolved.push_back(
             {child_subquery_handle, *last_normalized_dataset,
-             std::move(redpath_steps), redpath_ctx.callback});
+             std::move(redpath_steps), redpath_ctx.callback,
+             redpath_ctx.query_variables});
       }
       continue;
     }
@@ -1352,14 +1363,15 @@ void QueryPlanner::ProcessSubqueries(
     // Substitute any variables with their values provided by the query
     // engine.
     RedPathSteps redpath_steps =
-        subquery_handle->SubstituteVariables(query_variables);
+        subquery_handle->SubstituteVariables(&query_variables);
 
     // A context node can usually have multiple RedPath expressions mapped.
     // Let's instantiate the RedPathContext list with the one RedPath in the
     // subquery.
     auto node = redpath_steps.GetNode();
     std::vector<RedPathContext> redpath_ctx_multiple = {
-        {subquery_handle.get(), nullptr, std::move(redpath_steps), callback}};
+        {subquery_handle.get(), nullptr, std::move(redpath_steps), callback,
+        &query_variables}};
 
     if (subquery_handle->HasRedPath() && node.empty()) {
       // A special case where properties need to be queried from service root
