@@ -122,8 +122,7 @@ class MockableObjectRedfishVariantImpl : public RedfishVariant::ImplIntf {
 
   MOCK_METHOD(std::unique_ptr<RedfishObject>, AsObject, (), (const, override));
   MOCK_METHOD(std::unique_ptr<RedfishIterable>, AsIterable,
-              (RedfishVariant::IterableMode mode,
-               GetParams::Freshness freshness),
+              (RedfishVariant::IterableMode mode, GetParams params),
               (const, override));
 
   std::optional<ecclesia::RedfishTransport::bytes> AsRaw() const override {

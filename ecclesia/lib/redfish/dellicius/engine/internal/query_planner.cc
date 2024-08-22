@@ -1191,8 +1191,7 @@ bool ExecuteRedPathStepFromEachSubquery(
 
     std::unique_ptr<RedfishIterable> node_as_iterable =
         node_set_as_variant.AsIterable(
-            RedfishVariant::IterableMode::kAllowExpand,
-            redpath_params.freshness);
+            RedfishVariant::IterableMode::kAllowExpand, redpath_params);
 
     if (node_as_iterable == nullptr) {
       // We now know that the Redfish node is not a collection/array.

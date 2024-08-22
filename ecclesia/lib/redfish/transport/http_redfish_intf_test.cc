@@ -1355,7 +1355,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetWithIterable) {
   // handler once more .
   auto parent_as_iterable_with_freshness =
       parent.AsIterable(RedfishVariant::IterableMode::kAllowExpand,
-                        GetParams::Freshness::kRequired);
+                        {.freshness = GetParams::Freshness::kRequired});
   ASSERT_TRUE(parent_as_iterable_with_freshness);
   auto child3 = (*parent_as_iterable_with_freshness)[0];
   EXPECT_THAT(child_called_count, Eq(2));
