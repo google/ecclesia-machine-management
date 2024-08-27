@@ -190,6 +190,9 @@ inline constexpr char kRfOemPropertyWatchdog[] = "Watchdog";
 inline constexpr char kRfOemPropertyWatchdogSystemResets[] =
     "WatchdogSystemResets";
 inline constexpr char kRfOemPropertyMctpSerial[] = "MctpSerial";
+inline constexpr char kRfOemPropertyOpenBmc[] = "OpenBmc";
+inline constexpr char kRfOemPropertyFan[] = "Fan";
+inline constexpr char kRfOemPropertyFanZones[] = "FanZones";
 inline constexpr char kRfPropertyMediaTypeSsd[] = "SSD";
 inline constexpr char kRfPropertyMemberId[] = "MemberId";
 inline constexpr char kRfPropertyReading[] = "Reading";
