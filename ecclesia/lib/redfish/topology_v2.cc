@@ -32,6 +32,7 @@
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/location.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/property.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
@@ -431,6 +432,9 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
             ? (*node_to_attach.obj)[kRfPropertyLocation]
             : (*node_to_attach.obj)[kRfPropertyPhysicalLocation];
 
+    std::optional<SupplementalLocationInfo> supplemental_location_info =
+        GetSupplementalLocationInfo(*node_to_attach.obj);
+
     // Handle Location
     Node *current_node_ptr = nullptr;
     if (!node_to_attach.parent) {
@@ -439,6 +443,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
       auto node = std::make_unique<Node>();
       node->type = kBoard;
       node->replaceable = true;
+      node->supplemental_location_info = supplemental_location_info;
       node->local_devpath = std::string(kRootDevpath);
       std::optional<std::string> name =
           GetConvertedResourceName(*node_to_attach.obj);
@@ -499,6 +504,8 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
       DLOG(INFO) << "Creating child node";
       const auto node_location =
           location_attribute[kRfPropertyPartLocation].AsObject();
+      supplemental_location_info =
+          GetSupplementalLocationInfo(*node_to_attach.obj);
 
       std::optional<std::string> location_type =
           node_location->GetNodeValue<PropertyLocationType>();
@@ -518,6 +525,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
         node->model = *std::move(model);
       }
       node->associated_uris.push_back(*current_uri);
+      node->supplemental_location_info = supplemental_location_info;
       std::string parent_devpath = node_to_attach.parent->local_devpath;
       if (location_type == kLocationTypeEmbedded) {
         node->local_devpath =

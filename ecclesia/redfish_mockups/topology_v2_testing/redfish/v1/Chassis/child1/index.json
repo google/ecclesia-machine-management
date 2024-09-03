@@ -12,7 +12,8 @@
     "PartLocation": {
       "LocationType": "Slot",
       "ServiceLabel": "C1"
-    }
+    },
+    "PartLocationContext": ""
   },
   "Name": "child1",
   "Memory": {

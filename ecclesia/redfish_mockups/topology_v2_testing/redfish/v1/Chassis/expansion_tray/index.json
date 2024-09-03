@@ -12,7 +12,8 @@
     "PartLocation": {
       "LocationType": "Slot",
       "ServiceLabel": "DOWNLINK"
-    }
+    },
+    "PartLocationContext": "C2/HDMI"
   },
   "Name": "Expansion Tray "
 }

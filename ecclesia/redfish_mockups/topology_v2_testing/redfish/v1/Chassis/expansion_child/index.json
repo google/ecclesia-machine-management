@@ -12,7 +12,8 @@
     "PartLocation": {
       "LocationType": "Slot",
       "ServiceLabel": "E1"
-    }
+    },
+    "PartLocationContext": "C2/HDMI/DOWNLINK"
   },
   "Replaceable": false,
   "Name": " Expansion Child "

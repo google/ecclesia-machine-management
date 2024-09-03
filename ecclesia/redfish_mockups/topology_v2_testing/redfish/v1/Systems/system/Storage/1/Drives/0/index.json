@@ -6,7 +6,8 @@
   "PhysicalLocation": {
     "PartLocation": {
       "LocationType": "Embedded"
-    }
+    },
+    "PartLocationContext": "SSD"
   },
   "Id": "0"
 }

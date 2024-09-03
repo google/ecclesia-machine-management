@@ -19,6 +19,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/hash/hash_testing.h"
+#include "ecclesia/lib/redfish/location.h"
 #include "ecclesia/lib/redfish/types.h"
 
 namespace ecclesia {
@@ -28,12 +29,16 @@ using ::testing::Eq;
 using ::testing::Ne;
 
 TEST(NodeTest, EqualityCheck) {
-  const Node n1 = {.name = "name",
-                   .model = "model",
-                   .local_devpath = "devpath",
-                   .type = kBoard,
-                   .associated_uris = {"uri1", "uri2"},
-                   .replaceable = true};
+  const Node n1 = {
+      .name = "name",
+      .model = "model",
+      .local_devpath = "devpath",
+      .type = kBoard,
+      .associated_uris = {"uri1", "uri2"},
+      .supplemental_location_info =
+          SupplementalLocationInfo{.service_label = "label",
+                                   .part_location_context = "context"},
+      .replaceable = true};
 
   Node n2 = n1;
   EXPECT_THAT(n1, Eq(n2));
@@ -55,6 +60,10 @@ TEST(NodeTest, EqualityCheck) {
   n2 = n1;
   n2.replaceable = false;
   EXPECT_THAT(n1, Ne(n2));
+  n2 = n1;
+  n2.supplemental_location_info = SupplementalLocationInfo{
+      .service_label = "label2", .part_location_context = "context2"};
+  EXPECT_THAT(n1, Ne(n2));
 }
 
 TEST(NodeTest, HashesCorrectly) {
@@ -71,6 +80,9 @@ TEST(NodeTest, HashesCorrectly) {
            .local_devpath = "devpath",
            .type = kConnector,
            .associated_uris = {"uri1", "uri2", "uri3"},
+           .supplemental_location_info =
+               SupplementalLocationInfo{.service_label = "label",
+                                        .part_location_context = "context"},
            .replaceable = true},
       Node{.name = "name2",
            .model = "model2",

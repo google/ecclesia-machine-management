@@ -19,6 +19,7 @@
     "PartLocation": {
       "LocationType": "Slot",
       "ServiceLabel": "HDMI"
-    }
+    },
+    "PartLocationContext": "C2"
   }
 }

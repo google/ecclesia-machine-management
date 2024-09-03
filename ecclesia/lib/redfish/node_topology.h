@@ -18,11 +18,13 @@
 #define ECCLESIA_LIB_REDFISH_NODE_TOPOLOGY_H_
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "ecclesia/lib/redfish/location.h"
 #include "ecclesia/lib/redfish/types.h"
 
 namespace ecclesia {
@@ -41,14 +43,17 @@ struct Node {
   NodeType type;
   // Associated URIs that provide logical system information to this Node.
   std::vector<std::string> associated_uris;
+  // Additional location info (PartLocationContext, ServiceLabel) for this Node.
+  std::optional<SupplementalLocationInfo> supplemental_location_info =
+      std::nullopt;
   // Whether the Node represents a part can be replaced.
   bool replaceable;
 
   bool operator==(const Node &o) const {
     return std::tie(name, model, local_devpath, type, associated_uris,
-                    replaceable) == std::tie(o.name, o.model, o.local_devpath,
-                                             o.type, o.associated_uris,
-                                             o.replaceable);
+                    supplemental_location_info, replaceable) ==
+           std::tie(o.name, o.model, o.local_devpath, o.type, o.associated_uris,
+                    o.supplemental_location_info, o.replaceable);
   }
   bool operator!=(const Node &o) const { return !(*this == o); }
   // Support for absl::Hash.

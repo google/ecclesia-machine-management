@@ -25,6 +25,7 @@
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/redfish/location.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
@@ -672,8 +673,18 @@ TEST(TopologyTestRunner, TestingConfigsOptionV2) {
   NodeTopology topology =
       CreateTopologyFromRedfish(raw_intf.get(), "redfish_test.textpb");
   const std::vector<Node> expected_nodes = {
-      Node{"root", "root", "/phys", NodeType::kBoard},
-      Node{"cpu", "cpu", "/phys/CPU", NodeType::kBoard}};
+      Node{.name = "root",
+           .model = "root",
+           .local_devpath = "/phys",
+           .type = NodeType::kBoard,
+           .replaceable = true},
+      Node{.name = "cpu",
+           .model = "cpu",
+           .local_devpath = "/phys/CPU",
+           .type = NodeType::kBoard,
+           .supplemental_location_info =
+               SupplementalLocationInfo{.service_label = "CPU"},
+           .replaceable = true}};
 
   std::vector<Node> actual_nodes;
   actual_nodes.reserve(topology.nodes.size());

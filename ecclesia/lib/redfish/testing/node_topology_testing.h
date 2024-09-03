@@ -42,8 +42,10 @@ MATCHER_P3(RedfishNodeIdIs, name, devpath, type, "") {
 MATCHER(RedfishNodeEqId, "") {
   const Node &lhs = std::get<0>(arg);
   const Node &rhs = std::get<1>(arg);
-  return std::tie(lhs.name, lhs.model, lhs.local_devpath, lhs.type) ==
-         std::tie(rhs.name, rhs.model, rhs.local_devpath, rhs.type);
+  return std::tie(lhs.name, lhs.model, lhs.local_devpath, lhs.type,
+                  lhs.replaceable, lhs.supplemental_location_info) ==
+         std::tie(rhs.name, rhs.model, rhs.local_devpath, rhs.type,
+                  rhs.replaceable, rhs.supplemental_location_info);
 }
 
 // Some print functions defined to simplify debugging with GMock output.

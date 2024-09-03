@@ -15,7 +15,8 @@
     "PartLocation": {
       "LocationType": "Slot",
       "ServiceLabel": "C2"
-    }
+    },
+    "PartLocationContext": ""
   },
   "Power": {
     "@odata.id": "/redfish/v1/Chassis/child2/Power"

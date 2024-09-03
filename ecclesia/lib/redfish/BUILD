@@ -186,9 +186,32 @@ cc_test(
     name = "node_topology_test",
     srcs = ["node_topology_test.cc"],
     deps = [
+        ":location",
         ":node_topology",
         ":types",
         "@com_google_absl//absl/hash:hash_testing",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "location",
+    srcs = ["location.cc"],
+    hdrs = ["location.h"],
+    visibility = ["//visibility:public"],
+    deps = [":interface"],
+)
+
+cc_test(
+    name = "location_test",
+    srcs = ["location_test.cc"],
+    deps = [
+        ":interface",
+        ":location",
+        "//ecclesia/lib/redfish/testing:json_mockup",
+        "//ecclesia/lib/testing:proto",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -202,6 +225,7 @@ cc_test(
         "//ecclesia/redfish_mockups/topology_v2_testing:mockup.shar",
     ],
     deps = [
+        ":location",
         ":node_topology",
         ":test_mockup",
         ":topology",
@@ -225,6 +249,7 @@ cc_test(
         "//ecclesia/redfish_mockups/topology_v2_testing:mockup.shar",
     ],
     deps = [
+        ":location",
         ":node_topology",
         ":test_mockup",
         ":topology_v2",
@@ -441,6 +466,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":interface",
+        ":location",
         ":node_topology",
         ":property_definitions",
         ":topology_config_cc_proto",
@@ -455,28 +481,6 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_protobuf//:protobuf",
-    ],
-)
-
-cc_library(
-    name = "location",
-    srcs = ["location.cc"],
-    hdrs = ["location.h"],
-    visibility = ["//visibility:public"],
-    deps = [":interface"],
-)
-
-cc_test(
-    name = "location_test",
-    srcs = ["location_test.cc"],
-    deps = [
-        ":interface",
-        ":location",
-        "//ecclesia/lib/redfish/testing:json_mockup",
-        "//ecclesia/lib/testing:proto",
-        "//ecclesia/lib/testing:status",
-        "@com_google_absl//absl/strings",
-        "@com_google_googletest//:gtest_main",
     ],
 )
 

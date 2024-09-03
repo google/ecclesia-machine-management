@@ -12,6 +12,7 @@
     "PartLocation": {
       "LocationType": "Slot",
       "ServiceLabel": "QSFP"
-    }
+    },
+    "PartLocationContext": "C1"
   }
 }

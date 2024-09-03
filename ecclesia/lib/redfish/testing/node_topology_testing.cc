@@ -40,9 +40,18 @@ std::string ToString(NodeType type) {
 }
 
 void PrintTo(const Node &node, std::ostream *os) {
+  std::string part_location_context;
+  std::string service_label;
+  if (node.supplemental_location_info.has_value()) {
+    part_location_context =
+        node.supplemental_location_info->part_location_context;
+    service_label = node.supplemental_location_info->service_label;
+  }
   *os << absl::StrFormat(
-      "\n{name: \"%s\" model: \"%s\" devpath: \"%s\" type: %s)", node.name,
-      node.model, node.local_devpath, ToString(node.type));
+      "\n{name: \"%s\" model: \"%s\" devpath: \"%s\" type: %s replaceable: "
+      "%u part_location_context: \"%s\" service_label: \"%s\")",
+      node.name, node.model, node.local_devpath, ToString(node.type),
+      node.replaceable, part_location_context, service_label);
 }
 
 void PrintTo(const std::unique_ptr<Node> &node, std::ostream *os) {

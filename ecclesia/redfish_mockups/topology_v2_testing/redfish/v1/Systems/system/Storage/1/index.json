@@ -14,7 +14,8 @@
       "Location": {
         "PartLocation": {
           "LocationType": "Embedded"
-        }
+        },
+        "PartLocationContext": "SSD"
       }
     }
   ],

@@ -18,6 +18,7 @@
   "Location": {
     "PartLocation": {
       "LocationType": "Embedded"
-    }
+    },
+    "PartLocationContext": "C2_ROT"
   }
 }
