@@ -1423,7 +1423,8 @@ TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
 }
 
 // Subscribe to non navigational property fails.
-TEST_F(QueryPlannerTestRunner, SubscriptionToNonNavigationalPropertyFails) {
+TEST_F(QueryPlannerTestRunner,
+       SubscriptionToNonNavigationalPropertyDoesNotReturnError) {
   SetTestParams("indus_hmb_shim/mockup.shar");
 
   DelliciusQuery subscription_query = GetSubscriptionQuery();
@@ -1441,9 +1442,7 @@ TEST_F(QueryPlannerTestRunner, SubscriptionToNonNavigationalPropertyFails) {
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result =
       (*qp)->Run({.variables = args1, .query_type = QueryType::kSubscription});
-  EXPECT_TRUE(result.query_result.has_status());
-  EXPECT_THAT(result.query_result.status().error_code(),
-              ecclesia::ErrorCode::ERROR_INTERNAL);
+  EXPECT_FALSE(result.query_result.has_status());
 }
 
 // Subscribe to unknown property fails.
@@ -3498,6 +3497,81 @@ TEST_F(QueryPlannerTestRunner, ServiceRootQueryWithParamsSuccessful) {
                   .redfish_metrics()
                   .uri_to_metrics_map()
                   .contains("/redfish/v1?$expand=.($levels=1)"));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerExecutesPredicatesOnSingleRedfishObject) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "PredicateOnRedfishObject"
+        subquery {
+          subquery_id: "EnvironmentMetrics"
+          redpath: "/Systems[*]/Processors[*]/EnvironmentMetrics[Id=EnvironmentMetrics]"
+          properties { property: "PowerWatts.DataSourceUri" type: STRING }
+          properties { property: "PowerWatts.Reading" type: DOUBLE }
+        }
+      )pb");
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "PredicateOnRedfishObject"
+    stats { payload_size: 302 num_cache_misses: 8 }
+    data {
+      fields {
+        key: "EnvironmentMetrics"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "PowerWatts.DataSourceUri"
+                  value {
+                    string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu0_pwmon"
+                  }
+                }
+                fields {
+                  key: "PowerWatts.Reading"
+                  value { double_value: 30 }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "PowerWatts.DataSourceUri"
+                  value {
+                    string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon"
+                  }
+                }
+                fields {
+                  key: "PowerWatts.Reading"
+                  value { double_value: 30 }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = &query,
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {}});
+
+  ASSERT_THAT(qp, IsOk());
+  ASSERT_THAT(*qp, NotNull());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = (*qp)->Run({args1});
+  ASSERT_FALSE(result.query_result.has_status());
+  EXPECT_THAT(expected_query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(result.query_result)));
 }
 
 }  // namespace

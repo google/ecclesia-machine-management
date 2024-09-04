@@ -87,6 +87,11 @@ struct QueryExecutionContext {
   // Always empty unless subscription is requested.
   std::vector<std::string> uris_to_subscribe;
 
+  QueryExecutionContext FromExisting(
+      const std::string &new_redpath_prefix,
+      const GetParams &get_params_for_redpath,
+      RedfishObjectAndIterable redfish_object_and_iterable);
+
   QueryExecutionContext(
       QueryResult *result_in,
       const absl::flat_hash_map<std::string, QueryResultData *>

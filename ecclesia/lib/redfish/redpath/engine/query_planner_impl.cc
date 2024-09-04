@@ -69,6 +69,13 @@ namespace ecclesia {
 
 namespace {
 
+#define TRACE(trace_info, prefix, params, node) \
+  if (trace_info.has_value()) {                 \
+    trace_info->redpath_prefix = prefix;        \
+    trace_info->redpath_query = params;         \
+    trace_info->redpath_node = node;            \
+  }
+
 using RedPathRedfishQueryParams =
     absl::flat_hash_map<std::string /* RedPath */, GetParams>;
 
@@ -81,6 +88,31 @@ constexpr absl::string_view kPredicateSelectAll = "*";
 constexpr absl::string_view kServiceRootNode = "/";
 constexpr absl::string_view kDefaultRedfishServiceRoot = "/redfish/v1";
 
+// Returns navigational property from given redfish object
+absl::StatusOr<std::string> GetNavigationalPropertyToSubscribe(
+    const std::unique_ptr<RedfishObject> &current_redfish_obj,
+    const RedPathExpression &expression,
+    const GetParams &get_params_for_redpath) {
+  nlohmann::json json = current_redfish_obj->GetContentAsJson();
+  auto find_node_name = json.find(expression.expression);
+  if (find_node_name == json.end()) {
+    return absl::InternalError(
+        "Cannot find NodeName in Redfish Object for subscription.");
+  }
+
+  auto find_navigational_property = find_node_name->find(PropertyOdataId::Name);
+  if (find_navigational_property == find_node_name->end()) {
+    return absl::InternalError(
+        "Cannot find navigational property in Redfish Object for "
+        "subscription.");
+  }
+  // Append query parameters to navigational property.
+  std::string params = get_params_for_redpath.ToString();
+  std::string navigational_property =
+      absl::StrCat(find_navigational_property->get<std::string>(),
+                   params.empty() ? "" : absl::StrCat("?", params));
+  return navigational_property;
+}
 
 // Joins next RedPath expression to given RedPath prefix.
 // If ignore predicate is true, inserts a predicate `[*]` in place of given
@@ -330,6 +362,24 @@ void PopulateSubqueryErrorStatus(const absl::Status &node_status,
 
 }  // namespace
 
+QueryExecutionContext QueryExecutionContext::FromExisting(
+    const std::string &new_redpath_prefix,
+    const GetParams &get_params_for_redpath,
+    RedfishObjectAndIterable redfish_object_and_iterable) {
+  if (redpath_query_tracker != nullptr) {
+    redpath_query_tracker->executed_redpath_prefixes_and_params.insert(
+        {new_redpath_prefix, get_params_for_redpath});
+  }
+
+  RedPathPrefixTracker new_redpath_prefix_tracker(redpath_prefix_tracker);
+  new_redpath_prefix_tracker.last_redpath_prefix = new_redpath_prefix;
+
+  return QueryExecutionContext(
+      &result, subquery_id_to_subquery_result, &query_variables,
+      std::move(new_redpath_prefix_tracker), redpath_query_tracker,
+      std::move(redfish_object_and_iterable));
+}
+
 QueryPlanner::QueryPlanner(ImplOptions options_in)
     : query_(*ABSL_DIE_IF_NULL(options_in.query)),
       plan_id_(options_in.query->query_id()),
@@ -488,17 +538,18 @@ QueryPlanner::ExecuteQueryExpression(
   const std::unique_ptr<RedfishIterable> &current_redfish_iterable =
       current_execution_context.redfish_object_and_iterable.redfish_iterable;
 
+  // Construct RedPath prefix to lookup associated query parameters
+  RedPathPrefixTracker &redpath_prefix_tracker =
+      current_execution_context.redpath_prefix_tracker;
+  std::string new_redpath_prefix = AddExpressionToRedPath(
+      redpath_prefix_tracker.last_redpath_prefix, expression);
+  // Get query parameters for the RedPath expression we are about to
+  // execute.
+  GetParams get_params_for_redpath =
+      GetQueryParamsForRedPath(new_redpath_prefix);
+
   // Run query expression relative to Iterable resource
   if (current_redfish_iterable) {
-    RedPathPrefixTracker &redpath_prefix_tracker =
-        current_execution_context.redpath_prefix_tracker;
-    std::string new_redpath_prefix = AddExpressionToRedPath(
-        redpath_prefix_tracker.last_redpath_prefix, expression);
-
-    // Get query parameters for the RedPath expression we are about to execute.
-    GetParams get_params_for_redpath =
-        GetQueryParamsForRedPath(new_redpath_prefix);
-
     // Substitute variables in the predicate expression.
     ECCLESIA_ASSIGN_OR_RETURN(
         std::string new_predicate,
@@ -515,11 +566,8 @@ QueryPlanner::ExecuteQueryExpression(
         cache_hit_ = cache_hit_ + 1;
       }
       ECCLESIA_RETURN_IF_ERROR(indexed_node.status());
-      if (trace_info.has_value()) {
-        trace_info->redpath_prefix = new_redpath_prefix;
-        trace_info->redpath_query = get_params_for_redpath.ToString();
-        trace_info->redpath_node = expression.trie_node->ToString();
-      }
+      TRACE(trace_info, new_redpath_prefix, get_params_for_redpath.ToString(),
+            expression.trie_node->ToString());
       ECCLESIA_ASSIGN_OR_RETURN(
           std::unique_ptr<RedfishObject> indexed_node_as_object,
           GetRedfishObjectWithFreshness(get_params_for_redpath, indexed_node,
@@ -547,67 +595,23 @@ QueryPlanner::ExecuteQueryExpression(
                                      indexed_node_as_object));
 
       if (predicate_rule_result) {
-        if (current_execution_context.redpath_query_tracker != nullptr) {
-          (current_execution_context.redpath_query_tracker
-               ->executed_redpath_prefixes_and_params)
-              .insert({new_redpath_prefix, get_params_for_redpath});
-        }
-
-        RedPathPrefixTracker new_redpath_prefix_tracker =
-            current_execution_context.redpath_prefix_tracker;
-        new_redpath_prefix_tracker.last_redpath_prefix = new_redpath_prefix;
-
-        QueryExecutionContext new_execution_context(
-            &current_execution_context.result,
-            current_execution_context.subquery_id_to_subquery_result,
-            &current_execution_context.query_variables,
-            std::move(new_redpath_prefix_tracker),
-            current_execution_context.redpath_query_tracker,
-            {std::move(indexed_node_as_object), nullptr});
-        execution_contexts.push_back(std::move(new_execution_context));
+        execution_contexts.push_back(current_execution_context.FromExisting(
+            new_redpath_prefix, get_params_for_redpath,
+            {std::move(indexed_node_as_object), nullptr}));
       }
     }
   } else if (current_redfish_obj) {
-    // Construct RedPath prefix to lookup associated query parameters
-    RedPathPrefixTracker &redpath_prefix_tracker =
-        current_execution_context.redpath_prefix_tracker;
-    std::string new_redpath_prefix = AddExpressionToRedPath(
-        redpath_prefix_tracker.last_redpath_prefix, expression);
-    // Get query parameters for the RedPath expression we are about to
-    // execute.
-    GetParams get_params_for_redpath =
-        GetQueryParamsForRedPath(new_redpath_prefix);
-
     // Halt execution and capture URI if RedPath expression requires
     // event subscription.
     if (query_type == QueryType::kSubscription &&
         redpath_rules_.redpaths_to_subscribe.contains(new_redpath_prefix)) {
-      nlohmann::json json = current_redfish_obj->GetContentAsJson();
-      auto find_node_name = json.find(expression.expression);
-      if (find_node_name == json.end()) {
-        // It is not an error if a property to subscribe is not in a resource.
-        // Eventually, if no properties are subscribed to, the subscription
-        // query will fail. So there is no need to fail prematurely here.
-        DLOG(INFO) << "Cannot find navigational property in Redfish Object for "
-                   << "subscription.";
-        return execution_contexts;
+      absl::StatusOr<std::string> uri_to_subscribe =
+          GetNavigationalPropertyToSubscribe(current_redfish_obj, expression,
+                                             get_params_for_redpath);
+      if (uri_to_subscribe.ok()) {
+        current_execution_context.uris_to_subscribe.push_back(
+            uri_to_subscribe.value());
       }
-
-      auto find_navigational_property =
-          find_node_name->find(PropertyOdataId::Name);
-      if (find_navigational_property == find_node_name->end()) {
-        return absl::InternalError(
-            "Cannot find navigational property in Redfish Object for "
-            "subscription.");
-      }
-      // Append query parameters to navigational property.
-      std::string params = get_params_for_redpath.ToString();
-      std::string navigational_property =
-          absl::StrCat(find_navigational_property->get<std::string>(),
-                       params.empty() ? "" : absl::StrCat("?", params));
-      // Add URI to subscription.
-      current_execution_context.uris_to_subscribe.push_back(
-          std::move(navigational_property));
       return execution_contexts;
     }
 
@@ -645,7 +649,31 @@ QueryPlanner::ExecuteQueryExpression(
       get_params_for_redpath = GetQueryParamsForRedPath(expression.expression);
       redfish_variant = redfish_interface_.CachedGetUri(expression.expression,
                                                         get_params_for_redpath);
+    } else if (expression.type == RedPathExpression::Type::kPredicate) {
+      // We allow executing predicate on single redfish object.
+      ECCLESIA_ASSIGN_OR_RETURN(
+          bool predicate_rule_result,
+          ExecutePredicateExpression({.predicate = expression.expression,
+                                      .node_index = 0,
+                                      .node_set_size = 1},
+                                     current_execution_context,
+                                     current_redfish_obj));
+      ECCLESIA_ASSIGN_OR_RETURN(
+          std::unique_ptr<RedfishObject> redfish_object,
+          current_redfish_obj->EnsureFreshPayload(get_params_for_redpath));
+      if (!predicate_rule_result || !redfish_object) {
+        // It is not an error to execute predicate and not successfully filter
+        // redfish object.
+        return execution_contexts;
+      }
+      TRACE(trace_info, new_redpath_prefix, get_params_for_redpath.ToString(),
+            expression.trie_node->ToString());
+      execution_contexts.push_back(current_execution_context.FromExisting(
+          new_redpath_prefix, get_params_for_redpath,
+          {std::move(redfish_object), nullptr}));
+      return execution_contexts;
     }
+
     if (redfish_variant.IsFresh() == CacheState::kIsFresh) {
       cache_miss_ = cache_miss_ + 1;
     } else if (redfish_variant.IsFresh() == CacheState::kIsCached) {
@@ -671,11 +699,8 @@ QueryPlanner::ExecuteQueryExpression(
         return execution_contexts;
       }
 
-      if (trace_info.has_value()) {
-        trace_info->redpath_prefix = new_redpath_prefix;
-        trace_info->redpath_query = get_params_for_redpath.ToString();
-        trace_info->redpath_node = expression.trie_node->ToString();
-      }
+      TRACE(trace_info, new_redpath_prefix, get_params_for_redpath.ToString(),
+            expression.trie_node->ToString());
 
       // Get fresh Redfish Object if user has requested in the query rule.
       ECCLESIA_ASSIGN_OR_RETURN(
@@ -683,26 +708,9 @@ QueryPlanner::ExecuteQueryExpression(
           GetRedfishObjectWithFreshness(get_params_for_redpath, redfish_variant,
                                         trace_info, &cache_miss_));
     }
-
-    // Add the last executed RedPath to the record.
-    if (current_execution_context.redpath_query_tracker != nullptr) {
-      (current_execution_context.redpath_query_tracker
-           ->executed_redpath_prefixes_and_params)
-          .insert({new_redpath_prefix, get_params_for_redpath});
-    }
-
-    RedPathPrefixTracker new_redpath_prefix_tracker =
-        current_execution_context.redpath_prefix_tracker;
-    new_redpath_prefix_tracker.last_redpath_prefix = new_redpath_prefix;
-    QueryExecutionContext new_execution_context(
-        &current_execution_context.result,
-        current_execution_context.subquery_id_to_subquery_result,
-        &current_execution_context.query_variables,
-        std::move(new_redpath_prefix_tracker),
-        current_execution_context.redpath_query_tracker,
-        {std::move(redfish_object), std::move(redfish_iterable)});
-
-    execution_contexts.push_back(std::move(new_execution_context));
+    execution_contexts.push_back(current_execution_context.FromExisting(
+        new_redpath_prefix, get_params_for_redpath,
+        {std::move(redfish_object), std::move(redfish_iterable)}));
   }
   return execution_contexts;
 }
