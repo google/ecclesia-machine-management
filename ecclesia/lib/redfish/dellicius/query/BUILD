@@ -107,6 +107,7 @@ cc_binary(
         "//ecclesia/lib/redfish/dellicius/engine:query_rules_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:query_validator",
         "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/flags:flag",

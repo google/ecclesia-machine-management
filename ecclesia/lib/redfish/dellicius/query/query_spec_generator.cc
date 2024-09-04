@@ -24,8 +24,9 @@
 #include <utility>
 #include <vector>
 
+#include "absl/container/btree_map.h"
+#include "absl/container/btree_set.h"
 #include "absl/container/flat_hash_map.h"
-#include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/log/initialize.h"
@@ -114,7 +115,7 @@ absl::StatusOr<ecclesia::QuerySpec> Get$0QuerySpec(const ecclesia::Clock *clock)
 
 )";
 
-using FilenameContentMap = absl::flat_hash_map<std::string, std::string>;
+using FilenameContentMap = absl::btree_map<std::string, std::string>;
 
 absl::StatusOr<FilenameContentMap> ReadFileContents(
     absl::Span<const std::string> files) {
@@ -188,9 +189,9 @@ absl::Status ValidateQueries(const FilenameContentMap &filename_contents) {
   return absl::InternalError(absl::StrJoin(error_msgs, "\n"));
 }
 
-absl::StatusOr<absl::flat_hash_set<std::string>> GetQueryIds(
+absl::StatusOr<absl::btree_set<std::string>> GetQueryIds(
     const FilenameContentMap &filename_contents) {
-  absl::flat_hash_set<std::string> query_ids;
+  absl::btree_set<std::string> query_ids;
   for (const auto &[filename, contents] : filename_contents) {
     ecclesia::DelliciusQuery query;
     if (!google::protobuf::TextFormat::ParseFromString(contents, &query)) {
@@ -209,9 +210,8 @@ absl::StatusOr<absl::flat_hash_set<std::string>> GetQueryIds(
   return query_ids;
 }
 
-std::string GetFileContentsStr(
-    absl::string_view name, absl::string_view suffix,
-    const absl::flat_hash_map<std::string, std::string> &filename_contents) {
+std::string GetFileContentsStr(absl::string_view name, absl::string_view suffix,
+                               const FilenameContentMap &filename_contents) {
   std::string content =
       absl::StrFormat("ecclesia::EmbeddedFileArray<%d> k%s%s = {{",
                       filename_contents.size(), name, suffix);
@@ -263,7 +263,7 @@ class QuerySpecBuilder : public FileBuilderBase {
           absl::StrFormat(".query_rules = k%sQueryRule,", name());
     }
     ECCLESIA_RETURN_IF_ERROR(ValidateQueries(query_file_contents));
-    ECCLESIA_ASSIGN_OR_RETURN(absl::flat_hash_set<std::string> query_ids,
+    ECCLESIA_ASSIGN_OR_RETURN(absl::btree_set<std::string> query_ids,
                               GetQueryIds(query_file_contents));
     std::string query_ids_str = absl::StrJoin(query_ids, "\" , \"");
 
