@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/redfish/devpath.h"
 
+#include <memory>
 #include <optional>
 #include <queue>
 #include <string>
@@ -23,6 +24,7 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
@@ -40,8 +42,15 @@
 
 namespace ecclesia {
 
-std::optional<std::string> GetDevpathForUri(const NodeTopology &topology,
-                                            absl::string_view uri) {
+std::optional<std::string> GetDevpathForUri(
+    const NodeTopology &topology, absl::string_view uri,
+    absl::FunctionRef<std::optional<std::string>(const NodeTopology &,
+                                                 absl::string_view)>
+        alternate_resolver) {
+  std::optional<std::string> devpath = alternate_resolver(topology, uri);
+  if (devpath.has_value()) {
+    return devpath;
+  }
   auto it = topology.uri_to_associated_node_map.find(uri);
   if (it != topology.uri_to_associated_node_map.end() && !it->second.empty()) {
     // Assume that first Node will represent the local devpath for the URI
@@ -62,26 +71,34 @@ absl::StatusOr<std::string> GetFirstUriForDevpath(const NodeTopology &topology,
 }
 
 std::optional<std::string> GetDevpathForObjectAndNodeTopology(
-    const RedfishObject &obj, const NodeTopology &topology) {
+    const RedfishObject &obj, const NodeTopology &topology,
+    absl::FunctionRef<std::optional<std::string>(const NodeTopology &,
+                                                 absl::string_view)>
+        alternate_resolver) {
   if (std::optional<ResourceTypeAndVersion> type_and_version =
           GetResourceTypeAndVersionForObject(obj);
       type_and_version.has_value()) {
     if (type_and_version->resource_type == ResourceManager::Name) {
-      return GetManagerDevpathFromNodeTopology(obj, topology);
+      return GetManagerDevpathFromNodeTopology(obj, topology,
+                                               alternate_resolver);
     }
     if (type_and_version->resource_type == ResourceSensor::Name) {
-      return GetSensorDevpathFromNodeTopology(obj, topology);
+      return GetSensorDevpathFromNodeTopology(obj, topology,
+                                              alternate_resolver);
     }
   }
   std::optional<std::string> maybe_uri = obj.GetUriString();
   if (!maybe_uri.has_value()) {
     return std::nullopt;
   }
-  return GetDevpathForUri(topology, *maybe_uri);
+  return GetDevpathForUri(topology, *maybe_uri, alternate_resolver);
 }
 
 std::optional<std::string> GetSensorDevpathFromNodeTopology(
-    const RedfishObject &obj, const NodeTopology &topology) {
+    const RedfishObject &obj, const NodeTopology &topology,
+    absl::FunctionRef<std::optional<std::string>(const NodeTopology &,
+                                                 absl::string_view)>
+        alternate_resolver) {
   nlohmann::json json_obj = obj.GetContentAsJson();
   if (json_obj.contains(kRfPropertyRelatedItem)) {
     nlohmann::json related_item_json = json_obj[kRfPropertyRelatedItem];
@@ -90,16 +107,18 @@ std::optional<std::string> GetSensorDevpathFromNodeTopology(
         related_item_json[0].contains(PropertyOdataId::Name)) {
       std::string related_item_uri =
           related_item_json[0][PropertyOdataId::Name];
-      if (auto related_devpath = GetDevpathForUri(topology, related_item_uri);
+      if (std::optional<std::string> related_devpath =
+              GetDevpathForUri(topology, related_item_uri, alternate_resolver);
           related_devpath.has_value()) {
         return *related_devpath;
       }
     }
   }
   // Fallback to providing devpath for obj
-  auto sensor_uri = obj.GetUriString();
+  std::optional<std::string> sensor_uri = obj.GetUriString();
   if (sensor_uri.has_value()) {
-    auto sensor_devpath = GetDevpathForUri(topology, *sensor_uri);
+    std::optional<std::string> sensor_devpath =
+        GetDevpathForUri(topology, *sensor_uri, alternate_resolver);
     if (sensor_devpath.has_value()) {
       return *sensor_devpath;
     }
@@ -115,7 +134,8 @@ std::optional<std::string> GetSensorDevpathFromNodeTopology(
     if (uri_parts.size() > 5 && uri_parts[1] == kRfPropertyRedfish &&
         uri_parts[2] == kRfPropertyV1 && uri_parts[3] == kRfPropertyChassis) {
       uri_parts.resize(5);
-      auto devpath = GetDevpathForUri(topology, absl::StrJoin(uri_parts, "/"));
+      std::optional<std::string> devpath = GetDevpathForUri(
+          topology, absl::StrJoin(uri_parts, "/"), alternate_resolver);
       if (devpath.has_value()) {
         return *devpath;
       }
@@ -131,7 +151,10 @@ std::optional<std::string> GetSensorDevpathFromNodeTopology(
 
 std::optional<std::string> GetSlotDevpathFromNodeTopology(
     const RedfishObject &obj, absl::string_view parent_uri,
-    const NodeTopology &topology) {
+    const NodeTopology &topology,
+    absl::FunctionRef<std::optional<std::string>(const NodeTopology &,
+                                                 absl::string_view)>
+        alternate_resolver) {
   // Append the parent URL to each SLOT Service label.
   std::vector<absl::string_view> uri_parts = absl::StrSplit(parent_uri, '/');
   // The URI should be of the format
@@ -142,22 +165,23 @@ std::optional<std::string> GetSlotDevpathFromNodeTopology(
   if (uri_parts.size() >= 5 && uri_parts[1] == kRfPropertyRedfish &&
       uri_parts[2] == kRfPropertyV1 && uri_parts[3] == kRfPropertyChassis) {
     uri_parts.resize(5);
-    auto parent_devpath =
-        GetDevpathForUri(topology, absl::StrJoin(uri_parts, "/"));
+    std::optional<std::string> parent_devpath = GetDevpathForUri(
+        topology, absl::StrJoin(uri_parts, "/"), alternate_resolver);
     if (parent_devpath.has_value()) {
       // The slot_location could be PartLocation property in Location or
       // PhysicalLocation, because Redfish specification uses "PhysicalLocation"
       // instead of "Location" in Drives resource post v1.4.
-      auto slot_location =
+      std::unique_ptr<RedfishObject> slot_location =
           obj[kRfPropertyLocation][kRfPropertyPartLocation].AsObject();
-      if (!slot_location) {
+      if (slot_location == nullptr) {
         slot_location =
             obj[kRfPropertyPhysicalLocation][kRfPropertyPartLocation]
                 .AsObject();
       }
 
-      if (slot_location) {
-        auto label = slot_location->GetNodeValue<PropertyServiceLabel>();
+      if (slot_location != nullptr) {
+        std::optional<std::string> label =
+            slot_location->GetNodeValue<PropertyServiceLabel>();
 
         if (label.has_value()) {
           return absl::StrCat(*parent_devpath, ":connector:", *label);
@@ -175,15 +199,20 @@ std::optional<std::string> GetDevpathFromSlotDevpath(
 }
 
 std::optional<std::string> GetManagerDevpathFromNodeTopology(
-    const RedfishObject &obj, const NodeTopology &topology) {
-  auto manager_in_chassis =
+    const RedfishObject &obj, const NodeTopology &topology,
+    absl::FunctionRef<std::optional<std::string>(const NodeTopology &,
+                                                 absl::string_view)>
+        alternate_resolver) {
+  std::unique_ptr<RedfishObject> manager_in_chassis =
       obj[kRfPropertyLinks][kRfPropertyManagerInChassis].AsObject();
   if (manager_in_chassis != nullptr) {
-    auto manager_odata_id = manager_in_chassis->GetNodeValue<PropertyOdataId>();
+    std::optional<std::string> manager_odata_id =
+        manager_in_chassis->GetNodeValue<PropertyOdataId>();
     if (manager_odata_id.has_value()) {
-      auto devpath = GetDevpathForUri(topology, *manager_odata_id);
+      std::optional<std::string> devpath =
+          GetDevpathForUri(topology, *manager_odata_id, alternate_resolver);
       if (devpath.has_value()) {
-        auto name = GetConvertedResourceName(obj);
+        std::optional<std::string> name = GetConvertedResourceName(obj);
         if (name.has_value()) {
           return absl::StrCat(*devpath, ":device:", *name);
         }
@@ -192,9 +221,10 @@ std::optional<std::string> GetManagerDevpathFromNodeTopology(
   }
 
   // Fallback to providing devpath using the non-Manager devpath method
-  auto manager_uri = obj.GetUriString();
+  std::optional<std::string> manager_uri = obj.GetUriString();
   if (manager_uri.has_value()) {
-    auto manager_devpath = GetDevpathForUri(topology, *manager_uri);
+    std::optional<std::string> manager_devpath =
+        GetDevpathForUri(topology, *manager_uri, alternate_resolver);
     if (manager_devpath.has_value()) {
       return *manager_devpath;
     }
@@ -203,9 +233,17 @@ std::optional<std::string> GetManagerDevpathFromNodeTopology(
   return std::nullopt;
 }
 
-absl::StatusOr<absl::string_view>
-GetReplaceableDevpathForDevpathAndNodeTopology(absl::string_view devpath,
-                                               const NodeTopology &topology) {
+absl::StatusOr<std::string> GetReplaceableDevpathForDevpathAndNodeTopology(
+    absl::string_view devpath, const NodeTopology &topology,
+    absl::FunctionRef<std::optional<std::string>(const NodeTopology &,
+                                                 absl::string_view)>
+        alternate_resolver) {
+  std::optional<std::string> replaceable_devpath = alternate_resolver(
+      topology, GetFirstUriForDevpath(topology, devpath).value_or(""));
+  if (replaceable_devpath.has_value()) {
+    return *replaceable_devpath;
+  }
+
   auto node_iter = topology.devpath_to_node_map.find(devpath);
   if (node_iter == topology.devpath_to_node_map.end()) {
     return absl::NotFoundError(

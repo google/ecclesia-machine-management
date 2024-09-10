@@ -20,6 +20,8 @@
 #include <optional>
 #include <string>
 
+#include "absl/functional/function_ref.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/node_topology.h"
@@ -27,9 +29,17 @@
 namespace ecclesia {
 
 // Function to find devpath for an arbitrary URI by searching through
-// NodeTopology
-std::optional<std::string> GetDevpathForUri(const NodeTopology &topology,
-                                            absl::string_view uri);
+// NodeTopology. The caller may provide a functor enabling devpath resolution
+// using a custom method, falling back to the default method of searching
+// through NodeTopology.
+std::optional<std::string> GetDevpathForUri(
+    const NodeTopology &topology, absl::string_view uri,
+    absl::FunctionRef<std::optional<std::string>(const NodeTopology &,
+                                                 absl::string_view)>
+        alternate_resolver =
+            [](const NodeTopology &node_topology, absl::string_view uri) {
+              return std::nullopt;
+            });
 
 // Function to find a main uri which is the RedfishObj's uri that creates the
 // target devpath by searching through NodeTopology
@@ -40,7 +50,13 @@ absl::StatusOr<std::string> GetFirstUriForDevpath(const NodeTopology &topology,
 // Manager and Sensor resources that rely on different properties to resolve a
 // devpath.
 std::optional<std::string> GetDevpathForObjectAndNodeTopology(
-    const RedfishObject &obj, const NodeTopology &topology);
+    const RedfishObject &obj, const NodeTopology &topology,
+    absl::FunctionRef<std::optional<std::string>(const NodeTopology &,
+                                                 absl::string_view)>
+        alternate_resolver =
+            [](const NodeTopology &node_topology, absl::string_view uri) {
+              return std::nullopt;
+            });
 
 // Function to find devpath for Sensor resources (Sensor/Power/Thermal) based on
 // RelatedItems
@@ -52,19 +68,37 @@ std::optional<std::string> GetDevpathForObjectAndNodeTopology(
 // resources and provide that devpath.
 //
 // The RedfishObject passed to this function must be under a subURI of a Chassis
-// in order to produce a valid depvath i.e. /redfish/v1/Chassis/<chassis-id>/...
+// in order to produce a valid devpath i.e. /redfish/v1/Chassis/<chassis-id>/...
 std::optional<std::string> GetSensorDevpathFromNodeTopology(
-    const RedfishObject &obj, const NodeTopology &topology);
+    const RedfishObject &obj, const NodeTopology &topology,
+    absl::FunctionRef<std::optional<std::string>(const NodeTopology &,
+                                                 absl::string_view)>
+        alternate_resolver =
+            [](const NodeTopology &node_topology, absl::string_view uri) {
+              return std::nullopt;
+            });
 
 std::optional<std::string> GetSensorDevpathFromNodeTopology(
     RedfishObject *obj, const NodeTopology &topology);
 
 std::optional<std::string> GetManagerDevpathFromNodeTopology(
-    const RedfishObject &obj, const NodeTopology &topology);
+    const RedfishObject &obj, const NodeTopology &topology,
+    absl::FunctionRef<std::optional<std::string>(const NodeTopology &,
+                                                 absl::string_view)>
+        alternate_resolver =
+            [](const NodeTopology &node_topology, absl::string_view uri) {
+              return std::nullopt;
+            });
 
 std::optional<std::string> GetSlotDevpathFromNodeTopology(
     const RedfishObject &obj, absl::string_view parent_uri,
-    const NodeTopology &topology);
+    const NodeTopology &topology,
+    absl::FunctionRef<std::optional<std::string>(const NodeTopology &,
+                                                 absl::string_view)>
+        alternate_resolver =
+            [](const NodeTopology &node_topology, absl::string_view uri) {
+              return std::nullopt;
+            });
 
 std::optional<std::string> GetDevpathFromSlotDevpath(
     absl::string_view slot_devpath);
@@ -72,9 +106,14 @@ std::optional<std::string> GetDevpathFromSlotDevpath(
 // Find the replaceable devpath for a devpath inside a Node Topology. If the
 // devpath itself is replaceable it'll return itself, otherwise it'll return the
 // first parent that is replaceable.
-absl::StatusOr<absl::string_view>
-GetReplaceableDevpathForDevpathAndNodeTopology(absl::string_view devpath,
-                                               const NodeTopology &topology);
+absl::StatusOr<std::string> GetReplaceableDevpathForDevpathAndNodeTopology(
+    absl::string_view devpath, const NodeTopology &topology,
+    absl::FunctionRef<std::optional<std::string>(const NodeTopology &,
+                                                 absl::string_view)>
+        alternate_resolver =
+            [](const NodeTopology &node_topology, absl::string_view devpath) {
+              return std::nullopt;
+            });
 
 }  // namespace ecclesia
 
