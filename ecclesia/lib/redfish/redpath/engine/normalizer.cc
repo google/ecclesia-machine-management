@@ -277,7 +277,10 @@ absl::StatusOr<QueryValue> GetPropertyFromRedfishObject(
     }
   }
   if (query_value.kind_case() == QueryValue::KIND_NOT_SET) {
-    return absl::InvalidArgumentError("Invalid property type");
+    return absl::InvalidArgumentError(
+        absl::StrCat("Property `", property.property(),
+                     "` cannot be parsed from the redfish object: ",
+                     redfish_content.dump()));
   }
   return query_value;
 }
@@ -416,7 +419,8 @@ absl::Status RedpathNormalizerImplAddMachineBarepath::Normalize(
 
   absl::StatusOr<std::string> machine_devpath_for_redfish_location =
       id_assigner_->IdForRedfishLocationInQueryResult(data_set_local, is_root);
-  if (machine_devpath_for_redfish_location.ok()) {
+  if (machine_devpath_for_redfish_location.ok() &&
+      !machine_devpath_for_redfish_location->empty()) {
     (*data_set_local.mutable_fields())[kIdentifierTag]
         .mutable_identifier()
         ->set_machine_devpath(*machine_devpath_for_redfish_location);
@@ -426,12 +430,14 @@ absl::Status RedpathNormalizerImplAddMachineBarepath::Normalize(
   // We reach here if we cannot derive machine devpath using Redfish Stable id
   // - PartLocationContext + ServiceLabel. We will now try to map a local
   // devpath to machine devpath.
-  if (!query_value_reader->identifier().has_local_devpath()) {
+  if (!query_value_reader.ok() ||
+      !query_value_reader->identifier().has_local_devpath()) {
     return absl::OkStatus();
   }
   absl::StatusOr<std::string> machine_devpath_for_local_devpath =
       id_assigner_->IdForLocalDevpathInQueryResult(data_set_local);
-  if (machine_devpath_for_local_devpath.ok()) {
+  if (machine_devpath_for_local_devpath.ok() &&
+      !machine_devpath_for_local_devpath->empty()) {
     (*data_set_local.mutable_fields())[kIdentifierTag]
         .mutable_identifier()
         ->set_machine_devpath(*machine_devpath_for_local_devpath);

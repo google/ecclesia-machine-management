@@ -572,6 +572,9 @@ QueryPlanner::ExecuteQueryExpression(
           std::unique_ptr<RedfishObject> indexed_node_as_object,
           GetRedfishObjectWithFreshness(get_params_for_redpath, indexed_node,
                                         trace_info, &cache_miss_));
+      if (indexed_node_as_object == nullptr) {
+        continue;
+      }
 
       // We don't create new execution context when a subscription is required.
       // Instead, we store each URI of the resource collection in the given
