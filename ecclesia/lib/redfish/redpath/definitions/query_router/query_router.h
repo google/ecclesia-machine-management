@@ -96,11 +96,17 @@ class QueryRouter : public QueryRouterIntf {
   // communicate with.
   struct ServerSpec {
     ServerInfo server_info;
-    QueryEngineParams::RedfishStableIdType stable_id_type =
-        QueryEngineParams::RedfishStableIdType::kRedfishLocation;
     std::unique_ptr<RedfishTransport> transport = nullptr;
     std::unique_ptr<IdAssigner> id_assigner = nullptr;
     std::optional<std::string> node_local_system_id = std::nullopt;
+    // Gets set during QueryRouter initialization, based on the StableIdConfig
+    // declared.
+    QueryEngineParams::RedfishStableIdType stable_id_type =
+        QueryEngineParams::RedfishStableIdType::kRedfishLocation;
+    // When initializing QueryRouter using QueryRouterBuilder, this
+    // field is set to prevent QueryRouter constructors from repeating parsing
+    // of the stable id config.
+    bool parsed_stable_id_type_from_spec = false;
 
     ServerSpec() = default;
     ServerSpec(const ServerSpec&) = delete;

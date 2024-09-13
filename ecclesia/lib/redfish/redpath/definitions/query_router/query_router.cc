@@ -130,8 +130,19 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
     QueryEngineParams query_engine_params = {
         .transport = std::move(server_spec.transport),
         .entity_tag = server_info.server_tag,
-        .stable_id_type = server_spec.stable_id_type,
     };
+
+    if (!server_spec.parsed_stable_id_type_from_spec) {
+      ecclesia::QueryRouterSpec::StableIdConfig::StableIdType stable_id_type =
+          GetStableIdTypeFromRouterSpec(router_spec, server_info.server_tag,
+                                        server_info.server_type,
+                                        server_info.server_class);
+      // Set devpath policy for the query engine based on QueryRouterSpec.
+      query_engine_params.stable_id_type =
+          RouterSpecStableIdToQueryEngineStableId(stable_id_type);
+    } else {
+      query_engine_params.stable_id_type = server_spec.stable_id_type;
+    }
 
     if (router_spec.has_features()) {
       query_engine_params.features = router_spec.features();

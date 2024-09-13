@@ -752,5 +752,67 @@ TEST_F(GetQuerySpecTest, EmptyRouterSpecTest) {
   EXPECT_TRUE(query_spec.query_id_to_info.empty());
 }
 
+TEST(GetStableIdTypeTest, GetStableIdTypeCorrectly) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(
+      R"pb(
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select {
+                server_type: SERVER_TYPE_BMCWEB
+                server_tag: "server_1"
+                server_tag: "server_2"
+              }
+              query_and_rule_path { query_path: "query_a.textproto" }
+            }
+          }
+        }
+        stable_id_config: {
+          policies: {
+            select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+            stable_id_type: STABLE_ID_REDFISH_LOCATION
+          }
+          policies: {
+            select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_2" }
+            stable_id_type: STABLE_ID_TOPOLOGY_DERIVED
+          }
+          policies: {
+            select {
+              server_type: SERVER_TYPE_BMCWEB
+              server_class: SERVER_CLASS_COMPUTE
+            }
+            stable_id_type: STABLE_ID_REDFISH_LOCATION
+          }
+        }
+        default_stable_id_type: STABLE_ID_TOPOLOGY_DERIVED
+      )pb");
+
+  EXPECT_THAT(
+      GetStableIdTypeFromRouterSpec(
+          router_spec, "server_1",
+          SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE),
+      ecclesia::QueryRouterSpec::StableIdConfig::STABLE_ID_REDFISH_LOCATION);
+  EXPECT_THAT(
+      GetStableIdTypeFromRouterSpec(
+          router_spec, "server_2",
+          SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_UNSPECIFIED),
+      ecclesia::QueryRouterSpec::StableIdConfig::STABLE_ID_TOPOLOGY_DERIVED);
+  EXPECT_THAT(
+      GetStableIdTypeFromRouterSpec(
+          router_spec, "", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE),
+      ecclesia::QueryRouterSpec::StableIdConfig::STABLE_ID_REDFISH_LOCATION);
+  // When no config matches, the type should be based on the default.
+  EXPECT_THAT(
+      GetStableIdTypeFromRouterSpec(
+          router_spec, "",
+          SelectionSpec::SelectionClass::SERVER_TYPE_UNSPECIFIED,
+          SelectionSpec::SelectionClass::SERVER_CLASS_UNSPECIFIED),
+      ecclesia::QueryRouterSpec::StableIdConfig::STABLE_ID_TOPOLOGY_DERIVED);
+}
+
 }  // namespace
 }  // namespace ecclesia

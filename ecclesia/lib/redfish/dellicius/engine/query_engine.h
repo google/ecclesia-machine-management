@@ -60,8 +60,7 @@ namespace ecclesia {
 // Parameters necessary to configure the query engine.
 struct QueryEngineParams {
   // Stable id types used to configure engine for an appropriate normalizer that
-  // decorates the query result with desired stable
-  // id type.
+  // decorates the query result with desired stable id type.
   enum class RedfishStableIdType : uint8_t {
     kRedfishLocation,  // Redfish Standard - PartLocationContext + ServiceLabel
     kRedfishLocationDerived  // Derived from Redfish topology.

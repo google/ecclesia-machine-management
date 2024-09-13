@@ -23,6 +23,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 
@@ -57,6 +58,16 @@ absl::StatusOr<QuerySpec> GetQuerySpec(
     SelectionSpec::SelectionClass::ServerType server_type,
     std::optional<SelectionSpec::SelectionClass::ServerClass> server_class =
         std::nullopt);
+
+QueryRouterSpec::StableIdConfig::StableIdType GetStableIdTypeFromRouterSpec(
+    const ecclesia::QueryRouterSpec& router_spec,
+    absl::string_view node_entity_tag,
+    SelectionSpec::SelectionClass::ServerType server_type,
+    SelectionSpec::SelectionClass::ServerClass server_class);
+
+ecclesia::QueryEngineParams::RedfishStableIdType
+RouterSpecStableIdToQueryEngineStableId(
+    const ecclesia::QueryRouterSpec::StableIdConfig::StableIdType type);
 
 }  // namespace ecclesia
 

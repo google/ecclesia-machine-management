@@ -74,7 +74,6 @@ cc_test(
         "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_spec",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
-        "//ecclesia/lib/redfish/redpath/engine:id_assigner",
         "//ecclesia/lib/status:test_macros",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/container:flat_hash_set",
@@ -111,8 +110,10 @@ cc_library(
     deps = [
         ":query_router_spec_cc_proto",
         "//ecclesia/lib/apifs",
+        "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_spec",
         "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/algorithm:container",
         "@com_google_absl//absl/functional:any_invocable",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

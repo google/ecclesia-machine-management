@@ -98,4 +98,22 @@ message QueryRouterSpec {
   // patterns PATTERN_SERIAL_AGENT or PATTERN_PARALLEL_ALL. For
   // PATTERN_SERIAL_ALL, this value has no effect.
   int32 max_concurrent_threads = 6;
+
+  message StableIdConfig {
+    // Specifies the devpath policy for the underlying QueryEngines
+    enum StableIdType {
+      STABLE_ID_UNSPECIFIED = 0;
+      STABLE_ID_NONE = 1;
+      STABLE_ID_REDFISH_LOCATION = 2;
+      STABLE_ID_TOPOLOGY_DERIVED = 3;
+    }
+    message Policy {
+      SelectionSpec.SelectionClass select = 1;
+      StableIdType stable_id_type = 2;
+    }
+    repeated Policy policies = 1;
+  }
+  StableIdConfig stable_id_config = 7;
+  // Sets default stable id policy for all selection classes.
+  StableIdConfig.StableIdType default_stable_id_type = 8;
 }

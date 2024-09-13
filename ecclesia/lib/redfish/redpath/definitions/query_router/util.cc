@@ -22,6 +22,7 @@
 #include <utility>
 
 #include "google/protobuf/duration.pb.h"
+#include "absl/algorithm/container.h"
 #include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -29,6 +30,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/apifs/apifs.h"
+#include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/status/macros.h"
@@ -178,6 +180,45 @@ absl::StatusOr<QuerySpec> GetQuerySpec(
   ECCLESIA_RETURN_IF_ERROR(ExecuteOnMatchingQuerySelections(
       router_spec, server_tag, server_type, server_class, add_to_query_spec));
   return std::move(query_spec);
+}
+
+ecclesia::QueryRouterSpec::StableIdConfig::StableIdType
+GetStableIdTypeFromRouterSpec(
+    const ecclesia::QueryRouterSpec& router_spec,
+    absl::string_view node_entity_tag,
+    SelectionSpec::SelectionClass::ServerType server_type,
+    SelectionSpec::SelectionClass::ServerClass server_class) {
+  if (!router_spec.has_stable_id_config()) {
+    return router_spec.default_stable_id_type();
+  }
+  // match inputs against the SelectionClasses specified in the devpath policies
+  for (const ecclesia::QueryRouterSpec::StableIdConfig::Policy& policy :
+       router_spec.stable_id_config().policies()) {
+    // If agent is specified in the spec, it must match input being registered.
+    if (policy.select().has_server_type()) {
+      if (policy.select().server_type() != server_type) {
+        continue;
+      }
+    }
+    // Now ensure either the policy's server_class or node entity tag matches.
+    if (absl::c_linear_search(policy.select().server_class(), server_class) ||
+        absl::c_linear_search(policy.select().server_tag(), node_entity_tag)) {
+      return policy.stable_id_type();
+    }
+  }
+  // If nothing has matched, return the default.
+  return router_spec.default_stable_id_type();
+}
+
+ecclesia::QueryEngineParams::RedfishStableIdType
+RouterSpecStableIdToQueryEngineStableId(
+    const ecclesia::QueryRouterSpec::StableIdConfig::StableIdType type) {
+  if (type ==
+      ecclesia::QueryRouterSpec::StableIdConfig::STABLE_ID_TOPOLOGY_DERIVED) {
+    return ecclesia::QueryEngineParams::RedfishStableIdType::
+        kRedfishLocationDerived;
+  }
+  return ecclesia::QueryEngineParams::RedfishStableIdType::kRedfishLocation;
 }
 
 }  // namespace ecclesia
