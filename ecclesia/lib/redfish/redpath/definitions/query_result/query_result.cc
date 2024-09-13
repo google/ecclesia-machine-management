@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -27,10 +28,91 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/proto.h"
 
 namespace ecclesia {
+
+namespace {
+
+bool operator==(const RedfishLocation& a, const RedfishLocation& b) {
+  return std::tie(a.service_label(), a.part_location_context()) ==
+         std::tie(b.service_label(), b.part_location_context());
+}
+
+bool operator==(const Identifier& a, const Identifier& b) {
+  return std::tie(a.local_devpath(), a.machine_devpath(),
+                  a.embedded_location_context()) ==
+             std::tie(b.local_devpath(), b.machine_devpath(),
+                      b.embedded_location_context()) &&
+         a.redfish_location() == b.redfish_location();
+}
+
+bool RemoveDataForIdentifier(QueryValue& value,
+                                 const Identifier& identifier) {
+  bool result = false;
+  switch (value.kind_case()) {
+    case QueryValue::kSubqueryValue: {
+      auto& fields = *(value.mutable_subquery_value()->mutable_fields());
+      if (auto it = fields.find(kIdentifierTag); it != fields.end()) {
+        if (RemoveDataForIdentifier(it->second, identifier)) {
+          value.clear_subquery_value();
+          result = true;
+          break;
+        }
+      }
+      for (auto& [key, subquery_value] : fields) {
+        result |= RemoveDataForIdentifier(subquery_value, identifier);
+      }
+      break;
+    }
+    case QueryValue::kListValue: {
+      for (auto& list_value : *value.mutable_list_value()->mutable_values()) {
+        result |= RemoveDataForIdentifier(list_value, identifier);
+      }
+      break;
+    }
+    case QueryValue::kIdentifier: {
+      result = identifier == value.identifier();
+      break;
+    }
+    default:
+      result = false;
+  }
+  return result;
+}
+
+void GetDataForIdentifier(const QueryValue& value,
+                              const Identifier& identifier,
+                              std::vector<QueryResultData>& result) {
+  switch (value.kind_case()) {
+    case QueryValue::kSubqueryValue: {
+      if (auto it = value.subquery_value().fields().find(kIdentifierTag);
+          it != value.subquery_value().fields().end()) {
+        if (it->second.identifier() == identifier) {
+          result.push_back(value.subquery_value());
+          break;
+        }
+      }
+      for (const auto& [key, subquery_value] :
+           value.subquery_value().fields()) {
+        GetDataForIdentifier(subquery_value, identifier, result);
+      }
+      break;
+    }
+    case QueryValue::kListValue: {
+      for (const auto& list_value : value.list_value().values()) {
+        GetDataForIdentifier(list_value, identifier, result);
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+}  // namespace
 
 // Returns a QueryValueReader for the underlying subquery result for the given
 // key; or an error if the key is not found.
@@ -116,7 +198,7 @@ absl::StatusOr<QueryValueReader> QueryResultDataReader::Get(
 absl::StatusOr<Identifier> QueryValueReader::GetIdentifier() const {
   ECCLESIA_ASSIGN_OR_RETURN(QueryValueReader reader, Get(kIdentifierTag));
   if (reader.kind() != QueryValue::kIdentifier) {
-    return absl::InvalidArgumentError(absl::StrCat("No identifier available."));
+    return absl::InvalidArgumentError("No identifier available.");
   }
   return reader.identifier();
 }
@@ -170,6 +252,29 @@ absl::StatusOr<absl::Duration> GetQueryDuration(
         "time.");
   }
   return end_time - start_time;
+}
+
+bool RemoveDataForIdentifier(QueryResult& query_result,
+                                 const Identifier& identifier) {
+  bool result = false;
+  for (auto& [key, value] : *query_result.mutable_data()->mutable_fields()) {
+    result |= RemoveDataForIdentifier(value, identifier);
+  }
+  return result;
+}
+
+absl::StatusOr<std::vector<QueryResultData>> GetDataForIdentifier(
+    const QueryResult& query_result, const Identifier& identifier) {
+  std::vector<QueryResultData> result;
+  for (const auto& [key, value] : query_result.data().fields()) {
+    GetDataForIdentifier(value, identifier, result);
+  }
+  if (result.empty()) {
+    return absl::NotFoundError(
+        absl::StrCat("No subquery result found for devpath: ",
+                     identifier.machine_devpath()));
+  }
+  return std::move(result);
 }
 
 }  // namespace ecclesia

@@ -44,6 +44,7 @@ cc_test(
         ":query_result_cc_proto",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish:property",
+        "//ecclesia/lib/status:test_macros",
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
         "//ecclesia/lib/time:proto",

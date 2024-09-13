@@ -361,6 +361,17 @@ bool QueryOutputHasErrors(const QueryIdToResult& query_output);
 absl::StatusOr<absl::Duration> GetQueryDuration(
     const QueryResult& query_result);
 
+// Removes the subquery result for the given identifier from the query result.
+// Returns true if the subquery result was found and removed. Returns false if
+// the subquery result was not found.
+bool RemoveDataForIdentifier(QueryResult& query_result,
+                             const Identifier& identifier);
+
+// Returns the subquery result for the given identifier from the query result.
+// Returns error if the subquery result was not found.
+absl::StatusOr<std::vector<QueryResultData>> GetDataForIdentifier(
+    const QueryResult& query_result, const Identifier& identifier);
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_RESULT_QUERY_RESULT_H_

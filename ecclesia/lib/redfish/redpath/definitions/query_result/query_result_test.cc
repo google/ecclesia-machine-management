@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -29,6 +30,7 @@
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/property.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/status/test_macros.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/time/proto.h"
@@ -36,6 +38,7 @@
 namespace ecclesia {
 namespace {
 
+using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
 
@@ -828,6 +831,795 @@ TEST(GetQueryDuration, StartTimeAfterEndTime) {
                          end_time { seconds: 100 }
                        })pb")),
               IsStatusInternal());
+}
+
+TEST(RemoveDataForIdentifier, SuccessRemoveAtRoot) {
+  QueryResult result = ParseTextProtoOrDie(R"pb(
+    data {
+      fields {
+        key: "name0"
+        value {
+          subquery_value {
+            fields {
+              key: "_id_"
+              value { identifier { local_devpath: "/phys" } }
+            }
+            fields {
+              key: "name1"
+              value { string_value: "value1" }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  ASSERT_TRUE(RemoveDataForIdentifier(
+      result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys")pb")));
+  EXPECT_THAT(result, EqualsProto(R"pb(data {
+                                         fields {
+                                           key: "name0"
+                                           value {}
+                                         }
+                                       })pb"));
+}
+
+TEST(RemoveDataForIdentifier, SuccessRemoveFromMultipleSubquery) {
+  QueryResult result = ParseTextProtoOrDie(
+      R"pb(data {
+             fields {
+               key: "name0"
+               value {
+                 subquery_value {
+                   fields {
+                     key: "key0"
+                     value { string_value: "test0" }
+                   }
+                   fields {
+                     key: "_id_"
+                     value { identifier { local_devpath: "/phys" } }
+                   }
+                 }
+               }
+             }
+             fields {
+               key: "name1"
+               value {
+                 subquery_value {
+                   fields {
+                     key: "key1"
+                     value { string_value: "test1" }
+                   }
+                   fields {
+                     key: "_id_"
+                     value { identifier { local_devpath: "/phys" } }
+                   }
+                 }
+               }
+             }
+             fields {
+               key: "name2"
+               value {
+                 subquery_value {
+                   fields {
+                     key: "key2"
+                     value { string_value: "test2" }
+                   }
+                   fields {
+                     key: "_id_"
+                     value { identifier { local_devpath: "/phys/PE0" } }
+                   }
+                 }
+               }
+             }
+
+           }
+      )pb");
+
+  ASSERT_TRUE(RemoveDataForIdentifier(
+      result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys")pb")));
+  EXPECT_THAT(
+      result,
+      EqualsProto(
+          R"pb(data {
+                 fields {
+                   key: "name0"
+                   value {}
+                 }
+                 fields {
+                   key: "name1"
+                   value {}
+                 }
+                 fields {
+                   key: "name2"
+                   value {
+                     subquery_value {
+                       fields {
+                         key: "key2"
+                         value { string_value: "test2" }
+                       }
+                       fields {
+                         key: "_id_"
+                         value { identifier { local_devpath: "/phys/PE0" } }
+                       }
+                     }
+                   }
+                 }
+               })pb"));
+}
+
+TEST(RemoveDataForIdentifier, SuccessRemoveFromNestedSubquery) {
+  QueryResult result = ParseTextProtoOrDie(
+      R"pb(data {
+             fields {
+               key: "name0"
+               value {
+                 subquery_value {
+                   fields {
+                     key: "nested"
+                     value {
+                       subquery_value {
+                         fields {
+                           key: "_id_"
+                           value { identifier { local_devpath: "/phys" } }
+                         }
+                         fields {
+                           key: "key2"
+                           value { string_value: "value2" }
+                         }
+                       }
+                     }
+                   }
+                   fields {
+                     key: "_id_"
+                     value { identifier { local_devpath: "/phys" } }
+                   }
+                   fields {
+                     key: "key1"
+                     value { string_value: "test1" }
+                   }
+                 }
+               }
+             }
+           }
+      )pb");
+
+  ASSERT_TRUE(RemoveDataForIdentifier(
+      result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys")pb")));
+  EXPECT_THAT(result, EqualsProto(R"pb(data {
+                                         fields {
+                                           key: "name0"
+                                           value {}
+                                         }
+                                       })pb"));
+}
+
+TEST(RemoveDataForIdentifier, SuccessRemoveFromListValue) {
+  QueryResult result = ParseTextProtoOrDie(R"pb(
+    data {
+      fields {
+        key: "list0"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "key0"
+                  value { string_value: "value0" }
+                }
+                fields {
+                  key: "_id_"
+                  value { identifier { local_devpath: "/phys" } }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "key1"
+                  value { string_value: "value1" }
+                }
+                fields {
+                  key: "_id_"
+                  value { identifier { local_devpath: "/phys/PE0" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    })pb");
+
+  ASSERT_TRUE(RemoveDataForIdentifier(
+      result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys")pb")));
+  EXPECT_THAT(
+      result,
+      EqualsProto(
+          R"pb(data {
+                 fields {
+                   key: "list0"
+                   value {
+                     list_value {
+                       values {}
+                       values {
+                         subquery_value {
+                           fields {
+                             key: "_id_"
+                             value { identifier { local_devpath: "/phys/PE0" } }
+                           }
+                           fields {
+                             key: "key1"
+                             value { string_value: "value1" }
+                           }
+                         }
+                       }
+                     }
+                   }
+                 }
+               })pb"));
+}
+
+TEST(RemoveDataForIdentifier, SuccessRemoveFromMultipleListValues) {
+  QueryResult result = ParseTextProtoOrDie(
+      R"pb(data {
+             fields {
+               key: "list0"
+               value {
+                 list_value {
+                   values {
+                     subquery_value {
+                       fields {
+                         key: "key0"
+                         value { string_value: "value0" }
+                       }
+                       fields {
+                         key: "_id_"
+                         value { identifier { local_devpath: "/phys" } }
+                       }
+                     }
+                   }
+                   values {
+                     subquery_value {
+                       fields {
+                         key: "key1"
+                         value { string_value: "value1" }
+                       }
+                       fields {
+                         key: "_id_"
+                         value { identifier { local_devpath: "/phys/PE0" } }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+             fields {
+               key: "list1"
+               value {
+                 list_value {
+                   values {
+                     subquery_value {
+                       fields {
+                         key: "key2"
+                         value { string_value: "value0" }
+                       }
+                       fields {
+                         key: "_id_"
+                         value { identifier { local_devpath: "/phys" } }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+      )pb");
+
+  ASSERT_TRUE(RemoveDataForIdentifier(
+      result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys")pb")));
+  EXPECT_THAT(
+      result,
+      EqualsProto(
+          R"pb(data {
+                 fields {
+                   key: "list0"
+                   value {
+                     list_value {
+                       values {}
+                       values {
+                         subquery_value {
+                           fields {
+                             key: "_id_"
+                             value { identifier { local_devpath: "/phys/PE0" } }
+                           }
+                           fields {
+                             key: "key1"
+                             value { string_value: "value1" }
+                           }
+                         }
+                       }
+                     }
+                   }
+                 }
+                 fields {
+                   key: "list1"
+                   value { list_value { values {} } }
+                 }
+               })pb"));
+}
+
+TEST(RemoveDataForIdentifier, FailurePartialMatch) {
+  QueryResult result = ParseTextProtoOrDie(R"pb(
+    data {
+      fields {
+        key: "name0"
+        value {
+          subquery_value {
+            fields {
+              key: "_id_"
+              value {
+                identifier {
+                  local_devpath: "/phys"
+                  machine_devpath: "/phys/PE0"
+                }
+              }
+            }
+            fields {
+              key: "name1"
+              value { string_value: "value1" }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  ASSERT_FALSE(RemoveDataForIdentifier(
+      result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys")pb")));
+  EXPECT_THAT(result, EqualsProto(R"pb(
+                data {
+                  fields {
+                    key: "name0"
+                    value {
+                      subquery_value {
+                        fields {
+                          key: "_id_"
+                          value {
+                            identifier {
+                              local_devpath: "/phys"
+                              machine_devpath: "/phys/PE0"
+                            }
+                          }
+                        }
+                        fields {
+                          key: "name1"
+                          value { string_value: "value1" }
+                        }
+                      }
+                    }
+                  }
+                }
+              )pb"));
+}
+
+TEST(RemoveDataForIdentifier, FailureNotFound) {
+  QueryResult result = ParseTextProtoOrDie(R"pb(
+    data {
+      fields {
+        key: "name0"
+        value {
+          subquery_value {
+            fields {
+              key: "_id_"
+              value { identifier { local_devpath: "/phys" } }
+            }
+            fields {
+              key: "name1"
+              value { string_value: "value1" }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  ASSERT_FALSE(RemoveDataForIdentifier(
+      result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys/FAN0")pb")));
+  EXPECT_THAT(result, EqualsProto(R"pb(
+                data {
+                  fields {
+                    key: "name0"
+                    value {
+                      subquery_value {
+                        fields {
+                          key: "_id_"
+                          value { identifier { local_devpath: "/phys" } }
+                        }
+                        fields {
+                          key: "name1"
+                          value { string_value: "value1" }
+                        }
+                      }
+                    }
+                  }
+                }
+              )pb"));
+}
+
+TEST(GetDataForIdentifier, SuccessGetAtRoot) {
+  QueryResult result = ParseTextProtoOrDie(R"pb(
+    data {
+      fields {
+        key: "name0"
+        value {
+          subquery_value {
+            fields {
+              key: "_id_"
+              value { identifier { local_devpath: "/phys" } }
+            }
+            fields {
+              key: "name1"
+              value { string_value: "value1" }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::vector<QueryResultData> data,
+      GetDataForIdentifier(
+          result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys")pb")));
+  EXPECT_THAT(data, ElementsAre(EqualsProto(R"pb(
+                fields {
+                  key: "_id_"
+                  value { identifier { local_devpath: "/phys" } }
+                }
+                fields {
+                  key: "name1"
+                  value { string_value: "value1" }
+                }
+              )pb")));
+}
+
+TEST(GetDataForIdentifier, SuccessGetFromMultipleSubquery) {
+  QueryResult result = ParseTextProtoOrDie(
+      R"pb(data {
+             fields {
+               key: "name0"
+               value {
+                 subquery_value {
+                   fields {
+                     key: "key1"
+                     value { string_value: "test1" }
+                   }
+                   fields {
+                     key: "_id_"
+                     value { identifier { local_devpath: "/phys" } }
+                   }
+                 }
+               }
+             }
+             fields {
+               key: "name1"
+               value {
+                 subquery_value {
+                   fields {
+                     key: "key0"
+                     value { string_value: "test0" }
+                   }
+                   fields {
+                     key: "_id_"
+                     value { identifier { local_devpath: "/phys" } }
+                   }
+                 }
+               }
+             }
+             fields {
+               key: "name2"
+               value {
+                 subquery_value {
+                   fields {
+                     key: "key2"
+                     value { string_value: "test2" }
+                   }
+                   fields {
+                     key: "_id_"
+                     value { identifier { local_devpath: "/phys/PE0" } }
+                   }
+                 }
+               }
+             }
+
+           }
+      )pb");
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::vector<QueryResultData> data,
+      GetDataForIdentifier(
+          result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys")pb")));
+  EXPECT_THAT(data, UnorderedElementsAre(
+                        EqualsProto(R"pb(
+                          fields {
+                            key: "_id_"
+                            value { identifier { local_devpath: "/phys" } }
+                          }
+                          fields {
+                            key: "key0"
+                            value { string_value: "test0" }
+                          }
+                        )pb"),
+                        EqualsProto(R"pb(
+                          fields {
+                            key: "_id_"
+                            value { identifier { local_devpath: "/phys" } }
+                          }
+                          fields {
+                            key: "key1"
+                            value { string_value: "test1" }
+                          }
+                        )pb")));
+}
+
+TEST(GetDataForIdentifier, SuccessGetFromNestedSubquery) {
+  QueryResult result = ParseTextProtoOrDie(
+      R"pb(data {
+             fields {
+               key: "name0"
+               value {
+                 subquery_value {
+                   fields {
+                     key: "nested"
+                     value {
+                       subquery_value {
+                         fields {
+                           key: "_id_"
+                           value { identifier { local_devpath: "/phys" } }
+                         }
+                         fields {
+                           key: "key2"
+                           value { string_value: "value2" }
+                         }
+                       }
+                     }
+                   }
+                   fields {
+                     key: "_id_"
+                     value { identifier { local_devpath: "/phys" } }
+                   }
+                   fields {
+                     key: "key1"
+                     value { string_value: "test1" }
+                   }
+                 }
+               }
+             }
+           }
+      )pb");
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::vector<QueryResultData> data,
+      GetDataForIdentifier(
+          result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys")pb")));
+  EXPECT_THAT(data, UnorderedElementsAre(EqualsProto(R"pb(
+                fields {
+                  key: "_id_"
+                  value { identifier { local_devpath: "/phys" } }
+                }
+                fields {
+                  key: "key1"
+                  value { string_value: "test1" }
+                }
+                fields {
+                  key: "nested"
+                  value {
+                    subquery_value {
+                      fields {
+                        key: "_id_"
+                        value { identifier { local_devpath: "/phys" } }
+                      }
+                      fields {
+                        key: "key2"
+                        value { string_value: "value2" }
+                      }
+                    }
+                  }
+                }
+              )pb")));
+}
+
+TEST(GetDataForIdentifier, SuccessGetFromListValue) {
+  QueryResult result = ParseTextProtoOrDie(R"pb(
+    data {
+      fields {
+        key: "list0"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "key0"
+                  value { string_value: "value0" }
+                }
+                fields {
+                  key: "_id_"
+                  value { identifier { local_devpath: "/phys" } }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "key1"
+                  value { string_value: "value1" }
+                }
+                fields {
+                  key: "_id_"
+                  value { identifier { local_devpath: "/phys/PE0" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    })pb");
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::vector<QueryResultData> data,
+      GetDataForIdentifier(
+          result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys")pb")));
+  EXPECT_THAT(data, ElementsAre(EqualsProto(R"pb(
+                fields {
+                  key: "_id_"
+                  value { identifier { local_devpath: "/phys" } }
+                }
+                fields {
+                  key: "key0"
+                  value { string_value: "value0" }
+                }
+              )pb")));
+}
+
+TEST(GetDataForIdentifier, SuccessGetFromMultipleListValues) {
+  QueryResult result = ParseTextProtoOrDie(
+      R"pb(data {
+             fields {
+               key: "list0"
+               value {
+                 list_value {
+                   values {
+                     subquery_value {
+                       fields {
+                         key: "key0"
+                         value { string_value: "value0" }
+                       }
+                       fields {
+                         key: "_id_"
+                         value { identifier { local_devpath: "/phys" } }
+                       }
+                     }
+                   }
+                   values {
+                     subquery_value {
+                       fields {
+                         key: "key1"
+                         value { string_value: "value1" }
+                       }
+                       fields {
+                         key: "_id_"
+                         value { identifier { local_devpath: "/phys/PE0" } }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+             fields {
+               key: "list1"
+               value {
+                 list_value {
+                   values {
+                     subquery_value {
+                       fields {
+                         key: "key2"
+                         value { string_value: "value0" }
+                       }
+                       fields {
+                         key: "_id_"
+                         value { identifier { local_devpath: "/phys" } }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+      )pb");
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::vector<QueryResultData> data,
+      GetDataForIdentifier(
+          result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys")pb")));
+  EXPECT_THAT(data, UnorderedElementsAre(
+                        EqualsProto(R"pb(
+                          fields {
+                            key: "_id_"
+                            value { identifier { local_devpath: "/phys" } }
+                          }
+                          fields {
+                            key: "key0"
+                            value { string_value: "value0" }
+                          }
+                        )pb"),
+                        EqualsProto(R"pb(
+                          fields {
+                            key: "_id_"
+                            value { identifier { local_devpath: "/phys" } }
+                          }
+                          fields {
+                            key: "key2"
+                            value { string_value: "value0" }
+                          }
+                        )pb")));
+}
+
+TEST(GetDataForIdentifier, FailurePartialMatch) {
+  QueryResult result = ParseTextProtoOrDie(R"pb(
+    data {
+      fields {
+        key: "name0"
+        value {
+          subquery_value {
+            fields {
+              key: "_id_"
+              value {
+                identifier {
+                  local_devpath: "/phys"
+                  machine_devpath: "/phys/PE0"
+                }
+              }
+            }
+            fields {
+              key: "name1"
+              value { string_value: "value1" }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  EXPECT_THAT(GetDataForIdentifier(
+                  result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys")pb")),
+              IsStatusNotFound());
+}
+
+TEST(GetDataForIdentifier, FailureNotFound) {
+  QueryResult result = ParseTextProtoOrDie(R"pb(
+    data {
+      fields {
+        key: "name0"
+        value {
+          subquery_value {
+            fields {
+              key: "_id_"
+              value { identifier { local_devpath: "/phys" } }
+            }
+            fields {
+              key: "name1"
+              value { string_value: "value1" }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  EXPECT_THAT(
+      GetDataForIdentifier(
+          result, ParseTextProtoOrDie(R"pb(local_devpath: "/phys/FAN0")pb")),
+      IsStatusNotFound());
 }
 
 }  // namespace
