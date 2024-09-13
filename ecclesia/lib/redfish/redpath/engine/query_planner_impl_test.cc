@@ -2694,11 +2694,6 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
   ASSERT_TRUE(result.query_result.has_stats());
   ASSERT_TRUE(result.query_result.stats().has_redfish_metrics());
   EXPECT_THAT(result.query_result.stats().num_requests(), 40);
-
-  auto timestamp = AbslTimeToProtoTime(clock.Now());
-  EXPECT_THAT(result.query_result.stats().start_time(),
-              EqualsProto(*timestamp));
-  EXPECT_THAT(result.query_result.stats().end_time(), EqualsProto(*timestamp));
 }
 
 TEST_F(QueryPlannerTestRunner,
@@ -3021,13 +3016,6 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
       std::make_unique<NullTransport>();
   auto transport = std::make_unique<MetricalRedfishTransport>(
       std::move(base_transport), Clock::RealClock());
-
-  // This metrics object is owned and populated by the metrical transport.
-  // Use
-  // it to populate metrics in the QueryPlanner result.
-  const RedfishMetrics *metrics = MetricalRedfishTransport::GetConstMetrics();
-  ASSERT_NE(metrics, nullptr);
-
   auto cache = std::make_unique<NullCache>(transport.get());
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
@@ -3046,17 +3034,18 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
               Eq(ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE));
 
   // Redfish Metrics should indicate 1 failed GET request to service root.
-  EXPECT_EQ(metrics->uri_to_metrics_map().size(), 1);
-  EXPECT_TRUE(metrics->uri_to_metrics_map().contains("/redfish/v1"));
-  EXPECT_EQ(metrics->uri_to_metrics_map()
+  const RedfishMetrics &metrics = result.query_result.stats().redfish_metrics();
+  EXPECT_EQ(metrics.uri_to_metrics_map_size(), 1);
+  EXPECT_TRUE(metrics.uri_to_metrics_map().contains("/redfish/v1"));
+  EXPECT_EQ(metrics.uri_to_metrics_map()
                 .at("/redfish/v1")
                 .request_type_to_metadata_failures_size(),
             1);
-  EXPECT_TRUE(metrics->uri_to_metrics_map()
+  EXPECT_TRUE(metrics.uri_to_metrics_map()
                   .at("/redfish/v1")
                   .request_type_to_metadata_failures()
                   .contains("GET"));
-  EXPECT_EQ(metrics->uri_to_metrics_map()
+  EXPECT_EQ(metrics.uri_to_metrics_map()
                 .at("/redfish/v1")
                 .request_type_to_metadata_size(),
             0);

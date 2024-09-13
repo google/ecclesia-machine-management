@@ -16,6 +16,8 @@
 
 #include "ecclesia/lib/redfish/redpath/engine/query_planner_impl.h"
 
+#include <time.h>
+
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -360,6 +362,45 @@ void PopulateSubqueryErrorStatus(const absl::Status &node_status,
   execution_context.result.mutable_status()->set_error_code(error_code);
 }
 
+// RAII object used to record stats for a query execution.
+class QueryScopeStats {
+ public:
+  QueryScopeStats(QueryResult &result, const RedfishMetrics *metrics,
+                  CacheStats *cache_stats)
+      : result_(result),
+        metrics_(metrics),
+        cache_stats_(ABSL_DIE_IF_NULL(cache_stats)) {}
+  ~QueryScopeStats() { Dump(); }
+
+ private:
+  // Updates the query result with query stats.
+  void Dump() {
+    if (metrics_ != nullptr && !metrics_->uri_to_metrics_map().empty() &&
+        result_.IsInitialized()) {
+      *result_.mutable_stats()->mutable_redfish_metrics() = *metrics_;
+      uint64_t request_count = 0;
+      for (const auto &uri_x_metric : metrics_->uri_to_metrics_map()) {
+        for (const auto &[request_type, metadata] :
+             uri_x_metric.second.request_type_to_metadata()) {
+          request_count += metadata.request_count();
+        }
+      }
+      result_.mutable_stats()->set_num_requests(
+          static_cast<int64_t>(request_count));
+    }
+    result_.mutable_stats()->set_payload_size(
+        static_cast<int64_t>(result_.ByteSizeLong()));
+    result_.mutable_stats()->set_num_cache_misses(cache_stats_->cache_miss);
+    result_.mutable_stats()->set_num_cache_hits(cache_stats_->cache_hit);
+    cache_stats_->Reset();
+    MetricalRedfishTransport::ResetMetrics();
+  }
+
+  QueryResult &result_;
+  const RedfishMetrics *metrics_;
+  CacheStats *cache_stats_;
+};
+
 }  // namespace
 
 QueryExecutionContext QueryExecutionContext::FromExisting(
@@ -392,13 +433,12 @@ QueryPlanner::QueryPlanner(ImplOptions options_in)
                         : std::string(kDefaultRedfishServiceRoot)),
       subquery_id_to_subquery_(GetSubqueryIdToSubquery(query_)),
       subquery_id_to_root_ids_(GetSubqueryIdToRootIds(query_)),
-      clock_(options_in.clock),
-      timeout_manager_(
-          options_in.query_timeout.has_value()
-              ? std::make_unique<QueryTimeoutManager>(
-                    clock_ == nullptr ? *ecclesia::Clock::RealClock() : *clock_,
-                    *options_in.query_timeout)
-              : nullptr) {}
+      clock_(options_in.clock == nullptr ? ecclesia::Clock::RealClock()
+                                         : options_in.clock),
+      timeout_manager_(options_in.query_timeout.has_value()
+                           ? std::make_unique<QueryTimeoutManager>(
+                                 *clock_, *options_in.query_timeout)
+                           : nullptr) {}
 
 GetParams QueryPlanner::GetQueryParamsForRedPath(
     absl::string_view redpath_prefix) {
@@ -561,9 +601,9 @@ QueryPlanner::ExecuteQueryExpression(
     for (int node_index = 0; node_index < node_count; ++node_index) {
       RedfishVariant indexed_node = (*current_redfish_iterable)[node_index];
       if (indexed_node.IsFresh() == CacheState::kIsFresh) {
-        cache_miss_ = cache_miss_ + 1;
+        cache_stats_.cache_miss += 1;
       } else if (indexed_node.IsFresh() == CacheState::kIsCached) {
-        cache_hit_ = cache_hit_ + 1;
+        cache_stats_.cache_hit += 1;
       }
       ECCLESIA_RETURN_IF_ERROR(indexed_node.status());
       TRACE(trace_info, new_redpath_prefix, get_params_for_redpath.ToString(),
@@ -571,7 +611,7 @@ QueryPlanner::ExecuteQueryExpression(
       ECCLESIA_ASSIGN_OR_RETURN(
           std::unique_ptr<RedfishObject> indexed_node_as_object,
           GetRedfishObjectWithFreshness(get_params_for_redpath, indexed_node,
-                                        trace_info, &cache_miss_));
+                                        trace_info, &cache_stats_.cache_miss));
       if (indexed_node_as_object == nullptr) {
         continue;
       }
@@ -678,9 +718,9 @@ QueryPlanner::ExecuteQueryExpression(
     }
 
     if (redfish_variant.IsFresh() == CacheState::kIsFresh) {
-      cache_miss_ = cache_miss_ + 1;
+      cache_stats_.cache_miss += 1;
     } else if (redfish_variant.IsFresh() == CacheState::kIsCached) {
-      cache_hit_ = cache_hit_ + 1;
+      cache_stats_.cache_hit += 1;
     }
     // If a timeout occurred, it will be reported here.
     ECCLESIA_RETURN_IF_ERROR(redfish_variant.status());
@@ -709,7 +749,7 @@ QueryPlanner::ExecuteQueryExpression(
       ECCLESIA_ASSIGN_OR_RETURN(
           redfish_object,
           GetRedfishObjectWithFreshness(get_params_for_redpath, redfish_variant,
-                                        trace_info, &cache_miss_));
+                                        trace_info, &cache_stats_.cache_miss));
     }
     execution_contexts.push_back(current_execution_context.FromExisting(
         new_redpath_prefix, get_params_for_redpath,
@@ -853,24 +893,17 @@ void QueryPlanner::PopulateSubscriptionContext(
 
 QueryPlanner::QueryExecutionResult QueryPlanner::Run(
     QueryExecutionOptions query_execution_options) {
-  QueryResult result;
-  // Set start time.
-  auto set_time = [](absl::Time time, google::protobuf::Timestamp &field) {
-    if (auto timestamp = AbslTimeToProtoTime(time); timestamp.ok()) {
-      field = *std::move(timestamp);
-    }
-  };
-  if (clock_ != nullptr) {
-    set_time(clock_->Now(), *result.mutable_stats()->mutable_start_time());
-  }
+  QueryExecutionResult query_execution_result;
+  QueryResult &result = query_execution_result.query_result;
   result.set_query_id(plan_id_);
-
+  QueryScopeStats scoped_stats(
+      result, MetricalRedfishTransport::GetConstMetrics(), &cache_stats_);
   if (timeout_manager_ != nullptr && !timeout_manager_->StartTiming().ok()) {
     result.mutable_status()->add_errors(
         "Timed out before query execution could start");
     result.mutable_status()->set_error_code(
         ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT);
-    return QueryExecutionResult{.query_result = std::move(result)};
+    return query_execution_result;
   }
 
   // Query service root.
@@ -880,20 +913,20 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
   RedfishVariant variant = redfish_interface_.GetRoot(get_params_service_root,
       service_root_);
   if (variant.IsFresh() == CacheState::kIsFresh) {
-    cache_miss_ = cache_miss_ + 1;
+    cache_stats_.cache_miss += 1;
   } else if (variant.IsFresh() == CacheState::kIsCached) {
-    cache_hit_ = cache_hit_ + 1;
+    cache_stats_.cache_hit += 1;
   }
   if (variant.status().code() == absl::StatusCode::kDeadlineExceeded) {
     result.mutable_status()->add_errors(
         "Timed out while querying service root");
     result.mutable_status()->set_error_code(
         ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT);
-    return QueryExecutionResult{.query_result = std::move(result)};
+    return query_execution_result;
   }
   absl::StatusOr<std::unique_ptr<RedfishObject>> service_root_object =
       GetRedfishObjectWithFreshness(get_params_service_root, variant,
-                                    std::nullopt, &cache_miss_);
+                                    std::nullopt, &cache_stats_.cache_miss);
 
   // If service root is unreachable populate the error and return the result.
   if (!service_root_object.ok() || *service_root_object == nullptr) {
@@ -905,7 +938,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
                 absl::StatusCode::kDeadlineExceeded
             ? ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT
             : ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE);
-    return QueryExecutionResult{.query_result = std::move(result)};
+    return query_execution_result;
   }
   // Initialize query execution context to execute next RedPath expression.
   QueryExecutionContext query_execution_context(
@@ -927,7 +960,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
                        normalize_status.message()));
       result.mutable_status()->set_error_code(
           ecclesia::ErrorCode::ERROR_INTERNAL);
-      return QueryExecutionResult{.query_result = std::move(result)};
+      return query_execution_result;
     }
   }
 
@@ -979,8 +1012,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
         }
         PopulateSubqueryErrorStatus(execution_contexts.status(),
                                     current_execution_context, expression);
-        return QueryExecutionResult{
-            .query_result = std::move(current_execution_context.result)};
+        return query_execution_result;
       }
 
       // Handle subscription request.
@@ -1003,7 +1035,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
                 "Unable to normalize: ", normalize_status.message()));
             result.mutable_status()->set_error_code(
                 ecclesia::ErrorCode::ERROR_INTERNAL);
-            return QueryExecutionResult{.query_result = std::move(result)};
+            return query_execution_result;
           }
         }
         execution_context.redpath_trie_node = expression.trie_node;
@@ -1011,44 +1043,8 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
       }
     }
   }
-
-  // Each metrical_transport object has a thread local RedfishMetrics object.
-  const RedfishMetrics *metrics = MetricalRedfishTransport::GetConstMetrics();
-  if (metrics != nullptr && !metrics->uri_to_metrics_map().empty() &&
-      result.IsInitialized()) {
-    *result.mutable_stats()->mutable_redfish_metrics() = *metrics;
-    uint64_t request_count = 0;
-    for (const auto &uri_x_metric : metrics->uri_to_metrics_map()) {
-      for (const auto &[request_type, metadata] :
-           uri_x_metric.second.request_type_to_metadata()) {
-        request_count += metadata.request_count();
-      }
-    }
-
-    result.mutable_stats()->set_num_requests(
-        static_cast<int64_t>(request_count));
-  }
-
-  result.mutable_stats()->set_payload_size(
-      static_cast<int64_t>(result.ByteSizeLong()));
-
-  if (clock_ != nullptr) {
-    set_time(clock_->Now(), *result.mutable_stats()->mutable_end_time());
-  }
-  QueryExecutionResult execution_result;
-
-  execution_result.subscription_context = std::move(subscription_context);
-  MetricalRedfishTransport::ResetMetrics();
-
-  result.mutable_stats()->set_num_cache_misses(cache_miss_);
-  cache_miss_ = 0;
-
-  result.mutable_stats()->set_num_cache_hits(cache_hit_);
-  cache_hit_ = 0;
-
-  execution_result.query_result = result;
-
-  return execution_result;
+  query_execution_result.subscription_context = std::move(subscription_context);
+  return query_execution_result;
 }
 
 // Builds query plan for given query and returns QueryPlanner instance to the

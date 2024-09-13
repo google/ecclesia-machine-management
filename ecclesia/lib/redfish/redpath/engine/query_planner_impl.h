@@ -119,6 +119,17 @@ struct TraceInfo {
   std::string redpath_node;
 };
 
+// Holds cache hit and miss counters.
+struct CacheStats {
+  std::atomic<int64_t> cache_miss{0};
+  std::atomic<int64_t> cache_hit{0};
+
+  void Reset() {
+    cache_miss = 0;
+    cache_hit = 0;
+  }
+};
+
 // QueryPlannerImpl encapsulates the logic to interpret subqueries, deduplicate
 // RedPath path expressions, dispatch an optimum number of redfish resource
 // requests, and return normalized response data per given property requirement.
@@ -183,8 +194,7 @@ class QueryPlanner final : public QueryPlannerIntf {
   const absl::flat_hash_map<std::string, std::vector<std::string>>
       subquery_id_to_root_ids_;
   const Clock *clock_ = nullptr;
-  std::atomic<int64_t> cache_miss_{0};
-  std::atomic<int64_t> cache_hit_{0};
+  CacheStats cache_stats_;
   std::unique_ptr<QueryTimeoutManager> timeout_manager_ = nullptr;
 };
 
