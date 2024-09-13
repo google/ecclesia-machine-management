@@ -21,6 +21,7 @@ cc_library(
         "//ecclesia/lib/redfish/redpath/definitions/query_predicates:variable_substitution",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
         "//ecclesia/lib/redfish/timing:query_timeout_manager",
+        "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:metrical_transport",
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/time:clock",

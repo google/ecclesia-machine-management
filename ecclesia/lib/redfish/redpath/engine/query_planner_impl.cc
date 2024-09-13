@@ -39,6 +39,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/escaping.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
@@ -60,6 +61,7 @@
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/redpath/engine/redpath_trie.h"
 #include "ecclesia/lib/redfish/timing/query_timeout_manager.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
@@ -406,7 +408,7 @@ class QueryScopeStats {
 QueryExecutionContext QueryExecutionContext::FromExisting(
     const std::string &new_redpath_prefix,
     const GetParams &get_params_for_redpath,
-    RedfishObjectAndIterable redfish_object_and_iterable) {
+    RedfishResponse redfish_response_in) {
   if (redpath_query_tracker != nullptr) {
     redpath_query_tracker->executed_redpath_prefixes_and_params.insert(
         {new_redpath_prefix, get_params_for_redpath});
@@ -418,7 +420,7 @@ QueryExecutionContext QueryExecutionContext::FromExisting(
   return QueryExecutionContext(
       &result, subquery_id_to_subquery_result, &query_variables,
       std::move(new_redpath_prefix_tracker), redpath_query_tracker,
-      std::move(redfish_object_and_iterable));
+      std::move(redfish_response_in));
 }
 
 QueryPlanner::QueryPlanner(ImplOptions options_in)
@@ -471,35 +473,55 @@ absl::Status QueryPlanner::TryNormalize(
                      " not found in query execution context."));
   }
 
-  // Normalize Redfish Object into query result.
-  const std::unique_ptr<RedfishObject> &redfish_object =
-      query_execution_context->redfish_object_and_iterable.redfish_object;
-  // adding url annotations feature.
-  absl::StatusOr<QueryResultData> query_result_data = normalizer_.Normalize(
-      *redfish_object, find_subquery->second, normalizer_options);
-
-  if (!query_result_data.ok()) {
-    if (query_result_data.status().code() != absl::StatusCode::kNotFound) {
-      return query_result_data.status();
+  QueryValue normalized_query_value;
+  // When we are required to populate raw data like cper binary.
+  if (find_subquery->second.has_fetch_raw_data() &&
+      query_execution_context->redfish_response.redfish_raw_bytes != nullptr) {
+    const auto &fetch_raw_data = find_subquery->second.fetch_raw_data();
+    std::string raw_str(
+        query_execution_context->redfish_response.redfish_raw_bytes->begin(),
+        query_execution_context->redfish_response.redfish_raw_bytes->end());
+    if (fetch_raw_data.type() == DelliciusQuery::Subquery::RawData::BYTES) {
+      normalized_query_value.mutable_raw_data()->set_raw_bytes_value(raw_str);
+    } else if (fetch_raw_data.type() ==
+               DelliciusQuery::Subquery::RawData::STRING) {
+      // Encode bytes to a printable format.
+      normalized_query_value.mutable_raw_data()->set_raw_string_value(
+          absl::Base64Escape(raw_str));
     }
+  } else {
+    absl::StatusOr<QueryResultData> normalized_query_result =
+        normalizer_.Normalize(
+            *query_execution_context->redfish_response.redfish_object,
+            find_subquery->second, normalizer_options);
+    if (!normalized_query_result.ok()) {
+      if (normalized_query_result.status().code() !=
+          absl::StatusCode::kNotFound) {
+        return normalized_query_result.status();
+      }
 
-    // Not finding a property is not a halting error.
-    DLOG(INFO) << "Cannot find queried properties in Redfish Object.\n"
-               << "===Redfish Object===\n"
-               << redfish_object->GetContentAsJson().dump(1)
-               << "\n===Subquery===\n"
-               << find_subquery->second.DebugString()
-               << "\nError: " << query_result_data.status();
-    return absl::OkStatus();
+      // Not finding a property is not a halting error.
+      DLOG(INFO) << "Cannot find queried properties in Redfish Object.\n"
+                 << "===Redfish Object===\n"
+                 << query_execution_context->redfish_response.redfish_object
+                        ->GetContentAsJson()
+                        .dump(1)
+                 << "\n===Subquery===\n"
+                 << find_subquery->second.DebugString()
+                 << "\nError: " << normalized_query_result.status();
+      return absl::OkStatus();
+    }
+    *normalized_query_value.mutable_subquery_value() =
+        std::move(*normalized_query_result);
   }
 
   // If the current subquery has one or more root subquery ids, we will find
-  // the result of the root subquery id so that we can nest the query result of
-  // the current subquery in it.
-  QueryResultData *root_subquery_result = nullptr;
-  auto find_parent_subqueries = subquery_id_to_root_ids_.find(subquery_id);
-  if (find_parent_subqueries != subquery_id_to_root_ids_.end()) {
-    for (const auto &root_id : find_parent_subqueries->second) {
+  // the result of the root subquery so that we can nest the result of the
+  // current subquery in it.
+  QueryValue *root_subquery_result = nullptr;
+  auto subquery_id_to_root_iter = subquery_id_to_root_ids_.find(subquery_id);
+  if (subquery_id_to_root_iter != subquery_id_to_root_ids_.end()) {
+    for (const std::string &root_id : subquery_id_to_root_iter->second) {
       auto find_parent_subquery_output =
           query_execution_context->subquery_id_to_subquery_result.find(root_id);
       if (find_parent_subquery_output ==
@@ -511,7 +533,7 @@ absl::Status QueryPlanner::TryNormalize(
     }
   }
 
-  if (find_parent_subqueries == subquery_id_to_root_ids_.end() ||
+  if (subquery_id_to_root_iter == subquery_id_to_root_ids_.end() ||
       root_subquery_result == nullptr) {
     // There isn't a root subquery associated with current subquery or the
     // result of root subquery is not found.
@@ -522,48 +544,45 @@ absl::Status QueryPlanner::TryNormalize(
         query_execution_context->result.mutable_data()
             ->mutable_fields()
             ->insert({std::string(subquery_id), QueryValue()});
-    QueryResultData *subquery_value =
-        subquery_output->second.mutable_list_value()
-            ->add_values()
-            ->mutable_subquery_value();
+    QueryValue *subquery_value =
+        subquery_output->second.mutable_list_value()->add_values();
 
-    *subquery_value = std::move(*query_result_data);
+    *subquery_value = std::move(normalized_query_value);
     query_execution_context->subquery_id_to_subquery_result[subquery_id] =
         subquery_value;
-    return query_result_data.status();
+    return absl::OkStatus();
   }
 
-  auto *subquery_values_in_root_subquery_result =
-      root_subquery_result->mutable_fields();
+  auto *values_in_root_subquery_result =
+      root_subquery_result->mutable_subquery_value()->mutable_fields();
 
-  // Add subquery result to parent subquery result.
-  auto subquery_value_iter =
-      subquery_values_in_root_subquery_result->find(subquery_id);
-  if (subquery_value_iter != subquery_values_in_root_subquery_result->end()) {
-    QueryResultData *new_query_result_data =
-        subquery_value_iter->second.mutable_list_value()
-            ->add_values()
-            ->mutable_subquery_value();
+  // Add current subquery result to parent subquery result.
+  auto subquery_value_iter = values_in_root_subquery_result->find(subquery_id);
+  if (subquery_value_iter != values_in_root_subquery_result->end()) {
+    QueryValue *new_query_result_data =
+        subquery_value_iter->second.mutable_list_value()->add_values();
 
-    *new_query_result_data = std::move(*query_result_data);
+    *new_query_result_data = std::move(normalized_query_value);
     query_execution_context->subquery_id_to_subquery_result[subquery_id] =
         new_query_result_data;
-    return query_result_data.status();
+    return absl::OkStatus();
   }
 
   // When the root subquery result does not have a subquery result linked with
   // current subquery id, we create a new subquery output in root subquery
   // result with current subquery id.
-  QueryValue *subquery_value =
-      &(*subquery_values_in_root_subquery_result)[subquery_id];
-  QueryResultData *new_query_result = subquery_value->mutable_list_value()
-                                          ->add_values()
-                                          ->mutable_subquery_value();
-
-  *new_query_result = std::move(*query_result_data);
+  QueryValue *subquery_value = &(*values_in_root_subquery_result)[subquery_id];
+  QueryValue *new_query_result = subquery_value;
+  // When we are dealing with raw data, we don't expect multiple values in
+  // subquery. So add a list of values only when the query result doesn't have
+  // raw data.
+  if (!normalized_query_value.has_raw_data()) {
+    new_query_result = subquery_value->mutable_list_value()->add_values();
+  }
+  *new_query_result = std::move(normalized_query_value);
   query_execution_context->subquery_id_to_subquery_result[subquery_id] =
       new_query_result;
-  return query_result_data.status();
+  return absl::OkStatus();
 }
 
 absl::StatusOr<std::vector<QueryExecutionContext>>
@@ -574,9 +593,9 @@ QueryPlanner::ExecuteQueryExpression(
   std::vector<QueryExecutionContext> execution_contexts;
 
   const std::unique_ptr<RedfishObject> &current_redfish_obj =
-      current_execution_context.redfish_object_and_iterable.redfish_object;
+      current_execution_context.redfish_response.redfish_object;
   const std::unique_ptr<RedfishIterable> &current_redfish_iterable =
-      current_execution_context.redfish_object_and_iterable.redfish_iterable;
+      current_execution_context.redfish_response.redfish_iterable;
 
   // Construct RedPath prefix to lookup associated query parameters
   RedPathPrefixTracker &redpath_prefix_tracker =
@@ -681,12 +700,9 @@ QueryPlanner::ExecuteQueryExpression(
         return execution_contexts;
       }
       std::string node_name = json_obj->get<std::string>();
-
       get_params_for_redpath = GetQueryParamsForRedPath(node_name);
-
       redfish_variant =
           redfish_interface_.CachedGetUri(node_name, get_params_for_redpath);
-
     } else if (expression.type ==
                RedPathExpression::Type::kNodeNameUriPointer) {
       get_params_for_redpath = GetQueryParamsForRedPath(expression.expression);
@@ -729,31 +745,36 @@ QueryPlanner::ExecuteQueryExpression(
     if (timeout_manager_ != nullptr) {
       redfish_variant.SetTimeoutManager(timeout_manager_.get());
     }
-    std::unique_ptr<RedfishObject> redfish_object = nullptr;
-    std::unique_ptr<RedfishIterable> redfish_iterable = nullptr;
-    if (redfish_iterable = redfish_variant.AsIterable(); !redfish_iterable) {
-      redfish_object = redfish_variant.AsObject();
 
-      if (redfish_object == nullptr) {
+    RedfishResponse redfish_response;
+    redfish_response.redfish_iterable = redfish_variant.AsIterable();
+    std::optional<RedfishTransport::bytes> raw_bytes = redfish_variant.AsRaw();
+    if (raw_bytes.has_value()) {
+      redfish_response.redfish_raw_bytes =
+          std::make_unique<RedfishTransport::bytes>(
+              std::move(raw_bytes.value()));
+    }
+    redfish_response.redfish_object = redfish_variant.AsObject();
+    if (!redfish_response.redfish_iterable &&
+        !redfish_response.redfish_raw_bytes) {
+      if (!redfish_response.redfish_object) {
         DLOG(INFO) << "Cannot query NodeName " << expression.expression
                    << " in Redfish Object:\n"
                    << current_redfish_obj->GetContentAsJson().dump(1)
                    << "\nStatus: " << redfish_variant.status();
         return execution_contexts;
       }
-
       TRACE(trace_info, new_redpath_prefix, get_params_for_redpath.ToString(),
             expression.trie_node->ToString());
-
       // Get fresh Redfish Object if user has requested in the query rule.
       ECCLESIA_ASSIGN_OR_RETURN(
-          redfish_object,
+          redfish_response.redfish_object,
           GetRedfishObjectWithFreshness(get_params_for_redpath, redfish_variant,
                                         trace_info, &cache_stats_.cache_miss));
     }
     execution_contexts.push_back(current_execution_context.FromExisting(
         new_redpath_prefix, get_params_for_redpath,
-        {std::move(redfish_object), std::move(redfish_iterable)}));
+        std::move(redfish_response)));
   }
   return execution_contexts;
 }
@@ -785,7 +806,7 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
   // Populate subquery data using current node before processing next
   // expression in the trie.
   if (!execution_context.redpath_trie_node->subquery_id.empty() &&
-      execution_context.redfish_object_and_iterable.redfish_object != nullptr) {
+      execution_context.redfish_response.redfish_object != nullptr) {
     absl::Status normalize_status = TryNormalize(
         execution_context.redpath_trie_node->subquery_id, &execution_context,
         {.enable_url_annotation = query_resume_options.enable_url_annotation});
@@ -826,7 +847,7 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
       for (auto &new_execution_context : *execution_contexts) {
         // Populate subquery data before processing next expression
         const std::unique_ptr<RedfishObject> &object =
-            new_execution_context.redfish_object_and_iterable.redfish_object;
+            new_execution_context.redfish_response.redfish_object;
         if (!subquery_id.empty() && object != nullptr) {
           absl::Status normalize_status =
               TryNormalize(subquery_id, &new_execution_context,
@@ -1022,10 +1043,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
 
       for (auto &execution_context : *execution_contexts) {
         // Populate subquery data before processing next expression
-        const std::unique_ptr<RedfishObject> &redfish_object =
-            execution_context.redfish_object_and_iterable.redfish_object;
-
-        if (!subquery_id.empty() && redfish_object != nullptr) {
+        if (!subquery_id.empty()) {
           absl::Status normalize_status =
               TryNormalize(subquery_id, &execution_context,
                            {.enable_url_annotation =

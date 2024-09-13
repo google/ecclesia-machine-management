@@ -71,6 +71,7 @@ using RedPathRedfishQueryParams =
 using ::tensorflow::serving::net_http::HTTPStatusCode;
 using ::tensorflow::serving::net_http::ServerRequestInterface;
 using ::tensorflow::serving::net_http::SetContentType;
+using ::tensorflow::serving::net_http::SetContentTypeTEXT;
 using ::testing::HasSubstr;
 using ::testing::NotNull;
 using ::testing::UnorderedElementsAre;
@@ -3561,6 +3562,182 @@ TEST_F(QueryPlannerTestRunner,
   EXPECT_THAT(expected_query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
                   ecclesia::EqualsProto(result.query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner, QueryPlannerQueriesRawDataStringSuccessfully) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "TestRawData"
+        subquery {
+          subquery_id: "ServiceRoot"
+          redpath: "/"
+          properties: { property: "Id" type: STRING }
+        }
+        # Returns the CPER log binary
+        subquery {
+          subquery_id: "CperBinary"
+          root_subquery_ids: "ServiceRoot"
+          uri_reference_redpath: "AdditionalDataURI"
+          freshness: REQUIRED
+          fetch_raw_data { type: STRING }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/",
+          "Id": "1",
+          "AdditionalDataURI": "/redfish/v1/additional"
+        })json");
+    req->Reply();
+  });
+
+  server_->AddHttpGetHandler(
+      "/redfish/v1/additional", [](ServerRequestInterface *req) {
+        SetContentTypeTEXT(req);
+        req->WriteResponseString("adfasdfasfasdfasdfasdfxzcfaskdfaksdfn");
+        req->Reply();
+      });
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = &query,
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {}});
+  ASSERT_THAT(qp, IsOk());
+  ASSERT_THAT(*qp, NotNull());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = (*qp)->Run({args1});
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "TestRawData"
+    stats { payload_size: 123 num_cache_misses: 2 }
+    data {
+      fields {
+        key: "ServiceRoot"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "CperBinary"
+                  value {
+                    raw_data {
+                      raw_string_value: "YWRmYXNkZmFzZmFzZGZhc2RmYXNkZnh6Y2Zhc2tkZmFrc2Rmbg=="
+                    }
+                  }
+                }
+                fields {
+                  key: "Id"
+                  value { string_value: "1" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  ASSERT_FALSE(result.query_result.has_status());
+  EXPECT_THAT(result.query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(expected_query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner, QueryPlannerQueriesRawDataBytesSuccessfully) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "TestRawData"
+        subquery {
+          subquery_id: "ServiceRoot"
+          redpath: "/"
+          properties: { property: "Id" type: STRING }
+        }
+        # Returns the CPER log binary
+        subquery {
+          subquery_id: "CperBinary"
+          root_subquery_ids: "ServiceRoot"
+          uri_reference_redpath: "AdditionalDataURI"
+          freshness: REQUIRED
+          fetch_raw_data { type: BYTES }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/",
+          "Id": "1",
+          "AdditionalDataURI": "/redfish/v1/additional"
+        })json");
+    req->Reply();
+  });
+
+  server_->AddHttpGetHandler(
+      "/redfish/v1/additional", [](ServerRequestInterface *req) {
+        SetContentTypeTEXT(req);
+        req->WriteResponseString("adfasdfasfasdfasdfasdfxzcfaskdfaksdfn");
+        req->Reply();
+      });
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = &query,
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {}});
+  ASSERT_THAT(qp, IsOk());
+  ASSERT_THAT(*qp, NotNull());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = (*qp)->Run({args1});
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "TestRawData"
+    stats { payload_size: 108 num_cache_misses: 2 }
+    data {
+      fields {
+        key: "ServiceRoot"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "CperBinary"
+                  value {
+                    raw_data {
+                      raw_bytes_value: "adfasdfasfasdfasdfasdfxzcfaskdfaksdfn"
+                    }
+                  }
+                }
+                fields {
+                  key: "Id"
+                  value { string_value: "1" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  ASSERT_FALSE(result.query_result.has_status());
+  EXPECT_THAT(result.query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(expected_query_result)));
 }
 
 }  // namespace

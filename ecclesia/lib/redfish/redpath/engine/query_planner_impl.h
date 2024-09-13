@@ -39,6 +39,7 @@
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
 #include "ecclesia/lib/redfish/redpath/engine/redpath_trie.h"
 #include "ecclesia/lib/redfish/timing/query_timeout_manager.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
@@ -47,12 +48,13 @@ using SubqueryIdToSubquery =
     absl::flat_hash_map<std::string, DelliciusQuery::Subquery>;
 
 // Describes the Redfish resource relative to which RedPath expressions execute.
-struct RedfishObjectAndIterable {
+struct RedfishResponse {
   // A singleton Redfish resource.
-  std::unique_ptr<RedfishObject> redfish_object;
+  std::unique_ptr<RedfishObject> redfish_object = nullptr;
   // Redfish collection or any iterable Redfish object - collection of primitive
   // or complex types.
-  std::unique_ptr<RedfishIterable> redfish_iterable;
+  std::unique_ptr<RedfishIterable> redfish_iterable = nullptr;
+  std::unique_ptr<RedfishTransport::bytes> redfish_raw_bytes = nullptr;
 };
 
 // Tracks RedPath prefixes executed along with Redfish QueryParameters used
@@ -69,8 +71,7 @@ struct RedPathPrefixTracker {
 struct QueryExecutionContext {
   // QueryResult obtained to store the result of the execution.
   QueryResult &result;
-  absl::flat_hash_map<std::string, QueryResultData *>
-      subquery_id_to_subquery_result;
+  absl::flat_hash_map<std::string, QueryValue *> subquery_id_to_subquery_result;
   // RedPath Trie Node that containing next set of RedPath expressions to
   // execute.
   const RedPathTrieNode *redpath_trie_node = nullptr;
@@ -81,33 +82,31 @@ struct QueryExecutionContext {
   // Tracks RedPath prefixes and the Params
   QueryPlannerIntf::RedpathQueryTracker *redpath_query_tracker = nullptr;
   // Redfish resource relative to which RedPath expressions execute.
-  RedfishObjectAndIterable redfish_object_and_iterable;
+  RedfishResponse redfish_response;
 
   // Redfish URIs to subscribe to.
   // Always empty unless subscription is requested.
   std::vector<std::string> uris_to_subscribe;
 
-  QueryExecutionContext FromExisting(
-      const std::string &new_redpath_prefix,
-      const GetParams &get_params_for_redpath,
-      RedfishObjectAndIterable redfish_object_and_iterable);
+  QueryExecutionContext FromExisting(const std::string &new_redpath_prefix,
+                                     const GetParams &get_params_for_redpath,
+                                     RedfishResponse redfish_response);
 
   QueryExecutionContext(
       QueryResult *result_in,
-      const absl::flat_hash_map<std::string, QueryResultData *>
+      const absl::flat_hash_map<std::string, QueryValue *>
           &subquery_id_to_subquery_result_in,
       const QueryVariables *query_variables_in,
       RedPathPrefixTracker redpath_prefix_tracker_in,
       QueryPlannerIntf::RedpathQueryTracker *redpath_query_tracker_in,
-      RedfishObjectAndIterable redfish_object_and_iterable_in = {
+      RedfishResponse redfish_object_and_iterable_in = {
           /*redfish_object=*/nullptr, /*redfish_iterable=*/nullptr})
       : result(*ABSL_DIE_IF_NULL(result_in)),
         subquery_id_to_subquery_result(subquery_id_to_subquery_result_in),
         query_variables(*ABSL_DIE_IF_NULL(query_variables_in)),
         redpath_prefix_tracker(std::move(redpath_prefix_tracker_in)),
         redpath_query_tracker(redpath_query_tracker_in),
-        redfish_object_and_iterable(std::move(redfish_object_and_iterable_in)) {
-  }
+        redfish_response(std::move(redfish_object_and_iterable_in)) {}
 };
 
 // Encapsulates information relevant per redfish object that is queried during
