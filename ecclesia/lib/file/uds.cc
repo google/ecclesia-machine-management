@@ -25,7 +25,6 @@
 #include <string>
 
 #include "absl/log/log.h"
-#include "absl/strings/string_view.h"
 #include "ecclesia/lib/file/path.h"
 
 namespace ecclesia {
@@ -43,7 +42,7 @@ bool SetUpUnixDomainSocket(
     const std::function<bool(const std::string &)> &is_root_safe) {
   // Construct the directory and root paths from the socket path. We store these
   // in a string instead of a string_view because we need to be able to convert
-  // them into NUL-terminated strings to pass them into C APIs.
+  // them into NULL-terminated strings to pass them into C APIs.
   std::string socket_directory(GetDirname(socket_path));
   std::string socket_root(GetDirname(socket_directory));
 
@@ -128,28 +127,26 @@ bool SetUpUnixDomainSocket(
   }
 
   // At this point we know the socket directory is ready. There may already be
-  // an existing socket file, so we want to remove that. It's okay for the
-  // remove to fail because the file already doesn't exist, but any other
-  // failure is an error.
-  if (unlink(socket_path.c_str()) != 0 && errno != ENOENT) {
-    PLOG(ERROR) << "unable to remove the existing socket " << socket_path;
-    return false;
-  }
-
-  // At this point we know the socket directory is ready. There may already be
-  // an existing socket file, so we want to remove that. It's okay for the
-  // remove to fail because the file already doesn't exist, but any other
-  // failure is an error.
-  //
-  // After this point, all validation has succeeded if the socket directory
-  // exists and the socket path does not.
+  // an existing socket file, so we want to remove that. Validation is complete
+  // once the socket directory exists and the socket path does not.
   return CleanUpUnixDomainSocket(socket_path);
 }
 
 bool CleanUpUnixDomainSocket(const std::string &socket_path) {
-  // It's okay for the remove to fail because the file already doesn't exist,
-  // but any other failure is an error.
-  return (unlink(socket_path.c_str()) == 0 || errno == ENOENT);
+  if (unlink(socket_path.c_str()) != 0) {
+    // Since the goal of this function is to remove existing sockets, we can
+    // ignore errors that indicate the socket doesn't exist. Other errors should
+    // be logged and return false.
+    if (errno != ENOENT) {
+      PLOG(ERROR) << "Unable to remove the existing socket " << socket_path;
+      return false;
+    }
+  } else {
+    // If the unlink succeeded, log a message indicating success for better
+    // debuggability concerning sockets that persist between invocations.
+    LOG(INFO) << "Successfully removed the existing socket " << socket_path;
+  }
+  return true;
 }
 
 }  // namespace ecclesia
