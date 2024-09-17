@@ -56,6 +56,51 @@ cc_test(
     ],
 )
 
+proto_library(
+    name = "query_result_verification_proto",
+    srcs = ["query_result_verification.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":query_result_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "query_result_verification_cc_proto",
+    visibility = ["//visibility:public"],
+    deps = [":query_result_verification_proto"],
+)
+
+cc_library(
+    name = "verification",
+    srcs = ["verification.cc"],
+    hdrs = ["verification.h"],
+    deps = [
+        ":converter",
+        ":query_result_cc_proto",
+        ":query_result_verification_cc_proto",
+        "//ecclesia/lib/time:proto",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/strings:string_view",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_test(
+    name = "verification_test",
+    srcs = ["verification_test.cc"],
+    deps = [
+        ":query_result_cc_proto",
+        ":query_result_verification_cc_proto",
+        ":verification",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/testing:status",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
 cc_library(
     name = "converter",
     srcs = ["converter.cc"],
