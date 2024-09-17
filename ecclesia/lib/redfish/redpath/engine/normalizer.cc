@@ -417,30 +417,31 @@ absl::Status RedpathNormalizerImplAddMachineBarepath::Normalize(
   bool is_root = absl::StrContains(resource_type, "#Chassis.") &&
                  service_label.empty() && part_location_context.empty();
 
-  absl::StatusOr<std::string> machine_devpath_for_redfish_location =
-      id_assigner_->IdForRedfishLocationInQueryResult(data_set_local, is_root);
-  if (machine_devpath_for_redfish_location.ok() &&
-      !machine_devpath_for_redfish_location->empty()) {
+  // Try to find and set a machine devpath, prioritizing local devpath to
+  // machine devpath mappings from UHMM when desired.
+  absl::StatusOr<std::string> machine_devpath;
+  if (use_local_devpath_for_machine_devpath_) {
+    if (!query_value_reader.ok() ||
+        !query_value_reader->identifier().has_local_devpath()) {
+      return absl::OkStatus();
+    }
+    machine_devpath =
+        id_assigner_->IdForLocalDevpathInQueryResult(data_set_local);
+  } else {
+    machine_devpath = id_assigner_->IdForRedfishLocationInQueryResult(
+        data_set_local, is_root);
+    // Attempt to fallback to local devpath to derive machine devpath if we
+    // cannot find a machine devpath using redfish location properties.
+    if (!machine_devpath.ok() && query_value_reader.ok() &&
+        query_value_reader->identifier().has_local_devpath()) {
+      machine_devpath =
+          id_assigner_->IdForLocalDevpathInQueryResult(data_set_local);
+    }
+  }
+  if (machine_devpath.ok() && !machine_devpath->empty()) {
     (*data_set_local.mutable_fields())[kIdentifierTag]
         .mutable_identifier()
-        ->set_machine_devpath(*machine_devpath_for_redfish_location);
-    return absl::OkStatus();
-  }
-
-  // We reach here if we cannot derive machine devpath using Redfish Stable id
-  // - PartLocationContext + ServiceLabel. We will now try to map a local
-  // devpath to machine devpath.
-  if (!query_value_reader.ok() ||
-      !query_value_reader->identifier().has_local_devpath()) {
-    return absl::OkStatus();
-  }
-  absl::StatusOr<std::string> machine_devpath_for_local_devpath =
-      id_assigner_->IdForLocalDevpathInQueryResult(data_set_local);
-  if (machine_devpath_for_local_devpath.ok() &&
-      !machine_devpath_for_local_devpath->empty()) {
-    (*data_set_local.mutable_fields())[kIdentifierTag]
-        .mutable_identifier()
-        ->set_machine_devpath(*machine_devpath_for_local_devpath);
+        ->set_machine_devpath(*machine_devpath);
   }
   return absl::OkStatus();
 }

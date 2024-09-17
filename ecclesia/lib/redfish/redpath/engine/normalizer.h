@@ -17,6 +17,8 @@
 #ifndef ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_NORMALIZER_H_
 #define ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_NORMALIZER_H_
 
+#include <stdbool.h>
+
 #include <memory>
 #include <utility>
 #include <vector>
@@ -126,8 +128,11 @@ class RedpathNormalizerImplAddMachineBarepath final
     : public RedpathNormalizer::ImplInterface {
  public:
   explicit RedpathNormalizerImplAddMachineBarepath(
-      std::unique_ptr<IdAssigner> id_assigner)
-      : id_assigner_(std::move(id_assigner)) {}
+      std::unique_ptr<IdAssigner> id_assigner,
+      bool use_local_devpath_for_machine_devpath = false)
+      : id_assigner_(std::move(id_assigner)),
+        use_local_devpath_for_machine_devpath_(
+            use_local_devpath_for_machine_devpath) {}
 
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
@@ -137,6 +142,7 @@ class RedpathNormalizerImplAddMachineBarepath final
 
  private:
   std::unique_ptr<IdAssigner> id_assigner_;
+  bool use_local_devpath_for_machine_devpath_ = false;
 };
 
 // Builds normalizer that transparently returns queried redfish property without
@@ -183,7 +189,8 @@ BuildRedpathNormalizerWithMachineDevpath(
 
   normalizer->AddRedpathNormalizer(
       std::make_unique<RedpathNormalizerImplAddMachineBarepath>(
-          std::move(id_assigner)));
+          std::move(id_assigner),
+          /*use_local_devpath_for_machine_devpath=*/true));
   return normalizer;
 }
 

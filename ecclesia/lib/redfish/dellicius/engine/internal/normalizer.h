@@ -17,6 +17,8 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_NORMALIZER_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_INTERNAL_NORMALIZER_H_
 
+#include <stdbool.h>
+
 #include <memory>
 #include <string>
 #include <utility>
@@ -75,10 +77,14 @@ template <typename LocalIdMapT>
 class NormalizerImplAddMachineBarepath final
     : public Normalizer::ImplInterface {
  public:
-  NormalizerImplAddMachineBarepath(std::unique_ptr<LocalIdMapT> local_id_map,
-                                   std::unique_ptr<IdAssigner> id_assigner)
+  NormalizerImplAddMachineBarepath(
+      std::unique_ptr<LocalIdMapT> local_id_map,
+      std::unique_ptr<IdAssigner> id_assigner,
+      bool use_local_devpath_for_machine_devpath = false)
       : local_id_map_(std::move(local_id_map)),
-        id_assigner_(std::move(id_assigner)) {}
+        id_assigner_(std::move(id_assigner)),
+        use_local_devpath_for_machine_devpath_(
+            use_local_devpath_for_machine_devpath) {}
 
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
@@ -105,23 +111,24 @@ class NormalizerImplAddMachineBarepath final
           data_set.redfish_location().embedded_location_context());
     }
 
-    absl::StatusOr<std::string> machine_devpath =
-        id_assigner_->IdForRedfishLocationInDataSet(data_set, is_root);
-    if (machine_devpath.ok()) {
-      data_set.mutable_decorators()->set_machine_devpath(
-          machine_devpath.value());
-      return absl::OkStatus();
+    // Try to find and set a machine devpath, prioritizing local devpath to
+    // machine devpath mappings from UHMM when desired.
+    absl::StatusOr<std::string> machine_devpath;
+    if (use_local_devpath_for_machine_devpath_) {
+      if (!data_set.has_devpath()) return absl::OkStatus();
+      machine_devpath = id_assigner_->IdForLocalDevpathInDataSet(data_set);
+    } else {
+      machine_devpath =
+          id_assigner_->IdForRedfishLocationInDataSet(data_set, is_root);
+      // Attempt to fallback to local devpath to derive machine devpath if we
+      // cannot find a machine devpath using redfish location properties.
+      if (!machine_devpath.ok() && data_set.has_devpath()) {
+        machine_devpath = id_assigner_->IdForLocalDevpathInDataSet(data_set);
+      }
     }
-
-    // We reach here if we cannot derive machine devpath using Redfish Stable id
-    // - PartLocationContext + ServiceLabel. We will now try to map a local
-    // devpath to machine devpath
-    if (!data_set.has_devpath()) return absl::OkStatus();
-    machine_devpath = id_assigner_->IdForLocalDevpathInDataSet(data_set);
     if (machine_devpath.ok()) {
       data_set.mutable_decorators()->set_machine_devpath(
           machine_devpath.value());
-      return absl::OkStatus();
     }
     return absl::OkStatus();
   }
@@ -129,6 +136,7 @@ class NormalizerImplAddMachineBarepath final
  private:
   std::unique_ptr<LocalIdMapT> local_id_map_;
   std::unique_ptr<IdAssigner> id_assigner_;
+  bool use_local_devpath_for_machine_devpath_ = false;
 };
 
 }  // namespace ecclesia

@@ -26,6 +26,9 @@
 #include "google/rpc/code.pb.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
+#include "absl/functional/function_ref.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
@@ -41,6 +44,8 @@
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_errors.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner_devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/topology.h"
@@ -713,6 +718,53 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorDoesntHaltExecutionIfDesired) {
   ASSERT_TRUE(query_result.ok());
   EXPECT_THAT(query_result->status().code(),
               Eq(::google::rpc::Code::DEADLINE_EXCEEDED));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       NormalizerPrioritizesLocalDevpathForMachineDevpath) {
+  std::string query_in_path = GetTestDataDependencyPath(JoinFilePaths(
+      kQuerySamplesLocation, "query_in/all_processors_in.textproto"));
+  std::string query_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation,
+                    "query_out/legacy/legacy_sensor_out_links.textproto"));
+  SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
+
+  absl::flat_hash_set<std::string> expected_machine_devpaths = {
+      "/phys/PEO/IO0/CPU0", "/phys/PEO/IO0/CPU1"};
+  // Instantiate a normalizer with machine devpath from local devpath.
+  absl::flat_hash_map<std::string, std::string> devpath_map = {
+      {"/phys/CPU0", "/phys/PEO/IO0/CPU0"},
+      {"/phys/CPU1", "/phys/PEO/IO0/CPU1"}};
+  std::unique_ptr<IdAssigner> id_assigner =
+      NewMapBasedDevpathAssigner(devpath_map);
+
+  // MapBasedDevpathAssigner should only model local devpath to machine devpath
+  // mappings. RedfishLocation should not be used when prioritizing local
+  // devpath, trying to use it will throw an error as it using it for machine
+  // devpath unimplemented.
+  std::unique_ptr<Normalizer> normalizer_with_devpath =
+      BuildNormalizerWithMachineDevpath(std::move(id_assigner),
+                                        CreateTopologyFromRedfish(intf_.get()));
+  // Create the QueryPlanner, issue the query, and check that the devpaths
+  // were populated correctly.
+  DelliciusQuery query =
+      ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
+  absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qp =
+      BuildDefaultQueryPlanner(query, RedPathRedfishQueryParams{},
+                               normalizer_with_devpath.get(), nullptr);
+  ASSERT_TRUE(qp.ok());
+  absl::StatusOr<DelliciusQueryResult> query_result =
+      (*qp)->Run(intf_->GetRoot(), *clock_, /*tracker=*/nullptr,
+                 /*variables=*/{});
+  absl::flat_hash_set<std::string> actual_machine_devpaths;
+  ASSERT_TRUE(query_result.ok());
+  const auto it = query_result->subquery_output_by_id().find("Processors");
+  ASSERT_TRUE(it != query_result->subquery_output_by_id().end());
+  for (const SubqueryDataSet &data_set : it->second.data_sets()) {
+    actual_machine_devpaths.insert(data_set.decorators().machine_devpath());
+  }
+  ASSERT_THAT(actual_machine_devpaths,
+              testing::UnorderedElementsAreArray(expected_machine_devpaths));
 }
 
 }  // namespace

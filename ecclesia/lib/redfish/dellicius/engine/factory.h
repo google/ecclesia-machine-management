@@ -59,8 +59,8 @@ inline std::unique_ptr<Normalizer> BuildNormalizerWithMachineDevpath(
   return normalizer;
 }
 
-// Extends default normalizer to populate machine devpaths using Redfish stable
-// identifier.
+// Extends default normalizer to populate machine devpaths using local devpath
+// as the stable id.
 inline std::unique_ptr<Normalizer> BuildNormalizerWithMachineDevpath(
     std::unique_ptr<IdAssigner> id_assigner, NodeTopology node_topology) {
   std::unique_ptr<Normalizer> normalizer =
@@ -69,7 +69,8 @@ inline std::unique_ptr<Normalizer> BuildNormalizerWithMachineDevpath(
   // of the id assigner.
   normalizer->AddNormalizer(
       absl::make_unique<NormalizerImplAddMachineBarepath<int>>(
-          nullptr, std::move(id_assigner)));
+          nullptr, std::move(id_assigner),
+          /*use_local_devpath_for_machine_devpath=*/true));
   return normalizer;
 }
 
