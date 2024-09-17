@@ -220,5 +220,100 @@ TEST(CompareQueryValuesTest, NonScalarValues) {
   ASSERT_THAT(errors, IsEmpty());
 }
 
+TEST(CompareListValuesTest, Unimplemented) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {
+                                               values { int_value: 1 }
+                                               values { int_value: 2 }
+                                             })pb");
+  ListValueVerification verification;
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv_a, qv_a, verification, errors),
+              IsStatusUnimplemented());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(CompareSubqueryValues, Unimplemented) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(subquery_value {
+                                               fields {
+                                                 key: "foo"
+                                                 value: { int_value: 1 }
+                                               }
+                                             })pb");
+  QueryResultDataVerification verification;
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareSubqueryValues(qv_a, qv_a, verification, errors),
+              IsStatusUnimplemented());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(CompareQueryResultsTest, Unimplemented) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+    }
+  )pb");
+  QueryResultVerification verification;
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_a, verification, errors),
+              IsStatusUnimplemented());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryValueTest, Unimplemented) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
+  QueryValueVerification verification;
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyQueryValue(qv_a, verification, errors),
+              IsStatusUnimplemented());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyListValueTest, Unimplemented) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {
+                                               values { int_value: 1 }
+                                               values { int_value: 2 }
+                                             })pb");
+  ListValueVerification verification;
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyListValue(qv_a, verification, errors),
+              IsStatusUnimplemented());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifySubqueryValueTest, Unimplemented) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(subquery_value {
+                                               fields {
+                                                 key: "foo"
+                                                 value: { int_value: 1 }
+                                               }
+                                             })pb");
+  QueryResultDataVerification verification;
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifySubqueryValue(qv_a, verification, errors),
+              IsStatusUnimplemented());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryResultTest, Unimplemented) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+    }
+  )pb");
+  QueryResultVerification verification;
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyQueryResult(qr_a, verification, errors),
+              IsStatusUnimplemented());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
 }  // namespace
 }  // namespace ecclesia

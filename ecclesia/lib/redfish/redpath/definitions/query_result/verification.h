@@ -53,6 +53,51 @@ absl::Status CompareQueryValues(
     Comparison::Operation operation, std::vector<std::string>& errors,
     const VerificationOptions& options = VerificationOptions());
 
+// Compare two list values against the given verification.
+absl::Status CompareListValues(
+    const QueryValue& value_a, const QueryValue& value_b,
+    const ListValueVerification& verification, std::vector<std::string>& errors,
+    const VerificationOptions& options = VerificationOptions());
+
+// Compare two subquery values against the given verification.
+absl::Status CompareSubqueryValues(
+    const QueryValue& value_a, const QueryValue& value_b,
+    const QueryResultDataVerification& verification,
+    std::vector<std::string>& errors,
+    const VerificationOptions& options = VerificationOptions());
+
+// Compare two query results against the given verification.
+absl::Status CompareQueryResults(
+    const QueryResult& query_result_a, const QueryResult& query_result_b,
+    const QueryResultVerification& verification,
+    std::vector<std::string>& errors,
+    const VerificationOptions& options = VerificationOptions());
+
+// Verify a query value against the given verification.
+absl::Status VerifyQueryValue(
+    const QueryValue& value, const QueryValueVerification& verification,
+    std::vector<std::string>& errors,
+    const VerificationOptions& options = VerificationOptions());
+
+// Verify a list value against the given verification.
+absl::Status VerifyListValue(
+    const QueryValue& value, const ListValueVerification& verification,
+    std::vector<std::string>& errors,
+    const VerificationOptions& options = VerificationOptions());
+
+// Verify a subquery value against the given verification.
+absl::Status VerifySubqueryValue(
+    const QueryValue& value, const QueryResultDataVerification& verification,
+    std::vector<std::string>& errors,
+    const VerificationOptions& options = VerificationOptions());
+
+// Verify a query result against the given verification.
+absl::Status VerifyQueryResult(
+    const QueryResult& query_result,
+    const QueryResultVerification& verification,
+    std::vector<std::string>& errors,
+    const VerificationOptions& options = VerificationOptions());
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_REDFISH_REDPATH_DEFINITIONS_QUERY_RESULT_VERIFICATION_H_

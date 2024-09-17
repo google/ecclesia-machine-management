@@ -157,4 +157,54 @@ absl::Status CompareQueryValues(const QueryValue& value_a,
   return absl::FailedPreconditionError("Unsupported query value type");
 }
 
+absl::Status CompareListValues(const QueryValue& value_a,
+                               const QueryValue& value_b,
+                               const ListValueVerification& verification,
+                               std::vector<std::string>& errors,
+                               const VerificationOptions& options) {
+  return absl::UnimplementedError("Not implemented");
+}
+
+absl::Status CompareSubqueryValues(
+    const QueryValue& value_a, const QueryValue& value_b,
+    const QueryResultDataVerification& verification,
+    std::vector<std::string>& errors, const VerificationOptions& options) {
+  return absl::UnimplementedError("Not implemented");
+}
+
+absl::Status CompareQueryResults(const QueryResult& query_result_a,
+                                 const QueryResult& query_result_b,
+                                 const QueryResultVerification& verification,
+                                 std::vector<std::string>& errors,
+                                 const VerificationOptions& options) {
+  return absl::UnimplementedError("Not implemented");
+}
+
+absl::Status VerifyQueryValue(const QueryValue& value,
+                              const QueryValueVerification& verification,
+                              std::vector<std::string>& errors,
+                              const VerificationOptions& options) {
+  return absl::UnimplementedError("Not implemented");
+}
+
+absl::Status VerifyListValue(const QueryValue& value,
+                             const ListValueVerification& verification,
+                             std::vector<std::string>& errors,
+                             const VerificationOptions& options) {
+  return absl::UnimplementedError("Not implemented");
+}
+
+absl::Status VerifySubqueryValue(
+    const QueryValue& value, const QueryResultDataVerification& verification,
+    std::vector<std::string>& errors, const VerificationOptions& options) {
+  return absl::UnimplementedError("Not implemented");
+}
+
+absl::Status VerifyQueryResult(const QueryResult& query_result,
+                               const QueryResultVerification& verification,
+                               std::vector<std::string>& errors,
+                               const VerificationOptions& options) {
+  return absl::UnimplementedError("Not implemented");
+}
+
 }  // namespace ecclesia
