@@ -63,7 +63,7 @@ std::string InternalErrorMessage(absl::string_view message,
 
 template <typename T>
 absl::Status Compare(const T& value_a, const T& value_b,
-                     Comparison::Operation operation,
+                     Verification::Compare comparison,
                      std::vector<std::string>& errors,
                      const VerificationOptions& options) {
   auto internal_error = [&](absl::string_view message) {
@@ -72,20 +72,20 @@ absl::Status Compare(const T& value_a, const T& value_b,
     errors.push_back(error_message);
     return absl::InternalError(error_message);
   };
-  switch (operation) {
-    case Comparison::OPERATION_EQUAL:
+  switch (comparison) {
+    case Verification::COMPARE_EQUAL:
       if (value_a != value_b) {
         return internal_error("Failed equality check");
       }
       break;
-    case Comparison::OPERATION_NOT_EQUAL:
+    case Verification::COMPARE_NOT_EQUAL:
       if (value_a == value_b) {
         return internal_error("Failed inequality check");
       }
       break;
     default:
       return absl::InternalError(absl::StrFormat(
-          "Unsupported operation %s", Comparison::Operation_Name(operation)));
+          "Unsupported comparison %s", Verification::Compare_Name(comparison)));
       break;
   }
   return absl::OkStatus();
@@ -93,7 +93,7 @@ absl::Status Compare(const T& value_a, const T& value_b,
 
 absl::Status CompareRawData(const QueryValue::RawData& value_a,
                             const QueryValue::RawData& value_b,
-                            Comparison::Operation operation,
+                            Verification::Compare comparison,
                             std::vector<std::string>& errors,
                             const VerificationOptions& options) {
   if (value_a.value_case() != value_b.value_case()) {
@@ -103,10 +103,10 @@ absl::Status CompareRawData(const QueryValue::RawData& value_a,
   switch (value_a.value_case()) {
     case QueryValue_RawData::kRawStringValue:
       return Compare(value_a.raw_string_value(), value_b.raw_string_value(),
-                     operation, errors, options);
+                     comparison, errors, options);
     case QueryValue_RawData::kRawBytesValue:
       return Compare(value_a.raw_bytes_value(), value_b.raw_bytes_value(),
-                     operation, errors, options);
+                     comparison, errors, options);
     default:
       break;
   }
@@ -117,7 +117,7 @@ absl::Status CompareRawData(const QueryValue::RawData& value_a,
 
 absl::Status CompareQueryValues(const QueryValue& value_a,
                                 const QueryValue& value_b,
-                                Comparison::Operation operation,
+                                Verification::Compare comparison,
                                 std::vector<std::string>& errors,
                                 const VerificationOptions& options) {
   if (value_a.kind_case() != value_b.kind_case()) {
@@ -130,26 +130,26 @@ absl::Status CompareQueryValues(const QueryValue& value_a,
       return absl::FailedPreconditionError(
           "Only scalar values can be compared");
     case QueryValue::kIntValue:
-      return Compare(value_a.int_value(), value_b.int_value(), operation,
+      return Compare(value_a.int_value(), value_b.int_value(), comparison,
                      errors, options);
     case QueryValue::kDoubleValue:
-      return Compare(value_a.double_value(), value_b.double_value(), operation,
+      return Compare(value_a.double_value(), value_b.double_value(), comparison,
                      errors, options);
     case QueryValue::kStringValue:
-      return Compare(value_a.string_value(), value_b.string_value(), operation,
+      return Compare(value_a.string_value(), value_b.string_value(), comparison,
                      errors, options);
     case QueryValue::kBoolValue:
-      return Compare(value_a.bool_value(), value_b.bool_value(), operation,
+      return Compare(value_a.bool_value(), value_b.bool_value(), comparison,
                      errors, options);
     case QueryValue::kTimestampValue:
       return Compare(AbslTimeFromProtoTime(value_a.timestamp_value()),
                      AbslTimeFromProtoTime(value_b.timestamp_value()),
-                     operation, errors, options);
+                     comparison, errors, options);
     case QueryValue::kIdentifier:
-      return Compare(value_a.identifier(), value_b.identifier(), operation,
+      return Compare(value_a.identifier(), value_b.identifier(), comparison,
                      errors, options);
     case QueryValue::kRawData:
-      return CompareRawData(value_a.raw_data(), value_b.raw_data(), operation,
+      return CompareRawData(value_a.raw_data(), value_b.raw_data(), comparison,
                             errors, options);
     default:
       break;

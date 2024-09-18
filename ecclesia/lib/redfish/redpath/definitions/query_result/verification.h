@@ -50,7 +50,7 @@ struct VerificationOptions {
 // Compare two scalar query values against the given operation.
 absl::Status CompareQueryValues(
     const QueryValue& value_a, const QueryValue& value_b,
-    Comparison::Operation operation, std::vector<std::string>& errors,
+    Verification::Compare comparison, std::vector<std::string>& errors,
     const VerificationOptions& options = VerificationOptions());
 
 // Compare two list values against the given verification.

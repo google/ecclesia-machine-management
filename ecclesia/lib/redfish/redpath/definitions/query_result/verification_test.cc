@@ -53,7 +53,7 @@ TEST_P(EqualValuesTest, EqualSuccess) {
   std::vector<std::string> errors;
   ASSERT_THAT(
       CompareQueryValues(test_case.query_value_a, test_case.query_value_a,
-                         Comparison::OPERATION_EQUAL, errors),
+                         Verification::COMPARE_EQUAL, errors),
       IsOk());
   ASSERT_THAT(errors, IsEmpty());
 }
@@ -63,7 +63,7 @@ TEST_P(EqualValuesTest, EqualFailure) {
   std::vector<std::string> errors;
   ASSERT_THAT(
       CompareQueryValues(test_case.query_value_a, test_case.query_value_b,
-                         Comparison::OPERATION_EQUAL, errors),
+                         Verification::COMPARE_EQUAL, errors),
       IsStatusInternal());
   ASSERT_THAT(errors, SizeIs(1));
   EXPECT_THAT(errors[0], HasSubstr("Failed equality check"));
@@ -74,7 +74,7 @@ TEST_P(EqualValuesTest, NotEqualSuccess) {
   std::vector<std::string> errors;
   ASSERT_THAT(
       CompareQueryValues(test_case.query_value_a, test_case.query_value_b,
-                         Comparison::OPERATION_NOT_EQUAL, errors),
+                         Verification::COMPARE_NOT_EQUAL, errors),
       IsOk());
   ASSERT_THAT(errors, IsEmpty());
 }
@@ -84,7 +84,7 @@ TEST_P(EqualValuesTest, NotEqualFailure) {
   std::vector<std::string> errors;
   ASSERT_THAT(
       CompareQueryValues(test_case.query_value_a, test_case.query_value_a,
-                         Comparison::OPERATION_NOT_EQUAL, errors),
+                         Verification::COMPARE_NOT_EQUAL, errors),
       IsStatusInternal());
   ASSERT_THAT(errors, SizeIs(1));
   EXPECT_THAT(errors[0], HasSubstr("Failed inequality check"));
@@ -155,7 +155,7 @@ TEST(CompareQueryValuesTest, RawDataDifferentTypes) {
       ParseTextProtoOrDie(R"pb(raw_data { raw_bytes_value: "foo" })pb");
   std::vector<std::string> errors;
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_b, Comparison::OPERATION_EQUAL, errors),
+      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, errors),
       IsStatusFailedPrecondition());
   ASSERT_THAT(errors, IsEmpty());
 }
@@ -165,7 +165,7 @@ TEST(CompareQueryValuesTest, RawDataValueNotSet) {
   QueryValue qv_b = ParseTextProtoOrDie(R"pb(raw_data {})pb");
   std::vector<std::string> errors;
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_b, Comparison::OPERATION_EQUAL, errors),
+      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, errors),
       IsStatusFailedPrecondition());
   ASSERT_THAT(errors, IsEmpty());
 }
@@ -175,7 +175,7 @@ TEST(CompareQueryValuesTest, DifferentTypes) {
   QueryValue qv_b = ParseTextProtoOrDie(R"pb(bool_value: false)pb");
   std::vector<std::string> errors;
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_b, Comparison::OPERATION_EQUAL, errors),
+      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, errors),
       IsStatusFailedPrecondition());
   ASSERT_THAT(errors, IsEmpty());
 }
@@ -185,7 +185,7 @@ TEST(CompareQueryValuesTest, QueryValueNotSet) {
   QueryValue qv_b;
   std::vector<std::string> errors;
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_b, Comparison::OPERATION_EQUAL, errors),
+      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, errors),
       IsStatusFailedPrecondition());
   ASSERT_THAT(errors, IsEmpty());
 }
@@ -195,7 +195,7 @@ TEST(CompareQueryValuesTest, UnknownOperation) {
   QueryValue qv_b = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
   std::vector<std::string> errors;
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_b, Comparison::OPERATION_UNKNOWN, errors),
+      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_UNKNOWN, errors),
       IsStatusInternal());
   ASSERT_THAT(errors, IsEmpty());
 }
@@ -211,11 +211,11 @@ TEST(CompareQueryValuesTest, NonScalarValues) {
                                              })pb");
   std::vector<std::string> errors;
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_a, Comparison::OPERATION_EQUAL, errors),
+      CompareQueryValues(qv_a, qv_a, Verification::COMPARE_EQUAL, errors),
       IsStatusFailedPrecondition());
   ASSERT_THAT(errors, IsEmpty());
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_b, Comparison::OPERATION_EQUAL, errors),
+      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, errors),
       IsStatusFailedPrecondition());
   ASSERT_THAT(errors, IsEmpty());
 }

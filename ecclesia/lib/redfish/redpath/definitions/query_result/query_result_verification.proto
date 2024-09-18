@@ -18,64 +18,6 @@ package ecclesia;
 
 import "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.proto";
 
-message Comparison {
-  enum Operation {
-    OPERATION_UNKNOWN = 0;
-    OPERATION_EQUAL = 1;
-    OPERATION_NOT_EQUAL = 2;
-  }
-}
-
-message Validation {
-  enum Operation {
-    OPERATION_UNKNOWN = 0;
-    // The following operations are supported only for numeric values.
-    OPERATION_GREATER_THAN = 1;
-    OPERATION_GREATER_THAN_OR_EQUAL = 2;
-    OPERATION_LESS_THAN = 3;
-    OPERATION_LESS_THAN_OR_EQUAL = 4;
-    OPERATION_PLUS = 5;
-    OPERATION_MINUS = 6;
-    // The following operations are supported only for string values.
-    OPERATION_STRING_CONTAINS = 7;
-    OPERATION_STRING_NOT_CONTAINS = 8;
-    OPERATION_STRING_STARTS_WITH = 9;
-    OPERATION_STRING_NOT_STARTS_WITH = 10;
-    OPERATION_STRING_ENDS_WITH = 11;
-    OPERATION_STRING_NOT_ENDS_WITH = 12;
-    OPERATION_STRING_REGEX_MATCH = 13;
-    OPERATION_STRING_NOT_REGEX_MATCH = 14;
-  }
-
-  enum Range {
-    RANGE_UNKNOWN = 0;
-    RANGE_IN = 1;
-    RANGE_NOT_IN = 2;
-  }
-
-  enum Interval {
-    INTERVAL_UNKNOWN = 0;
-    INTERVAL_OPEN = 1;
-    INTERVAL_CLOSED = 2;
-    INTERVAL_OPEN_CLOSED = 3;
-    INTERVAL_CLOSED_OPEN = 4;
-  }
-
-  oneof operations {
-    Operation operation = 1;
-    Range range = 2;
-    Interval interval = 3;
-  }
-
-  // Specify the operands for the verification operation.
-  //  - For regular and string operations, no operands are required. They are
-  //    ignored if provided.
-  //  - For range operations, at least one operand is required.
-  //  - For interval operations, at least two operands are required - the first
-  //    operand is the lower bound and the second is the upper bound.
-  repeated QueryValue operands = 4;
-}
-
 message Verification {
   enum Presence {
     PRESENCE_UNKNOWN = 0;
@@ -83,10 +25,67 @@ message Verification {
     PRESENCE_OPTIONAL = 2;
   }
 
+  enum Compare {
+    COMPARE_UNKNOWN = 0;
+    COMPARE_EQUAL = 1;
+    COMPARE_NOT_EQUAL = 2;
+  }
+
+  message Validation {
+    enum Operation {
+      OPERATION_UNKNOWN = 0;
+      // The following operations are supported only for numeric values.
+      OPERATION_GREATER_THAN = 1;
+      OPERATION_GREATER_THAN_OR_EQUAL = 2;
+      OPERATION_LESS_THAN = 3;
+      OPERATION_LESS_THAN_OR_EQUAL = 4;
+      OPERATION_PLUS = 5;
+      OPERATION_MINUS = 6;
+      // The following operations are supported only for string values.
+      OPERATION_STRING_CONTAINS = 7;
+      OPERATION_STRING_NOT_CONTAINS = 8;
+      OPERATION_STRING_STARTS_WITH = 9;
+      OPERATION_STRING_NOT_STARTS_WITH = 10;
+      OPERATION_STRING_ENDS_WITH = 11;
+      OPERATION_STRING_NOT_ENDS_WITH = 12;
+      OPERATION_STRING_REGEX_MATCH = 13;
+      OPERATION_STRING_NOT_REGEX_MATCH = 14;
+    }
+
+    enum Range {
+      RANGE_UNKNOWN = 0;
+      RANGE_IN = 1;
+      RANGE_NOT_IN = 2;
+    }
+
+    enum Interval {
+      INTERVAL_UNKNOWN = 0;
+      INTERVAL_OPEN = 1;
+      INTERVAL_CLOSED = 2;
+      INTERVAL_OPEN_CLOSED = 3;
+      INTERVAL_CLOSED_OPEN = 4;
+    }
+
+    oneof operations {
+      Operation operation = 1;
+      Range range = 2;
+      Interval interval = 3;
+    }
+
+    // Specify the operands for the verification operation.
+    //  - For regular and string operations, no operands are required. They are
+    //    ignored if provided.
+    //  - For range operations, at least one operand is required.
+    //  - For interval operations, at least two operands are required - the
+    //  first
+    //    operand is the lower bound and the second is the upper bound.
+    repeated QueryValue operands = 4;
+  }
+
   // The presence check for the query value.
   Presence presence = 1;
   // The comparison to perform on the query value.
-  Comparison comparison = 2;
+  Compare comparison = 2;
   // The validation to perform on the query value.
   Validation validation = 3;
 }
