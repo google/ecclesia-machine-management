@@ -216,7 +216,7 @@ QueryIdToResult TranslateLegacyResults(
 // Main method for ExecuteQuery that triggers the QueryPlanner to execute
 // queries and provide transport metrics as part of the Statistics in each
 // QueryResult.
-std::vector<DelliciusQueryResult> QueryEngine::ExecuteQuery(
+std::vector<DelliciusQueryResult> QueryEngine::ExecuteQueryLegacy(
     absl::Span<const absl::string_view> query_ids,
     QueryEngine::ServiceRootType service_root_uri,
     const QueryVariableSet &query_arguments) {
@@ -272,8 +272,40 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
     absl::Span<const absl::string_view> query_ids,
     QueryEngine::ServiceRootType service_root_uri,
     const QueryVariableSet &query_arguments) {
-  return TranslateLegacyResults(
-      ExecuteQuery(query_ids, service_root_uri, query_arguments));
+  if (!features_.enable_streaming()) {
+    return TranslateLegacyResults(
+        ExecuteQueryLegacy(query_ids, service_root_uri, query_arguments));
+  }
+  QueryIdToResult query_id_to_result;
+  for (const absl::string_view query_id : query_ids) {
+    auto it = id_to_redpath_query_plans_.find(query_id);
+    if (it == id_to_redpath_query_plans_.end()) {
+      LOG(ERROR) << "Query plan does not exist for id " << query_id;
+      continue;
+    }
+    QueryVariables vars = QueryVariables();
+    auto it_vars = query_arguments.find(query_id);
+    if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
+    QueryExecutionResult result_single;
+    ExecutionFlags planner_execution_flags{
+        .execution_mode =
+            features_.fail_on_first_error()
+                ? ExecutionFlags::ExecutionMode::kFailOnFirstError
+                : ExecutionFlags::ExecutionMode::kContinueOnSubqueryErrors,
+        .log_redfish_traces = features_.log_redfish_traces(),
+        .enable_url_annotation = features_.enable_url_annotation()};
+    {
+      auto query_timer = RedpathQueryTimestamp(&result_single, clock_);
+      result_single = it->second->Run(
+          {.variables = vars,
+           .enable_url_annotation =
+               planner_execution_flags.enable_url_annotation,
+           .log_redfish_traces = planner_execution_flags.log_redfish_traces});
+    }
+    query_id_to_result.mutable_results()->insert(
+        {result_single.query_result.query_id(), result_single.query_result});
+  }
+  return query_id_to_result;
 }
 
 void QueryEngine::HandleRedfishEvent(
@@ -425,27 +457,17 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
     return absl::InternalError("Can't create redfish interface");
   }
 
-  std::unique_ptr<Normalizer> normalizer;
-  if (id_assigner == nullptr) {
-    normalizer =
-        BuildLocalDevpathNormalizer(redfish_interface.get(), engine_params);
-  } else {
-    normalizer = GetMachineDevpathNormalizer(
-        engine_params, std::move(id_assigner), redfish_interface.get());
-  }
-
+  std::unique_ptr<Normalizer> legacy_normalizer;
   std::unique_ptr<RedpathNormalizer> redpath_normalizer;
-  if (id_assigner == nullptr) {
-    redpath_normalizer = BuildLocalDevpathRedpathNormalizer(
-        redfish_interface.get(), engine_params);
-  } else {
-    redpath_normalizer = GetMachineDevpathRedpathNormalizer(
-        engine_params, std::move(id_assigner),
-        redfish_interface.get());
-  }
-
-  // Build legacy query planner for non steaming query execution mode.
+  // Build legacy query engine when streaming feature is not requested.
   if (!engine_params.features.enable_streaming()) {
+    if (id_assigner == nullptr) {
+      legacy_normalizer =
+          BuildLocalDevpathNormalizer(redfish_interface.get(), engine_params);
+    } else {
+      legacy_normalizer = GetMachineDevpathNormalizer(
+          engine_params, std::move(id_assigner), redfish_interface.get());
+    }
     absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
         id_to_query_plans;
     id_to_query_plans.reserve(query_spec.query_id_to_info.size());
@@ -456,16 +478,23 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
           BuildDefaultQueryPlanner(
               query_info.query,
               ParseQueryRuleParams(std::move(query_info.rule)),
-              normalizer.get(), redfish_interface.get()));
+              legacy_normalizer.get(), redfish_interface.get()));
 
       id_to_query_plans[query_id] = std::move(query_planner);
     }
-
     return QueryEngine(
         engine_params.entity_tag, std::move(id_to_query_plans),
-        query_spec.clock, std::move(normalizer), std::move(redpath_normalizer),
-        std::move(redfish_interface), std::move(engine_params.features),
-        metrical_transport_ptr);
+        query_spec.clock, std::move(legacy_normalizer),
+        std::move(redpath_normalizer), std::move(redfish_interface),
+        std::move(engine_params.features), metrical_transport_ptr);
+  }
+
+  if (id_assigner == nullptr) {
+    redpath_normalizer = BuildLocalDevpathRedpathNormalizer(
+        redfish_interface.get(), engine_params);
+  } else {
+    redpath_normalizer = GetMachineDevpathRedpathNormalizer(
+        engine_params, std::move(id_assigner), redfish_interface.get());
   }
 
   // Build RedPath trie based query planner.
@@ -482,11 +511,11 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
              .clock = query_spec.clock}));
     id_to_redpath_trie_plans[query_id] = std::move(query_planner);
   }
-  return QueryEngine(engine_params.entity_tag,
-                     std::move(id_to_redpath_trie_plans), query_spec.clock,
-                     std::move(normalizer), std::move(redpath_normalizer),
-                     std::move(redfish_interface),
-                     std::move(engine_params.features), metrical_transport_ptr);
+  return QueryEngine(
+      engine_params.entity_tag, std::move(id_to_redpath_trie_plans),
+      query_spec.clock, std::move(legacy_normalizer),
+      std::move(redpath_normalizer), std::move(redfish_interface),
+      std::move(engine_params.features), metrical_transport_ptr);
 }
 
 absl::StatusOr<QueryEngine> CreateQueryEngine(

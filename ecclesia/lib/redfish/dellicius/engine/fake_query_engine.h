@@ -89,14 +89,6 @@ class FakeQueryEngine : public QueryEngineIntf {
                                                    streaming_options);
   }
 
-  std::vector<DelliciusQueryResult> ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override {
-    return query_engine_->ExecuteQuery(query_ids, service_root_uri,
-                                       query_arguments);
-  }
-
   absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) override {
     return query_engine_->GetRedfishInterface(unused_passkey);

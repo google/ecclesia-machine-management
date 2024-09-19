@@ -34,11 +34,6 @@ class MockQueryEngine : public QueryEngineIntf {
  public:
   virtual ~MockQueryEngine() = default;
 
-  MOCK_METHOD(std::vector<DelliciusQueryResult>, ExecuteQuery,
-              (absl::Span<const absl::string_view>, ServiceRootType,
-               const QueryVariableSet &),
-              (override));
-
   MOCK_METHOD(absl::StatusOr<SubscriptionQueryResult>, ExecuteSubscriptionQuery,
               (absl::Span<const absl::string_view>, const QueryVariableSet &,
                StreamingOptions),

@@ -147,19 +147,6 @@ class QueryEngineIntf {
 
   virtual ~QueryEngineIntf() = default;
 
-  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-  std::vector<DelliciusQueryResult> ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri = ServiceRootType::kCustom) {
-    return ExecuteQuery(query_ids, service_root_uri, {});
-  }
-
-  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-  virtual std::vector<DelliciusQueryResult> ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) = 0;
-
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri = ServiceRootType::kCustom) {
@@ -206,7 +193,6 @@ class QueryEngineIntf {
 
 class QueryEngine : public QueryEngineIntf {
  public:
-  using QueryEngineIntf::ExecuteQuery;
   using QueryEngineIntf::ExecuteRedpathQuery;
 
   // Creates query engine for machine devpath decorator extensions.
@@ -223,12 +209,6 @@ class QueryEngine : public QueryEngineIntf {
   QueryEngine &operator=(const QueryEngine &) = delete;
   QueryEngine(QueryEngine &&other) = default;
   QueryEngine &operator=(QueryEngine &&other) = default;
-
-  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-  std::vector<DelliciusQueryResult> ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override;
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
@@ -251,16 +231,16 @@ class QueryEngine : public QueryEngineIntf {
       std::string entity_tag,
       absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
           id_to_query_plans,
-      const Clock *clock, std::unique_ptr<Normalizer> normalizer,
-      std::unique_ptr<RedpathNormalizer> redpath_normalizer,
+      const Clock *clock, std::unique_ptr<Normalizer> legacy_normalizer,
+      std::unique_ptr<RedpathNormalizer> normalizer,
       std::unique_ptr<RedfishInterface> redfish_interface,
       QueryEngineFeatures features,
       MetricalRedfishTransport *metrical_transport = nullptr)
       : entity_tag_(std::move(entity_tag)),
         id_to_query_plans_(std::move(id_to_query_plans)),
         clock_(clock),
+        legacy_normalizer_(std::move(legacy_normalizer)),
         normalizer_(std::move(normalizer)),
-        redpath_normalizer_(std::move(redpath_normalizer)),
         redfish_interface_(std::move(redfish_interface)),
         metrical_transport_(metrical_transport),
         features_(std::move(features)) {}
@@ -269,19 +249,24 @@ class QueryEngine : public QueryEngineIntf {
       std::string entity_tag,
       absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
           id_to_query_plans,
-      const Clock *clock, std::unique_ptr<Normalizer> normalizer,
-      std::unique_ptr<RedpathNormalizer> redpath_normalizer,
+      const Clock *clock, std::unique_ptr<Normalizer> legacy_normalizer,
+      std::unique_ptr<RedpathNormalizer> normalizer,
       std::unique_ptr<RedfishInterface> redfish_interface,
       QueryEngineFeatures features,
       MetricalRedfishTransport *metrical_transport = nullptr)
       : entity_tag_(std::move(entity_tag)),
         id_to_redpath_query_plans_(std::move(id_to_query_plans)),
         clock_(clock),
+        legacy_normalizer_(std::move(legacy_normalizer)),
         normalizer_(std::move(normalizer)),
-        redpath_normalizer_(std::move(redpath_normalizer)),
         redfish_interface_(std::move(redfish_interface)),
         metrical_transport_(metrical_transport),
         features_(std::move(features)) {}
+
+  std::vector<DelliciusQueryResult> ExecuteQueryLegacy(
+      absl::Span<const absl::string_view> query_ids,
+      ServiceRootType service_root_uri,
+      const QueryVariableSet &query_arguments);
 
   void HandleRedfishEvent(
       const RedfishVariant &variant,
@@ -306,8 +291,8 @@ class QueryEngine : public QueryEngineIntf {
                       std::unique_ptr<QueryPlannerIntf::SubscriptionContext>>
       id_to_subscription_context_;
   const Clock *clock_;
-  std::unique_ptr<Normalizer> normalizer_;
-  std::unique_ptr<RedpathNormalizer> redpath_normalizer_;
+  std::unique_ptr<Normalizer> legacy_normalizer_;
+  std::unique_ptr<RedpathNormalizer> normalizer_;
   std::unique_ptr<RedfishInterface> redfish_interface_;
   // Used during query metrics collection.
   MetricalRedfishTransport *metrical_transport_ = nullptr;

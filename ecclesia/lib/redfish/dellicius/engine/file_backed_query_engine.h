@@ -73,15 +73,6 @@ class FileBackedQueryEngine : public QueryEngineIntf {
         "ExecuteSubscriptionQuery() method is not supported");
   }
 
-  ABSL_DEPRECATED("Use ExecuteRedpathQuery Instead")
-  std::vector<DelliciusQueryResult> ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override {
-    // ExecuteQuery() method is deprecated and is not supported
-    return {};
-  }
-
   absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) override {
     return absl::UnimplementedError(

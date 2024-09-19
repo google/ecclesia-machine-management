@@ -251,6 +251,7 @@ cc_test(
         "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
         "//ecclesia/lib/redfish/dellicius/utils:id_assigner_devpath",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_engine_features",
+        "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_engine_features_cc_proto",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_spec",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:redpath_subscription",
         "//ecclesia/lib/redfish/redpath/definitions/query_result",

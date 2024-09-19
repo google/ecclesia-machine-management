@@ -1825,5 +1825,42 @@ TEST(QueryEngineTest, QueryEngineAppliesQueryRulesToServiceRoot) {
   EXPECT_EQ(service_root_fetch_counter, 1);
 }
 
+TEST(QueryEngineTest, CanExecuteNonStreamingQueryWithStreamingQueryEngine) {
+  FakeRedfishServer server(kIndusMockup);
+  FakeClock clock{clock_time};
+
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
+                                   .query_rules = kQueryRules,
+                                   .clock = &clock}));
+
+  QueryEngineFeatures features = StreamingQueryEngineFeatures();
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      QueryEngine::Create(std::move(query_spec),
+                          {.transport = std::move(transport),
+                           .features = std::move(features)}));
+  QueryIdToResult intent_output_sensor =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(
+          GetTestDataDependencyPath(JoinFilePaths(
+              kQuerySamplesLocation, "query_out/sensor_out.textproto")));
+  QueryIdToResult response_entries =
+      query_engine->ExecuteRedpathQuery({"SensorCollector"});
+  // Remove stats as we are not comparing them
+  response_entries.mutable_results()->at("SensorCollector").clear_stats();
+  VerifyQueryResults(std::move(response_entries),
+                     std::move(intent_output_sensor));
+}
+
 }  // namespace
 }  // namespace ecclesia
