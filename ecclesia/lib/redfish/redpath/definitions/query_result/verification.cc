@@ -21,11 +21,13 @@
 
 #include "google/protobuf/timestamp.pb.h"
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result_verification.pb.h"
+#include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/proto.h"
 
 namespace ecclesia {
@@ -169,7 +171,54 @@ absl::Status CompareSubqueryValues(
     const QueryValue& value_a, const QueryValue& value_b,
     const QueryResultDataVerification& verification,
     std::vector<std::string>& errors, const VerificationOptions& options) {
-  return absl::UnimplementedError("Not implemented");
+  if (!value_a.has_subquery_value() || !value_b.has_subquery_value()) {
+    return absl::FailedPreconditionError(
+        "Query values are not subquery values and cannot be compared");
+  }
+
+  const google::protobuf::Map<std::string, QueryValue>& fields_a =
+      value_a.subquery_value().fields();
+  const google::protobuf::Map<std::string, QueryValue>& fields_b =
+      value_b.subquery_value().fields();
+
+  for (const auto& [property, operations] : verification.fields()) {
+    auto a_it = fields_a.find(property);
+    auto b_it = fields_b.find(property);
+    if (a_it == fields_b.end() || b_it == fields_b.end()) {
+      if (a_it == fields_a.end()) {
+        std::string error_message_a = absl::StrCat(
+            "Missing property ", property, " in ", options.label_a);
+        errors.push_back(error_message_a);
+      }
+
+      if (b_it == fields_b.end()) {
+        std::string error_message_b = absl::StrCat(
+            "Missing property ", property, " in ", options.label_b);
+        errors.push_back(error_message_b);
+      }
+
+      continue;
+    }
+
+    switch (a_it->second.kind_case()) {
+      case QueryValue::kSubqueryValue:
+        ECCLESIA_RETURN_IF_ERROR(
+            CompareSubqueryValues(a_it->second, b_it->second,
+                                  operations.data_compare(), errors, options));
+        break;
+      case QueryValue::kListValue:
+        ECCLESIA_RETURN_IF_ERROR(CompareListValues(a_it->second, b_it->second,
+                                                   operations.list_compare(),
+                                                   errors, options));
+        break;
+      default:
+        ECCLESIA_RETURN_IF_ERROR(CompareQueryValues(
+            a_it->second, b_it->second, operations.verify().comparison(),
+            errors, options));
+    }
+  }
+
+  return absl::OkStatus();
 }
 
 absl::Status CompareQueryResults(const QueryResult& query_result_a,
