@@ -23,13 +23,13 @@
 #include <string>
 #include <tuple>
 #include <utility>
-#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/container/flat_hash_map.h"
+#include "absl/log/check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/notification.h"
@@ -40,6 +40,7 @@
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
+#include "ecclesia/lib/network/testing.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/engine/fake_query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
@@ -49,9 +50,9 @@
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
-#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner_devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
@@ -59,7 +60,10 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
+#include "ecclesia/lib/redfish/testing/grpc_dynamic_mockup_server.h"
 #include "ecclesia/lib/redfish/testing/json_mockup.h"
+#include "ecclesia/lib/redfish/transport/grpc.h"
+#include "ecclesia/lib/redfish/transport/grpc_tls_options.h"
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
@@ -69,6 +73,8 @@
 #include "ecclesia/lib/thread/thread.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/clock_fake.h"
+#include "grpcpp/server_context.h"
+#include "grpcpp/support/status.h"
 #include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 
 namespace ecclesia {
@@ -1860,6 +1866,72 @@ TEST(QueryEngineTest, CanExecuteNonStreamingQueryWithStreamingQueryEngine) {
   response_entries.mutable_results()->at("SensorCollector").clear_stats();
   VerifyQueryResults(std::move(response_entries),
                      std::move(intent_output_sensor));
+}
+
+// Sets up a grpc mockup server and creates a transport to connect to it.
+// Necessary to use this if testing QueryEngine with query level timeouts.
+class QueryEngineGrpcTestRunner : public ::testing::Test {
+ protected:
+  QueryEngineGrpcTestRunner() = default;
+  void SetTestParams(absl::string_view mockup) {
+    int port = ecclesia::FindUnusedPortOrDie();
+    server_ = std::make_unique<ecclesia::GrpcDynamicMockupServer>(
+        mockup, "localhost", port);
+    StaticBufferBasedTlsOptions options;
+    options.SetToInsecure();
+    ECCLESIA_ASSIGN_OR_FAIL(
+        transport_, CreateGrpcRedfishTransport(
+                        absl::StrCat("localhost:", port), {.clock = &clock_},
+                        options.GetChannelCredentials()));
+  }
+
+  ecclesia::FakeClock clock_;
+  std::unique_ptr<ecclesia::GrpcDynamicMockupServer> server_;
+  std::unique_ptr<RedfishInterface> intf_;
+  absl::Duration cache_duration_ = absl::Seconds(1);
+  absl::Notification notification_;
+  std::unique_ptr<RedfishTransport> transport_;
+};
+
+TEST_F(QueryEngineGrpcTestRunner,
+       StreamingQueryEngineRespectsQueryLevelTimeoutAtServiceRoot) {
+  constexpr absl::string_view sensor_query_id = "SensorCollector";
+  SetTestParams(kIndusMockup);
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
+                                   .query_rules = kQueryRules,
+                                   .clock = &clock_}));
+
+  QueryEngineFeatures features = StreamingQueryEngineFeatures();
+  std::string expected_str = R"json({
+    "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
+    "@odata.id": "/redfish/v1",
+   })json";
+  absl::Notification notification;
+  // Make service root request wait past the timeout.
+  server_->AddHttpGetHandler(
+      "/redfish/v1",
+      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
+          ::redfish::v1::Response *response) {
+        response->set_json_str(std::string(expected_str));
+        response->set_code(200);
+        notification_.WaitForNotification();
+        return grpc::Status::OK;
+      });
+  ASSERT_TRUE(query_spec.query_id_to_info.contains(sensor_query_id));
+  query_spec.query_id_to_info[sensor_query_id].timeout = absl::Seconds(2);
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      QueryEngine::Create(std::move(query_spec),
+                          {.transport = std::move(transport_),
+                           .features = std::move(features)}));
+  QueryIdToResult response_entries =
+      query_engine->ExecuteRedpathQuery({sensor_query_id});
+  EXPECT_THAT(
+      response_entries.results().at(sensor_query_id).status().error_code(),
+      ecclesia::ERROR_QUERY_TIMEOUT);
+  notification_.Notify();
 }
 
 }  // namespace

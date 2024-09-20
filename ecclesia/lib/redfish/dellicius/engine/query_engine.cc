@@ -508,7 +508,8 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
              .normalizer = redpath_normalizer.get(),
              .redfish_interface = redfish_interface.get(),
              .redpath_rules = CreateRedPathRules(std::move(query_info.rule)),
-             .clock = query_spec.clock}));
+             .clock = query_spec.clock,
+             .query_timeout = query_info.timeout}));
     id_to_redpath_trie_plans[query_id] = std::move(query_planner);
   }
   return QueryEngine(
