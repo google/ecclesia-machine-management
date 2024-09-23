@@ -29,6 +29,7 @@
 #include "absl/base/attributes.h"
 #include "absl/base/call_once.h"
 #include "absl/base/const_init.h"
+#include "absl/base/thread_annotations.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
@@ -224,8 +225,7 @@ CurlHttpClient::CurlHttpClient(std::unique_ptr<LibCurl> libcurl,
   // Setup interface to share the actual underlying cached connection
   libcurl_->curl_share_setopt(shared_connection_, CURLSHOPT_SHARE,
                               CURL_LOCK_DATA_CONNECT);
-  // Setup locking and unlocking functions so that share interface is thread
-  // safe
+  // Setup locking & unlocking functions so that share interface is thread-safe.
   libcurl_->curl_share_setopt(shared_connection_, CURLSHOPT_LOCKFUNC,
                               &LockSharedMutex);
   libcurl_->curl_share_setopt(shared_connection_, CURLSHOPT_UNLOCKFUNC,
@@ -340,8 +340,11 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
     Protocol cmd, std::unique_ptr<HttpRequest> request,
     IncrementalResponseHandler *handler) {
   CURL *curl = libcurl_->curl_easy_init();
-  if (!curl) return absl::InternalError("Failed to create curl handle");
-  absl::Cleanup curl_cleanup([&]() { libcurl_->curl_easy_cleanup(curl); });
+  if (curl == nullptr) {
+    return absl::InternalError("Failed to create curl handle");
+  }
+  absl::Cleanup curl_cleanup(
+      [&]() -> void { libcurl_->curl_easy_cleanup(curl); });
   SetDefaultCurlOpts(curl);
 
   libcurl_->curl_easy_setopt(curl, CURLOPT_URL, request->uri.c_str());
@@ -355,8 +358,11 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
                                request->unix_socket_path.c_str());
   }
 
-  std::visit([&](auto creds) { SetCurlOpts(libcurl_.get(), curl, creds); },
-             cred_);
+  std::visit(
+      [&](const auto &creds) -> void {
+        SetCurlOpts(libcurl_.get(), curl, creds);
+      },
+      cred_);
 
   switch (cmd) {
     case Protocol::kGet:
@@ -382,12 +388,12 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
   }
 
   struct curl_slist *request_headers = NULL;
-  absl::Cleanup cleanup = [&request_headers]() {
+  absl::Cleanup cleanup = [&request_headers]() -> void {
     curl_slist_free_all(request_headers);
   };
-  for (const auto &hdr : request->headers) {
+  for (const auto &[key, value] : request->headers) {
     struct curl_slist *list = curl_slist_append(
-        request_headers, absl::StrCat(hdr.first, ":", hdr.second).c_str());
+        request_headers, absl::StrCat(key, ":", value).c_str());
     if (list == nullptr) {
       return absl::ResourceExhaustedError("request header list");
     }
@@ -477,19 +483,51 @@ int CurlHttpClient::ProgressCallback(void *userp, curl_off_t dltotal,
              : CURL_PROGRESSFUNC_CONTINUE;
 }
 
-ABSL_CONST_INIT absl::Mutex CurlHttpClient::shared_mutex_(absl::kConstInit);
+ABSL_CONST_INIT absl::Mutex CurlHttpClient::data_share_mutex_(
+    absl::kConstInit);
+ABSL_CONST_INIT absl::Mutex CurlHttpClient::data_connect_mutex_(
+    absl::kConstInit);
 
 void CurlHttpClient::LockSharedMutex(CURL *handle, curl_lock_data data,
                                      curl_lock_access laccess, void *useptr) {
-  shared_mutex_.Lock();
+  // `CURLSHOPT_LOCKFUNC` expects a function pointer to a callback that handles
+  // locking multiple mutexes based on the `data` parameter. In this library, we
+  // only share the `shared_connection_` pointer, so we only need to handle the
+  // `CURL_LOCK_DATA_SHARE` and `CURL_LOCK_DATA_CONNECT` cases.
+  // https://curl.se/libcurl/c/CURLSHOPT_LOCKFUNC.html
+  //
+  // Generally, we should not use ABSL_TS_UNCHECKED in production code.
+  // However, in this case, we are using it to lock a mutex via a static
+  // callback function that is invoked by the third-party `libcurl` library in
+  // a way that is not able to be checked by the thread safety analyzer.
+  if (data == CURL_LOCK_DATA_SHARE) {
+    ABSL_TS_UNCHECKED(data_share_mutex_.Lock());
+  } else if (data == CURL_LOCK_DATA_CONNECT) {
+    ABSL_TS_UNCHECKED(data_connect_mutex_.Lock());
+  }
 }
+
 void CurlHttpClient::UnlockSharedMutex(CURL *handle, curl_lock_data data,
                                        void *useptr) {
-  shared_mutex_.Unlock();
+  // `CURLSHOPT_UNLOCKFUNC` expects a function pointer to a callback that
+  // handles unlocking multiple mutexes based on the `data` parameter. In this
+  // library, we only share the `shared_connection_` pointer, so we only need to
+  // handle the `CURL_LOCK_DATA_SHARE` and `CURL_LOCK_DATA_CONNECT` cases.
+  // https://curl.se/libcurl/c/CURLSHOPT_UNLOCKFUNC.html
+  //
+  // Generally, we should not use ABSL_TS_UNCHECKED in production code.
+  // However, in this case, we are using it to unlock a mutex via a static
+  // callback function that is invoked by the third-party `libcurl` library in
+  // a way that is not able to be checked by the thread safety analyzer.
+  if (data == CURL_LOCK_DATA_SHARE) {
+    ABSL_TS_UNCHECKED(data_share_mutex_.Unlock());
+  } else if (data == CURL_LOCK_DATA_CONNECT) {
+    ABSL_TS_UNCHECKED(data_connect_mutex_.Unlock());
+  }
 }
 
 void CurlHttpClient::SetDefaultCurlOpts(CURL *curl) const {
-  if (!curl) {
+  if (curl == nullptr) {
     LOG(ERROR) << "curl is nullptr.";
     return;
   }

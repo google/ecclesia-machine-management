@@ -22,8 +22,8 @@
 #include <cstdio>
 #include <memory>
 #include <string>
+#include <variant>
 
-#include "absl/base/thread_annotations.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/synchronization/mutex.h"
@@ -106,7 +106,7 @@ class LibCurl {
   virtual void curl_slist_free_all(struct curl_slist *list) = 0;
 
   virtual struct curl_slist *curl_slist_append(struct curl_slist *list,
-                                        const char *data) = 0;
+                                               const char *data) = 0;
 };
 
 class LibCurlProxy : public LibCurl {
@@ -182,7 +182,7 @@ class LibCurlProxy : public LibCurl {
   void curl_slist_free_all(struct curl_slist *list) override;
 
   struct curl_slist *curl_slist_append(struct curl_slist *list,
-                                        const char *data) override;
+                                       const char *data) override;
 };
 
 // The cURL client is NOT threadsafe as the underlying curl operations modify
@@ -262,18 +262,18 @@ class CurlHttpClient : public HttpClient {
   static int ProgressCallback(void *userp, curl_off_t dltotal, curl_off_t dlnow,
                               curl_off_t ultotal, curl_off_t ulnow);
 
-  // The following mutex is used to statically lock the CURLSH pointer
+  // The following mutexes are used to statically lock the CURLSH pointer
   // shared_connection_.
-  static absl::Mutex shared_mutex_;
+  static absl::Mutex data_share_mutex_;
+  static absl::Mutex data_connect_mutex_;
 
   // Locking and unlocking functions to be passed to Libcurl share interface
   // The parameters are required by share interface but are unused in the actual
   // function definition.
   static void LockSharedMutex(CURL *handle, curl_lock_data data,
-                              curl_lock_access laccess, void *useptr)
-      ABSL_EXCLUSIVE_LOCK_FUNCTION(shared_mutex_);
-  static void UnlockSharedMutex(CURL *handle, curl_lock_data data, void *useptr)
-      ABSL_UNLOCK_FUNCTION(shared_mutex_);
+                              curl_lock_access laccess, void *useptr);
+  static void UnlockSharedMutex(CURL *handle, curl_lock_data data,
+                                void *useptr);
 
   std::unique_ptr<LibCurl> libcurl_;
   Config config_;
@@ -281,7 +281,7 @@ class CurlHttpClient : public HttpClient {
   const std::variant<HttpCredential, TlsCredential> cred_;
 
   // CURL share interface (https://curl.se/libcurl/c/libcurl-share.html)
-  // The share interface lets us captalize on the fact that we're connecting to
+  // The share interface lets us capitalize on the fact that we're connecting to
   // the same endpoints. By doing so, we can save CPU usage on setting and
   // finding connections (e.g. TCP handshake)
   CURLSH *shared_connection_;
