@@ -17,12 +17,16 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/verification.h"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "google/protobuf/timestamp.pb.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
@@ -61,6 +65,33 @@ std::string InternalErrorMessage(absl::string_view message,
   return absl::StrFormat("%s, %s: '%s', %s: '%s'", message, options.label_a,
                          IdentifierValueToJson(value_a).dump(), options.label_b,
                          IdentifierValueToJson(value_b).dump());
+}
+
+absl::StatusOr<std::string> GenerateIdentifier(
+    const ListValueVerification& validation, const QueryValue& value) {
+  if (!value.has_subquery_value()) {
+    return absl::FailedPreconditionError(
+        "Identifiers are only supported for subquery values");
+  }
+
+  std::vector<std::string> identifier_values;
+  for (absl::string_view identifier : validation.identifiers()) {
+    if (auto it = value.subquery_value().fields().find(identifier);
+        it != value.subquery_value().fields().end()) {
+      std::string property_value;
+      if (it->second.has_identifier()) {
+        property_value = IdentifierValueToJson(it->second.identifier()).dump();
+      } else {
+        property_value = ValueToJson(it->second).dump();
+      }
+      identifier_values.push_back(
+          absl::StrCat(identifier, "=", property_value));
+    } else {
+      return absl::FailedPreconditionError(
+          absl::StrCat("property ", identifier, " is not present"));
+    }
+  }
+  return absl::StrJoin(identifier_values, ",");
 }
 
 template <typename T>
@@ -164,7 +195,99 @@ absl::Status CompareListValues(const QueryValue& value_a,
                                const ListValueVerification& verification,
                                std::vector<std::string>& errors,
                                const VerificationOptions& options) {
-  return absl::UnimplementedError("Not implemented");
+  if (!value_a.has_list_value() || !value_b.has_list_value()) {
+    return absl::FailedPreconditionError(
+        "Query values are not list values and cannot be compared");
+  }
+
+  absl::flat_hash_map<std::string,
+                      std::pair<const QueryValue*, const QueryValue*>>
+      data_map;
+  data_map.reserve(value_a.list_value().values_size() +
+                   value_b.list_value().values_size());
+
+  auto add_to_data_map = [&](const QueryValue& list_value,
+                             absl::string_view label, bool is_first_item,
+                             bool use_index) -> absl::Status {
+    int index = 0;
+    for (const ecclesia::QueryValue& value : list_value.list_value().values()) {
+      std::pair<const QueryValue*, const QueryValue*>* data_map_item = nullptr;
+      if (use_index) {
+        data_map_item = &data_map[absl::StrCat("index=", index++)];
+      } else {
+        absl::StatusOr<std::string> identifier =
+            GenerateIdentifier(verification, value);
+        if (!identifier.ok()) {
+          std::string error_message =
+              absl::StrCat("Missing identifier in ", label, ": ",
+                           identifier.status().message());
+          errors.push_back(error_message);
+          return absl::InternalError(error_message);
+        }
+        if (auto it = data_map.find(*identifier); it != data_map.end()) {
+          if (is_first_item ||
+              (!is_first_item && it->second.second != nullptr)) {
+            std::string error_message = absl::StrCat("Duplicate identifier in ",
+                                                     label, ": ", *identifier);
+            errors.push_back(error_message);
+            return absl::InternalError(error_message);
+          }
+          data_map_item = &it->second;
+        } else {
+          data_map_item = &data_map[*identifier];
+        }
+      }
+      if (is_first_item) {
+        data_map_item->first = &value;
+      } else {
+        data_map_item->second = &value;
+      }
+    }
+    return absl::OkStatus();
+  };
+
+  bool use_index = verification.identifiers().empty();
+  ECCLESIA_RETURN_IF_ERROR(add_to_data_map(value_a, options.label_a,
+                                           /*is_first_item=*/true, use_index));
+  ECCLESIA_RETURN_IF_ERROR(add_to_data_map(value_b, options.label_b,
+                                           /*is_first_item=*/false, use_index));
+
+  for (const auto& [id, values] : data_map) {
+    const auto& [list_item_a, list_item_b] = values;
+    std::vector<std::string> error_messages;
+    auto check_list_item =
+        [&identifier = id, &errors = errors, &error_messages = error_messages](
+            const QueryValue* list_item, absl::string_view label) {
+          if (list_item == nullptr) {
+            std::string error_message = absl::StrCat(
+                "Missing value in ", label, " with identifier ", identifier);
+            errors.push_back(error_message);
+            error_messages.push_back(std::move(error_message));
+          }
+        };
+    check_list_item(list_item_a, options.label_a);
+    check_list_item(list_item_b, options.label_b);
+    if (!error_messages.empty()) {
+      return absl::InternalError(absl::StrJoin(error_messages, "\n"));
+    }
+
+    switch (list_item_a->kind_case()) {
+      case QueryValue::kSubqueryValue:
+        ECCLESIA_RETURN_IF_ERROR(CompareSubqueryValues(
+            *list_item_a, *list_item_b, verification.verify().data_compare(),
+            errors, options));
+        break;
+      case QueryValue::kListValue:
+        return absl::FailedPreconditionError(
+            "Query result contains a list of lists, invalid structure");
+      default:
+        ECCLESIA_RETURN_IF_ERROR(CompareQueryValues(
+            *list_item_a, *list_item_b,
+            verification.verify().verify().comparison(), errors, options));
+    }
+  }
+
+  return absl::OkStatus();
 }
 
 absl::Status CompareSubqueryValues(

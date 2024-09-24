@@ -109,7 +109,7 @@ message ListValueVerification {
   // appear in the list.
   repeated string identifiers = 1;
   // The verification to perform on the list values.
-  repeated QueryValueVerification verify = 2;
+  QueryValueVerification verify = 2;
 }
 
 message QueryResultDataVerification {

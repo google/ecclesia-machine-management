@@ -30,6 +30,8 @@
 namespace ecclesia {
 namespace {
 
+using ::testing::Contains;
+using ::testing::ContainsRegex;
 using ::testing::ElementsAreArray;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
@@ -386,30 +388,405 @@ TEST(CompareSubqueryValues, SucessList) {
   QueryResultDataVerification verification = ParseTextProtoOrDie(R"pb(
     fields {
       key: "foo"
-      value {
-        list_compare {
-          identifiers: "bar"
-          verify { verify { comparison: COMPARE_EQUAL } }
+      value { list_compare { verify { verify { comparison: COMPARE_EQUAL } } } }
+    }
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareSubqueryValues(qv_a, qv_b, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(CompareListValuesTest, MisMatchingQueryType) {
+  QueryValue list = ParseTextProtoOrDie(R"pb(list_value {})pb");
+  QueryValue subquery = ParseTextProtoOrDie(R"pb(subquery_value {})pb");
+  ListValueVerification verification;
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(list, subquery, verification, errors),
+              IsStatusFailedPrecondition());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(CompareListValuesTest, MissingIndexAsIndentifier) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                             })pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(list_value {})pb");
+
+  ListValueVerification verification;
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv_a, qv_b, verification, errors),
+              IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0],
+              HasSubstr("Missing value in valueB with identifier index=0"));
+}
+
+TEST(CompareListValuesTest, ListofLists) {
+  QueryValue qv_a =
+      ParseTextProtoOrDie(R"pb(list_value { values { list_value {} } })pb");
+  QueryValue qv_b =
+      ParseTextProtoOrDie(R"pb(list_value { values { list_value {} } })pb");
+
+  ListValueVerification verification;
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv_a, qv_b, verification, errors),
+              IsStatusFailedPrecondition());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(CompareListValuesTest, EmptyListValue) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(list_value {})pb");
+  ListValueVerification verification;
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv, qv, verification, errors), IsOk());
+  EXPECT_THAT(errors, IsEmpty());
+}
+
+TEST(CompareListValuesTest, EmptyListValueWithIdentifier) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value { values {} })pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(list_value {})pb");
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    identifiers: "foo"
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv_a, qv_b, verification, errors),
+              IsStatusInternal());
+  EXPECT_THAT(errors,
+              ElementsAreArray({"Missing identifier in valueA: Identifiers are "
+                                "only supported for subquery values"}));
+}
+
+TEST(CompareListValuesTest, MissingPropertyInSubqueryA) {
+  QueryValue qv_a =
+      ParseTextProtoOrDie(R"pb(list_value { values { subquery_value {} } })pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(list_value {})pb");
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    identifiers: "foo"
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv_a, qv_b, verification, errors),
+              IsStatusInternal());
+  EXPECT_THAT(
+      errors,
+      ElementsAreArray(
+          {"Missing identifier in valueA: property foo is not present"}));
+}
+
+TEST(CompareListValuesTest, DuplicateIdentifierInSubqueryA) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                             })pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(list_value {
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                             })pb");
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    identifiers: "foo"
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv_a, qv_b, verification, errors),
+              IsStatusInternal());
+  EXPECT_THAT(errors,
+              ElementsAreArray({"Duplicate identifier in valueA: foo=1"}));
+}
+
+TEST(CompareListValuesTest, MissingPropertyInSubqueryB) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                             })pb");
+  QueryValue qv_b =
+      ParseTextProtoOrDie(R"pb(list_value { values { subquery_value {} } })pb");
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    identifiers: "foo"
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv_a, qv_b, verification, errors),
+              IsStatusInternal());
+  EXPECT_THAT(
+      errors,
+      Contains("Missing identifier in valueB: property foo is not present"));
+}
+
+TEST(CompareListValuesTest, DuplicateIdentifierInSubqueryB) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                             })pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(list_value {
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                             })pb");
+
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    identifiers: "foo"
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv_a, qv_b, verification, errors),
+              IsStatusInternal());
+  EXPECT_THAT(errors,
+              ElementsAreArray({"Duplicate identifier in valueB: foo=1"}));
+}
+
+TEST(CompareListValuesTest, MissingIdentifierInSubqueryA) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {})pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(list_value {
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                             })pb");
+
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    identifiers: "foo"
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv_a, qv_b, verification, errors),
+              IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0],
+              HasSubstr("Missing value in valueA with identifier foo=1"));
+}
+
+TEST(CompareListValuesTest, MisAlignedListValues) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 2 }
+                                                   }
+                                                 }
+                                               }
+                                             })pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(list_value {
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 2 }
+                                                   }
+                                                 }
+                                               }
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                             })pb");
+
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    verify {
+      data_compare {
+        fields {
+          key: "foo"
+          value: { verify { comparison: COMPARE_EQUAL } }
         }
       }
     }
   )pb");
   std::vector<std::string> errors;
-  EXPECT_THAT(CompareSubqueryValues(qv_a, qv_b, verification, errors),
-              IsStatusUnimplemented());
-  ASSERT_THAT(errors, IsEmpty());
+  EXPECT_THAT(CompareListValues(qv_a, qv_b, verification, errors),
+              IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0],
+              ContainsRegex("Failed equality check, valueA: '.', valueB: '.'"));
 }
 
-TEST(CompareListValuesTest, Unimplemented) {
+TEST(CompareListValuesTest, SucessCompareQueryValues) {
+  QueryValue qv =
+      ParseTextProtoOrDie(R"pb(list_value { values { int_value: 1 } })pb");
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    verify { verify { comparison: COMPARE_EQUAL } }
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv, qv, verification, errors), IsOk());
+  EXPECT_THAT(errors, IsEmpty());
+}
+
+TEST(CompareListValuesTest, SucessIndexAsIndentifier) {
   QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {
-                                               values { int_value: 1 }
-                                               values { int_value: 2 }
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
                                              })pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(list_value {
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                             })pb");
+
   ListValueVerification verification;
   std::vector<std::string> errors;
-  EXPECT_THAT(CompareListValues(qv_a, qv_a, verification, errors),
-              IsStatusUnimplemented());
-  ASSERT_THAT(errors, IsEmpty());
+  EXPECT_THAT(CompareListValues(qv_a, qv_b, verification, errors), IsOk());
+  EXPECT_THAT(errors, IsEmpty());
+}
+
+TEST(CompareListValuesTest, SucessWithDefinedIndentifier) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 2 }
+                                                   }
+                                                 }
+                                               }
+                                             })pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(list_value {
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 2 }
+                                                   }
+                                                 }
+                                               }
+                                               values {
+                                                 subquery_value {
+                                                   fields {
+                                                     key: "foo"
+                                                     value: { int_value: 1 }
+                                                   }
+                                                 }
+                                               }
+                                             })pb");
+
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    identifiers: "foo"
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv_a, qv_b, verification, errors), IsOk());
+  EXPECT_THAT(errors, IsEmpty());
+}
+
+TEST(CompareListValuesTest, SucessWithDefinedIndentifierAsDevpath) {
+  QueryValue qv_a =
+      ParseTextProtoOrDie(R"pb(list_value {
+                                 values {
+                                   subquery_value {
+                                     fields {
+                                       key: "_id_"
+                                       value {
+                                         identifier {
+                                           local_devpath: "/phys"
+                                           machine_devpath: "/phys"
+                                         }
+                                       }
+                                     }
+                                   }
+                                 }
+                               })pb");
+  QueryValue qv_b =
+      ParseTextProtoOrDie(R"pb(list_value {
+                                 values {
+                                   subquery_value {
+                                     fields {
+                                       key: "_id_"
+                                       value {
+                                         identifier {
+                                           local_devpath: "/phys"
+                                           machine_devpath: "/phys"
+                                         }
+                                       }
+                                     }
+                                   }
+                                 }
+                               })pb");
+
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    identifiers: "_id_"
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(CompareListValues(qv_a, qv_b, verification, errors), IsOk());
+  EXPECT_THAT(errors, IsEmpty());
 }
 
 TEST(CompareQueryResultsTest, Unimplemented) {
