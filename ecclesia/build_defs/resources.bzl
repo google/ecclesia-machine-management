@@ -49,7 +49,6 @@ def resource_proto(resource, name, srcs, deps = None):
 
     native.py_proto_library(
         name = name + "_py_pb2",
-        api_version = 2,
         deps = [":" + name + "_proto"],
         visibility = _DEFAULT_VISIBILITY,
     )
