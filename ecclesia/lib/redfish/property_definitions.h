@@ -466,6 +466,8 @@ DEFINE_REDFISH_PROPERTY(PropertyKernelPercent, double, "KernelPercent");
 DEFINE_REDFISH_PROPERTY(PropertyUserPercent, double, "UserPercent");
 DEFINE_REDFISH_PROPERTY(PropertyLatency, double, "Latency");
 DEFINE_REDFISH_PROPERTY(PropertyAvailableBytes, int64_t, "AvailableBytes");
+DEFINE_REDFISH_PROPERTY(PropertyRWStorageSpaceUsageBytes, int64_t,
+                        "RWStorageSpaceUsageBytes");
 DEFINE_REDFISH_PROPERTY(PropertyBootCount, int, "BootCount");
 DEFINE_REDFISH_PROPERTY(PropertyCrashCount, int, "CrashCount");
 DEFINE_REDFISH_PROPERTY(PropertyCurrentSpeedGbps, double, "CurrentSpeedGbps");
