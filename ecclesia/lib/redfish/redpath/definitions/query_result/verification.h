@@ -55,13 +55,13 @@ absl::Status CompareQueryValues(
 
 // Compare two list values against the given verification.
 absl::Status CompareListValues(
-    const QueryValue& value_a, const QueryValue& value_b,
+    const ListValue& value_a, const ListValue& value_b,
     const ListValueVerification& verification, std::vector<std::string>& errors,
     const VerificationOptions& options = VerificationOptions());
 
 // Compare two subquery values against the given verification.
 absl::Status CompareSubqueryValues(
-    const QueryValue& value_a, const QueryValue& value_b,
+    const QueryResultData& value_a, const QueryResultData& value_b,
     const QueryResultDataVerification& verification,
     std::vector<std::string>& errors,
     const VerificationOptions& options = VerificationOptions());

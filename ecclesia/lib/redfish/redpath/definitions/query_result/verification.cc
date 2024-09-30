@@ -190,27 +190,21 @@ absl::Status CompareQueryValues(const QueryValue& value_a,
   return absl::FailedPreconditionError("Unsupported query value type");
 }
 
-absl::Status CompareListValues(const QueryValue& value_a,
-                               const QueryValue& value_b,
+absl::Status CompareListValues(const ListValue& value_a,
+                               const ListValue& value_b,
                                const ListValueVerification& verification,
                                std::vector<std::string>& errors,
                                const VerificationOptions& options) {
-  if (!value_a.has_list_value() || !value_b.has_list_value()) {
-    return absl::FailedPreconditionError(
-        "Query values are not list values and cannot be compared");
-  }
-
   absl::flat_hash_map<std::string,
                       std::pair<const QueryValue*, const QueryValue*>>
       data_map;
-  data_map.reserve(value_a.list_value().values_size() +
-                   value_b.list_value().values_size());
+  data_map.reserve(value_a.values_size() + value_b.values_size());
 
-  auto add_to_data_map = [&](const QueryValue& list_value,
+  auto add_to_data_map = [&](const ListValue& list_value,
                              absl::string_view label, bool is_first_item,
                              bool use_index) -> absl::Status {
     int index = 0;
-    for (const ecclesia::QueryValue& value : list_value.list_value().values()) {
+    for (const ecclesia::QueryValue& value : list_value.values()) {
       std::pair<const QueryValue*, const QueryValue*>* data_map_item = nullptr;
       if (use_index) {
         data_map_item = &data_map[absl::StrCat("index=", index++)];
@@ -274,8 +268,8 @@ absl::Status CompareListValues(const QueryValue& value_a,
     switch (list_item_a->kind_case()) {
       case QueryValue::kSubqueryValue:
         ECCLESIA_RETURN_IF_ERROR(CompareSubqueryValues(
-            *list_item_a, *list_item_b, verification.verify().data_compare(),
-            errors, options));
+            list_item_a->subquery_value(), list_item_b->subquery_value(),
+            verification.verify().data_compare(), errors, options));
         break;
       case QueryValue::kListValue:
         return absl::FailedPreconditionError(
@@ -291,18 +285,11 @@ absl::Status CompareListValues(const QueryValue& value_a,
 }
 
 absl::Status CompareSubqueryValues(
-    const QueryValue& value_a, const QueryValue& value_b,
+    const QueryResultData& value_a, const QueryResultData& value_b,
     const QueryResultDataVerification& verification,
     std::vector<std::string>& errors, const VerificationOptions& options) {
-  if (!value_a.has_subquery_value() || !value_b.has_subquery_value()) {
-    return absl::FailedPreconditionError(
-        "Query values are not subquery values and cannot be compared");
-  }
-
-  const google::protobuf::Map<std::string, QueryValue>& fields_a =
-      value_a.subquery_value().fields();
-  const google::protobuf::Map<std::string, QueryValue>& fields_b =
-      value_b.subquery_value().fields();
+  const google::protobuf::Map<std::string, QueryValue>& fields_a = value_a.fields();
+  const google::protobuf::Map<std::string, QueryValue>& fields_b = value_b.fields();
 
   for (const auto& [property, operations] : verification.fields()) {
     auto a_it = fields_a.find(property);
@@ -325,14 +312,14 @@ absl::Status CompareSubqueryValues(
 
     switch (a_it->second.kind_case()) {
       case QueryValue::kSubqueryValue:
-        ECCLESIA_RETURN_IF_ERROR(
-            CompareSubqueryValues(a_it->second, b_it->second,
-                                  operations.data_compare(), errors, options));
+        ECCLESIA_RETURN_IF_ERROR(CompareSubqueryValues(
+            a_it->second.subquery_value(), b_it->second.subquery_value(),
+            operations.data_compare(), errors, options));
         break;
       case QueryValue::kListValue:
-        ECCLESIA_RETURN_IF_ERROR(CompareListValues(a_it->second, b_it->second,
-                                                   operations.list_compare(),
-                                                   errors, options));
+        ECCLESIA_RETURN_IF_ERROR(CompareListValues(
+            a_it->second.list_value(), b_it->second.list_value(),
+            operations.list_compare(), errors, options));
         break;
       default:
         ECCLESIA_RETURN_IF_ERROR(CompareQueryValues(
@@ -349,7 +336,23 @@ absl::Status CompareQueryResults(const QueryResult& query_result_a,
                                  const QueryResultVerification& verification,
                                  std::vector<std::string>& errors,
                                  const VerificationOptions& options) {
-  return absl::UnimplementedError("Not implemented");
+  if (query_result_a.query_id() != query_result_b.query_id()) {
+    return absl::FailedPreconditionError(absl::StrCat(
+        "Query results have different query IDs: ", query_result_a.query_id(),
+        "(", options.label_a, ") vs ", query_result_b.query_id(), "(",
+        options.label_b, ")"));
+  }
+
+  if (query_result_a.query_id() != verification.query_id()) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Query result has query ID ", query_result_a.query_id(),
+                     " which does not match the verification query "
+                     "ID ",
+                     verification.query_id()));
+  }
+
+  return CompareSubqueryValues(query_result_a.data(), query_result_b.data(),
+                               verification.data_verify(), errors, options);
 }
 
 absl::Status VerifyQueryValue(const QueryValue& value,
