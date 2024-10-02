@@ -106,6 +106,10 @@ absl::Status Compare(const T& value_a, const T& value_b,
     return absl::InternalError(error_message);
   };
   switch (comparison) {
+    case Verification::COMPARE_UNKNOWN:
+      // This means that the comparison is not specified and the verification
+      // should be skipped.
+      return absl::OkStatus();
     case Verification::COMPARE_EQUAL:
       if (value_a != value_b) {
         return internal_error("Failed equality check");

@@ -198,7 +198,7 @@ TEST(CompareQueryValuesTest, UnknownOperation) {
   std::vector<std::string> errors;
   EXPECT_THAT(
       CompareQueryValues(qv_a, qv_b, Verification::COMPARE_UNKNOWN, errors),
-      IsStatusInternal());
+      IsOk());
   ASSERT_THAT(errors, IsEmpty());
 }
 
