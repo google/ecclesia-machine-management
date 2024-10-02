@@ -497,6 +497,15 @@ INSTANTIATE_TEST_SUITE_P(
                 {"Missing identifier in valueA: property foo is not present"},
         },
         QueryValueInputsWithExpectations{
+            .query_value_a = ParseTextProtoOrDie(R"pb(list_value {})pb"),
+            .query_value_b = ParseTextProtoOrDie(
+                R"pb(list_value { values { subquery_value {} } })pb"),
+            .list_compare = ParseTextProtoOrDie(R"pb(identifiers: "foo")pb"),
+            .expected_status = IsStatusInternal(),
+            .expected_errors =
+                {"Missing identifier in valueB: property foo is not present"},
+        },
+        QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(
                 R"pb(list_value {
                        values {
@@ -548,6 +557,61 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_errors =
                 {"Missing value in valueA with identifier foo=1"},
+        },
+        QueryValueInputsWithExpectations{
+            .query_value_a =
+                ParseTextProtoOrDie(R"pb(list_value {
+                                           values {
+                                             subquery_value {
+                                               fields {
+                                                 key: "foo"
+                                                 value: { int_value: 1 }
+                                               }
+                                             }
+                                           }
+                                         })pb"),
+            .query_value_b = ParseTextProtoOrDie(R"pb(list_value {})pb"),
+            .list_compare = ParseTextProtoOrDie(R"pb(identifiers: "foo")pb"),
+            .expected_status = IsStatusInternal(),
+            .expected_errors =
+                {"Missing value in valueB with identifier foo=1"},
+        },
+        QueryValueInputsWithExpectations{
+            .query_value_a =
+                ParseTextProtoOrDie(R"pb(list_value {
+                                           values {
+                                             subquery_value {
+                                               fields {
+                                                 key: "foo"
+                                                 value: { int_value: 1 }
+                                               }
+                                               fields {
+                                                 key: "foo"
+                                                 value: { int_value: 2 }
+                                               }
+                                             }
+                                           }
+                                         })pb"),
+            .query_value_b =
+                ParseTextProtoOrDie(R"pb(list_value {
+                                           values {
+                                             subquery_value {
+                                               fields {
+                                                 key: "foo"
+                                                 value: { int_value: 2 }
+                                               }
+                                               fields {
+                                                 key: "foo"
+                                                 value: { int_value: 3 }
+                                               }
+                                             }
+                                           }
+                                         })pb"),
+            .list_compare = ParseTextProtoOrDie(R"pb(identifiers: "foo")pb"),
+            .expected_status = IsStatusInternal(),
+            .expected_errors =
+                {"Missing value in valueA with identifier foo=3",
+                 "Missing value in valueB with identifier foo=2"},
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(list_value {

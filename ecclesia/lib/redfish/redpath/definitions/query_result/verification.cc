@@ -499,9 +499,9 @@ absl::Status CompareListValues(const ListValue& value_a,
   ECCLESIA_RETURN_IF_ERROR(add_to_data_map(value_b, options.label_b,
                                            /*is_first_item=*/false, use_index));
 
+  std::vector<std::string> error_messages;
   for (const auto& [id, values] : data_map) {
     const auto& [list_item_a, list_item_b] = values;
-    std::vector<std::string> error_messages;
     auto check_list_item =
         [&identifier = id, &errors = errors, &error_messages = error_messages](
             const QueryValue* list_item, absl::string_view label) {
@@ -515,7 +515,7 @@ absl::Status CompareListValues(const ListValue& value_a,
     check_list_item(list_item_a, options.label_a);
     check_list_item(list_item_b, options.label_b);
     if (!error_messages.empty()) {
-      return absl::InternalError(absl::StrJoin(error_messages, "\n"));
+      continue;
     }
 
     switch (list_item_a->kind_case()) {
@@ -532,6 +532,10 @@ absl::Status CompareListValues(const ListValue& value_a,
             *list_item_a, *list_item_b,
             verification.verify().verify().comparison(), errors, options));
     }
+  }
+
+  if (!error_messages.empty()) {
+    return absl::InternalError(absl::StrJoin(error_messages, "\n"));
   }
 
   return absl::OkStatus();
