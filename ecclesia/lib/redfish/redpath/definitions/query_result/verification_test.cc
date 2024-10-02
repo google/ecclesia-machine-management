@@ -1612,19 +1612,142 @@ TEST(VerifyListValueTest, Unimplemented) {
   ASSERT_THAT(errors, IsEmpty());
 }
 
-TEST(VerifySubqueryValueTest, Unimplemented) {
-  QueryValue qv_a = ParseTextProtoOrDie(R"pb(subquery_value {
-                                               fields {
-                                                 key: "foo"
-                                                 value: { int_value: 1 }
-                                               }
-                                             })pb");
-  QueryResultDataVerification verification;
+struct VerifyQueryValueInputsWithExpectations {
+  QueryValue query_value;
+  QueryResultDataVerification data_compare;
+  internal_status::IsStatusPolyMatcher expected_status;
+  std::vector<std::string> expected_errors;
+};
+using VerificationSubqueryValueTest =
+    TestWithParam<VerifyQueryValueInputsWithExpectations>;
+
+TEST_P(VerificationSubqueryValueTest, VerifySubqueryValueTest) {
+  const VerifyQueryValueInputsWithExpectations& test_case = GetParam();
   std::vector<std::string> errors;
-  EXPECT_THAT(VerifySubqueryValue(qv_a, verification, errors),
-              IsStatusUnimplemented());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(VerifySubqueryValue(test_case.query_value.subquery_value(),
+                                  test_case.data_compare, errors),
+              test_case.expected_status);
+  ASSERT_THAT(errors, UnorderedElementsAreArray(test_case.expected_errors));
 }
+INSTANTIATE_TEST_SUITE_P(
+    VerificationSubqueryValueTest, VerificationSubqueryValueTest,
+    Values(
+        VerifyQueryValueInputsWithExpectations{
+            .query_value = ParseTextProtoOrDie(R"pb(subquery_value {
+                                                      fields {
+                                                        key: "foo"
+                                                        value: { int_value: 1 }
+                                                      }
+                                                    })pb"),
+            .data_compare = ParseTextProtoOrDie(
+                R"pb(fields {
+                       key: "foo"
+                       value: {
+                         verify {
+                           presence: PRESENCE_REQUIRED,
+                           validation: {
+                             operation: OPERATION_GREATER_THAN
+                             operands { int_value: 0 }
+                           }
+                         }
+                       }
+                     })pb"),
+            .expected_status = IsOk(),
+        },
+        VerifyQueryValueInputsWithExpectations{
+            .query_value = ParseTextProtoOrDie(R"pb(subquery_value {
+                                                      fields {
+                                                        key: "foo"
+                                                        value: { int_value: 1 }
+                                                      }
+                                                    })pb"),
+            .data_compare = ParseTextProtoOrDie(
+                R"pb(fields {
+                       key: "bar"
+                       value: {
+                         verify {
+                           presence: PRESENCE_REQUIRED,
+                         }
+                       }
+                     })pb"),
+            .expected_status = IsStatusInternal(),
+            .expected_errors = {"Missing required property bar"},
+        },
+        VerifyQueryValueInputsWithExpectations{
+            .query_value = ParseTextProtoOrDie(R"pb(subquery_value {
+                                                      fields {
+                                                        key: "foo"
+                                                        value: { int_value: 1 }
+                                                      }
+                                                    })pb"),
+            .data_compare = ParseTextProtoOrDie(
+                R"pb(fields {
+                       key: "bar"
+                       value: {
+                         verify {
+                           presence: PRESENCE_OPTIONAL,
+                         }
+                       }
+                     })pb"),
+            .expected_status = IsOk(),
+        },
+        VerifyQueryValueInputsWithExpectations{
+            .query_value = ParseTextProtoOrDie(R"pb(subquery_value {
+                                                      fields {
+                                                        key: "foo"
+                                                        value: { int_value: 1 }
+                                                      }
+                                                    })pb"),
+            .data_compare = ParseTextProtoOrDie(
+                R"pb(fields {
+                       key: "bar"
+                       value: {}
+                     })pb"),
+            .expected_status = IsOk(),
+        },
+        VerifyQueryValueInputsWithExpectations{
+            .query_value =
+                ParseTextProtoOrDie(R"pb(subquery_value {
+                                           fields {
+                                             key: "foo"
+                                             value: {
+                                               subquery_value {
+                                                 fields {
+                                                   key: "bar"
+                                                   value: { int_value: 1 }
+                                                 }
+                                               }
+                                             }
+                                           }
+                                         })pb"),
+            .data_compare = ParseTextProtoOrDie(
+                R"pb(fields {
+                       key: "foo"
+                       value: {
+                         data_compare {
+                           fields {
+                             key: "bar"
+                             value: { verify {} }
+                           }
+                         }
+                       }
+                     })pb"),
+            .expected_status = IsOk(),
+        },
+        VerifyQueryValueInputsWithExpectations{
+            .query_value = ParseTextProtoOrDie(R"pb(subquery_value {
+                                                      fields {
+                                                        key: "foo"
+                                                        value: { list_value {} }
+                                                      }
+                                                    })pb"),
+            .data_compare = ParseTextProtoOrDie(
+                R"pb(fields {
+                       key: "foo"
+                       value: { list_compare {} }
+                     })pb"),
+            .expected_status = IsStatusUnimplemented(),
+        }));
 
 TEST(VerifyQueryResultTest, Unimplemented) {
   QueryResult qr_a = ParseTextProtoOrDie(R"pb(

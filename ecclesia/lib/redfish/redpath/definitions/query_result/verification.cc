@@ -659,9 +659,41 @@ absl::Status VerifyListValue(const QueryValue& value,
 }
 
 absl::Status VerifySubqueryValue(
-    const QueryValue& value, const QueryResultDataVerification& verification,
+    const QueryResultData& value,
+    const QueryResultDataVerification& verification,
     std::vector<std::string>& errors, const VerificationOptions& options) {
-  return absl::UnimplementedError("Not implemented");
+  const google::protobuf::Map<std::string, QueryValue>& fields = value.fields();
+
+  for (const auto& [property, operations] : verification.fields()) {
+    auto it = fields.find(property);
+    if (it == fields.end()) {
+      if (operations.has_verify() &&
+          operations.verify().presence() == Verification::PRESENCE_REQUIRED) {
+        std::string error_message =
+            absl::StrCat("Missing required property ", property);
+        errors.push_back(error_message);
+        return absl::InternalError(error_message);
+      }
+      continue;
+    }
+
+    switch (it->second.kind_case()) {
+      case QueryValue::kSubqueryValue:
+        ECCLESIA_RETURN_IF_ERROR(
+            VerifySubqueryValue(it->second.subquery_value(),
+                                operations.data_compare(), errors, options));
+        break;
+      case QueryValue::kListValue:
+        ECCLESIA_RETURN_IF_ERROR(VerifyListValue(
+            it->second, operations.list_compare(), errors, options));
+        break;
+      default:
+        ECCLESIA_RETURN_IF_ERROR(
+            VerifyQueryValue(it->second, operations, errors, options));
+    }
+  }
+
+  return absl::OkStatus();
 }
 
 absl::Status VerifyQueryResult(const QueryResult& query_result,

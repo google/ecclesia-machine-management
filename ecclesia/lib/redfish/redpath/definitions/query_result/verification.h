@@ -87,7 +87,8 @@ absl::Status VerifyListValue(
 
 // Verify a subquery value against the given verification.
 absl::Status VerifySubqueryValue(
-    const QueryValue& value, const QueryResultDataVerification& verification,
+    const QueryResultData& value,
+    const QueryResultDataVerification& verification,
     std::vector<std::string>& errors,
     const VerificationOptions& options = VerificationOptions());
 
