@@ -24,6 +24,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -33,6 +34,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result_verification.pb.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/proto.h"
+#include "re2/re2.h"
 
 namespace ecclesia {
 namespace {
@@ -148,6 +150,253 @@ absl::Status CompareRawData(const QueryValue::RawData& value_a,
       break;
   }
   return absl::FailedPreconditionError("Unsupported raw data type");
+}
+
+template <typename T>
+absl::Status Operation(const T& value, const T& operand,
+                       const Verification::Validation::Operation& operation,
+                       std::vector<std::string>& errors) {
+  switch (operation) {
+    case Verification::Validation::OPERATION_GREATER_THAN:
+      if (value > operand) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL:
+      if (value >= operand) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::OPERATION_LESS_THAN:
+      if (value < operand) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL:
+      if (value <= operand) {
+        return absl::OkStatus();
+      }
+      break;
+    default:
+      return absl::InternalError(
+          absl::StrFormat("Unsupported operation %s",
+                          Verification::Validation::Operation_Name(operation)));
+  }
+
+  std::string error_message = absl::StrFormat(
+      "Failed %s check, value: '%v', operand: '%v'",
+      Verification::Validation::Operation_Name(operation), value, operand);
+  errors.push_back(error_message);
+  return absl::InternalError(error_message);
+}
+
+absl::Status OperationString(
+    absl::string_view value, absl::string_view operand,
+    const Verification::Validation::Operation& operation,
+    std::vector<std::string>& errors) {
+  switch (operation) {
+    case Verification::Validation::OPERATION_STRING_CONTAINS:
+      if (absl::StrContains(value, operand)) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::OPERATION_STRING_NOT_CONTAINS:
+      if (!absl::StrContains(value, operand)) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::OPERATION_STRING_STARTS_WITH:
+      if (absl::StartsWith(value, operand)) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::OPERATION_STRING_NOT_STARTS_WITH:
+      if (!absl::StartsWith(value, operand)) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::OPERATION_STRING_ENDS_WITH:
+      if (absl::EndsWith(value, operand)) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::OPERATION_STRING_NOT_ENDS_WITH:
+      if (!absl::EndsWith(value, operand)) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::OPERATION_STRING_REGEX_MATCH:
+      if (RE2::PartialMatch(value, RE2(operand))) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::OPERATION_STRING_NOT_REGEX_MATCH:
+      if (!RE2::PartialMatch(value, RE2(operand))) {
+        return absl::OkStatus();
+      }
+      break;
+    default:
+      return absl::InternalError(
+          absl::StrFormat("Unsupported operation %s",
+                          Verification::Validation::Operation_Name(operation)));
+  }
+  std::string error_message = absl::StrFormat(
+      "Failed operation %s, value: '%s', operand: '%s'",
+      Verification::Validation::Operation_Name(operation), value, operand);
+  errors.push_back(error_message);
+  return absl::InternalError(error_message);
+}
+
+absl::Status OperationQueryValue(
+    const QueryValue& value, const QueryValue& operand,
+    const Verification::Validation::Operation& operation,
+    std::vector<std::string>& errors) {
+  if (value.kind_case() != operand.kind_case()) {
+    return absl::FailedPreconditionError(
+        "Value and operand have different types and cannot be compared");
+  }
+  switch (value.kind_case()) {
+    case QueryValue::kSubqueryValue:
+    case QueryValue::kListValue:
+      return absl::FailedPreconditionError("Value are not scalar values");
+    case QueryValue::kIntValue:
+      return Operation(value.int_value(), operand.int_value(), operation,
+                       errors);
+    case QueryValue::kDoubleValue:
+      return Operation(value.double_value(), operand.double_value(), operation,
+                       errors);
+    case QueryValue::kStringValue:
+      return OperationString(value.string_value(), operand.string_value(),
+                             operation, errors);
+    case QueryValue::kBoolValue:
+      return absl::InternalError("Operation does not support boolean values");
+    case QueryValue::kTimestampValue:
+      return Operation(AbslTimeFromProtoTime(value.timestamp_value()),
+                       AbslTimeFromProtoTime(operand.timestamp_value()),
+                       operation, errors);
+    case QueryValue::kIdentifier:
+      return absl::InternalError(
+          "Operation does not support Identifier values");
+    case QueryValue::kRawData:
+      return absl::InternalError("Operation does not support Raw Data");
+    default:
+      return absl::FailedPreconditionError(
+          "Unsupported value type for operation");
+      break;
+  }
+  return absl::OkStatus();
+}
+
+absl::Status Range(const QueryValue& value,
+                   const google::protobuf::RepeatedPtrField<QueryValue>& operands,
+                   const Verification::Validation::Range& range,
+                   std::vector<std::string>& errors) {
+  if (operands.empty()) {
+    return absl::FailedPreconditionError(
+        "Atleast one operand is required for range check. None provided.");
+  }
+
+  bool success = false;
+  std::string error_message;
+  Verification::Compare comparison;
+  switch (range) {
+    case Verification::Validation::RANGE_UNKNOWN:
+      return absl::FailedPreconditionError("Range is not provided");
+    case Verification::Validation::RANGE_IN:
+      comparison = Verification::COMPARE_EQUAL;
+      error_message = "Value is not in the range of operands provided";
+      break;
+    case Verification::Validation::RANGE_NOT_IN:
+      comparison = Verification::COMPARE_NOT_EQUAL;
+      error_message = "Value is in the range of operands provided";
+      break;
+    default:
+      return absl::FailedPreconditionError(absl::StrFormat(
+          "Unsupported range %s", Verification::Validation::Range_Name(range)));
+  }
+
+  std::vector<std::string> internal_errors;
+  for (const QueryValue& operand : operands) {
+    if (CompareQueryValues(value, operand, comparison, internal_errors,
+                           VerificationOptions())
+            .ok()) {
+      success = true;
+      break;
+    }
+  }
+  if (!success) {
+    errors.insert(errors.end(), internal_errors.begin(), internal_errors.end());
+    return absl::InternalError(error_message);
+  }
+  return absl::OkStatus();
+}
+
+absl::Status Interval(const QueryValue& value,
+                      const google::protobuf::RepeatedPtrField<QueryValue>& operands,
+                      const Verification::Validation::Interval& interval,
+                      std::vector<std::string>& errors) {
+  if (operands.size() != 2) {
+    return absl::FailedPreconditionError(absl::StrFormat(
+        "Two operands are required for interval check. %d provided.",
+        operands.size()));
+  }
+  switch (interval) {
+    case Verification::Validation::INTERVAL_UNKNOWN:
+      return absl::FailedPreconditionError("Interval is not provided");
+    case Verification::Validation::INTERVAL_OPEN:
+      if (OperationQueryValue(value, operands[0],
+                              Verification::Validation::OPERATION_GREATER_THAN,
+                              errors)
+              .ok() &&
+          OperationQueryValue(value, operands[1],
+                              Verification::Validation::OPERATION_LESS_THAN,
+                              errors)
+              .ok()) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::INTERVAL_CLOSED:
+      if (OperationQueryValue(
+              value, operands[0],
+              Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL, errors)
+              .ok() &&
+          OperationQueryValue(
+              value, operands[1],
+              Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL, errors)
+              .ok()) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::INTERVAL_OPEN_CLOSED:
+      if (OperationQueryValue(value, operands[0],
+                              Verification::Validation::OPERATION_GREATER_THAN,
+                              errors)
+              .ok() &&
+          OperationQueryValue(
+              value, operands[1],
+              Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL, errors)
+              .ok()) {
+        return absl::OkStatus();
+      }
+      break;
+    case Verification::Validation::INTERVAL_CLOSED_OPEN:
+      if (OperationQueryValue(
+              value, operands[0],
+              Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL, errors)
+              .ok() &&
+          OperationQueryValue(value, operands[1],
+                              Verification::Validation::OPERATION_LESS_THAN,
+                              errors)
+              .ok()) {
+        return absl::OkStatus();
+      }
+      break;
+    default:
+      return absl::FailedPreconditionError("Interval is not set");
+  }
+
+  return absl::InternalError(
+      "Value is not in the interval of operands provided");
 }
 
 }  // namespace
@@ -363,7 +612,39 @@ absl::Status VerifyQueryValue(const QueryValue& value,
                               const QueryValueVerification& verification,
                               std::vector<std::string>& errors,
                               const VerificationOptions& options) {
-  return absl::UnimplementedError("Not implemented");
+  if (!verification.has_verify()) {
+    return absl::InvalidArgumentError(
+        "Query value verification must have a verify field");
+  }
+
+  // Presence checking is handled by the caller. This function can only verify
+  // properties that are present in the query value.
+  if (!verification.verify().has_validation()) {
+    return absl::OkStatus();
+  }
+
+  if (verification.verify().validation().has_operation()) {
+    if (verification.verify().validation().operands().empty()) {
+      return absl::InternalError(
+          "Query value verification must have at least one operand");
+    }
+
+    return OperationQueryValue(
+        value, verification.verify().validation().operands(0),
+        verification.verify().validation().operation(), errors);
+  }
+
+  if (verification.verify().validation().has_range()) {
+    return Range(value, verification.verify().validation().operands(),
+                 verification.verify().validation().range(), errors);
+  }
+
+  if (verification.verify().validation().has_interval()) {
+    return Interval(value, verification.verify().validation().operands(),
+                    verification.verify().validation().interval(), errors);
+  }
+
+  return absl::OkStatus();
 }
 
 absl::Status VerifyListValue(const QueryValue& value,

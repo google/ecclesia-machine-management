@@ -22,6 +22,7 @@
 #include "google/protobuf/timestamp.pb.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/strings/str_format.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result_verification.pb.h"
@@ -838,13 +839,701 @@ TEST(CompareQueryResultsTest, SuccessListQueryResult) {
   ASSERT_THAT(errors, IsEmpty());
 }
 
-TEST(VerifyQueryValueTest, Unimplemented) {
-  QueryValue qv_a = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
+TEST(VerifyQueryValueTest, EmtpyVerification) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
   QueryValueVerification verification;
   std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryValue(qv_a, verification, errors),
-              IsStatusUnimplemented());
+  EXPECT_THAT(VerifyQueryValue(qv, verification, errors),
+              IsStatusInvalidArgument());
   ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryValueTest, VerificationWithNoValidation) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
+  QueryValueVerification verification = ParseTextProtoOrDie(R"pb(verify {})pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryValueTest, VerificationWithNoOperandas) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
+  QueryValueVerification verification =
+      ParseTextProtoOrDie(R"pb(verify { validation {} })pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryValueTest, VerificationWithJustOperands) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
+  QueryValueVerification verification = ParseTextProtoOrDie(
+      R"pb(verify { validation { operation: OPERATION_GREATER_THAN } })pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryValueTest, VerificationWithMismatchedOperandaType) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
+  QueryValueVerification verification =
+      ParseTextProtoOrDie(R"pb(verify {
+                                 validation {
+                                   operands { string_value: "foo" }
+                                   operation: OPERATION_GREATER_THAN
+                                 }
+                               })pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyQueryValue(qv, verification, errors),
+              IsStatusFailedPrecondition());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+struct UnsupportedValidationTestCase {
+  QueryValue::KindCase value_type;
+  std::vector<Verification::Validation::Operation> operations;
+};
+using UnsupportedValidationTest = TestWithParam<UnsupportedValidationTestCase>;
+
+TEST_P(UnsupportedValidationTest, UnsupportedOperation) {
+  const UnsupportedValidationTestCase& test_case = GetParam();
+
+  QueryValue query_value;
+  switch (test_case.value_type) {
+    case QueryValue::kIntValue:
+      query_value.set_int_value(1);
+      break;
+    case QueryValue::kDoubleValue:
+      query_value.set_double_value(1.0);
+      break;
+    case QueryValue::kBoolValue:
+      query_value.set_bool_value(true);
+      break;
+    case QueryValue::kStringValue:
+      query_value.set_string_value("foo");
+      break;
+    case QueryValue::kTimestampValue:
+      query_value.mutable_timestamp_value()->set_seconds(1);
+      break;
+    case QueryValue::kIdentifier:
+      query_value.mutable_identifier()->set_local_devpath("foo");
+      break;
+    case QueryValue::kRawData:
+      query_value.mutable_raw_data()->set_raw_string_value("foo");
+      break;
+    default:
+      break;
+  };
+
+  std::vector<std::string> errors;
+  for (Verification::Validation::Operation operation : test_case.operations) {
+    QueryValueVerification verification;
+    verification.mutable_verify()->mutable_validation()->set_operation(
+        operation);
+    *verification.mutable_verify()->mutable_validation()->add_operands() =
+        query_value;
+    ASSERT_THAT(VerifyQueryValue(query_value, verification, errors),
+                IsStatusInternal());
+    ASSERT_THAT(errors, IsEmpty());
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    UnsupportedValidationTest, UnsupportedValidationTest,
+    Values(
+        UnsupportedValidationTestCase{
+            .value_type = QueryValue::kIntValue,
+            .operations =
+                {
+                    Verification::Validation::OPERATION_UNKNOWN,
+                    Verification::Validation::OPERATION_STRING_CONTAINS,
+                    Verification::Validation::OPERATION_STRING_NOT_CONTAINS,
+                    Verification::Validation::OPERATION_STRING_STARTS_WITH,
+                    Verification::Validation::OPERATION_STRING_NOT_STARTS_WITH,
+                    Verification::Validation::OPERATION_STRING_ENDS_WITH,
+                    Verification::Validation::OPERATION_STRING_NOT_ENDS_WITH,
+                    Verification::Validation::OPERATION_STRING_REGEX_MATCH,
+                    Verification::Validation::OPERATION_STRING_NOT_REGEX_MATCH,
+                }},
+        UnsupportedValidationTestCase{
+            .value_type = QueryValue::kDoubleValue,
+            .operations =
+                {
+                    Verification::Validation::OPERATION_UNKNOWN,
+                    Verification::Validation::OPERATION_STRING_CONTAINS,
+                    Verification::Validation::OPERATION_STRING_NOT_CONTAINS,
+                    Verification::Validation::OPERATION_STRING_STARTS_WITH,
+                    Verification::Validation::OPERATION_STRING_NOT_STARTS_WITH,
+                    Verification::Validation::OPERATION_STRING_ENDS_WITH,
+                    Verification::Validation::OPERATION_STRING_NOT_ENDS_WITH,
+                    Verification::Validation::OPERATION_STRING_REGEX_MATCH,
+                    Verification::Validation::OPERATION_STRING_NOT_REGEX_MATCH,
+                }},
+        UnsupportedValidationTestCase{
+            .value_type = QueryValue::kStringValue,
+            .operations =
+                {
+                    Verification::Validation::OPERATION_UNKNOWN,
+                    Verification::Validation::OPERATION_GREATER_THAN,
+                    Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL,
+                    Verification::Validation::OPERATION_LESS_THAN,
+                    Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL,
+                }},
+        UnsupportedValidationTestCase{
+            .value_type = QueryValue::kBoolValue,
+            .operations =
+                {
+                    Verification::Validation::OPERATION_UNKNOWN,
+                    Verification::Validation::OPERATION_GREATER_THAN,
+                    Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL,
+                    Verification::Validation::OPERATION_LESS_THAN,
+                    Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL,
+                    Verification::Validation::OPERATION_STRING_CONTAINS,
+                    Verification::Validation::OPERATION_STRING_NOT_CONTAINS,
+                    Verification::Validation::OPERATION_STRING_STARTS_WITH,
+                    Verification::Validation::OPERATION_STRING_NOT_STARTS_WITH,
+                    Verification::Validation::OPERATION_STRING_ENDS_WITH,
+                    Verification::Validation::OPERATION_STRING_NOT_ENDS_WITH,
+                    Verification::Validation::OPERATION_STRING_REGEX_MATCH,
+                    Verification::Validation::OPERATION_STRING_NOT_REGEX_MATCH,
+                }},
+        UnsupportedValidationTestCase{
+            .value_type = QueryValue::kTimestampValue,
+            .operations =
+                {
+                    Verification::Validation::OPERATION_UNKNOWN,
+                    Verification::Validation::OPERATION_STRING_CONTAINS,
+                    Verification::Validation::OPERATION_STRING_NOT_CONTAINS,
+                    Verification::Validation::OPERATION_STRING_STARTS_WITH,
+                    Verification::Validation::OPERATION_STRING_NOT_STARTS_WITH,
+                    Verification::Validation::OPERATION_STRING_ENDS_WITH,
+                    Verification::Validation::OPERATION_STRING_NOT_ENDS_WITH,
+                    Verification::Validation::OPERATION_STRING_REGEX_MATCH,
+                    Verification::Validation::OPERATION_STRING_NOT_REGEX_MATCH,
+                }},
+        UnsupportedValidationTestCase{
+            .value_type = QueryValue::kIdentifier,
+            .operations =
+                {
+                    Verification::Validation::OPERATION_UNKNOWN,
+                    Verification::Validation::OPERATION_GREATER_THAN,
+                    Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL,
+                    Verification::Validation::OPERATION_LESS_THAN,
+                    Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL,
+                    Verification::Validation::OPERATION_STRING_CONTAINS,
+                    Verification::Validation::OPERATION_STRING_NOT_CONTAINS,
+                    Verification::Validation::OPERATION_STRING_STARTS_WITH,
+                    Verification::Validation::OPERATION_STRING_NOT_STARTS_WITH,
+                    Verification::Validation::OPERATION_STRING_ENDS_WITH,
+                    Verification::Validation::OPERATION_STRING_NOT_ENDS_WITH,
+                    Verification::Validation::OPERATION_STRING_REGEX_MATCH,
+                    Verification::Validation::OPERATION_STRING_NOT_REGEX_MATCH,
+                }},
+        UnsupportedValidationTestCase{
+            .value_type = QueryValue::kRawData,
+            .operations = {
+                Verification::Validation::OPERATION_UNKNOWN,
+                Verification::Validation::OPERATION_GREATER_THAN,
+                Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL,
+                Verification::Validation::OPERATION_LESS_THAN,
+                Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL,
+                Verification::Validation::OPERATION_STRING_CONTAINS,
+                Verification::Validation::OPERATION_STRING_NOT_CONTAINS,
+                Verification::Validation::OPERATION_STRING_STARTS_WITH,
+                Verification::Validation::OPERATION_STRING_NOT_STARTS_WITH,
+                Verification::Validation::OPERATION_STRING_ENDS_WITH,
+                Verification::Validation::OPERATION_STRING_NOT_ENDS_WITH,
+                Verification::Validation::OPERATION_STRING_REGEX_MATCH,
+                Verification::Validation::OPERATION_STRING_NOT_REGEX_MATCH,
+            }}));
+
+TEST_P(GreaterLesserValuesTest, GreaterThanSuccess) {
+  const QueryValueInputs& test_case = GetParam();
+  QueryValueVerification verification;
+  verification.mutable_verify()->mutable_validation()->set_operation(
+      Verification::Validation::OPERATION_GREATER_THAN);
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      test_case.query_value_b;
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
+              IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST_P(GreaterLesserValuesTest, GreaterThanFailure) {
+  const QueryValueInputs& test_case = GetParam();
+  QueryValueVerification verification;
+  verification.mutable_verify()->mutable_validation()->set_operation(
+      Verification::Validation::OPERATION_GREATER_THAN);
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      test_case.query_value_a;
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
+              IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_GREATER_THAN check"));
+}
+
+TEST_P(GreaterLesserValuesTest, GreaterThanOrEqualSuccess) {
+  const QueryValueInputs& test_case = GetParam();
+  QueryValueVerification verification;
+  verification.mutable_verify()->mutable_validation()->set_operation(
+      Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL);
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      test_case.query_value_b;
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
+              IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+
+  // Test Equal Values
+  errors.clear();
+  EXPECT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
+              IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST_P(GreaterLesserValuesTest, GreaterThanOrEqualFailure) {
+  const QueryValueInputs& test_case = GetParam();
+  QueryValueVerification verification;
+  verification.mutable_verify()->mutable_validation()->set_operation(
+      Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL);
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      test_case.query_value_a;
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
+              IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0],
+              HasSubstr("Failed OPERATION_GREATER_THAN_OR_EQUAL check"));
+}
+
+TEST_P(GreaterLesserValuesTest, LessThanSuccess) {
+  const QueryValueInputs& test_case = GetParam();
+  std::vector<std::string> errors;
+  QueryValueVerification verification;
+  verification.mutable_verify()->mutable_validation()->set_operation(
+      Verification::Validation::OPERATION_LESS_THAN);
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      test_case.query_value_a;
+  EXPECT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
+              IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST_P(GreaterLesserValuesTest, LessThanFailure) {
+  const QueryValueInputs& test_case = GetParam();
+  std::vector<std::string> errors;
+  QueryValueVerification verification;
+  verification.mutable_verify()->mutable_validation()->set_operation(
+      Verification::Validation::OPERATION_LESS_THAN);
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      test_case.query_value_b;
+  ASSERT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
+              IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_LESS_THAN check"));
+}
+
+TEST_P(GreaterLesserValuesTest, LessThanOrEqualSuccess) {
+  const QueryValueInputs& test_case = GetParam();
+  QueryValueVerification verification;
+  verification.mutable_verify()->mutable_validation()->set_operation(
+      Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL);
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      test_case.query_value_a;
+
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
+              IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+
+  // Test Equal Values
+  errors.clear();
+  EXPECT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
+              IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST_P(GreaterLesserValuesTest, LessThanOrEqualFailure) {
+  const QueryValueInputs& test_case = GetParam();
+
+  QueryValueVerification verification;
+  verification.mutable_verify()->mutable_validation()->set_operation(
+      Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL);
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      test_case.query_value_b;
+
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
+              IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0],
+              HasSubstr("Failed OPERATION_LESS_THAN_OR_EQUAL check"));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    GreaterLesserTests, GreaterLesserValuesTest,
+    Values(
+        QueryValueInputs{
+            .query_value_a = ParseTextProtoOrDie(R"pb(int_value: 2)pb"),
+            .query_value_b = ParseTextProtoOrDie(R"pb(int_value: 1)pb"),
+        },
+        QueryValueInputs{
+            .query_value_a = ParseTextProtoOrDie(R"pb(double_value: 3.14)pb"),
+            .query_value_b = ParseTextProtoOrDie(R"pb(double_value: 1.23)pb"),
+        },
+        QueryValueInputs{
+            .query_value_a = ParseTextProtoOrDie(R"pb(timestamp_value {
+                                                        seconds: 1694462500
+                                                        nanos: 0
+                                                      })pb"),
+            .query_value_b = ParseTextProtoOrDie(R"pb(timestamp_value {
+                                                        seconds: 1694462400
+                                                        nanos: 0
+                                                      })pb"),
+        }));
+
+struct StringOperationTestCase {
+  Verification::Validation::Operation operation;
+  QueryValue operand;
+};
+using StringOperationTest = TestWithParam<StringOperationTestCase>;
+
+TEST_P(StringOperationTest, OperationStringFailure) {
+  StringOperationTestCase test_case = GetParam();
+  QueryValue qv = ParseTextProtoOrDie(R"pb(string_value: "somethingElse")pb");
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      test_case.operand;
+  verification.mutable_verify()->mutable_validation()->set_operation(
+      test_case.operation);
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
+
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0],
+              HasSubstr(absl::StrFormat(
+                  "Failed operation %s, value: '%s', operand: '%s'",
+                  Verification::Validation::Operation_Name(test_case.operation),
+                  qv.string_value(), test_case.operand.string_value())));
+}
+
+TEST_P(StringOperationTest, OperationStringSuccess) {
+  StringOperationTestCase test_case = GetParam();
+  QueryValue qv = ParseTextProtoOrDie(R"pb(string_value: "foobar")pb");
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      test_case.operand;
+  verification.mutable_verify()->mutable_validation()->set_operation(
+      test_case.operation);
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
+
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    StringOperationTests, StringOperationTest,
+    Values(
+        StringOperationTestCase{
+            .operation = Verification::Validation::OPERATION_STRING_CONTAINS,
+            .operand = ParseTextProtoOrDie(R"pb(string_value: "oob")pb"),
+        },
+        StringOperationTestCase{
+            .operation =
+                Verification::Validation::OPERATION_STRING_NOT_CONTAINS,
+            .operand = ParseTextProtoOrDie(R"pb(string_value: "something")pb"),
+        },
+        StringOperationTestCase{
+            .operation = Verification::Validation::OPERATION_STRING_STARTS_WITH,
+            .operand = ParseTextProtoOrDie(R"pb(string_value: "foo")pb"),
+        },
+        StringOperationTestCase{
+            .operation =
+                Verification::Validation::OPERATION_STRING_NOT_STARTS_WITH,
+            .operand = ParseTextProtoOrDie(R"pb(string_value: "something")pb"),
+        },
+        StringOperationTestCase{
+            .operation = Verification::Validation::OPERATION_STRING_ENDS_WITH,
+            .operand = ParseTextProtoOrDie(R"pb(string_value: "bar")pb"),
+        },
+        StringOperationTestCase{
+            .operation =
+                Verification::Validation::OPERATION_STRING_NOT_ENDS_WITH,
+            .operand = ParseTextProtoOrDie(R"pb(string_value: "Else")pb"),
+        },
+        StringOperationTestCase{
+            .operation = Verification::Validation::OPERATION_STRING_REGEX_MATCH,
+            .operand = ParseTextProtoOrDie(R"pb(string_value: "^f.*r$")pb"),
+        },
+        StringOperationTestCase{
+            .operation =
+                Verification::Validation::OPERATION_STRING_NOT_REGEX_MATCH,
+            .operand = ParseTextProtoOrDie(R"pb(string_value: "^s.*e$")pb"),
+        }));
+
+TEST(VerifyQueryValueTest, InRangeFail) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      ParseTextProtoOrDie(R"pb(int_value: 3)pb");
+  verification.mutable_verify()->mutable_validation()->set_range(
+      Verification::Validation::RANGE_IN);
+
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0],
+              HasSubstr("Failed equality check, valueA: '2', valueB: '3'"));
+}
+
+TEST(VerifyQueryValueTest, RangeUnknownOption) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      ParseTextProtoOrDie(R"pb(int_value: 2)pb");
+  verification.mutable_verify()->mutable_validation()->set_range(
+      Verification::Validation::RANGE_UNKNOWN);
+
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, errors),
+              IsStatusFailedPrecondition());
+  ASSERT_THAT(errors, IsEmpty());
+}
+TEST(VerifyQueryValueTest, RangeUnsupported) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      ParseTextProtoOrDie(R"pb(int_value: 2)pb");
+  verification.mutable_verify()->mutable_validation()->set_range(
+      static_cast<Verification::Validation::Range>(
+          Verification::Validation::RANGE_UNKNOWN - 1));
+
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, errors),
+              IsStatusFailedPrecondition());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryValueTest, RangeMissingOperands) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
+  QueryValueVerification verification;
+  verification.mutable_verify()->mutable_validation()->set_range(
+      Verification::Validation::RANGE_IN);
+
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, errors),
+              IsStatusFailedPrecondition());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryValueTest, InRangeSuccess) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      ParseTextProtoOrDie(R"pb(int_value: 1)pb");
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      ParseTextProtoOrDie(R"pb(int_value: 2)pb");
+  verification.mutable_verify()->mutable_validation()->set_range(
+      Verification::Validation::RANGE_IN);
+
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+TEST(VerifyQueryValueTest, NotInRangeFail) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      ParseTextProtoOrDie(R"pb(int_value: 2)pb");
+  verification.mutable_verify()->mutable_validation()->set_range(
+      Verification::Validation::RANGE_NOT_IN);
+
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0],
+              HasSubstr("Failed inequality check, valueA: '2', valueB: '2'"));
+}
+
+TEST(VerifyQueryValueTest, NotInRangeSuccess) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      ParseTextProtoOrDie(R"pb(int_value: 3)pb");
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      ParseTextProtoOrDie(R"pb(int_value: 4)pb");
+  verification.mutable_verify()->mutable_validation()->set_range(
+      Verification::Validation::RANGE_NOT_IN);
+
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryValueTest, IntervalFailSingleOperand) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 0)pb");
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() =
+      ParseTextProtoOrDie(R"pb(int_value: 1)pb");
+  verification.mutable_verify()->mutable_validation()->set_interval(
+      Verification::Validation::INTERVAL_OPEN);
+
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, errors),
+              IsStatusFailedPrecondition());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryValueTest, IntervalUnknownOption) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(int_value: 0)pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(int_value: 5)pb");
+  QueryValue qv_c = ParseTextProtoOrDie(R"pb(int_value: 10)pb");
+
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_a;
+  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_c;
+
+  verification.mutable_verify()->mutable_validation()->set_interval(
+      Verification::Validation::INTERVAL_UNKNOWN);
+
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors),
+              IsStatusFailedPrecondition());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryValueTest, IntervalUnsupported) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(int_value: 0)pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(int_value: 5)pb");
+  QueryValue qv_c = ParseTextProtoOrDie(R"pb(int_value: 10)pb");
+
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_a;
+  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_c;
+
+  verification.mutable_verify()->mutable_validation()->set_interval(
+      static_cast<Verification::Validation::Interval>(
+          Verification::Validation::INTERVAL_UNKNOWN - 1));
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors),
+              IsStatusFailedPrecondition());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryValueTest, IntervalFail) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(int_value: 0)pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
+  QueryValue qv_c = ParseTextProtoOrDie(R"pb(int_value: 10)pb");
+  QueryValue qv_d = ParseTextProtoOrDie(R"pb(int_value: 100)pb");
+
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_b;
+  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_c;
+
+  verification.mutable_verify()->mutable_validation()->set_interval(
+      Verification::Validation::INTERVAL_OPEN);
+
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(
+      errors[0],
+      HasSubstr(
+          "Failed OPERATION_GREATER_THAN check, value: '1', operand: '1'"));
+  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_c, verification, errors), IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(
+      errors[0],
+      HasSubstr(
+          "Failed OPERATION_LESS_THAN check, value: '10', operand: '10'"));
+  errors.clear();
+
+  verification.mutable_verify()->mutable_validation()->set_interval(
+      Verification::Validation::INTERVAL_CLOSED);
+  ASSERT_THAT(VerifyQueryValue(qv_a, verification, errors), IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_GREATER_THAN_OR_EQUAL "
+                                   "check, value: '0', operand: '1'"));
+  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_d, verification, errors), IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_LESS_THAN_OR_EQUAL check, "
+                                   "value: '100', operand: '10'"));
+  errors.clear();
+
+  verification.mutable_verify()->mutable_validation()->set_interval(
+      Verification::Validation::INTERVAL_OPEN_CLOSED);
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_GREATER_THAN "
+                                   "check, value: '1', operand: '1'"));
+  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_d, verification, errors), IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_LESS_THAN_OR_EQUAL check, "
+                                   "value: '100', operand: '10'"));
+  errors.clear();
+
+  verification.mutable_verify()->mutable_validation()->set_interval(
+      Verification::Validation::INTERVAL_CLOSED_OPEN);
+  ASSERT_THAT(VerifyQueryValue(qv_a, verification, errors), IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_GREATER_THAN_OR_EQUAL "
+                                   "check, value: '0', operand: '1'"));
+  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_c, verification, errors), IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(1));
+  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_LESS_THAN check, "
+                                   "value: '10', operand: '10'"));
+  errors.clear();
+}
+
+TEST(VerifyQueryValueTest, IntervalSuccess) {
+  QueryValue qv_a = ParseTextProtoOrDie(R"pb(int_value: 0)pb");
+  QueryValue qv_b = ParseTextProtoOrDie(R"pb(int_value: 5)pb");
+  QueryValue qv_c = ParseTextProtoOrDie(R"pb(int_value: 10)pb");
+
+  QueryValueVerification verification;
+  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_a;
+  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_c;
+
+  verification.mutable_verify()->mutable_validation()->set_interval(
+      Verification::Validation::INTERVAL_OPEN);
+
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+  errors.clear();
+
+  verification.mutable_verify()->mutable_validation()->set_interval(
+      Verification::Validation::INTERVAL_CLOSED);
+  ASSERT_THAT(VerifyQueryValue(qv_a, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_c, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+  errors.clear();
+
+  verification.mutable_verify()->mutable_validation()->set_interval(
+      Verification::Validation::INTERVAL_OPEN_CLOSED);
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_c, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+  errors.clear();
+
+  verification.mutable_verify()->mutable_validation()->set_interval(
+      Verification::Validation::INTERVAL_CLOSED_OPEN);
+  ASSERT_THAT(VerifyQueryValue(qv_a, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+  errors.clear();
 }
 
 TEST(VerifyListValueTest, Unimplemented) {
