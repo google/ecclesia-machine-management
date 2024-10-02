@@ -270,6 +270,25 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_errors = {"Missing property foo in valueA"},
         },
         QueryValueInputsWithExpectations{
+            .query_value_a = ParseTextProtoOrDie(R"pb(subquery_value {
+                                                        fields {
+                                                          key: "foo"
+                                                          value: {
+                                                            int_value: 1
+                                                          }
+                                                        }
+                                                      })pb"),
+            .query_value_b = ParseTextProtoOrDie(R"pb(subquery_value {})pb"),
+            .data_compare = ParseTextProtoOrDie(R"pb(
+              fields {
+                key: "foo"
+                value { verify { comparison: COMPARE_EQUAL } }
+              }
+            )pb"),
+            .expected_status = IsOk(),
+            .expected_errors = {"Missing property foo in valueB"},
+        },
+        QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(subquery_value {})pb"),
             .query_value_b = ParseTextProtoOrDie(R"pb(subquery_value {})pb"),
             .data_compare = ParseTextProtoOrDie(R"pb(
@@ -279,8 +298,7 @@ INSTANTIATE_TEST_SUITE_P(
               }
             )pb"),
             .expected_status = IsOk(),
-            .expected_errors = {"Missing property foo in valueA",
-                                "Missing property foo in valueB"},
+            .expected_errors = {},
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(subquery_value {

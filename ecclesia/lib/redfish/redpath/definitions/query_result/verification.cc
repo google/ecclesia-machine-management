@@ -298,19 +298,19 @@ absl::Status CompareSubqueryValues(
   for (const auto& [property, operations] : verification.fields()) {
     auto a_it = fields_a.find(property);
     auto b_it = fields_b.find(property);
-    if (a_it == fields_b.end() || b_it == fields_b.end()) {
-      if (a_it == fields_a.end()) {
-        std::string error_message_a = absl::StrCat(
-            "Missing property ", property, " in ", options.label_a);
-        errors.push_back(error_message_a);
-      }
-
-      if (b_it == fields_b.end()) {
-        std::string error_message_b = absl::StrCat(
-            "Missing property ", property, " in ", options.label_b);
-        errors.push_back(error_message_b);
-      }
-
+    if (a_it == fields_a.end() && b_it == fields_b.end()) {
+      // If the property is not present in both, then there is no need to
+      // compare or report an error.
+      continue;
+    }
+    if (a_it == fields_a.end()) {
+      errors.push_back(
+          absl::StrCat("Missing property ", property, " in ", options.label_a));
+      continue;
+    }
+    if (b_it == fields_b.end()) {
+      errors.push_back(
+          absl::StrCat("Missing property ", property, " in ", options.label_b));
       continue;
     }
 
