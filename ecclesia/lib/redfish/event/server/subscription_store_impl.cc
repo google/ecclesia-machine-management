@@ -36,13 +36,6 @@ namespace ecclesia {
 
 namespace {
 
-// Redfish properties to parse in Subscription request.
-constexpr absl::string_view kPropertyOem = "Oem";
-constexpr absl::string_view kPropertyGoogle = "Google";
-constexpr absl::string_view kPropertyTriggers = "Triggers";
-constexpr absl::string_view kPropertyId = "Id";
-constexpr absl::string_view kPropertyLastEventId = "LastEventId";
-
 // Concrete implementation of SubscriptionStore.
 // Thread safe
 class SubscriptionStoreImpl : public SubscriptionStore {

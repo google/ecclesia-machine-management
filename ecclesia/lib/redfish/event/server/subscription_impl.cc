@@ -54,7 +54,6 @@ namespace {
 constexpr absl::string_view kPropertyOem = "Oem";
 constexpr absl::string_view kPropertyGoogle = "Google";
 constexpr absl::string_view kPropertyTriggers = "Triggers";
-constexpr absl::string_view kPropertyId = "Id";
 constexpr absl::string_view kPropertyLastEventId = "LastEventId";
 
 std::string PropertyNotPopulatedError(absl::string_view property) {
