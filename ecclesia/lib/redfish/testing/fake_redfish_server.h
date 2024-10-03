@@ -70,10 +70,19 @@ namespace ecclesia {
 class FakeRedfishServer {
  public:
   FakeRedfishServer(absl::string_view mockup_shar,
-                    absl::string_view mockup_uds_path);
+                    absl::string_view mockup_uds_path, int port);
+  FakeRedfishServer(absl::string_view mockup_shar, int port)
+      : FakeRedfishServer(mockup_shar,
+                         absl::StrCat(GetTestTempUdsDirectory(),
+                                      "/mockup.socket"),
+                         port) {}
+  FakeRedfishServer(absl::string_view mockup_shar,
+                    absl::string_view mockup_uds_path)
+      : FakeRedfishServer(mockup_shar, mockup_uds_path, kDefaultPort) {}
   explicit FakeRedfishServer(absl::string_view mockup_shar)
       : FakeRedfishServer(mockup_shar, absl::StrCat(GetTestTempUdsDirectory(),
-                                                    "/mockup.socket")) {}
+                                                    "/mockup.socket"),
+                                                    kDefaultPort) {}
   ~FakeRedfishServer();
 
   using HandlerFunc = std::function<void(
@@ -180,6 +189,7 @@ class FakeRedfishServer {
   TestingMockupServer mockup_server_;
   // Interface to the mockup server, used by the proxy server
   std::unique_ptr<RedfishInterface> redfish_intf_;
+  static constexpr int kDefaultPort = 0;
 };
 
 }  // namespace ecclesia

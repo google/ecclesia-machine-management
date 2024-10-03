@@ -50,8 +50,6 @@
 namespace ecclesia {
 namespace {
 
-// Binding to port 0 will bind to any available port.
-constexpr int kDefaultPort = 0;
 constexpr int kNumThreads = 5;
 
 // Create HTTP Transport
@@ -233,8 +231,9 @@ std::unique_ptr<RedfishTransport> FakeRedfishServer::RedfishClientTransport() {
 }
 
 FakeRedfishServer::FakeRedfishServer(absl::string_view mockup_shar,
-                                     absl::string_view mockup_uds_path)
-    : proxy_server_(ecclesia::CreateServer(kDefaultPort, kNumThreads)),
+                                     absl::string_view mockup_uds_path,
+                                     int port)
+    : proxy_server_(ecclesia::CreateServer(port, kNumThreads)),
       mockup_server_(mockup_shar, mockup_uds_path),
       redfish_intf_(mockup_server_.RedfishClientInterface()) {
   auto handler =
