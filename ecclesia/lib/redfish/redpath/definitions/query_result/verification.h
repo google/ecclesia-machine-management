@@ -81,7 +81,7 @@ absl::Status VerifyQueryValue(
 
 // Verify a list value against the given verification.
 absl::Status VerifyListValue(
-    const QueryValue& value, const ListValueVerification& verification,
+    const ListValue& value, const ListValueVerification& verification,
     std::vector<std::string>& errors,
     const VerificationOptions& options = VerificationOptions());
 

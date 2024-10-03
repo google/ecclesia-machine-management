@@ -651,11 +651,31 @@ absl::Status VerifyQueryValue(const QueryValue& value,
   return absl::OkStatus();
 }
 
-absl::Status VerifyListValue(const QueryValue& value,
+absl::Status VerifyListValue(const ListValue& list_value,
                              const ListValueVerification& verification,
                              std::vector<std::string>& errors,
                              const VerificationOptions& options) {
-  return absl::UnimplementedError("Not implemented");
+  if (!verification.has_verify()) {
+    return absl::InvalidArgumentError(
+        "Query value verification must have a verify field");
+  }
+  // Ignore identifiers because they are for comparison only.
+  for (const QueryValue& list_item : list_value.values()) {
+    switch (list_item.kind_case()) {
+      case QueryValue::kSubqueryValue:
+        ECCLESIA_RETURN_IF_ERROR(VerifySubqueryValue(
+            list_item.subquery_value(), verification.verify().data_compare(),
+            errors, options));
+        break;
+      case QueryValue::kListValue:
+        return absl::FailedPreconditionError(
+            "Query result contains a list of lists, invalid structure");
+      default:
+        ECCLESIA_RETURN_IF_ERROR(VerifyQueryValue(
+            list_item, verification.verify(), errors, options));
+    }
+  }
+  return absl::OkStatus();
 }
 
 absl::Status VerifySubqueryValue(
@@ -684,8 +704,9 @@ absl::Status VerifySubqueryValue(
                                 operations.data_compare(), errors, options));
         break;
       case QueryValue::kListValue:
-        ECCLESIA_RETURN_IF_ERROR(VerifyListValue(
-            it->second, operations.list_compare(), errors, options));
+        ECCLESIA_RETURN_IF_ERROR(VerifyListValue(it->second.list_value(),
+                                                 operations.list_compare(),
+                                                 errors, options));
         break;
       default:
         ECCLESIA_RETURN_IF_ERROR(

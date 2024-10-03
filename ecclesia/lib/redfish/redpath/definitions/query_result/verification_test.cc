@@ -1600,15 +1600,67 @@ TEST(VerifyQueryValueTest, IntervalSuccess) {
   errors.clear();
 }
 
-TEST(VerifyListValueTest, Unimplemented) {
-  QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {
-                                               values { int_value: 1 }
-                                               values { int_value: 2 }
-                                             })pb");
+TEST(VerifyListValueTest, MissingVerifyField) {
+  ListValue lv = ParseTextProtoOrDie(R"pb(
+    values { int_value: 1 }
+    values { int_value: 2 }
+  )pb");
   ListValueVerification verification;
   std::vector<std::string> errors;
-  EXPECT_THAT(VerifyListValue(qv_a, verification, errors),
-              IsStatusUnimplemented());
+  EXPECT_THAT(VerifyListValue(lv, verification, errors),
+              IsStatusInvalidArgument());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyListValueTest, BasicListVerification) {
+  ListValue lv = ParseTextProtoOrDie(R"pb(
+    values { int_value: 1 }
+    values { int_value: 2 }
+  )pb");
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    verify { verify {} }
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyListValue(lv, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyListValueTest, ListofSuberyqueryVerification) {
+  ListValue lv = ParseTextProtoOrDie(R"pb(
+    values {
+      subquery_value {
+        fields {
+          key: "foo"
+          value: { int_value: 1 }
+        }
+      }
+    }
+  )pb");
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    verify {
+      data_compare {
+        fields {
+          key: "foo"
+          value: { verify {} }
+        }
+      }
+    }
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyListValue(lv, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyListValueTest, ListofListVerification) {
+  ListValue lv = ParseTextProtoOrDie(R"pb(
+    values { list_value { values { int_value: 1 } } }
+  )pb");
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb(
+    verify {}
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyListValue(lv, verification, errors),
+              IsStatusFailedPrecondition());
   ASSERT_THAT(errors, IsEmpty());
 }
 
@@ -1744,9 +1796,9 @@ INSTANTIATE_TEST_SUITE_P(
             .data_compare = ParseTextProtoOrDie(
                 R"pb(fields {
                        key: "foo"
-                       value: { list_compare {} }
+                       value: { list_compare { verify {} } }
                      })pb"),
-            .expected_status = IsStatusUnimplemented(),
+            .expected_status = IsOk(),
         }));
 
 TEST(VerifyQueryResultTest, Unimplemented) {
