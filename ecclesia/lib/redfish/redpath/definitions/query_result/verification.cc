@@ -721,7 +721,16 @@ absl::Status VerifyQueryResult(const QueryResult& query_result,
                                const QueryResultVerification& verification,
                                std::vector<std::string>& errors,
                                const VerificationOptions& options) {
-  return absl::UnimplementedError("Not implemented");
+  if (query_result.query_id() != verification.query_id()) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Query result has query ID ", query_result.query_id(),
+                     " which does not match the verification query "
+                     "ID ",
+                     verification.query_id()));
+  }
+
+  return VerifySubqueryValue(query_result.data(), verification.data_verify(),
+                             errors, options);
 }
 
 }  // namespace ecclesia

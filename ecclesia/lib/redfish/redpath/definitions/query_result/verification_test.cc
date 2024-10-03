@@ -1801,8 +1801,21 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsOk(),
         }));
 
-TEST(VerifyQueryResultTest, Unimplemented) {
-  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+TEST(VerifyQueryResultTest, QueryIdsMismatchForVerification) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_a"
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_b"
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, errors),
+              IsStatusInvalidArgument());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryResultTest, SuccessSimpleQueryResult) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
     query_id: "query_1"
     data {
       fields {
@@ -1811,10 +1824,79 @@ TEST(VerifyQueryResultTest, Unimplemented) {
       }
     }
   )pb");
-  QueryResultVerification verification;
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value { verify {} }
+      }
+    }
+  )pb");
   std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryResult(qr_a, verification, errors),
-              IsStatusUnimplemented());
+  EXPECT_THAT(VerifyQueryResult(qr, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryResultTest, SuccessSubqueryQueryResult) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value {
+          subquery_value {
+            fields {
+              key: "key1"
+              value { int_value: 0 }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          data_compare {
+            fields {
+              key: "key1"
+              value { verify {} }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryResultTest, SuccessListQueryResult) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { list_value { values { int_value: 0 } } }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value { list_compare { verify { verify {} } } }
+      }
+    }
+  )pb");
+  std::vector<std::string> errors;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, errors), IsOk());
   ASSERT_THAT(errors, IsEmpty());
 }
 
