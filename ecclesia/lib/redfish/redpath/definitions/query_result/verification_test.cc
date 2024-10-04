@@ -992,10 +992,10 @@ TEST_P(UnsupportedValidationTest, UnsupportedOperation) {
   std::vector<std::string> errors;
   for (Verification::Validation::Operation operation : test_case.operations) {
     QueryValueVerification verification;
-    verification.mutable_verify()->mutable_validation()->set_operation(
-        operation);
-    *verification.mutable_verify()->mutable_validation()->add_operands() =
-        query_value;
+    Verification::Validation& validation =
+        *verification.mutable_verify()->mutable_validation()->Add();
+    validation.set_operation(operation);
+    *validation.add_operands() = query_value;
     ASSERT_THAT(VerifyQueryValue(query_value, verification, errors),
                 IsStatusInternal());
     ASSERT_THAT(errors, IsEmpty());
@@ -1114,10 +1114,10 @@ INSTANTIATE_TEST_SUITE_P(
 TEST_P(GreaterLesserValuesTest, GreaterThanSuccess) {
   const QueryValueInputs& test_case = GetParam();
   QueryValueVerification verification;
-  verification.mutable_verify()->mutable_validation()->set_operation(
-      Verification::Validation::OPERATION_GREATER_THAN);
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      test_case.query_value_b;
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_operation(Verification::Validation::OPERATION_GREATER_THAN);
+  *validation.add_operands() = test_case.query_value_b;
   std::vector<std::string> errors;
   EXPECT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
               IsOk());
@@ -1127,10 +1127,10 @@ TEST_P(GreaterLesserValuesTest, GreaterThanSuccess) {
 TEST_P(GreaterLesserValuesTest, GreaterThanFailure) {
   const QueryValueInputs& test_case = GetParam();
   QueryValueVerification verification;
-  verification.mutable_verify()->mutable_validation()->set_operation(
-      Verification::Validation::OPERATION_GREATER_THAN);
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      test_case.query_value_a;
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_operation(Verification::Validation::OPERATION_GREATER_THAN);
+  *validation.add_operands() = test_case.query_value_a;
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
               IsStatusInternal());
@@ -1141,10 +1141,11 @@ TEST_P(GreaterLesserValuesTest, GreaterThanFailure) {
 TEST_P(GreaterLesserValuesTest, GreaterThanOrEqualSuccess) {
   const QueryValueInputs& test_case = GetParam();
   QueryValueVerification verification;
-  verification.mutable_verify()->mutable_validation()->set_operation(
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_operation(
       Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL);
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      test_case.query_value_b;
+  *validation.add_operands() = test_case.query_value_b;
   std::vector<std::string> errors;
   EXPECT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
               IsOk());
@@ -1160,10 +1161,11 @@ TEST_P(GreaterLesserValuesTest, GreaterThanOrEqualSuccess) {
 TEST_P(GreaterLesserValuesTest, GreaterThanOrEqualFailure) {
   const QueryValueInputs& test_case = GetParam();
   QueryValueVerification verification;
-  verification.mutable_verify()->mutable_validation()->set_operation(
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_operation(
       Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL);
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      test_case.query_value_a;
+  *validation.add_operands() = test_case.query_value_a;
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
               IsStatusInternal());
@@ -1176,10 +1178,10 @@ TEST_P(GreaterLesserValuesTest, LessThanSuccess) {
   const QueryValueInputs& test_case = GetParam();
   std::vector<std::string> errors;
   QueryValueVerification verification;
-  verification.mutable_verify()->mutable_validation()->set_operation(
-      Verification::Validation::OPERATION_LESS_THAN);
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      test_case.query_value_a;
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_operation(Verification::Validation::OPERATION_LESS_THAN);
+  *validation.add_operands() = test_case.query_value_a;
   EXPECT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
               IsOk());
   ASSERT_THAT(errors, IsEmpty());
@@ -1189,10 +1191,10 @@ TEST_P(GreaterLesserValuesTest, LessThanFailure) {
   const QueryValueInputs& test_case = GetParam();
   std::vector<std::string> errors;
   QueryValueVerification verification;
-  verification.mutable_verify()->mutable_validation()->set_operation(
-      Verification::Validation::OPERATION_LESS_THAN);
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      test_case.query_value_b;
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_operation(Verification::Validation::OPERATION_LESS_THAN);
+  *validation.add_operands() = test_case.query_value_b;
   ASSERT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
               IsStatusInternal());
   ASSERT_THAT(errors, SizeIs(1));
@@ -1202,10 +1204,11 @@ TEST_P(GreaterLesserValuesTest, LessThanFailure) {
 TEST_P(GreaterLesserValuesTest, LessThanOrEqualSuccess) {
   const QueryValueInputs& test_case = GetParam();
   QueryValueVerification verification;
-  verification.mutable_verify()->mutable_validation()->set_operation(
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_operation(
       Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL);
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      test_case.query_value_a;
+  *validation.add_operands() = test_case.query_value_a;
 
   std::vector<std::string> errors;
   EXPECT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
@@ -1223,10 +1226,11 @@ TEST_P(GreaterLesserValuesTest, LessThanOrEqualFailure) {
   const QueryValueInputs& test_case = GetParam();
 
   QueryValueVerification verification;
-  verification.mutable_verify()->mutable_validation()->set_operation(
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_operation(
       Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL);
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      test_case.query_value_b;
+  *validation.add_operands() = test_case.query_value_b;
 
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
@@ -1268,10 +1272,10 @@ TEST_P(StringOperationTest, OperationStringFailure) {
   StringOperationTestCase test_case = GetParam();
   QueryValue qv = ParseTextProtoOrDie(R"pb(string_value: "somethingElse")pb");
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      test_case.operand;
-  verification.mutable_verify()->mutable_validation()->set_operation(
-      test_case.operation);
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_operation(test_case.operation);
+  *validation.add_operands() = test_case.operand;
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
 
@@ -1287,10 +1291,10 @@ TEST_P(StringOperationTest, OperationStringSuccess) {
   StringOperationTestCase test_case = GetParam();
   QueryValue qv = ParseTextProtoOrDie(R"pb(string_value: "foobar")pb");
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      test_case.operand;
-  verification.mutable_verify()->mutable_validation()->set_operation(
-      test_case.operation);
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_operation(test_case.operation);
+  *validation.add_operands() = test_case.operand;
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
 
@@ -1337,13 +1341,75 @@ INSTANTIATE_TEST_SUITE_P(
             .operand = ParseTextProtoOrDie(R"pb(string_value: "^s.*e$")pb"),
         }));
 
+TEST(VerifyQueryValueTest, MultipleValidationsSuccess) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(string_value: "foobar")pb");
+  QueryValueVerification verification = ParseTextProtoOrDie(R"pb(
+    verify {
+      validation {
+        operation: OPERATION_STRING_CONTAINS
+        operands { string_value: "oob" }
+      }
+      validation {
+        operation: OPERATION_STRING_NOT_CONTAINS
+        operands { string_value: "something" }
+      }
+
+      validation {
+        operation: OPERATION_STRING_STARTS_WITH
+        operands { string_value: "foo" }
+      }
+      validation {
+        operation: OPERATION_STRING_ENDS_WITH
+        operands { string_value: "bar" }
+      }
+    }
+  )pb");
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
+  ASSERT_THAT(errors, IsEmpty());
+}
+
+TEST(VerifyQueryValueTest, MultipleValidationsFailure) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(string_value: "foobar")pb");
+  QueryValueVerification verification = ParseTextProtoOrDie(R"pb(
+    verify {
+      validation {
+        operation: OPERATION_STRING_CONTAINS
+        operands { string_value: "oob" }
+      }
+      validation {
+        operation: OPERATION_STRING_NOT_CONTAINS
+        operands { string_value: "something" }
+      }
+
+      validation {
+        operation: OPERATION_STRING_STARTS_WITH
+        operands { string_value: "bar" }
+      }
+      validation {
+        operation: OPERATION_STRING_ENDS_WITH
+        operands { string_value: "foo" }
+      }
+    }
+  )pb");
+  std::vector<std::string> errors;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
+  ASSERT_THAT(errors, SizeIs(2));
+  EXPECT_THAT(errors[0],
+              HasSubstr("Failed operation OPERATION_STRING_STARTS_WITH, value: "
+                        "'foobar', operand: 'bar'"));
+  EXPECT_THAT(errors[1],
+              HasSubstr("Failed operation OPERATION_STRING_ENDS_WITH, value: "
+                        "'foobar', operand: 'foo'"));
+}
+
 TEST(VerifyQueryValueTest, InRangeFail) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      ParseTextProtoOrDie(R"pb(int_value: 3)pb");
-  verification.mutable_verify()->mutable_validation()->set_range(
-      Verification::Validation::RANGE_IN);
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_range(Verification::Validation::RANGE_IN);
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 3)pb");
 
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
@@ -1355,10 +1421,10 @@ TEST(VerifyQueryValueTest, InRangeFail) {
 TEST(VerifyQueryValueTest, RangeUnknownOption) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      ParseTextProtoOrDie(R"pb(int_value: 2)pb");
-  verification.mutable_verify()->mutable_validation()->set_range(
-      Verification::Validation::RANGE_UNKNOWN);
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_range(Verification::Validation::RANGE_UNKNOWN);
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
 
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv, verification, errors),
@@ -1368,11 +1434,11 @@ TEST(VerifyQueryValueTest, RangeUnknownOption) {
 TEST(VerifyQueryValueTest, RangeUnsupported) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      ParseTextProtoOrDie(R"pb(int_value: 2)pb");
-  verification.mutable_verify()->mutable_validation()->set_range(
-      static_cast<Verification::Validation::Range>(
-          Verification::Validation::RANGE_UNKNOWN - 1));
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_range(static_cast<Verification::Validation::Range>(
+      Verification::Validation::RANGE_UNKNOWN - 1));
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
 
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv, verification, errors),
@@ -1383,7 +1449,7 @@ TEST(VerifyQueryValueTest, RangeUnsupported) {
 TEST(VerifyQueryValueTest, RangeMissingOperands) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
   QueryValueVerification verification;
-  verification.mutable_verify()->mutable_validation()->set_range(
+  verification.mutable_verify()->mutable_validation()->Add()->set_range(
       Verification::Validation::RANGE_IN);
 
   std::vector<std::string> errors;
@@ -1395,12 +1461,11 @@ TEST(VerifyQueryValueTest, RangeMissingOperands) {
 TEST(VerifyQueryValueTest, InRangeSuccess) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      ParseTextProtoOrDie(R"pb(int_value: 1)pb");
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      ParseTextProtoOrDie(R"pb(int_value: 2)pb");
-  verification.mutable_verify()->mutable_validation()->set_range(
-      Verification::Validation::RANGE_IN);
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_range(Verification::Validation::RANGE_IN);
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
 
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
@@ -1409,10 +1474,12 @@ TEST(VerifyQueryValueTest, InRangeSuccess) {
 TEST(VerifyQueryValueTest, NotInRangeFail) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      ParseTextProtoOrDie(R"pb(int_value: 2)pb");
-  verification.mutable_verify()->mutable_validation()->set_range(
-      Verification::Validation::RANGE_NOT_IN);
+
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_range(Verification::Validation::RANGE_IN);
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
+  validation.set_range(Verification::Validation::RANGE_NOT_IN);
 
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
@@ -1424,12 +1491,12 @@ TEST(VerifyQueryValueTest, NotInRangeFail) {
 TEST(VerifyQueryValueTest, NotInRangeSuccess) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      ParseTextProtoOrDie(R"pb(int_value: 3)pb");
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      ParseTextProtoOrDie(R"pb(int_value: 4)pb");
-  verification.mutable_verify()->mutable_validation()->set_range(
-      Verification::Validation::RANGE_NOT_IN);
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_range(Verification::Validation::RANGE_IN);
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 3)pb");
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 4)pb");
+  validation.set_range(Verification::Validation::RANGE_NOT_IN);
 
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
@@ -1439,11 +1506,10 @@ TEST(VerifyQueryValueTest, NotInRangeSuccess) {
 TEST(VerifyQueryValueTest, IntervalFailSingleOperand) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 0)pb");
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() =
-      ParseTextProtoOrDie(R"pb(int_value: 1)pb");
-  verification.mutable_verify()->mutable_validation()->set_interval(
-      Verification::Validation::INTERVAL_OPEN);
-
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_interval(Verification::Validation::INTERVAL_OPEN);
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv, verification, errors),
               IsStatusFailedPrecondition());
@@ -1456,11 +1522,12 @@ TEST(VerifyQueryValueTest, IntervalUnknownOption) {
   QueryValue qv_c = ParseTextProtoOrDie(R"pb(int_value: 10)pb");
 
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_a;
-  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_c;
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  *validation.add_operands() = qv_a;
+  *validation.add_operands() = qv_c;
 
-  verification.mutable_verify()->mutable_validation()->set_interval(
-      Verification::Validation::INTERVAL_UNKNOWN);
+  validation.set_interval(Verification::Validation::INTERVAL_UNKNOWN);
 
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors),
@@ -1474,12 +1541,13 @@ TEST(VerifyQueryValueTest, IntervalUnsupported) {
   QueryValue qv_c = ParseTextProtoOrDie(R"pb(int_value: 10)pb");
 
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_a;
-  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_c;
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  *validation.add_operands() = qv_a;
+  *validation.add_operands() = qv_c;
 
-  verification.mutable_verify()->mutable_validation()->set_interval(
-      static_cast<Verification::Validation::Interval>(
-          Verification::Validation::INTERVAL_UNKNOWN - 1));
+  validation.set_interval(static_cast<Verification::Validation::Interval>(
+      Verification::Validation::INTERVAL_UNKNOWN - 1));
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors),
               IsStatusFailedPrecondition());
@@ -1493,11 +1561,12 @@ TEST(VerifyQueryValueTest, IntervalFail) {
   QueryValue qv_d = ParseTextProtoOrDie(R"pb(int_value: 100)pb");
 
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_b;
-  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_c;
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  *validation.add_operands() = qv_b;
+  *validation.add_operands() = qv_c;
 
-  verification.mutable_verify()->mutable_validation()->set_interval(
-      Verification::Validation::INTERVAL_OPEN);
+  validation.set_interval(Verification::Validation::INTERVAL_OPEN);
 
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsStatusInternal());
@@ -1515,8 +1584,7 @@ TEST(VerifyQueryValueTest, IntervalFail) {
           "Failed OPERATION_LESS_THAN check, value: '10', operand: '10'"));
   errors.clear();
 
-  verification.mutable_verify()->mutable_validation()->set_interval(
-      Verification::Validation::INTERVAL_CLOSED);
+  validation.set_interval(Verification::Validation::INTERVAL_CLOSED);
   ASSERT_THAT(VerifyQueryValue(qv_a, verification, errors), IsStatusInternal());
   ASSERT_THAT(errors, SizeIs(1));
   EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_GREATER_THAN_OR_EQUAL "
@@ -1528,8 +1596,7 @@ TEST(VerifyQueryValueTest, IntervalFail) {
                                    "value: '100', operand: '10'"));
   errors.clear();
 
-  verification.mutable_verify()->mutable_validation()->set_interval(
-      Verification::Validation::INTERVAL_OPEN_CLOSED);
+  validation.set_interval(Verification::Validation::INTERVAL_OPEN_CLOSED);
   ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsStatusInternal());
   ASSERT_THAT(errors, SizeIs(1));
   EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_GREATER_THAN "
@@ -1541,8 +1608,7 @@ TEST(VerifyQueryValueTest, IntervalFail) {
                                    "value: '100', operand: '10'"));
   errors.clear();
 
-  verification.mutable_verify()->mutable_validation()->set_interval(
-      Verification::Validation::INTERVAL_CLOSED_OPEN);
+  validation.set_interval(Verification::Validation::INTERVAL_CLOSED_OPEN);
   ASSERT_THAT(VerifyQueryValue(qv_a, verification, errors), IsStatusInternal());
   ASSERT_THAT(errors, SizeIs(1));
   EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_GREATER_THAN_OR_EQUAL "
@@ -1561,19 +1627,19 @@ TEST(VerifyQueryValueTest, IntervalSuccess) {
   QueryValue qv_c = ParseTextProtoOrDie(R"pb(int_value: 10)pb");
 
   QueryValueVerification verification;
-  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_a;
-  *verification.mutable_verify()->mutable_validation()->add_operands() = qv_c;
 
-  verification.mutable_verify()->mutable_validation()->set_interval(
-      Verification::Validation::INTERVAL_OPEN);
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  *validation.add_operands() = qv_a;
+  *validation.add_operands() = qv_c;
 
+  validation.set_interval(Verification::Validation::INTERVAL_OPEN);
   std::vector<std::string> errors;
   ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsOk());
   ASSERT_THAT(errors, IsEmpty());
   errors.clear();
 
-  verification.mutable_verify()->mutable_validation()->set_interval(
-      Verification::Validation::INTERVAL_CLOSED);
+  validation.set_interval(Verification::Validation::INTERVAL_CLOSED);
   ASSERT_THAT(VerifyQueryValue(qv_a, verification, errors), IsOk());
   ASSERT_THAT(errors, IsEmpty());
   errors.clear();
@@ -1581,8 +1647,7 @@ TEST(VerifyQueryValueTest, IntervalSuccess) {
   ASSERT_THAT(errors, IsEmpty());
   errors.clear();
 
-  verification.mutable_verify()->mutable_validation()->set_interval(
-      Verification::Validation::INTERVAL_OPEN_CLOSED);
+  validation.set_interval(Verification::Validation::INTERVAL_OPEN_CLOSED);
   ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsOk());
   ASSERT_THAT(errors, IsEmpty());
   errors.clear();
@@ -1590,8 +1655,7 @@ TEST(VerifyQueryValueTest, IntervalSuccess) {
   ASSERT_THAT(errors, IsEmpty());
   errors.clear();
 
-  verification.mutable_verify()->mutable_validation()->set_interval(
-      Verification::Validation::INTERVAL_CLOSED_OPEN);
+  validation.set_interval(Verification::Validation::INTERVAL_CLOSED_OPEN);
   ASSERT_THAT(VerifyQueryValue(qv_a, verification, errors), IsOk());
   ASSERT_THAT(errors, IsEmpty());
   errors.clear();

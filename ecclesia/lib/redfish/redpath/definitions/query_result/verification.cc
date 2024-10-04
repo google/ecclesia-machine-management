@@ -650,33 +650,41 @@ absl::Status VerifyQueryValue(const QueryValue& value,
 
   // Presence checking is handled by the caller. This function can only verify
   // properties that are present in the query value.
-  if (!verification.verify().has_validation()) {
+  if (verification.verify().validation().empty()) {
     return absl::OkStatus();
   }
 
-  if (verification.verify().validation().has_operation()) {
-    if (verification.verify().validation().operands().empty()) {
-      return absl::InternalError(
-          "Query value verification must have at least one operand");
+  auto verify_element =
+      [&](const Verification::Validation& validation) -> absl::Status {
+    if (validation.has_operation()) {
+      if (validation.operands().empty()) {
+        return absl::InternalError(
+            "Query value verification must have at least one operand");
+      }
+      return OperationQueryValue(value, validation.operands(0),
+                                 validation.operation(), errors, context);
+    }
+    if (validation.has_range()) {
+      return Range(value, validation.operands(), validation.range(), errors,
+                   context);
     }
 
-    return OperationQueryValue(
-        value, verification.verify().validation().operands(0),
-        verification.verify().validation().operation(), errors, context);
+    if (validation.has_interval()) {
+      return Interval(value, validation.operands(), validation.interval(),
+                      errors, context);
+    }
+    return absl::OkStatus();
+  };
+
+  absl::Status result = absl::OkStatus();
+  for (const Verification::Validation& validation :
+       verification.verify().validation()) {
+    if (absl::Status status = verify_element(validation); !status.ok()) {
+      result = status;
+    }
   }
 
-  if (verification.verify().validation().has_range()) {
-    return Range(value, verification.verify().validation().operands(),
-                 verification.verify().validation().range(), errors, context);
-  }
-
-  if (verification.verify().validation().has_interval()) {
-    return Interval(value, verification.verify().validation().operands(),
-                    verification.verify().validation().interval(), errors,
-                    context);
-  }
-
-  return absl::OkStatus();
+  return result;
 }
 
 absl::Status VerifyListValue(const ListValue& list_value,

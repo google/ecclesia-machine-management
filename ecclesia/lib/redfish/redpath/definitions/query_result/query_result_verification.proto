@@ -86,8 +86,8 @@ message Verification {
   Presence presence = 1;
   // The comparison to perform on the query value.
   Compare comparison = 2;
-  // The validation to perform on the query value.
-  Validation validation = 3;
+  // Set of validations to perform on the query value.
+  repeated Validation validation = 3;
 }
 
 message QueryValueVerification {
