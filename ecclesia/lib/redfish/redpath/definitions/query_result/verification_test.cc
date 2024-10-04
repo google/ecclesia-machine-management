@@ -1900,5 +1900,209 @@ TEST(VerifyQueryResultTest, SuccessListQueryResult) {
   ASSERT_THAT(errors, IsEmpty());
 }
 
+struct VerifyQueryResultErrorStrings {
+  QueryResult query_result;
+  QueryResultVerification verification;
+  internal_status::IsStatusPolyMatcher expected_status;
+  std::vector<std::string> expected_errors;
+};
+using VerifyQueryResultErrorStringsTest =
+    TestWithParam<VerifyQueryResultErrorStrings>;
+
+TEST_P(VerifyQueryResultErrorStringsTest, VerifyQueryResult) {
+  const VerifyQueryResultErrorStrings& test_case = GetParam();
+  std::vector<std::string> errors;
+  ASSERT_THAT(
+      VerifyQueryResult(test_case.query_result, test_case.verification, errors),
+      test_case.expected_status);
+  ASSERT_THAT(errors, UnorderedElementsAreArray(test_case.expected_errors));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    VerifyQueryResultErrorStringsTest, VerifyQueryResultErrorStringsTest,
+    Values(
+        VerifyQueryResultErrorStrings{
+            .query_result = ParseTextProtoOrDie(R"pb(
+              query_id: "query_1"
+              data {
+                fields {
+                  key: "key0"
+                  value { list_value { values { int_value: 0 } } }
+                }
+              }
+            )pb"),
+            .verification = ParseTextProtoOrDie(
+                R"pb(query_id: "query_1"
+                     data_verify {
+                       fields {
+                         key: "key0"
+                         value {
+                           list_compare {
+                             verify {
+                               verify {
+                                 validation {
+                                   operation: OPERATION_GREATER_THAN
+                                   operands { int_value: 0 }
+                                 }
+                               }
+                             }
+                           }
+                         }
+                       }
+                     })pb"),
+            .expected_status = IsStatusInternal(),
+            .expected_errors =
+                {"(Path: query_1.key0.index=0) Failed OPERATION_GREATER_THAN "
+                 "check, value: '0', operand: '0'"},
+        },
+        VerifyQueryResultErrorStrings{
+            .query_result = ParseTextProtoOrDie(R"pb(
+              query_id: "query_1"
+              data {
+                fields {
+                  key: "key0"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "subkey0"
+                            value { string_value: "bar" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            )pb"),
+            .verification = ParseTextProtoOrDie(
+                R"pb(query_id: "query_1"
+                     data_verify {
+                       fields {
+                         key: "key0"
+                         value {
+                           list_compare {
+                             identifiers: "subkey0"
+                             verify {
+                               data_compare {
+                                 fields {
+                                   key: "subkey0"
+                                   value {
+                                     verify {
+                                       validation {
+                                         operation: OPERATION_STRING_STARTS_WITH
+                                         operands { string_value: "foo" }
+                                       }
+                                     }
+                                   }
+                                 }
+                               }
+                             }
+                           }
+                         }
+                       }
+                     })pb"),
+            .expected_status = IsStatusInternal(),
+            .expected_errors =
+                {"(Path: query_1.key0.index=0.subkey0) Failed operation "
+                 "OPERATION_STRING_STARTS_WITH, value: 'bar', operand: 'foo'"},
+        }));
+
+using CompareQueryResultErrorStringsTest =
+    TestWithParam<VerifyQueryResultErrorStrings>;
+
+TEST_P(CompareQueryResultErrorStringsTest, CompareQueryResult) {
+  const VerifyQueryResultErrorStrings& test_case = GetParam();
+  std::vector<std::string> errors;
+  ASSERT_THAT(
+      CompareQueryResults(test_case.query_result, test_case.query_result,
+                          test_case.verification, errors),
+      test_case.expected_status);
+  ASSERT_THAT(errors, UnorderedElementsAreArray(test_case.expected_errors));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    CompareQueryResultErrorStringsTest, CompareQueryResultErrorStringsTest,
+    Values(
+        VerifyQueryResultErrorStrings{
+            .query_result = ParseTextProtoOrDie(R"pb(
+              query_id: "query_1"
+              data {
+                fields {
+                  key: "key0"
+                  value { list_value { values { int_value: 0 } } }
+                }
+              }
+            )pb"),
+            .verification = ParseTextProtoOrDie(
+                R"pb(query_id: "query_1"
+                     data_verify {
+                       fields {
+                         key: "key0"
+                         value {
+                           list_compare {
+                             verify { verify { comparison: COMPARE_NOT_EQUAL } }
+                           }
+                         }
+                       }
+                     })pb"),
+            .expected_status = IsStatusInternal(),
+            .expected_errors = {"(Path: query_1.key0.index=0) Failed "
+                                "inequality check, valueA: '0', valueB: '0'"},
+        },
+        VerifyQueryResultErrorStrings{
+            .query_result = ParseTextProtoOrDie(R"pb(
+              query_id: "query_1"
+              data {
+                fields {
+                  key: "key0"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "subkey0"
+                            value { string_value: "foo" }
+                          }
+                          fields {
+                            key: "element"
+                            value { string_value: "bar" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            )pb"),
+            .verification = ParseTextProtoOrDie(
+                R"pb(query_id: "query_1"
+                     data_verify {
+                       fields {
+                         key: "key0"
+                         value {
+                           list_compare {
+                             identifiers: "subkey0"
+                             verify {
+                               data_compare {
+                                 fields {
+                                   key: "element"
+                                   value {
+                                     verify { comparison: COMPARE_NOT_EQUAL }
+                                   }
+                                 }
+                               }
+                             }
+                           }
+                         }
+                       }
+                     })pb"),
+            .expected_status = IsStatusInternal(),
+            .expected_errors =
+                {"(Path: query_1.key0.subkey0=\"foo\".element) Failed "
+                 "inequality check, valueA: 'bar', valueB: 'bar'"},
+        }));
+
 }  // namespace
 }  // namespace ecclesia

@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result_verification.pb.h"
@@ -47,16 +48,36 @@ struct VerificationOptions {
   absl::string_view label_b = "valueB";
 };
 
+// Context for verification functions. This is used to provide more useful
+// error messages. Please note that the context is copied by value, so if you
+// want to use a reference to a string, you should use a valid string_view.
+struct VerificationContext {
+  absl::string_view path;
+
+  VerificationContext() = default;
+  explicit VerificationContext(absl::string_view in_path) : path(in_path) {}
+
+  // Appends a path element to the current path.
+  std::string AppendPath(absl::string_view path_element) const {
+    if (path.empty()) {
+      return std::string(path_element);
+    }
+    return absl::StrCat(path, ".", path_element);
+  }
+};
+
 // Compare two scalar query values against the given operation.
 absl::Status CompareQueryValues(
     const QueryValue& value_a, const QueryValue& value_b,
     Verification::Compare comparison, std::vector<std::string>& errors,
+    VerificationContext context = VerificationContext(),
     const VerificationOptions& options = VerificationOptions());
 
 // Compare two list values against the given verification.
 absl::Status CompareListValues(
     const ListValue& value_a, const ListValue& value_b,
     const ListValueVerification& verification, std::vector<std::string>& errors,
+    VerificationContext context = VerificationContext(),
     const VerificationOptions& options = VerificationOptions());
 
 // Compare two subquery values against the given verification.
@@ -64,6 +85,7 @@ absl::Status CompareSubqueryValues(
     const QueryResultData& value_a, const QueryResultData& value_b,
     const QueryResultDataVerification& verification,
     std::vector<std::string>& errors,
+    VerificationContext context = VerificationContext(),
     const VerificationOptions& options = VerificationOptions());
 
 // Compare two query results against the given verification.
@@ -77,12 +99,14 @@ absl::Status CompareQueryResults(
 absl::Status VerifyQueryValue(
     const QueryValue& value, const QueryValueVerification& verification,
     std::vector<std::string>& errors,
+    VerificationContext context = VerificationContext(),
     const VerificationOptions& options = VerificationOptions());
 
 // Verify a list value against the given verification.
 absl::Status VerifyListValue(
     const ListValue& value, const ListValueVerification& verification,
     std::vector<std::string>& errors,
+    VerificationContext context = VerificationContext(),
     const VerificationOptions& options = VerificationOptions());
 
 // Verify a subquery value against the given verification.
@@ -90,6 +114,7 @@ absl::Status VerifySubqueryValue(
     const QueryResultData& value,
     const QueryResultDataVerification& verification,
     std::vector<std::string>& errors,
+    VerificationContext context = VerificationContext(),
     const VerificationOptions& options = VerificationOptions());
 
 // Verify a query result against the given verification.
