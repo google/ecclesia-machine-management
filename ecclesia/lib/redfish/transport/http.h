@@ -85,6 +85,8 @@ class HttpRedfishTransport : public RedfishTransport {
 
   absl::StatusOr<Result> Get(absl::string_view path)
       ABSL_LOCKS_EXCLUDED(mutex_) override;
+  absl::StatusOr<Result> Get(absl::string_view path, absl::Duration timeout)
+      ABSL_LOCKS_EXCLUDED(mutex_) override;
   absl::StatusOr<Result> Post(absl::string_view path, absl::string_view data)
       ABSL_LOCKS_EXCLUDED(mutex_) override;
   absl::StatusOr<Result> Patch(absl::string_view path, absl::string_view data)

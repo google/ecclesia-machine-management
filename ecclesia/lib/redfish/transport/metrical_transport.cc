@@ -117,6 +117,18 @@ absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Get(
   }
   return result;
 }
+
+absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Get(
+    absl::string_view path, absl::Duration timeout) {
+  CHECK(base_transport_ != nullptr);
+  auto trace = RedfishTrace({path, "GET"}, clock_, &redfish_transport_metrics_);
+  auto result = base_transport_->Get(path, timeout);
+  if (!result.ok()) {
+    trace.RecordError();
+  }
+  return result;
+}
+
 absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Post(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);

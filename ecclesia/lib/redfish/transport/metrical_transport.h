@@ -22,6 +22,7 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "ecclesia/lib/time/clock.h"
@@ -45,6 +46,8 @@ class MetricalRedfishTransport : public RedfishTransport {
 
   absl::string_view GetRootUri() override;
   absl::StatusOr<Result> Get(absl::string_view path) override;
+  absl::StatusOr<Result> Get(absl::string_view path,
+                             absl::Duration timeout) override;
   absl::StatusOr<Result> Post(absl::string_view path,
                               absl::string_view data) override;
   absl::StatusOr<Result> Patch(absl::string_view path,

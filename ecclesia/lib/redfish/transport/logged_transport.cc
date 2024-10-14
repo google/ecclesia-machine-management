@@ -96,6 +96,14 @@ absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Get(
   return LogMethodDataAndResult("Get", path, std::nullopt,
                                 [&]() { return base_transport_->Get(path); });
 }
+absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Get(
+    absl::string_view path, absl::Duration timeout) {
+  CHECK(base_transport_ != nullptr);
+  return LogMethodDataAndResult("Get", path, std::nullopt, [&]() {
+    return base_transport_->Get(path, timeout);
+  });
+}
+
 absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Post(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
