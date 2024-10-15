@@ -515,6 +515,7 @@ absl::Status CompareListValues(const ListValue& value_a,
                                            /*is_first_item=*/false, use_index));
 
   std::vector<std::string> error_messages;
+  absl::Status list_compare_status = absl::OkStatus();
   for (const auto& [id, values] : data_map) {
     const auto& [list_item_a, list_item_b] = values;
     auto check_list_item =
@@ -538,10 +539,13 @@ absl::Status CompareListValues(const ListValue& value_a,
 
     switch (list_item_a->kind_case()) {
       case QueryValue::kSubqueryValue:
-        ECCLESIA_RETURN_IF_ERROR(CompareSubqueryValues(
-            list_item_a->subquery_value(), list_item_b->subquery_value(),
-            verification.verify().data_compare(), errors, sub_context,
-            options));
+        if (absl::Status status = CompareSubqueryValues(
+                list_item_a->subquery_value(), list_item_b->subquery_value(),
+                verification.verify().data_compare(), errors, sub_context,
+                options);
+            !status.ok()) {
+          list_compare_status = status;
+        }
         break;
       case QueryValue::kListValue:
         return absl::FailedPreconditionError(
@@ -558,7 +562,7 @@ absl::Status CompareListValues(const ListValue& value_a,
     return absl::InternalError(absl::StrJoin(error_messages, "\n"));
   }
 
-  return absl::OkStatus();
+  return list_compare_status;
 }
 
 absl::Status CompareSubqueryValues(

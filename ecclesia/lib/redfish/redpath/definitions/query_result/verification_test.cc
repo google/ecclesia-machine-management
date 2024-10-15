@@ -783,9 +783,14 @@ TEST(CompareListValuesTest, MisAlignedListValues) {
   EXPECT_THAT(CompareListValues(qv_a.list_value(), qv_b.list_value(),
                                 verification, errors),
               IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0],
-              ContainsRegex("Failed equality check, valueA: '.', valueB: '.'"));
+  ASSERT_THAT(errors, SizeIs(2));
+  EXPECT_THAT(
+      errors,
+      UnorderedElementsAreArray(
+          {"(Path: index=1.foo) Failed equality check, valueA: '2', "
+           "valueB: '1'",
+           "(Path: index=0.foo) Failed equality check, valueA: '1', valueB: "
+           "'2'"}));
 }
 
 TEST(CompareQueryResultsTest, QueryIdsMismatchForAndB) {
