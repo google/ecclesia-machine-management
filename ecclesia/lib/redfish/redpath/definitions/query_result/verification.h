@@ -18,7 +18,6 @@
 #define ECCLESIA_LIB_REDFISH_REDFISH_REDPATH_DEFINITIONS_QUERY_RESULT_VERIFICATION_H_
 
 #include <string>
-#include <vector>
 
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
@@ -64,19 +63,27 @@ struct VerificationContext {
     }
     return absl::StrCat(path, ".", path_element);
   }
+
+  std::string ToString() const {
+    std::string result;
+    if (!path.empty()) {
+      absl::StrAppend(&result, "(Path: ", path, ") ");
+    }
+    return result;
+  }
 };
 
 // Compare two scalar query values against the given operation.
 absl::Status CompareQueryValues(
     const QueryValue& value_a, const QueryValue& value_b,
-    Verification::Compare comparison, std::vector<std::string>& errors,
+    Verification::Compare comparison, QueryVerificationResult& result,
     VerificationContext context = VerificationContext(),
     const VerificationOptions& options = VerificationOptions());
 
 // Compare two list values against the given verification.
 absl::Status CompareListValues(
     const ListValue& value_a, const ListValue& value_b,
-    const ListValueVerification& verification, std::vector<std::string>& errors,
+    const ListValueVerification& verification, QueryVerificationResult& result,
     VerificationContext context = VerificationContext(),
     const VerificationOptions& options = VerificationOptions());
 
@@ -84,7 +91,7 @@ absl::Status CompareListValues(
 absl::Status CompareSubqueryValues(
     const QueryResultData& value_a, const QueryResultData& value_b,
     const QueryResultDataVerification& verification,
-    std::vector<std::string>& errors,
+    QueryVerificationResult& result,
     VerificationContext context = VerificationContext(),
     const VerificationOptions& options = VerificationOptions());
 
@@ -92,20 +99,20 @@ absl::Status CompareSubqueryValues(
 absl::Status CompareQueryResults(
     const QueryResult& query_result_a, const QueryResult& query_result_b,
     const QueryResultVerification& verification,
-    std::vector<std::string>& errors,
+    QueryVerificationResult& result,
     const VerificationOptions& options = VerificationOptions());
 
 // Verify a query value against the given verification.
 absl::Status VerifyQueryValue(
     const QueryValue& value, const QueryValueVerification& verification,
-    std::vector<std::string>& errors,
+    QueryVerificationResult& result,
     VerificationContext context = VerificationContext(),
     const VerificationOptions& options = VerificationOptions());
 
 // Verify a list value against the given verification.
 absl::Status VerifyListValue(
     const ListValue& value, const ListValueVerification& verification,
-    std::vector<std::string>& errors,
+    QueryVerificationResult& result,
     VerificationContext context = VerificationContext(),
     const VerificationOptions& options = VerificationOptions());
 
@@ -113,7 +120,7 @@ absl::Status VerifyListValue(
 absl::Status VerifySubqueryValue(
     const QueryResultData& value,
     const QueryResultDataVerification& verification,
-    std::vector<std::string>& errors,
+    QueryVerificationResult& result,
     VerificationContext context = VerificationContext(),
     const VerificationOptions& options = VerificationOptions());
 
@@ -121,7 +128,7 @@ absl::Status VerifySubqueryValue(
 absl::Status VerifyQueryResult(
     const QueryResult& query_result,
     const QueryResultVerification& verification,
-    std::vector<std::string>& errors,
+    QueryVerificationResult& result,
     const VerificationOptions& options = VerificationOptions());
 
 }  // namespace ecclesia

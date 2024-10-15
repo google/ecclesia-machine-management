@@ -51,11 +51,25 @@ bool operator==(const Identifier& a, const Identifier& b) {
 
 bool operator!=(const Identifier& a, const Identifier& b) { return !(a == b); }
 
+void AddError(QueryVerificationResult& result, absl::string_view message,
+              VerificationContext context) {
+  QueryVerificationResult::ErrorInfo& error_info = *result.add_errors();
+  error_info.set_msg(std::string(message));
+  error_info.set_path(std::string(context.path));
+}
+
+absl::Status AddAndReturnError(QueryVerificationResult& result,
+                               absl::string_view message,
+                               VerificationContext context) {
+  AddError(result, message, context);
+  return absl::InternalError(message);
+}
+
 template <typename T>
 std::string InternalErrorMessage(absl::string_view message, const T& value_a,
                                  const T& value_b, VerificationContext context,
                                  const VerificationOptions& options) {
-  return absl::StrFormat("(Path: %s) %s, %s: '%v', %s: '%v'", context.path,
+  return absl::StrFormat("%s%s, %s: '%v', %s: '%v'", context.ToString(),
                          message, options.label_a, value_a, options.label_b,
                          value_b);
 }
@@ -66,7 +80,7 @@ std::string InternalErrorMessage(absl::string_view message,
                                  const Identifier& value_b,
                                  VerificationContext context,
                                  const VerificationOptions& options) {
-  return absl::StrFormat("(Path: %s) %s, %s: '%s', %s: '%s'", context.path,
+  return absl::StrFormat("%s%s, %s: '%s', %s: '%s'", context.ToString(),
                          message, options.label_a,
                          IdentifierValueToJson(value_a).dump(), options.label_b,
                          IdentifierValueToJson(value_b).dump());
@@ -102,14 +116,14 @@ absl::StatusOr<std::string> GenerateIdentifier(
 template <typename T>
 absl::Status Compare(const T& value_a, const T& value_b,
                      Verification::Compare comparison,
-                     std::vector<std::string>& errors,
+                     QueryVerificationResult& result,
                      VerificationContext context,
                      const VerificationOptions& options) {
   auto internal_error = [&](absl::string_view message) {
-    std::string error_message =
-        InternalErrorMessage(message, value_a, value_b, context, options);
-    errors.push_back(error_message);
-    return absl::InternalError(error_message);
+    return AddAndReturnError(
+        result,
+        InternalErrorMessage(message, value_a, value_b, context, options),
+        context);
   };
   switch (comparison) {
     case Verification::COMPARE_UNKNOWN:
@@ -137,7 +151,7 @@ absl::Status Compare(const T& value_a, const T& value_b,
 absl::Status CompareRawData(const QueryValue::RawData& value_a,
                             const QueryValue::RawData& value_b,
                             Verification::Compare comparison,
-                            std::vector<std::string>& errors,
+                            QueryVerificationResult& result,
                             VerificationContext context,
                             const VerificationOptions& options) {
   if (value_a.value_case() != value_b.value_case()) {
@@ -147,10 +161,10 @@ absl::Status CompareRawData(const QueryValue::RawData& value_a,
   switch (value_a.value_case()) {
     case QueryValue_RawData::kRawStringValue:
       return Compare(value_a.raw_string_value(), value_b.raw_string_value(),
-                     comparison, errors, context, options);
+                     comparison, result, context, options);
     case QueryValue_RawData::kRawBytesValue:
       return Compare(value_a.raw_bytes_value(), value_b.raw_bytes_value(),
-                     comparison, errors, context, options);
+                     comparison, result, context, options);
     default:
       break;
   }
@@ -160,7 +174,7 @@ absl::Status CompareRawData(const QueryValue::RawData& value_a,
 template <typename T>
 absl::Status Operation(const T& value, const T& operand,
                        const Verification::Validation::Operation& operation,
-                       std::vector<std::string>& errors,
+                       QueryVerificationResult& result,
                        VerificationContext context) {
   switch (operation) {
     case Verification::Validation::OPERATION_GREATER_THAN:
@@ -190,16 +204,15 @@ absl::Status Operation(const T& value, const T& operand,
   }
 
   std::string error_message = absl::StrFormat(
-      "(Path: %s) Failed %s check, value: '%v', operand: '%v'", context.path,
+      "%sFailed %s check, value: '%v', operand: '%v'", context.ToString(),
       Verification::Validation::Operation_Name(operation), value, operand);
-  errors.push_back(error_message);
-  return absl::InternalError(error_message);
+  return AddAndReturnError(result, error_message, context);
 }
 
 absl::Status OperationString(
     absl::string_view value, absl::string_view operand,
     const Verification::Validation::Operation& operation,
-    std::vector<std::string>& errors, VerificationContext context) {
+    QueryVerificationResult& result, VerificationContext context) {
   switch (operation) {
     case Verification::Validation::OPERATION_STRING_CONTAINS:
       if (absl::StrContains(value, operand)) {
@@ -247,17 +260,15 @@ absl::Status OperationString(
                           Verification::Validation::Operation_Name(operation)));
   }
   std::string error_message = absl::StrFormat(
-      "(Path: %s) Failed operation %s, value: '%s', operand: '%s'",
-      context.path, Verification::Validation::Operation_Name(operation), value,
-      operand);
-  errors.push_back(error_message);
-  return absl::InternalError(error_message);
+      "%sFailed operation %s, value: '%s', operand: '%s'", context.ToString(),
+      Verification::Validation::Operation_Name(operation), value, operand);
+  return AddAndReturnError(result, error_message, context);
 }
 
 absl::Status OperationQueryValue(
     const QueryValue& value, const QueryValue& operand,
     const Verification::Validation::Operation& operation,
-    std::vector<std::string>& errors, VerificationContext context) {
+    QueryVerificationResult& result, VerificationContext context) {
   if (value.kind_case() != operand.kind_case()) {
     return absl::FailedPreconditionError(
         "Value and operand have different types and cannot be compared");
@@ -268,19 +279,19 @@ absl::Status OperationQueryValue(
       return absl::FailedPreconditionError("Value are not scalar values");
     case QueryValue::kIntValue:
       return Operation(value.int_value(), operand.int_value(), operation,
-                       errors, context);
+                       result, context);
     case QueryValue::kDoubleValue:
       return Operation(value.double_value(), operand.double_value(), operation,
-                       errors, context);
+                       result, context);
     case QueryValue::kStringValue:
       return OperationString(value.string_value(), operand.string_value(),
-                             operation, errors, context);
+                             operation, result, context);
     case QueryValue::kBoolValue:
       return absl::InternalError("Operation does not support boolean values");
     case QueryValue::kTimestampValue:
       return Operation(AbslTimeFromProtoTime(value.timestamp_value()),
                        AbslTimeFromProtoTime(operand.timestamp_value()),
-                       operation, errors, context);
+                       operation, result, context);
     case QueryValue::kIdentifier:
       return absl::InternalError(
           "Operation does not support Identifier values");
@@ -297,7 +308,7 @@ absl::Status OperationQueryValue(
 absl::Status Range(const QueryValue& value,
                    const google::protobuf::RepeatedPtrField<QueryValue>& operands,
                    const Verification::Validation::Range& range,
-                   std::vector<std::string>& errors,
+                   QueryVerificationResult& result,
                    VerificationContext context) {
   if (operands.empty()) {
     return absl::FailedPreconditionError(
@@ -323,9 +334,9 @@ absl::Status Range(const QueryValue& value,
           "Unsupported range %s", Verification::Validation::Range_Name(range)));
   }
 
-  std::vector<std::string> internal_errors;
+  QueryVerificationResult internal_result;
   for (const QueryValue& operand : operands) {
-    if (CompareQueryValues(value, operand, comparison, internal_errors, context,
+    if (CompareQueryValues(value, operand, comparison, internal_result, context,
                            VerificationOptions())
             .ok()) {
       success = true;
@@ -333,7 +344,8 @@ absl::Status Range(const QueryValue& value,
     }
   }
   if (!success) {
-    errors.insert(errors.end(), internal_errors.begin(), internal_errors.end());
+    result.mutable_errors()->Add(internal_result.errors().begin(),
+                                 internal_result.errors().end());
     return absl::InternalError(error_message);
   }
   return absl::OkStatus();
@@ -342,7 +354,7 @@ absl::Status Range(const QueryValue& value,
 absl::Status Interval(const QueryValue& value,
                       const google::protobuf::RepeatedPtrField<QueryValue>& operands,
                       const Verification::Validation::Interval& interval,
-                      std::vector<std::string>& errors,
+                      QueryVerificationResult& result,
                       VerificationContext context) {
   if (operands.size() != 2) {
     return absl::FailedPreconditionError(absl::StrFormat(
@@ -355,11 +367,11 @@ absl::Status Interval(const QueryValue& value,
     case Verification::Validation::INTERVAL_OPEN:
       if (OperationQueryValue(value, operands[0],
                               Verification::Validation::OPERATION_GREATER_THAN,
-                              errors, context)
+                              result, context)
               .ok() &&
           OperationQueryValue(value, operands[1],
                               Verification::Validation::OPERATION_LESS_THAN,
-                              errors, context)
+                              result, context)
               .ok()) {
         return absl::OkStatus();
       }
@@ -367,12 +379,12 @@ absl::Status Interval(const QueryValue& value,
     case Verification::Validation::INTERVAL_CLOSED:
       if (OperationQueryValue(
               value, operands[0],
-              Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL, errors,
+              Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL, result,
               context)
               .ok() &&
           OperationQueryValue(
               value, operands[1],
-              Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL, errors,
+              Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL, result,
               context)
               .ok()) {
         return absl::OkStatus();
@@ -381,11 +393,11 @@ absl::Status Interval(const QueryValue& value,
     case Verification::Validation::INTERVAL_OPEN_CLOSED:
       if (OperationQueryValue(value, operands[0],
                               Verification::Validation::OPERATION_GREATER_THAN,
-                              errors, context)
+                              result, context)
               .ok() &&
           OperationQueryValue(
               value, operands[1],
-              Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL, errors,
+              Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL, result,
               context)
               .ok()) {
         return absl::OkStatus();
@@ -394,12 +406,12 @@ absl::Status Interval(const QueryValue& value,
     case Verification::Validation::INTERVAL_CLOSED_OPEN:
       if (OperationQueryValue(
               value, operands[0],
-              Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL, errors,
+              Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL, result,
               context)
               .ok() &&
           OperationQueryValue(value, operands[1],
                               Verification::Validation::OPERATION_LESS_THAN,
-                              errors, context)
+                              result, context)
               .ok()) {
         return absl::OkStatus();
       }
@@ -417,7 +429,7 @@ absl::Status Interval(const QueryValue& value,
 absl::Status CompareQueryValues(const QueryValue& value_a,
                                 const QueryValue& value_b,
                                 Verification::Compare comparison,
-                                std::vector<std::string>& errors,
+                                QueryVerificationResult& result,
                                 VerificationContext context,
                                 const VerificationOptions& options) {
   if (value_a.kind_case() != value_b.kind_case()) {
@@ -431,26 +443,26 @@ absl::Status CompareQueryValues(const QueryValue& value_a,
           "Only scalar values can be compared");
     case QueryValue::kIntValue:
       return Compare(value_a.int_value(), value_b.int_value(), comparison,
-                     errors, context, options);
+                     result, context, options);
     case QueryValue::kDoubleValue:
       return Compare(value_a.double_value(), value_b.double_value(), comparison,
-                     errors, context, options);
+                     result, context, options);
     case QueryValue::kStringValue:
       return Compare(value_a.string_value(), value_b.string_value(), comparison,
-                     errors, context, options);
+                     result, context, options);
     case QueryValue::kBoolValue:
       return Compare(value_a.bool_value(), value_b.bool_value(), comparison,
-                     errors, context, options);
+                     result, context, options);
     case QueryValue::kTimestampValue:
       return Compare(AbslTimeFromProtoTime(value_a.timestamp_value()),
                      AbslTimeFromProtoTime(value_b.timestamp_value()),
-                     comparison, errors, context, options);
+                     comparison, result, context, options);
     case QueryValue::kIdentifier:
       return Compare(value_a.identifier(), value_b.identifier(), comparison,
-                     errors, context, options);
+                     result, context, options);
     case QueryValue::kRawData:
       return CompareRawData(value_a.raw_data(), value_b.raw_data(), comparison,
-                            errors, context, options);
+                            result, context, options);
     default:
       break;
   }
@@ -460,7 +472,7 @@ absl::Status CompareQueryValues(const QueryValue& value_a,
 absl::Status CompareListValues(const ListValue& value_a,
                                const ListValue& value_b,
                                const ListValueVerification& verification,
-                               std::vector<std::string>& errors,
+                               QueryVerificationResult& result,
                                VerificationContext context,
                                const VerificationOptions& options) {
   absl::flat_hash_map<std::string,
@@ -483,16 +495,14 @@ absl::Status CompareListValues(const ListValue& value_a,
           std::string error_message =
               absl::StrCat("Missing identifier in ", label, ": ",
                            identifier.status().message());
-          errors.push_back(error_message);
-          return absl::InternalError(error_message);
+          return AddAndReturnError(result, error_message, context);
         }
         if (auto it = data_map.find(*identifier); it != data_map.end()) {
           if (is_first_item ||
               (!is_first_item && it->second.second != nullptr)) {
             std::string error_message = absl::StrCat("Duplicate identifier in ",
                                                      label, ": ", *identifier);
-            errors.push_back(error_message);
-            return absl::InternalError(error_message);
+            return AddAndReturnError(result, error_message, context);
           }
           data_map_item = &it->second;
         } else {
@@ -519,12 +529,12 @@ absl::Status CompareListValues(const ListValue& value_a,
   for (const auto& [id, values] : data_map) {
     const auto& [list_item_a, list_item_b] = values;
     auto check_list_item =
-        [&identifier = id, &errors = errors, &error_messages = error_messages](
-            const QueryValue* list_item, absl::string_view label) {
+        [&identifier = id, &errors = result, &error_messages = error_messages,
+         &ctx = context](const QueryValue* list_item, absl::string_view label) {
           if (list_item == nullptr) {
             std::string error_message = absl::StrCat(
                 "Missing value in ", label, " with identifier ", identifier);
-            errors.push_back(error_message);
+            AddError(errors, error_message, ctx);
             error_messages.push_back(std::move(error_message));
           }
         };
@@ -541,7 +551,7 @@ absl::Status CompareListValues(const ListValue& value_a,
       case QueryValue::kSubqueryValue:
         if (absl::Status status = CompareSubqueryValues(
                 list_item_a->subquery_value(), list_item_b->subquery_value(),
-                verification.verify().data_compare(), errors, sub_context,
+                verification.verify().data_compare(), result, sub_context,
                 options);
             !status.ok()) {
           list_compare_status = status;
@@ -554,7 +564,7 @@ absl::Status CompareListValues(const ListValue& value_a,
         ECCLESIA_RETURN_IF_ERROR(
             CompareQueryValues(*list_item_a, *list_item_b,
                                verification.verify().verify().comparison(),
-                               errors, sub_context, options));
+                               result, sub_context, options));
     }
   }
 
@@ -568,7 +578,7 @@ absl::Status CompareListValues(const ListValue& value_a,
 absl::Status CompareSubqueryValues(
     const QueryResultData& value_a, const QueryResultData& value_b,
     const QueryResultDataVerification& verification,
-    std::vector<std::string>& errors, VerificationContext context,
+    QueryVerificationResult& result, VerificationContext context,
     const VerificationOptions& options) {
   const google::protobuf::Map<std::string, QueryValue>& fields_a = value_a.fields();
   const google::protobuf::Map<std::string, QueryValue>& fields_b = value_b.fields();
@@ -582,13 +592,17 @@ absl::Status CompareSubqueryValues(
       continue;
     }
     if (a_it == fields_a.end()) {
-      errors.push_back(
-          absl::StrCat("Missing property ", property, " in ", options.label_a));
+      AddError(
+          result,
+          absl::StrCat("Missing property ", property, " in ", options.label_a),
+          context);
       continue;
     }
     if (b_it == fields_b.end()) {
-      errors.push_back(
-          absl::StrCat("Missing property ", property, " in ", options.label_b));
+      AddError(
+          result,
+          absl::StrCat("Missing property ", property, " in ", options.label_b),
+          context);
       continue;
     }
 
@@ -599,17 +613,17 @@ absl::Status CompareSubqueryValues(
       case QueryValue::kSubqueryValue:
         ECCLESIA_RETURN_IF_ERROR(CompareSubqueryValues(
             a_it->second.subquery_value(), b_it->second.subquery_value(),
-            operations.data_compare(), errors, sub_context, options));
+            operations.data_compare(), result, sub_context, options));
         break;
       case QueryValue::kListValue:
         ECCLESIA_RETURN_IF_ERROR(CompareListValues(
             a_it->second.list_value(), b_it->second.list_value(),
-            operations.list_compare(), errors, sub_context, options));
+            operations.list_compare(), result, sub_context, options));
         break;
       default:
         ECCLESIA_RETURN_IF_ERROR(CompareQueryValues(
             a_it->second, b_it->second, operations.verify().comparison(),
-            errors, sub_context, options));
+            result, sub_context, options));
     }
   }
 
@@ -619,7 +633,7 @@ absl::Status CompareSubqueryValues(
 absl::Status CompareQueryResults(const QueryResult& query_result_a,
                                  const QueryResult& query_result_b,
                                  const QueryResultVerification& verification,
-                                 std::vector<std::string>& errors,
+                                 QueryVerificationResult& result,
                                  const VerificationOptions& options) {
   if (query_result_a.query_id() != query_result_b.query_id()) {
     return absl::FailedPreconditionError(absl::StrCat(
@@ -638,13 +652,13 @@ absl::Status CompareQueryResults(const QueryResult& query_result_a,
 
   VerificationContext context(query_result_a.query_id());
   return CompareSubqueryValues(query_result_a.data(), query_result_b.data(),
-                               verification.data_verify(), errors, context,
+                               verification.data_verify(), result, context,
                                options);
 }
 
 absl::Status VerifyQueryValue(const QueryValue& value,
                               const QueryValueVerification& verification,
-                              std::vector<std::string>& errors,
+                              QueryVerificationResult& result,
                               VerificationContext context,
                               const VerificationOptions& options) {
   if (!verification.has_verify()) {
@@ -666,34 +680,35 @@ absl::Status VerifyQueryValue(const QueryValue& value,
             "Query value verification must have at least one operand");
       }
       return OperationQueryValue(value, validation.operands(0),
-                                 validation.operation(), errors, context);
+                                 validation.operation(), result, context);
     }
     if (validation.has_range()) {
-      return Range(value, validation.operands(), validation.range(), errors,
+      return Range(value, validation.operands(), validation.range(), result,
                    context);
     }
 
     if (validation.has_interval()) {
       return Interval(value, validation.operands(), validation.interval(),
-                      errors, context);
+                      result, context);
     }
     return absl::OkStatus();
   };
 
-  absl::Status result = absl::OkStatus();
+  absl::Status status = absl::OkStatus();
   for (const Verification::Validation& validation :
        verification.verify().validation()) {
-    if (absl::Status status = verify_element(validation); !status.ok()) {
-      result = status;
+    if (absl::Status verify_status = verify_element(validation);
+        !verify_status.ok()) {
+      status = verify_status;
     }
   }
 
-  return result;
+  return status;
 }
 
 absl::Status VerifyListValue(const ListValue& list_value,
                              const ListValueVerification& verification,
-                             std::vector<std::string>& errors,
+                             QueryVerificationResult& result,
                              VerificationContext context,
                              const VerificationOptions& options) {
   if (!verification.has_verify()) {
@@ -709,14 +724,14 @@ absl::Status VerifyListValue(const ListValue& list_value,
       case QueryValue::kSubqueryValue:
         ECCLESIA_RETURN_IF_ERROR(VerifySubqueryValue(
             list_item.subquery_value(), verification.verify().data_compare(),
-            errors, sub_context, options));
+            result, sub_context, options));
         break;
       case QueryValue::kListValue:
         return absl::FailedPreconditionError(
             "Query result contains a list of lists, invalid structure");
       default:
         ECCLESIA_RETURN_IF_ERROR(VerifyQueryValue(
-            list_item, verification.verify(), errors, sub_context, options));
+            list_item, verification.verify(), result, sub_context, options));
     }
   }
   return absl::OkStatus();
@@ -725,7 +740,7 @@ absl::Status VerifyListValue(const ListValue& list_value,
 absl::Status VerifySubqueryValue(
     const QueryResultData& value,
     const QueryResultDataVerification& verification,
-    std::vector<std::string>& errors, VerificationContext context,
+    QueryVerificationResult& result, VerificationContext context,
     const VerificationOptions& options) {
   const google::protobuf::Map<std::string, QueryValue>& fields = value.fields();
 
@@ -734,10 +749,9 @@ absl::Status VerifySubqueryValue(
     if (it == fields.end()) {
       if (operations.has_verify() &&
           operations.verify().presence() == Verification::PRESENCE_REQUIRED) {
-        std::string error_message =
-            absl::StrCat("Missing required property ", property);
-        errors.push_back(error_message);
-        return absl::InternalError(error_message);
+        return AddAndReturnError(
+            result, absl::StrCat("Missing required property ", property),
+            context);
       }
       continue;
     }
@@ -748,17 +762,17 @@ absl::Status VerifySubqueryValue(
     switch (it->second.kind_case()) {
       case QueryValue::kSubqueryValue:
         ECCLESIA_RETURN_IF_ERROR(VerifySubqueryValue(
-            it->second.subquery_value(), operations.data_compare(), errors,
+            it->second.subquery_value(), operations.data_compare(), result,
             sub_context, options));
         break;
       case QueryValue::kListValue:
         ECCLESIA_RETURN_IF_ERROR(VerifyListValue(it->second.list_value(),
                                                  operations.list_compare(),
-                                                 errors, sub_context, options));
+                                                 result, sub_context, options));
         break;
       default:
         ECCLESIA_RETURN_IF_ERROR(VerifyQueryValue(
-            it->second, operations, errors, sub_context, options));
+            it->second, operations, result, sub_context, options));
     }
   }
 
@@ -767,7 +781,7 @@ absl::Status VerifySubqueryValue(
 
 absl::Status VerifyQueryResult(const QueryResult& query_result,
                                const QueryResultVerification& verification,
-                               std::vector<std::string>& errors,
+                               QueryVerificationResult& result,
                                const VerificationOptions& options) {
   if (query_result.query_id() != verification.query_id()) {
     return absl::InvalidArgumentError(
@@ -780,7 +794,7 @@ absl::Status VerifyQueryResult(const QueryResult& query_result,
   VerificationContext context(query_result.query_id());
 
   return VerifySubqueryValue(query_result.data(), verification.data_verify(),
-                             errors, context, options);
+                             result, context, options);
 }
 
 }  // namespace ecclesia

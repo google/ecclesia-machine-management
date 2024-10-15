@@ -124,3 +124,18 @@ message QueryResultVerification {
   // The verification to perform on the query result data.
   QueryResultDataVerification data_verify = 2;
 }
+
+message QueryVerificationResult {
+  // The error information for a single verification error.
+  message ErrorInfo {
+    // The error message for the verification error.
+    string msg = 1;
+    // The path to the QueryResult value that failed verification.
+    string path = 2;
+    // The corresponding URI of the QueryResult value that failed verification.
+    optional string uri = 3;
+  }
+
+  // The list of errors encountered during verification.
+  repeated ErrorInfo errors = 1;
+}

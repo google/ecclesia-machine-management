@@ -32,12 +32,13 @@ namespace ecclesia {
 namespace {
 
 using ::testing::ContainsRegex;
+using ::testing::EqualsProto;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::SizeIs;
 using ::testing::TestWithParam;
-using ::testing::UnorderedElementsAreArray;
 using ::testing::Values;
+using ::testing::proto::IgnoringRepeatedFieldOrdering;
 
 // Struct to hold the scalar query values to be compared in various
 // parameterized tests.
@@ -53,44 +54,44 @@ using GreaterLesserValuesTest = TestWithParam<QueryValueInputs>;
 
 TEST_P(EqualValuesTest, EqualSuccess) {
   const QueryValueInputs& test_case = GetParam();
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   ASSERT_THAT(
       CompareQueryValues(test_case.query_value_a, test_case.query_value_a,
-                         Verification::COMPARE_EQUAL, errors),
+                         Verification::COMPARE_EQUAL, result),
       IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST_P(EqualValuesTest, EqualFailure) {
   const QueryValueInputs& test_case = GetParam();
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   ASSERT_THAT(
       CompareQueryValues(test_case.query_value_a, test_case.query_value_b,
-                         Verification::COMPARE_EQUAL, errors),
+                         Verification::COMPARE_EQUAL, result),
       IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0], HasSubstr("Failed equality check"));
+  ASSERT_THAT(result.errors(), SizeIs(1));
+  EXPECT_THAT(result.errors(0).msg(), HasSubstr("Failed equality check"));
 }
 
 TEST_P(EqualValuesTest, NotEqualSuccess) {
   const QueryValueInputs& test_case = GetParam();
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   ASSERT_THAT(
       CompareQueryValues(test_case.query_value_a, test_case.query_value_b,
-                         Verification::COMPARE_NOT_EQUAL, errors),
+                         Verification::COMPARE_NOT_EQUAL, result),
       IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST_P(EqualValuesTest, NotEqualFailure) {
   const QueryValueInputs& test_case = GetParam();
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   ASSERT_THAT(
       CompareQueryValues(test_case.query_value_a, test_case.query_value_a,
-                         Verification::COMPARE_NOT_EQUAL, errors),
+                         Verification::COMPARE_NOT_EQUAL, result),
       IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0], HasSubstr("Failed inequality check"));
+  ASSERT_THAT(result.errors(), SizeIs(1));
+  EXPECT_THAT(result.errors(0).msg(), HasSubstr("Failed inequality check"));
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -156,51 +157,51 @@ TEST(CompareQueryValuesTest, RawDataDifferentTypes) {
       ParseTextProtoOrDie(R"pb(raw_data { raw_string_value: "foo" })pb");
   QueryValue qv_b =
       ParseTextProtoOrDie(R"pb(raw_data { raw_bytes_value: "foo" })pb");
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, errors),
+      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, result),
       IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result.errors(), IsEmpty());
 }
 
 TEST(CompareQueryValuesTest, RawDataValueNotSet) {
   QueryValue qv_a = ParseTextProtoOrDie(R"pb(raw_data {})pb");
   QueryValue qv_b = ParseTextProtoOrDie(R"pb(raw_data {})pb");
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, errors),
+      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, result),
       IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result.errors(), IsEmpty());
 }
 
 TEST(CompareQueryValuesTest, DifferentTypes) {
   QueryValue qv_a = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
   QueryValue qv_b = ParseTextProtoOrDie(R"pb(bool_value: false)pb");
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, errors),
+      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, result),
       IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result.errors(), IsEmpty());
 }
 
 TEST(CompareQueryValuesTest, QueryValueNotSet) {
   QueryValue qv_a;
   QueryValue qv_b;
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, errors),
+      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, result),
       IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result.errors(), IsEmpty());
 }
 
 TEST(CompareQueryValuesTest, UnknownOperation) {
   QueryValue qv_a = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
   QueryValue qv_b = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_UNKNOWN, errors),
+      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_UNKNOWN, result),
       IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result.errors(), IsEmpty());
 }
 
 TEST(CompareQueryValuesTest, NonScalarValues) {
@@ -212,15 +213,15 @@ TEST(CompareQueryValuesTest, NonScalarValues) {
                                                  value: { int_value: 1 }
                                                }
                                              })pb");
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_a, Verification::COMPARE_EQUAL, errors),
+      CompareQueryValues(qv_a, qv_a, Verification::COMPARE_EQUAL, result),
       IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result.errors(), IsEmpty());
   EXPECT_THAT(
-      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, errors),
+      CompareQueryValues(qv_a, qv_b, Verification::COMPARE_EQUAL, result),
       IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result.errors(), IsEmpty());
 }
 
 // Struct to hold the subquery values to be compared in various
@@ -231,7 +232,7 @@ struct QueryValueInputsWithExpectations {
   QueryResultDataVerification data_compare;
   ListValueVerification list_compare;
   internal_status::IsStatusPolyMatcher expected_status;
-  std::vector<std::string> expected_errors;
+  QueryVerificationResult expected_result;
 };
 
 // In Subquery Values Test, query_value_a and query_value_b are different
@@ -240,12 +241,13 @@ using SubqueryValueTests = TestWithParam<QueryValueInputsWithExpectations>;
 
 TEST_P(SubqueryValueTests, CompareSubqueryValues) {
   const QueryValueInputsWithExpectations& test_case = GetParam();
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   EXPECT_THAT(CompareSubqueryValues(test_case.query_value_a.subquery_value(),
                                     test_case.query_value_b.subquery_value(),
-                                    test_case.data_compare, errors),
+                                    test_case.data_compare, result),
               test_case.expected_status);
-  EXPECT_THAT(errors, UnorderedElementsAreArray(test_case.expected_errors));
+  EXPECT_THAT(result, IgnoringRepeatedFieldOrdering(
+                          EqualsProto(test_case.expected_result)));
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -268,7 +270,8 @@ INSTANTIATE_TEST_SUITE_P(
               }
             )pb"),
             .expected_status = IsOk(),
-            .expected_errors = {"Missing property foo in valueA"},
+            .expected_result = ParseTextProtoOrDie(
+                R"pb(errors { msg: "Missing property foo in valueA" })pb"),
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(subquery_value {
@@ -287,7 +290,8 @@ INSTANTIATE_TEST_SUITE_P(
               }
             )pb"),
             .expected_status = IsOk(),
-            .expected_errors = {"Missing property foo in valueB"},
+            .expected_result = ParseTextProtoOrDie(
+                R"pb(errors { msg: "Missing property foo in valueB" })pb"),
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(subquery_value {})pb"),
@@ -299,7 +303,7 @@ INSTANTIATE_TEST_SUITE_P(
               }
             )pb"),
             .expected_status = IsOk(),
-            .expected_errors = {},
+            .expected_result = {},
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(subquery_value {
@@ -325,13 +329,13 @@ INSTANTIATE_TEST_SUITE_P(
               }
             )pb"),
             .expected_status = IsStatusFailedPrecondition(),
-            .expected_errors = {},
+            .expected_result = {},
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(subquery_value {})pb"),
             .query_value_b = ParseTextProtoOrDie(R"pb(subquery_value {})pb"),
             .expected_status = IsOk(),
-            .expected_errors = {},
+            .expected_result = {},
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(subquery_value {
@@ -356,7 +360,7 @@ INSTANTIATE_TEST_SUITE_P(
                        value { verify { comparison: COMPARE_EQUAL } }
                      })pb"),
             .expected_status = IsOk(),
-            .expected_errors = {},
+            .expected_result = {},
         },
         QueryValueInputsWithExpectations{
             .query_value_a =
@@ -400,7 +404,7 @@ INSTANTIATE_TEST_SUITE_P(
                        }
                      })pb"),
             .expected_status = IsOk(),
-            .expected_errors = {},
+            .expected_result = {},
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(
@@ -427,19 +431,20 @@ INSTANTIATE_TEST_SUITE_P(
                        }
                      })pb"),
             .expected_status = IsOk(),
-            .expected_errors = {},
+            .expected_result = {},
         }));
 
 // In List Values Test, query_value_a and query_value_b are different values.
 using ListValueTests = TestWithParam<QueryValueInputsWithExpectations>;
 TEST_P(ListValueTests, CompareListValues) {
   const QueryValueInputsWithExpectations& test_case = GetParam();
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   EXPECT_THAT(CompareListValues(test_case.query_value_a.list_value(),
                                 test_case.query_value_b.list_value(),
-                                test_case.list_compare, errors),
+                                test_case.list_compare, result),
               test_case.expected_status);
-  EXPECT_THAT(errors, UnorderedElementsAreArray(test_case.expected_errors));
+  EXPECT_THAT(result, IgnoringRepeatedFieldOrdering(
+                          EqualsProto(test_case.expected_result)));
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -459,8 +464,10 @@ INSTANTIATE_TEST_SUITE_P(
                                          })pb"),
             .query_value_b = ParseTextProtoOrDie(R"pb(list_value {})pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors = {"Missing value in valueB with identifier "
-                                "index=0"},
+            .expected_result = ParseTextProtoOrDie(
+                R"pb(errors {
+                       msg: "Missing value in valueB with identifier index=0"
+                     })pb"),
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(list_value {
@@ -470,13 +477,13 @@ INSTANTIATE_TEST_SUITE_P(
                                                         values { list_value {} }
                                                       })pb"),
             .expected_status = IsStatusFailedPrecondition(),
-            .expected_errors = {},
+            .expected_result = {},
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(list_value {})pb"),
             .query_value_b = ParseTextProtoOrDie(R"pb(list_value {})pb"),
             .expected_status = IsOk(),
-            .expected_errors = {},
+            .expected_result = {},
         },
         QueryValueInputsWithExpectations{
             .query_value_a =
@@ -484,8 +491,10 @@ INSTANTIATE_TEST_SUITE_P(
             .query_value_b = ParseTextProtoOrDie(R"pb(list_value {})pb"),
             .list_compare = ParseTextProtoOrDie(R"pb(identifiers: "foo")pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors = {"Missing identifier in valueA: Identifiers are "
-                                "only supported for subquery values"},
+            .expected_result = ParseTextProtoOrDie(
+                R"pb(errors {
+                       msg: "Missing identifier in valueA: Identifiers are only supported for subquery values"
+                     })pb"),
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(
@@ -493,8 +502,10 @@ INSTANTIATE_TEST_SUITE_P(
             .query_value_b = ParseTextProtoOrDie(R"pb(list_value {})pb"),
             .list_compare = ParseTextProtoOrDie(R"pb(identifiers: "foo")pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors =
-                {"Missing identifier in valueA: property foo is not present"},
+            .expected_result = ParseTextProtoOrDie(
+                R"pb(errors {
+                       msg: "Missing identifier in valueA: property foo is not present"
+                     })pb"),
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(list_value {})pb"),
@@ -502,8 +513,10 @@ INSTANTIATE_TEST_SUITE_P(
                 R"pb(list_value { values { subquery_value {} } })pb"),
             .list_compare = ParseTextProtoOrDie(R"pb(identifiers: "foo")pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors =
-                {"Missing identifier in valueB: property foo is not present"},
+            .expected_result = ParseTextProtoOrDie(
+                R"pb(errors {
+                       msg: "Missing identifier in valueB: property foo is not present"
+                     })pb"),
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(
@@ -538,7 +551,8 @@ INSTANTIATE_TEST_SUITE_P(
                                          })pb"),
             .list_compare = ParseTextProtoOrDie(R"pb(identifiers: "foo")pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors = {"Duplicate identifier in valueA: foo=1"},
+            .expected_result = ParseTextProtoOrDie(
+                R"pb(errors { msg: "Duplicate identifier in valueA: foo=1" })pb"),
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(list_value {})pb"),
@@ -555,8 +569,10 @@ INSTANTIATE_TEST_SUITE_P(
                                          })pb"),
             .list_compare = ParseTextProtoOrDie(R"pb(identifiers: "foo")pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors =
-                {"Missing value in valueA with identifier foo=1"},
+            .expected_result = ParseTextProtoOrDie(
+                R"pb(errors {
+                       msg: "Missing value in valueA with identifier foo=1"
+                     })pb"),
         },
         QueryValueInputsWithExpectations{
             .query_value_a =
@@ -573,8 +589,10 @@ INSTANTIATE_TEST_SUITE_P(
             .query_value_b = ParseTextProtoOrDie(R"pb(list_value {})pb"),
             .list_compare = ParseTextProtoOrDie(R"pb(identifiers: "foo")pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors =
-                {"Missing value in valueB with identifier foo=1"},
+            .expected_result = ParseTextProtoOrDie(
+                R"pb(errors {
+                       msg: "Missing value in valueB with identifier foo=1"
+                     })pb"),
         },
         QueryValueInputsWithExpectations{
             .query_value_a =
@@ -609,9 +627,13 @@ INSTANTIATE_TEST_SUITE_P(
                                          })pb"),
             .list_compare = ParseTextProtoOrDie(R"pb(identifiers: "foo")pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors =
-                {"Missing value in valueA with identifier foo=3",
-                 "Missing value in valueB with identifier foo=2"},
+            .expected_result = ParseTextProtoOrDie(
+                R"pb(errors {
+                       msg: "Missing value in valueB with identifier foo=2"
+                     }
+                     errors {
+                       msg: "Missing value in valueA with identifier foo=3"
+                     })pb"),
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(list_value {
@@ -623,7 +645,7 @@ INSTANTIATE_TEST_SUITE_P(
             .list_compare = ParseTextProtoOrDie(
                 R"pb(verify { verify { comparison: COMPARE_EQUAL } })pb"),
             .expected_status = IsOk(),
-            .expected_errors = {},
+            .expected_result = {},
         },
         QueryValueInputsWithExpectations{
             .query_value_a =
@@ -649,7 +671,7 @@ INSTANTIATE_TEST_SUITE_P(
                                            }
                                          })pb"),
             .expected_status = IsOk(),
-            .expected_errors = {},
+            .expected_result = {},
         },
         QueryValueInputsWithExpectations{
             .query_value_a =
@@ -692,7 +714,7 @@ INSTANTIATE_TEST_SUITE_P(
                                          })pb"),
             .list_compare = ParseTextProtoOrDie(R"pb(identifiers: "foo")pb"),
             .expected_status = IsOk(),
-            .expected_errors = {},
+            .expected_result = {},
         },
         QueryValueInputsWithExpectations{
             .query_value_a =
@@ -729,7 +751,7 @@ INSTANTIATE_TEST_SUITE_P(
                                          })pb"),
             .list_compare = ParseTextProtoOrDie(R"pb(identifiers: "_id_")pb"),
             .expected_status = IsOk(),
-            .expected_errors = {},
+            .expected_result = {},
         }));
 TEST(CompareListValuesTest, MisAlignedListValues) {
   QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {
@@ -779,18 +801,21 @@ TEST(CompareListValuesTest, MisAlignedListValues) {
       }
     }
   )pb");
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   EXPECT_THAT(CompareListValues(qv_a.list_value(), qv_b.list_value(),
-                                verification, errors),
+                                verification, result),
               IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(2));
   EXPECT_THAT(
-      errors,
-      UnorderedElementsAreArray(
-          {"(Path: index=1.foo) Failed equality check, valueA: '2', "
-           "valueB: '1'",
-           "(Path: index=0.foo) Failed equality check, valueA: '1', valueB: "
-           "'2'"}));
+      result,
+      IgnoringRepeatedFieldOrdering(EqualsProto(
+          R"pb(errors {
+                 msg: "(Path: index=1.foo) Failed equality check, valueA: \'2\', valueB: \'1\'"
+                 path: "index=1.foo"
+               }
+               errors {
+                 msg: "(Path: index=0.foo) Failed equality check, valueA: \'1\', valueB: \'2\'"
+                 path: "index=0.foo"
+               })pb")));
 }
 
 TEST(CompareQueryResultsTest, QueryIdsMismatchForAndB) {
@@ -801,10 +826,10 @@ TEST(CompareQueryResultsTest, QueryIdsMismatchForAndB) {
     query_id: "query_b"
   )pb");
   QueryResultVerification verification;
-  std::vector<std::string> errors;
-  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, errors),
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result),
               IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  EXPECT_THAT(result, EqualsProto(""));
 }
 
 TEST(CompareQueryResultsTest, QueryIdsMismatchForVerification) {
@@ -814,10 +839,10 @@ TEST(CompareQueryResultsTest, QueryIdsMismatchForVerification) {
   QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
     query_id: "query_b"
   )pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(CompareQueryResults(qr, qr, verification, errors),
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr, qr, verification, result),
               IsStatusInvalidArgument());
-  ASSERT_THAT(errors, IsEmpty());
+  EXPECT_THAT(result, EqualsProto(""));
 }
 
 TEST(CompareQueryResultsTest, SuccessSimpleQueryResult) {
@@ -839,9 +864,9 @@ TEST(CompareQueryResultsTest, SuccessSimpleQueryResult) {
       }
     }
   )pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(CompareQueryResults(qr, qr, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr, qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
 }
 
 TEST(CompareQueryResultsTest, SuccessSubqueryQueryResult) {
@@ -877,9 +902,9 @@ TEST(CompareQueryResultsTest, SuccessSubqueryQueryResult) {
       }
     }
   )pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(CompareQueryResults(qr, qr, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr, qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
 }
 
 TEST(CompareQueryResultsTest, SuccessListQueryResult) {
@@ -903,44 +928,45 @@ TEST(CompareQueryResultsTest, SuccessListQueryResult) {
       }
     }
   )pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(CompareQueryResults(qr, qr, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr, qr, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST(VerifyQueryValueTest, EmtpyVerification) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
   QueryValueVerification verification;
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryValue(qv, verification, errors),
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryValue(qv, verification, result),
               IsStatusInvalidArgument());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST(VerifyQueryValueTest, VerificationWithNoValidation) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
   QueryValueVerification verification = ParseTextProtoOrDie(R"pb(verify {})pb");
   std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryValue(qv, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
 }
 
 TEST(VerifyQueryValueTest, VerificationWithNoOperandas) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
   QueryValueVerification verification =
       ParseTextProtoOrDie(R"pb(verify { validation {} })pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryValue(qv, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST(VerifyQueryValueTest, VerificationWithJustOperands) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
   QueryValueVerification verification = ParseTextProtoOrDie(
       R"pb(verify { validation { operation: OPERATION_GREATER_THAN } })pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryValue(qv, verification, result), IsStatusInternal());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST(VerifyQueryValueTest, VerificationWithMismatchedOperandaType) {
@@ -952,10 +978,10 @@ TEST(VerifyQueryValueTest, VerificationWithMismatchedOperandaType) {
                                    operation: OPERATION_GREATER_THAN
                                  }
                                })pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryValue(qv, verification, errors),
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryValue(qv, verification, result),
               IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 struct UnsupportedValidationTestCase {
@@ -994,16 +1020,16 @@ TEST_P(UnsupportedValidationTest, UnsupportedOperation) {
       break;
   };
 
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   for (Verification::Validation::Operation operation : test_case.operations) {
     QueryValueVerification verification;
     Verification::Validation& validation =
         *verification.mutable_verify()->mutable_validation()->Add();
     validation.set_operation(operation);
     *validation.add_operands() = query_value;
-    ASSERT_THAT(VerifyQueryValue(query_value, verification, errors),
+    ASSERT_THAT(VerifyQueryValue(query_value, verification, result),
                 IsStatusInternal());
-    ASSERT_THAT(errors, IsEmpty());
+    ASSERT_THAT(result, EqualsProto(""));
   }
 }
 
@@ -1123,10 +1149,10 @@ TEST_P(GreaterLesserValuesTest, GreaterThanSuccess) {
       *verification.mutable_verify()->mutable_validation()->Add();
   validation.set_operation(Verification::Validation::OPERATION_GREATER_THAN);
   *validation.add_operands() = test_case.query_value_b;
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryValue(test_case.query_value_a, verification, result),
               IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST_P(GreaterLesserValuesTest, GreaterThanFailure) {
@@ -1136,11 +1162,12 @@ TEST_P(GreaterLesserValuesTest, GreaterThanFailure) {
       *verification.mutable_verify()->mutable_validation()->Add();
   validation.set_operation(Verification::Validation::OPERATION_GREATER_THAN);
   *validation.add_operands() = test_case.query_value_a;
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(test_case.query_value_b, verification, result),
               IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_GREATER_THAN check"));
+  ASSERT_THAT(result.errors(), SizeIs(1));
+  EXPECT_THAT(result.errors(0).msg(),
+              HasSubstr("Failed OPERATION_GREATER_THAN check"));
 }
 
 TEST_P(GreaterLesserValuesTest, GreaterThanOrEqualSuccess) {
@@ -1151,16 +1178,16 @@ TEST_P(GreaterLesserValuesTest, GreaterThanOrEqualSuccess) {
   validation.set_operation(
       Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL);
   *validation.add_operands() = test_case.query_value_b;
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryValue(test_case.query_value_a, verification, result),
               IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 
   // Test Equal Values
-  errors.clear();
-  EXPECT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
+  result.Clear();
+  EXPECT_THAT(VerifyQueryValue(test_case.query_value_b, verification, result),
               IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST_P(GreaterLesserValuesTest, GreaterThanOrEqualFailure) {
@@ -1171,39 +1198,40 @@ TEST_P(GreaterLesserValuesTest, GreaterThanOrEqualFailure) {
   validation.set_operation(
       Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL);
   *validation.add_operands() = test_case.query_value_a;
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(test_case.query_value_b, verification, result),
               IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0],
+  ASSERT_THAT(result.errors(), SizeIs(1));
+  EXPECT_THAT(result.errors(0).msg(),
               HasSubstr("Failed OPERATION_GREATER_THAN_OR_EQUAL check"));
 }
 
 TEST_P(GreaterLesserValuesTest, LessThanSuccess) {
   const QueryValueInputs& test_case = GetParam();
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   QueryValueVerification verification;
   Verification::Validation& validation =
       *verification.mutable_verify()->mutable_validation()->Add();
   validation.set_operation(Verification::Validation::OPERATION_LESS_THAN);
   *validation.add_operands() = test_case.query_value_a;
-  EXPECT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
+  EXPECT_THAT(VerifyQueryValue(test_case.query_value_b, verification, result),
               IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST_P(GreaterLesserValuesTest, LessThanFailure) {
   const QueryValueInputs& test_case = GetParam();
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   QueryValueVerification verification;
   Verification::Validation& validation =
       *verification.mutable_verify()->mutable_validation()->Add();
   validation.set_operation(Verification::Validation::OPERATION_LESS_THAN);
   *validation.add_operands() = test_case.query_value_b;
-  ASSERT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
+  ASSERT_THAT(VerifyQueryValue(test_case.query_value_a, verification, result),
               IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_LESS_THAN check"));
+  ASSERT_THAT(result.errors(), SizeIs(1));
+  EXPECT_THAT(result.errors(0).msg(),
+              HasSubstr("Failed OPERATION_LESS_THAN check"));
 }
 
 TEST_P(GreaterLesserValuesTest, LessThanOrEqualSuccess) {
@@ -1215,16 +1243,16 @@ TEST_P(GreaterLesserValuesTest, LessThanOrEqualSuccess) {
       Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL);
   *validation.add_operands() = test_case.query_value_a;
 
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryValue(test_case.query_value_b, verification, errors),
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryValue(test_case.query_value_b, verification, result),
               IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  EXPECT_THAT(result, EqualsProto(""));
 
   // Test Equal Values
-  errors.clear();
-  EXPECT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
+  result.Clear();
+  EXPECT_THAT(VerifyQueryValue(test_case.query_value_a, verification, result),
               IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  EXPECT_THAT(result, EqualsProto(""));
 }
 
 TEST_P(GreaterLesserValuesTest, LessThanOrEqualFailure) {
@@ -1237,11 +1265,11 @@ TEST_P(GreaterLesserValuesTest, LessThanOrEqualFailure) {
       Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL);
   *validation.add_operands() = test_case.query_value_b;
 
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(test_case.query_value_a, verification, errors),
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(test_case.query_value_a, verification, result),
               IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0],
+  ASSERT_THAT(result.errors(), SizeIs(1));
+  EXPECT_THAT(result.errors(0).msg(),
               HasSubstr("Failed OPERATION_LESS_THAN_OR_EQUAL check"));
 }
 
@@ -1281,11 +1309,11 @@ TEST_P(StringOperationTest, OperationStringFailure) {
       *verification.mutable_verify()->mutable_validation()->Add();
   validation.set_operation(test_case.operation);
   *validation.add_operands() = test_case.operand;
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result), IsStatusInternal());
 
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0],
+  ASSERT_THAT(result.errors(), SizeIs(1));
+  EXPECT_THAT(result.errors(0).msg(),
               HasSubstr(absl::StrFormat(
                   "Failed operation %s, value: '%s', operand: '%s'",
                   Verification::Validation::Operation_Name(test_case.operation),
@@ -1300,10 +1328,10 @@ TEST_P(StringOperationTest, OperationStringSuccess) {
       *verification.mutable_verify()->mutable_validation()->Add();
   validation.set_operation(test_case.operation);
   *validation.add_operands() = test_case.operand;
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result), IsOk());
 
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1369,9 +1397,9 @@ TEST(VerifyQueryValueTest, MultipleValidationsSuccess) {
       }
     }
   )pb");
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST(VerifyQueryValueTest, MultipleValidationsFailure) {
@@ -1397,15 +1425,18 @@ TEST(VerifyQueryValueTest, MultipleValidationsFailure) {
       }
     }
   )pb");
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(2));
-  EXPECT_THAT(errors[0],
-              HasSubstr("Failed operation OPERATION_STRING_STARTS_WITH, value: "
-                        "'foobar', operand: 'bar'"));
-  EXPECT_THAT(errors[1],
-              HasSubstr("Failed operation OPERATION_STRING_ENDS_WITH, value: "
-                        "'foobar', operand: 'foo'"));
+
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result), IsStatusInternal());
+  ASSERT_THAT(
+      result,
+      EqualsProto(
+          R"pb(errors {
+                 msg: "Failed operation OPERATION_STRING_STARTS_WITH, value: 'foobar', operand: 'bar'"
+               }
+               errors {
+                 msg: "Failed operation OPERATION_STRING_ENDS_WITH, value: 'foobar', operand: 'foo'"
+               })pb"));
 }
 
 TEST(VerifyQueryValueTest, InRangeFail) {
@@ -1416,11 +1447,13 @@ TEST(VerifyQueryValueTest, InRangeFail) {
   validation.set_range(Verification::Validation::RANGE_IN);
   *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 3)pb");
 
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0],
-              HasSubstr("Failed equality check, valueA: '2', valueB: '3'"));
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result), IsStatusInternal());
+  ASSERT_THAT(result,
+              EqualsProto(
+                  R"pb(errors {
+                         msg: "Failed equality check, valueA: '2', valueB: '3'"
+                       })pb"));
 }
 
 TEST(VerifyQueryValueTest, RangeUnknownOption) {
@@ -1431,11 +1464,12 @@ TEST(VerifyQueryValueTest, RangeUnknownOption) {
   validation.set_range(Verification::Validation::RANGE_UNKNOWN);
   *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
 
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv, verification, errors),
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result),
               IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
+
 TEST(VerifyQueryValueTest, RangeUnsupported) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
   QueryValueVerification verification;
@@ -1445,10 +1479,10 @@ TEST(VerifyQueryValueTest, RangeUnsupported) {
       Verification::Validation::RANGE_UNKNOWN - 1));
   *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
 
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv, verification, errors),
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result),
               IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST(VerifyQueryValueTest, RangeMissingOperands) {
@@ -1457,10 +1491,10 @@ TEST(VerifyQueryValueTest, RangeMissingOperands) {
   verification.mutable_verify()->mutable_validation()->Add()->set_range(
       Verification::Validation::RANGE_IN);
 
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv, verification, errors),
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result),
               IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST(VerifyQueryValueTest, InRangeSuccess) {
@@ -1472,10 +1506,11 @@ TEST(VerifyQueryValueTest, InRangeSuccess) {
   *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
   *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
 
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(""));
 }
+
 TEST(VerifyQueryValueTest, NotInRangeFail) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
   QueryValueVerification verification;
@@ -1486,11 +1521,14 @@ TEST(VerifyQueryValueTest, NotInRangeFail) {
   *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 2)pb");
   validation.set_range(Verification::Validation::RANGE_NOT_IN);
 
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0],
-              HasSubstr("Failed inequality check, valueA: '2', valueB: '2'"));
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result), IsStatusInternal());
+  ASSERT_THAT(
+      result,
+      EqualsProto(
+          R"pb(errors {
+                 msg: "Failed inequality check, valueA: '2', valueB: '2'"
+               })pb"));
 }
 
 TEST(VerifyQueryValueTest, NotInRangeSuccess) {
@@ -1503,9 +1541,9 @@ TEST(VerifyQueryValueTest, NotInRangeSuccess) {
   *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 4)pb");
   validation.set_range(Verification::Validation::RANGE_NOT_IN);
 
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST(VerifyQueryValueTest, IntervalFailSingleOperand) {
@@ -1515,10 +1553,10 @@ TEST(VerifyQueryValueTest, IntervalFailSingleOperand) {
       *verification.mutable_verify()->mutable_validation()->Add();
   validation.set_interval(Verification::Validation::INTERVAL_OPEN);
   *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv, verification, errors),
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result),
               IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST(VerifyQueryValueTest, IntervalUnknownOption) {
@@ -1534,10 +1572,10 @@ TEST(VerifyQueryValueTest, IntervalUnknownOption) {
 
   validation.set_interval(Verification::Validation::INTERVAL_UNKNOWN);
 
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors),
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, result),
               IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(""));
 }
 
 TEST(VerifyQueryValueTest, IntervalUnsupported) {
@@ -1553,10 +1591,10 @@ TEST(VerifyQueryValueTest, IntervalUnsupported) {
 
   validation.set_interval(static_cast<Verification::Validation::Interval>(
       Verification::Validation::INTERVAL_UNKNOWN - 1));
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors),
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, result),
               IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
 }
 
 TEST(VerifyQueryValueTest, IntervalFail) {
@@ -1573,57 +1611,81 @@ TEST(VerifyQueryValueTest, IntervalFail) {
 
   validation.set_interval(Verification::Validation::INTERVAL_OPEN);
 
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(
-      errors[0],
-      HasSubstr(
-          "Failed OPERATION_GREATER_THAN check, value: '1', operand: '1'"));
-  errors.clear();
-  ASSERT_THAT(VerifyQueryValue(qv_c, verification, errors), IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(
-      errors[0],
-      HasSubstr(
-          "Failed OPERATION_LESS_THAN check, value: '10', operand: '10'"));
-  errors.clear();
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, result), IsStatusInternal());
+  ASSERT_THAT(
+      result,
+      EqualsProto(
+          R"pb(errors {
+                 msg: "Failed OPERATION_GREATER_THAN check, value: '1', operand: '1'"
+               })pb"));
+  result.Clear();
+
+  ASSERT_THAT(VerifyQueryValue(qv_c, verification, result), IsStatusInternal());
+  ASSERT_THAT(
+      result,
+      EqualsProto(
+          R"pb(errors {
+                 msg: "Failed OPERATION_LESS_THAN check, value: '10', operand: '10'"
+               })pb"));
+  result.Clear();
 
   validation.set_interval(Verification::Validation::INTERVAL_CLOSED);
-  ASSERT_THAT(VerifyQueryValue(qv_a, verification, errors), IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_GREATER_THAN_OR_EQUAL "
-                                   "check, value: '0', operand: '1'"));
-  errors.clear();
-  ASSERT_THAT(VerifyQueryValue(qv_d, verification, errors), IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_LESS_THAN_OR_EQUAL check, "
-                                   "value: '100', operand: '10'"));
-  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_a, verification, result), IsStatusInternal());
+  ASSERT_THAT(
+      result,
+      EqualsProto(
+          R"pb(errors {
+                 msg: "Failed OPERATION_GREATER_THAN_OR_EQUAL check, value: '0', operand: '1'"
+               })pb"));
+  result.Clear();
+
+  ASSERT_THAT(VerifyQueryValue(qv_d, verification, result), IsStatusInternal());
+  ASSERT_THAT(
+      result,
+      EqualsProto(
+          R"pb(errors {
+                 msg: "Failed OPERATION_LESS_THAN_OR_EQUAL check, value: '100', operand: '10'"
+               })pb"));
+  result.Clear();
 
   validation.set_interval(Verification::Validation::INTERVAL_OPEN_CLOSED);
-  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_GREATER_THAN "
-                                   "check, value: '1', operand: '1'"));
-  errors.clear();
-  ASSERT_THAT(VerifyQueryValue(qv_d, verification, errors), IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_LESS_THAN_OR_EQUAL check, "
-                                   "value: '100', operand: '10'"));
-  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, result), IsStatusInternal());
+  ASSERT_THAT(
+      result,
+      EqualsProto(
+          R"pb(errors {
+                 msg: "Failed OPERATION_GREATER_THAN check, value: '1', operand: '1'"
+               })pb"));
+  result.Clear();
+
+  ASSERT_THAT(VerifyQueryValue(qv_d, verification, result), IsStatusInternal());
+  ASSERT_THAT(
+      result,
+      EqualsProto(
+          R"pb(errors {
+                 msg: "Failed OPERATION_LESS_THAN_OR_EQUAL check, value: '100', operand: '10'"
+               })pb"));
+  result.Clear();
 
   validation.set_interval(Verification::Validation::INTERVAL_CLOSED_OPEN);
-  ASSERT_THAT(VerifyQueryValue(qv_a, verification, errors), IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_GREATER_THAN_OR_EQUAL "
-                                   "check, value: '0', operand: '1'"));
-  errors.clear();
-  ASSERT_THAT(VerifyQueryValue(qv_c, verification, errors), IsStatusInternal());
-  ASSERT_THAT(errors, SizeIs(1));
-  EXPECT_THAT(errors[0], HasSubstr("Failed OPERATION_LESS_THAN check, "
-                                   "value: '10', operand: '10'"));
-  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_a, verification, result), IsStatusInternal());
+  ASSERT_THAT(
+      result,
+      EqualsProto(
+          R"pb(errors {
+                 msg: "Failed OPERATION_GREATER_THAN_OR_EQUAL check, value: '0', operand: '1'"
+               })pb"));
+  result.Clear();
+
+  ASSERT_THAT(VerifyQueryValue(qv_c, verification, result), IsStatusInternal());
+  ASSERT_THAT(
+      result,
+      EqualsProto(
+          R"pb(errors {
+                 msg: "Failed OPERATION_LESS_THAN check, value: '10', operand: '10'"
+               })pb"));
+  result.Clear();
 }
 
 TEST(VerifyQueryValueTest, IntervalSuccess) {
@@ -1639,34 +1701,34 @@ TEST(VerifyQueryValueTest, IntervalSuccess) {
   *validation.add_operands() = qv_c;
 
   validation.set_interval(Verification::Validation::INTERVAL_OPEN);
-  std::vector<std::string> errors;
-  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
-  errors.clear();
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
+  result.Clear();
 
   validation.set_interval(Verification::Validation::INTERVAL_CLOSED);
-  ASSERT_THAT(VerifyQueryValue(qv_a, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
-  errors.clear();
-  ASSERT_THAT(VerifyQueryValue(qv_c, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
-  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_a, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
+  result.Clear();
+  ASSERT_THAT(VerifyQueryValue(qv_c, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
+  result.Clear();
 
   validation.set_interval(Verification::Validation::INTERVAL_OPEN_CLOSED);
-  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
-  errors.clear();
-  ASSERT_THAT(VerifyQueryValue(qv_c, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
-  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
+  result.Clear();
+  ASSERT_THAT(VerifyQueryValue(qv_c, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
+  result.Clear();
 
   validation.set_interval(Verification::Validation::INTERVAL_CLOSED_OPEN);
-  ASSERT_THAT(VerifyQueryValue(qv_a, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
-  errors.clear();
-  ASSERT_THAT(VerifyQueryValue(qv_b, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
-  errors.clear();
+  ASSERT_THAT(VerifyQueryValue(qv_a, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
+  result.Clear();
+  ASSERT_THAT(VerifyQueryValue(qv_b, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
+  result.Clear();
 }
 
 TEST(VerifyListValueTest, MissingVerifyField) {
@@ -1675,10 +1737,10 @@ TEST(VerifyListValueTest, MissingVerifyField) {
     values { int_value: 2 }
   )pb");
   ListValueVerification verification;
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyListValue(lv, verification, errors),
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyListValue(lv, verification, result),
               IsStatusInvalidArgument());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
 }
 
 TEST(VerifyListValueTest, BasicListVerification) {
@@ -1689,9 +1751,9 @@ TEST(VerifyListValueTest, BasicListVerification) {
   ListValueVerification verification = ParseTextProtoOrDie(R"pb(
     verify { verify {} }
   )pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyListValue(lv, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyListValue(lv, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
 }
 
 TEST(VerifyListValueTest, ListofSuberyqueryVerification) {
@@ -1715,9 +1777,9 @@ TEST(VerifyListValueTest, ListofSuberyqueryVerification) {
       }
     }
   )pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyListValue(lv, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyListValue(lv, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
 }
 
 TEST(VerifyListValueTest, ListofListVerification) {
@@ -1727,28 +1789,29 @@ TEST(VerifyListValueTest, ListofListVerification) {
   ListValueVerification verification = ParseTextProtoOrDie(R"pb(
     verify {}
   )pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyListValue(lv, verification, errors),
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyListValue(lv, verification, result),
               IsStatusFailedPrecondition());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
 }
 
 struct VerifyQueryValueInputsWithExpectations {
   QueryValue query_value;
   QueryResultDataVerification data_compare;
   internal_status::IsStatusPolyMatcher expected_status;
-  std::vector<std::string> expected_errors;
+  QueryVerificationResult expected_result;
 };
 using VerificationSubqueryValueTest =
     TestWithParam<VerifyQueryValueInputsWithExpectations>;
 
 TEST_P(VerificationSubqueryValueTest, VerifySubqueryValueTest) {
   const VerifyQueryValueInputsWithExpectations& test_case = GetParam();
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   ASSERT_THAT(VerifySubqueryValue(test_case.query_value.subquery_value(),
-                                  test_case.data_compare, errors),
+                                  test_case.data_compare, result),
               test_case.expected_status);
-  ASSERT_THAT(errors, UnorderedElementsAreArray(test_case.expected_errors));
+  ASSERT_THAT(result, IgnoringRepeatedFieldOrdering(
+                          EqualsProto(test_case.expected_result)));
 }
 INSTANTIATE_TEST_SUITE_P(
     VerificationSubqueryValueTest, VerificationSubqueryValueTest,
@@ -1792,7 +1855,8 @@ INSTANTIATE_TEST_SUITE_P(
                        }
                      })pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors = {"Missing required property bar"},
+            .expected_result = ParseTextProtoOrDie(
+                R"pb(errors { msg: "Missing required property bar" })pb"),
         },
         VerifyQueryValueInputsWithExpectations{
             .query_value = ParseTextProtoOrDie(R"pb(subquery_value {
@@ -1877,10 +1941,10 @@ TEST(VerifyQueryResultTest, QueryIdsMismatchForVerification) {
   QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
     query_id: "query_b"
   )pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryResult(qr, verification, errors),
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result),
               IsStatusInvalidArgument());
-  ASSERT_THAT(errors, IsEmpty());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
 }
 
 TEST(VerifyQueryResultTest, SuccessSimpleQueryResult) {
@@ -1902,9 +1966,9 @@ TEST(VerifyQueryResultTest, SuccessSimpleQueryResult) {
       }
     }
   )pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryResult(qr, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
 }
 
 TEST(VerifyQueryResultTest, SuccessSubqueryQueryResult) {
@@ -1940,9 +2004,9 @@ TEST(VerifyQueryResultTest, SuccessSubqueryQueryResult) {
       }
     }
   )pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryResult(qr, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
 }
 
 TEST(VerifyQueryResultTest, SuccessListQueryResult) {
@@ -1964,27 +2028,28 @@ TEST(VerifyQueryResultTest, SuccessListQueryResult) {
       }
     }
   )pb");
-  std::vector<std::string> errors;
-  EXPECT_THAT(VerifyQueryResult(qr, verification, errors), IsOk());
-  ASSERT_THAT(errors, IsEmpty());
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
 }
 
 struct VerifyQueryResultErrorStrings {
   QueryResult query_result;
   QueryResultVerification verification;
   internal_status::IsStatusPolyMatcher expected_status;
-  std::vector<std::string> expected_errors;
+  QueryVerificationResult expected_result;
 };
 using VerifyQueryResultErrorStringsTest =
     TestWithParam<VerifyQueryResultErrorStrings>;
 
 TEST_P(VerifyQueryResultErrorStringsTest, VerifyQueryResult) {
   const VerifyQueryResultErrorStrings& test_case = GetParam();
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   ASSERT_THAT(
-      VerifyQueryResult(test_case.query_result, test_case.verification, errors),
+      VerifyQueryResult(test_case.query_result, test_case.verification, result),
       test_case.expected_status);
-  ASSERT_THAT(errors, UnorderedElementsAreArray(test_case.expected_errors));
+  ASSERT_THAT(result, IgnoringRepeatedFieldOrdering(
+                          EqualsProto(test_case.expected_result)));
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -2020,9 +2085,12 @@ INSTANTIATE_TEST_SUITE_P(
                        }
                      })pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors =
-                {"(Path: query_1.key0.index=0) Failed OPERATION_GREATER_THAN "
-                 "check, value: '0', operand: '0'"},
+            .expected_result = ParseTextProtoOrDie(R"pb(
+              errors {
+                msg: "(Path: query_1.key0.index=0) Failed OPERATION_GREATER_THAN check, value: '0', operand: '0'"
+                path: "query_1.key0.index=0"
+              }
+            )pb"),
         },
         VerifyQueryResultErrorStrings{
             .query_result = ParseTextProtoOrDie(R"pb(
@@ -2073,9 +2141,12 @@ INSTANTIATE_TEST_SUITE_P(
                        }
                      })pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors =
-                {"(Path: query_1.key0.index=0.subkey0) Failed operation "
-                 "OPERATION_STRING_STARTS_WITH, value: 'bar', operand: 'foo'"},
+            .expected_result = ParseTextProtoOrDie(R"pb(
+              errors {
+                msg: "(Path: query_1.key0.index=0.subkey0) Failed operation OPERATION_STRING_STARTS_WITH, value: 'bar', operand: 'foo'"
+                path: "query_1.key0.index=0.subkey0"
+              }
+            )pb"),
         }));
 
 using CompareQueryResultErrorStringsTest =
@@ -2083,12 +2154,13 @@ using CompareQueryResultErrorStringsTest =
 
 TEST_P(CompareQueryResultErrorStringsTest, CompareQueryResult) {
   const VerifyQueryResultErrorStrings& test_case = GetParam();
-  std::vector<std::string> errors;
+  QueryVerificationResult result;
   ASSERT_THAT(
       CompareQueryResults(test_case.query_result, test_case.query_result,
-                          test_case.verification, errors),
+                          test_case.verification, result),
       test_case.expected_status);
-  ASSERT_THAT(errors, UnorderedElementsAreArray(test_case.expected_errors));
+  ASSERT_THAT(result, IgnoringRepeatedFieldOrdering(
+                          EqualsProto(test_case.expected_result)));
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -2117,8 +2189,12 @@ INSTANTIATE_TEST_SUITE_P(
                        }
                      })pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors = {"(Path: query_1.key0.index=0) Failed "
-                                "inequality check, valueA: '0', valueB: '0'"},
+            .expected_result = ParseTextProtoOrDie(R"pb(
+              errors {
+                msg: "(Path: query_1.key0.index=0) Failed inequality check, valueA: '0', valueB: '0'"
+                path: "query_1.key0.index=0"
+              }
+            )pb"),
         },
         VerifyQueryResultErrorStrings{
             .query_result = ParseTextProtoOrDie(R"pb(
@@ -2168,9 +2244,12 @@ INSTANTIATE_TEST_SUITE_P(
                        }
                      })pb"),
             .expected_status = IsStatusInternal(),
-            .expected_errors =
-                {"(Path: query_1.key0.subkey0=\"foo\".element) Failed "
-                 "inequality check, valueA: 'bar', valueB: 'bar'"},
+            .expected_result = ParseTextProtoOrDie(R"pb(
+              errors {
+                msg: "(Path: query_1.key0.subkey0=\"foo\".element) Failed inequality check, valueA: 'bar', valueB: 'bar'"
+                path: "query_1.key0.subkey0=\"foo\".element"
+              }
+            )pb"),
         }));
 
 }  // namespace
