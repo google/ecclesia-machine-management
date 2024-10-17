@@ -100,6 +100,7 @@ cc_test(
         ":query_result_verification_cc_proto",
         ":verification",
         "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest_main",

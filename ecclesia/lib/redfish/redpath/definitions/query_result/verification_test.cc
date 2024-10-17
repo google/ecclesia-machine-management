@@ -26,19 +26,19 @@
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result_verification.pb.h"
+#include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
 
 namespace ecclesia {
 namespace {
 
-using ::testing::ContainsRegex;
-using ::testing::EqualsProto;
+using ::ecclesia::EqualsProto;
+using ::ecclesia::IgnoringRepeatedFieldOrdering;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::SizeIs;
 using ::testing::TestWithParam;
 using ::testing::Values;
-using ::testing::proto::IgnoringRepeatedFieldOrdering;
 
 // Struct to hold the scalar query values to be compared in various
 // parameterized tests.
