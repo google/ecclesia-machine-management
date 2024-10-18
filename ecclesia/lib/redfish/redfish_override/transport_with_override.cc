@@ -32,6 +32,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1_grpc_include.h"
@@ -42,6 +43,11 @@
 #include "grpc/grpc_security_constants.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
+#include "grpcpp/security/auth_context.h"
+#include "grpcpp/security/credentials.h"
+#include "grpcpp/support/config.h"
+#include "grpcpp/support/status.h"
+#include "grpcpp/support/string_ref.h"
 #include "google/protobuf/message.h"
 #include "google/protobuf/text_format.h"
 #include "re2/re2.h"
@@ -475,6 +481,15 @@ RedfishTransportWithOverride::TryApplyingOverride(
 absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
     absl::string_view path) {
   auto get_result = redfish_transport_->Get(path);
+  if (!get_result.ok()) {
+    return get_result;
+  }
+  return TryApplyingOverride(path, *std::move(get_result));
+}
+
+absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
+    absl::string_view path, absl::Duration timeout) {
+  auto get_result = redfish_transport_->Get(path, timeout);
   if (!get_result.ok()) {
     return get_result;
   }

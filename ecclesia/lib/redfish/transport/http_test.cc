@@ -20,16 +20,15 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
-#include "ecclesia/lib/file/test_filesystem.h"
-#include "ecclesia/lib/http/client.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
@@ -958,5 +957,9 @@ TEST_F(HttpRedfishTransportTest, CanDoSessionAuthTwice) {
   EXPECT_THAT(delete_count, Eq(2));
 }
 
+TEST_F(HttpRedfishTransportTest, GetWithTimeoutUnimplemented) {
+  ASSERT_THAT(transport_->Get("test_uri", absl::Seconds(1)),
+              IsStatusUnimplemented());
+}
 }  // namespace
 }  // namespace ecclesia

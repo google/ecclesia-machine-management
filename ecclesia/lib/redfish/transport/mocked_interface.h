@@ -20,6 +20,7 @@
 #include "gmock/gmock.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 
 namespace ecclesia {
@@ -29,6 +30,8 @@ class RedfishTransportMock : public RedfishTransport {
   MOCK_METHOD(absl::string_view, GetRootUri, (), (override));
   MOCK_METHOD(absl::StatusOr<Result>, Get, (absl::string_view path),
               (override));
+  MOCK_METHOD(absl::StatusOr<Result>, Get,
+              (absl::string_view path, absl::Duration timeout), (override));
   MOCK_METHOD(absl::StatusOr<Result>, Post,
               (absl::string_view path, absl::string_view data), (override));
   MOCK_METHOD(absl::StatusOr<Result>, Patch,

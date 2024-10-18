@@ -81,10 +81,7 @@ class RedfishTransport {
   // The application-level success or failure is captured in Result.code.
   virtual absl::StatusOr<Result> Get(absl::string_view path) = 0;
   virtual absl::StatusOr<Result> Get(absl::string_view path,
-                                     absl::Duration timeout) {
-    return absl::UnimplementedError(
-        "GET request with timeout is not implemented yet.");
-  }
+                                     absl::Duration timeout) = 0;
   virtual absl::StatusOr<Result> Post(absl::string_view path,
                                       absl::string_view data) = 0;
   virtual absl::StatusOr<Result> Patch(absl::string_view path,
@@ -111,17 +108,23 @@ class RedfishTransport {
 // all of its methods.
 class NullTransport : public RedfishTransport {
   absl::string_view GetRootUri() override { return ""; }
-  absl::StatusOr<Result> Get(absl::string_view path) {
+  absl::StatusOr<Result> Get(absl::string_view path) override {
+  return absl::InternalError("NullTransport");
+  }
+  absl::StatusOr<Result> Get(absl::string_view path,
+                             absl::Duration timeout) override {
     return absl::InternalError("NullTransport");
   }
-  absl::StatusOr<Result> Post(absl::string_view path, absl::string_view data) {
+  absl::StatusOr<Result> Post(absl::string_view path,
+                              absl::string_view data) override {
     return absl::InternalError("NullTransport");
   }
-  absl::StatusOr<Result> Patch(absl::string_view path, absl::string_view data) {
+  absl::StatusOr<Result> Patch(absl::string_view path,
+                               absl::string_view data) override {
     return absl::InternalError("NullTransport");
   }
   absl::StatusOr<Result> Delete(absl::string_view path,
-                                absl::string_view data) {
+                                absl::string_view data) override {
     return absl::InternalError("NullTransport");
   }
   absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(

@@ -28,10 +28,10 @@
 #include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
@@ -220,6 +220,14 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Get(
     absl::string_view path) {
   absl::MutexLock mu(&mutex_);
   return LockedGet(path);
+}
+
+absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Get(
+    absl::string_view path, absl::Duration timeout) {
+  return absl::UnimplementedError(
+      "GETs with timeout are currently only supported from "
+      "GrpcRedfishTransport based "
+      "transports");
 }
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedGet(
