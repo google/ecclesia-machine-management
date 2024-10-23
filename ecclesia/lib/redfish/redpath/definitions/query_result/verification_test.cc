@@ -754,42 +754,52 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_result = {},
         }));
 TEST(CompareListValuesTest, MisAlignedListValues) {
-  QueryValue qv_a = ParseTextProtoOrDie(R"pb(list_value {
-                                               values {
-                                                 subquery_value {
-                                                   fields {
-                                                     key: "foo"
-                                                     value: { int_value: 1 }
-                                                   }
-                                                 }
-                                               }
-                                               values {
-                                                 subquery_value {
-                                                   fields {
-                                                     key: "foo"
-                                                     value: { int_value: 2 }
-                                                   }
-                                                 }
-                                               }
-                                             })pb");
-  QueryValue qv_b = ParseTextProtoOrDie(R"pb(list_value {
-                                               values {
-                                                 subquery_value {
-                                                   fields {
-                                                     key: "foo"
-                                                     value: { int_value: 2 }
-                                                   }
-                                                 }
-                                               }
-                                               values {
-                                                 subquery_value {
-                                                   fields {
-                                                     key: "foo"
-                                                     value: { int_value: 1 }
-                                                   }
-                                                 }
-                                               }
-                                             })pb");
+  QueryValue qv_a = ParseTextProtoOrDie(
+      R"pb(list_value {
+             values {
+               subquery_value {
+                 fields {
+                   key: "foo"
+                   value: { int_value: 1 }
+                 }
+                 fields {
+                   key: "_uri_"
+                   value: { string_value: "/redfish/v1/index0" }
+                 }
+               }
+             }
+             values {
+               subquery_value {
+                 fields {
+                   key: "foo"
+                   value: { int_value: 2 }
+                 }
+               }
+             }
+           })pb");
+  QueryValue qv_b = ParseTextProtoOrDie(
+      R"pb(list_value {
+             values {
+               subquery_value {
+                 fields {
+                   key: "foo"
+                   value: { int_value: 2 }
+                 }
+               }
+             }
+             values {
+               subquery_value {
+                 fields {
+                   key: "foo"
+                   value: { int_value: 1 }
+                 }
+                 fields {
+                   key: "_uri_"
+                   value: { string_value: "/redfish/v1/index1b" }
+                 }
+               }
+             }
+           })pb");
 
   ListValueVerification verification = ParseTextProtoOrDie(R"pb(
     verify {
@@ -809,12 +819,14 @@ TEST(CompareListValuesTest, MisAlignedListValues) {
       result,
       IgnoringRepeatedFieldOrdering(EqualsProto(
           R"pb(errors {
-                 msg: "(Path: index=1.foo) Failed equality check, valueA: \'2\', valueB: \'1\'"
+                 msg: "(Path: index=1.foo, uri: /redfish/v1/index1b) Failed equality check, valueA: \'2\', valueB: \'1\'"
                  path: "index=1.foo"
+                 uri: "/redfish/v1/index1b"
                }
                errors {
-                 msg: "(Path: index=0.foo) Failed equality check, valueA: \'1\', valueB: \'2\'"
+                 msg: "(Path: index=0.foo, uri: /redfish/v1/index0) Failed equality check, valueA: \'1\', valueB: \'2\'"
                  path: "index=0.foo"
+                 uri: "/redfish/v1/index0"
                })pb")));
 }
 
@@ -2063,6 +2075,10 @@ INSTANTIATE_TEST_SUITE_P(
                   key: "key0"
                   value { list_value { values { int_value: 0 } } }
                 }
+                fields {
+                  key: "_uri_"
+                  value: { string_value: "/redfish/v1/example" }
+                }
               }
             )pb"),
             .verification = ParseTextProtoOrDie(
@@ -2087,8 +2103,9 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(R"pb(
               errors {
-                msg: "(Path: query_1.key0.index=0) Failed OPERATION_GREATER_THAN check, value: '0', operand: '0'"
+                msg: "(Path: query_1.key0.index=0, uri: /redfish/v1/example) Failed OPERATION_GREATER_THAN check, value: '0', operand: '0'"
                 path: "query_1.key0.index=0"
+                uri: "/redfish/v1/example"
               }
             )pb"),
         },
@@ -2214,6 +2231,10 @@ INSTANTIATE_TEST_SUITE_P(
                             key: "element"
                             value { string_value: "bar" }
                           }
+                          fields {
+                            key: "_uri_"
+                            value: { string_value: "/redfish/v1/example" }
+                          }
                         }
                       }
                     }
@@ -2246,8 +2267,9 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(R"pb(
               errors {
-                msg: "(Path: query_1.key0.subkey0=\"foo\".element) Failed inequality check, valueA: 'bar', valueB: 'bar'"
+                msg: "(Path: query_1.key0.subkey0=\"foo\".element, uri: /redfish/v1/example) Failed inequality check, valueA: 'bar', valueB: 'bar'"
                 path: "query_1.key0.subkey0=\"foo\".element"
+                uri: "/redfish/v1/example"
               }
             )pb"),
         }));

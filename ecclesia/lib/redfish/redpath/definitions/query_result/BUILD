@@ -77,6 +77,7 @@ cc_library(
     hdrs = ["verification.h"],
     deps = [
         ":converter",
+        ":query_result",
         ":query_result_cc_proto",
         ":query_result_verification_cc_proto",
         "//ecclesia/lib/status:macros",

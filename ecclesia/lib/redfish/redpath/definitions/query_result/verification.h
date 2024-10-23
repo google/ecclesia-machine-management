@@ -18,9 +18,11 @@
 #define ECCLESIA_LIB_REDFISH_REDFISH_REDPATH_DEFINITIONS_QUERY_RESULT_VERIFICATION_H_
 
 #include <string>
+#include <vector>
 
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result_verification.pb.h"
@@ -52,9 +54,14 @@ struct VerificationOptions {
 // want to use a reference to a string, you should use a valid string_view.
 struct VerificationContext {
   absl::string_view path;
+  absl::string_view uri;
 
   VerificationContext() = default;
-  explicit VerificationContext(absl::string_view in_path) : path(in_path) {}
+  explicit VerificationContext(absl::string_view in_path,
+                               absl::string_view in_uri = "")
+      : path(in_path), uri(in_uri) {}
+
+  void SetUri(absl::string_view in_uri) { uri = in_uri; }
 
   // Appends a path element to the current path.
   std::string AppendPath(absl::string_view path_element) const {
@@ -65,11 +72,20 @@ struct VerificationContext {
   }
 
   std::string ToString() const {
-    std::string result;
+    std::vector<std::string> result;
+    result.reserve(2);
     if (!path.empty()) {
-      absl::StrAppend(&result, "(Path: ", path, ") ");
+      result.push_back(absl::StrCat("Path: ", path));
     }
-    return result;
+
+    if (!uri.empty()) {
+      result.push_back(absl::StrCat("uri: ", uri));
+    }
+
+    if (!result.empty()) {
+      return absl::StrCat("(", absl::StrJoin(result, ", "), ") ");
+    }
+    return "";
   }
 };
 

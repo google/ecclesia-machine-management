@@ -30,6 +30,7 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result_verification.pb.h"
 #include "ecclesia/lib/status/macros.h"
@@ -56,6 +57,9 @@ void AddError(QueryVerificationResult& result, absl::string_view message,
   QueryVerificationResult::ErrorInfo& error_info = *result.add_errors();
   error_info.set_msg(std::string(message));
   error_info.set_path(std::string(context.path));
+  if (!context.uri.empty()) {
+    error_info.set_uri(std::string(context.uri));
+  }
 }
 
 absl::Status AddAndReturnError(QueryVerificationResult& result,
@@ -84,6 +88,16 @@ std::string InternalErrorMessage(absl::string_view message,
                          message, options.label_a,
                          IdentifierValueToJson(value_a).dump(), options.label_b,
                          IdentifierValueToJson(value_b).dump());
+}
+
+absl::StatusOr<std::string> GetUriAnnotation(
+    const google::protobuf::Map<std::string, QueryValue>& fields) {
+  if (auto annotation = fields.find(kUriAnnotationTag);
+      annotation != fields.end()) {
+    return annotation->second.string_value();
+  }
+
+  return absl::NotFoundError("URI annotation not found");
 }
 
 absl::StatusOr<std::string> GenerateIdentifier(
@@ -545,7 +559,7 @@ absl::Status CompareListValues(const ListValue& value_a,
     }
 
     std::string path = context.AppendPath(id);
-    VerificationContext sub_context(path);
+    VerificationContext sub_context(path, context.uri);
 
     switch (list_item_a->kind_case()) {
       case QueryValue::kSubqueryValue:
@@ -583,6 +597,13 @@ absl::Status CompareSubqueryValues(
   const google::protobuf::Map<std::string, QueryValue>& fields_a = value_a.fields();
   const google::protobuf::Map<std::string, QueryValue>& fields_b = value_b.fields();
 
+  absl::StatusOr<std::string> annotation;
+  if (annotation = GetUriAnnotation(fields_a); annotation.ok()) {
+    context.SetUri(*annotation);
+  } else if (annotation = GetUriAnnotation(fields_b); annotation.ok()) {
+    context.SetUri(*annotation);
+  }
+
   for (const auto& [property, operations] : verification.fields()) {
     auto a_it = fields_a.find(property);
     auto b_it = fields_b.find(property);
@@ -607,7 +628,7 @@ absl::Status CompareSubqueryValues(
     }
 
     std::string path = context.AppendPath(property);
-    VerificationContext sub_context(path);
+    VerificationContext sub_context(path, context.uri);
 
     switch (a_it->second.kind_case()) {
       case QueryValue::kSubqueryValue:
@@ -719,7 +740,7 @@ absl::Status VerifyListValue(const ListValue& list_value,
   // Ignore identifiers because they are for comparison only.
   for (const QueryValue& list_item : list_value.values()) {
     std::string path = context.AppendPath(absl::StrCat("index=", index++));
-    VerificationContext sub_context(path);
+    VerificationContext sub_context(path, context.uri);
     switch (list_item.kind_case()) {
       case QueryValue::kSubqueryValue:
         ECCLESIA_RETURN_IF_ERROR(VerifySubqueryValue(
@@ -744,6 +765,11 @@ absl::Status VerifySubqueryValue(
     const VerificationOptions& options) {
   const google::protobuf::Map<std::string, QueryValue>& fields = value.fields();
 
+  absl::StatusOr<std::string> annotation;
+  if (annotation = GetUriAnnotation(fields); annotation.ok()) {
+    context.SetUri(*annotation);
+  }
+
   for (const auto& [property, operations] : verification.fields()) {
     auto it = fields.find(property);
     if (it == fields.end()) {
@@ -757,7 +783,7 @@ absl::Status VerifySubqueryValue(
     }
 
     std::string path = context.AppendPath(property);
-    VerificationContext sub_context(path);
+    VerificationContext sub_context(path, context.uri);
 
     switch (it->second.kind_case()) {
       case QueryValue::kSubqueryValue:
