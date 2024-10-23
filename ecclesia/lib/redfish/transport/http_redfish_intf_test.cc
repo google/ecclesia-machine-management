@@ -633,6 +633,121 @@ TEST_F(HttpRedfishInterfaceTest, CachedGet) {
   }
 }
 
+// Test harness to start a FakeRedfishServer and create a RedfishInterface
+// for testing.
+class HttpRedfishInterfaceTestCache : public ::testing::Test {
+ protected:
+  HttpRedfishInterfaceTestCache() {
+    server_ = std::make_unique<ecclesia::FakeRedfishServer>(
+        "barebones_session_auth/mockup.shar");
+    auto config = server_->GetConfig();
+    ecclesia::HttpCredential creds;
+    auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
+        ecclesia::LibCurlProxy::CreateInstance(), creds);
+    auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
+        std::move(curl_http_client),
+        absl::StrFormat("%s:%d", config.hostname, config.port));
+    auto cache_factory = [this](RedfishTransport *transport) {
+      return TimeBasedCache::CreateDeepCache(transport, absl::Minutes(1),
+                                             &clock_);
+    };
+    intf_ = NewHttpInterface(std::move(transport), cache_factory,
+                             RedfishInterface::kTrusted);
+  }
+
+  ecclesia::FakeClock clock_;
+  std::unique_ptr<ecclesia::FakeRedfishServer> server_;
+  std::unique_ptr<RedfishInterface> intf_;
+};
+
+TEST_F(HttpRedfishInterfaceTestCache, GetFromDeepCache) {
+  int called_count = 0;
+  int memory_called_count = 0;
+  auto result_json = nlohmann::json::parse(R"(
+    {
+      "@odata.id": "/redfish/v1/Systems/1",
+      "Name": "My System",
+      "Processors": [
+        {
+          "@odata.id": "/redfish/v1/Systems/1/Processors/1",
+          "Id": "CPU1",
+          "Cores": [
+            {
+              "@odata.id": "/redfish/v1/Systems/1/Processors/1/Cores/1",
+              "Id": "Core1"
+            }
+          ],
+          "Links": {
+            "Temperatures": [
+              {
+                "@odata.id": "/redfish/v1/Systems/1/Processors/1/Temperatures/1",
+                "Name": "CPU Temp"
+              }
+            ]
+          }
+        }
+      ],
+      "Memory": {
+        "@odata.id": "/redfish/v1/Systems/1/Memory/1",
+        "TotalSystemMemoryGiB": 32,
+        "MemoryModules": [
+          {
+            "@odata.id": "/redfish/v1/Systems/1/Memory/1/MemoryModules/1",
+            "CapacityMiB": 16384
+          }
+        ]
+      }
+    }
+  )");
+
+  auto memory_json = nlohmann::json::parse(R"json({
+    "@odata.id": "/redfish/v1/Systems/1/Memory/1",
+    "TotalSystemMemoryGiB": 32,
+    "MemoryModules": [
+      {
+        "@odata.id": "/redfish/v1/Systems/1/Memory/1/MemoryModules/1",
+        "CapacityMiB": 16384
+      }
+    ]
+  })json");
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Systems/1", [&](ServerRequestInterface *req) {
+        called_count++;
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(result_json.dump());
+        req->Reply();
+      });
+
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Systems/1/Memory/1", [&](ServerRequestInterface *req) {
+        memory_called_count++;
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(memory_json.dump());
+        req->Reply();
+      });
+
+  // The first GET will return an expanded response which will be cached
+  // recursively for all the nested objects.
+  {
+    auto result = intf_->CachedGetUri("/redfish/v1/Systems/1", GetParams{});
+    EXPECT_THAT(called_count, Eq(1));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(result_json));
+  }
+
+  // The next GET of the memory object should hit the cache.
+  clock_.AdvanceTime(absl::Seconds(1));
+  {
+    auto result =
+        intf_->CachedGetUri("/redfish/v1/Systems/1/Memory/1", GetParams{});
+    EXPECT_THAT(memory_called_count, Eq(0));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(memory_json));
+  }
+}
+
 TEST_F(HttpRedfishInterfaceWithGrpcTest, CachedGetUriWithTimeout) {
   // Ensure CachedGetUri succeeds when timeout is sufficient.
   ecclesia::QueryTimeoutManager timeout_mgr(clock_, absl::Seconds(1));

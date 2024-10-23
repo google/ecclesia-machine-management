@@ -18,14 +18,18 @@
 
 #include <memory>
 #include <optional>
+#include <queue>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/timing/query_timeout_manager.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 
@@ -57,6 +61,51 @@ RedfishCachedGetterInterface::OperationResult NullCache::CachedPostInternal(
     absl::string_view path, absl::string_view post_payload,
     absl::Duration duration) {
   return {.result = transport_->Post(path, post_payload), .is_fresh = true};
+}
+
+void TimeBasedCache::CacheNestedObjects(
+    const RedfishTransport::Result &result) {
+  std::queue<nlohmann::json> unprocessed_objects;
+  if (!std::holds_alternative<nlohmann::json>(result.body)) {
+    return;
+  }
+  unprocessed_objects.push(std::get<nlohmann::json>(result.body));
+
+  while (!unprocessed_objects.empty()) {
+    nlohmann::json current_obj = std::move(unprocessed_objects.front());
+    unprocessed_objects.pop();
+
+    for (const auto &[key, value] : current_obj.items()) {
+      if (value.is_object() || value.is_array()) {
+        unprocessed_objects.push(value);
+      }
+
+      // We cache only if the object has an @odata.id and is not a singleton.
+      if (current_obj.size() == 1) {
+        continue;
+      }
+
+      auto find_id = current_obj.find("@odata.id");
+      if (find_id == current_obj.end()) {
+        continue;
+      }
+
+      if (current_obj.is_object()) {
+        std::string id = find_id->get<std::string>();
+        absl::MutexLock mu(&get_cache_lock_);
+        if (get_cache_.find(id) != get_cache_.end()) {
+          continue;
+        }
+        RedfishTransport::Result new_result = {.code = result.code,
+                                               .body = current_obj,
+                                               .headers = result.headers};
+        get_cache_.insert(std::make_pair(
+            id,
+            std::make_unique<CacheNode>(id, std::move(new_result), transport_,
+                                        *clock_, get_max_age_)));
+      }
+    }
+  }
 }
 
 TimeBasedCache::CacheNode &TimeBasedCache::RetrieveCacheNode(
@@ -94,6 +143,9 @@ RedfishCachedGetterInterface::OperationResult TimeBasedCache::CachedGetInternal(
     std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr) {
   TimeBasedCache::CacheNode &store = RetrieveCacheNode(path);
   auto result = store.CachedRead(timeout_mgr);
+  if (deep_cache_ && result.is_fresh && result.result.ok()) {
+    CacheNestedObjects(result.result.value());
+  }
   return {.result = std::move(result.result), .is_fresh = result.is_fresh};
 }
 

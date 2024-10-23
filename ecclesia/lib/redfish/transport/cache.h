@@ -168,13 +168,22 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
     return std::make_unique<TimeBasedCache>(transport, clock, max_age);
   }
 
+  static std::unique_ptr<RedfishCachedGetterInterface> CreateDeepCache(
+      RedfishTransport *transport, absl::Duration max_age,
+      const Clock *clock = Clock::RealClock()) {
+    return std::make_unique<TimeBasedCache>(transport, clock, max_age,
+                                            std::nullopt, true);
+  }
+
   TimeBasedCache(
       RedfishTransport *transport, const Clock *clock, absl::Duration max_age,
-      std::optional<const ApiComplexityContextManager *> manager = std::nullopt)
+      std::optional<const ApiComplexityContextManager *> manager = std::nullopt,
+      bool deep_cache = false)
       : RedfishCachedGetterInterface(manager),
         transport_(transport),
         clock_(clock),
-        get_max_age_(max_age) {}
+        get_max_age_(max_age),
+        deep_cache_(deep_cache) {}
 
  protected:
   OperationResult CachedGetInternal(
@@ -199,6 +208,11 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
               const absl::Duration duration)
         : CacheNode(std::move(path), std::nullopt, transport, clock, duration) {
     }
+    CacheNode(std::string path, RedfishTransport::Result result,
+              RedfishTransport *transport, const Clock &clock,
+              const absl::Duration duration)
+        : CacheNode(std::move(path), std::nullopt, transport, clock, duration,
+                    std::move(result)) {}
     CacheNode(std::string path, std::optional<std::string> post_payload,
               RedfishTransport *transport, const Clock &clock,
               const absl::Duration duration)
@@ -207,6 +221,16 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
           transport_(transport),
           clock_(&clock),
           duration_(duration) {}
+    CacheNode(std::string path, std::optional<std::string> post_payload,
+              RedfishTransport *transport, const Clock &clock,
+              const absl::Duration duration, RedfishTransport::Result result)
+        : path_(std::move(path)),
+          post_payload_(std::move(post_payload)),
+          transport_(transport),
+          clock_(&clock),
+          duration_(duration),
+          last_update_time_(clock_->Now()),
+          result_(std::move(result)) {}
 
     struct ResultAndFreshness {
       absl::StatusOr<RedfishTransport::Result> result;
@@ -339,6 +363,7 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
     bool operation_in_progress_ ABSL_GUARDED_BY(mutex_) = false;
   };
 
+  void CacheNestedObjects(const RedfishTransport::Result &result);
   CacheNode &RetrieveCacheNode(absl::string_view path)
       ABSL_LOCKS_EXCLUDED(get_cache_lock_);
   CacheNode &RetrieveCacheNode(absl::string_view path,
@@ -356,6 +381,7 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
   absl::flat_hash_map<std::pair<std::string, std::string>,
                       std::unique_ptr<CacheNode>>
       post_cache_ ABSL_GUARDED_BY(post_cache_lock_);
+  bool deep_cache_;
 };
 
 }  // namespace ecclesia
