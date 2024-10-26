@@ -372,6 +372,9 @@ bool RemoveDataForIdentifier(QueryResult& query_result,
 absl::StatusOr<std::vector<QueryResultData>> GetDataForIdentifier(
     const QueryResult& query_result, const Identifier& identifier);
 
+// Converts query result status to an absl::Status.
+absl::Status StatusFromQueryResultStatus(const ecclesia::Status& status);
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_RESULT_QUERY_RESULT_H_

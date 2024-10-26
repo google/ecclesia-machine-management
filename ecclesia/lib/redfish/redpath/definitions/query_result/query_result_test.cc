@@ -1622,5 +1622,36 @@ TEST(GetDataForIdentifier, FailureNotFound) {
       IsStatusNotFound());
 }
 
+TEST(GetStatusFromQueryResultStatus, StatusTranslatesCorrectly) {
+  EXPECT_THAT(StatusFromQueryResultStatus(ParseTextProtoOrDie(R"pb(
+                error_code: ERROR_NONE
+              )pb")),
+              IsOk());
+  EXPECT_THAT(StatusFromQueryResultStatus(ParseTextProtoOrDie(R"pb(
+                error_code: ERROR_NETWORK
+              )pb")),
+              IsStatusDeadlineExceeded());
+  EXPECT_THAT(StatusFromQueryResultStatus(ParseTextProtoOrDie(R"pb(
+                error_code: ERROR_SERVICE_ROOT_UNREACHABLE
+              )pb")),
+              IsStatusFailedPrecondition());
+  EXPECT_THAT(StatusFromQueryResultStatus(ParseTextProtoOrDie(R"pb(
+                error_code: ERROR_UNAUTHENTICATED
+              )pb")),
+              IsStatusUnauthenticated());
+  EXPECT_THAT(StatusFromQueryResultStatus(ParseTextProtoOrDie(R"pb(
+                error_code: ERROR_QUERY_TIMEOUT
+              )pb")),
+              IsStatusDeadlineExceeded());
+  EXPECT_THAT(StatusFromQueryResultStatus(ParseTextProtoOrDie(R"pb(
+                error_code: ERROR_INTERNAL
+              )pb")),
+              IsStatusInternal());
+  EXPECT_THAT(StatusFromQueryResultStatus(ParseTextProtoOrDie(R"pb(
+                error_code: ERROR_UNAVAILABLE
+              )pb")),
+              IsStatusUnavailable());
+}
+
 }  // namespace
 }  // namespace ecclesia

@@ -26,6 +26,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
@@ -275,6 +276,31 @@ absl::StatusOr<std::vector<QueryResultData>> GetDataForIdentifier(
                      identifier.machine_devpath()));
   }
   return std::move(result);
+}
+
+absl::Status StatusFromQueryResultStatus(const ecclesia::Status& status) {
+  std::string error_message = absl::StrJoin(status.errors(), "\n");
+  switch (status.error_code()) {
+    case ecclesia::ErrorCode::ERROR_NONE:
+      return absl::OkStatus();
+    case ecclesia::ErrorCode::ERROR_NETWORK:
+      return absl::DeadlineExceededError(error_message);
+    case ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE:
+      return absl::FailedPreconditionError(error_message);
+    case ecclesia::ErrorCode::ERROR_UNAUTHENTICATED:
+      return absl::UnauthenticatedError(error_message);
+    case ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT:
+      return absl::DeadlineExceededError(error_message);
+    case ecclesia::ErrorCode::ERROR_INTERNAL:
+      return absl::InternalError(error_message);
+    case ecclesia::ErrorCode::ERROR_UNAVAILABLE:
+      return absl::UnavailableError(error_message);
+    // Account for all cases so method won't compile if new Statuses are
+    // added.
+    case ecclesia::ErrorCode_INT_MIN_SENTINEL_DO_NOT_USE_:
+    case ecclesia::ErrorCode_INT_MAX_SENTINEL_DO_NOT_USE_:
+      return absl::UnknownError(error_message);
+  }
 }
 
 }  // namespace ecclesia
