@@ -22,6 +22,7 @@
 
 #include "google/protobuf/timestamp.pb.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
@@ -40,6 +41,15 @@
 namespace ecclesia {
 namespace {
 
+const absl::flat_hash_set<QueryValue::KindCase>& GetIntervalCompatibleTypes() {
+  static const auto* kIntervalCompatibleTypes =  // NOLINT
+      new absl::flat_hash_set<QueryValue::KindCase>(
+          {QueryValue::kIntValue, QueryValue::kDoubleValue,
+           QueryValue::kTimestampValue});
+
+  return *kIntervalCompatibleTypes;
+}
+
 bool operator==(const Identifier& a, const Identifier& b) {
   return a.local_devpath() == b.local_devpath() &&
          a.machine_devpath() == b.machine_devpath() &&
@@ -51,6 +61,11 @@ bool operator==(const Identifier& a, const Identifier& b) {
 }
 
 bool operator!=(const Identifier& a, const Identifier& b) { return !(a == b); }
+
+template <typename T>
+std::string ToString(const T& value) {
+  return absl::StrFormat("%v", value);
+}
 
 void AddError(QueryVerificationResult& result, absl::string_view message,
               VerificationContext context) {
@@ -375,67 +390,126 @@ absl::Status Interval(const QueryValue& value,
         "Two operands are required for interval check. %d provided.",
         operands.size()));
   }
+
+  auto get_string_value = [](const QueryValue& value) -> std::string {
+    switch (value.kind_case()) {
+      case QueryValue::kIntValue:
+        return ToString(value.int_value());
+      case QueryValue::kDoubleValue:
+        return ToString(value.double_value());
+      case QueryValue::kTimestampValue:
+        return ToString(AbslTimeFromProtoTime(value.timestamp_value()));
+      default:
+        return "";
+    }
+  };
+
+  if (value.kind_case() != operands[0].kind_case() ||
+      value.kind_case() != operands[1].kind_case()) {
+    return absl::FailedPreconditionError(
+        absl::StrFormat("Value: %s and operands [%s, %s] have different types "
+                        "and cannot be compared",
+                        get_string_value(value), get_string_value(operands[0]),
+                        get_string_value(operands[1])));
+  }
+
+  if (!GetIntervalCompatibleTypes().contains(value.kind_case())) {
+    return absl::FailedPreconditionError(
+        absl::StrFormat("Value: %s has an unsupported type for interval check",
+                        get_string_value(value)));
+  }
+
+  auto err_msg_format = [&](const QueryValue& value) -> std::string {
+    std::string lower_bound = get_string_value(operands[0]);
+    std::string upper_bound = get_string_value(operands[1]);
+    std::string interval_str;
+    switch (interval) {
+      case Verification::Validation::INTERVAL_OPEN:
+        interval_str = absl::StrFormat("(%s, %s)", lower_bound, upper_bound);
+        break;
+      case Verification::Validation::INTERVAL_CLOSED:
+        interval_str = absl::StrFormat("[%s, %s]", lower_bound, upper_bound);
+        break;
+      case Verification::Validation::INTERVAL_OPEN_CLOSED:
+        interval_str = absl::StrFormat("(%s, %s]", lower_bound, upper_bound);
+        break;
+      case Verification::Validation::INTERVAL_CLOSED_OPEN:
+        interval_str = absl::StrFormat("[%s, %s)", lower_bound, upper_bound);
+        break;
+      default:
+        return "- Unsupported interval";
+    }
+
+    return absl::StrFormat("Value: %s is not in the interval %s",
+                           get_string_value(value), interval_str);
+  };
+
+  std::string error_message;
+  QueryVerificationResult internal_result;
   switch (interval) {
     case Verification::Validation::INTERVAL_UNKNOWN:
       return absl::FailedPreconditionError("Interval is not provided");
     case Verification::Validation::INTERVAL_OPEN:
       if (OperationQueryValue(value, operands[0],
                               Verification::Validation::OPERATION_GREATER_THAN,
-                              result, context)
+                              internal_result, context)
               .ok() &&
           OperationQueryValue(value, operands[1],
                               Verification::Validation::OPERATION_LESS_THAN,
-                              result, context)
+                              internal_result, context)
               .ok()) {
         return absl::OkStatus();
       }
+      error_message = err_msg_format(value);
       break;
     case Verification::Validation::INTERVAL_CLOSED:
       if (OperationQueryValue(
               value, operands[0],
-              Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL, result,
-              context)
+              Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL,
+              internal_result, context)
               .ok() &&
           OperationQueryValue(
               value, operands[1],
-              Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL, result,
-              context)
+              Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL,
+              internal_result, context)
               .ok()) {
         return absl::OkStatus();
       }
+      error_message = err_msg_format(value);
       break;
     case Verification::Validation::INTERVAL_OPEN_CLOSED:
       if (OperationQueryValue(value, operands[0],
                               Verification::Validation::OPERATION_GREATER_THAN,
-                              result, context)
+                              internal_result, context)
               .ok() &&
           OperationQueryValue(
               value, operands[1],
-              Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL, result,
-              context)
+              Verification::Validation::OPERATION_LESS_THAN_OR_EQUAL,
+              internal_result, context)
               .ok()) {
         return absl::OkStatus();
       }
+      error_message = err_msg_format(value);
       break;
     case Verification::Validation::INTERVAL_CLOSED_OPEN:
       if (OperationQueryValue(
               value, operands[0],
-              Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL, result,
-              context)
+              Verification::Validation::OPERATION_GREATER_THAN_OR_EQUAL,
+              internal_result, context)
               .ok() &&
           OperationQueryValue(value, operands[1],
                               Verification::Validation::OPERATION_LESS_THAN,
-                              result, context)
+                              internal_result, context)
               .ok()) {
         return absl::OkStatus();
       }
+      error_message = err_msg_format(value);
       break;
     default:
       return absl::FailedPreconditionError("Interval is not set");
   }
 
-  return absl::InternalError(
-      "Value is not in the interval of operands provided");
+  return AddAndReturnError(result, error_message, context);
 }
 
 }  // namespace

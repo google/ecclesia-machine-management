@@ -1571,6 +1571,34 @@ TEST(VerifyQueryValueTest, IntervalFailSingleOperand) {
   ASSERT_THAT(result, EqualsProto(""));
 }
 
+TEST(VerifyQueryValueTest, IntervalFailMisMatchTypes) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 0)pb");
+  QueryValueVerification verification;
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_interval(Verification::Validation::INTERVAL_OPEN);
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(double_value: 1)pb");
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result),
+              IsStatusFailedPrecondition());
+  ASSERT_THAT(result, EqualsProto(""));
+}
+
+TEST(VerifyQueryValueTest, IntervalFailUnsupportedType) {
+  QueryValue qv = ParseTextProtoOrDie(R"pb(string_value: "0")pb");
+  QueryValueVerification verification;
+  Verification::Validation& validation =
+      *verification.mutable_verify()->mutable_validation()->Add();
+  validation.set_interval(Verification::Validation::INTERVAL_OPEN);
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(string_value: "1")pb");
+  *validation.add_operands() = ParseTextProtoOrDie(R"pb(string_value: "1")pb");
+  QueryVerificationResult result;
+  ASSERT_THAT(VerifyQueryValue(qv, verification, result),
+              IsStatusFailedPrecondition());
+  ASSERT_THAT(result, EqualsProto(""));
+}
+
 TEST(VerifyQueryValueTest, IntervalUnknownOption) {
   QueryValue qv_a = ParseTextProtoOrDie(R"pb(int_value: 0)pb");
   QueryValue qv_b = ParseTextProtoOrDie(R"pb(int_value: 5)pb");
@@ -1625,79 +1653,70 @@ TEST(VerifyQueryValueTest, IntervalFail) {
 
   QueryVerificationResult result;
   ASSERT_THAT(VerifyQueryValue(qv_b, verification, result), IsStatusInternal());
-  ASSERT_THAT(
-      result,
-      EqualsProto(
-          R"pb(errors {
-                 msg: "Failed OPERATION_GREATER_THAN check, value: '1', operand: '1'"
-               })pb"));
+  ASSERT_THAT(result,
+              EqualsProto(
+                  R"pb(
+                    errors { msg: "Value: 1 is not in the interval (1, 10)" }
+                  )pb"));
   result.Clear();
 
   ASSERT_THAT(VerifyQueryValue(qv_c, verification, result), IsStatusInternal());
-  ASSERT_THAT(
-      result,
-      EqualsProto(
-          R"pb(errors {
-                 msg: "Failed OPERATION_LESS_THAN check, value: '10', operand: '10'"
-               })pb"));
+  ASSERT_THAT(result, EqualsProto(
+                          R"pb(
+                            errors {
+                              msg: "Value: 10 is not in the interval (1, 10)"
+                            })pb"));
   result.Clear();
 
   validation.set_interval(Verification::Validation::INTERVAL_CLOSED);
   ASSERT_THAT(VerifyQueryValue(qv_a, verification, result), IsStatusInternal());
-  ASSERT_THAT(
-      result,
-      EqualsProto(
-          R"pb(errors {
-                 msg: "Failed OPERATION_GREATER_THAN_OR_EQUAL check, value: '0', operand: '1'"
-               })pb"));
+  ASSERT_THAT(result, EqualsProto(
+                          R"pb(
+                            errors {
+                              msg: "Value: 0 is not in the interval [1, 10]"
+                            })pb"));
   result.Clear();
 
   ASSERT_THAT(VerifyQueryValue(qv_d, verification, result), IsStatusInternal());
-  ASSERT_THAT(
-      result,
-      EqualsProto(
-          R"pb(errors {
-                 msg: "Failed OPERATION_LESS_THAN_OR_EQUAL check, value: '100', operand: '10'"
-               })pb"));
+  ASSERT_THAT(result, EqualsProto(
+                          R"pb(
+                            errors {
+                              msg: "Value: 100 is not in the interval [1, 10]"
+                            })pb"));
   result.Clear();
 
   validation.set_interval(Verification::Validation::INTERVAL_OPEN_CLOSED);
   ASSERT_THAT(VerifyQueryValue(qv_b, verification, result), IsStatusInternal());
-  ASSERT_THAT(
-      result,
-      EqualsProto(
-          R"pb(errors {
-                 msg: "Failed OPERATION_GREATER_THAN check, value: '1', operand: '1'"
-               })pb"));
+  ASSERT_THAT(result, EqualsProto(
+                          R"pb(
+                            errors {
+                              msg: "Value: 1 is not in the interval (1, 10]"
+                            })pb"));
   result.Clear();
 
   ASSERT_THAT(VerifyQueryValue(qv_d, verification, result), IsStatusInternal());
-  ASSERT_THAT(
-      result,
-      EqualsProto(
-          R"pb(errors {
-                 msg: "Failed OPERATION_LESS_THAN_OR_EQUAL check, value: '100', operand: '10'"
-               })pb"));
+  ASSERT_THAT(result, EqualsProto(
+                          R"pb(
+                            errors {
+                              msg: "Value: 100 is not in the interval (1, 10]"
+                            })pb"));
   result.Clear();
 
   validation.set_interval(Verification::Validation::INTERVAL_CLOSED_OPEN);
   ASSERT_THAT(VerifyQueryValue(qv_a, verification, result), IsStatusInternal());
-  ASSERT_THAT(
-      result,
-      EqualsProto(
-          R"pb(errors {
-                 msg: "Failed OPERATION_GREATER_THAN_OR_EQUAL check, value: '0', operand: '1'"
-               })pb"));
+  ASSERT_THAT(result, EqualsProto(
+                          R"pb(
+                            errors {
+                              msg: "Value: 0 is not in the interval [1, 10)"
+                            })pb"));
   result.Clear();
 
   ASSERT_THAT(VerifyQueryValue(qv_c, verification, result), IsStatusInternal());
-  ASSERT_THAT(
-      result,
-      EqualsProto(
-          R"pb(errors {
-                 msg: "Failed OPERATION_LESS_THAN check, value: '10', operand: '10'"
-               })pb"));
-  result.Clear();
+  ASSERT_THAT(result, EqualsProto(
+                          R"pb(
+                            errors {
+                              msg: "Value: 10 is not in the interval [1, 10)"
+                            })pb"));
 }
 
 TEST(VerifyQueryValueTest, IntervalSuccess) {
