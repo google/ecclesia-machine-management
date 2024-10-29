@@ -30,6 +30,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 namespace {
@@ -491,5 +492,28 @@ TEST(JsonMockup, ForEachPropertyStop) {
   EXPECT_THAT(called, Eq(1));
 }
 
+TEST(EditableJsonMockup, CanEditJson) {
+  auto json_model = std::make_unique<nlohmann::json>();
+  *json_model = nlohmann::json::parse(R"json(
+    {
+      "StringField": "string value"
+    }
+  )json",
+                                      nullptr, false);
+  auto mockup_interface = NewEditableJsonMockupInterface(json_model.get());
+  std::string str_value;
+  ASSERT_TRUE(
+      mockup_interface->UncachedGetUri("/StringField").GetValue(&str_value));
+  ASSERT_EQ(str_value, "string value");
+  *json_model = nlohmann::json::parse(R"json(
+    {
+      "StringField": "NEW string value"
+    }
+  )json",
+                                      nullptr, false);
+  ASSERT_TRUE(
+      mockup_interface->UncachedGetUri("/StringField").GetValue(&str_value));
+  ASSERT_EQ(str_value, "NEW string value");
+}
 }  // namespace
 }  // namespace ecclesia

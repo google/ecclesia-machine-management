@@ -30,6 +30,9 @@ namespace ecclesia {
 // Returns nullptr in case the interface failed to be constructed.
 std::unique_ptr<RedfishInterface> NewJsonMockupInterface(
     absl::string_view raw_json);
+// Same as above, but allows for an editable json model.
+std::unique_ptr<RedfishInterface> NewEditableJsonMockupInterface(
+    nlohmann::json *json_model);
 
 class JsonMockupObject : public RedfishObject {
  public:

@@ -157,14 +157,13 @@ std::string JsonMockupVariantImpl::DebugString() const {
   return json_view_.dump(/*indent=*/1);
 }
 
-class JsonMockupMockup : public RedfishInterface {
+class EditableJsonMockupMockup : public RedfishInterface {
  public:
-  explicit JsonMockupMockup(absl::string_view raw_json) {
-    json_model_ = nlohmann::json::parse(raw_json, nullptr, false);
-    if (json_model_.is_discarded()) {
-      LOG(FATAL) << "Could not load JSON.";
-    }
+  explicit EditableJsonMockupMockup(nlohmann::json *json_model)
+      : json_model_(json_model) {
+    if (json_model_ == nullptr) LOG(FATAL) << "Provided json_model is null";
   }
+
   bool IsTrusted() const override { return true; }
   void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
                        TrustedEndpoint trusted) override {
@@ -174,18 +173,20 @@ class JsonMockupMockup : public RedfishInterface {
   }
   RedfishVariant GetRoot(GetParams params,
                          ServiceRootUri service_root) override {
-    return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(json_model_));
+    return RedfishVariant(
+        std::make_unique<JsonMockupVariantImpl>(*json_model_));
   }
   RedfishVariant GetRoot(GetParams params,
                          absl::string_view service_root) override {
-    return RedfishVariant(std::make_unique<JsonMockupVariantImpl>(json_model_));
+    return RedfishVariant(
+        std::make_unique<JsonMockupVariantImpl>(*json_model_));
   }
 
   RedfishVariant UncachedGetUri(absl::string_view uri,
                                 GetParams params) override {
     // We will implement GetUri as walking the URI from the root JSON node.
 
-    auto current_json = json_model_;
+    auto current_json = *json_model_;
     auto path_list = absl::StrSplit(uri, '/');
     for (const auto &p : path_list) {
       if (p.empty()) continue;
@@ -266,9 +267,22 @@ class JsonMockupMockup : public RedfishInterface {
   }
 
  private:
-  nlohmann::json json_model_;
+  nlohmann::json *json_model_;
 };
 
+class JsonMockupMockup : public EditableJsonMockupMockup {
+ public:
+  explicit JsonMockupMockup(absl::string_view raw_json)
+      : EditableJsonMockupMockup(&json_model_) {
+    json_model_ = nlohmann::json::parse(raw_json, nullptr, false);
+    if (json_model_.is_discarded()) {
+      LOG(FATAL) << "Could not load JSON.";
+    }
+  }
+
+ private:
+  nlohmann::json json_model_;
+};
 }  // namespace
 
 RedfishVariant JsonMockupObject::Get(const std::string &node_name,
@@ -296,6 +310,11 @@ void JsonMockupObject::ForEachProperty(
 std::unique_ptr<RedfishInterface> NewJsonMockupInterface(
     absl::string_view raw_json) {
   return std::make_unique<JsonMockupMockup>(raw_json);
+}
+
+std::unique_ptr<RedfishInterface> NewEditableJsonMockupInterface(
+    nlohmann::json *json_model) {
+  return std::make_unique<EditableJsonMockupMockup>(json_model);
 }
 
 }  // namespace ecclesia
