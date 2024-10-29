@@ -575,7 +575,7 @@ absl::Status CompareListValues(const ListValue& value_a,
     for (const ecclesia::QueryValue& value : list_value.values()) {
       std::pair<const QueryValue*, const QueryValue*>* data_map_item = nullptr;
       if (use_index) {
-        data_map_item = &data_map[absl::StrCat("index=", index++)];
+        data_map_item = &data_map[absl::StrCat(index++)];
       } else {
         absl::StatusOr<std::string> identifier =
             GenerateIdentifier(verification, value);
@@ -618,10 +618,14 @@ absl::Status CompareListValues(const ListValue& value_a,
     const auto& [list_item_a, list_item_b] = values;
     auto check_list_item =
         [&identifier = id, &errors = result, &error_messages = error_messages,
-         &ctx = context](const QueryValue* list_item, absl::string_view label) {
+         &ctx = context,
+         use_index](const QueryValue* list_item, absl::string_view label) {
           if (list_item == nullptr) {
-            std::string error_message = absl::StrCat(
-                "Missing value in ", label, " with identifier ", identifier);
+            std::string identifier_str =
+                use_index ? absl::StrCat("index=", identifier) : identifier;
+            std::string error_message =
+                absl::StrCat("Missing value in ", label, " with identifier ",
+                             identifier_str);
             AddError(errors, error_message, ctx);
             error_messages.push_back(std::move(error_message));
           }
@@ -632,7 +636,12 @@ absl::Status CompareListValues(const ListValue& value_a,
       continue;
     }
 
-    std::string path = context.AppendPath(id);
+    std::string path;
+    if (use_index) {
+      path = context.AppendPath(absl::StrCat("[", id, "]"));
+    } else {
+      path = context.AppendPath(id);
+    }
     VerificationContext sub_context(path, context.uri);
 
     switch (list_item_a->kind_case()) {
@@ -813,7 +822,7 @@ absl::Status VerifyListValue(const ListValue& list_value,
   int index = 0;
   // Ignore identifiers because they are for comparison only.
   for (const QueryValue& list_item : list_value.values()) {
-    std::string path = context.AppendPath(absl::StrCat("index=", index++));
+    std::string path = context.AppendPath(absl::StrCat("[", index++, "]"));
     VerificationContext sub_context(path, context.uri);
     switch (list_item.kind_case()) {
       case QueryValue::kSubqueryValue:

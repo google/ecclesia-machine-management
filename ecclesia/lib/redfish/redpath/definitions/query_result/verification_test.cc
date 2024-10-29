@@ -819,13 +819,13 @@ TEST(CompareListValuesTest, MisAlignedListValues) {
       result,
       IgnoringRepeatedFieldOrdering(EqualsProto(
           R"pb(errors {
-                 msg: "(Path: index=1.foo, uri: /redfish/v1/index1b) Failed equality check, valueA: \'2\', valueB: \'1\'"
-                 path: "index=1.foo"
+                 msg: "(Path: [1].foo, uri: /redfish/v1/index1b) Failed equality check, valueA: \'2\', valueB: \'1\'"
+                 path: "[1].foo"
                  uri: "/redfish/v1/index1b"
                }
                errors {
-                 msg: "(Path: index=0.foo, uri: /redfish/v1/index0) Failed equality check, valueA: \'1\', valueB: \'2\'"
-                 path: "index=0.foo"
+                 msg: "(Path: [0].foo, uri: /redfish/v1/index0) Failed equality check, valueA: \'1\', valueB: \'2\'"
+                 path: "[0].foo"
                  uri: "/redfish/v1/index0"
                })pb")));
 }
@@ -2122,8 +2122,8 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(R"pb(
               errors {
-                msg: "(Path: query_1.key0.index=0, uri: /redfish/v1/example) Failed OPERATION_GREATER_THAN check, value: '0', operand: '0'"
-                path: "query_1.key0.index=0"
+                msg: "(Path: query_1.key0.[0], uri: /redfish/v1/example) Failed OPERATION_GREATER_THAN check, value: '0', operand: '0'"
+                path: "query_1.key0.[0]"
                 uri: "/redfish/v1/example"
               }
             )pb"),
@@ -2179,8 +2179,8 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(R"pb(
               errors {
-                msg: "(Path: query_1.key0.index=0.subkey0) Failed operation OPERATION_STRING_STARTS_WITH, value: 'bar', operand: 'foo'"
-                path: "query_1.key0.index=0.subkey0"
+                msg: "(Path: query_1.key0.[0].subkey0) Failed operation OPERATION_STRING_STARTS_WITH, value: 'bar', operand: 'foo'"
+                path: "query_1.key0.[0].subkey0"
               }
             )pb"),
         }));
@@ -2227,8 +2227,8 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(R"pb(
               errors {
-                msg: "(Path: query_1.key0.index=0) Failed inequality check, valueA: '0', valueB: '0'"
-                path: "query_1.key0.index=0"
+                msg: "(Path: query_1.key0.[0]) Failed inequality check, valueA: '0', valueB: '0'"
+                path: "query_1.key0.[0]"
               }
             )pb"),
         },
