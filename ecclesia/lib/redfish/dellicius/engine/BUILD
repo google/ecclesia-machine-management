@@ -1,5 +1,6 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("//ecclesia/build_defs:embed.bzl", "cc_data_library")
+load("//third_party/protobuf/bazel:proto_library.bzl", "proto_library")
 
 licenses(["notice"])
 

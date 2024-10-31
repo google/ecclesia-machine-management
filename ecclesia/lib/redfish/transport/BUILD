@@ -1,3 +1,5 @@
+load("//third_party/protobuf/bazel:proto_library.bzl", "proto_library")
+
 # Description:
 # Transport interfaces for Redfish
 

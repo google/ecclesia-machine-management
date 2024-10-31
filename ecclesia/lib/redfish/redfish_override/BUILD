@@ -1,6 +1,7 @@
 # Redfish override (a RedfishTransport layer) library
 
 load("//ecclesia/build_defs:proto.bzl", "proto_data")
+load("//third_party/protobuf/bazel:proto_library.bzl", "proto_library")
 
 licenses(["notice"])
 

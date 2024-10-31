@@ -1,5 +1,7 @@
 # A http library that wraps around curl.
 
+load("//third_party/protobuf/bazel:proto_library.bzl", "proto_library")
+
 licenses(["notice"])
 
 cc_library(
