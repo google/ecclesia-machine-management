@@ -49,9 +49,41 @@ cc_test(
         "//ecclesia/lib/testing:status",
         "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "path_util",
+    srcs = ["path_util.cc"],
+    hdrs = ["path_util.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":converter",
+        ":query_result_cc_proto",
+        "//ecclesia/lib/status:macros",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "path_util_test",
+    srcs = ["path_util_test.cc"],
+    deps = [
+        ":path_util",
+        ":query_result_cc_proto",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/testing:proto",
+        "//ecclesia/lib/testing:status",
         "@com_google_googletest//:gtest_main",
     ],
 )
