@@ -6,6 +6,7 @@ import "google/protobuf/duration.proto";
 import "ecclesia/lib/redfish/dellicius/engine/query_rules.proto";
 import "ecclesia/lib/redfish/dellicius/query/query.proto";
 import "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.proto";
+import "ecclesia/lib/redfish/redpath/definitions/query_result/query_result_verification.proto";
 
 message QueryAndRulePath {
   string query_path = 1;
@@ -15,6 +16,13 @@ message QueryAndRulePath {
 message QueryAndRule {
   ecclesia.DelliciusQuery query = 1;
   ecclesia.QueryRules.RedPathPrefixSetWithQueryParams rule = 2;
+}
+
+message VerificationConfig {
+  oneof verification_config {
+    string path = 1;
+    QueryResultVerification config = 2;
+  }
 }
 
 message SelectionSpec {
@@ -57,6 +65,7 @@ message SelectionSpec {
     }
     google.protobuf.Duration timeout = 4;
     reserved 5;
+    VerificationConfig verification_config = 6;
   }
 
   repeated QuerySelectionSpec query_selection_specs = 1;

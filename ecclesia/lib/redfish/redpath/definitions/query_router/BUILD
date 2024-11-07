@@ -6,6 +6,7 @@ proto_library(
         "//ecclesia/lib/redfish/dellicius/engine:query_rules_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_proto",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_engine_features_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_verification_proto",
         "@com_google_protobuf//:duration_proto",
     ],
 )
