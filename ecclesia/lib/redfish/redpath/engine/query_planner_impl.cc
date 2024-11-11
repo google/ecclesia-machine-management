@@ -608,7 +608,8 @@ QueryPlanner::ExecuteQueryExpression(
       GetQueryParamsForRedPath(new_redpath_prefix);
 
   // Run query expression relative to Iterable resource
-  if (current_redfish_iterable) {
+  if (current_redfish_iterable &&
+      expression.type == RedPathExpression::Type::kPredicate) {
     // Substitute variables in the predicate expression.
     ECCLESIA_ASSIGN_OR_RETURN(
         std::string new_predicate,

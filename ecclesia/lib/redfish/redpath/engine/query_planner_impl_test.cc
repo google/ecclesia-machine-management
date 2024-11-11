@@ -3740,6 +3740,60 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerQueriesRawDataBytesSuccessfully) {
                   ecclesia::EqualsProto(expected_query_result)));
 }
 
+TEST_F(QueryPlannerTestRunner, CollectionResourceCanBeQueried) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis/Members[*]"
+          properties { property: "Id" type: STRING }
+        }
+      )pb");
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "ChassisSubTreeTest"
+    stats { payload_size: 60 num_cache_misses: 4 }
+    data: {
+      fields {
+        key: "Chassis"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Id"
+                  value { string_value: "chassis" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = &query,
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {}});
+
+  ASSERT_THAT(qp, IsOk());
+  ASSERT_THAT(*qp, NotNull());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = (*qp)->Run({args1});
+
+  EXPECT_FALSE(result.query_result.has_status());
+  EXPECT_THAT(expected_query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(result.query_result)));
+}
+
 }  // namespace
 
 }  // namespace ecclesia
