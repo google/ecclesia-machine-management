@@ -32,17 +32,12 @@ def redpath_query(name, cc_namespace, queries, query_rules = [], visibility = No
 
     native.filegroup(
         name = name + "__query_filegroup",
-        srcs = queries,
+        srcs = queries + query_rules,
     )
-    srcs = [":" + name + "__query_filegroup"]
+    srcs = [":%s__query_filegroup" % (name)]
 
     cmd_suffix = ""
     if len(query_rules) != 0:
-        native.filegroup(
-            name = name + "__query_rule_filegroup",
-            srcs = query_rules,
-        )
-        srcs.append(":" + name + "__query_rule_filegroup")
         cmd_suffix = "--query_rules %s" % _get_file_location_str(query_rules)
 
     native.genrule(
@@ -58,7 +53,7 @@ def redpath_query(name, cc_namespace, queries, query_rules = [], visibility = No
         name = name,
         srcs = [name + ".cc"],
         hdrs = [name + ".h"],
-        tags = ["__query_spec:%s;%s;%s.h" % (cc_namespace, camel_case_name, name)],
+        tags = ["__query_spec:%s;%s;%s.h" % (cc_namespace, camel_case_name, name), "__redpath_queries__"],
         deps = [
             "@com_google_absl//absl/container:flat_hash_set",
             "//ecclesia/lib/file:cc_embed_interface",
