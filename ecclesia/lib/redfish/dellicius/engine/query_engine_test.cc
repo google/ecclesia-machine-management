@@ -129,15 +129,28 @@ void RemoveTimestamps(QueryIdToResult &entries) {
   }
 }
 
+void RemoveStats(QueryIdToResult &entries) {
+  for (auto &[query_id, entry] : *entries.mutable_results()) {
+    entry.clear_stats();
+  }
+}
+
 void VerifyQueryResults(QueryIdToResult actual_entries,
                         QueryIdToResult expected_entries,
                         bool check_num_requests = false,
                         bool check_timestamps = false,
-                        bool check_metrics = false) {
+                        bool check_metrics = false,
+                        bool check_identifiers = false) {
   if (!check_timestamps) {
     RemoveTimestamps(actual_entries);
     RemoveTimestamps(expected_entries);
   }
+
+  if (!check_metrics && !check_num_requests) {
+    RemoveStats(actual_entries);
+    RemoveStats(expected_entries);
+  }
+
   if (!check_metrics) {
     RemoveMetrics(actual_entries);
     RemoveMetrics(expected_entries);
@@ -510,8 +523,9 @@ TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec),
-                              kComponentIntegrityMockupPath, {}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kComponentIntegrityMockupPath,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"GoogleServiceRoot"}, QueryEngine::ServiceRootType::kGoogle);

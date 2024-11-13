@@ -43,6 +43,9 @@ results {
                   value {
                     identifier {
                       local_devpath: "/phys:device:hoth"
+                      redfish_location {
+                        service_label: "Hoth"
+                      }
                     }
                   }
                 }
@@ -85,6 +88,9 @@ results {
                   value {
                     identifier {
                       local_devpath: "/phys:device:tpu0"
+                      redfish_location {
+                        service_label: "tpu0"
+                      }
                     }
                   }
                 }

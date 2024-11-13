@@ -932,8 +932,14 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
   // Get Query Parameters to use for service root
   GetParams get_params_service_root =
       GetQueryParamsForRedPath(kServiceRootNode);
-  RedfishVariant variant = redfish_interface_.GetRoot(get_params_service_root,
-      service_root_);
+  RedfishVariant variant(absl::OkStatus());
+  if (!query_execution_options.custom_service_root.empty()) {
+    variant = redfish_interface_.GetRoot(
+        get_params_service_root, query_execution_options.custom_service_root);
+  } else {
+    variant =
+        redfish_interface_.GetRoot(get_params_service_root, service_root_);
+  }
   if (variant.IsFresh() == CacheState::kIsFresh) {
     cache_stats_.cache_miss += 1;
   } else if (variant.IsFresh() == CacheState::kIsCached) {

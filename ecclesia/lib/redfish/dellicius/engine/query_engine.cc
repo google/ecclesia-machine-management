@@ -300,7 +300,11 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
           {.variables = vars,
            .enable_url_annotation =
                planner_execution_flags.enable_url_annotation,
-           .log_redfish_traces = planner_execution_flags.log_redfish_traces});
+           .log_redfish_traces = planner_execution_flags.log_redfish_traces,
+           .custom_service_root =
+               service_root_uri == QueryEngine::ServiceRootType::kGoogle
+                   ? "/google/v1"
+                   : ""});
     }
     query_id_to_result.mutable_results()->insert(
         {result_single.query_result.query_id(), result_single.query_result});
