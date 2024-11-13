@@ -154,8 +154,8 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
       query_engine_params.cache_factory =
           [cache_duration =
                router_spec.cache_duration_ms()](RedfishTransport *transport) {
-            return TimeBasedCache::Create(transport,
-                                          absl::Milliseconds(cache_duration));
+            return TimeBasedCache::CreateDeepCache(
+                transport, absl::Milliseconds(cache_duration));
           };
     }
 
