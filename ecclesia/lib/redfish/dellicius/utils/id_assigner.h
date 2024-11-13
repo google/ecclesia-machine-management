@@ -22,6 +22,7 @@
 #include "absl/base/attributes.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 
@@ -55,6 +56,13 @@ class IdAssigner {
   // Return absl::NotFoundError if a translation does not exist.
   virtual absl::StatusOr<std::string> IdForRedfishLocationInQueryResult(
       const QueryResultData &query_result, bool is_root) {
+    return absl::UnimplementedError("");
+  }
+
+  // Assign an identifier based on local devpath.
+  // Return absl::NotFoundError if a translation does not exist.
+  virtual absl::StatusOr<std::string> IdForLocalDevpath(
+      absl::string_view local_devpath) {
     return absl::UnimplementedError("");
   }
 };
