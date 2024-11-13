@@ -210,6 +210,12 @@ absl::StatusOr<QueryValue> GetPropertyFromRedfishObject(
   QueryValue query_value;
   if (property.property_element_type() ==
       RedfishProperty::COLLECTION_PRIMITIVE) {
+    if (json_obj.empty()) {
+      return absl::NotFoundError(
+          absl::StrCat("Encountered empty collection property value during ",
+                       "normalization. Property: ", property.property(),
+                       " JSON: ", json_obj.dump()));
+    }
     ECCLESIA_RETURN_IF_ERROR(GetCollectionPropertyFromRedfishObject(
         property, json_obj, query_value));
   } else if (json_obj.is_null()) {
