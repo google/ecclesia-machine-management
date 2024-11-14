@@ -94,6 +94,7 @@ enum class ResourceEntity : int {
   kFan,
   kFanCollection,
   kGoogleBareMetalInstance,
+  kGoogleBootTime,
   kGoogleErrorCounter,
   kGoogleErrorCounterCollection,
   kGoogleManagedObjectStoreMetrics,
