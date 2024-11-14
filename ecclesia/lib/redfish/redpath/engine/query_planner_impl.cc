@@ -440,7 +440,8 @@ QueryPlanner::QueryPlanner(ImplOptions options_in)
       timeout_manager_(options_in.query_timeout.has_value()
                            ? std::make_unique<QueryTimeoutManager>(
                                  *clock_, *options_in.query_timeout)
-                           : nullptr) {}
+                           : nullptr),
+      execution_mode_(options_in.execution_mode) {}
 
 GetParams QueryPlanner::GetQueryParamsForRedPath(
     absl::string_view redpath_prefix) {
@@ -625,14 +626,24 @@ QueryPlanner::ExecuteQueryExpression(
       } else if (indexed_node.IsFresh() == CacheState::kIsCached) {
         cache_stats_.cache_hit += 1;
       }
-      ECCLESIA_RETURN_IF_ERROR(indexed_node.status());
+
       TRACE(trace_info, new_redpath_prefix, get_params_for_redpath.ToString(),
             expression.trie_node->ToString());
-      ECCLESIA_ASSIGN_OR_RETURN(
-          std::unique_ptr<RedfishObject> indexed_node_as_object,
+
+      // Get fresh Redfish Object if user has requested in the query rule.
+      absl::StatusOr<std::unique_ptr<RedfishObject>> indexed_node_as_object =
           GetRedfishObjectWithFreshness(get_params_for_redpath, indexed_node,
-                                        trace_info, &cache_stats_.cache_miss));
-      if (indexed_node_as_object == nullptr) {
+                                        trace_info, &cache_stats_.cache_miss);
+      if (!indexed_node.status().ok() || !indexed_node_as_object.ok()) {
+        if (execution_mode_ == QueryPlanner::ExecutionMode::kFailOnFirstError) {
+          return (!indexed_node.status().ok())
+                     ? indexed_node.status()
+                     : indexed_node_as_object.status();
+        }
+        continue;
+      }
+
+      if (*indexed_node_as_object == nullptr) {
         continue;
       }
 
@@ -642,7 +653,7 @@ QueryPlanner::ExecuteQueryExpression(
       if (query_type == QueryType::kSubscription &&
           redpath_rules_.redpaths_to_subscribe.contains(new_redpath_prefix)) {
         std::optional<std::string> odata_id =
-            indexed_node_as_object->GetNodeValue<PropertyOdataId>();
+            (*indexed_node_as_object)->GetNodeValue<PropertyOdataId>();
         if (odata_id.has_value()) {
           current_execution_context.uris_to_subscribe.push_back(
               odata_id.value());
@@ -655,12 +666,12 @@ QueryPlanner::ExecuteQueryExpression(
                                       .node_index = node_index,
                                       .node_set_size = node_count},
                                      current_execution_context,
-                                     indexed_node_as_object));
+                                     *indexed_node_as_object));
 
       if (predicate_rule_result) {
         execution_contexts.push_back(current_execution_context.FromExisting(
             new_redpath_prefix, get_params_for_redpath,
-            {std::move(indexed_node_as_object), nullptr}));
+            {std::move(*indexed_node_as_object), nullptr}));
       }
     }
   } else if (current_redfish_obj) {
@@ -761,7 +772,7 @@ QueryPlanner::ExecuteQueryExpression(
       if (!redfish_response.redfish_object) {
         DLOG(INFO) << "Cannot query NodeName " << expression.expression
                    << " in Redfish Object:\n"
-                   << current_redfish_obj->GetContentAsJson().dump(1)
+                   << redfish_variant.DebugString()
                    << "\nStatus: " << redfish_variant.status();
         return execution_contexts;
       }
@@ -1040,6 +1051,9 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
         }
         PopulateSubqueryErrorStatus(execution_contexts.status(),
                                     current_execution_context, expression);
+        if (execution_mode_ == ExecutionMode::kContinueOnSubqueryErrors) {
+          continue;
+        }
         return query_execution_result;
       }
 

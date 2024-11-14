@@ -513,7 +513,12 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
              .redfish_interface = redfish_interface.get(),
              .redpath_rules = CreateRedPathRules(std::move(query_info.rule)),
              .clock = query_spec.clock,
-             .query_timeout = query_info.timeout}));
+             .query_timeout = query_info.timeout,
+             .execution_mode =
+                 engine_params.features.fail_on_first_error()
+                     ? QueryPlanner::ExecutionMode::kFailOnFirstError
+                     : QueryPlanner::ExecutionMode::
+                           kContinueOnSubqueryErrors}));
     id_to_redpath_trie_plans[query_id] = std::move(query_planner);
   }
   return QueryEngine(

@@ -136,6 +136,11 @@ struct CacheStats {
 // QueryPlannerImpl is a thread safe implementation.
 class QueryPlanner final : public QueryPlannerIntf {
  public:
+  enum class ExecutionMode : std::uint8_t {
+    kFailOnFirstError,
+    kContinueOnSubqueryErrors
+  };
+
   struct ImplOptions {
     const DelliciusQuery *query = nullptr;
     RedpathNormalizer *normalizer = nullptr;
@@ -144,6 +149,7 @@ class QueryPlanner final : public QueryPlannerIntf {
     RedPathRules redpath_rules;
     const Clock *clock = nullptr;
     const std::optional<absl::Duration> query_timeout = std::nullopt;
+    ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError;
   };
 
   explicit QueryPlanner(ImplOptions options_in);
@@ -195,6 +201,7 @@ class QueryPlanner final : public QueryPlannerIntf {
   const Clock *clock_ = nullptr;
   CacheStats cache_stats_;
   std::unique_ptr<QueryTimeoutManager> timeout_manager_ = nullptr;
+  const ExecutionMode execution_mode_;
 };
 
 absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(

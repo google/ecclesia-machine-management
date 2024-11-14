@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/redfish/redpath/engine/query_planner_impl.h"
 
+#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -96,7 +97,9 @@ class QueryPlannerTestRunner : public ::testing::Test {
   }
 
   absl::StatusOr<QueryExecutionResult> PlanAndExecuteQuery(
-      const DelliciusQuery &query) {
+      const DelliciusQuery &query,
+      QueryPlanner::ExecutionMode execution_mode =
+          QueryPlanner::ExecutionMode::kFailOnFirstError) {
     CHECK(server_ != nullptr && intf_ != nullptr) << "Test parameters not set!";
     std::unique_ptr<RedpathNormalizer> normalizer =
         BuildDefaultRedpathNormalizer();
@@ -106,7 +109,8 @@ class QueryPlannerTestRunner : public ::testing::Test {
         BuildQueryPlanner({.query = &query,
                            .normalizer = normalizer.get(),
                            .redfish_interface = intf_.get(),
-                           .redpath_rules = {}}));
+                           .redpath_rules = {},
+                           .execution_mode = execution_mode}));
     ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
     return qp->Run({args1});
   }
@@ -3792,6 +3796,471 @@ TEST_F(QueryPlannerTestRunner, CollectionResourceCanBeQueried) {
   EXPECT_THAT(expected_query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
                   ecclesia::EqualsProto(result.query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerContinuesQueryOnErrorCollectionResource) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "SensorCollector"
+           subquery {
+             subquery_id: "Sensors"
+             redpath: "/Chassis[*]/Sensors[*]"
+             properties { property: "Name" type: STRING }
+             properties { property: "ReadingType" type: STRING }
+             properties { property: "ReadingUnits" type: STRING }
+             properties { property: "Reading" type: INT64 }
+           })pb");
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm",
+      [](ServerRequestInterface *req) {
+        req->ReplyWithStatus(HTTPStatusCode::UNAUTHORIZED);
+      });
+
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(
+      query, QueryPlanner::ExecutionMode::kContinueOnSubqueryErrors);
+
+  // Ensure that after encountering a NOT_FOUND error, the query status is
+  // OK and no error summaries are populated.
+  ASSERT_THAT(result, IsOk());
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "SensorCollector"
+    stats { payload_size: 1189 num_cache_misses: 18 }
+    data {
+      fields {
+        key: "Sensors"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "fan0" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 16115 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Rotational" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "RPM" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "fan1" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 16115 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Rotational" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "RPM" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "fan2" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 16115 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Rotational" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "RPM" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "fan3" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 16115 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Rotational" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "RPM" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "fan4" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 16115 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Rotational" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "RPM" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "fan5" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 16115 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Rotational" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "RPM" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "fan6" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 16115 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Rotational" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "RPM" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "indus_eat_temp" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 28 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Temperature" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "Cel" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "indus_latm_temp" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 35 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Temperature" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "Cel" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU0" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 30 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Power" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "W" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU1" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 30 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Power" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "W" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU0" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 60 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Temperature" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "Cel" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU1" }
+                }
+                fields {
+                  key: "Reading"
+                  value { int_value: 60 }
+                }
+                fields {
+                  key: "ReadingType"
+                  value { string_value: "Temperature" }
+                }
+                fields {
+                  key: "ReadingUnits"
+                  value { string_value: "Cel" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+  EXPECT_THAT(result->query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(expected_query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerStopsQueryOnErrorCollectionResource) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "SensorCollector"
+           subquery {
+             subquery_id: "Sensors"
+             redpath: "/Chassis[*]/Sensors[*]"
+             properties { property: "Name" type: STRING }
+             properties { property: "ReadingType" type: STRING }
+             properties { property: "ReadingUnits" type: STRING }
+             properties { property: "Reading" type: INT64 }
+           })pb");
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm",
+      [](ServerRequestInterface *req) {
+        req->ReplyWithStatus(HTTPStatusCode::UNAUTHORIZED);
+      });
+
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(
+      query, QueryPlanner::ExecutionMode::kFailOnFirstError);
+
+  ASSERT_THAT(result, IsOk());
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "SensorCollector"
+    status {
+      errors: "Cannot resolve NodeName * to valid Redfish object at path /Chassis[*]/Sensors. Redfish Request failed with error: Unauthorized"
+      error_code: ERROR_UNAUTHENTICATED
+    }
+    stats { payload_size: 152 num_cache_misses: 12 }
+  )pb");
+  EXPECT_THAT(result->query_result,
+              ecclesia::EqualsProto(expected_query_result));
+}
+
+TEST_F(QueryPlannerTestRunner, QueryPlannerStopsQueryOnErrorSingletonResource) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "SensorCollector"
+           subquery {
+             subquery_id: "Sensors"
+             redpath: "/Chassis[*]/Sensors"
+             properties { property: "Name" type: STRING }
+             properties { property: "ReadingType" type: STRING }
+             properties { property: "ReadingUnits" type: STRING }
+             properties { property: "Reading" type: INT64 }
+           }
+           subquery {
+             subquery_id: "Assembly"
+             redpath: "/Chassis[*]/Assembly"
+             properties { property: "Name" type: STRING }
+             properties { property: "ReadingType" type: STRING }
+             properties { property: "ReadingUnits" type: STRING }
+             properties { property: "Reading" type: INT64 }
+           })pb");
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::atomic<bool> called = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/Sensors",
+      [&called](ServerRequestInterface *req) {
+        if (called) {
+          req->ReplyWithStatus(HTTPStatusCode::OK);
+          return;
+        }
+        called = true;
+        req->ReplyWithStatus(HTTPStatusCode::UNAUTHORIZED);
+      });
+
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/Assembly",
+      [&called](ServerRequestInterface *req) {
+        if (called) {
+          req->ReplyWithStatus(HTTPStatusCode::OK);
+          return;
+        }
+        called = true;
+        req->ReplyWithStatus(HTTPStatusCode::UNAUTHORIZED);
+      });
+
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(
+      query, QueryPlanner::ExecutionMode::kFailOnFirstError);
+
+  ASSERT_THAT(result, IsOk());
+  EXPECT_EQ(result->query_result.data().ByteSizeLong(), 0);
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerContinuesQueryOnErrorSingletonResource) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "SensorCollector"
+           subquery {
+             subquery_id: "Sensors"
+             redpath: "/Chassis[*]/Sensors"
+             properties { property: "Name" type: STRING }
+           }
+           subquery {
+             subquery_id: "Assembly"
+             redpath: "/Chassis[*]/Assembly"
+             properties { property: "Name" type: STRING }
+           })pb");
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::atomic<bool> called = false;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/Sensors",
+      [&called](ServerRequestInterface *req) {
+        if (!called) {
+          called = true;
+          req->ReplyWithStatus(HTTPStatusCode::UNAUTHORIZED);
+          return;
+        }
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors",
+            "@odata.type": "#SensorCollection.SensorCollection",
+            "Name": "Chassis sensors",
+            "Members@odata.count": 2,
+            "Members": [
+                {
+                    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/indus_fan0_rpm"
+                },
+                {
+                    "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/indus_fan1_rpm"
+                }
+            ]
+          })json");
+        req->ReplyWithStatus(HTTPStatusCode::OK);
+      });
+
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/Assembly",
+      [&called](ServerRequestInterface *req) {
+        if (!called) {
+          called = true;
+          req->ReplyWithStatus(HTTPStatusCode::UNAUTHORIZED);
+          return;
+        }
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json(
+          {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Assembly",
+            "@odata.type": "#Assembly.v1_2_0.Assembly",
+            "Id": "Assembly",
+            "Name": "indus",
+            "Assemblies": [
+              {
+                "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0",
+                "MemberId": "0",
+                "Name": "indus"
+              }
+            ]
+          })json");
+        req->ReplyWithStatus(HTTPStatusCode::OK);
+      });
+
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(
+      query, QueryPlanner::ExecutionMode::kContinueOnSubqueryErrors);
+
+  ASSERT_THAT(result, IsOk());
+  EXPECT_NE(result->query_result.data().ByteSizeLong(), 0);
 }
 
 }  // namespace
