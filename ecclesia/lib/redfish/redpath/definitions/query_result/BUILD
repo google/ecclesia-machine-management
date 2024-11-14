@@ -49,7 +49,6 @@ cc_test(
         "//ecclesia/lib/testing:status",
         "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/container:flat_hash_set",
-        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
@@ -69,7 +68,6 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/strings:string_view",
         "@com_google_absl//absl/types:span",
     ],
@@ -107,6 +105,7 @@ cc_library(
     name = "verification",
     srcs = ["verification.cc"],
     hdrs = ["verification.h"],
+    visibility = ["//visibility:public"],
     deps = [
         ":converter",
         ":query_result",
