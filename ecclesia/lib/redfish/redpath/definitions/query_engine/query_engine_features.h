@@ -32,7 +32,7 @@ inline QueryEngineFeatures DefaultQueryEngineFeatures() {
   return features;
 }
 
-inline QueryEngineFeatures StreamingQueryEngineFeatures() {
+inline QueryEngineFeatures StandardQueryEngineFeatures() {
   QueryEngineFeatures features;
   features.set_fail_on_first_error(true);
   features.set_enable_streaming(true);

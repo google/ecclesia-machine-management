@@ -121,7 +121,7 @@ class FakeQueryEngine : public QueryEngineIntf {
 
     QueryEngineFeatures features;
     if (params.streaming == Streaming::kEnable) {
-      features = StreamingQueryEngineFeatures();
+      features = StandardQueryEngineFeatures();
     } else if (params.annotations == Annotations::kEnable) {
       features = EnableQueryEngineFeatures(
           RedfishAnnotationsPasskeyFactory::GetPassKey());

@@ -147,7 +147,7 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
     if (router_spec.has_features()) {
       query_engine_params.features = router_spec.features();
     } else {
-      query_engine_params.features = StreamingQueryEngineFeatures();
+      query_engine_params.features = StandardQueryEngineFeatures();
     }
 
     if (router_spec.cache_duration_ms() > 0) {

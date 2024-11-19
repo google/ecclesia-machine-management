@@ -1263,7 +1263,7 @@ TEST(QueryEngineTest, CanCreateQueryEngineWithStreamingFeature) {
       auto query_engine,
       QueryEngine::Create(std::move(query_spec),
                           {.transport = std::move(transport),
-                           .features = StreamingQueryEngineFeatures()}));
+                           .features = StandardQueryEngineFeatures()}));
 }
 
 TEST(QueryEngineTest, CanExecuteSubscriptionQuerySuccessfully) {
@@ -1864,7 +1864,7 @@ TEST(QueryEngineTest, CanExecuteNonStreamingQueryWithStreamingQueryEngine) {
                                    .query_rules = kQueryRules,
                                    .clock = &clock}));
 
-  QueryEngineFeatures features = StreamingQueryEngineFeatures();
+  QueryEngineFeatures features = StandardQueryEngineFeatures();
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
       QueryEngine::Create(std::move(query_spec),
@@ -1917,7 +1917,7 @@ TEST_F(QueryEngineGrpcTestRunner,
                                    .query_rules = kQueryRules,
                                    .clock = &clock_}));
 
-  QueryEngineFeatures features = StreamingQueryEngineFeatures();
+  QueryEngineFeatures features = StandardQueryEngineFeatures();
   std::string expected_str = R"json({
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
     "@odata.id": "/redfish/v1",
