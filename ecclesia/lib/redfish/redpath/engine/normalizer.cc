@@ -422,9 +422,17 @@ absl::Status RedpathNormalizerImplAddMachineBarepath::Normalize(
   // Root devpath is assigned to the root Chassis, to do this we need to track
   // if the resource is Chassis type and has no redfish location.
   std::string resource_type;
-  redfish_object[ecclesia::PropertyOdataId::Name].GetValue(&resource_type);
+  redfish_object.Get(ecclesia::PropertyOdataType::Name)
+      .GetValue(&resource_type);
   bool is_root = absl::StrContains(resource_type, "#Chassis.") &&
                  service_label.empty() && part_location_context.empty();
+
+  // Root Chassis may not have the identifier tag populated but by definition it
+  // is a root. Need to populate it with empty redfish location.
+  if (!query_value_reader.ok() && is_root) {
+    *(*data_set_local.mutable_fields())[kIdentifierTag]
+         .mutable_identifier() = {};
+  }
 
   // Try to find and set a machine devpath, prioritizing local devpath to
   // machine devpath mappings from UHMM when desired.
