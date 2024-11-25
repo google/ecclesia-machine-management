@@ -695,6 +695,21 @@ TEST_F(HttpRedfishInterfaceTestCache, GetFromDeepCache) {
             "@odata.id": "/redfish/v1/Systems/1/Memory/1/MemoryModules/1",
             "CapacityMiB": 16384
           }
+        ],
+        "Assemblies": [
+          {
+              "@odata.id": "/redfish/v1/Systems/1/Memory/1#/Assemblies/0",
+              "@odata.type": "#Assembly.v1_3_0.AssemblyData",
+              "Location": {
+                  "PartLocation": {
+                      "LocationType": "Slot",
+                      "ServiceLabel": "CPU0_ANCHORS"
+                  }
+              },
+              "MemberId": "0",
+              "Model": "cooler",
+              "Name": "CpuCooler0"
+          }
         ]
       }
     }
@@ -708,8 +723,38 @@ TEST_F(HttpRedfishInterfaceTestCache, GetFromDeepCache) {
         "@odata.id": "/redfish/v1/Systems/1/Memory/1/MemoryModules/1",
         "CapacityMiB": 16384
       }
+    ],
+    "Assemblies": [
+      {
+          "@odata.id": "/redfish/v1/Systems/1/Memory/1#/Assemblies/0",
+          "@odata.type": "#Assembly.v1_3_0.AssemblyData",
+          "Location": {
+              "PartLocation": {
+                  "LocationType": "Slot",
+                  "ServiceLabel": "CPU0_ANCHORS"
+              }
+          },
+          "MemberId": "0",
+          "Model": "cooler",
+          "Name": "CpuCooler0"
+      }
     ]
   })json");
+
+  auto assembly_json = nlohmann::json::parse(R"json({
+    "@odata.id": "/redfish/v1/Systems/1/Memory/1#/Assemblies/0",
+    "@odata.type": "#Assembly.v1_3_0.AssemblyData",
+    "Location": {
+        "PartLocation": {
+            "LocationType": "Slot",
+            "ServiceLabel": "CPU0_ANCHORS"
+        }
+    },
+    "MemberId": "0",
+    "Model": "cooler",
+    "Name": "CpuCooler0"
+  })json");
+
   server_->AddHttpGetHandler(
       "/redfish/v1/Systems/1", [&](ServerRequestInterface *req) {
         called_count++;
@@ -745,6 +790,14 @@ TEST_F(HttpRedfishInterfaceTestCache, GetFromDeepCache) {
     EXPECT_THAT(memory_called_count, Eq(0));
     EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
                 Eq(memory_json));
+  }
+
+  {
+    auto result = intf_->CachedGetUri(
+        "/redfish/v1/Systems/1/Memory/1#/Assemblies/0", GetParams{});
+    EXPECT_THAT(memory_called_count, Eq(0));
+    EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+                Eq(assembly_json));
   }
 }
 

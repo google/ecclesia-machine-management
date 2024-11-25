@@ -460,10 +460,6 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
            .annotations = FakeQueryEngine::Annotations::kDisable,
            .cache = FakeQueryEngine::Cache::kInfinite}));
 
-  // Hold all the metrics collected from each query execution to validate
-  // later.
-  RedfishMetrics metrics_first;
-  RedfishMetrics metrics_cached;
   {
     // On first query, thermal subsystem won't be queried explicitly since
     // chassis level 2 expand will return thermal objects. Here we expect to
@@ -471,23 +467,11 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
     QueryIdToResult response_entries =
         query_engine->ExecuteRedpathQuery({"Thermal"});
     ASSERT_THAT(response_entries.results(), Not(IsEmpty()));
-    metrics_first =
+    const RedfishMetrics &metrics =
         response_entries.results().at("Thermal").stats().redfish_metrics();
-  }
-  {
-    // Query again. This time all resources up to Thermal should be served
-    // from cache. All Thermal objects will be freshly queried.
-    QueryIdToResult response_entries =
-        query_engine->ExecuteRedpathQuery({"Thermal"});
-    ASSERT_THAT(response_entries.results(), Not(IsEmpty()));
-    metrics_cached =
-        response_entries.results().at("Thermal").stats().redfish_metrics();
-  }
+    size_t traced_chassis_expand = 0;
+    size_t traced_thermal = 0;
 
-  size_t traced_chassis_expand = 0;
-  size_t traced_thermal = 0;
-
-  for (const RedfishMetrics &metrics : {metrics_first, metrics_cached}) {
     for (const auto &uri_x_metric : metrics.uri_to_metrics_map()) {
       if (uri_x_metric.first == "/redfish/v1/Chassis?$expand=.($levels=2)") {
         ++traced_chassis_expand;
@@ -497,18 +481,41 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
         }
       }
 
-      if (uri_x_metric.first ==
-          "/redfish/v1/Chassis/chassis/Thermal/#/Temperatures/0") {
+      if (uri_x_metric.first == "/redfish/v1/Chassis/chassis/Thermal/") {
+        ++traced_thermal;
+      }
+    }
+    EXPECT_EQ(traced_chassis_expand, 1);
+    EXPECT_EQ(traced_thermal, 0);
+  }
+  {
+    // Query again. This time all resources up to Thermal should be served
+    // from cache. All Thermal objects will be freshly queried.
+    QueryIdToResult response_entries =
+        query_engine->ExecuteRedpathQuery({"Thermal"});
+    ASSERT_THAT(response_entries.results(), Not(IsEmpty()));
+    const RedfishMetrics &metrics =
+        response_entries.results().at("Thermal").stats().redfish_metrics();
+
+    size_t traced_chassis_expand = 0;
+    size_t traced_thermal = 0;
+
+    for (const auto &uri_x_metric : metrics.uri_to_metrics_map()) {
+      if (uri_x_metric.first == "/redfish/v1/Chassis?$expand=.($levels=2)") {
+        ++traced_chassis_expand;
+      }
+
+      if (uri_x_metric.first == "/redfish/v1/Chassis/chassis/Thermal/") {
         ++traced_thermal;
         for (const auto &metadata :
              uri_x_metric.second.request_type_to_metadata()) {
-          EXPECT_EQ(metadata.second.request_count(), 1);
+          EXPECT_EQ(metadata.second.request_count(), 24);
         }
       }
     }
+    EXPECT_EQ(traced_chassis_expand, 0);
+    EXPECT_EQ(traced_thermal, 1);
   }
-  EXPECT_EQ(traced_chassis_expand, 1);
-  EXPECT_EQ(traced_thermal, 1);
 }
 
 TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {

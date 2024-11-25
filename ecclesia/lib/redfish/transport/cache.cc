@@ -90,20 +90,25 @@ void TimeBasedCache::CacheNestedObjects(
         continue;
       }
 
-      if (current_obj.is_object()) {
-        std::string id = find_id->get<std::string>();
-        absl::MutexLock mu(&get_cache_lock_);
-        if (get_cache_.find(id) != get_cache_.end()) {
-          continue;
-        }
-        RedfishTransport::Result new_result = {.code = result.code,
-                                               .body = current_obj,
-                                               .headers = result.headers};
-        get_cache_.insert(std::make_pair(
-            id,
-            std::make_unique<CacheNode>(id, std::move(new_result), transport_,
-                                        *clock_, get_max_age_)));
+      if (!current_obj.is_object()) {
+        continue;
       }
+
+      std::string id = find_id->get<std::string>();
+      // Strip URI fragment before caching.
+      auto pos = id.find('#');
+      if (pos != std::string::npos) {
+        id = id.substr(0, pos);
+      }
+      absl::MutexLock mu(&get_cache_lock_);
+      if (get_cache_.find(id) != get_cache_.end()) {
+        continue;
+      }
+      RedfishTransport::Result new_result = {
+          .code = result.code, .body = current_obj, .headers = result.headers};
+      get_cache_.insert(std::make_pair(
+          id, std::make_unique<CacheNode>(id, std::move(new_result), transport_,
+                                          *clock_, get_max_age_)));
     }
   }
 }
@@ -111,6 +116,15 @@ void TimeBasedCache::CacheNestedObjects(
 TimeBasedCache::CacheNode &TimeBasedCache::RetrieveCacheNode(
     absl::string_view path) {
   absl::MutexLock mu(&get_cache_lock_);
+  // As per the Redfish spec -
+  //  "When a URI includes a fragment ( frag ) to submit an operation, the
+  //  server ignores the fragment."
+  // https://www.dmtf.org/sites/default/files/standards/documents/DSP0266_1.21.0.pdf
+  // Therefore, we strip the fragment to retrieve the node.
+  auto pos = path.find('#');
+  if (pos != std::string::npos) {
+    path = path.substr(0, pos);
+  }
   auto val = get_cache_.find(path);
   if (val != get_cache_.end()) {
     return *val->second;
