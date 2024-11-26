@@ -1,3 +1,4 @@
+load("//devtools/bbcp/builddefs:build_defs.bzl", "generated_file")
 load("//ecclesia/build_defs:embed.bzl", "cc_data_library")
 
 # Description:
@@ -584,6 +585,9 @@ cc_data_library(
     data = glob(["topology_configs/*.textpb"]),
     var_name = "kTopologyConfig",
 )
+
+# go/bbcp-register for query engine copybaras
+generated_file(wrapped_target = ":topology_configs__generator")
 
 cc_library(
     name = "to_proto",
