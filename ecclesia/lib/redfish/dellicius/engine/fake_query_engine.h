@@ -115,7 +115,7 @@ class FakeQueryEngine : public QueryEngineIntf {
     auto *cache_factory = (params.cache == Cache::kDisable)
                               ? NullCache::Create
                               : ([](RedfishTransport *transport) {
-                                  return TimeBasedCache::Create(
+                                  return TimeBasedCache::CreateDeepCache(
                                       transport, absl::InfiniteDuration());
                                 });
 
