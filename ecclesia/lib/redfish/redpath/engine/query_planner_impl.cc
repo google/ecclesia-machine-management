@@ -135,14 +135,19 @@ std::string AddExpressionToRedPath(absl::string_view redpath_prefix,
 // Generate a $filter string based on the predicates listed as children of this
 // node.
 absl::StatusOr<std::string> GetFilterStringFromNextNode(
-    RedPathTrieNode *next_trie_node) {
+    RedPathTrieNode *next_trie_node,
+    const QueryExecutionContext &execution_context) {
   std::vector<std::string> predicates;
   for (const auto &expression : next_trie_node->child_expressions) {
     if (expression.type == RedPathExpression::Type::kPredicate) {
       // If some of the predicates are invalid for $filter, ie
       // "[*]" or "[Property]" the entire filter generation will fail, which is
       // intended behavior.
-      predicates.push_back(expression.expression);
+      ECCLESIA_ASSIGN_OR_RETURN(
+          std::string new_predicate,
+          SubstituteVariables(expression.expression,
+                              execution_context.query_variables));
+      predicates.push_back(std::move(new_predicate));
     }
   }
   return BuildFilterFromRedpathPredicateList(predicates);
@@ -695,8 +700,8 @@ QueryPlanner::ExecuteQueryExpression(
         // Since filter is enabled all predicates that rely on the redfish data
         // returned from this call need to be added to the $filter parameter
         // that is sent to the Redfish agent.
-        absl::StatusOr<std::string> filter_string =
-            GetFilterStringFromNextNode(expression.trie_node);
+        absl::StatusOr<std::string> filter_string = GetFilterStringFromNextNode(
+            expression.trie_node, current_execution_context);
         if (filter_string.ok()) {
           get_params_for_redpath.filter->SetFilterString(filter_string.value());
         }

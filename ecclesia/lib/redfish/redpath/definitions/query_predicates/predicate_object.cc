@@ -62,7 +62,8 @@ absl::StatusOr<RelationalExpression> EncodeRelationalExpression(
     relational_expression.rhs = rhs;
     return relational_expression;
   }
-  return absl::InvalidArgumentError("Invalid expression");
+  return absl::InvalidArgumentError(
+      absl::StrCat("Invalid relational expression: ", expression));
 }
 
 std::string RelationalExpressionToString(const RelationalExpression &relexp) {

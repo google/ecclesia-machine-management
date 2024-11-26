@@ -4263,6 +4263,74 @@ TEST_F(QueryPlannerTestRunner,
   EXPECT_NE(result->query_result.data().ByteSizeLong(), 0);
 }
 
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerExecutesTemplatedQueryWithFilterRulesCorrectly) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "Assembly"
+          root_subquery_ids: "Chassis"
+          redpath: "/Assembly/Assemblies[Name=indus]"
+          properties { property: "Name" type: STRING }
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[Name=$Name and Reading<$Threshold]"
+          properties { property: "Name" type: STRING }
+          properties { property: "Reading" type: INT64 }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  auto transport = std::make_unique<MetricalRedfishTransport>(
+      server_->RedfishClientTransport(), Clock::RealClock());
+  auto cache = std::make_unique<NullCache>(transport.get());
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  RedPathRules redpath_rules = {
+      .redpath_to_query_params = {
+          {"/Chassis[*]/Sensors", {.filter = RedfishQueryParamFilter("")}}}};
+
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = &query,
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf.get(),
+                         .redpath_rules = std::move(redpath_rules)});
+  ASSERT_THAT(qp, IsOk());
+  ASSERT_THAT(*qp, NotNull());
+  QueryVariables args1 = ecclesia::QueryVariables();
+  QueryVariables::VariableValue val1;
+  QueryVariables::VariableValue val2;
+  val1.set_name("Threshold");
+  *val1.add_values() = "36";
+  val2.set_name("Name");
+  *val2.add_values() = "indus_latm_temp";
+
+  *args1.add_variable_values() = val1;
+  *args1.add_variable_values() = val2;
+  QueryExecutionResult result = (*qp)->Run({args1});
+
+  EXPECT_FALSE(result.query_result.has_status());
+  ASSERT_TRUE(result.query_result.stats().has_redfish_metrics());
+  EXPECT_TRUE(result.query_result.stats()
+                  .redfish_metrics()
+                  .uri_to_metrics_map()
+                  .contains("/redfish/v1/Chassis/chassis/"
+                            "Sensors?$filter=Name%20eq%20%27indus_latm_temp%27%"
+                            "20and%20Reading%20lt%2036"));
+}
+
 }  // namespace
 
 }  // namespace ecclesia
