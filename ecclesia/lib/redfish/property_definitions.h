@@ -354,6 +354,12 @@ DEFINE_REDFISH_PROPERTY(PropertyMetricValue, std::string, "MetricValue");
 DEFINE_REDFISH_PROPERTY(PropertyState, std::string, "State");
 DEFINE_REDFISH_PROPERTY(PropertyVendorId, std::string, "VendorId");
 DEFINE_REDFISH_PROPERTY(PropertyDeviceId, std::string, "DeviceId");
+DEFINE_REDFISH_PROPERTY(PropertyBusNumber, std::string, "BusNumber");
+DEFINE_REDFISH_PROPERTY(PropertyClassCode, std::string, "ClassCode");
+DEFINE_REDFISH_PROPERTY(PropertyDeviceNumber, std::string, "DeviceNumber");
+DEFINE_REDFISH_PROPERTY(PropertyFunctionNumber, std::string, "FunctionNumber");
+DEFINE_REDFISH_PROPERTY(PropertyDomain, std::string, "Domain");
+DEFINE_REDFISH_PROPERTY(PropertyRevisionId, std::string, "RevisionId");
 DEFINE_REDFISH_PROPERTY(PropertySubsystemId, std::string, "SubsystemId");
 DEFINE_REDFISH_PROPERTY(PropertySubsystemVendorId, std::string,
                         "SubsystemVendorId");
