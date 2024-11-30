@@ -1,3 +1,5 @@
+load("//third_party/protobuf/bazel:proto_library.bzl", "proto_library")
+
 proto_library(
     name = "query_router_spec_proto",
     srcs = ["query_router_spec.proto"],

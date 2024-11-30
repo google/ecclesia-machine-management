@@ -1,4 +1,5 @@
 load("//ecclesia/build_defs:embed.bzl", "cc_data_library")
+load("//third_party/protobuf/bazel:proto_library.bzl", "proto_library")
 
 # Description:
 # C++ wrapper interfaces for libredfish

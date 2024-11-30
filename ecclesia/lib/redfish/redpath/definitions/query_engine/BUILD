@@ -1,3 +1,5 @@
+load("//third_party/protobuf/bazel:proto_library.bzl", "proto_library")
+
 proto_library(
     name = "query_engine_features_proto",
     srcs = ["query_engine_features.proto"],
