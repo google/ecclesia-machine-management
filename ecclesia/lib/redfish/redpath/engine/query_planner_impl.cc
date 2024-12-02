@@ -358,11 +358,9 @@ void PopulateSubqueryErrorStatus(const absl::Status &node_status,
       ". Redfish Request failed with error: ", node_status.message());
   if (code == absl::StatusCode::kUnavailable) {
     error_code = ecclesia::ErrorCode::ERROR_UNAVAILABLE;
-  }
-  if (code == absl::StatusCode::kUnauthenticated) {
+  } else if (code == absl::StatusCode::kUnauthenticated) {
     error_code = ecclesia::ErrorCode::ERROR_UNAUTHENTICATED;
-  }
-  if (code == absl::StatusCode::kDeadlineExceeded) {
+  } else if (code == absl::StatusCode::kDeadlineExceeded) {
     error_code = ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT;
   }
   execution_context.result.mutable_status()->add_errors(error_message);
