@@ -190,6 +190,16 @@ inline constexpr char kRfOemPropertyTimeoutCount[] = "TimeoutCount";
 inline constexpr char kRfOemPropertyWatchdog[] = "Watchdog";
 inline constexpr char kRfOemPropertyWatchdogSystemResets[] =
     "WatchdogSystemResets";
+inline constexpr char kRfOemPropertyHft[] = "Hft";
+inline constexpr char kRfOemPropertyHftSensorList[] = "HftSensorList";
+inline constexpr char kRfOemPropertyHftSensorName[] = "name";
+inline constexpr char kRfOemPropertyHftSensorType[] = "type";
+inline constexpr char kRfOemPropertyHftSensorUnits[] = "unit";
+inline constexpr char kRfOemPropertyHftLogs[] = "HftLogs";
+inline constexpr char kRfOemPropertyHftReadings[] = "readings";
+inline constexpr char kRfOemPropertyHftReading[] = "reading";
+inline constexpr char kRfOemPropertyHftTimestamp[] = "timestamp";
+inline constexpr char kRfOemPropertyHftCommand[] = "command";
 inline constexpr char kRfOemPropertyMctpSerial[] = "MctpSerial";
 inline constexpr char kRfOemPropertyOpenBmc[] = "OpenBmc";
 inline constexpr char kRfOemPropertyFan[] = "Fan";
@@ -535,6 +545,13 @@ DEFINE_REDFISH_PROPERTY(OemPropertyEmbeddedLocationContext,
                         std::vector<std::string>, "EmbeddedLocationContext");
 DEFINE_REDFISH_PROPERTY(OemPropertyControllerType, std::string,
                         "ControllerType");
+
+// OEM HFT properties
+DEFINE_REDFISH_PROPERTY(OemPropertyHftReading, std::string, "reading");
+DEFINE_REDFISH_PROPERTY(OemPropertyHftTimestamp, std::string, "timestamp");
+DEFINE_REDFISH_PROPERTY(OemPropertyHftSensorName, std::string, "name");
+DEFINE_REDFISH_PROPERTY(OemPropertyHftSensorType, std::string, "type");
+DEFINE_REDFISH_PROPERTY(OemPropertyHftSensorUnits, std::string, "unit");
 
 // Redfish Task properties.
 DEFINE_REDFISH_PROPERTY(PropertyTaskStatus, std::string, "TaskStatus");
