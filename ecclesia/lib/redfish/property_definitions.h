@@ -57,6 +57,7 @@ inline constexpr char kRfPropertyControlMode[] = "ControlMode";
 inline constexpr char kRfPropertyProtocolOem[] = "OEM";
 inline constexpr char kRfPropertyOem[] = "Oem";
 inline constexpr char kRfPropertyLifeTime[] = "LifeTime";
+inline constexpr char kRfPropertyI2CBuses[] = "I2CBuses";
 inline constexpr char kRfPropertyCurrentPeriod[] = "CurrentPeriod";
 inline constexpr char kRfPropertyCurrentSpeedGbps[] = "CurrentSpeedGbps";
 inline constexpr char kRfPropertyCacheMetricsTotal[] = "CacheMetricsTotal";
@@ -522,10 +523,13 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyNerf, std::string, "NERF");
 DEFINE_REDFISH_PROPERTY(OemPropertyRootOfTrust, std::string, "RootOfTrust");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyWatchdogSystemResets, int,
                         "WatchdogSystemResets");
-DEFINE_REDFISH_PROPERTY(OemGooglePropertyBusName, std::string,
-                        "BusName");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyBusName, std::string, "BusName");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyRxErrorCount, int, "RxErrorCount");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyTotalRxPackets, int, "TotalRxPackets");
+DEFINE_REDFISH_PROPERTY(PropertyI2CBusName, std::string, "I2CBusName");
+DEFINE_REDFISH_PROPERTY(PropertyBusErrorCount, int, "BusErrorCount");
+DEFINE_REDFISH_PROPERTY(PropertyTotalTransactionCount, int,
+                        "TotalTransactionCount");
 
 DEFINE_REDFISH_PROPERTY(OemPropertyEmbeddedLocationContext,
                         std::vector<std::string>, "EmbeddedLocationContext");
