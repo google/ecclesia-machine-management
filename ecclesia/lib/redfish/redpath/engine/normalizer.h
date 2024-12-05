@@ -56,16 +56,28 @@ class RedpathNormalizer {
 
   // Returns normalized dataset, possibly empty. RedpathNormalizers can be
   // nested and empty dataset on one level can be extended in outer normalizers.
+  // This normalization would start from an empty dataset.
   absl::StatusOr<ecclesia::QueryResultData> Normalize(
       const RedfishObject &redfish_object,
       const DelliciusQuery::Subquery &query,
       const RedpathNormalizerOptions &options) {
+    ecclesia::QueryResultData data_set;
+    ECCLESIA_RETURN_IF_ERROR(
+        Normalize(redfish_object, query, data_set, options));
+    return data_set;
+  }
+
+  // Similar to above method but accepts an existing dataset, so we can chain
+  // multiple normalizers.
+  absl::Status Normalize(const RedfishObject &redfish_object,
+                         const DelliciusQuery::Subquery &query,
+                         ecclesia::QueryResultData &data_set,
+                         const RedpathNormalizerOptions &options) {
     // It's ok to use a simple mutex here. If we ever detect lock contention
     // and we know that the writes are less frequent, we can convert this mutex
     // to Reader-writer lock.
     absl::MutexLock l(&impl_chain_mu_);
     if (impl_chain_.empty()) return absl::NotFoundError("No normalizers added");
-    ecclesia::QueryResultData data_set;
 
     for (const auto &impl : impl_chain_) {
       ECCLESIA_RETURN_IF_ERROR(
@@ -76,7 +88,7 @@ class RedpathNormalizer {
     if (data_set.fields_size() <= 0) {
       return absl::NotFoundError("Resulting dataset is empty");
     }
-    return data_set;
+    return absl::OkStatus();
   }
 
   void AddRedpathNormalizer(std::unique_ptr<ImplInterface> impl) {

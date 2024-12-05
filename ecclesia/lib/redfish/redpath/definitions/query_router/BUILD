@@ -1,3 +1,5 @@
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
+
 proto_library(
     name = "query_router_spec_proto",
     srcs = ["query_router_spec.proto"],
@@ -13,6 +15,12 @@ proto_library(
 
 cc_proto_library(
     name = "query_router_spec_cc_proto",
+    visibility = ["//visibility:public"],
+    deps = [":query_router_spec_proto"],
+)
+
+py_proto_library(
+    name = "query_router_spec_py_pb2",
     visibility = ["//visibility:public"],
     deps = [":query_router_spec_proto"],
 )

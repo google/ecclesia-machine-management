@@ -66,6 +66,7 @@ message SelectionSpec {
     google.protobuf.Duration timeout = 4;
     reserved 5;
     VerificationConfig verification_config = 6;
+    reserved 7;
   }
 
   repeated QuerySelectionSpec query_selection_specs = 1;
