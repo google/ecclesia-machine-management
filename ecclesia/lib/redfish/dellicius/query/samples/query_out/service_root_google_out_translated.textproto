@@ -38,6 +38,16 @@ results {
                     string_value: "Enabled"
                   }
                 }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      redfish_location {
+                        service_label: "Hoth"
+                      }
+                    }
+                  }
+                }
               }
             }
             values {
@@ -70,6 +80,16 @@ results {
                   key: "State"
                   value {
                     string_value: "Enabled"
+                  }
+                }
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      redfish_location {
+                        service_label: "tpu0"
+                      }
+                    }
                   }
                 }
               }

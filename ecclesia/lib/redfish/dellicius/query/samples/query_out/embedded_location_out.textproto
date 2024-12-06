@@ -23,6 +23,9 @@ results: {
                   value {
                     identifier {
                       embedded_location_context: "sub-fru/logical"
+                      redfish_location {
+                        service_label: "board1"
+                      }
                     }
                   }
                 }

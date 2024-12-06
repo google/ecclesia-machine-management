@@ -119,15 +119,10 @@ class FakeQueryEngine : public QueryEngineIntf {
                                       transport, absl::InfiniteDuration());
                                 });
 
-    QueryEngineFeatures features;
-    if (params.streaming == Streaming::kEnable) {
-      features = StandardQueryEngineFeatures();
-    } else if (params.annotations == Annotations::kEnable) {
-      features = EnableQueryEngineFeatures(
-          RedfishAnnotationsPasskeyFactory::GetPassKey());
-    } else {
-      features = DefaultQueryEngineFeatures();
-    }
+    QueryEngineFeatures features = DefaultQueryEngineFeatures();
+    features.set_enable_url_annotation(params.annotations ==
+                                       Annotations::kEnable);
+    features.set_enable_streaming(params.streaming == Streaming::kEnable);
     features.set_enable_redfish_metrics(params.metrics == Metrics::kEnable);
 
     std::unique_ptr<QueryEngineIntf> query_engine;

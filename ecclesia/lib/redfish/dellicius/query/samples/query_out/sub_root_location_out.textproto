@@ -23,6 +23,7 @@ results: {
                   value {
                     identifier {
                       embedded_location_context: "resource"
+                      redfish_location {}
                     }
                   }
                 }

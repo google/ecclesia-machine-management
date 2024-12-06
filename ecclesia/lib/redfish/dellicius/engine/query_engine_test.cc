@@ -50,10 +50,12 @@
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner_devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/redpath_subscription.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
@@ -167,7 +169,8 @@ absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
     absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
     absl::Span<const EmbeddedFile> query_rules = kQueryRules,
     const Clock *clock = Clock::RealClock(),
-    const QueryEngineParams &query_engine_params = {}) {
+    const QueryEngineParams &query_engine_params = {
+        .features = StandardQueryEngineFeatures()}) {
   FakeRedfishServer::Config config = server.GetConfig();
   auto http_client = std::make_unique<CurlHttpClient>(
       LibCurlProxy::CreateInstance(), HttpCredential{});
@@ -183,6 +186,7 @@ absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
       query_context, {.transport = std::move(transport),
                       .entity_tag = query_engine_params.entity_tag,
                       .stable_id_type = query_engine_params.stable_id_type,
+                      .features = query_engine_params.features,
                       .redfish_topology_config_name =
                           query_engine_params.redfish_topology_config_name});
 }
@@ -206,7 +210,8 @@ absl::StatusOr<QueryEngine> GetQueryEngineWithIdAssigner(
       {.transport = std::move(transport),
        .entity_tag = "test_node_id",
        .stable_id_type =
-           QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived},
+           QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived,
+       .features = StandardQueryEngineFeatures()},
       std::move(id_assigner));
 }
 
@@ -222,7 +227,9 @@ TEST(QueryEngineTest, QueryEngineDevpathConfiguration) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
   QueryIdToResult response_entries =
       query_engine->ExecuteRedpathQuery({"SensorCollector"});
 
@@ -245,7 +252,9 @@ TEST(QueryEngineTest, QueryEngineRedfishIntfAccessor) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
   EXPECT_TRUE(
       query_engine
           ->GetRedfishInterface(RedfishInterfacePasskeyFactory::GetPassKey())
@@ -262,7 +271,9 @@ TEST(QueryEngineTest, QueryEngineTopConfiguration) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
   QueryIdToResult response_entries =
       query_engine->ExecuteRedpathQuery({"PaginatedSensorCollector"});
 
@@ -282,8 +293,10 @@ TEST(QueryEngineTest, QueryEngineInvalidQueries) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
-                              {.devpath = FakeQueryEngine::Devpath::kDisable}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   // Invalid Query Id
   QueryIdToResult response_entries =
@@ -308,15 +321,17 @@ TEST(QueryEngineTest, QueryEngineConcurrentQueries) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
-                              {.devpath = FakeQueryEngine::Devpath::kDisable}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"SensorCollector", "AssemblyCollectorWithPropertyNameNormalization"});
 
-  RemoveTimestamps(response_entries);
-  RemoveTimestamps(intent_output_sensor);
-  RemoveTimestamps(intent_output_assembly);
+  RemoveStats(response_entries);
+  RemoveStats(intent_output_sensor);
+  RemoveStats(intent_output_assembly);
   EXPECT_THAT(
       response_entries.results().at("SensorCollector"),
       EqualsProto(intent_output_sensor.results().at("SensorCollector")));
@@ -338,8 +353,10 @@ TEST(QueryEngineTest, QueryEngineEmptyItemDevpath) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
-                              {.entity_tag = "test_node_id"}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.entity_tag = "test_node_id",
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"AssemblyCollectorWithPropertyNameNormalization"});
@@ -366,7 +383,8 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
           {.devpath = FakeQueryEngine::Devpath::kDisable,
            .metrics = FakeQueryEngine::Metrics::kEnable,
            .annotations = FakeQueryEngine::Annotations::kDisable,
-           .cache = FakeQueryEngine::Cache::kInfinite}));
+           .cache = FakeQueryEngine::Cache::kInfinite,
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   {
     // Query assemblies 3 times in a row. Cache is cold only for the 1st query.
@@ -458,7 +476,8 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
           {.devpath = FakeQueryEngine::Devpath::kDisable,
            .metrics = FakeQueryEngine::Metrics::kEnable,
            .annotations = FakeQueryEngine::Annotations::kDisable,
-           .cache = FakeQueryEngine::Cache::kInfinite}));
+           .cache = FakeQueryEngine::Cache::kInfinite,
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   {
     // On first query, thermal subsystem won't be queried explicitly since
@@ -558,7 +577,8 @@ TEST(QueryEngineTest, QueryEngineWithUrlAnnotations) {
           {.devpath = FakeQueryEngine::Devpath::kDisable,
            .metrics = FakeQueryEngine::Metrics::kDisable,
            .annotations = FakeQueryEngine::Annotations::kEnable,
-           .cache = FakeQueryEngine::Cache::kInfinite}));
+           .cache = FakeQueryEngine::Cache::kInfinite,
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"AssemblyCollectorWithPropertyNameNormalization"});
@@ -615,7 +635,9 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedQuery) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
@@ -650,7 +672,9 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedUnfilledVars) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish,
@@ -707,7 +731,9 @@ TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
 
   // Execute query with first set of variable values.
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -738,8 +764,10 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedNoVars) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
-                              {.devpath = FakeQueryEngine::Devpath::kDisable}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
       {"SensorCollectorTemplate"}, QueryEngine::ServiceRootType::kRedfish);
@@ -774,10 +802,12 @@ TEST(QueryEngineTest, QueryEngineTransportMetricsInResult) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
-                              {.devpath = FakeQueryEngine::Devpath::kDisable,
-                               .metrics = FakeQueryEngine::Metrics::kEnable,
-                               .cache = FakeQueryEngine::Cache::kInfinite}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .metrics = FakeQueryEngine::Metrics::kEnable,
+           .cache = FakeQueryEngine::Cache::kInfinite,
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   // Validate first query result with metrics.
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -839,7 +869,7 @@ TEST(QueryEngineTest, TestQueryEngineFactoryForParserError) {
 TEST(QueryEngineTest, TestQueryEngineFactoryForInvalidQuery) {
   FakeRedfishServer server(kIndusMockup);
   EXPECT_EQ(GetDefaultQueryEngine(server, {{"Test", ""}}).status().code(),
-            absl::StatusCode::kInternal);
+            absl::StatusCode::kInvalidArgument);
 }
 
 TEST(QueryEngineTest, QueryEngineWithTranslation) {
@@ -854,8 +884,10 @@ TEST(QueryEngineTest, QueryEngineWithTranslation) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
-                              {.devpath = FakeQueryEngine::Devpath::kDisable}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.devpath = FakeQueryEngine::Devpath::kDisable,
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   // Validate first query result with metrics.
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -875,7 +907,9 @@ TEST(QueryEngineTest, QueryEngineWithTranslationAndLocalDevpath) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
 
   // Validate first query result with metrics.
   QueryIdToResult response_entries =
@@ -926,6 +960,9 @@ TEST(QueryEngineTest, QueryEngineNoHaltOnFirstFailure) {
   QueryContext query_context{.query_files = kDelliciusQueries,
                              .query_rules = kQueryRules,
                              .clock = &clock};
+  QueryEngineFeatures features = StandardQueryEngineFeatures();
+  features.set_enable_redfish_metrics(true);
+  features.set_fail_on_first_error(false);
   absl::StatusOr<QueryEngine> query_engine =
       CreateQueryEngine(query_context, {.transport = std::move(transport),
                                         .entity_tag = "test_node_id",
@@ -1107,7 +1144,8 @@ TEST(QueryEngineTest, QueryEngineLocationContextSuccess) {
       query_context,
       {.transport = std::move(transport),
        .stable_id_type =
-           QueryEngineParams::RedfishStableIdType::kRedfishLocation},
+           QueryEngineParams::RedfishStableIdType::kRedfishLocation,
+       .features = StandardQueryEngineFeatures()},
       std::move(id_assigner));
   ASSERT_TRUE(query_engine.ok());
   QueryIdToResult response_entries =
@@ -1163,7 +1201,8 @@ TEST(QueryEngineTest, QueryEngineSubRootStableIdServiceLabel) {
       query_context,
       {.transport = std::move(transport),
        .stable_id_type =
-           QueryEngineParams::RedfishStableIdType::kRedfishLocation},
+           QueryEngineParams::RedfishStableIdType::kRedfishLocation,
+       .features = StandardQueryEngineFeatures()},
       std::move(id_assigner));
   ASSERT_TRUE(query_engine.ok());
   QueryIdToResult response_entries =
@@ -1195,7 +1234,8 @@ TEST(QueryEngineTest, QueryEngineCreateUsingQuerySpec) {
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
       QueryEngine::Create(std::move(query_spec),
-                          {.transport = std::move(transport)}));
+                          {.transport = std::move(transport),
+                           .features = StandardQueryEngineFeatures()}));
 
   // Execute query where custom service root is set to /google/v1.
   QueryIdToResult response =
@@ -1220,7 +1260,9 @@ TEST(QueryEngineTest, QueryEngineFilterConfiguration) {
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
-      FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
 
   QueryVariables::VariableValue val1;
   val1.set_name("Ceiling");
@@ -1655,8 +1697,9 @@ TEST(QueryEngineTest, QueryEngineFailsOnServiceUnavailability) {
   QueryContext query_context{.query_files = kDelliciusQueries,
                              .query_rules = kQueryRules,
                              .clock = &clock};
-  absl::StatusOr<QueryEngine> query_engine =
-      CreateQueryEngine(query_context, {.transport = std::move(transport)});
+  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
+      query_context, {.transport = std::move(transport),
+                      .features = StandardQueryEngineFeatures()});
   ASSERT_TRUE(query_engine.ok());
   QueryIdToResult query_result =
       query_engine->ExecuteRedpathQuery({"SensorCollectorWithChassisLinks"});
@@ -1679,7 +1722,8 @@ TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnce) {
           std::move(query_spec), kIndusHmbCnMockup,
           {.devpath = FakeQueryEngine::Devpath::kDisable,
            .metrics = FakeQueryEngine::Metrics::kEnable,
-           .annotations = FakeQueryEngine::Annotations::kDisable}));
+           .annotations = FakeQueryEngine::Annotations::kDisable,
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   QueryIdToResult response_entries =
       query_engine->ExecuteRedpathQuery({"AssemblyAutoExpand"});
@@ -1728,7 +1772,8 @@ TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnceMultithreaded) {
           {.devpath = FakeQueryEngine::Devpath::kDisable,
            .metrics = FakeQueryEngine::Metrics::kEnable,
            .annotations = FakeQueryEngine::Annotations::kDisable,
-           .cache = FakeQueryEngine::Cache::kDisable}));
+           .cache = FakeQueryEngine::Cache::kDisable,
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   ThreadFactoryInterface *thread_factory = GetDefaultThreadFactory();
   std::vector<std::unique_ptr<ThreadInterface>> threads(kNumThreads);
@@ -1792,7 +1837,8 @@ TEST(QueryEngineTest, QueryEngineExecutesQueryRuleWithUriPrefix) {
           {.devpath = FakeQueryEngine::Devpath::kDisable,
            .metrics = FakeQueryEngine::Metrics::kEnable,
            .annotations = FakeQueryEngine::Annotations::kDisable,
-           .cache = FakeQueryEngine::Cache::kInfinite}));
+           .cache = FakeQueryEngine::Cache::kInfinite,
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   int systems_fetched_counter = 0;
   QueryIdToResult response = query_engine->ExecuteRedpathQuery(
@@ -1832,7 +1878,8 @@ TEST(QueryEngineTest, QueryEngineAppliesQueryRulesToServiceRoot) {
           {.devpath = FakeQueryEngine::Devpath::kDisable,
            .metrics = FakeQueryEngine::Metrics::kEnable,
            .annotations = FakeQueryEngine::Annotations::kDisable,
-           .cache = FakeQueryEngine::Cache::kInfinite}));
+           .cache = FakeQueryEngine::Cache::kInfinite,
+           .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   int service_root_fetch_counter = 0;
   QueryIdToResult response = query_engine->ExecuteRedpathQuery(
@@ -1980,14 +2027,13 @@ TEST(QueryEngineTest, QueryEngineNoHaltOnFirstFailureWithStreamingEngine) {
   QueryContext query_context{.query_files = kDelliciusQueries,
                              .query_rules = kQueryRules,
                              .clock = &clock};
+  QueryEngineFeatures features = StandardQueryEngineFeatures();
+  features.set_fail_on_first_error(false);
+  features.set_enable_redfish_metrics(true);
   absl::StatusOr<QueryEngine> query_engine =
       CreateQueryEngine(query_context, {.transport = std::move(transport),
                                         .entity_tag = "test_node_id",
-                                        .features = ParseTextProtoOrDie(R"pb(
-                                          enable_redfish_metrics: true
-                                          fail_on_first_error: false
-                                          enable_streaming: true
-                                        )pb")});
+                                        .features = std::move(features)});
   ASSERT_TRUE(query_engine.ok());
   EXPECT_EQ(query_engine->GetAgentIdentifier(), "test_node_id");
   // Issue the query and assert that both GETs were issued, ensuring that the
