@@ -494,6 +494,10 @@ absl::Status QueryPlanner::TryNormalize(
           absl::Base64Escape(raw_str));
     }
   } else {
+    if (query_execution_context->redfish_response.redfish_object == nullptr) {
+      return absl::InternalError(
+          "Redfish object is null in query execution context.");
+    }
     absl::StatusOr<QueryResultData> normalized_query_result =
         normalizer_.Normalize(
             *query_execution_context->redfish_response.redfish_object,
