@@ -495,8 +495,9 @@ absl::Status QueryPlanner::TryNormalize(
     }
   } else {
     if (query_execution_context->redfish_response.redfish_object == nullptr) {
-      return absl::InternalError(
-          "Redfish object is null in query execution context.");
+      return absl::InternalError(absl::StrCat(
+          "Redfish object is null in query execution context: ",
+          query_execution_context->redpath_prefix_tracker.last_redpath_prefix));
     }
     absl::StatusOr<QueryResultData> normalized_query_result =
         normalizer_.Normalize(
