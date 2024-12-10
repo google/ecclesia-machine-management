@@ -29,6 +29,7 @@
 #include "absl/functional/any_invocable.h"
 #include "absl/log/die_if_null.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
@@ -62,6 +63,14 @@ class QueryRouterIntf {
     bool operator==(const ServerInfo &other) const {
       return std::tie(server_tag, server_type, server_class) ==
              std::tie(other.server_tag, other.server_type, other.server_class);
+    }
+
+    std::string ToString() const {
+      return absl::StrCat(
+          "server_tag: ", server_tag, ", server_type: ",
+          SelectionSpec::SelectionClass::ServerType_Name(server_type),
+          ", server_class: ",
+          SelectionSpec::SelectionClass::ServerClass_Name(server_class));
     }
   };
 
