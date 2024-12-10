@@ -39,6 +39,7 @@ namespace ecclesia {
 namespace {
 
 using ::testing::ElementsAre;
+using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
 
@@ -718,6 +719,22 @@ TEST(GetQueryResultByValue, QueryHasErrors) {
     }
   )pb");
   ASSERT_THAT(GetQueryResult(std::move(result), "test"), IsStatusInternal());
+}
+
+TEST(GetQueryResultByValue, QueryHasCorrectErrorMessage) {
+  QueryIdToResult result = ParseTextProtoOrDie(R"pb(
+    results {
+      key: "test"
+      value {
+        query_id: "test"
+        status { errors: "internal error1" errors: "internal error2" }
+      }
+    }
+  )pb");
+  ASSERT_THAT(
+      std::string(GetQueryResult(std::move(result), "test").status().message()),
+      Eq("Query result contains errors for query: "
+         "test.\ninternal error1\ninternal error2\n"));
 }
 
 TEST(QueryResultHasErrors, SuccessTest) {

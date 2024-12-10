@@ -216,13 +216,17 @@ absl::StatusOr<QueryResult> GetQueryResult(QueryIdToResult result,
     return absl::NotFoundError(absl::StrCat(
         "Query result doesn't contain result for query: ", query_id, "."));
   }
-
-  if (QueryResult query_result = std::move(it->second);
-      !QueryResultHasErrors(query_result)) {
+  QueryResult query_result = std::move(it->second);
+  if (!QueryResultHasErrors(query_result)) {
     return std::move(query_result);
   }
-  return absl::InternalError(
-      absl::StrCat("Query result contains errors for query: ", query_id, "."));
+  std::string error_message =
+      absl::StrCat("Query result contains errors for query: ", query_id, ".\n");
+  // Enumerate all errors, seperated by newlines.
+  for (const auto& error : query_result.status().errors()) {
+    absl::StrAppend(&error_message, error, "\n");
+  }
+  return absl::InternalError(error_message);
 }
 
 bool QueryResultHasErrors(const QueryResult& query_result) {
