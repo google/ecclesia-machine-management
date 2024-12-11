@@ -1062,6 +1062,12 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
         if (execution_mode_ == ExecutionMode::kContinueOnSubqueryErrors) {
           continue;
         }
+
+        // We are returning an error at this point, so end the timing session,
+        // regardless of its status.
+        if (timeout_manager_ != nullptr) {
+          timeout_manager_->EndTiming().IgnoreError();
+        }
         return query_execution_result;
       }
 
@@ -1091,6 +1097,14 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
     }
   }
   query_execution_result.subscription_context = std::move(subscription_context);
+
+  // Check if between the last RPC returning and now, the timeout has been
+  // reached. If so, return a timeout error.
+  if (timeout_manager_ != nullptr && !timeout_manager_->EndTiming().ok()) {
+    result.mutable_status()->add_errors("Timed out while executing query");
+    result.mutable_status()->set_error_code(
+        ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT);
+  }
   return query_execution_result;
 }
 

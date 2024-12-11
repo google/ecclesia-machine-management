@@ -3439,6 +3439,65 @@ TEST_F(QueryPlannerGrpcTestRunner,
               Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
 }
 
+TEST_F(QueryPlannerGrpcTestRunner, CheckEachQueryPlannerRunRespectsTimeout) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+          properties { property: "Name" type: STRING }
+          freshness: REQUIRED
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[ReadingUnits=RPM]"
+          properties { property: "Name" type: STRING }
+          freshness: REQUIRED
+        }
+      )pb");
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  // For 3 of the sensor requests, advance the clock by 1 second.
+  for (absl::string_view uri :
+       {"/redfish/v1/Chassis/chassis/Sensors/indus_fan2_rpm",
+        "/redfish/v1/Chassis/chassis/Sensors/indus_fan3_rpm",
+        "/redfish/v1/Chassis/chassis/Sensors/indus_fan4_rpm"}) {
+    server_->AddHttpGetHandler(uri, [&](grpc::ServerContext *context,
+                                        const ::redfish::v1::Request *request,
+                                        redfish::v1::Response *response) {
+      clock_.AdvanceTime(absl::Seconds(1));
+      response->set_json_str(R"json({
+        "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/fan_x",
+        "@odata.type": "#Fan.v1_5_0.Fan",
+        "Id": "Fan",
+        "Name": "Fan",
+        "ReadingUnits": "RPM"
+      })json");
+      response->set_code(200);
+      return grpc::Status::OK;
+    });
+  }
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+      BuildQueryPlanner({.query = &query,
+                         .normalizer = normalizer.get(),
+                         .redfish_interface = intf_.get(),
+                         .redpath_rules = {},
+                         .clock = &clock_,
+                         .query_timeout = absl::Seconds(12)});
+  ASSERT_THAT(qp, IsOk());
+  ASSERT_THAT(*qp, NotNull());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  // Issue multiple Run calls with the same QP and ensure they all pass.
+  for (int i = 0; i < 3; ++i) {
+    QueryExecutionResult result = (*qp)->Run({args1});
+    EXPECT_FALSE(result.query_result.has_status());
+  }
+}
+
 TEST_F(QueryPlannerTestRunner, ServiceRootQueryWithParamsSuccessful) {
   DelliciusQuery query = ParseTextProtoOrDie(
       R"pb(query_id: "ServiceRoot"
