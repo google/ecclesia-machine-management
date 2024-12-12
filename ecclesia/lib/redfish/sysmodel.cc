@@ -262,6 +262,7 @@ void Sysmodel::QueryAllResourceInternal(
 
 // EthernetInterface:
 // "/redfish/v1/Systems/{id}/EthernetInterfaces/{id}"
+// "/redfish/v1/Managers/{id}/EthernetInterfaces/{id}"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceEthernetInterface> /*unused*/, ResultCallback result_callback,
     const QueryParams &query_params) {
