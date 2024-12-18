@@ -198,12 +198,16 @@ class QueryEngine : public QueryEngineIntf {
   // Creates query engine for machine devpath decorator extensions.
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
       QuerySpec query_spec, QueryEngineParams params,
-      std::unique_ptr<IdAssigner> id_assigner = nullptr);
+      std::unique_ptr<IdAssigner> id_assigner = nullptr,
+      RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizer =
+          DefaultRedpathNormalizerMap());
 
   ABSL_DEPRECATED("Use Create Instead")
   static absl::StatusOr<QueryEngine> CreateLegacy(
       QuerySpec query_spec, QueryEngineParams params,
-      std::unique_ptr<IdAssigner> id_assigner = nullptr);
+      std::unique_ptr<IdAssigner> id_assigner = nullptr,
+      RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizer =
+          DefaultRedpathNormalizerMap());
 
   QueryEngine(const QueryEngine &) = delete;
   QueryEngine &operator=(const QueryEngine &) = delete;
@@ -253,7 +257,9 @@ class QueryEngine : public QueryEngineIntf {
       std::unique_ptr<RedpathNormalizer> normalizer,
       std::unique_ptr<RedfishInterface> redfish_interface,
       QueryEngineFeatures features,
-      MetricalRedfishTransport *metrical_transport = nullptr)
+      MetricalRedfishTransport *metrical_transport = nullptr,
+      RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers =
+          DefaultRedpathNormalizerMap())
       : entity_tag_(std::move(entity_tag)),
         id_to_redpath_query_plans_(std::move(id_to_query_plans)),
         clock_(clock),
@@ -261,7 +267,8 @@ class QueryEngine : public QueryEngineIntf {
         normalizer_(std::move(normalizer)),
         redfish_interface_(std::move(redfish_interface)),
         metrical_transport_(metrical_transport),
-        features_(std::move(features)) {}
+        features_(std::move(features)),
+        id_to_normalizers_(std::move(id_to_normalizers)) {}
 
   std::vector<DelliciusQueryResult> ExecuteQueryLegacy(
       absl::Span<const absl::string_view> query_ids,
@@ -298,6 +305,10 @@ class QueryEngine : public QueryEngineIntf {
   MetricalRedfishTransport *metrical_transport_ = nullptr;
   // Collection of flags dictating query engine execution.
   QueryEngineFeatures features_;
+  // Maps query id to additional normalizers, these normalizers are used to
+  // decorate the query result with additional information right after the
+  // regular normalizer above, which are optional based on the query id.
+  RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers_;
 };
 
 // Build query engine based on given `engine_params` to execute queries in
@@ -315,7 +326,8 @@ absl::StatusOr<QueryEngine> CreateQueryEngine(
 using QueryEngineFactory =
     absl::AnyInvocable<absl::StatusOr<std::unique_ptr<QueryEngineIntf>>(
         QuerySpec query_spec, QueryEngineParams engine_params,
-        std::unique_ptr<IdAssigner> id_assigner)>;
+        std::unique_ptr<IdAssigner> id_assigner,
+        RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers)>;
 
 }  // namespace ecclesia
 

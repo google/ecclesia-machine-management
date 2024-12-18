@@ -168,6 +168,7 @@ class QueryPlanner final : public QueryPlannerIntf {
   struct ImplOptions {
     const DelliciusQuery *query = nullptr;
     RedpathNormalizer *normalizer = nullptr;
+    std::vector<RedpathNormalizer *> additional_normalizers;
     RedfishInterface *redfish_interface = nullptr;
     std::unique_ptr<RedPathTrieNode> redpath_trie_node = nullptr;
     RedPathRules redpath_rules;
@@ -214,6 +215,7 @@ class QueryPlanner final : public QueryPlannerIntf {
   const std::string plan_id_;
   // RedpathNormalizer is thread safe.
   RedpathNormalizer &normalizer_;
+  const std::vector<RedpathNormalizer *> additional_normalizers_;
   const std::unique_ptr<RedPathTrieNode> redpath_trie_node_;
   const RedPathRules redpath_rules_;
   // Redfish interface is thread safe.

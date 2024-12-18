@@ -44,7 +44,6 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
-#include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_errors.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
@@ -65,7 +64,6 @@
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
-#include "ecclesia/lib/time/proto.h"
 #include "single_include/nlohmann/json.hpp"
 #include "re2/re2.h"
 
@@ -422,6 +420,7 @@ QueryPlanner::QueryPlanner(ImplOptions options_in)
     : query_(*ABSL_DIE_IF_NULL(options_in.query)),
       plan_id_(options_in.query->query_id()),
       normalizer_(*ABSL_DIE_IF_NULL(options_in.normalizer)),
+      additional_normalizers_(options_in.additional_normalizers),
       redpath_trie_node_(std::move(options_in.redpath_trie_node)),
       redpath_rules_(std::move(options_in.redpath_rules)),
       redfish_interface_(*ABSL_DIE_IF_NULL(options_in.redfish_interface)),
@@ -534,6 +533,12 @@ absl::Status QueryPlanner::TryNormalize(
       // If the subquery is a root subquery, we need to create an empty subquery
       // result to allow child subqueries to be executed.
       normalized_query_result = QueryResultData();
+    }
+
+    for (RedpathNormalizer *additional_normalizer : additional_normalizers_) {
+      ECCLESIA_RETURN_IF_ERROR(additional_normalizer->Normalize(
+          *query_execution_context->redfish_response.redfish_object,
+          find_subquery->second, *normalized_query_result, normalizer_options));
     }
 
     // Add an empty subquery value to allow child subqueries to be executed.

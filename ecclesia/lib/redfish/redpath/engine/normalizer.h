@@ -20,10 +20,13 @@
 #include <stdbool.h>
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/container/flat_hash_map.h"
+#include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/synchronization/mutex.h"
@@ -44,6 +47,12 @@ struct RedpathNormalizerOptions {
 // for the property specification in a Dellicius Subquery.
 class RedpathNormalizer {
  public:
+  using QueryIdToNormalizerMap =
+      absl::flat_hash_map<std::string, std::unique_ptr<RedpathNormalizer>>;
+  // Factory for creating a map of RedpathNormalizer, keyed by query id.
+  using RedpathNormalizersFactory =
+      absl::AnyInvocable<QueryIdToNormalizerMap()>;
+
   class ImplInterface {
    public:
     virtual ~ImplInterface() = default;
@@ -204,6 +213,11 @@ BuildRedpathNormalizerWithMachineDevpath(
           std::move(id_assigner),
           /*use_local_devpath_for_machine_devpath=*/true));
   return normalizer;
+}
+
+// Returns an empty set of RedpathNormalizers.
+inline RedpathNormalizer::QueryIdToNormalizerMap DefaultRedpathNormalizerMap() {
+  return {};
 }
 
 }  // namespace ecclesia

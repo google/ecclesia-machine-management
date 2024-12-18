@@ -47,6 +47,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/default_template_variable_names.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/util.h"
+#include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/transport/cache.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/status/macros.h"
@@ -103,7 +104,8 @@ void ExecuteQueries(QueryEngineIntf &query_engine,
 
 absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
     const QueryRouterSpec &router_spec, std::vector<ServerSpec> server_specs,
-    QueryEngineFactory query_engine_factory) {
+    QueryEngineFactory query_engine_factory,
+    RedpathNormalizer::RedpathNormalizersFactory redpath_normalizers_factory) {
   switch (router_spec.query_pattern()) {
     case QueryPattern::PATTERN_SERIAL_ALL:
       break;
@@ -171,9 +173,9 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
 
     ECCLESIA_ASSIGN_OR_RETURN(
         auto query_engine,
-        query_engine_factory(std::move(query_spec),
-                             std::move(query_engine_params),
-                             std::move(server_spec.id_assigner)));
+        query_engine_factory(
+            std::move(query_spec), std::move(query_engine_params),
+            std::move(server_spec.id_assigner), redpath_normalizers_factory()));
 
     routing_table.push_back({
         .server_info = std::move(server_spec.server_info),

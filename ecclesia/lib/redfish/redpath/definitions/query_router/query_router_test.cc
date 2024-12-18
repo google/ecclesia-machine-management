@@ -44,6 +44,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/default_template_variable_names.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/status/test_macros.h"
 #include "ecclesia/lib/testing/status.h"
 #include "google/protobuf/text_format.h"
@@ -259,14 +260,16 @@ TEST_P(QueryRouterSuccessTest, CreateSuccess) {
       QueryRouter::Create(
           router_spec, std::move(server_specs),
           [&](const QuerySpec &, const QueryEngineParams &params,
-              std::unique_ptr<IdAssigner>)
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
             EXPECT_FALSE(params.features.log_redfish_traces());
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
-          }));
+          },
+          DefaultRedpathNormalizerMap));
   {
     absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
         {"query_a",
@@ -431,13 +434,15 @@ TEST_F(QueryRouterTest, CreateSuccessWithSystemIdQueryRouterTest) {
       QueryRouter::Create(
           router_spec, std::move(server_specs),
           [&](const QuerySpec &, const QueryEngineParams &params,
-              std::unique_ptr<IdAssigner>)
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
             EXPECT_FALSE(params.features.log_redfish_traces());
             return std::move(mock_qe);
-          }));
+          },
+          DefaultRedpathNormalizerMap));
 
   query_router->ExecuteQuery({"query_a"}, {});
 }
@@ -474,11 +479,13 @@ TEST_F(QueryRouterTest, DisjointServerAndQuerySpec) {
       QueryRouter::Create(
           router_spec, std::move(server_specs),
           [&](const QuerySpec &, const QueryEngineParams &,
-              std::unique_ptr<IdAssigner>)
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
-          }));
+          },
+          DefaultRedpathNormalizerMap));
 
   {
     absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {};
@@ -529,11 +536,13 @@ TEST_F(QueryRouterTest, QueryAndServerSpecPartialIntersect) {
       QueryRouter::Create(
           router_spec, std::move(server_specs),
           [&](const QuerySpec &, const QueryEngineParams &,
-              std::unique_ptr<IdAssigner>)
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
-          }));
+          },
+          DefaultRedpathNormalizerMap));
 
   {
     absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
@@ -577,11 +586,13 @@ TEST_F(QueryRouterTest, InvalidQuerySpec) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &,
-                      std::unique_ptr<IdAssigner>)
+                      std::unique_ptr<IdAssigner>,
+                      const RedpathNormalizer::QueryIdToNormalizerMap &)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
-                  }),
+                  },
+                  DefaultRedpathNormalizerMap),
               IsStatusNotFound());
 }
 
@@ -606,11 +617,13 @@ TEST_F(QueryRouterTest, UnsupportedQueryPattern) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &,
-                      std::unique_ptr<IdAssigner>)
+                      std::unique_ptr<IdAssigner>,
+                      const RedpathNormalizer::QueryIdToNormalizerMap &)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
-                  }),
+                  },
+                  DefaultRedpathNormalizerMap),
               IsStatusFailedPrecondition());
 }
 
@@ -639,11 +652,13 @@ TEST_P(QueryRouterFailureTest, WithoutMaxThreadValue) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &,
-                      std::unique_ptr<IdAssigner>)
+                      std::unique_ptr<IdAssigner>,
+                      const RedpathNormalizer::QueryIdToNormalizerMap &)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
-                  }),
+                  },
+                  DefaultRedpathNormalizerMap),
               IsStatusFailedPrecondition());
 }
 
@@ -673,10 +688,12 @@ TEST_F(QueryRouterTest, QueryEngineCreateFailure) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &,
-                      std::unique_ptr<IdAssigner>)
+                      std::unique_ptr<IdAssigner>,
+                      const RedpathNormalizer::QueryIdToNormalizerMap &)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     return absl::InternalError("Failed to create QueryEngine");
-                  }),
+                  },
+                  DefaultRedpathNormalizerMap),
               IsStatusInternal());
 }
 
@@ -707,14 +724,16 @@ TEST_F(QueryRouterTest, CheckFeatureFlags) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &params,
-                      std::unique_ptr<IdAssigner>)
+                      std::unique_ptr<IdAssigner>,
+                      const RedpathNormalizer::QueryIdToNormalizerMap &)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     EXPECT_TRUE(params.features.enable_redfish_metrics());
                     EXPECT_TRUE(params.features.fail_on_first_error());
                     EXPECT_TRUE(params.features.log_redfish_traces());
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
-                  }),
+                  },
+                  DefaultRedpathNormalizerMap),
               IsOk());
 }
 
@@ -746,14 +765,16 @@ TEST_F(QueryRouterTest, CheckLocationStableIdConfiguration) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &params,
-                      std::unique_ptr<IdAssigner>)
+                      std::unique_ptr<IdAssigner>,
+                      const RedpathNormalizer::QueryIdToNormalizerMap &)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     EXPECT_EQ(params.stable_id_type,
                               ecclesia::QueryEngineParams::RedfishStableIdType::
                                   kRedfishLocation);
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
-                  }),
+                  },
+                  DefaultRedpathNormalizerMap),
               IsOk());
 }
 
@@ -791,14 +812,16 @@ TEST_F(QueryRouterTest, CheckLocationDerivedStableIdConfiguration) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &params,
-                      std::unique_ptr<IdAssigner>)
+                      std::unique_ptr<IdAssigner>,
+                      const RedpathNormalizer::QueryIdToNormalizerMap &)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     EXPECT_EQ(params.stable_id_type,
                               ecclesia::QueryEngineParams::RedfishStableIdType::
                                   kRedfishLocationDerived);
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
-                  }),
+                  },
+                  DefaultRedpathNormalizerMap),
               IsOk());
 }
 
@@ -829,14 +852,16 @@ TEST_F(QueryRouterTest, CheckStableIdConfigurationInheritsFromServerSpec) {
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
                   [&](const QuerySpec &, const QueryEngineParams &params,
-                      std::unique_ptr<IdAssigner>)
+                      std::unique_ptr<IdAssigner>,
+                      const RedpathNormalizer::QueryIdToNormalizerMap &)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     EXPECT_EQ(params.stable_id_type,
                               ecclesia::QueryEngineParams::RedfishStableIdType::
                                   kRedfishLocationDerived);
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
-                  }),
+                  },
+                  DefaultRedpathNormalizerMap),
               IsOk());
 }
 
@@ -868,13 +893,15 @@ TEST_F(QueryRouterTest, GetRedfishInterfaceSuccess) {
       QueryRouter::Create(
           router_spec, std::move(server_specs),
           [&](const QuerySpec &, const QueryEngineParams &params,
-              std::unique_ptr<IdAssigner>)
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
             EXPECT_FALSE(params.features.log_redfish_traces());
             return std::move(mock_qe);
-          }));
+          },
+          DefaultRedpathNormalizerMap));
 
   ECCLESIA_ASSIGN_OR_FAIL(
       RedfishInterface * intf,
@@ -914,13 +941,15 @@ TEST_F(QueryRouterTest, GetRedfishInterfaceFailure) {
       QueryRouter::Create(
           router_spec, std::move(server_specs),
           [&](const QuerySpec &, const QueryEngineParams &params,
-              std::unique_ptr<IdAssigner>)
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
             EXPECT_FALSE(params.features.log_redfish_traces());
             return std::move(mock_qe);
-          }));
+          },
+          DefaultRedpathNormalizerMap));
 
   ASSERT_THAT(
       query_router->GetRedfishInterface(

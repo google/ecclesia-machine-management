@@ -26,6 +26,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/log/check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -61,6 +62,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/testing/grpc_dynamic_mockup_server.h"
 #include "ecclesia/lib/redfish/testing/json_mockup.h"
@@ -69,6 +71,7 @@
 #include "ecclesia/lib/redfish/transport/http.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
+#include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/status/test_macros.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
@@ -189,6 +192,41 @@ absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
                       .features = query_engine_params.features,
                       .redfish_topology_config_name =
                           query_engine_params.redfish_topology_config_name});
+}
+
+absl::StatusOr<QueryEngine> GetQueryEngineWithNormalizers(
+    FakeRedfishServer &server,
+    absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
+    absl::Span<const EmbeddedFile> query_rules = kQueryRules,
+    const Clock *clock = Clock::RealClock(),
+    const QueryEngineParams &query_engine_params = {
+        .features = StandardQueryEngineFeatures()}) {
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
+
+  QueryContext query_context{
+      .query_files = query_files, .query_rules = query_rules, .clock = clock};
+  ECCLESIA_ASSIGN_OR_RETURN(QuerySpec query_spec,
+                            QuerySpec::FromQueryContext(query_context));
+  RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers;
+  id_to_normalizers.emplace("test_query_id",
+                            std::make_unique<RedpathNormalizer>());
+
+  return QueryEngine::CreateLegacy(
+      query_spec,
+      {.transport = std::move(transport),
+       .entity_tag = query_engine_params.entity_tag,
+       .stable_id_type = query_engine_params.stable_id_type,
+       .features = query_engine_params.features,
+       .redfish_topology_config_name =
+           query_engine_params.redfish_topology_config_name},
+      nullptr, std::move(id_to_normalizers));
 }
 
 absl::StatusOr<QueryEngine> GetQueryEngineWithIdAssigner(
@@ -827,6 +865,23 @@ TEST(QueryEngineTest, QueryEngineWithDefaultNormalizer) {
   FakeClock clock{clock_time};
   absl::StatusOr<QueryEngine> query_engine =
       GetDefaultQueryEngine(server, kDelliciusQueries, kQueryRules, &clock);
+  EXPECT_TRUE(query_engine.ok());
+
+  QueryIdToResult intent_output_sensor =
+      ParseTextFileAsProtoOrDie<QueryIdToResult>(
+          GetTestDataDependencyPath(JoinFilePaths(
+              kQuerySamplesLocation, "query_out/sensor_out.textproto")));
+  QueryIdToResult response_entries =
+      query_engine->ExecuteRedpathQuery({"SensorCollector"});
+  VerifyQueryResults(std::move(response_entries),
+                     std::move(intent_output_sensor));
+}
+
+TEST(QueryEngineTest, QueryEngineWithAdditionalNormalizers) {
+  FakeRedfishServer server(kIndusMockup);
+  FakeClock clock{clock_time};
+  absl::StatusOr<QueryEngine> query_engine = GetQueryEngineWithNormalizers(
+      server, kDelliciusQueries, kQueryRules, &clock);
   EXPECT_TRUE(query_engine.ok());
 
   QueryIdToResult intent_output_sensor =

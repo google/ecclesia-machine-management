@@ -24,7 +24,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/base/attributes.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
 #include "absl/log/check.h"
@@ -431,17 +430,20 @@ absl::StatusOr<RedfishInterface *> QueryEngine::GetRedfishInterface(
 
 absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
     QuerySpec query_spec, QueryEngineParams params,
-    std::unique_ptr<IdAssigner> id_assigner) {
+    std::unique_ptr<IdAssigner> id_assigner,
+    RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers) {
   ECCLESIA_ASSIGN_OR_RETURN(
       QueryEngine engine,
       QueryEngine::CreateLegacy(std::move(query_spec), std::move(params),
-                                std::move(id_assigner)));
+                                std::move(id_assigner),
+                                std::move(id_to_normalizers)));
   return std::make_unique<QueryEngine>(std::move(engine));
 }
 
 absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
     QuerySpec query_spec, QueryEngineParams engine_params,
-    std::unique_ptr<IdAssigner> id_assigner) {
+    std::unique_ptr<IdAssigner> id_assigner,
+    RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers) {
   std::unique_ptr<RedfishInterface> redfish_interface;
   MetricalRedfishTransport *metrical_transport_ptr = nullptr;
   if (engine_params.features.enable_redfish_metrics()) {
@@ -505,11 +507,18 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
       id_to_redpath_trie_plans;
   for (auto &[query_id, query_info] : query_spec.query_id_to_info) {
+    std::vector<RedpathNormalizer *> additional_normalizers;
+    if (auto it = id_to_normalizers.find(query_id);
+        it != id_to_normalizers.end() && it->second != nullptr) {
+      additional_normalizers.push_back(it->second.get());
+    }
+
     ECCLESIA_ASSIGN_OR_RETURN(
         auto query_planner,
         BuildQueryPlanner(
             {.query = &query_info.query,
              .normalizer = redpath_normalizer.get(),
+             .additional_normalizers = std::move(additional_normalizers),
              .redfish_interface = redfish_interface.get(),
              .redpath_rules = CreateRedPathRules(std::move(query_info.rule)),
              .clock = query_spec.clock,
@@ -525,7 +534,8 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
       engine_params.entity_tag, std::move(id_to_redpath_trie_plans),
       query_spec.clock, std::move(legacy_normalizer),
       std::move(redpath_normalizer), std::move(redfish_interface),
-      std::move(engine_params.features), metrical_transport_ptr);
+      std::move(engine_params.features), metrical_transport_ptr,
+      std::move(id_to_normalizers));
 }
 
 absl::StatusOr<QueryEngine> CreateQueryEngine(

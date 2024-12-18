@@ -34,11 +34,13 @@
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
+#include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
+#include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 
 namespace ecclesia {
@@ -129,7 +131,9 @@ class QueryRouter : public QueryRouterIntf {
   // QueryRouterSpec and the list of ServerSpecs specified.
   static absl::StatusOr<std::unique_ptr<QueryRouterIntf>> Create(
       const QueryRouterSpec &router_spec, std::vector<ServerSpec> server_specs,
-      QueryEngineFactory query_engine_factory = QueryEngine::Create);
+      QueryEngineFactory query_engine_factory = QueryEngine::Create,
+      RedpathNormalizer::RedpathNormalizersFactory redpath_normalizers_factory =
+          DefaultRedpathNormalizerMap);
 
   ~QueryRouter() override = default;
 
@@ -215,9 +219,10 @@ class QueryRouter : public QueryRouterIntf {
 // Ideally used in tests to inject different variants of query router
 using QueryRouterFactory = absl::AnyInvocable<
     absl::StatusOr<std::unique_ptr<ecclesia::QueryRouterIntf>>(
-        const ecclesia::QueryRouterSpec&,
+        const ecclesia::QueryRouterSpec &,
         std::vector<ecclesia::QueryRouter::ServerSpec>,
-        ecclesia::QueryEngineFactory)>;
+        ecclesia::QueryEngineFactory,
+        ecclesia::RedpathNormalizer::RedpathNormalizersFactory)>;
 
 }  // namespace ecclesia
 
