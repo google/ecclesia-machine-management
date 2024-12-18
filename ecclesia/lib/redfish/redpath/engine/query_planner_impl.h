@@ -44,8 +44,32 @@
 
 namespace ecclesia {
 
-using SubqueryIdToSubquery =
-    absl::flat_hash_map<std::string, DelliciusQuery::Subquery>;
+// Encapsulates the associations between subquery ids and root subquery ids.
+struct SubqueryAssociations {
+  absl::flat_hash_map<std::string, std::vector<std::string>>
+      subquery_id_to_root_ids;
+  absl::flat_hash_map<std::string, std::vector<std::string>>
+      root_id_to_subquery_ids;
+  absl::flat_hash_map<std::string, DelliciusQuery::Subquery>
+      subquery_id_to_subquery;
+
+  explicit SubqueryAssociations(const DelliciusQuery &query) {
+    for (const auto &subquery : query.subquery()) {
+      subquery_id_to_subquery[subquery.subquery_id()] = subquery;
+      std::vector<std::string> root_ids;
+      for (const auto &root_id : subquery.root_subquery_ids()) {
+        root_ids.push_back(root_id);
+      }
+      if (root_ids.empty()) {
+        continue;
+      }
+      for (const auto &root_id : root_ids) {
+        root_id_to_subquery_ids[root_id].push_back(subquery.subquery_id());
+      }
+      subquery_id_to_root_ids[subquery.subquery_id()] = std::move(root_ids);
+    }
+  }
+};
 
 // Describes the Redfish resource relative to which RedPath expressions execute.
 struct RedfishResponse {
@@ -195,9 +219,7 @@ class QueryPlanner final : public QueryPlannerIntf {
   // Redfish interface is thread safe.
   RedfishInterface &redfish_interface_;
   const std::string service_root_;
-  const SubqueryIdToSubquery subquery_id_to_subquery_;
-  const absl::flat_hash_map<std::string, std::vector<std::string>>
-      subquery_id_to_root_ids_;
+  const SubqueryAssociations subquery_associations_;
   const Clock *clock_ = nullptr;
   CacheStats cache_stats_;
   std::unique_ptr<QueryTimeoutManager> timeout_manager_ = nullptr;

@@ -4390,6 +4390,72 @@ TEST_F(QueryPlannerTestRunner,
                             "20and%20Reading%20lt%2036"));
 }
 
+TEST_F(QueryPlannerTestRunner, TestEmptyRootSubQuerySuccess) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(query_id: "ServiceRoot"
+           subquery { subquery_id: "RedfishVersion" redpath: "/" }
+           subquery {
+             subquery_id: "ChassisLinked"
+             root_subquery_ids: "RedfishVersion"
+             redpath: "/Chassis[*]"
+             properties {
+               name: "serial_number"
+               property: "SerialNumber"
+               type: STRING
+             }
+             properties {
+               name: "part_number"
+               property: "PartNumber"
+               type: STRING
+             }
+           })pb");
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "ServiceRoot"
+    stats { payload_size: 133 num_cache_misses: 3 }
+    data {
+      fields {
+        key: "RedfishVersion"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "ChassisLinked"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "part_number"
+                            value { string_value: "1043652-02" }
+                          }
+                          fields {
+                            key: "serial_number"
+                            value { string_value: "MBBQTW194106556" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  SetTestParams("indus_hmb_cn/mockup.shar");
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result, IsOk());
+  EXPECT_FALSE(result->query_result.has_status());
+  EXPECT_THAT(result->query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(expected_query_result)));
+}
+
 }  // namespace
 
 }  // namespace ecclesia

@@ -321,14 +321,6 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> GetRedfishObjectWithFreshness(
   return std::move(refetch_obj.value());
 }
 
-SubqueryIdToSubquery GetSubqueryIdToSubquery(const DelliciusQuery &query) {
-  SubqueryIdToSubquery id_to_subquery;
-  for (const auto &subquery : query.subquery()) {
-    id_to_subquery[subquery.subquery_id()] = subquery;
-  }
-  return id_to_subquery;
-}
-
 absl::StatusOr<bool> ExecutePredicateExpression(
     const PredicateOptions &predicate_options,
     QueryExecutionContext &current_execution_context,
@@ -436,8 +428,7 @@ QueryPlanner::QueryPlanner(ImplOptions options_in)
       service_root_(query_.has_service_root()
                         ? query_.service_root()
                         : std::string(kDefaultRedfishServiceRoot)),
-      subquery_id_to_subquery_(GetSubqueryIdToSubquery(query_)),
-      subquery_id_to_root_ids_(GetSubqueryIdToRootIds(query_)),
+      subquery_associations_(query_),
       clock_(options_in.clock == nullptr ? ecclesia::Clock::RealClock()
                                          : options_in.clock),
       timeout_manager_(options_in.query_timeout.has_value()
@@ -466,12 +457,23 @@ GetParams QueryPlanner::GetQueryParamsForRedPath(
   return params;
 }
 
+// Tries to normalize the Redfish object based on the given subquery ID.
+//
+// This function retrieves the subquery definition from the
+// `subquery_id_to_subquery_` map. If the subquery requires fetching raw data,
+// it extracts the raw data from the `query_execution_context`. Otherwise, it
+// uses the `normalizer_` to normalize the Redfish object based on the subquery
+// definition and stores the result in the `query_execution_context`.
+//
+// If the subquery has a root subquery ID, the normalized result is nested under
+// the root subquery result in the `query_execution_context`.
 absl::Status QueryPlanner::TryNormalize(
     absl::string_view subquery_id,
     QueryExecutionContext *query_execution_context,
     const RedpathNormalizerOptions &normalizer_options) const {
-  auto find_subquery = subquery_id_to_subquery_.find(subquery_id);
-  if (find_subquery == subquery_id_to_subquery_.end()) {
+  auto find_subquery =
+      subquery_associations_.subquery_id_to_subquery.find(subquery_id);
+  if (find_subquery == subquery_associations_.subquery_id_to_subquery.end()) {
     return absl::NotFoundError(
         absl::StrCat("Subquery for subquery id ", subquery_id,
                      " not found in query execution context."));
@@ -509,17 +511,32 @@ absl::Status QueryPlanner::TryNormalize(
         return normalized_query_result.status();
       }
 
-      // Not finding a property is not a halting error.
-      DLOG(INFO) << "Cannot find queried properties in Redfish Object.\n"
-                 << "===Redfish Object===\n"
-                 << query_execution_context->redfish_response.redfish_object
-                        ->GetContentAsJson()
-                        .dump(1)
-                 << "\n===Subquery===\n"
-                 << find_subquery->second.DebugString()
-                 << "\nError: " << normalized_query_result.status();
-      return absl::OkStatus();
+      // There are no properties to normalize. If the subquery doesn't have
+      // any properties to query or the subquery is not a root subquery, there
+      // no reason to create an empty subquery result.
+      // But Not finding a property is not an error either, so in this case
+      // we just return with ok status without data.
+      if (!find_subquery->second.properties().empty() ||
+          !subquery_associations_.root_id_to_subquery_ids.contains(
+              subquery_id)) {
+        // Not finding a property is not a halting error.
+        DLOG(INFO) << "Cannot find queried properties in Redfish Object.\n"
+                   << "===Redfish Object===\n"
+                   << query_execution_context->redfish_response.redfish_object
+                          ->GetContentAsJson()
+                          .dump(1)
+                   << "\n===Subquery===\n"
+                   << find_subquery->second.DebugString()
+                   << "\nError: " << normalized_query_result.status();
+        return absl::OkStatus();
+      }
+
+      // If the subquery is a root subquery, we need to create an empty subquery
+      // result to allow child subqueries to be executed.
+      normalized_query_result = QueryResultData();
     }
+
+    // Add an empty subquery value to allow child subqueries to be executed.
     *normalized_query_value.mutable_subquery_value() =
         std::move(*normalized_query_result);
   }
@@ -528,8 +545,10 @@ absl::Status QueryPlanner::TryNormalize(
   // the result of the root subquery so that we can nest the result of the
   // current subquery in it.
   QueryValue *root_subquery_result = nullptr;
-  auto subquery_id_to_root_iter = subquery_id_to_root_ids_.find(subquery_id);
-  if (subquery_id_to_root_iter != subquery_id_to_root_ids_.end()) {
+  auto subquery_id_to_root_iter =
+      subquery_associations_.subquery_id_to_root_ids.find(subquery_id);
+  if (subquery_id_to_root_iter !=
+      subquery_associations_.subquery_id_to_root_ids.end()) {
     for (const std::string &root_id : subquery_id_to_root_iter->second) {
       auto find_parent_subquery_output =
           query_execution_context->subquery_id_to_subquery_result.find(root_id);
@@ -542,7 +561,8 @@ absl::Status QueryPlanner::TryNormalize(
     }
   }
 
-  if (subquery_id_to_root_iter == subquery_id_to_root_ids_.end() ||
+  if (subquery_id_to_root_iter ==
+          subquery_associations_.subquery_id_to_root_ids.end() ||
       root_subquery_result == nullptr) {
     // There isn't a root subquery associated with current subquery or the
     // result of root subquery is not found.
