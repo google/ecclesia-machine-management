@@ -35,7 +35,7 @@
 
 namespace ecclesia {
 namespace {
-bool CompareListIdentifer(
+bool CompareListIdentifier(
     const QueryValue& query_value,
     absl::Span<const std::pair<std::string, std::string>> identifier) {
   for (const auto& [key, value] : identifier) {
@@ -55,13 +55,14 @@ bool CompareListIdentifer(
   return true;
 }
 
-absl::StatusOr<const QueryValue*> GetNextQueryValue(
-    const QueryValue* value, absl::string_view subquery_id) {
+absl::StatusOr<QueryValue*> GetNextMutableQueryValue(
+    QueryValue* value, absl::string_view subquery_id) {
   switch (value->kind_case()) {
     case QueryValue::kSubqueryValue: {
-      auto it = value->subquery_value().fields().find(subquery_id);
+      auto it =
+          value->mutable_subquery_value()->mutable_fields()->find(subquery_id);
       if (it == value->subquery_value().fields().end()) {
-        return absl::InvalidArgumentError(
+        return absl::NotFoundError(
             absl::StrCat("Subquery ID '", subquery_id, "' doesn't exist"));
       }
       return &it->second;
@@ -78,8 +79,9 @@ absl::StatusOr<const QueryValue*> GetNextQueryValue(
           identifier_parts.push_back(std::make_pair(parts[0], parts[1]));
         }
 
-        for (const auto& list_value : value->list_value().values()) {
-          if (CompareListIdentifer(list_value, identifier_parts)) {
+        for (auto& list_value :
+             *value->mutable_list_value()->mutable_values()) {
+          if (CompareListIdentifier(list_value, identifier_parts)) {
             return &list_value;
           }
         }
@@ -99,21 +101,21 @@ absl::StatusOr<const QueryValue*> GetNextQueryValue(
           return absl::NotFoundError(
               absl::StrCat("The list index is out of bounds: ", subquery_id));
         }
-        return &value->list_value().values(index);
+        return value->mutable_list_value()->mutable_values(index);
       }
       break;
     }
     default:
       return absl::InvalidArgumentError("Value is not a subquery or list");
   }
-  return absl::InvalidArgumentError(
+  return absl::NotFoundError(
       absl::StrCat("Path '", subquery_id, "' doesn't exist"));
 }
 
 }  // namespace
 
-absl::StatusOr<QueryValue> GetQueryValueFromResult(const QueryResult& result,
-                                                   absl::string_view path) {
+absl::StatusOr<QueryValue*> GetMutableQueryValueFromResult(
+    QueryResult& result, absl::string_view path) {
   if (path.empty()) {
     return absl::InvalidArgumentError("Path is empty.");
   }
@@ -135,23 +137,33 @@ absl::StatusOr<QueryValue> GetQueryValueFromResult(const QueryResult& result,
     return absl::InvalidArgumentError("Query result has no data.");
   }
 
-  const QueryValue* current_value;
-  if (auto it = result.data().fields().find(path_parts.front());
+  QueryValue* current_value;
+  if (auto it =
+          result.mutable_data()->mutable_fields()->find(path_parts.front());
       it != result.data().fields().end()) {
     current_value = &it->second;
     path_parts.pop();
   } else {
-    return absl::InvalidArgumentError(
-        absl::StrCat("Path is not a subquery: ", path));
+    return absl::NotFoundError(
+        absl::StrCat("Subquery ID '", path_parts.front(), "' doesn't exist"));
   }
 
   while (!path_parts.empty()) {
     ECCLESIA_ASSIGN_OR_RETURN(
-        current_value, GetNextQueryValue(current_value, path_parts.front()));
+        current_value,
+        GetNextMutableQueryValue(current_value, path_parts.front()));
 
     path_parts.pop();
   }
-  return *current_value;
+  return current_value;
+}
+
+absl::StatusOr<QueryValue> GetQueryValueFromResult(const QueryResult& result,
+                                                   absl::string_view path) {
+  QueryValue* value = nullptr;
+  ECCLESIA_ASSIGN_OR_RETURN(value, GetMutableQueryValueFromResult(
+                                       const_cast<QueryResult&>(result), path));
+  return *value;
 }
 
 }  // namespace ecclesia

@@ -82,6 +82,8 @@ cc_test(
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_main",
     ],
 )

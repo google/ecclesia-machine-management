@@ -38,6 +38,11 @@ namespace ecclesia {
 absl::StatusOr<QueryValue> GetQueryValueFromResult(const QueryResult& result,
                                                    absl::string_view path);
 
+// Returns error if the `path` doesn't exist in `result`; modifiable pointer to
+// the QueryValue otherwise.
+absl::StatusOr<QueryValue*> GetMutableQueryValueFromResult(
+    QueryResult& result, absl::string_view path);
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_RESULT_PATH_UTIL_H_
