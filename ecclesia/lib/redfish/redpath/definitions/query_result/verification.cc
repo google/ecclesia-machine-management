@@ -136,7 +136,7 @@ absl::StatusOr<std::string> GenerateIdentifier(
           absl::StrCat(identifier, "=", property_value));
     } else {
       return absl::FailedPreconditionError(
-          absl::StrCat("property ", identifier, " is not present"));
+          absl::StrCat("property '", identifier, "' is not present"));
     }
   }
   return absl::StrJoin(identifier_values, ",");
@@ -406,16 +406,16 @@ absl::Status Interval(const QueryValue& value,
 
   if (value.kind_case() != operands[0].kind_case() ||
       value.kind_case() != operands[1].kind_case()) {
-    return absl::FailedPreconditionError(
-        absl::StrFormat("Value: %s and operands [%s, %s] have different types "
-                        "and cannot be compared",
-                        get_string_value(value), get_string_value(operands[0]),
-                        get_string_value(operands[1])));
+    return absl::FailedPreconditionError(absl::StrFormat(
+        "Value '%s' and operands ['%s', '%s'] have different types "
+        "and cannot be compared",
+        get_string_value(value), get_string_value(operands[0]),
+        get_string_value(operands[1])));
   }
 
   if (!GetIntervalCompatibleTypes().contains(value.kind_case())) {
     return absl::FailedPreconditionError(
-        absl::StrFormat("Value: %s has an unsupported type for interval check",
+        absl::StrFormat("Value '%s' has an unsupported type for interval check",
                         get_string_value(value)));
   }
 
@@ -440,7 +440,7 @@ absl::Status Interval(const QueryValue& value,
         return "- Unsupported interval";
     }
 
-    return absl::StrFormat("Value: %s is not in the interval %s",
+    return absl::StrFormat("Value '%s' is not in the interval %s",
                            get_string_value(value), interval_str);
   };
 
@@ -581,8 +581,8 @@ absl::Status CompareListValues(const ListValue& value_a,
             GenerateIdentifier(verification, value);
         if (!identifier.ok()) {
           std::string error_message =
-              absl::StrCat("Missing identifier in ", label, ": ",
-                           identifier.status().message());
+              absl::StrCat("Missing identifier in '", label,
+                           "': ", identifier.status().message());
           return AddAndReturnError(result, error_message, context);
         }
         if (auto it = data_map.find(*identifier); it != data_map.end()) {
@@ -624,7 +624,7 @@ absl::Status CompareListValues(const ListValue& value_a,
             std::string identifier_str =
                 use_index ? absl::StrCat("index=", identifier) : identifier;
             std::string error_message =
-                absl::StrCat("Missing value in ", label, " with identifier ",
+                absl::StrCat("Missing value in '", label, "' with identifier ",
                              identifier_str);
             AddError(errors, error_message, ctx);
             error_messages.push_back(std::move(error_message));
@@ -696,17 +696,17 @@ absl::Status CompareSubqueryValues(
       continue;
     }
     if (a_it == fields_a.end()) {
-      AddError(
-          result,
-          absl::StrCat("Missing property ", property, " in ", options.label_a),
-          context);
+      AddError(result,
+               absl::StrCat("Missing property '", property, "' in ",
+                            options.label_a),
+               context);
       continue;
     }
     if (b_it == fields_b.end()) {
-      AddError(
-          result,
-          absl::StrCat("Missing property ", property, " in ", options.label_b),
-          context);
+      AddError(result,
+               absl::StrCat("Missing property '", property, "' in ",
+                            options.label_b),
+               context);
       continue;
     }
 
@@ -859,7 +859,7 @@ absl::Status VerifySubqueryValue(
       if (operations.has_verify() &&
           operations.verify().presence() == Verification::PRESENCE_REQUIRED) {
         return AddAndReturnError(
-            result, absl::StrCat("Missing required property ", property),
+            result, absl::StrCat("Missing required property '", property, "'"),
             context);
       }
       continue;
@@ -894,10 +894,10 @@ absl::Status VerifyQueryResult(const QueryResult& query_result,
                                const VerificationOptions& options) {
   if (query_result.query_id() != verification.query_id()) {
     return absl::InvalidArgumentError(
-        absl::StrCat("Query result has query ID ", query_result.query_id(),
-                     " which does not match the verification query "
-                     "ID ",
-                     verification.query_id()));
+        absl::StrCat("Query result has query ID '", query_result.query_id(),
+                     "' which does not match the verification query "
+                     "ID '",
+                     verification.query_id(), "'"));
   }
 
   VerificationContext context(query_result.query_id());

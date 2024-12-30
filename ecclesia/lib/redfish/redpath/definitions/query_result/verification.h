@@ -75,11 +75,11 @@ struct VerificationContext {
     std::vector<std::string> result;
     result.reserve(2);
     if (!path.empty()) {
-      result.push_back(absl::StrCat("Path: ", path));
+      result.push_back(absl::StrCat("path: '", path, "'"));
     }
 
     if (!uri.empty()) {
-      result.push_back(absl::StrCat("uri: ", uri));
+      result.push_back(absl::StrCat("uri: '", uri, "'"));
     }
 
     if (!result.empty()) {

@@ -271,7 +271,7 @@ INSTANTIATE_TEST_SUITE_P(
             )pb"),
             .expected_status = IsOk(),
             .expected_result = ParseTextProtoOrDie(
-                R"pb(errors { msg: "Missing property foo in valueA" })pb"),
+                R"pb(errors { msg: "Missing property 'foo' in valueA" })pb"),
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(subquery_value {
@@ -291,7 +291,7 @@ INSTANTIATE_TEST_SUITE_P(
             )pb"),
             .expected_status = IsOk(),
             .expected_result = ParseTextProtoOrDie(
-                R"pb(errors { msg: "Missing property foo in valueB" })pb"),
+                R"pb(errors { msg: "Missing property 'foo' in valueB" })pb"),
         },
         QueryValueInputsWithExpectations{
             .query_value_a = ParseTextProtoOrDie(R"pb(subquery_value {})pb"),
@@ -466,7 +466,7 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(
                 R"pb(errors {
-                       msg: "Missing value in valueB with identifier index=0"
+                       msg: "Missing value in 'valueB' with identifier index=0"
                      })pb"),
         },
         QueryValueInputsWithExpectations{
@@ -493,7 +493,7 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(
                 R"pb(errors {
-                       msg: "Missing identifier in valueA: Identifiers are only supported for subquery values"
+                       msg: "Missing identifier in 'valueA': Identifiers are only supported for subquery values"
                      })pb"),
         },
         QueryValueInputsWithExpectations{
@@ -504,7 +504,7 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(
                 R"pb(errors {
-                       msg: "Missing identifier in valueA: property foo is not present"
+                       msg: "Missing identifier in 'valueA': property 'foo' is not present"
                      })pb"),
         },
         QueryValueInputsWithExpectations{
@@ -515,7 +515,7 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(
                 R"pb(errors {
-                       msg: "Missing identifier in valueB: property foo is not present"
+                       msg: "Missing identifier in 'valueB': property 'foo' is not present"
                      })pb"),
         },
         QueryValueInputsWithExpectations{
@@ -571,7 +571,7 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(
                 R"pb(errors {
-                       msg: "Missing value in valueA with identifier foo=1"
+                       msg: "Missing value in 'valueA' with identifier foo=1"
                      })pb"),
         },
         QueryValueInputsWithExpectations{
@@ -591,7 +591,7 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(
                 R"pb(errors {
-                       msg: "Missing value in valueB with identifier foo=1"
+                       msg: "Missing value in 'valueB' with identifier foo=1"
                      })pb"),
         },
         QueryValueInputsWithExpectations{
@@ -629,10 +629,10 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(
                 R"pb(errors {
-                       msg: "Missing value in valueB with identifier foo=2"
+                       msg: "Missing value in 'valueB' with identifier foo=2"
                      }
                      errors {
-                       msg: "Missing value in valueA with identifier foo=3"
+                       msg: "Missing value in 'valueA' with identifier foo=3"
                      })pb"),
         },
         QueryValueInputsWithExpectations{
@@ -819,12 +819,12 @@ TEST(CompareListValuesTest, MisAlignedListValues) {
       result,
       IgnoringRepeatedFieldOrdering(EqualsProto(
           R"pb(errors {
-                 msg: "(Path: [1].foo, uri: /redfish/v1/index1b) Failed equality check, valueA: \'2\', valueB: \'1\'"
+                 msg: "(path: '[1].foo', uri: '/redfish/v1/index1b') Failed equality check, valueA: '2', valueB: '1'"
                  path: "[1].foo"
                  uri: "/redfish/v1/index1b"
                }
                errors {
-                 msg: "(Path: [0].foo, uri: /redfish/v1/index0) Failed equality check, valueA: \'1\', valueB: \'2\'"
+                 msg: "(path: '[0].foo', uri: '/redfish/v1/index0') Failed equality check, valueA: '1', valueB: '2'"
                  path: "[0].foo"
                  uri: "/redfish/v1/index0"
                })pb")));
@@ -1656,7 +1656,7 @@ TEST(VerifyQueryValueTest, IntervalFail) {
   ASSERT_THAT(result,
               EqualsProto(
                   R"pb(
-                    errors { msg: "Value: 1 is not in the interval (1, 10)" }
+                    errors { msg: "Value '1' is not in the interval (1, 10)" }
                   )pb"));
   result.Clear();
 
@@ -1664,7 +1664,7 @@ TEST(VerifyQueryValueTest, IntervalFail) {
   ASSERT_THAT(result, EqualsProto(
                           R"pb(
                             errors {
-                              msg: "Value: 10 is not in the interval (1, 10)"
+                              msg: "Value '10' is not in the interval (1, 10)"
                             })pb"));
   result.Clear();
 
@@ -1673,7 +1673,7 @@ TEST(VerifyQueryValueTest, IntervalFail) {
   ASSERT_THAT(result, EqualsProto(
                           R"pb(
                             errors {
-                              msg: "Value: 0 is not in the interval [1, 10]"
+                              msg: "Value '0' is not in the interval [1, 10]"
                             })pb"));
   result.Clear();
 
@@ -1681,7 +1681,7 @@ TEST(VerifyQueryValueTest, IntervalFail) {
   ASSERT_THAT(result, EqualsProto(
                           R"pb(
                             errors {
-                              msg: "Value: 100 is not in the interval [1, 10]"
+                              msg: "Value '100' is not in the interval [1, 10]"
                             })pb"));
   result.Clear();
 
@@ -1690,7 +1690,7 @@ TEST(VerifyQueryValueTest, IntervalFail) {
   ASSERT_THAT(result, EqualsProto(
                           R"pb(
                             errors {
-                              msg: "Value: 1 is not in the interval (1, 10]"
+                              msg: "Value '1' is not in the interval (1, 10]"
                             })pb"));
   result.Clear();
 
@@ -1698,7 +1698,7 @@ TEST(VerifyQueryValueTest, IntervalFail) {
   ASSERT_THAT(result, EqualsProto(
                           R"pb(
                             errors {
-                              msg: "Value: 100 is not in the interval (1, 10]"
+                              msg: "Value '100' is not in the interval (1, 10]"
                             })pb"));
   result.Clear();
 
@@ -1707,7 +1707,7 @@ TEST(VerifyQueryValueTest, IntervalFail) {
   ASSERT_THAT(result, EqualsProto(
                           R"pb(
                             errors {
-                              msg: "Value: 0 is not in the interval [1, 10)"
+                              msg: "Value '0' is not in the interval [1, 10)"
                             })pb"));
   result.Clear();
 
@@ -1715,7 +1715,7 @@ TEST(VerifyQueryValueTest, IntervalFail) {
   ASSERT_THAT(result, EqualsProto(
                           R"pb(
                             errors {
-                              msg: "Value: 10 is not in the interval [1, 10)"
+                              msg: "Value '10' is not in the interval [1, 10)"
                             })pb"));
 }
 
@@ -1887,7 +1887,7 @@ INSTANTIATE_TEST_SUITE_P(
                      })pb"),
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(
-                R"pb(errors { msg: "Missing required property bar" })pb"),
+                R"pb(errors { msg: "Missing required property 'bar'" })pb"),
         },
         VerifyQueryValueInputsWithExpectations{
             .query_value = ParseTextProtoOrDie(R"pb(subquery_value {
@@ -2122,7 +2122,7 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(R"pb(
               errors {
-                msg: "(Path: query_1.key0.[0], uri: /redfish/v1/example) Failed OPERATION_GREATER_THAN check, value: '0', operand: '0'"
+                msg: "(path: 'query_1.key0.[0]', uri: '/redfish/v1/example') Failed OPERATION_GREATER_THAN check, value: '0', operand: '0'"
                 path: "query_1.key0.[0]"
                 uri: "/redfish/v1/example"
               }
@@ -2179,7 +2179,7 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(R"pb(
               errors {
-                msg: "(Path: query_1.key0.[0].subkey0) Failed operation OPERATION_STRING_STARTS_WITH, value: 'bar', operand: 'foo'"
+                msg: "(path: 'query_1.key0.[0].subkey0') Failed operation OPERATION_STRING_STARTS_WITH, value: 'bar', operand: 'foo'"
                 path: "query_1.key0.[0].subkey0"
               }
             )pb"),
@@ -2227,7 +2227,7 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(R"pb(
               errors {
-                msg: "(Path: query_1.key0.[0]) Failed inequality check, valueA: '0', valueB: '0'"
+                msg: "(path: 'query_1.key0.[0]') Failed inequality check, valueA: '0', valueB: '0'"
                 path: "query_1.key0.[0]"
               }
             )pb"),
@@ -2286,7 +2286,7 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(R"pb(
               errors {
-                msg: "(Path: query_1.key0.subkey0=\"foo\".element, uri: /redfish/v1/example) Failed inequality check, valueA: 'bar', valueB: 'bar'"
+                msg: "(path: 'query_1.key0.subkey0=\"foo\".element', uri: '/redfish/v1/example') Failed inequality check, valueA: 'bar', valueB: 'bar'"
                 path: "query_1.key0.subkey0=\"foo\".element"
                 uri: "/redfish/v1/example"
               }
