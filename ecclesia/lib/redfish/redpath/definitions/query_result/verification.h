@@ -63,12 +63,21 @@ struct VerificationContext {
 
   void SetUri(absl::string_view in_uri) { uri = in_uri; }
 
-  // Appends a path element to the current path.
-  std::string AppendPath(absl::string_view path_element) const {
+  // Appends a property to the current path.
+  std::string AppendProperty(absl::string_view property) const {
     if (path.empty()) {
-      return std::string(path_element);
+      return std::string(property);
     }
-    return absl::StrCat(path, ".", path_element);
+    return absl::StrCat(path, ".", property);
+  }
+
+  // Appends an index to the current path.
+  template <typename T>
+  std::string AddIndex(const T& index) const {
+    if (path.empty()) {
+      return absl::StrCat("[", index, "]");
+    }
+    return absl::StrCat(path, "[", index, "]");
   }
 
   std::string ToString() const {

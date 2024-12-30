@@ -638,9 +638,9 @@ absl::Status CompareListValues(const ListValue& value_a,
 
     std::string path;
     if (use_index) {
-      path = context.AppendPath(absl::StrCat("[", id, "]"));
+      path = context.AddIndex(id);
     } else {
-      path = context.AppendPath(id);
+      path = context.AppendProperty(id);
     }
     VerificationContext sub_context(path, context.uri);
 
@@ -710,7 +710,7 @@ absl::Status CompareSubqueryValues(
       continue;
     }
 
-    std::string path = context.AppendPath(property);
+    std::string path = context.AppendProperty(property);
     VerificationContext sub_context(path, context.uri);
 
     switch (a_it->second.kind_case()) {
@@ -822,7 +822,7 @@ absl::Status VerifyListValue(const ListValue& list_value,
   int index = 0;
   // Ignore identifiers because they are for comparison only.
   for (const QueryValue& list_item : list_value.values()) {
-    std::string path = context.AppendPath(absl::StrCat("[", index++, "]"));
+    std::string path = context.AddIndex(index++);
     VerificationContext sub_context(path, context.uri);
     switch (list_item.kind_case()) {
       case QueryValue::kSubqueryValue:
@@ -865,7 +865,7 @@ absl::Status VerifySubqueryValue(
       continue;
     }
 
-    std::string path = context.AppendPath(property);
+    std::string path = context.AppendProperty(property);
     VerificationContext sub_context(path, context.uri);
 
     switch (it->second.kind_case()) {

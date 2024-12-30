@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/path_util.h"
 
+#include <cstddef>
 #include <queue>
 #include <string>
 #include <utility>
@@ -131,6 +132,19 @@ absl::StatusOr<QueryValue*> GetMutableQueryValueFromResult(
   if (path_parts.empty()) {
     return absl::InvalidArgumentError(
         absl::StrCat("Path is not a subquery: ", path));
+  }
+
+  const size_t parts_size = path_parts.size();
+  for (size_t i = 0; i < parts_size; ++i) {
+    absl::string_view front_part = path_parts.front();
+    path_parts.pop();
+    if (auto pos = front_part.find_first_of('[');
+        pos != absl::string_view::npos) {
+      path_parts.push(front_part.substr(0, pos));
+      path_parts.push(front_part.substr(pos));
+    } else {
+      path_parts.push(front_part);
+    }
   }
 
   if (!result.has_data() || result.data().fields().empty()) {

@@ -2122,8 +2122,8 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(R"pb(
               errors {
-                msg: "(path: 'query_1.key0.[0]', uri: '/redfish/v1/example') Failed OPERATION_GREATER_THAN check, value: '0', operand: '0'"
-                path: "query_1.key0.[0]"
+                msg: "(path: 'query_1.key0[0]', uri: '/redfish/v1/example') Failed OPERATION_GREATER_THAN check, value: '0', operand: '0'"
+                path: "query_1.key0[0]"
                 uri: "/redfish/v1/example"
               }
             )pb"),
@@ -2179,8 +2179,8 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(R"pb(
               errors {
-                msg: "(path: 'query_1.key0.[0].subkey0') Failed operation OPERATION_STRING_STARTS_WITH, value: 'bar', operand: 'foo'"
-                path: "query_1.key0.[0].subkey0"
+                msg: "(path: 'query_1.key0[0].subkey0') Failed operation OPERATION_STRING_STARTS_WITH, value: 'bar', operand: 'foo'"
+                path: "query_1.key0[0].subkey0"
               }
             )pb"),
         }));
@@ -2227,8 +2227,8 @@ INSTANTIATE_TEST_SUITE_P(
             .expected_status = IsStatusInternal(),
             .expected_result = ParseTextProtoOrDie(R"pb(
               errors {
-                msg: "(path: 'query_1.key0.[0]') Failed inequality check, valueA: '0', valueB: '0'"
-                path: "query_1.key0.[0]"
+                msg: "(path: 'query_1.key0[0]') Failed inequality check, valueA: '0', valueB: '0'"
+                path: "query_1.key0[0]"
               }
             )pb"),
         },

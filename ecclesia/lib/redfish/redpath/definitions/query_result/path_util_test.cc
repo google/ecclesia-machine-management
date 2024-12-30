@@ -461,7 +461,7 @@ TEST(GetQueryValueFromResult, IndexNotInt) {
     }
   )pb");
 
-  std::string path = "query1.subquery_id.[example].name";
+  std::string path = "query1.subquery_id[example].name";
 
   EXPECT_THAT(GetQueryValueFromResult(result, path), IsStatusInvalidArgument());
 }
@@ -496,10 +496,10 @@ TEST(GetQueryValueFromResult, IndexDoesNotExist) {
     }
   )pb");
 
-  EXPECT_THAT(GetQueryValueFromResult(result, "query1.subquery_id.[3].name"),
+  EXPECT_THAT(GetQueryValueFromResult(result, "query1.subquery_id[3].name"),
               IsStatusNotFound());
 
-  EXPECT_THAT(GetQueryValueFromResult(result, "query1.subquery_id.[-1].name"),
+  EXPECT_THAT(GetQueryValueFromResult(result, "query1.subquery_id[-1].name"),
               IsStatusNotFound());
 }
 
@@ -534,7 +534,7 @@ TEST(GetQueryValueFromResult, ListIndexSuccess) {
   )pb");
 
   EXPECT_THAT(
-      GetQueryValueFromResult(result, "query1.subquery_id.[0].name"),
+      GetQueryValueFromResult(result, "query1.subquery_id[0].name"),
       IsOkAndHolds(ecclesia::EqualsProto(R"pb(string_value: "value1")pb")));
 }
 
@@ -549,7 +549,7 @@ TEST(GetQueryValueFromResult, NotAllowedType) {
     }
   )pb");
 
-  EXPECT_THAT(GetQueryValueFromResult(result, "query1.subquery_id.[0].name"),
+  EXPECT_THAT(GetQueryValueFromResult(result, "query1.subquery_id[0].name"),
               IsStatusInvalidArgument());
 }
 
@@ -609,7 +609,7 @@ INSTANTIATE_TEST_SUITE_P(
              }
            }
          )pb"),
-         .path = "query1.subquery_id.[0].name",
+         .path = "query1.subquery_id[0].name",
          .expected_status_code = IsStatusInvalidArgument()},
         {.result = ParseTextProtoOrDie(R"pb(
            query_id: "query1"
@@ -803,7 +803,7 @@ INSTANTIATE_TEST_SUITE_P(
              }
            }
          )pb"),
-         .path = "query1.subquery_id.[example].name",
+         .path = "query1.subquery_id[example].name",
          .expected_status_code = IsStatusInvalidArgument()},
         {.result = ParseTextProtoOrDie(R"pb(
            query_id: "query1"
@@ -833,7 +833,7 @@ INSTANTIATE_TEST_SUITE_P(
              }
            }
          )pb"),
-         .path = "query1.subquery_id.[3].name",
+         .path = "query1.subquery_id[3].name",
          .expected_status_code = IsStatusNotFound()},
         {.result = ParseTextProtoOrDie(R"pb(
            query_id: "query1"
@@ -863,7 +863,7 @@ INSTANTIATE_TEST_SUITE_P(
              }
            }
          )pb"),
-         .path = "query1.subquery_id.[-1].name",
+         .path = "query1.subquery_id[-1].name",
          .expected_status_code = IsStatusNotFound()},
     }));
 
@@ -1081,7 +1081,7 @@ INSTANTIATE_TEST_SUITE_P(
                 }
               }
             )pb"),
-            .path = "query1.subquery_id.[0].name",
+            .path = "query1.subquery_id[0].name",
             .expected_value =
                 ParseTextProtoOrDie(R"pb(string_value: "value1")pb"),
         },
