@@ -2293,5 +2293,63 @@ INSTANTIATE_TEST_SUITE_P(
             )pb"),
         }));
 
+TEST(VerifyQueryResultTest, MultipleErrors) {
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          list_compare {
+            verify {
+              data_compare {
+                fields {
+                  key: "key1"
+                  value { verify { presence: PRESENCE_REQUIRED } }
+                }
+                fields {
+                  key: "key2"
+                  value { verify { presence: PRESENCE_REQUIRED } }
+                }
+              }
+            }
+          }
+        }
+      }
+    })pb");
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "key3"
+                  value { int_value: 1 }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsStatusInternal());
+  ASSERT_THAT(result, IgnoringRepeatedFieldOrdering(EqualsProto(R"pb(
+                errors {
+                  msg: "Missing required property 'key1'"
+                  path: "query_1.key0[0]"
+                }
+                errors {
+                  msg: "Missing required property 'key2'"
+                  path: "query_1.key0[0]"
+                }
+              )pb")));
+}
+
 }  // namespace
 }  // namespace ecclesia

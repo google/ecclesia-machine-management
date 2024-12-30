@@ -84,6 +84,15 @@ absl::Status AddAndReturnError(QueryVerificationResult& result,
   return absl::InternalError(message);
 }
 
+absl::Status ProcessResult(const QueryVerificationResult& result) {
+  if (result.errors().empty()) return absl::OkStatus();
+  return absl::InternalError(absl::StrJoin(
+      result.errors(), "\n",
+      [](std::string* out, const QueryVerificationResult::ErrorInfo& error) {
+        absl::StrAppend(out, error.msg());
+      }));
+}
+
 template <typename T>
 std::string InternalErrorMessage(absl::string_view message, const T& value_a,
                                  const T& value_b, VerificationContext context,
@@ -583,14 +592,16 @@ absl::Status CompareListValues(const ListValue& value_a,
           std::string error_message =
               absl::StrCat("Missing identifier in '", label,
                            "': ", identifier.status().message());
-          return AddAndReturnError(result, error_message, context);
+          AddError(result, error_message, context);
+          continue;
         }
         if (auto it = data_map.find(*identifier); it != data_map.end()) {
           if (is_first_item ||
               (!is_first_item && it->second.second != nullptr)) {
             std::string error_message = absl::StrCat("Duplicate identifier in ",
                                                      label, ": ", *identifier);
-            return AddAndReturnError(result, error_message, context);
+            AddError(result, error_message, context);
+            continue;
           }
           data_map_item = &it->second;
         } else {
@@ -603,7 +614,7 @@ absl::Status CompareListValues(const ListValue& value_a,
         data_map_item->second = &value;
       }
     }
-    return absl::OkStatus();
+    return ProcessResult(result);
   };
 
   bool use_index = verification.identifiers().empty();
@@ -858,9 +869,9 @@ absl::Status VerifySubqueryValue(
     if (it == fields.end()) {
       if (operations.has_verify() &&
           operations.verify().presence() == Verification::PRESENCE_REQUIRED) {
-        return AddAndReturnError(
-            result, absl::StrCat("Missing required property '", property, "'"),
-            context);
+        AddError(result,
+                 absl::StrCat("Missing required property '", property, "'"),
+                 context);
       }
       continue;
     }
@@ -885,7 +896,7 @@ absl::Status VerifySubqueryValue(
     }
   }
 
-  return absl::OkStatus();
+  return ProcessResult(result);
 }
 
 absl::Status VerifyQueryResult(const QueryResult& query_result,
