@@ -74,6 +74,12 @@ class RedPathQueryValidator {
           return "Deep Query";
         case Type::kDeepRedPath:
           return "Deep Redpath";
+        case Type::kRedPathNoName:
+          return "Redpath No Name";
+        case Type::kDisallowedPredicate:
+          return "Disallowed Predicate";
+        default:
+          return "Unknown";
       }
     }
 
