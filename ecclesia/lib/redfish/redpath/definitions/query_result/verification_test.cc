@@ -949,8 +949,7 @@ TEST(VerifyQueryValueTest, EmtpyVerification) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
   QueryValueVerification verification;
   QueryVerificationResult result;
-  EXPECT_THAT(VerifyQueryValue(qv, verification, result),
-              IsStatusInvalidArgument());
+  EXPECT_THAT(VerifyQueryValue(qv, verification, result), IsOk());
   ASSERT_THAT(result, EqualsProto(""));
 }
 
@@ -1769,8 +1768,7 @@ TEST(VerifyListValueTest, MissingVerifyField) {
   )pb");
   ListValueVerification verification;
   QueryVerificationResult result;
-  EXPECT_THAT(VerifyListValue(lv, verification, result),
-              IsStatusInvalidArgument());
+  EXPECT_THAT(VerifyListValue(lv, verification, result), IsOk());
   ASSERT_THAT(result, EqualsProto(R"pb()pb"));
 }
 

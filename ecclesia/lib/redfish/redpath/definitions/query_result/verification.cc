@@ -777,8 +777,7 @@ absl::Status VerifyQueryValue(const QueryValue& value,
                               VerificationContext context,
                               const VerificationOptions& options) {
   if (!verification.has_verify()) {
-    return absl::InvalidArgumentError(
-        "Query value verification must have a verify field");
+    return absl::OkStatus();
   }
 
   // Presence checking is handled by the caller. This function can only verify
@@ -827,8 +826,7 @@ absl::Status VerifyListValue(const ListValue& list_value,
                              VerificationContext context,
                              const VerificationOptions& options) {
   if (!verification.has_verify()) {
-    return absl::InvalidArgumentError(
-        "Query value verification must have a verify field");
+    return absl::OkStatus();
   }
   int index = 0;
   // Ignore identifiers because they are for comparison only.
