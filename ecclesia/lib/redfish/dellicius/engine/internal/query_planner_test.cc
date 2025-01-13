@@ -87,13 +87,13 @@ class MockableGetRedfishObject : public RedfishObject {
  public:
   MockableGetRedfishObject() = default;
   MockableGetRedfishObject(const MockableGetRedfishObject &) = delete;
-  RedfishVariant operator[](const std::string &node_name) const override {
+  RedfishVariant operator[](absl::string_view node_name) const override {
     return RedfishVariant(
         absl::UnimplementedError("TestRedfishObject [] unsupported"));
   }
   nlohmann::json GetContentAsJson() const override { return kMockObject; }
   MOCK_METHOD(RedfishVariant, Get,
-              (const std::string &node_name, GetParams params),
+              (absl::string_view node_name, GetParams params),
               (const, override));
   std::string DebugString() const override { return std::string(kMockObject); }
   std::optional<std::string> GetUriString() const override { return ""; }
@@ -459,7 +459,7 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulated) {
   std::unique_ptr<MockableGetRedfishObject> mock_rf_obj =
       std::make_unique<MockableGetRedfishObject>();
   // Mock Get() call one for Chassis node in the redpath.
-  EXPECT_CALL(*mock_rf_obj, Get("Chassis", AnyGetParams(_)))
+  EXPECT_CALL(*mock_rf_obj, Get(absl::string_view("Chassis"), AnyGetParams(_)))
       .WillOnce(Return(ByMove(
           RedfishVariant(absl::DeadlineExceededError("deadline exceeded")))));
   // Create context node that will return the mocked Redfish Object.
@@ -529,7 +529,8 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulatedCollectionResource) {
   std::unique_ptr<MockableGetRedfishObject> mock_ok_rf_obj =
       std::make_unique<MockableGetRedfishObject>();
   // Mock Get() call one for Chassis node in the redpath.
-  EXPECT_CALL(*mock_ok_rf_obj, Get("Chassis", AnyGetParams(_)))
+  EXPECT_CALL(*mock_ok_rf_obj,
+              Get(absl::string_view("Chassis"), AnyGetParams(_)))
       .WillOnce(Return(ByMove(std::move(ok_rf_variant))));
 
   // Create context node to return the mocked Redfish Object.
@@ -698,10 +699,10 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorDoesntHaltExecutionIfDesired) {
       std::make_unique<MockableGetRedfishObject>();
   // Since query execution should NOT halt, expect both subqueries are
   // executed, even though they return errors.
-  EXPECT_CALL(*mock_rf_obj, Get("Systems", AnyGetParams(_)))
+  EXPECT_CALL(*mock_rf_obj, Get(absl::string_view("Systems"), AnyGetParams(_)))
       .WillRepeatedly(Return(ByMove(
           RedfishVariant(absl::DeadlineExceededError("deadline exceeded")))));
-  EXPECT_CALL(*mock_rf_obj, Get("Chassis", AnyGetParams(_)))
+  EXPECT_CALL(*mock_rf_obj, Get(absl::string_view("Chassis"), AnyGetParams(_)))
       .WillRepeatedly(Return(ByMove(
           RedfishVariant(absl::DeadlineExceededError("deadline exceeded")))));
   // Create context node that will return the mocked Redfish Object.

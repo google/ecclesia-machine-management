@@ -39,11 +39,11 @@ class JsonMockupObject : public RedfishObject {
   explicit JsonMockupObject(nlohmann::json json_view)
       : json_view_(std::move(json_view)) {}
 
-  RedfishVariant operator[](const std::string &node_name) const {
+  RedfishVariant operator[](absl::string_view node_name) const {
     return Get(node_name, GetParams());
   }
   // Mockup interface ignores params
-  RedfishVariant Get(const std::string &node_name,
+  RedfishVariant Get(absl::string_view node_name,
                      GetParams params) const override;
 
   std::optional<std::string> GetUriString() const override {

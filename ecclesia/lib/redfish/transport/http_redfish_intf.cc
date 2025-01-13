@@ -66,7 +66,7 @@ namespace {
 //   }
 struct RedfishExtendedPath {
   std::string uri;
-  std::vector<std::variant<std::string, int>> properties;
+  std::vector<std::variant<absl::string_view, int>> properties;
   std::string GetFullPath() const {
     std::string raw_path = uri;
     for (const auto &item : properties) {
@@ -84,7 +84,7 @@ struct RedfishExtendedPath {
 nlohmann::json ProcessValueVariant(const RedfishInterface::ListValue &val);
 nlohmann::json ProcessValueVariant(const RedfishInterface::ObjectValue &val);
 nlohmann::json ProcessValueVariant(int val) { return nlohmann::json(val); }
-nlohmann::json ProcessValueVariant(const std::string &val) {
+nlohmann::json ProcessValueVariant(absl::string_view val) {
   return nlohmann::json(val);
 }
 nlohmann::json ProcessValueVariant(const char *val) {
@@ -305,11 +305,11 @@ class HttpIntfObjectImpl : public RedfishObject {
   HttpIntfObjectImpl(const HttpIntfObjectImpl &) = delete;
   HttpIntfObjectImpl &operator=(const HttpIntfObjectImpl &) = delete;
 
-  RedfishVariant operator[](const std::string &node_name) const override {
+  RedfishVariant operator[](absl::string_view node_name) const override {
     return Get(node_name, GetParams{.timeout_manager = timeout_mgr_});
   }
 
-  RedfishVariant Get(const std::string &node_name,
+  RedfishVariant Get(absl::string_view node_name,
                      GetParams params) const override {
     if (!std::holds_alternative<nlohmann::json>(result_.body)) {
       return RedfishVariant(

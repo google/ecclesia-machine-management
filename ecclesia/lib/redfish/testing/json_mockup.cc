@@ -285,7 +285,7 @@ class JsonMockupMockup : public EditableJsonMockupMockup {
 };
 }  // namespace
 
-RedfishVariant JsonMockupObject::Get(const std::string &node_name,
+RedfishVariant JsonMockupObject::Get(absl::string_view node_name,
                                      GetParams params) const {
   auto node = json_view_.find(node_name);
   if (node == json_view_.end())

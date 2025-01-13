@@ -423,7 +423,7 @@ class RedfishVariant final {
   RedfishVariant &operator=(RedfishVariant &&other) = default;
 
   inline RedfishVariant operator[](IndexGetWithArgs property) const;
-  inline RedfishVariant operator[](const std::string &property) const;
+  inline RedfishVariant operator[](absl::string_view property) const;
   inline RedfishVariant operator[](size_t index) const;
 
   IndexHelper AsIndexHelper() const { return IndexHelper(*this); }
@@ -615,12 +615,12 @@ class RedfishObject {
   // Returns the payload for a given named property node. If the value of
   // the node is an "@odata.id" field, the RedfishInterface will be queried
   // to retrieve the payload corresponding to that "@odata.id".
-  virtual RedfishVariant operator[](const std::string &node_name) const = 0;
+  virtual RedfishVariant operator[](absl::string_view node_name) const = 0;
 
   // Returns the payload for a given named property node. Implementation is
-  // similar to 'operator[](const std::string &node_name)' and extended with
+  // similar to 'operator[](absl::string_view node_name)' and extended with
   // GetParams arguments
-  virtual RedfishVariant Get(const std::string &node_name,
+  virtual RedfishVariant Get(absl::string_view node_name,
                              GetParams params = {}) const = 0;
 
   // Returns the string URI of the current RedfishObject, if available.
@@ -887,7 +887,7 @@ RedfishVariant RedfishVariant::operator[](IndexGetWithArgs property) const {
   return RedfishVariant(absl::InternalError("not a RedfishObject"));
 }
 
-RedfishVariant RedfishVariant::operator[](const std::string &property) const {
+RedfishVariant RedfishVariant::operator[](absl::string_view property) const {
   if (!status_.ok()) {
     return RedfishVariant(nullptr, status_, httpcode_, httpheaders_);
   }
