@@ -90,6 +90,29 @@ message Verification {
   repeated Validation validation = 3;
 }
 
+message Conditions {
+  message Condition {
+    // The path to the property to check. The path is relative to the current
+    // position in the query result.
+    string property_name = 1;
+    // The verification to perform if the condition is true.
+    Verification condition = 2;
+  }
+  repeated Condition conditions = 2;
+}
+
+message ConditionalVerification {
+  // The condition to check.
+  QueryValueVerification conditional_verify = 1;
+  // The path to the property to check. The path is relative to the current
+  // to the current position in the query result.
+
+  oneof ConditionalTypes {
+    Conditions all_of = 2;
+    Conditions any_of = 3;
+  }
+}
+
 message QueryValueVerification {
   // The comparison to perform based on the type of the value.
   oneof kind {
@@ -100,6 +123,9 @@ message QueryValueVerification {
     // Applies to subquery values.
     QueryResultDataVerification data_compare = 3;
   }
+
+  // The conditional verification to perform on the query value.
+  repeated ConditionalVerification overrides = 4;
 }
 
 message ListValueVerification {

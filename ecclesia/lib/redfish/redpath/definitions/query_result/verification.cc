@@ -521,6 +521,170 @@ absl::Status Interval(const QueryValue& value,
   return AddAndReturnError(result, error_message, context);
 }
 
+absl::Status QueryValueValidation(const QueryValue& value,
+                                  const Verification& verification,
+                                  QueryVerificationResult& result,
+                                  VerificationContext context,
+                                  const VerificationOptions& options) {
+  auto verify_element =
+      [&](const Verification::Validation& validation) -> absl::Status {
+    if (validation.has_operation()) {
+      if (validation.operands().empty()) {
+        return absl::InternalError(
+            "Query value verification must have at least one operand");
+      }
+      return OperationQueryValue(value, validation.operands(0),
+                                 validation.operation(), result, context);
+    }
+    if (validation.has_range()) {
+      return Range(value, validation.operands(), validation.range(), result,
+                   context);
+    }
+
+    if (validation.has_interval()) {
+      return Interval(value, validation.operands(), validation.interval(),
+                      result, context);
+    }
+    return absl::OkStatus();
+  };
+
+  if (verification.validation().empty()) {
+    return absl::OkStatus();
+  }
+
+  absl::Status status = absl::OkStatus();
+  for (const Verification::Validation& validation : verification.validation()) {
+    if (absl::Status verify_status = verify_element(validation);
+        !verify_status.ok()) {
+      status = verify_status;
+    }
+  }
+  return status;
+}
+
+bool CheckCondition(const QueryResultData& value,
+                    absl::string_view path_property_name,
+                    const ecclesia::Verification& condition,
+                    VerificationContext context) {
+  auto it = value.fields().find(path_property_name);
+  if (it == value.fields().end()) {
+    return false;
+  }
+
+  QueryVerificationResult verification_result;
+  if (!QueryValueValidation(it->second, condition, verification_result, context,
+                            VerificationOptions())
+           .ok()) {
+    return false;
+  }
+  return verification_result.errors().empty();
+}
+
+QueryValueVerification GetVerification(
+    const QueryResultData* value, const QueryValueVerification& verification,
+    VerificationContext context) {
+  if (verification.overrides().empty()) {
+    return verification;
+  }
+
+  for (const ecclesia::ConditionalVerification& override :
+       verification.overrides()) {
+    bool has_condition = false;
+
+    switch (override.ConditionalTypes_case()) {
+      case ConditionalVerification::kAllOf:
+        // If there are no conditions, then the condition is always false.
+        // Otherwise, all conditions must be true.
+        has_condition = !override.all_of().conditions().empty();
+        for (const ecclesia::Conditions::Condition& condition :
+             override.all_of().conditions()) {
+          if (!CheckCondition(*value, condition.property_name(),
+                              condition.condition(), context)) {
+            has_condition = false;
+            break;
+          }
+        }
+        break;
+      case ConditionalVerification::kAnyOf:
+        for (const ecclesia::Conditions::Condition& condition :
+             override.any_of().conditions()) {
+          if (CheckCondition(*value, condition.property_name(),
+                             condition.condition(), context)) {
+            has_condition = true;
+            break;
+          }
+        }
+        break;
+      default:
+        break;
+    }
+
+    if (has_condition) {
+      return override.conditional_verify();
+    }
+  }
+
+  // no conditions matched, return the original verification.
+  return verification;
+}
+
+QueryValueVerification GetComparison(const QueryResultData* value_a,
+                                     const QueryResultData* value_b,
+                                     const QueryValueVerification& verification,
+                                     VerificationContext context) {
+  if (verification.overrides().empty()) {
+    return verification;
+  }
+
+  // Check if any of the conditions match.
+  for (const ecclesia::ConditionalVerification& override :
+       verification.overrides()) {
+    bool has_condition = false;
+
+    switch (override.ConditionalTypes_case()) {
+      case ConditionalVerification::kAllOf:
+        // If there are no conditions, then the condition is always false.
+        // Otherwise, all conditions must be true.
+        has_condition = !override.all_of().conditions().empty();
+        for (const ecclesia::Conditions::Condition& condition :
+             override.all_of().conditions()) {
+          if (!CheckCondition(*value_a, condition.property_name(),
+                              condition.condition(), context)) {
+            has_condition = false;
+            break;
+          }
+          if (!CheckCondition(*value_b, condition.property_name(),
+                              condition.condition(), context)) {
+            has_condition = false;
+            break;
+          }
+        }
+        break;
+      case ConditionalVerification::kAnyOf:
+        for (const ecclesia::Conditions::Condition& condition :
+             override.any_of().conditions()) {
+          if (CheckCondition(*value_a, condition.property_name(),
+                             condition.condition(), context) &&
+              CheckCondition(*value_b, condition.property_name(),
+                             condition.condition(), context)) {
+            has_condition = true;
+            break;
+          }
+        }
+        break;
+      default:
+        break;
+    }
+
+    if (has_condition) {
+      return override.conditional_verify();
+    }
+  }
+
+  // no conditions matched, return the original verification.
+  return verification;
+}
+
 }  // namespace
 
 absl::Status CompareQueryValues(const QueryValue& value_a,
@@ -724,21 +888,25 @@ absl::Status CompareSubqueryValues(
     std::string path = context.AppendProperty(property);
     VerificationContext sub_context(path, context.uri);
 
+    QueryValueVerification local_verification =
+        GetComparison(&value_a, &value_b, operations, context);
     switch (a_it->second.kind_case()) {
       case QueryValue::kSubqueryValue:
         ECCLESIA_RETURN_IF_ERROR(CompareSubqueryValues(
             a_it->second.subquery_value(), b_it->second.subquery_value(),
-            operations.data_compare(), result, sub_context, options));
+            local_verification.data_compare(), result, sub_context, options));
         break;
       case QueryValue::kListValue:
         ECCLESIA_RETURN_IF_ERROR(CompareListValues(
             a_it->second.list_value(), b_it->second.list_value(),
-            operations.list_compare(), result, sub_context, options));
+            local_verification.list_compare(), result, sub_context, options));
         break;
       default:
-        ECCLESIA_RETURN_IF_ERROR(CompareQueryValues(
-            a_it->second, b_it->second, operations.verify().comparison(),
-            result, sub_context, options));
+        // Check conditions before passing configurations.
+        ECCLESIA_RETURN_IF_ERROR(
+            CompareQueryValues(a_it->second, b_it->second,
+                               local_verification.verify().comparison(), result,
+                               sub_context, options));
     }
   }
 
@@ -779,45 +947,11 @@ absl::Status VerifyQueryValue(const QueryValue& value,
   if (!verification.has_verify()) {
     return absl::OkStatus();
   }
-
   // Presence checking is handled by the caller. This function can only verify
   // properties that are present in the query value.
-  if (verification.verify().validation().empty()) {
-    return absl::OkStatus();
-  }
 
-  auto verify_element =
-      [&](const Verification::Validation& validation) -> absl::Status {
-    if (validation.has_operation()) {
-      if (validation.operands().empty()) {
-        return absl::InternalError(
-            "Query value verification must have at least one operand");
-      }
-      return OperationQueryValue(value, validation.operands(0),
-                                 validation.operation(), result, context);
-    }
-    if (validation.has_range()) {
-      return Range(value, validation.operands(), validation.range(), result,
-                   context);
-    }
-
-    if (validation.has_interval()) {
-      return Interval(value, validation.operands(), validation.interval(),
-                      result, context);
-    }
-    return absl::OkStatus();
-  };
-
-  absl::Status status = absl::OkStatus();
-  for (const Verification::Validation& validation :
-       verification.verify().validation()) {
-    if (absl::Status verify_status = verify_element(validation);
-        !verify_status.ok()) {
-      status = verify_status;
-    }
-  }
-
-  return status;
+  return QueryValueValidation(value, verification.verify(), result, context,
+                              options);
 }
 
 absl::Status VerifyListValue(const ListValue& list_value,
@@ -863,10 +997,13 @@ absl::Status VerifySubqueryValue(
   }
 
   for (const auto& [property, operations] : verification.fields()) {
+    QueryValueVerification local_verification =
+        GetVerification(&value, operations, context);
     auto it = fields.find(property);
     if (it == fields.end()) {
-      if (operations.has_verify() &&
-          operations.verify().presence() == Verification::PRESENCE_REQUIRED) {
+      if (local_verification.has_verify() &&
+          local_verification.verify().presence() ==
+              Verification::PRESENCE_REQUIRED) {
         AddError(result,
                  absl::StrCat("Missing required property '", property, "'"),
                  context);
@@ -880,17 +1017,17 @@ absl::Status VerifySubqueryValue(
     switch (it->second.kind_case()) {
       case QueryValue::kSubqueryValue:
         ECCLESIA_RETURN_IF_ERROR(VerifySubqueryValue(
-            it->second.subquery_value(), operations.data_compare(), result,
-            sub_context, options));
+            it->second.subquery_value(), local_verification.data_compare(),
+            result, sub_context, options));
         break;
       case QueryValue::kListValue:
-        ECCLESIA_RETURN_IF_ERROR(VerifyListValue(it->second.list_value(),
-                                                 operations.list_compare(),
-                                                 result, sub_context, options));
+        ECCLESIA_RETURN_IF_ERROR(VerifyListValue(
+            it->second.list_value(), local_verification.list_compare(), result,
+            sub_context, options));
         break;
       default:
         ECCLESIA_RETURN_IF_ERROR(VerifyQueryValue(
-            it->second, operations, result, sub_context, options));
+            it->second, local_verification, result, sub_context, options));
     }
   }
 

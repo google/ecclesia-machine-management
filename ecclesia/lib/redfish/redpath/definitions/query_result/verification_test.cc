@@ -945,6 +945,921 @@ TEST(CompareQueryResultsTest, SuccessListQueryResult) {
   ASSERT_THAT(result, EqualsProto(""));
 }
 
+TEST(CompareQueryResultsTest, SuccessConditionalSimpleQueryResult) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+  QueryResult qr_b = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify { comparison: COMPARE_EQUAL }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN_OR_EQUAL
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+            conditional_verify { verify { comparison: COMPARE_NOT_EQUAL } }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(CompareQueryResultsTest, SuccessAllOfConditionalSimpleQueryResult) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+  QueryResult qr_b = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify { comparison: COMPARE_EQUAL }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key0"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN_OR_EQUAL
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+              conditions {
+                property_name: "conditional_key1"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_CONTAINS
+                    operands { string_value: "/phys" }
+                  }
+                }
+              }
+            }
+            conditional_verify { verify { comparison: COMPARE_NOT_EQUAL } }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(CompareQueryResultsTest, SuccessAnyOfConditionalSimpleQueryResult) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+  QueryResult qr_b = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify { comparison: COMPARE_EQUAL }
+          overrides {
+            any_of {
+              conditions {
+                property_name: "conditional_key0"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN_OR_EQUAL
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+              conditions {
+                property_name: "conditional_key1"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_CONTAINS
+                    operands { string_value: "/phys0" }
+                  }
+                }
+              }
+            }
+            conditional_verify { verify { comparison: COMPARE_NOT_EQUAL } }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(CompareQueryResultsTest, SuccessMultipleOverridesSimpleQueryResult) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+  QueryResult qr_b = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify { comparison: COMPARE_EQUAL }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key0"
+                condition {
+                  validation {
+                    operation: OPERATION_LESS_THAN
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+            conditional_verify { verify { comparison: COMPARE_NOT_EQUAL } }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key1"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_CONTAINS
+                    operands { string_value: "/phys" }
+                  }
+                }
+              }
+            }
+            conditional_verify { verify { comparison: COMPARE_NOT_EQUAL } }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(CompareQueryResultsTest, SuccessConditionalSubqueryQueryResult) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value {
+          subquery_value {
+            fields {
+              key: "key1"
+              value { int_value: 0 }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+  QueryResult qr_b = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value {
+          subquery_value {
+            fields {
+              key: "key1"
+              value { int_value: 1 }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          data_compare {
+            fields {
+              key: "key1"
+              value { verify { comparison: COMPARE_EQUAL } }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN_OR_EQUAL
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              data_compare {
+                fields {
+                  key: "key1"
+                  value { verify { comparison: COMPARE_NOT_EQUAL } }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(CompareQueryResultsTest, SuccessConditionalListQueryResult) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { list_value { values { int_value: 0 } } }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+  QueryResult qr_b = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { list_value { values { int_value: 1 } } }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          list_compare { verify { verify { comparison: COMPARE_EQUAL } } }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN_OR_EQUAL
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              list_compare {
+                verify { verify { comparison: COMPARE_NOT_EQUAL } }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(""));
+}
+
+TEST(CompareQueryResultsTest, SuccessConditionalSimpleQueryResultDefault) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+  QueryResult qr_b = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify { comparison: COMPARE_NOT_EQUAL }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_LESS_THAN
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+            conditional_verify { verify { comparison: COMPARE_EQUAL } }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(CompareQueryResultsTest, SuccessAllOfConditionalSimpleQueryResultDefault) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+  QueryResult qr_b = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify { comparison: COMPARE_NOT_EQUAL }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key0"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN_OR_EQUAL
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+              conditions {
+                property_name: "conditional_key1"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_CONTAINS
+                    operands { string_value: "/phys0" }
+                  }
+                }
+              }
+            }
+            conditional_verify { verify { comparison: COMPARE_EQUAL } }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key0"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+      fields {
+        key: "conditional_key1"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(CompareQueryResultsTest, SuccessAnyOfConditionalSimpleQueryResultDefault) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+  QueryResult qr_b = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify { comparison: COMPARE_NOT_EQUAL }
+          overrides {
+            any_of {
+              conditions {
+                property_name: "conditional_key0"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+              conditions {
+                property_name: "conditional_key1"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_CONTAINS
+                    operands { string_value: "something" }
+                  }
+                }
+              }
+            }
+            conditional_verify { verify { comparison: COMPARE_EQUAL } }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key0"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+      fields {
+        key: "conditional_key1"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(CompareQueryResultsTest,
+     SuccessMultipleOverridesSimpleQueryResultDefault) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+  QueryResult qr_b = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify { comparison: COMPARE_NOT_EQUAL }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key0"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+            conditional_verify { verify { comparison: COMPARE_EQUAL } }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key1"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_CONTAINS
+                    operands { string_value: "/phys0" }
+                  }
+                }
+              }
+            }
+            conditional_verify { verify { comparison: COMPARE_EQUAL } }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key0"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+      fields {
+        key: "conditional_key1"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(CompareQueryResultsTest, SuccessConditionalSubqueryQueryResultDefault) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value {
+          subquery_value {
+            fields {
+              key: "key1"
+              value { int_value: 0 }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+  QueryResult qr_b = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value {
+          subquery_value {
+            fields {
+              key: "key1"
+              value { int_value: 1 }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          data_compare {
+            fields {
+              key: "key1"
+              value { verify { comparison: COMPARE_NOT_EQUAL } }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_LESS_THAN
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              data_compare {
+                fields {
+                  key: "key1"
+                  value { verify { comparison: COMPARE_EQUAL } }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(CompareQueryResultsTest, SuccessConditionalListQueryResultDefault) {
+  QueryResult qr_a = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { list_value { values { int_value: 0 } } }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+  QueryResult qr_b = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { list_value { values { int_value: 1 } } }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          list_compare { verify { verify { comparison: COMPARE_NOT_EQUAL } } }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_LESS_THAN
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              list_compare { verify { verify { comparison: COMPARE_EQUAL } } }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { comparison: COMPARE_EQUAL } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(CompareQueryResults(qr_a, qr_b, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(""));
+}
+
 TEST(VerifyQueryValueTest, EmtpyVerification) {
   QueryValue qv = ParseTextProtoOrDie(R"pb(int_value: 1)pb");
   QueryValueVerification verification;
@@ -2347,6 +3262,902 @@ TEST(VerifyQueryResultTest, MultipleErrors) {
                   path: "query_1.key0[0]"
                 }
               )pb")));
+}
+
+TEST(VerifyQueryResultTest, SuccessConditionalSimpleQueryResult) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+      fields {
+        key: "key1"
+        value {
+          verify { presence: PRESENCE_REQUIRED }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN_OR_EQUAL
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+            conditional_verify { verify { presence: PRESENCE_OPTIONAL } }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(VerifyQueryResultTest, SuccessAllOfSimpleQueryResult) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify {
+            validation {
+              operation: OPERATION_GREATER_THAN_OR_EQUAL
+              operands { int_value: 1 }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key0"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN_OR_EQUAL
+                    operands { int_value: 0 }
+                  }
+                }
+              }
+              conditions {
+                property_name: "conditional_key1"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_CONTAINS
+                    operands { string_value: "/phys" }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              verify {
+                validation {
+                  operation: OPERATION_LESS_THAN
+                  operands { int_value: 1 }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key0"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+      fields {
+        key: "conditional_key1"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(VerifyQueryResultTest, SuccessAnyOfSimpleQueryResult) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify {
+            validation {
+              operation: OPERATION_GREATER_THAN_OR_EQUAL
+              operands { int_value: 1 }
+            }
+          }
+          overrides {
+            any_of {
+              conditions {
+                property_name: "conditional_key0"
+                condition {
+                  validation {
+                    operation: OPERATION_LESS_THAN
+                    operands { int_value: 0 }
+                  }
+                }
+              }
+              conditions {
+                property_name: "conditional_key1"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_CONTAINS
+                    operands { string_value: "/phys" }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              verify {
+                validation {
+                  operation: OPERATION_LESS_THAN
+                  operands { int_value: 1 }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key0"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+      fields {
+        key: "conditional_key1"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(VerifyQueryResultTest, SuccessMultipleOverridesSimpleQueryResult) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key"
+        value { string_value: "/phys/something" }
+      }
+    }
+  )pb");
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify {
+            validation {
+              operation: OPERATION_GREATER_THAN
+              operands { int_value: 1 }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_NOT_CONTAINS
+                    operands { string_value: "/phys" }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              verify {
+                validation {
+                  operation: OPERATION_GREATER_THAN_OR_EQUAL
+                  operands { int_value: 1 }
+                }
+              }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_STARTS_WITH
+                    operands { string_value: "/phys" }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              verify {
+                validation {
+                  operation: OPERATION_LESS_THAN
+                  operands { int_value: 1 }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(VerifyQueryResultTest, SuccessConditionalSubqueryQueryResult) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value {
+          subquery_value {
+            fields {
+              key: "key1"
+              value { int_value: 0 }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          data_compare {
+            fields {
+              key: "key1"
+              value { verify { presence: PRESENCE_REQUIRED } }
+            }
+            fields {
+              key: "key2"
+              value { verify { presence: PRESENCE_REQUIRED } }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN_OR_EQUAL
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              data_compare {
+                fields {
+                  key: "key1"
+                  value { verify { presence: PRESENCE_REQUIRED } }
+                }
+                fields {
+                  key: "key2"
+                  value { verify { presence: PRESENCE_OPTIONAL } }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(VerifyQueryResultTest, SuccessConditionalListQueryResult) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value {
+          list_value {
+            values { int_value: 0 }
+            values { int_value: 1 }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          list_compare {
+            verify {
+              verify {
+                validation {
+                  operation: OPERATION_GREATER_THAN
+                  operands { int_value: 0 }
+                }
+              }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN_OR_EQUAL
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              list_compare {
+                verify {
+                  verify {
+                    validation {
+                      operation: OPERATION_GREATER_THAN_OR_EQUAL
+                      operands { int_value: 0 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(""));
+}
+
+TEST(VerifyQueryResultTest, SuccessConditionalSimpleQueryResultDefault) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify {
+            validation {
+              operation: OPERATION_LESS_THAN
+              operands { int_value: 1 }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_LESS_THAN
+                    operands { int_value: 0 }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              verify {
+                validation {
+                  operation: OPERATION_GREATER_THAN_OR_EQUAL
+                  operands { int_value: 1 }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(VerifyQueryResultTest, SuccessAllOfSimpleQueryResultDefault) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify {
+            validation {
+              operation: OPERATION_LESS_THAN
+              operands { int_value: 1 }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key0"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN_OR_EQUAL
+                    operands { int_value: 0 }
+                  }
+                }
+              }
+              conditions {
+                property_name: "conditional_key1"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_CONTAINS
+                    operands { string_value: "/phys1" }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              verify {
+                validation {
+                  operation: OPERATION_GREATER_THAN_OR_EQUAL
+                  operands { int_value: 1 }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key0"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+      fields {
+        key: "conditional_key1"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(VerifyQueryResultTest, SuccessAnyOfSimpleQueryResultDefault) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 0 }
+      }
+      fields {
+        key: "conditional_key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key1"
+        value { string_value: "/phys" }
+      }
+    }
+  )pb");
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify {
+            validation {
+              operation: OPERATION_LESS_THAN
+              operands { int_value: 1 }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key0"
+                condition {
+                  validation {
+                    operation: OPERATION_GREATER_THAN_OR_EQUAL
+                    operands { int_value: 0 }
+                  }
+                }
+              }
+              conditions {
+                property_name: "conditional_key1"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_CONTAINS
+                    operands { string_value: "/phys1" }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              verify {
+                validation {
+                  operation: OPERATION_GREATER_THAN_OR_EQUAL
+                  operands { int_value: 1 }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key0"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+      fields {
+        key: "conditional_key1"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(VerifyQueryResultTest, SuccessConditionalSubqueryQueryResultDefault) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value {
+          subquery_value {
+            fields {
+              key: "key1"
+              value { int_value: 0 }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          data_compare {
+            fields {
+              key: "key1"
+              value {
+                verify {
+                  validation {
+                    operation: OPERATION_LESS_THAN
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_LESS_THAN
+                    operands { int_value: 0 }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              data_compare {
+                fields {
+                  key: "key1"
+                  value {
+                    verify {
+                      validation {
+                        operation: OPERATION_GREATER_THAN_OR_EQUAL
+                        operands { int_value: 1 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+}
+
+TEST(VerifyQueryResultTest, SuccessConditionalListQueryResultDefault) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value {
+          list_value {
+            values { int_value: 0 }
+            values { int_value: 1 }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { int_value: 1 }
+      }
+    }
+  )pb");
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          list_compare {
+            verify {
+              verify {
+                validation {
+                  operation: OPERATION_LESS_THAN_OR_EQUAL
+                  operands { int_value: 1 }
+                }
+              }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_LESS_THAN
+                    operands { int_value: 1 }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              list_compare {
+                verify {
+                  verify {
+                    validation {
+                      operation: OPERATION_GREATER_THAN
+                      operands { int_value: 1 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(""));
+}
+
+TEST(VerifyQueryResultTest, SuccessMultipleOverridesSimpleQueryResultDefault) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value { int_value: 1 }
+      }
+      fields {
+        key: "conditional_key"
+        value { string_value: "/phys/something" }
+      }
+    }
+  )pb");
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          verify {
+            validation {
+              operation: OPERATION_GREATER_THAN_OR_EQUAL
+              operands { int_value: 1 }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_NOT_CONTAINS
+                    operands { string_value: "/phys" }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              verify {
+                validation {
+                  operation: OPERATION_GREATER_THAN
+                  operands { int_value: 1 }
+                }
+              }
+            }
+          }
+          overrides {
+            all_of {
+              conditions {
+                property_name: "conditional_key"
+                condition {
+                  validation {
+                    operation: OPERATION_STRING_ENDS_WITH
+                    operands { string_value: "/phys" }
+                  }
+                }
+              }
+            }
+            conditional_verify {
+              verify {
+                validation {
+                  operation: OPERATION_LESS_THAN
+                  operands { int_value: 1 }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "conditional_key"
+        value { verify { presence: PRESENCE_REQUIRED } }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
 }
 
 }  // namespace
