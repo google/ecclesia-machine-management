@@ -25,7 +25,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_grpc_grpc//:grpc++",
-        "@com_github_grpc_grpc//:grpc++_public_hdrs",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:cord",
