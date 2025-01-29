@@ -4160,5 +4160,269 @@ TEST(VerifyQueryResultTest, SuccessMultipleOverridesSimpleQueryResultDefault) {
   EXPECT_THAT(result, EqualsProto(""));
 }
 
+struct StableIdRequirementTestCase {
+  std::string test_name;
+  QueryResult query_result;
+  std::vector<internal_status::IsStatusPolyMatcher> status_matchers;
+};
+
+using VerifyQueryResultStableIdTest =
+    TestWithParam<StableIdRequirementTestCase>;
+
+TEST_P(VerifyQueryResultStableIdTest, TestStableIdRequirements) {
+  const StableIdRequirementTestCase& test_case = GetParam();
+
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          list_compare {
+            verify {
+              data_compare {
+                fields {
+                  key: "_id_"
+                  value {
+                    verify {
+                      presence: PRESENCE_REQUIRED
+                      stable_id_requirement: STABLE_ID_PRESENCE_NONE
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  for (int i = 0; i < Verification::StableIdRequirement_ARRAYSIZE; ++i) {
+    Verification::StableIdRequirement requirement =
+        static_cast<Verification::StableIdRequirement>(i);
+    verification.mutable_data_verify()
+        ->mutable_fields()
+        ->at("key0")
+        .mutable_list_compare()
+        ->mutable_verify()
+        ->mutable_data_compare()
+        ->mutable_fields()
+        ->at("_id_")
+        .mutable_verify()
+        ->set_stable_id_requirement(requirement);
+    result.Clear();
+    EXPECT_THAT(VerifyQueryResult(test_case.query_result, verification, result),
+                test_case.status_matchers[requirement]);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    VerifyQueryResultStableIdTest, VerifyQueryResultStableIdTest,
+    Values(
+        StableIdRequirementTestCase{
+            .test_name = "RequirementNone",
+            .query_result = ParseTextProtoOrDie(R"pb(
+              query_id: "query_1"
+              data {
+                fields {
+                  key: "key0"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "_id_"
+                            value {
+                              identifier {
+                                redfish_location {
+                                  service_label: "DIMM0"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              })pb"),
+            .status_matchers = {IsOk(), IsOk(), IsStatusInternal(),
+                                IsStatusInternal()},
+        },
+        StableIdRequirementTestCase{
+            .test_name = "RequirementDevpath",
+            .query_result = ParseTextProtoOrDie(R"pb(
+              query_id: "query_1"
+              data {
+                fields {
+                  key: "key0"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "_id_"
+                            value {
+                              identifier {
+                                local_devpath: "/phys/DIMM0"
+                                machine_devpath: "/phys/DIMM0"
+                                redfish_location {
+                                  service_label: "DIMM0"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              })pb"),
+            .status_matchers = {IsOk(), IsOk(), IsOk(), IsStatusInternal()},
+        },
+        StableIdRequirementTestCase{
+            .test_name = "RequirementSubfru",
+            .query_result = ParseTextProtoOrDie(R"pb(
+              query_id: "query_1"
+              data {
+                fields {
+                  key: "key0"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "_id_"
+                            value {
+                              identifier {
+                                local_devpath: "/phys/CPU0"
+                                machine_devpath: "/phys/CPU0"
+                                embedded_location_context: "die0_core0:thread0"
+                                redfish_location {
+                                  service_label: "CPU0"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              })pb"),
+            .status_matchers = {IsOk(), IsOk(), IsOk(), IsOk()},
+        }
+      )
+);
+
+TEST(VerifyQueryResultTest, SuccessConditionalStableIdQueryResult) {
+  QueryResult qr = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data {
+      fields {
+        key: "key0"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      local_devpath: "/phys/DIMM0"
+                      machine_devpath: "/phys/DIMM0"
+                      redfish_location {
+                        service_label: "DIMM0"
+                      }
+                    }
+                  }
+                }
+                fields {
+                  key: "present_in_firmware"
+                  value {
+                    string_value: "Enabled"
+                  }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      redfish_location {
+                        service_label: "DIMM1"
+                      }
+                    }
+                  }
+                }
+                fields {
+                  key: "present_in_firmware"
+                  value {
+                    string_value: "Absent"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+  QueryResultVerification verification = ParseTextProtoOrDie(R"pb(
+    query_id: "query_1"
+    data_verify {
+      fields {
+        key: "key0"
+        value {
+          list_compare {
+            verify {
+              data_compare {
+                fields {
+                  key: "_id_"
+                  value {
+                    verify {
+                      presence: PRESENCE_REQUIRED
+                      stable_id_requirement: STABLE_ID_PRESENCE_DEVPATH
+                    }
+                    overrides {
+                      all_of {
+                        conditions {
+                          property_name: "present_in_firmware"
+                          condition {
+                            validation {
+                              operation: OPERATION_STRING_NOT_CONTAINS
+                              operands { string_value: "Enabled" }
+                            }
+                          }
+                        }
+                      }
+                      conditional_verify {
+                        verify {
+                          presence: PRESENCE_REQUIRED
+                          stable_id_requirement: STABLE_ID_PRESENCE_NONE
+                        }
+                      }
+                    }
+                  }
+                }
+                fields {
+                  key: "present_in_firmware"
+                  value { verify { presence: PRESENCE_REQUIRED } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyQueryResult(qr, verification, result), IsOk());
+  EXPECT_THAT(result, EqualsProto(""));
+};
+
 }  // namespace
 }  // namespace ecclesia

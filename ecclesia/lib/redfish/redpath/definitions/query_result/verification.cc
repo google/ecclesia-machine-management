@@ -685,6 +685,22 @@ QueryValueVerification GetComparison(const QueryResultData* value_a,
   return verification;
 }
 
+absl::Status VerifyStableId(const Identifier& stable_id,
+    const Verification::StableIdRequirement requirement) {
+  if (requirement == Verification::STABLE_ID_PRESENCE_UNKNOWN ||
+      requirement == Verification::STABLE_ID_PRESENCE_NONE) {
+    return absl::OkStatus();
+  }
+  if (!stable_id.has_machine_devpath()) {
+    return absl::InternalError("Missing machine devpath in _id_");
+  }
+  if (requirement == Verification::STABLE_ID_PRESENCE_SUBFRU &&
+      !stable_id.has_embedded_location_context()) {
+    return absl::InternalError("Missing embedded location context in _id_");
+  }
+  return absl::OkStatus();
+}
+
 }  // namespace
 
 absl::Status CompareQueryValues(const QueryValue& value_a,
@@ -946,6 +962,10 @@ absl::Status VerifyQueryValue(const QueryValue& value,
                               const VerificationOptions& options) {
   if (!verification.has_verify()) {
     return absl::OkStatus();
+  }
+  if (value.has_identifier()) {
+    ECCLESIA_RETURN_IF_ERROR(VerifyStableId(
+        value.identifier(), verification.verify().stable_id_requirement()));
   }
   // Presence checking is handled by the caller. This function can only verify
   // properties that are present in the query value.

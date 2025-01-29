@@ -82,12 +82,26 @@ message Verification {
     repeated QueryValue operands = 4;
   }
 
+  enum StableIdRequirement {
+    // stable ID does not apply
+    STABLE_ID_PRESENCE_UNKNOWN = 0;
+    // No stable ID is required.
+    STABLE_ID_PRESENCE_NONE = 1;
+    // Resources should have a devpath associated with them.
+    STABLE_ID_PRESENCE_DEVPATH = 2;
+    // Resources should have a devpath and embedded_location_context
+    // associated with them.
+    STABLE_ID_PRESENCE_SUBFRU = 3;
+  }
+
   // The presence check for the query value.
   Presence presence = 1;
   // The comparison to perform on the query value.
   Compare comparison = 2;
   // Set of validations to perform on the query value.
   repeated Validation validation = 3;
+  // Every resource must comply with the stable ID verification.
+  StableIdRequirement stable_id_requirement = 4;
 }
 
 message Conditions {
