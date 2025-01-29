@@ -224,10 +224,11 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Get(
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Get(
     absl::string_view path, absl::Duration timeout) {
-  return absl::UnimplementedError(
-      "GETs with timeout are currently only supported from "
-      "GrpcRedfishTransport based "
-      "transports");
+  return Get(path);
+  // return absl::UnimplementedError(
+  //     "GETs with timeout are currently only supported from "
+  //     "GrpcRedfishTransport based "
+  //     "transports");
 }
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedGet(
