@@ -16,10 +16,13 @@
 
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/util.h"
 
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
@@ -41,8 +44,12 @@ namespace {
 
 using ::testing::ElementsAre;
 using ::testing::Eq;
+using ::testing::MockFunction;
 using ::testing::Pair;
+using ::testing::Return;
+using ::testing::TestWithParam;
 using ::testing::UnorderedElementsAre;
+using ::testing::ValuesIn;
 
 constexpr absl::string_view kRootDir = "/test/";
 constexpr int kQueryATimeoutSecs = 10;

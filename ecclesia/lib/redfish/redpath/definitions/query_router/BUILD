@@ -157,6 +157,7 @@ cc_test(
         "//ecclesia/lib/status:test_macros",
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
         "@com_google_googletest//:gtest_main",

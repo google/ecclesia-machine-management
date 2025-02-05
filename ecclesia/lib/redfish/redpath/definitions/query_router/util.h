@@ -29,6 +29,20 @@
 
 namespace ecclesia {
 
+// The `execute_fn` callback is invoked for every Selection Spec found
+// in `select_specs` that matches the specified `server_tag`,
+// `server_type` and `server_class`.
+//
+// Returns an error if the selection spec is empty or the selection criteria in
+// the selection spec is not valid; if the callback function returns an
+// error.
+absl::Status ExecuteOnMatchingSelections(
+    const google::protobuf::RepeatedPtrField<SelectionSpec::SelectionClass>& select_specs,
+    absl::string_view server_tag,
+    SelectionSpec::SelectionClass::ServerType server_type,
+    std::optional<SelectionSpec::SelectionClass::ServerClass> server_class,
+    absl::AnyInvocable<absl::Status()> execute_fn);
+
 // The `execute_fn` callback is invoked for every Query Selection Spec found
 // in the Query Router spec that matches the specified `server_tag`,
 // `server_type` and `server_class`.

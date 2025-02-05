@@ -64,6 +64,54 @@ void AddTimeoutFromSelectionSpec(
 
 }  // namespace
 
+absl::Status ExecuteOnMatchingSelections(
+    const google::protobuf::RepeatedPtrField<SelectionSpec::SelectionClass>& select_specs,
+    absl::string_view server_tag,
+    SelectionSpec::SelectionClass::ServerType server_type,
+    std::optional<SelectionSpec::SelectionClass::ServerClass> server_class,
+    absl::AnyInvocable<absl::Status()> execute_fn) {
+  for (const SelectionSpec::SelectionClass& select : select_specs) {
+    if (!select.has_server_type() && select.server_tag().empty() &&
+        select.server_class().empty()) {
+      // This means that no select conditions are specified.
+      return absl::FailedPreconditionError("No select conditions specified");
+    }
+    bool server_type_matched = true;
+    if (select.has_server_type()) {
+      if (select.server_type() ==
+          SelectionSpec::SelectionClass::SERVER_TYPE_UNSPECIFIED) {
+        return absl::FailedPreconditionError(
+            "Server type cannot be SERVER_TYPE_UNSPECIFIED");
+      }
+      server_type_matched = select.server_type() == server_type;
+    }
+    bool server_tag_matched =
+        select.server_tag().empty()
+            ? true
+            : std::find(select.server_tag().begin(), select.server_tag().end(),
+                        server_tag) != select.server_tag().end();
+    bool server_class_matched = true;
+    if (!select.server_class().empty() && server_class.has_value()) {
+      server_class_matched = false;
+      for (int server_class_select : select.server_class()) {
+        if (server_class_select ==
+            SelectionSpec::SelectionClass::SERVER_CLASS_UNSPECIFIED) {
+          return absl::FailedPreconditionError(
+              "Server class cannot be SERVER_CLASS_UNSPECIFIED");
+        }
+        if (server_class_select == server_class) {
+          server_class_matched = true;
+          break;
+        }
+      }
+    }
+    if (server_type_matched && server_tag_matched && server_class_matched) {
+      ECCLESIA_RETURN_IF_ERROR(execute_fn());
+    }
+  }
+  return absl::OkStatus();
+}
+
 absl::Status ExecuteOnMatchingQuerySelections(
     const QueryRouterSpec& router_spec, absl::string_view server_tag,
     SelectionSpec::SelectionClass::ServerType server_type,
@@ -79,48 +127,12 @@ absl::Status ExecuteOnMatchingQuerySelections(
             "Both server tag and server type not specified for query: ",
             query_id));
       }
-      for (const SelectionSpec::SelectionClass& select :
-           query_select_spec.select()) {
-        if (!select.has_server_type() && select.server_tag().empty() &&
-            select.server_class().empty()) {
-          // This means that no select conditions are specified.
-          return absl::FailedPreconditionError(absl::StrCat(
-              "No select conditions specified for query: ", query_id));
-        }
-        bool server_type_matched = true;
-        if (select.has_server_type()) {
-          if (select.server_type() ==
-              SelectionSpec::SelectionClass::SERVER_TYPE_UNSPECIFIED) {
-            return absl::FailedPreconditionError(
-                "Server type cannot be SERVER_TYPE_UNSPECIFIED");
-          }
-          server_type_matched = select.server_type() == server_type;
-        }
-        bool server_tag_matched =
-            select.server_tag().empty()
-                ? true
-                : std::find(select.server_tag().begin(),
-                            select.server_tag().end(),
-                            server_tag) != select.server_tag().end();
-        bool server_class_matched = true;
-        if (!select.server_class().empty() && server_class.has_value()) {
-          server_class_matched = false;
-          for (int server_class_select : select.server_class()) {
-            if (server_class_select ==
-                SelectionSpec::SelectionClass::SERVER_CLASS_UNSPECIFIED) {
-              return absl::FailedPreconditionError(
-                  "Server class cannot be SERVER_CLASS_UNSPECIFIED");
-            }
-            if (server_class_select == server_class) {
-              server_class_matched = true;
-              break;
-            }
-          }
-        }
-        if (server_type_matched && server_tag_matched && server_class_matched) {
-          ECCLESIA_RETURN_IF_ERROR(execute_fn(query_id, query_select_spec));
-        }
-      }
+      ECCLESIA_RETURN_IF_ERROR(ExecuteOnMatchingSelections(
+          query_select_spec.select(), server_tag, server_type, server_class,
+          [&]() {
+            ECCLESIA_RETURN_IF_ERROR(execute_fn(query_id, query_select_spec));
+            return absl::OkStatus();
+          }));
     }
   }
   return absl::OkStatus();
