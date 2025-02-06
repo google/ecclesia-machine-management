@@ -74,6 +74,7 @@ cc_test(
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/redfish/transport:metrical_transport",
         "//ecclesia/lib/status:macros",
+        "//ecclesia/lib/status:test_macros",
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
         "//ecclesia/lib/time:clock",

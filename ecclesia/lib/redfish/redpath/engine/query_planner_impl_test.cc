@@ -51,6 +51,7 @@
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/status/macros.h"
+#include "ecclesia/lib/status/test_macros.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/time/clock.h"
@@ -112,7 +113,7 @@ class QueryPlannerTestRunner : public ::testing::Test {
                            .redpath_rules = {},
                            .execution_mode = execution_mode}));
     ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-    return qp->Run({args1});
+    return qp->Run({.variables = args1});
   }
 
   std::unique_ptr<FakeRedfishServer> server_;
@@ -460,16 +461,17 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {}});
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
 
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
 
   EXPECT_FALSE(result.query_result.has_status());
   EXPECT_THAT(expected_query_result,
@@ -531,16 +533,16 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFreshnessFromQuery) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get(),
-                         .redpath_rules = {}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
-  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
+  EXPECT_FALSE(qp->Run({.variables = args1}).query_result.has_status());
+  EXPECT_FALSE(qp->Run({.variables = args1}).query_result.has_status());
 
   // We expect Chassis to be queried twice due to freshness requirement.
   EXPECT_EQ(chassis_query_count, 2);
@@ -590,15 +592,16 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesExpandFromRules) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = std::move(redpath_rules)});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner({.query = &query,
+                             .normalizer = normalizer.get(),
+                             .redfish_interface = intf_.get(),
+                             .redpath_rules = std::move(redpath_rules)}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
+  EXPECT_FALSE(qp->Run({.variables = args1}).query_result.has_status());
   EXPECT_TRUE(expand_requested);
 }
 
@@ -650,15 +653,16 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterFromRules) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = std::move(redpath_rules)});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner({.query = &query,
+                             .normalizer = normalizer.get(),
+                             .redfish_interface = intf_.get(),
+                             .redpath_rules = std::move(redpath_rules)}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
+  EXPECT_FALSE(qp->Run({.variables = args1}).query_result.has_status());
   // Since the order in which the predicates are passed to the $filter string
   // construction method is non-deterministic, the Redfish request can be in two
   // possible forms.
@@ -714,15 +718,16 @@ TEST_F(QueryPlannerTestRunner,
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = std::move(redpath_rules)});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner({.query = &query,
+                             .normalizer = normalizer.get(),
+                             .redfish_interface = intf_.get(),
+                             .redpath_rules = std::move(redpath_rules)}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
+  EXPECT_FALSE(qp->Run({.variables = args1}).query_result.has_status());
   // Since the order in which the predicates are passed to the $filter string
   // construction method is non-deterministic, the Redfish request can be in two
   // possible forms.
@@ -826,13 +831,14 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   ecclesia::QueryVariables::VariableValue val1;
   ecclesia::QueryVariables::VariableValue val2;
@@ -847,7 +853,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
   *args1.add_variable_values() = val1;
   *args1.add_variable_values() = val2;
   *args1.add_variable_values() = val3;
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
 
   EXPECT_FALSE(result.query_result.has_status());
   EXPECT_THAT(result.query_result,
@@ -865,7 +871,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
   val3.set_name("Type");
   *val3.add_values() = "Rotational";
 
-  result = (*qp)->Run({args1});
+  result = qp->Run({.variables = args1});
   EXPECT_FALSE(result.query_result.has_status());
   EXPECT_THAT(result.query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
@@ -948,13 +954,14 @@ TEST_F(QueryPlannerTestRunner,
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables multi_value_args = ecclesia::QueryVariables();
   ecclesia::QueryVariables::VariableValue chassis_id_val;
   ecclesia::QueryVariables::VariableValue sensor_name_val;
@@ -973,7 +980,7 @@ TEST_F(QueryPlannerTestRunner,
   *multi_value_args.add_variable_values() = sensor_name_val;
   *multi_value_args.add_variable_values() = threshold_val;
 
-  QueryExecutionResult result = (*qp)->Run({multi_value_args});
+  QueryExecutionResult result = qp->Run({.variables = multi_value_args});
   EXPECT_FALSE(result.query_result.has_status());
   EXPECT_THAT(result.query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
@@ -1124,13 +1131,14 @@ TEST_F(QueryPlannerTestRunner,
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables multi_value_args = ecclesia::QueryVariables();
   ecclesia::QueryVariables::VariableValue chassis_id_val;
   ecclesia::QueryVariables::VariableValue sensor_name_val;
@@ -1156,7 +1164,7 @@ TEST_F(QueryPlannerTestRunner,
   //  Name = indus_latm_temp, indus_eat_temp or CPU,
   //  Reading = 60
   //  No Reading value and Id = i_cpu0_t or indus_fan7_rpm
-  QueryExecutionResult result = (*qp)->Run({multi_value_args});
+  QueryExecutionResult result = qp->Run({.variables = multi_value_args});
   EXPECT_FALSE(result.query_result.has_status());
   EXPECT_THAT(result.query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
@@ -1273,22 +1281,162 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesWithUrlAnnotations) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {}});
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
 
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result =
-      (*qp)->Run({.variables = args1, .enable_url_annotation = true});
+      qp->Run({.variables = args1, .enable_url_annotation = true});
 
   EXPECT_FALSE(result.query_result.has_status());
   EXPECT_THAT(result.query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
                   ecclesia::EqualsProto(expected_query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerExecutesWithInjectedRedfishInterface) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "Assembly"
+          root_subquery_ids: "Chassis"
+          redpath: "/Assembly/Assemblies[Name=indus]"
+          properties { property: "Name" type: STRING }
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[Name=CPU1]"
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "ChassisSubTreeTest"
+    stats { payload_size: 153 num_cache_misses: 32 }
+    data {
+      fields {
+        key: "Chassis"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Assembly"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Name"
+                            value { string_value: "indus" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                fields {
+                  key: "Id"
+                  value { string_value: "chassis" }
+                }
+                fields {
+                  key: "Sensors"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Name"
+                            value { string_value: "CPU1" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Name"
+                            value { string_value: "CPU1" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(qp, BuildQueryPlanner({.query = &query,
+                                                 .normalizer = normalizer.get(),
+                                                 .redpath_rules = {}}));
+
+  ASSERT_THAT(qp, NotNull());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result =
+      qp->Run({.variables = args1, .redfish_interface = intf_.get()});
+
+  EXPECT_FALSE(result.query_result.has_status());
+  EXPECT_THAT(result.query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(expected_query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner, QueryPlannerRunWithoutRedfishInterface) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(qp, BuildQueryPlanner({.query = &query,
+                                                 .normalizer = normalizer.get(),
+                                                 .redpath_rules = {}}));
+
+  ASSERT_THAT(qp, NotNull());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = qp->Run({.variables = args1});
+
+  EXPECT_TRUE(result.query_result.has_status());
+  EXPECT_THAT(result.query_result.status().error_code(),
+              ecclesia::ErrorCode::ERROR_INTERNAL);
+  EXPECT_THAT(result.query_result.status().errors(),
+              UnorderedElementsAre("Redfish interface is not set"));
 }
 
 DelliciusQuery GetSubscriptionQuery() {
@@ -1345,23 +1493,27 @@ TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
-      {.query = &subscription_query,
-       .normalizer = normalizer.get(),
-       .redfish_interface = intf_.get(),
-       .redpath_rules = {
-           .redpath_to_query_params =
-               {{std::string(kAssemblyRedPath),
-                 {.expand = RedfishQueryParamExpand(
-                      {.type = RedfishQueryParamExpand::ExpandType::kNotLinks,
-                       .levels = 1})}}},
-           .redpaths_to_subscribe = {std::string(kSensorRedPath),
-                                     std::string(kAssemblyRedPath)}}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp,
+      BuildQueryPlanner(
+          {.query = &subscription_query,
+           .normalizer = normalizer.get(),
+           .redfish_interface = intf_.get(),
+           .redpath_rules = {
+               .redpath_to_query_params =
+                   {{std::string(kAssemblyRedPath),
+                     {.expand = RedfishQueryParamExpand(
+                          {.type =
+                               RedfishQueryParamExpand::ExpandType::kNotLinks,
+                           .levels = 1})}}},
+               .redpaths_to_subscribe = {std::string(kSensorRedPath),
+                                         std::string(kAssemblyRedPath)}}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result =
-      (*qp)->Run({.variables = args1, .query_type = QueryType::kSubscription});
+      qp->Run({.variables = args1, .query_type = QueryType::kSubscription});
 
   EXPECT_FALSE(result.query_result.has_status());
   EXPECT_THAT(result.query_result,
@@ -1436,17 +1588,19 @@ TEST_F(QueryPlannerTestRunner,
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
-      {.query = &subscription_query,
-       .normalizer = normalizer.get(),
-       .redfish_interface = intf_.get(),
-       .redpath_rules = {
-           .redpaths_to_subscribe = {std::string(kAssembliesRedPath)}}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner(
+              {.query = &subscription_query,
+               .normalizer = normalizer.get(),
+               .redfish_interface = intf_.get(),
+               .redpath_rules = {.redpaths_to_subscribe = {
+                                     std::string(kAssembliesRedPath)}}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result =
-      (*qp)->Run({.variables = args1, .query_type = QueryType::kSubscription});
+      qp->Run({.variables = args1, .query_type = QueryType::kSubscription});
   EXPECT_FALSE(result.query_result.has_status());
 }
 
@@ -1468,18 +1622,20 @@ TEST_F(QueryPlannerTestRunner,
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &subscription_query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {.redpaths_to_subscribe = {
-                                               std::string(kInvalidRedPath)}}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner(
+              {.query = &subscription_query,
+               .normalizer = normalizer.get(),
+               .redfish_interface = intf_.get(),
+               .redpath_rules = {
+                   .redpaths_to_subscribe = {std::string(kInvalidRedPath)}}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result =
-      (*qp)->Run({.variables = args1, .query_type = QueryType::kSubscription});
-  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
+      qp->Run({.variables = args1, .query_type = QueryType::kSubscription});
+  EXPECT_FALSE(qp->Run({.variables = args1}).query_result.has_status());
 }
 
 // Subscribe to unknown property fails.
@@ -1499,14 +1655,16 @@ TEST_F(QueryPlannerTestRunner, TemplatedQueryWithNoVarsSucceeds) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &subscription_query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get()});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(qp, BuildQueryPlanner({
+                                  .query = &subscription_query,
+                                  .normalizer = normalizer.get(),
+                                  .redfish_interface = intf_.get(),
+                              }));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
   EXPECT_FALSE(result.query_result.has_status());
 }
 
@@ -1519,19 +1677,21 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
-      {.query = &subscription_query,
-       .normalizer = normalizer.get(),
-       .redfish_interface = intf_.get(),
-       .redpath_rules = {
-           .redpaths_to_subscribe = {std::string(kSensorRedPath),
-                                     std::string(kAssemblyRedPath)}}});
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner(
+              {.query = &subscription_query,
+               .normalizer = normalizer.get(),
+               .redfish_interface = intf_.get(),
+               .redpath_rules = {
+                   .redpaths_to_subscribe = {std::string(kSensorRedPath),
+                                             std::string(kAssemblyRedPath)}}}));
 
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result =
-      (*qp)->Run({.variables = args1, .query_type = QueryType::kSubscription});
+      qp->Run({.variables = args1, .query_type = QueryType::kSubscription});
   const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
       result.subscription_context;
   ASSERT_THAT(context, NotNull());
@@ -1569,7 +1729,7 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
       }
     )json");
     ecclesia::RedfishVariant sensor_variant = sensor_json->GetRoot();
-    absl::StatusOr<QueryResult> resume_query_result = (*qp)->Resume({
+    absl::StatusOr<QueryResult> resume_query_result = qp->Resume({
         .trie_node = find_sensor_trie_node->second,
         .redfish_variant = sensor_variant,
         .variables = args1,
@@ -1650,7 +1810,7 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
         }
     )json");
     ecclesia::RedfishVariant assembly_variant = assembly_json->GetRoot();
-    absl::StatusOr<QueryResult> resume_query_result = (*qp)->Resume({
+    absl::StatusOr<QueryResult> resume_query_result = qp->Resume({
         .trie_node = find_assembly_trie_node->second,
         .redfish_variant = assembly_variant,
         .variables = args1,
@@ -1708,17 +1868,21 @@ TEST_F(QueryPlannerTestRunner,
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &subscription_collection_query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {.redpaths_to_subscribe = {
-                                               std::string(kSensorsRedPath)}}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner(
+              {.query = &subscription_collection_query,
+               .normalizer = normalizer.get(),
+               .redfish_interface = intf_.get(),
+               .redpath_rules = {
+                   .redpaths_to_subscribe = {std::string(kSensorsRedPath)}}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result =
-      (*qp)->Run({.variables = args1, .query_type = QueryType::kSubscription});
+  QueryExecutionResult result = qp->Run({
+      .variables = args1,
+      .query_type = QueryType::kSubscription,
+  });
   const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
       result.subscription_context;
   ASSERT_THAT(context, NotNull());
@@ -1736,7 +1900,7 @@ TEST_F(QueryPlannerTestRunner,
   // to try to resolve collection members, and fail at that point.
   ecclesia::RedfishVariant sensors_variant =
       intf_->UncachedGetUri("/redfish/v1/Chassis/chassis/Sensors", {});
-  absl::StatusOr<QueryResult> resume_query_result = (*qp)->Resume({
+  absl::StatusOr<QueryResult> resume_query_result = qp->Resume({
       .trie_node = find_sensor_trie_node->second,
       .redfish_variant = sensors_variant,
       .variables = args1,
@@ -1756,18 +1920,22 @@ TEST_F(QueryPlannerTestRunner, CannotNormalizeInvalidEvent) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp = BuildQueryPlanner(
-      {.query = &subscription_query,
-       .normalizer = normalizer.get(),
-       .redfish_interface = intf_.get(),
-       .redpath_rules = {
-           .redpaths_to_subscribe = {std::string(kSensorRedPath),
-                                     std::string(kAssemblyRedPath)}}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner(
+              {.query = &subscription_query,
+               .normalizer = normalizer.get(),
+               .redfish_interface = intf_.get(),
+               .redpath_rules = {
+                   .redpaths_to_subscribe = {std::string(kSensorRedPath),
+                                             std::string(kAssemblyRedPath)}}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result =
-      (*qp)->Run({.variables = args1, .query_type = QueryType::kSubscription});
+  QueryExecutionResult result = qp->Run({
+      .variables = args1,
+      .query_type = QueryType::kSubscription,
+  });
   const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
       result.subscription_context;
   ASSERT_THAT(context, NotNull());
@@ -1790,7 +1958,7 @@ TEST_F(QueryPlannerTestRunner, CannotNormalizeInvalidEvent) {
     ]
   )json");
   ecclesia::RedfishVariant sensor_variant = sensor_json->GetRoot();
-  absl::StatusOr<QueryResult> resume_query_result = (*qp)->Resume({
+  absl::StatusOr<QueryResult> resume_query_result = qp->Resume({
       .trie_node = find_sensor_trie_node->second,
       .redfish_variant = sensor_variant,
       .variables = args1,
@@ -1805,6 +1973,178 @@ TEST_F(QueryPlannerTestRunner, CannotNormalizeInvalidEvent) {
   EXPECT_THAT(expect_query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
                   ecclesia::EqualsProto(*resume_query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner, ResumesQueryWithInjectedRedfishInterface) {
+  SetTestParams("indus_hmb_shim/mockup.shar");
+
+  // Setup: Build query planner and Execute query to create subscription.
+  DelliciusQuery subscription_query = GetSubscriptionQuery();
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner(
+              {.query = &subscription_query,
+               .normalizer = normalizer.get(),
+               .redpath_rules = {
+                   .redpaths_to_subscribe = {std::string(kSensorRedPath),
+                                             std::string(kAssemblyRedPath)}}}));
+
+  ASSERT_THAT(qp, NotNull());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = qp->Run({.variables = args1,
+                                         .query_type = QueryType::kSubscription,
+                                         .redfish_interface = intf_.get()});
+  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
+      result.subscription_context;
+  ASSERT_THAT(context, NotNull());
+
+  // Assembly RedPath query resumes on receiving an event on a
+  // collection type resource. `/Chassis[*]/Assembly`.
+  //
+  // Setup: Make sure we have a trie node to resume Assembly RedPath query.
+  auto find_assembly_trie_node =
+      context->redpath_to_trie_node.find(kAssemblyRedPath);
+  ASSERT_TRUE(find_assembly_trie_node != context->redpath_to_trie_node.end());
+  ASSERT_THAT(find_assembly_trie_node->second, NotNull());
+
+  // Mock sensor event.
+  std::unique_ptr<ecclesia::RedfishInterface> assembly_json =
+      ecclesia::NewJsonMockupInterface(R"json(
+        {
+          "@odata.id": "/redfish/v1/Chassis/chassis/Assembly",
+          "@odata.type": "#Assembly.v1_2_0.Assembly",
+          "Id": "Assembly",
+          "Name": "indus",
+          "Assemblies": [
+            {
+              "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/0",
+              "MemberId": "0",
+              "Name": "indus"
+            },
+            {
+              "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/1",
+              "MemberId": "1",
+              "Name": "fan_40mm"
+            },
+            {
+              "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/2",
+              "MemberId": "2",
+              "Name": "fan_40mm"
+            },
+            {
+              "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/3",
+              "MemberId": "3",
+              "Name": "fan_assembly"
+            }
+          ]
+        }
+    )json");
+  ecclesia::RedfishVariant assembly_variant = assembly_json->GetRoot();
+  absl::StatusOr<QueryResult> resume_query_result =
+      qp->Resume({.trie_node = find_assembly_trie_node->second,
+                  .redfish_variant = assembly_variant,
+                  .variables = args1,
+                  .redfish_interface = intf_.get()});
+  EXPECT_THAT(resume_query_result, IsOk());
+
+  QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "SubscriptionTest"
+    data {
+      fields {
+        key: "Assembly"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "indus" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  // Verify query result.
+  EXPECT_THAT(expect_query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(*resume_query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner, ResumesQueryWithoutRedfishInterfaceError) {
+  SetTestParams("indus_hmb_shim/mockup.shar");
+
+  // Setup: Build query planner and Execute query to create subscription.
+  DelliciusQuery subscription_query = GetSubscriptionQuery();
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner(
+              {.query = &subscription_query,
+               .normalizer = normalizer.get(),
+               .redpath_rules = {
+                   .redpaths_to_subscribe = {std::string(kSensorRedPath),
+                                             std::string(kAssemblyRedPath)}}}));
+
+  ASSERT_THAT(qp, NotNull());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = qp->Run({.variables = args1,
+                                         .query_type = QueryType::kSubscription,
+                                         .redfish_interface = intf_.get()});
+  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
+      result.subscription_context;
+  ASSERT_THAT(context, NotNull());
+
+  // Setup: Make sure we have a trie node to resume Sensor RedPath query.
+  auto find_sensor_trie_node =
+      context->redpath_to_trie_node.find(kSensorRedPath);
+  ASSERT_TRUE(find_sensor_trie_node != context->redpath_to_trie_node.end());
+  ASSERT_THAT(find_sensor_trie_node->second, NotNull());
+
+  // Mock sensor event.
+  std::unique_ptr<ecclesia::RedfishInterface> sensor_json =
+      ecclesia::NewJsonMockupInterface(R"json(
+    {
+        "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/indus_fan3_rpm",
+        "@odata.type": "#Sensor.v1_2_0.Sensor",
+        "Id": "indus_fan3_rpm",
+        "Name": "fan3",
+        "Reading": 16115.0,
+        "ReadingUnits": "RPM",
+        "ReadingType": "Rotational",
+        "RelatedItem": [
+            {
+                "@odata.id":
+"/redfish/v1/Chassis/chassis/Assembly#/Assemblies/5"
+            }
+        ],
+        "Status": {
+            "Health": "OK",
+            "State": "Enabled"
+        }
+    }
+  )json");
+  ecclesia::RedfishVariant sensor_variant = sensor_json->GetRoot();
+  absl::StatusOr<QueryResult> resume_query_result = qp->Resume({
+      .trie_node = find_sensor_trie_node->second,
+      .redfish_variant = sensor_variant,
+      .variables = args1,
+  });
+  EXPECT_THAT(resume_query_result, IsOk());
+  EXPECT_TRUE(resume_query_result->has_status());
+  EXPECT_THAT(resume_query_result->status().error_code(),
+              ecclesia::ErrorCode::ERROR_INTERNAL);
+  EXPECT_THAT(resume_query_result->status().errors(),
+              UnorderedElementsAre("Redfish interface is not set"));
 }
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesUriCorrectly) {
@@ -1844,16 +2184,17 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesUriCorrectly) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp,
       BuildQueryPlanner({.query = &query,
                          .normalizer = normalizer.get(),
                          .redfish_interface = intf_.get(),
                          .redpath_rules = {.redpath_to_query_params =
-                                               RedPathRedfishQueryParams{}}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+                                               RedPathRedfishQueryParams{}}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult query_result = (*qp)->Run({args1});
+  QueryExecutionResult query_result = qp->Run({.variables = args1});
 
   EXPECT_FALSE(query_result.query_result.has_status());
   EXPECT_THAT(expected_query_result,
@@ -1895,16 +2236,17 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterForUriFromRules) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {.redpath_to_query_params = std::move(
-                                               redpath_redfish_query_params)}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner(
+              {.query = &query,
+               .normalizer = normalizer.get(),
+               .redfish_interface = intf_.get(),
+               .redpath_rules = {.redpath_to_query_params = std::move(
+                                     redpath_redfish_query_params)}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  EXPECT_FALSE((*qp)->Run({args1}).query_result.has_status());
+  EXPECT_FALSE(qp->Run({.variables = args1}).query_result.has_status());
   // Since the order in which the predicates are passed to the $filter string
   // construction method is non-deterministic, the Redfish request can be in two
   // possible forms.
@@ -1926,16 +2268,16 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerHaltsOnWrongPropertyType) {
   SetTestParams("indus_hmb_shim/mockup.shar");
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
 
   EXPECT_THAT(result.query_result.status().error_code(),
               Eq(ecclesia::ErrorCode::ERROR_INTERNAL));
@@ -2008,15 +2350,15 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
 
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  auto result = (*qp)->Run({args1});
+  auto result = qp->Run({.variables = args1});
   EXPECT_FALSE(result.query_result.has_status());
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "EmbeddedResource"
@@ -2682,18 +3024,18 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
   absl::Time test_time = absl::UnixEpoch() + absl::Seconds(50);
   FakeClock clock(test_time);
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get(),
-                         .redpath_rules = {},
-                         .clock = &clock});
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf.get(),
+                                             .redpath_rules = {},
+                                             .clock = &clock}));
 
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  ASSERT_THAT(qp, NotNull());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
 
   EXPECT_FALSE(result.query_result.has_status());
   ASSERT_TRUE(result.query_result.has_stats());
@@ -2746,16 +3088,17 @@ TEST_F(QueryPlannerTestRunner,
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get(),
-                         .redpath_rules = {}});
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf.get(),
+                                             .redpath_rules = {}}));
 
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result =
+      qp->Run({.variables = args1, .redfish_interface = intf.get()});
 
   EXPECT_FALSE(result.query_result.has_status());
   ASSERT_TRUE(result.query_result.has_stats());
@@ -2813,22 +3156,22 @@ TEST_F(QueryPlannerTestRunner,
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get(),
-                         .redpath_rules = {}});
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf.get(),
+                                             .redpath_rules = {}}));
 
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
 
   EXPECT_FALSE(result.query_result.has_status());
   ASSERT_TRUE(result.query_result.has_stats());
   ASSERT_TRUE(result.query_result.stats().has_redfish_metrics());
 
-  QueryExecutionResult result_repeat = (*qp)->Run({args1});
+  QueryExecutionResult result_repeat = qp->Run({.variables = args1});
 
   EXPECT_FALSE(result_repeat.query_result.has_status());
   ASSERT_TRUE(result_repeat.query_result.has_stats());
@@ -2852,16 +3195,16 @@ TEST_F(QueryPlannerTestRunner, CheckQueryPlannerPopulatesStatus) {
                                        HTTPStatusCode::SERVICE_UNAV);
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
 
   EXPECT_THAT(result.query_result.status().error_code(),
               Eq(ecclesia::ErrorCode::ERROR_UNAVAILABLE));
@@ -3025,16 +3368,16 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get(),
-                         .redpath_rules = {}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  auto result = (*qp)->Run({args1});
+  auto result = qp->Run({.variables = args1});
   EXPECT_THAT(result.query_result.status().error_code(),
               Eq(ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE));
 
@@ -3251,16 +3594,16 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
                                RedfishInterface::kTrusted);
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get(),
-                         .redpath_rules = {}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
   // Metrics should be auto-populated in the query result.
   ASSERT_TRUE(result.query_result.stats().has_redfish_metrics());
   // For each type of redfish request for each URI, validate that the
@@ -3303,18 +3646,18 @@ TEST_F(QueryPlannerGrpcTestRunner, CheckQueryPlannerRespectsTimeoutOnGetRoot) {
       });
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {},
-                         .clock = &clock_,
-                         .query_timeout = absl::Seconds(1)});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner({.query = &query,
+                             .normalizer = normalizer.get(),
+                             .redfish_interface = intf_.get(),
+                             .redpath_rules = {},
+                             .clock = &clock_,
+                             .query_timeout = absl::Seconds(1)}));
+  ASSERT_THAT(qp, NotNull());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
   EXPECT_THAT(result.query_result.status().error_code(),
               Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
   EXPECT_THAT(result.query_result.status().errors().at(0),
@@ -3352,18 +3695,18 @@ TEST_F(QueryPlannerGrpcTestRunner,
       });
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {},
-                         .clock = &clock_,
-                         .query_timeout = absl::Seconds(1)});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner({.query = &query,
+                             .normalizer = normalizer.get(),
+                             .redfish_interface = intf_.get(),
+                             .redpath_rules = {},
+                             .clock = &clock_,
+                             .query_timeout = absl::Seconds(1)}));
+  ASSERT_THAT(qp, NotNull());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
   EXPECT_THAT(result.query_result.status().error_code(),
               Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
   notification_.Notify();
@@ -3412,29 +3755,30 @@ TEST_F(QueryPlannerGrpcTestRunner,
   }
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {},
-                         .clock = &clock_,
-                         .query_timeout = absl::Seconds(10)});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner({.query = &query,
+                             .normalizer = normalizer.get(),
+                             .redfish_interface = intf_.get(),
+                             .redpath_rules = {},
+                             .clock = &clock_,
+                             .query_timeout = absl::Seconds(10)}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
   EXPECT_FALSE(result.query_result.has_status());
 
   // Execute the query again with a QP with only 1 sec timeout, it should fail.
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp2 =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {},
-                         .clock = &clock_,
-                         .query_timeout = absl::Seconds(2)});
-  EXPECT_THAT(qp2, IsOk());
-  QueryExecutionResult timeout_result = (*qp2)->Run({args1});
+  std::unique_ptr<QueryPlannerIntf> qp2;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp2, BuildQueryPlanner({.query = &query,
+                              .normalizer = normalizer.get(),
+                              .redfish_interface = intf_.get(),
+                              .redpath_rules = {},
+                              .clock = &clock_,
+                              .query_timeout = absl::Seconds(2)}));
+  EXPECT_THAT(qp2, NotNull());
+  QueryExecutionResult timeout_result = qp2->Run({.variables = args1});
   EXPECT_THAT(timeout_result.query_result.status().error_code(),
               Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
 }
@@ -3481,19 +3825,19 @@ TEST_F(QueryPlannerGrpcTestRunner, CheckEachQueryPlannerRunRespectsTimeout) {
   }
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {},
-                         .clock = &clock_,
-                         .query_timeout = absl::Seconds(12)});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner({.query = &query,
+                             .normalizer = normalizer.get(),
+                             .redfish_interface = intf_.get(),
+                             .redpath_rules = {},
+                             .clock = &clock_,
+                             .query_timeout = absl::Seconds(12)}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   // Issue multiple Run calls with the same QP and ensure they all pass.
   for (int i = 0; i < 3; ++i) {
-    QueryExecutionResult result = (*qp)->Run({args1});
+    QueryExecutionResult result = qp->Run({.variables = args1});
     EXPECT_FALSE(result.query_result.has_status());
   }
 }
@@ -3531,17 +3875,17 @@ TEST_F(QueryPlannerTestRunner, ServiceRootQueryWithParamsSuccessful) {
                 {.type = RedfishQueryParamExpand::ExpandType::kNotLinks,
                  .levels = 1})}}}};
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get(),
-                         .redpath_rules = std::move(redpath_rules),
-                         .clock = &clock});
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner({.query = &query,
+                             .normalizer = normalizer.get(),
+                             .redfish_interface = intf.get(),
+                             .redpath_rules = std::move(redpath_rules),
+                             .clock = &clock}));
 
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  auto result = (*qp)->Run({args1});
+  auto result = qp->Run({.variables = args1});
   ASSERT_TRUE(result.query_result.stats().has_redfish_metrics());
   EXPECT_EQ(
       result.query_result.stats().redfish_metrics().uri_to_metrics_map_size(),
@@ -3611,16 +3955,16 @@ TEST_F(QueryPlannerTestRunner,
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {}});
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
 
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
   ASSERT_FALSE(result.query_result.has_status());
   EXPECT_THAT(expected_query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
@@ -3668,16 +4012,16 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerQueriesRawDataStringSuccessfully) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "TestRawData"
@@ -3756,16 +4100,16 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerQueriesRawDataBytesSuccessfully) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {}});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "TestRawData"
@@ -3840,16 +4184,15 @@ TEST_F(QueryPlannerTestRunner, CollectionResourceCanBeQueried) {
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf_.get(),
-                         .redpath_rules = {}});
-
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
 
   EXPECT_FALSE(result.query_result.has_status());
   EXPECT_THAT(expected_query_result,
@@ -4361,13 +4704,13 @@ TEST_F(QueryPlannerTestRunner,
       .redpath_to_query_params = {
           {"/Chassis[*]/Sensors", {.filter = RedfishQueryParamFilter("")}}}};
 
-  absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> qp =
-      BuildQueryPlanner({.query = &query,
-                         .normalizer = normalizer.get(),
-                         .redfish_interface = intf.get(),
-                         .redpath_rules = std::move(redpath_rules)});
-  ASSERT_THAT(qp, IsOk());
-  ASSERT_THAT(*qp, NotNull());
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner({.query = &query,
+                             .normalizer = normalizer.get(),
+                             .redfish_interface = intf.get(),
+                             .redpath_rules = std::move(redpath_rules)}));
+  ASSERT_THAT(qp, NotNull());
   QueryVariables args1 = ecclesia::QueryVariables();
   QueryVariables::VariableValue val1;
   QueryVariables::VariableValue val2;
@@ -4378,7 +4721,7 @@ TEST_F(QueryPlannerTestRunner,
 
   *args1.add_variable_values() = val1;
   *args1.add_variable_values() = val2;
-  QueryExecutionResult result = (*qp)->Run({args1});
+  QueryExecutionResult result = qp->Run({.variables = args1});
 
   EXPECT_FALSE(result.query_result.has_status());
   ASSERT_TRUE(result.query_result.stats().has_redfish_metrics());

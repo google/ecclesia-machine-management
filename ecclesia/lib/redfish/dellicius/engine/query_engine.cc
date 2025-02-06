@@ -303,7 +303,8 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
            .custom_service_root =
                service_root_uri == QueryEngine::ServiceRootType::kGoogle
                    ? "/google/v1"
-                   : ""});
+                   : "",
+           .redfish_interface = redfish_interface_.get()});
     }
     query_id_to_result.mutable_results()->insert(
         {result_single.query_result.query_id(), result_single.query_result});
@@ -332,11 +333,11 @@ void QueryEngine::HandleRedfishEvent(
     const std::unique_ptr<QueryPlannerIntf> &query_plan =
         id_to_redpath_query_plans_.at(event_context.query_id);
 
-    QueryResult resume_query_result = query_plan->Resume({
-        .trie_node = find_trie_node->second,
-        .redfish_variant = variant,
-        .variables = std::move(find_context->second->query_variables),
-    });
+    QueryResult resume_query_result = query_plan->Resume(
+        {.trie_node = find_trie_node->second,
+         .redfish_variant = variant,
+         .variables = std::move(find_context->second->query_variables),
+         .redfish_interface = redfish_interface_.get()});
 
     if (resume_query_result.has_status()) {
       std::string error_message = resume_query_result.status().errors().empty()
@@ -367,8 +368,10 @@ absl::StatusOr<SubscriptionQueryResult> QueryEngine::ExecuteSubscriptionQuery(
     QueryPlannerIntf::QueryExecutionResult result_single;
     {
       auto query_timer = RedpathQueryTimestamp(&result_single, clock_);
-      result_single = it->second->Run(
-          {.variables = vars, .query_type = QueryType::kSubscription});
+      result_single =
+          it->second->Run({.variables = vars,
+                           .query_type = QueryType::kSubscription,
+                           .redfish_interface = redfish_interface_.get()});
       if (result_single.query_result.has_status()) {
         std::string error_message =
             result_single.query_result.status().errors().empty()
@@ -519,7 +522,6 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
             {.query = &query_info.query,
              .normalizer = redpath_normalizer.get(),
              .additional_normalizers = std::move(additional_normalizers),
-             .redfish_interface = redfish_interface.get(),
              .redpath_rules = CreateRedPathRules(std::move(query_info.rule)),
              .clock = query_spec.clock,
              .query_timeout = query_info.timeout,

@@ -79,6 +79,7 @@ class QueryPlannerIntf {
     RedpathQueryTracker *redpath_query_tracker = nullptr;
     QueryType query_type = QueryType::kPolling;
     std::string custom_service_root;
+    RedfishInterface *redfish_interface = nullptr;
   };
 
   // Configures a query resume operation.
@@ -89,6 +90,7 @@ class QueryPlannerIntf {
     bool enable_url_annotation = false;
     bool log_redfish_traces = false;
     RedpathQueryTracker *redpath_query_tracker = nullptr;
+    RedfishInterface *redfish_interface = nullptr;
   };
 
   // QueryPlan execution output.

@@ -193,7 +193,8 @@ class QueryPlanner final : public QueryPlannerIntf {
   absl::StatusOr<std::vector<QueryExecutionContext>> ExecuteQueryExpression(
       QueryType query_type, const RedPathExpression &expression,
       QueryExecutionContext &current_execution_context,
-      std::optional<TraceInfo> &trace_info);
+      std::optional<TraceInfo> &trace_info,
+      RedfishInterface *redfish_interface = nullptr);
 
   void PopulateSubscriptionContext(
       const std::vector<QueryExecutionContext> &execution_contexts,
@@ -219,7 +220,7 @@ class QueryPlanner final : public QueryPlannerIntf {
   const std::unique_ptr<RedPathTrieNode> redpath_trie_node_;
   const RedPathRules redpath_rules_;
   // Redfish interface is thread safe.
-  RedfishInterface &redfish_interface_;
+  RedfishInterface *redfish_interface_ = nullptr;
   const std::string service_root_;
   const SubqueryAssociations subquery_associations_;
   const Clock *clock_ = nullptr;

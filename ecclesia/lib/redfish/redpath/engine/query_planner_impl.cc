@@ -423,7 +423,7 @@ QueryPlanner::QueryPlanner(ImplOptions options_in)
       additional_normalizers_(options_in.additional_normalizers),
       redpath_trie_node_(std::move(options_in.redpath_trie_node)),
       redpath_rules_(std::move(options_in.redpath_rules)),
-      redfish_interface_(*ABSL_DIE_IF_NULL(options_in.redfish_interface)),
+      redfish_interface_(options_in.redfish_interface),
       service_root_(query_.has_service_root()
                         ? query_.service_root()
                         : std::string(kDefaultRedfishServiceRoot)),
@@ -623,7 +623,16 @@ absl::StatusOr<std::vector<QueryExecutionContext>>
 QueryPlanner::ExecuteQueryExpression(
     QueryType query_type, const RedPathExpression &expression,
     QueryExecutionContext &current_execution_context,
-    std::optional<TraceInfo> &trace_info) {
+    std::optional<TraceInfo> &trace_info,
+    RedfishInterface *redfish_interface_inject) {
+  if (redfish_interface_inject == nullptr && redfish_interface_ == nullptr) {
+    return absl::InternalError("Redfish interface is null.");
+  }
+
+  RedfishInterface *redfish_interface = redfish_interface_inject == nullptr
+                                            ? redfish_interface_
+                                            : redfish_interface_inject;
+
   std::vector<QueryExecutionContext> execution_contexts;
 
   const std::unique_ptr<RedfishObject> &current_redfish_obj =
@@ -747,11 +756,11 @@ QueryPlanner::ExecuteQueryExpression(
       std::string node_name = json_obj->get<std::string>();
       get_params_for_redpath = GetQueryParamsForRedPath(node_name);
       redfish_variant =
-          redfish_interface_.CachedGetUri(node_name, get_params_for_redpath);
+          redfish_interface->CachedGetUri(node_name, get_params_for_redpath);
     } else if (expression.type ==
                RedPathExpression::Type::kNodeNameUriPointer) {
       get_params_for_redpath = GetQueryParamsForRedPath(expression.expression);
-      redfish_variant = redfish_interface_.CachedGetUri(expression.expression,
+      redfish_variant = redfish_interface->CachedGetUri(expression.expression,
                                                         get_params_for_redpath);
     } else if (expression.type == RedPathExpression::Type::kPredicate) {
       // We allow executing predicate on single redfish object.
@@ -864,6 +873,19 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
     }
   }
 
+  if (query_resume_options.redfish_interface == nullptr &&
+      redfish_interface_ == nullptr) {
+    result.mutable_status()->add_errors("Redfish interface is not set");
+    result.mutable_status()->set_error_code(
+        ecclesia::ErrorCode::ERROR_INTERNAL);
+    return result;
+  }
+
+  RedfishInterface *local_redfish_interface =
+      query_resume_options.redfish_interface == nullptr
+          ? redfish_interface_
+          : query_resume_options.redfish_interface;
+
   // Begin BFS traversal of the trie.
   std::queue<QueryExecutionContext> node_queue;
   node_queue.push(std::move(execution_context));
@@ -876,7 +898,8 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
     for (const auto &expression : current_redpath_trie_node.child_expressions) {
       absl::StatusOr<std::vector<QueryExecutionContext>> execution_contexts =
           ExecuteQueryExpression(QueryType::kPolling, expression,
-                                 current_execution_context, trace_info);
+                                 current_execution_context, trace_info,
+                                 local_redfish_interface);
       if (!execution_contexts.ok()) {
         if (execution_contexts.status().code() != absl::StatusCode::kNotFound) {
           PopulateSubqueryErrorStatus(execution_contexts.status(),
@@ -972,17 +995,30 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
     return query_execution_result;
   }
 
+  if (query_execution_options.redfish_interface == nullptr &&
+      redfish_interface_ == nullptr) {
+    result.mutable_status()->add_errors("Redfish interface is not set");
+    result.mutable_status()->set_error_code(
+        ecclesia::ErrorCode::ERROR_INTERNAL);
+    return query_execution_result;
+  }
+
+  RedfishInterface *local_redfish_interface =
+      query_execution_options.redfish_interface == nullptr
+          ? redfish_interface_
+          : query_execution_options.redfish_interface;
+
   // Query service root.
   // Get Query Parameters to use for service root
   GetParams get_params_service_root =
       GetQueryParamsForRedPath(kServiceRootNode);
   RedfishVariant variant(absl::OkStatus());
   if (!query_execution_options.custom_service_root.empty()) {
-    variant = redfish_interface_.GetRoot(
+    variant = local_redfish_interface->GetRoot(
         get_params_service_root, query_execution_options.custom_service_root);
   } else {
-    variant =
-        redfish_interface_.GetRoot(get_params_service_root, service_root_);
+    variant = local_redfish_interface->GetRoot(get_params_service_root,
+                                               service_root_);
   }
   if (variant.IsFresh() == CacheState::kIsFresh) {
     cache_stats_.cache_miss += 1;
@@ -1074,7 +1110,8 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
 
       absl::StatusOr<std::vector<QueryExecutionContext>> execution_contexts =
           ExecuteQueryExpression(query_execution_options.query_type, expression,
-                                 current_execution_context, trace_info);
+                                 current_execution_context, trace_info,
+                                 local_redfish_interface);
       // Exit query execution and populate error if querying fails. If the error
       // is due to the resource not being found continue as this is allowed by
       // query engine.
