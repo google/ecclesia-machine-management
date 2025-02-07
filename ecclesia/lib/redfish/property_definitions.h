@@ -456,6 +456,14 @@ DEFINE_REDFISH_PROPERTY(PropertyAllowedSpeedsMHz, std::vector<int>,
 DEFINE_REDFISH_PROPERTY(PropertyAllowableMax, int, "AllowableMax");
 DEFINE_REDFISH_PROPERTY(PropertyAllowableMin, int, "AllowableMin");
 DEFINE_REDFISH_PROPERTY(PropertySetPoint, int, "SetPoint");
+DEFINE_REDFISH_PROPERTY(PropertySetPointType, std::string, "SetPointType");
+DEFINE_REDFISH_PROPERTY(PropertySetPointUnits, std::string, "SetPointUnits");
+DEFINE_REDFISH_PROPERTY(PropertyControlMode, std::string, "ControlMode");
+DEFINE_REDFISH_PROPERTY(PropertyControlType, std::string, "ControlType");
+DEFINE_REDFISH_PROPERTY(PropertyImplementation, std::string, "Implementation");
+DEFINE_REDFISH_PROPERTY(PropertyDifferential, double, "Differential");
+DEFINE_REDFISH_PROPERTY(PropertyIntegral, double, "Integral");
+DEFINE_REDFISH_PROPERTY(PropertyProportional, double, "Proportional");
 DEFINE_REDFISH_PROPERTY(PropertyECCModeEnabled, bool, "ECCModeEnabled");
 DEFINE_REDFISH_PROPERTY(PropertyTotalMemorySizeMiB, int, "TotalMemorySizeMiB");
 DEFINE_REDFISH_PROPERTY(PropertyDramBandwidthGbps, double, "DRAMBandwidthGbps");
