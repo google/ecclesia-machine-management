@@ -692,11 +692,19 @@ absl::Status VerifyStableId(const Identifier& stable_id,
     return absl::OkStatus();
   }
   if (!stable_id.has_machine_devpath()) {
-    return absl::InternalError("Missing machine devpath in _id_");
+    return absl::InternalError(absl::StrCat(
+        "Missing machine devpath in _id_: EmbeddedLocationContext: ",
+        stable_id.embedded_location_context(), " ServiceLabel: ",
+        stable_id.redfish_location().service_label(), " PartLocationContext: ",
+        stable_id.redfish_location().part_location_context()));
   }
   if (requirement == Verification::STABLE_ID_PRESENCE_SUBFRU &&
       !stable_id.has_embedded_location_context()) {
-    return absl::InternalError("Missing embedded location context in _id_");
+    return absl::InternalError(absl::StrCat(
+        "Missing embedded location context in _id_: EmbeddedLocationContext: ",
+        stable_id.embedded_location_context(), " ServiceLabel: ",
+        stable_id.redfish_location().service_label(), " PartLocationContext: ",
+        stable_id.redfish_location().part_location_context()));
   }
   return absl::OkStatus();
 }
@@ -964,8 +972,11 @@ absl::Status VerifyQueryValue(const QueryValue& value,
     return absl::OkStatus();
   }
   if (value.has_identifier()) {
-    ECCLESIA_RETURN_IF_ERROR(VerifyStableId(
-        value.identifier(), verification.verify().stable_id_requirement()));
+    absl::Status check_stable_id = VerifyStableId(
+        value.identifier(), verification.verify().stable_id_requirement());
+    if (!check_stable_id.ok()) {
+      AddError(result, check_stable_id.message(), context);
+    }
   }
   // Presence checking is handled by the caller. This function can only verify
   // properties that are present in the query value.
