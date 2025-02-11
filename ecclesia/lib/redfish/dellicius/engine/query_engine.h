@@ -145,12 +145,27 @@ class QueryEngineIntf {
     SubscriptionBroker subscription_broker = RedPathSubscriptionImpl::Create;
   };
 
+  struct RedpathQueryOptions {
+    ServiceRootType service_root_uri;
+    QueryVariableSet query_arguments;
+  };
+
   virtual ~QueryEngineIntf() = default;
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri = ServiceRootType::kCustom) {
-    return ExecuteRedpathQuery(query_ids, service_root_uri, {});
+    RedpathQueryOptions options = {.service_root_uri = service_root_uri};
+    return ExecuteRedpathQuery(query_ids, options);
+  }
+
+  QueryIdToResult ExecuteRedpathQuery(
+      absl::Span<const absl::string_view> query_ids,
+      ServiceRootType service_root_uri,
+      const QueryVariableSet &query_arguments) {
+    RedpathQueryOptions options = {.service_root_uri = service_root_uri,
+                                   .query_arguments = query_arguments};
+    return ExecuteRedpathQuery(query_ids, options);
   }
 
   // Executes a subscription query.
@@ -168,8 +183,7 @@ class QueryEngineIntf {
 
   virtual QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) = 0;
+      const RedpathQueryOptions &options) = 0;
 
   // Executes a subscription query.
   // Overloads ExecuteSubscriptionQuery to allow specifying `query_arguments`
@@ -216,8 +230,7 @@ class QueryEngine : public QueryEngineIntf {
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override;
+      const RedpathQueryOptions &options) override;
 
   absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(
       absl::Span<const absl::string_view> query_ids,

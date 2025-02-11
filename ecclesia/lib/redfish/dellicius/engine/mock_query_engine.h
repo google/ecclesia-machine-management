@@ -40,8 +40,8 @@ class MockQueryEngine : public QueryEngineIntf {
               (override));
 
   MOCK_METHOD(QueryIdToResult, ExecuteRedpathQuery,
-              (absl::Span<const absl::string_view>, ServiceRootType,
-               const QueryVariableSet &),
+              (absl::Span<const absl::string_view>,
+               const RedpathQueryOptions &),
               (override));
 
   MOCK_METHOD(absl::StatusOr<RedfishInterface *>, GetRedfishInterface,

@@ -88,7 +88,7 @@ absl::StatusOr<std::unique_ptr<QueryEngineIntf>> FileBackedQueryEngine::Create(
 
 QueryIdToResult FileBackedQueryEngine::ExecuteRedpathQuery(
     absl::Span<const absl::string_view> query_ids,
-    ServiceRootType service_root_uri, const QueryVariableSet &query_arguments) {
+    const RedpathQueryOptions& options) {
   QueryIdToResult result;
   for (absl::string_view query_id : query_ids) {
     QueryResult& result_entry = (*result.mutable_results())[query_id];

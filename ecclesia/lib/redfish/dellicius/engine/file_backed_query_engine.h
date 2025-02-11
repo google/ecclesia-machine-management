@@ -62,8 +62,7 @@ class FileBackedQueryEngine : public QueryEngineIntf {
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override;
+      const RedpathQueryOptions &options) override;
 
   absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(
       absl::Span<const absl::string_view> query_ids,

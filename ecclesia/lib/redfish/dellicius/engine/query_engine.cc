@@ -269,12 +269,12 @@ std::vector<DelliciusQueryResult> QueryEngine::ExecuteQueryLegacy(
 // Executes Redpath query and returns results in updated QueryResult format.
 QueryIdToResult QueryEngine::ExecuteRedpathQuery(
     absl::Span<const absl::string_view> query_ids,
-    QueryEngine::ServiceRootType service_root_uri,
-    const QueryVariableSet &query_arguments) {
+    const RedpathQueryOptions &options) {
   if (!features_.enable_streaming()) {
-    return TranslateLegacyResults(
-        ExecuteQueryLegacy(query_ids, service_root_uri, query_arguments));
+    return TranslateLegacyResults(ExecuteQueryLegacy(
+        query_ids, options.service_root_uri, options.query_arguments));
   }
+
   QueryIdToResult query_id_to_result;
   for (const absl::string_view query_id : query_ids) {
     auto it = id_to_redpath_query_plans_.find(query_id);
@@ -283,8 +283,10 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
       continue;
     }
     QueryVariables vars = QueryVariables();
-    auto it_vars = query_arguments.find(query_id);
-    if (it_vars != query_arguments.end()) vars = query_arguments.at(query_id);
+    auto it_vars = options.query_arguments.find(query_id);
+    if (it_vars != options.query_arguments.end())
+      vars = options.query_arguments.at(query_id);
+
     QueryExecutionResult result_single;
     ExecutionFlags planner_execution_flags{
         .execution_mode =
@@ -301,7 +303,7 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
                planner_execution_flags.enable_url_annotation,
            .log_redfish_traces = planner_execution_flags.log_redfish_traces,
            .custom_service_root =
-               service_root_uri == QueryEngine::ServiceRootType::kGoogle
+               options.service_root_uri == QueryEngine::ServiceRootType::kGoogle
                    ? "/google/v1"
                    : "",
            .redfish_interface = redfish_interface_.get()});

@@ -75,10 +75,8 @@ class FakeQueryEngine : public QueryEngineIntf {
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) override {
-    return query_engine_->ExecuteRedpathQuery(query_ids, service_root_uri,
-                                              query_arguments);
+      const RedpathQueryOptions &options) override {
+    return query_engine_->ExecuteRedpathQuery(query_ids, options);
   }
 
   absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(

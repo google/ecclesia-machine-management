@@ -62,7 +62,7 @@ constexpr absl::string_view kRootDir = "/test/";
 constexpr absl::string_view kQueryResultDir = "/test/query_result/";
 
 MATCHER_P(ContainsSystemIdAsQueryVariable, expected_id, "") {
-  for (const auto &[query_id, query_vars] : arg) {
+  for (const auto &[query_id, query_vars] : arg.query_arguments) {
     for (const auto &var_value : query_vars.variable_values()) {
       if (var_value.name() == kNodeLocalSystemIdVariableName) {
         const auto &values = var_value.values();
@@ -426,7 +426,7 @@ TEST_F(QueryRouterTest, CreateSuccessWithSystemIdQueryRouterTest) {
   auto mock_qe = std::make_unique<MockQueryEngine>();
 
   EXPECT_CALL(*mock_qe, ExecuteRedpathQuery(
-                            _, _, ContainsSystemIdAsQueryVariable("system1")))
+                            _, ContainsSystemIdAsQueryVariable("system1")))
       .Times(1);
 
   ECCLESIA_ASSIGN_OR_FAIL(
