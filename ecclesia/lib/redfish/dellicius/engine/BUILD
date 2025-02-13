@@ -112,6 +112,7 @@ cc_library(
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/engine/internal:passkey",
         "//ecclesia/lib/redfish/redpath/definitions/query_result",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",

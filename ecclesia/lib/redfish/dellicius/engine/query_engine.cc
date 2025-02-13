@@ -433,6 +433,16 @@ absl::StatusOr<RedfishInterface *> QueryEngine::GetRedfishInterface(
   return redfish_interface_.get();
 }
 
+absl::Status QueryEngine::ExecuteOnRedfishInterface(
+    RedfishInterfacePasskey unused_passkey,
+    const RedfishInterfaceOptions &options) {
+  if (redfish_interface_ == nullptr) {
+    return absl::InternalError(
+        "QueryEngine contains uninitialized RedfishInterface");
+  }
+  return options.callback(*redfish_interface_);
+}
+
 absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
     QuerySpec query_spec, QueryEngineParams params,
     std::unique_ptr<IdAssigner> id_assigner,

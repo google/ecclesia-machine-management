@@ -150,6 +150,10 @@ class QueryEngineIntf {
     QueryVariableSet query_arguments;
   };
 
+  struct RedfishInterfaceOptions {
+    std::function<absl::Status(const RedfishInterface &)> callback;
+  };
+
   virtual ~QueryEngineIntf() = default;
 
   QueryIdToResult ExecuteRedpathQuery(
@@ -201,6 +205,10 @@ class QueryEngineIntf {
   virtual absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) = 0;
 
+  virtual absl::Status ExecuteOnRedfishInterface(
+      RedfishInterfacePasskey unused_passkey,
+      const RedfishInterfaceOptions &options) = 0;
+
   // Returns the server tag, if available
   virtual absl::string_view GetAgentIdentifier() const { return ""; }
 };
@@ -239,6 +247,10 @@ class QueryEngine : public QueryEngineIntf {
 
   absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) override;
+
+  absl::Status ExecuteOnRedfishInterface(
+      RedfishInterfacePasskey unused_passkey,
+      const RedfishInterfaceOptions &options) override;
 
   absl::string_view GetAgentIdentifier() const override { return entity_tag_; }
 
@@ -325,8 +337,8 @@ class QueryEngine : public QueryEngineIntf {
 };
 
 // Build query engine based on given `engine_params` to execute queries in
-// `query_context`. Optionally supply `id_assigner` to decorate the results with
-// devpaths.
+// `query_context`. Optionally supply `id_assigner` to decorate the results
+// with devpaths.
 ABSL_DEPRECATED("Use QueryEngine::Create Instead")
 absl::StatusOr<QueryEngine> CreateQueryEngine(
     const QueryContext &query_context, QueryEngineParams engine_params,

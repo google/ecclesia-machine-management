@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "gmock/gmock.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
@@ -46,6 +47,10 @@ class MockQueryEngine : public QueryEngineIntf {
 
   MOCK_METHOD(absl::StatusOr<RedfishInterface *>, GetRedfishInterface,
               (RedfishInterfacePasskey), (override));
+
+  MOCK_METHOD(absl::Status, ExecuteOnRedfishInterface,
+              (RedfishInterfacePasskey, const RedfishInterfaceOptions &),
+              (override));
 
   MOCK_METHOD(absl::string_view, GetAgentIdentifier, (), (const, override));
 };

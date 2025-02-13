@@ -78,6 +78,13 @@ class FileBackedQueryEngine : public QueryEngineIntf {
         "No redfish interface in FileBakedQueryEngine");
   }
 
+  absl::Status ExecuteOnRedfishInterface(
+      RedfishInterfacePasskey unused_passkey,
+      const RedfishInterfaceOptions &options) override {
+    return absl::UnimplementedError(
+        "No redfish interface in FileBakedQueryEngine");
+  }
+
  private:
   using QueryIdToFilenameMap = absl::flat_hash_map<std::string, std::string>;
 

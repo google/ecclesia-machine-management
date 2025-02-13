@@ -299,6 +299,27 @@ TEST(QueryEngineTest, QueryEngineRedfishIntfAccessor) {
           .ok());
 }
 
+TEST(QueryEngineTest, ExecuteOnRedfishIntface) {
+  std::string sensor_out_path = GetTestDataDependencyPath(
+      JoinFilePaths(kQuerySamplesLocation, "query_out/sensor_out.textproto"));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      FakeQueryEngine::Create(
+          std::move(query_spec), kIndusMockup,
+          {.streaming = FakeQueryEngine::Streaming::kEnable}));
+  EXPECT_TRUE(query_engine
+                  ->ExecuteOnRedfishInterface(
+                      RedfishInterfacePasskeyFactory::GetPassKey(),
+                      {.callback = [](const RedfishInterface &redfish_interface)
+                           -> absl::Status { return absl::OkStatus(); }})
+                  .ok());
+}
+
 // Test $top queries
 // Use the paginated version of SensorCollector query for this test
 TEST(QueryEngineTest, QueryEngineTopConfiguration) {
