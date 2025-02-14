@@ -4799,6 +4799,23 @@ TEST_F(QueryPlannerTestRunner, TestEmptyRootSubQuerySuccess) {
                   ecclesia::EqualsProto(expected_query_result)));
 }
 
+TEST(RedpathQueryTimestampTest, TestTimestamp) {
+  FakeClock clock(absl::FromUnixSeconds(100));
+  QueryPlannerIntf::QueryExecutionResult result;
+  result.query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "ServiceRoot"
+    stats { payload_size: 133 num_cache_misses: 3 }
+  )pb");
+  {
+    RedpathQueryTimestamp timestamp(&result, &clock);
+    clock.AdvanceTime(absl::Seconds(10));
+  }
+  EXPECT_THAT(result.query_result.stats().start_time(),
+              EqualsProto(R"pb(seconds: 100)pb"));
+  EXPECT_THAT(result.query_result.stats().end_time(),
+              EqualsProto(R"pb(seconds: 110)pb"));
+}
+
 }  // namespace
 
 }  // namespace ecclesia

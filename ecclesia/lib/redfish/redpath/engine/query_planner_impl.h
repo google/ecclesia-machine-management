@@ -41,6 +41,7 @@
 #include "ecclesia/lib/redfish/timing/query_timeout_manager.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
+#include "ecclesia/lib/time/proto.h"
 
 namespace ecclesia {
 
@@ -151,6 +152,33 @@ struct CacheStats {
     cache_miss = 0;
     cache_hit = 0;
   }
+};
+
+// RAII style wrapper to timestamp query.
+class RedpathQueryTimestamp {
+ public:
+  RedpathQueryTimestamp(QueryPlannerIntf::QueryExecutionResult *result,
+                        const Clock *clock)
+      : result_(*ABSL_DIE_IF_NULL(result)),
+        clock_(*ABSL_DIE_IF_NULL(clock)),
+        start_time_(clock_.Now()) {}
+
+  ~RedpathQueryTimestamp() {
+    auto set_time = [](absl::Time time, google::protobuf::Timestamp &field) {
+      if (auto timestamp = AbslTimeToProtoTime(time); timestamp.ok()) {
+        field = *std::move(timestamp);
+      }
+    };
+    set_time(start_time_,
+             *result_.query_result.mutable_stats()->mutable_start_time());
+    set_time(clock_.Now(),
+             *result_.query_result.mutable_stats()->mutable_end_time());
+  }
+
+ private:
+  QueryPlannerIntf::QueryExecutionResult &result_;
+  const Clock &clock_;
+  absl::Time start_time_;
 };
 
 // QueryPlannerImpl encapsulates the logic to interpret subqueries, deduplicate
