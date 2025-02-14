@@ -19,6 +19,7 @@
 #include <stdint.h>
 
 #include <algorithm>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -36,12 +37,14 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/topology.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/proto.h"
 #include "single_include/nlohmann/json.hpp"
@@ -462,6 +465,49 @@ absl::Status RedpathNormalizerImplAddMachineBarepath::Normalize(
         ->set_machine_devpath(*machine_devpath);
   }
   return absl::OkStatus();
+}
+
+std::unique_ptr<RedpathNormalizer> BuildLocalDevpathRedpathNormalizer(
+    RedfishInterface *redfish_interface,
+    RedpathNormalizer::RedfishStableIdType stable_id_type,
+    absl::string_view redfish_topology_config_name) {
+  switch (stable_id_type) {
+    case RedpathNormalizer::RedfishStableIdType::kRedfishLocation:
+      return BuildDefaultRedpathNormalizer();
+    case RedpathNormalizer::RedfishStableIdType::kRedfishLocationDerived:
+      if (!redfish_topology_config_name.empty()) {
+        return BuildDefaultRedpathNormalizerWithLocalDevpath(
+            CreateTopologyFromRedfish(redfish_interface,
+                                      redfish_topology_config_name));
+      }
+      return BuildDefaultRedpathNormalizerWithLocalDevpath(
+          CreateTopologyFromRedfish(redfish_interface));
+  }
+
+  return nullptr;
+}
+
+std::unique_ptr<RedpathNormalizer> GetMachineDevpathRedpathNormalizer(
+    RedpathNormalizer::RedfishStableIdType stable_id_type,
+    absl::string_view redfish_topology_config_name,
+    std::unique_ptr<IdAssigner> id_assigner,
+    RedfishInterface *redfish_interface) {
+  switch (stable_id_type) {
+    case RedpathNormalizer::RedfishStableIdType::kRedfishLocation:
+      return BuildRedpathNormalizerWithMachineDevpath(std::move(id_assigner));
+    case RedpathNormalizer::RedfishStableIdType::kRedfishLocationDerived:
+      if (redfish_topology_config_name.empty()) {
+        return BuildRedpathNormalizerWithMachineDevpath(
+            std::move(id_assigner),
+            CreateTopologyFromRedfish(redfish_interface));
+      }
+      return BuildRedpathNormalizerWithMachineDevpath(
+          std::move(id_assigner),
+          CreateTopologyFromRedfish(redfish_interface,
+                                    redfish_topology_config_name));
+  }
+
+  return nullptr;
 }
 
 }  // namespace ecclesia

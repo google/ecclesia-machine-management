@@ -84,6 +84,18 @@ struct QueryEngineParams {
   // QueryEngine to traverse the tree for specific resources and their
   // subordinates to build physical topology.
   std::string redfish_topology_config_name;
+
+  // instead of QueryEngineParams::RedfishStableIdType.
+  static RedpathNormalizer::RedfishStableIdType
+  GetRedpathNormalizerStableIdType(
+      QueryEngineParams::RedfishStableIdType stable_id_type) {
+    switch (stable_id_type) {
+      case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
+        return RedpathNormalizer::RedfishStableIdType::kRedfishLocation;
+      case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
+        return RedpathNormalizer::RedfishStableIdType::kRedfishLocationDerived;
+    }
+  }
 };
 
 // QueryEngine is logical composition of Redfish query interpreter, dispatcher

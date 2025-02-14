@@ -108,8 +108,10 @@ cc_library(
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:redpath_subscription",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
         "//ecclesia/lib/time:clock",
+        "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/log:die_if_null",
         "@com_google_absl//absl/time",
     ],
 )
@@ -145,6 +147,7 @@ cc_library(
         "//ecclesia/lib/redfish:devpath",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish:node_topology",
+        "//ecclesia/lib/redfish:topology",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:id_assigner",

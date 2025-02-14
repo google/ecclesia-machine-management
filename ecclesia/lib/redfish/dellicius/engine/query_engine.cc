@@ -68,45 +68,6 @@ namespace {
 
 using QueryExecutionResult = QueryPlannerIntf::QueryExecutionResult;
 
-std::unique_ptr<RedpathNormalizer> GetMachineDevpathRedpathNormalizer(
-    const QueryEngineParams &query_engine_params,
-    std::unique_ptr<IdAssigner> id_assigner,
-    RedfishInterface *redfish_interface) {
-  switch (query_engine_params.stable_id_type) {
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
-      return BuildRedpathNormalizerWithMachineDevpath(std::move(id_assigner));
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
-      if (query_engine_params.redfish_topology_config_name.empty()) {
-        return BuildRedpathNormalizerWithMachineDevpath(
-            std::move(id_assigner),
-            CreateTopologyFromRedfish(redfish_interface));
-      }
-      return BuildRedpathNormalizerWithMachineDevpath(
-          std::move(id_assigner),
-          CreateTopologyFromRedfish(
-              redfish_interface,
-              query_engine_params.redfish_topology_config_name));
-  }
-}
-
-std::unique_ptr<RedpathNormalizer> BuildLocalDevpathRedpathNormalizer(
-    RedfishInterface *redfish_interface,
-    const QueryEngineParams &query_engine_params) {
-  switch (query_engine_params.stable_id_type) {
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
-      return BuildDefaultRedpathNormalizer();
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
-      if (!query_engine_params.redfish_topology_config_name.empty()) {
-        return BuildDefaultRedpathNormalizerWithLocalDevpath(
-            CreateTopologyFromRedfish(
-                redfish_interface,
-                query_engine_params.redfish_topology_config_name));
-      }
-      return BuildDefaultRedpathNormalizerWithLocalDevpath(
-          CreateTopologyFromRedfish(redfish_interface));
-  }
-}
-
 ABSL_DEPRECATED("Use BuildRedpathNormalizerWithMachineDevpath instead.")
 std::unique_ptr<Normalizer> GetMachineDevpathNormalizer(
     const QueryEngineParams &query_engine_params,
@@ -486,10 +447,16 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
 
   if (id_assigner == nullptr) {
     redpath_normalizer = BuildLocalDevpathRedpathNormalizer(
-        redfish_interface.get(), engine_params);
+        redfish_interface.get(),
+        QueryEngineParams::GetRedpathNormalizerStableIdType(
+            engine_params.stable_id_type),
+        engine_params.redfish_topology_config_name);
   } else {
     redpath_normalizer = GetMachineDevpathRedpathNormalizer(
-        engine_params, std::move(id_assigner), redfish_interface.get());
+        QueryEngineParams::GetRedpathNormalizerStableIdType(
+            engine_params.stable_id_type),
+        engine_params.redfish_topology_config_name, std::move(id_assigner),
+        redfish_interface.get());
   }
 
   // Build RedPath trie based query planner.

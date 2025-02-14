@@ -19,6 +19,7 @@
 
 #include <stdbool.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
@@ -29,6 +30,7 @@
 #include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
@@ -47,6 +49,13 @@ struct RedpathNormalizerOptions {
 // for the property specification in a Dellicius Subquery.
 class RedpathNormalizer {
  public:
+  // Stable id types used to configure engine for an appropriate normalizer that
+  // decorates the query result with desired stable id type.
+  enum class RedfishStableIdType : uint8_t {
+    kRedfishLocation,  // Redfish Standard - PartLocationContext + ServiceLabel
+    kRedfishLocationDerived  // Derived from Redfish topology.
+  };
+
   using QueryIdToNormalizerMap =
       absl::flat_hash_map<std::string, std::unique_ptr<RedpathNormalizer>>;
   // Factory for creating a map of RedpathNormalizer, keyed by query id.
@@ -219,6 +228,17 @@ BuildRedpathNormalizerWithMachineDevpath(
 inline RedpathNormalizer::QueryIdToNormalizerMap DefaultRedpathNormalizerMap() {
   return {};
 }
+
+std::unique_ptr<RedpathNormalizer> BuildLocalDevpathRedpathNormalizer(
+    RedfishInterface *redfish_interface,
+    RedpathNormalizer::RedfishStableIdType stable_id_type,
+    absl::string_view redfish_topology_config_name);
+
+std::unique_ptr<RedpathNormalizer> GetMachineDevpathRedpathNormalizer(
+    RedpathNormalizer::RedfishStableIdType stable_id_type,
+    absl::string_view redfish_topology_config_name,
+    std::unique_ptr<IdAssigner> id_assigner,
+    RedfishInterface *redfish_interface);
 
 }  // namespace ecclesia
 
