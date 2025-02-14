@@ -28,6 +28,7 @@
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/check.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -167,7 +168,7 @@ void VerifyQueryResults(QueryIdToResult actual_entries,
   EXPECT_THAT(actual_entries, EqualsProto(expected_entries));
 }
 
-absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
+absl::StatusOr<std::unique_ptr<QueryEngineIntf>> GetDefaultQueryEngine(
     FakeRedfishServer &server,
     absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
     absl::Span<const EmbeddedFile> query_rules = kQueryRules,
@@ -185,16 +186,21 @@ absl::StatusOr<QueryEngine> GetDefaultQueryEngine(
 
   QueryContext query_context{
       .query_files = query_files, .query_rules = query_rules, .clock = clock};
-  return CreateQueryEngine(
-      query_context, {.transport = std::move(transport),
-                      .entity_tag = query_engine_params.entity_tag,
-                      .stable_id_type = query_engine_params.stable_id_type,
-                      .features = query_engine_params.features,
-                      .redfish_topology_config_name =
-                          query_engine_params.redfish_topology_config_name});
+
+  ECCLESIA_ASSIGN_OR_RETURN(
+      ecclesia::QuerySpec query_spec,
+      ecclesia::QuerySpec::FromQueryContext(query_context));
+  return QueryEngine::Create(
+      std::move(query_spec),
+      {.transport = std::move(transport),
+       .entity_tag = query_engine_params.entity_tag,
+       .stable_id_type = query_engine_params.stable_id_type,
+       .features = query_engine_params.features,
+       .redfish_topology_config_name =
+           query_engine_params.redfish_topology_config_name});
 }
 
-absl::StatusOr<QueryEngine> GetQueryEngineWithNormalizers(
+absl::StatusOr<std::unique_ptr<QueryEngineIntf>> GetQueryEngineWithNormalizers(
     FakeRedfishServer &server,
     absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
     absl::Span<const EmbeddedFile> query_rules = kQueryRules,
@@ -218,8 +224,8 @@ absl::StatusOr<QueryEngine> GetQueryEngineWithNormalizers(
   id_to_normalizers.emplace("test_query_id",
                             std::make_unique<RedpathNormalizer>());
 
-  return QueryEngine::CreateLegacy(
-      query_spec,
+  return ecclesia::QueryEngine::Create(
+      std::move(query_spec),
       {.transport = std::move(transport),
        .entity_tag = query_engine_params.entity_tag,
        .stable_id_type = query_engine_params.stable_id_type,
@@ -229,7 +235,8 @@ absl::StatusOr<QueryEngine> GetQueryEngineWithNormalizers(
       nullptr, std::move(id_to_normalizers));
 }
 
-absl::StatusOr<QueryEngine> GetQueryEngineWithIdAssigner(
+absl::StatusOr<std::unique_ptr<ecclesia::QueryEngineIntf>>
+GetQueryEngineWithIdAssigner(
     FakeRedfishServer &server, std::unique_ptr<IdAssigner> id_assigner,
     absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
     const Clock *clock = Clock::RealClock()) {
@@ -243,8 +250,10 @@ absl::StatusOr<QueryEngine> GetQueryEngineWithIdAssigner(
                                         network_endpoint);
 
   QueryContext query_context{.query_files = query_files, .clock = clock};
-  return CreateQueryEngine(
-      query_context,
+  ECCLESIA_ASSIGN_OR_RETURN(QuerySpec query_spec,
+                            QuerySpec::FromQueryContext(query_context));
+  return QueryEngine::Create(
+      std::move(query_spec),
       {.transport = std::move(transport),
        .entity_tag = "test_node_id",
        .stable_id_type =
@@ -271,8 +280,7 @@ TEST(QueryEngineTest, QueryEngineDevpathConfiguration) {
   QueryIdToResult response_entries =
       query_engine->ExecuteRedpathQuery({"SensorCollector"});
 
-  auto results =
-      response_entries.results().at("SensorCollector").data();
+  auto results = response_entries.results().at("SensorCollector").data();
   auto sensors = results.fields().at("Sensors");
   EXPECT_EQ(sensors.list_value().values_size(), 14);
 
@@ -325,8 +333,8 @@ TEST(QueryEngineTest, ExecuteOnRedfishIntface) {
 TEST(QueryEngineTest, QueryEngineTopConfiguration) {
   ECCLESIA_ASSIGN_OR_FAIL(
       QuerySpec query_spec,
-      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
-                                  .query_rules = kQueryRules}));
+      QuerySpec::FromQueryContext(
+          {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
       auto query_engine,
@@ -649,9 +657,9 @@ TEST(QueryEngineTest, QueryEngineWithUrlAnnotations) {
 TEST(QueryEngineTest, QueryEngineTestCustomServiceRoot) {
   FakeRedfishServer server(kComponentIntegrityMockupPath);
   FakeClock clock{clock_time};
-  absl::StatusOr<QueryEngine> query_engine =
-      GetDefaultQueryEngine(server, kDelliciusQueries, kQueryRules, &clock);
-  EXPECT_TRUE(query_engine.ok());
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::unique_ptr<QueryEngineIntf> query_engine,
+      GetDefaultQueryEngine(server, kDelliciusQueries, kQueryRules, &clock));
   // Execute query where custom service root is set to /google/v1.
   QueryIdToResult response =
       query_engine->ExecuteRedpathQuery({"CustomServiceRoot"});
@@ -884,9 +892,9 @@ TEST(QueryEngineTest, QueryEngineTransportMetricsInResult) {
 TEST(QueryEngineTest, QueryEngineWithDefaultNormalizer) {
   FakeRedfishServer server(kIndusMockup);
   FakeClock clock{clock_time};
-  absl::StatusOr<QueryEngine> query_engine =
-      GetDefaultQueryEngine(server, kDelliciusQueries, kQueryRules, &clock);
-  EXPECT_TRUE(query_engine.ok());
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::unique_ptr<QueryEngineIntf> query_engine,
+      GetDefaultQueryEngine(server, kDelliciusQueries, kQueryRules, &clock));
 
   QueryIdToResult intent_output_sensor =
       ParseTextFileAsProtoOrDie<QueryIdToResult>(
@@ -901,9 +909,10 @@ TEST(QueryEngineTest, QueryEngineWithDefaultNormalizer) {
 TEST(QueryEngineTest, QueryEngineWithAdditionalNormalizers) {
   FakeRedfishServer server(kIndusMockup);
   FakeClock clock{clock_time};
-  absl::StatusOr<QueryEngine> query_engine = GetQueryEngineWithNormalizers(
-      server, kDelliciusQueries, kQueryRules, &clock);
-  EXPECT_TRUE(query_engine.ok());
+
+  ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<QueryEngineIntf> query_engine,
+                          GetQueryEngineWithNormalizers(
+                              server, kDelliciusQueries, kQueryRules, &clock));
 
   QueryIdToResult intent_output_sensor =
       ParseTextFileAsProtoOrDie<QueryIdToResult>(
@@ -922,9 +931,10 @@ TEST(QueryEngineTest, QueryEngineWithIdAssigner) {
   absl::flat_hash_map<std::string, std::string> devpath_map = {};
   auto id_assigner = NewMapBasedDevpathAssigner(devpath_map);
 
-  absl::StatusOr<QueryEngine> query_engine = GetQueryEngineWithIdAssigner(
-      server, std::move(id_assigner), kDelliciusQueries, &clock);
-  EXPECT_TRUE(query_engine.ok());
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::unique_ptr<QueryEngineIntf> query_engine,
+      GetQueryEngineWithIdAssigner(server, std::move(id_assigner),
+                                   kDelliciusQueries, &clock));
 
   QueryIdToResult intent_output_assembly =
       ParseTextFileAsProtoOrDie<QueryIdToResult>(GetTestDataDependencyPath(
@@ -1036,17 +1046,18 @@ TEST(QueryEngineTest, QueryEngineNoHaltOnFirstFailure) {
   QueryContext query_context{.query_files = kDelliciusQueries,
                              .query_rules = kQueryRules,
                              .clock = &clock};
+  ECCLESIA_ASSIGN_OR_FAIL(QuerySpec query_spec,
+                          QuerySpec::FromQueryContext(query_context));
   QueryEngineFeatures features = StandardQueryEngineFeatures();
   features.set_enable_redfish_metrics(true);
   features.set_fail_on_first_error(false);
-  absl::StatusOr<QueryEngine> query_engine =
-      CreateQueryEngine(query_context, {.transport = std::move(transport),
-                                        .entity_tag = "test_node_id",
-                                        .features = ParseTextProtoOrDie(R"pb(
-                                          enable_redfish_metrics: true
-                                          fail_on_first_error: false
-                                        )pb")});
-  ASSERT_TRUE(query_engine.ok());
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine, QueryEngine::Create(std::move(query_spec),
+                                             {.transport = std::move(transport),
+                                              .entity_tag = "test_node_id",
+                                              .features = features},
+                                             /*id_assigner=*/nullptr,
+                                             /*id_to_normalizers=*/{}));
   EXPECT_EQ(query_engine->GetAgentIdentifier(), "test_node_id");
   // Issue the query and assert that both GETs were issued, ensuring that the
   // query execution continued AFTER the first error occurred.
@@ -1070,9 +1081,9 @@ TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
         .stable_id_type =
             QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived,
         .redfish_topology_config_name = "redfish_test.textpb"};
-    absl::StatusOr<QueryEngine> query_engine = GetDefaultQueryEngine(
-        server, kDelliciusQueries, kQueryRules, &clock, params);
-    EXPECT_TRUE(query_engine.ok());
+    ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<QueryEngineIntf> query_engine,
+                            GetDefaultQueryEngine(server, kDelliciusQueries,
+                                                  kQueryRules, &clock, params));
 
     std::string query_result_str = R"pb(
       results {
@@ -1113,9 +1124,9 @@ TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
     QueryEngineParams params{
         .stable_id_type =
             QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived};
-    absl::StatusOr<QueryEngine> query_engine = GetDefaultQueryEngine(
-        server, kDelliciusQueries, kQueryRules, &clock, params);
-    EXPECT_TRUE(query_engine.ok());
+    ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<QueryEngineIntf> query_engine,
+                            GetDefaultQueryEngine(server, kDelliciusQueries,
+                                                  kQueryRules, &clock, params));
 
     std::string query_result_str = R"pb(
       results {
@@ -1212,18 +1223,20 @@ TEST(QueryEngineTest, QueryEngineLocationContextSuccess) {
   std::unique_ptr<RedfishTransport> transport =
       HttpRedfishTransport::MakeNetwork(std::move(http_client),
                                         network_endpoint);
-  // Set up Query Engine with query files and query rules.
-  QueryContext query_context{.query_files = kDelliciusQueries,
-                             .query_rules = kQueryRules,
-                             .clock = &clock};
-  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
-      query_context,
-      {.transport = std::move(transport),
-       .stable_id_type =
-           QueryEngineParams::RedfishStableIdType::kRedfishLocation,
-       .features = StandardQueryEngineFeatures()},
-      std::move(id_assigner));
-  ASSERT_TRUE(query_engine.ok());
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
+                                   .query_rules = kQueryRules,
+                                   .clock = &clock}));
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      QueryEngine::Create(
+          std::move(query_spec),
+          {.transport = std::move(transport),
+           .stable_id_type =
+               QueryEngineParams::RedfishStableIdType::kRedfishLocation,
+           .features = StandardQueryEngineFeatures()},
+          std::move(id_assigner)));
   QueryIdToResult response_entries =
       query_engine->ExecuteRedpathQuery({"EmbeddedResource"});
   ASSERT_EQ(response_entries.results().size(), 1);
@@ -1273,14 +1286,17 @@ TEST(QueryEngineTest, QueryEngineSubRootStableIdServiceLabel) {
   QueryContext query_context{.query_files = kDelliciusQueries,
                              .query_rules = kQueryRules,
                              .clock = &clock};
-  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
-      query_context,
-      {.transport = std::move(transport),
-       .stable_id_type =
-           QueryEngineParams::RedfishStableIdType::kRedfishLocation,
-       .features = StandardQueryEngineFeatures()},
-      std::move(id_assigner));
-  ASSERT_TRUE(query_engine.ok());
+  ECCLESIA_ASSIGN_OR_FAIL(QuerySpec query_spec,
+                          QuerySpec::FromQueryContext(query_context));
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      QueryEngine::Create(
+          std::move(query_spec),
+          {.transport = std::move(transport),
+           .stable_id_type =
+               QueryEngineParams::RedfishStableIdType::kRedfishLocation,
+           .features = StandardQueryEngineFeatures()},
+          std::move(id_assigner)));
   QueryIdToResult response_entries =
       query_engine->ExecuteRedpathQuery({"SubRootResource"});
   ASSERT_EQ(response_entries.results().size(), 1);
@@ -1773,10 +1789,13 @@ TEST(QueryEngineTest, QueryEngineFailsOnServiceUnavailability) {
   QueryContext query_context{.query_files = kDelliciusQueries,
                              .query_rules = kQueryRules,
                              .clock = &clock};
-  absl::StatusOr<QueryEngine> query_engine = CreateQueryEngine(
-      query_context, {.transport = std::move(transport),
-                      .features = StandardQueryEngineFeatures()});
-  ASSERT_TRUE(query_engine.ok());
+  ECCLESIA_ASSIGN_OR_FAIL(ecclesia::QuerySpec query_spec,
+                          ecclesia::QuerySpec::FromQueryContext(query_context));
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      QueryEngine::Create(std::move(query_spec),
+                          {.transport = std::move(transport),
+                           .features = StandardQueryEngineFeatures()}));
   QueryIdToResult query_result =
       query_engine->ExecuteRedpathQuery({"SensorCollectorWithChassisLinks"});
   EXPECT_THAT(query_result.results()
@@ -1938,9 +1957,7 @@ TEST(QueryEngineTest, QueryEngineAppliesQueryRulesToServiceRoot) {
   constexpr absl::string_view kQueryRuleStr = R"pb(
     query_id_to_params_rule {
       key: "AssemblyCollectorWithPropertyNameNormalization"
-      value {
-        redpath_prefix_with_params { redpath: "/" uri_prefix: "/tlbmc" }
-      }
+      value { redpath_prefix_with_params { redpath: "/" uri_prefix: "/tlbmc" } }
     })pb";
 
   auto query_spec = QuerySpec::FromQueryContext(
@@ -2100,17 +2117,20 @@ TEST(QueryEngineTest, QueryEngineNoHaltOnFirstFailureWithStreamingEngine) {
       HttpRedfishTransport::MakeNetwork(std::move(http_client),
                                         network_endpoint);
 
-  QueryContext query_context{.query_files = kDelliciusQueries,
-                             .query_rules = kQueryRules,
-                             .clock = &clock};
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
+                                   .query_rules = kQueryRules,
+                                   .clock = &clock}));
   QueryEngineFeatures features = StandardQueryEngineFeatures();
   features.set_fail_on_first_error(false);
   features.set_enable_redfish_metrics(true);
-  absl::StatusOr<QueryEngine> query_engine =
-      CreateQueryEngine(query_context, {.transport = std::move(transport),
-                                        .entity_tag = "test_node_id",
-                                        .features = std::move(features)});
-  ASSERT_TRUE(query_engine.ok());
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      QueryEngine::Create(std::move(query_spec),
+                          {.transport = std::move(transport),
+                           .entity_tag = "test_node_id",
+                           .features = std::move(features)}));
   EXPECT_EQ(query_engine->GetAgentIdentifier(), "test_node_id");
   // Issue the query and assert that both GETs were issued, ensuring that the
   // query execution continued AFTER the first error occurred.
