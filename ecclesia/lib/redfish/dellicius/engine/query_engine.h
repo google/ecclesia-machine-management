@@ -53,6 +53,7 @@
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/transport/metrical_transport.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
+#include "ecclesia/lib/stubarbiter/arbiter.h"
 #include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
@@ -160,10 +161,14 @@ class QueryEngineIntf {
   struct RedpathQueryOptions {
     ServiceRootType service_root_uri;
     QueryVariableSet query_arguments;
+    StubArbiterInfo::PriorityLabel priority_label =
+        StubArbiterInfo::PriorityLabel::kUnknown;
   };
 
   struct RedfishInterfaceOptions {
     std::function<absl::Status(const RedfishInterface &)> callback;
+    StubArbiterInfo::PriorityLabel priority_label =
+        StubArbiterInfo::PriorityLabel::kUnknown;
   };
 
   virtual ~QueryEngineIntf() = default;
@@ -266,26 +271,7 @@ class QueryEngine : public QueryEngineIntf {
 
   absl::string_view GetAgentIdentifier() const override { return entity_tag_; }
 
- private:
-  ABSL_DEPRECATED("Use the constructor that uses QueryPlannerIntf instead")
-  QueryEngine(
-      std::string entity_tag,
-      absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
-          id_to_query_plans,
-      const Clock *clock, std::unique_ptr<Normalizer> legacy_normalizer,
-      std::unique_ptr<RedpathNormalizer> normalizer,
-      std::unique_ptr<RedfishInterface> redfish_interface,
-      QueryEngineFeatures features,
-      MetricalRedfishTransport *metrical_transport = nullptr)
-      : entity_tag_(std::move(entity_tag)),
-        id_to_query_plans_(std::move(id_to_query_plans)),
-        clock_(clock),
-        legacy_normalizer_(std::move(legacy_normalizer)),
-        normalizer_(std::move(normalizer)),
-        redfish_interface_(std::move(redfish_interface)),
-        metrical_transport_(metrical_transport),
-        features_(std::move(features)) {}
-
+ protected:
   QueryEngine(
       std::string entity_tag,
       absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
@@ -297,15 +283,42 @@ class QueryEngine : public QueryEngineIntf {
       MetricalRedfishTransport *metrical_transport = nullptr,
       RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers =
           DefaultRedpathNormalizerMap())
-      : entity_tag_(std::move(entity_tag)),
-        id_to_redpath_query_plans_(std::move(id_to_query_plans)),
+      : id_to_redpath_query_plans_(std::move(id_to_query_plans)),
         clock_(clock),
+        features_(std::move(features)),
+        entity_tag_(std::move(entity_tag)),
         legacy_normalizer_(std::move(legacy_normalizer)),
         normalizer_(std::move(normalizer)),
         redfish_interface_(std::move(redfish_interface)),
         metrical_transport_(metrical_transport),
-        features_(std::move(features)),
         id_to_normalizers_(std::move(id_to_normalizers)) {}
+
+  // Maps query id to query planner.
+  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
+      id_to_redpath_query_plans_;
+  const Clock *clock_;
+  // Collection of flags dictating query engine execution.
+  QueryEngineFeatures features_;
+
+ private:
+  ABSL_DEPRECATED("Use the constructor that uses QueryPlannerIntf instead")
+  QueryEngine(
+      std::string entity_tag,
+      absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
+          id_to_query_plans,
+      const Clock *clock, std::unique_ptr<Normalizer> legacy_normalizer,
+      std::unique_ptr<RedpathNormalizer> normalizer,
+      std::unique_ptr<RedfishInterface> redfish_interface,
+      QueryEngineFeatures features,
+      MetricalRedfishTransport *metrical_transport = nullptr)
+      : clock_(clock),
+        features_(std::move(features)),
+        entity_tag_(std::move(entity_tag)),
+        id_to_query_plans_(std::move(id_to_query_plans)),
+        legacy_normalizer_(std::move(legacy_normalizer)),
+        normalizer_(std::move(normalizer)),
+        redfish_interface_(std::move(redfish_interface)),
+        metrical_transport_(metrical_transport) {}
 
   std::vector<DelliciusQueryResult> ExecuteQueryLegacy(
       absl::Span<const absl::string_view> query_ids,
@@ -325,23 +338,17 @@ class QueryEngine : public QueryEngineIntf {
   ABSL_DEPRECATED("Use id_to_redpath_query_plans_ instead")
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
       id_to_query_plans_;
-  // Maps query id to query planner.
-  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
-      id_to_redpath_query_plans_;
   // Maps query id to subscription context.
   // Subscription context is used to create subscriptions and resume query
   // operations on event.
   absl::flat_hash_map<std::string,
                       std::unique_ptr<QueryPlannerIntf::SubscriptionContext>>
       id_to_subscription_context_;
-  const Clock *clock_;
   std::unique_ptr<Normalizer> legacy_normalizer_;
   std::unique_ptr<RedpathNormalizer> normalizer_;
   std::unique_ptr<RedfishInterface> redfish_interface_;
   // Used during query metrics collection.
   MetricalRedfishTransport *metrical_transport_ = nullptr;
-  // Collection of flags dictating query engine execution.
-  QueryEngineFeatures features_;
   // Maps query id to additional normalizers, these normalizers are used to
   // decorate the query result with additional information right after the
   // regular normalizer above, which are optional based on the query id.

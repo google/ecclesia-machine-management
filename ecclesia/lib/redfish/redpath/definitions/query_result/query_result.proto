@@ -78,6 +78,21 @@ message Identifier {
   optional RedfishLocation redfish_location = 5;
 }
 
+enum TransportPriority {
+  TRANSPORT_PRIORITY_UNKNOWN = 0;
+  TRANSPORT_PRIORITY_PRIMARY = 1;
+  TRANSPORT_PRIORITY_SECONDARY = 2;
+}
+
+message TransportMetrics {
+  // Priority of transport used for the query.
+  TransportPriority transport_priority = 1;
+  // Start time of the query
+  google.protobuf.Timestamp start_time = 2;
+  // End time of the query
+  google.protobuf.Timestamp end_time = 3;
+}
+
 message Statistics {
   // Start time of the query
   google.protobuf.Timestamp start_time = 1;
@@ -93,6 +108,9 @@ message Statistics {
   int64 num_cache_misses = 6;
   // Metrics collected when using MetricalRedfishTransport
   optional RedfishMetrics redfish_metrics = 7;
+
+  // Transport metrics for when there is a primary and secondary transport.
+  repeated TransportMetrics transport_metrics = 8;
 }
 
 // Codes for errors that may be encountered during redpath query execution.
@@ -113,9 +131,19 @@ enum ErrorCode {
   ERROR_UNAVAILABLE = 6;
 }
 
+message TransportErrorCode {
+  // priority of transport used for the query.
+  TransportPriority transport_priority = 1;
+  // Error code for the query.
+  ErrorCode error_code = 2;
+}
+
 message Status {
   // List of errors encountered for this query
   repeated string errors = 1;
   // Error code for the query. Will reflect first encountered error.
   ErrorCode error_code = 2;
+
+  // Error code for when there is a primary and secondary transport.
+  repeated TransportErrorCode transport_code = 3;
 }
