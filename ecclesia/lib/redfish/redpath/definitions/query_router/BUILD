@@ -49,6 +49,7 @@ cc_library(
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/thread:thread_pool",
+        "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/functional:any_invocable",

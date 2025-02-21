@@ -79,24 +79,25 @@ QueryEngineIntf::QueryVariableSet CreateQueryArgumentsWithSystemId(
 
 void ExecuteQueries(QueryEngineIntf &query_engine,
                     absl::Span<const absl::string_view> queries,
-                    const QueryEngineIntf::QueryVariableSet &query_arguments,
-                    const QueryRouterIntf::ResultCallback &callback,
+                    const QueryRouterIntf::RedpathQueryOptions &options,
                     const QueryRouterIntf::ServerInfo &server_info,
                     const std::optional<std::string> &node_local_system_id,
                     absl::Mutex &callback_mutex) {
   QueryIdToResult result;
+  QueryEngineIntf::RedpathQueryOptions redpath_query_options{
+      .service_root_uri = QueryEngine::ServiceRootType::kCustom,
+  };
   if (node_local_system_id.has_value()) {
-    result = query_engine.ExecuteRedpathQuery(
-        queries, QueryEngine::ServiceRootType::kCustom,
-        CreateQueryArgumentsWithSystemId(queries, query_arguments,
-                                         *node_local_system_id));
+    redpath_query_options.query_arguments = CreateQueryArgumentsWithSystemId(
+        queries, options.query_arguments, *node_local_system_id);
+    result = query_engine.ExecuteRedpathQuery(queries, redpath_query_options);
   } else {
-    result = query_engine.ExecuteRedpathQuery(
-        queries, QueryEngine::ServiceRootType::kCustom, query_arguments);
+    redpath_query_options.query_arguments = options.query_arguments;
+    result = query_engine.ExecuteRedpathQuery(queries, redpath_query_options);
   }
   for (auto &[query_id, query_result] : *result.mutable_results()) {
     absl::MutexLock lock(&callback_mutex);
-    callback(server_info, std::move(query_result));
+    options.callback(server_info, std::move(query_result));
   }
 }
 
@@ -213,44 +214,37 @@ QueryRouter::QueryRouter(QueryRouter::RoutingTable routing_table,
   }
 }
 
-void QueryRouter::ExecuteQuery(
-    absl::Span<const absl::string_view> query_ids,
-    const QueryEngineIntf::QueryVariableSet &query_arguments,
-    const ResultCallback &callback) const {
-  execute_function_(query_ids, query_arguments, callback);
+void QueryRouter::ExecuteQuery(const RedpathQueryOptions &options) const {
+  execute_function_(options);
 }
 
 void QueryRouter::ExecuteQuerySerialAll(
-    absl::Span<const absl::string_view> query_ids,
-    const QueryEngineIntf::QueryVariableSet &query_arguments,
-    const ResultCallback &callback) const {
+    const RedpathQueryOptions &options) const {
   absl::Mutex callback_mutex;
   for (const QueryRoutingInfo &routing_info : routing_table_) {
     std::vector<absl::string_view> queries;
-    queries.reserve(query_ids.size());
-    for (absl::string_view query_id : query_ids) {
+    queries.reserve(options.query_ids.size());
+    for (absl::string_view query_id : options.query_ids) {
       if (routing_info.query_ids.contains(query_id)) {
         queries.push_back(query_id);
       }
     }
     if (!queries.empty()) {
-      ExecuteQueries(*routing_info.query_engine, queries, query_arguments,
-                     callback, routing_info.server_info,
+      ExecuteQueries(*routing_info.query_engine, queries, options,
+                     routing_info.server_info,
                      routing_info.node_local_system_id, callback_mutex);
     }
   }
 }
 
 void QueryRouter::ExecuteQuerySerialAgent(
-    absl::Span<const absl::string_view> query_ids,
-    const QueryEngineIntf::QueryVariableSet &query_arguments,
-    const ResultCallback &callback) const {
+    const RedpathQueryOptions &options) const {
   std::vector<QueryBatch> query_batches;
   query_batches.reserve(routing_table_.size());
   for (const QueryRoutingInfo &routing_info : routing_table_) {
     // Combine all queries per agent into a single batch
     QueryBatch query_batch(&routing_info);
-    for (absl::string_view query_id : query_ids) {
+    for (absl::string_view query_id : options.query_ids) {
       if (routing_info.query_ids.contains(query_id)) {
         query_batch.queries.push_back(query_id);
       }
@@ -260,17 +254,15 @@ void QueryRouter::ExecuteQuerySerialAgent(
     }
   }
 
-  ExecuteQueryBatches(query_batches, query_arguments, callback);
+  ExecuteQueryBatches(query_batches, options);
 }
 
 void QueryRouter::ExecuteQueryParallelAll(
-    absl::Span<const absl::string_view> query_ids,
-    const QueryEngineIntf::QueryVariableSet &query_arguments,
-    const ResultCallback &callback) const {
+    const RedpathQueryOptions &options) const {
   std::vector<QueryBatch> query_batches;
   // Group individual queries into their own batches
   for (const QueryRoutingInfo &routing_info : routing_table_) {
-    for (absl::string_view query_id : query_ids) {
+    for (absl::string_view query_id : options.query_ids) {
       if (routing_info.query_ids.contains(query_id)) {
         QueryBatch query_batch(&routing_info);
         query_batch.queries.push_back(query_id);
@@ -278,13 +270,12 @@ void QueryRouter::ExecuteQueryParallelAll(
       }
     }
   }
-  ExecuteQueryBatches(query_batches, query_arguments, callback);
+  ExecuteQueryBatches(query_batches, options);
 }
 
 void QueryRouter::ExecuteQueryBatches(
     absl::Span<const QueryBatch> query_batches,
-    const QueryEngineIntf::QueryVariableSet &query_arguments,
-    const ResultCallback &callback) const {
+    const RedpathQueryOptions &options) const {
   int num_threads =
       std::min(static_cast<int>(query_batches.size()), max_concurrent_threads_);
 
@@ -293,8 +284,8 @@ void QueryRouter::ExecuteQueryBatches(
   for (const QueryBatch &query_batch : query_batches) {
     thread_pool.Schedule([&]() {
       const QueryRoutingInfo &routing_info = query_batch.routing_info;
-      ExecuteQueries(*routing_info.query_engine, query_batch.queries,
-                     query_arguments, callback, routing_info.server_info,
+      ExecuteQueries(*routing_info.query_engine, query_batch.queries, options,
+                     routing_info.server_info,
                      routing_info.node_local_system_id, callback_mutex);
     });
   }

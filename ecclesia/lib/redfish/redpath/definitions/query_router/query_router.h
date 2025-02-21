@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/attributes.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/functional/any_invocable.h"
 #include "absl/log/die_if_null.h"
@@ -81,17 +82,38 @@ class QueryRouterIntf {
 
   virtual ~QueryRouterIntf() = default;
 
+  struct RedpathQueryOptions {
+    absl::Span<const absl::string_view> query_ids;
+    QueryEngineIntf::QueryVariableSet query_arguments;
+    const ResultCallback &callback;
+  };
+
   // Overloaded function for executing non-templated queries
+  // the new function.
+  ABSL_DEPRECATED("Use ExecuteQuery with RedpathQueryOptions instead.")
   void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
                     const ResultCallback &callback) const {
-    ExecuteQuery(query_ids, {}, callback);
+    RedpathQueryOptions options{
+        .query_ids = query_ids,
+        .callback = callback,
+    };
+    ExecuteQuery(options);
+  }
+
+  ABSL_DEPRECATED("Use ExecuteQuery with RedpathQueryOptions instead.")
+  void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
+                    const QueryEngineIntf::QueryVariableSet &query_arguments,
+                    const ResultCallback &callback) const {
+    RedpathQueryOptions options{
+        .query_ids = query_ids,
+        .query_arguments = query_arguments,
+        .callback = callback,
+    };
+    ExecuteQuery(options);
   }
 
   // Pure-virtual functions that must be overridden by concrete implementations.
-  virtual void ExecuteQuery(
-      absl::Span<const absl::string_view> query_ids,
-      const QueryEngineIntf::QueryVariableSet &query_arguments,
-      const ResultCallback &callback) const = 0;
+  virtual void ExecuteQuery(const RedpathQueryOptions &options) const = 0;
 
   virtual absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       const ServerInfo &server_info,
@@ -143,9 +165,7 @@ class QueryRouter : public QueryRouterIntf {
   // `callback` is guaranteed to be executed non-concurrently and clients don't
   // need to independently guard against concurrent access to any of their data
   // structures that are accessed by the callback.
-  void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
-                    const QueryEngineIntf::QueryVariableSet &query_arguments,
-                    const ResultCallback &callback) const override;
+  void ExecuteQuery(const RedpathQueryOptions &options) const override;
 
   // Returns the RedfishInterface for the given ServerInfo.
   // QueryEngineRawInterfacePasskey is just an empty strongly-typed object that
@@ -177,38 +197,25 @@ class QueryRouter : public QueryRouterIntf {
 
   using RoutingTable = std::vector<QueryRoutingInfo>;
 
-  using ExecuteFunction = std::function<void(
-      absl::Span<const absl::string_view>,
-      const QueryEngineIntf::QueryVariableSet&, const ResultCallback&)>;
+  using ExecuteFunction = std::function<void(const RedpathQueryOptions &)>;
 
   QueryRouter(RoutingTable routing_table, QueryPattern query_pattern,
               int max_concurrent_threads);
 
   // All queries will be executed in series across all agents.
-  void ExecuteQuerySerialAll(
-      absl::Span<const absl::string_view> query_ids,
-      const QueryEngineIntf::QueryVariableSet &query_arguments,
-      const ResultCallback &callback) const;
+  void ExecuteQuerySerialAll(const RedpathQueryOptions &options) const;
 
   // All queries will be execute in series for an agent, but queries across
   // agents are executed in parallel
-  void ExecuteQuerySerialAgent(
-      absl::Span<const absl::string_view> query_ids,
-      const QueryEngineIntf::QueryVariableSet &query_arguments,
-      const ResultCallback &callback) const;
+  void ExecuteQuerySerialAgent(const RedpathQueryOptions &options) const;
 
   // All queries will be executed in parallel across all agents.
-  void ExecuteQueryParallelAll(
-      absl::Span<const absl::string_view> query_ids,
-      const QueryEngineIntf::QueryVariableSet &query_arguments,
-      const ResultCallback &callback) const;
+  void ExecuteQueryParallelAll(const RedpathQueryOptions &options) const;
 
   // Each query set in the query_batches list is executed in its own individual
   // thread.
-  void ExecuteQueryBatches(
-      absl::Span<const QueryBatch> query_batches,
-      const QueryEngineIntf::QueryVariableSet &query_arguments,
-      const ResultCallback &callback) const;
+  void ExecuteQueryBatches(absl::Span<const QueryBatch> query_batches,
+                           const RedpathQueryOptions &options) const;
 
   RoutingTable routing_table_;
   ExecuteFunction execute_function_;
