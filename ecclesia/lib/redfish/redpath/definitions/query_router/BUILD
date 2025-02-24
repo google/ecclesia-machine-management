@@ -36,6 +36,7 @@ cc_library(
         ":util",
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
+        "//ecclesia/lib/redfish/dellicius/engine:transport_arbiter_query_engine",
         "//ecclesia/lib/redfish/dellicius/engine/internal:passkey",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_variables_cc_proto",
@@ -48,6 +49,7 @@ cc_library(
         "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/status:macros",
+        "//ecclesia/lib/stubarbiter:arbiter",
         "//ecclesia/lib/thread:thread_pool",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/container:flat_hash_map",
@@ -70,6 +72,9 @@ cc_library(
 cc_test(
     name = "query_router_test",
     srcs = ["query_router_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/indus_hmb_shim:mockup.shar",
+    ],
     deps = [
         ":default_template_variable_names",
         ":query_router",
@@ -87,7 +92,9 @@ cc_test(
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_spec",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
         "//ecclesia/lib/redfish/redpath/engine:normalizer",
+        "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/status:test_macros",
+        "//ecclesia/lib/stubarbiter:arbiter",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/status",
@@ -108,9 +115,8 @@ cc_library(
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
         "//ecclesia/lib/redfish/dellicius/engine/internal:passkey",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest",
     ],
 )

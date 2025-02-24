@@ -29,12 +29,14 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/functional/any_invocable.h"
 #include "absl/log/die_if_null.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
+#include "ecclesia/lib/redfish/dellicius/engine/transport_arbiter_query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
@@ -43,6 +45,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
+#include "ecclesia/lib/stubarbiter/arbiter.h"
 
 namespace ecclesia {
 
@@ -85,6 +88,8 @@ class QueryRouterIntf {
   struct RedpathQueryOptions {
     absl::Span<const absl::string_view> query_ids;
     QueryEngineIntf::QueryVariableSet query_arguments;
+    StubArbiterInfo::PriorityLabel priority_label =
+        StubArbiterInfo::PriorityLabel::kUnknown;
     const ResultCallback &callback;
   };
 
@@ -118,18 +123,26 @@ class QueryRouterIntf {
   virtual absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       const ServerInfo &server_info,
       RedfishInterfacePasskey unused_passkey) const = 0;
+
+  virtual absl::Status ExecuteOnRedfishInterface(
+      const ServerInfo &server_info, RedfishInterfacePasskey unused_passkey,
+      const QueryEngineIntf::RedfishInterfaceOptions &options) const = 0;
 };
 
 // Concrete implementation of Query Router Interface that routes the queries
 // to the appropriate query engine.
 class QueryRouter : public QueryRouterIntf {
  public:
+  using RedfishTransportFactory =
+      std::function<absl::StatusOr<std::unique_ptr<RedfishTransport>>(
+          StubArbiterInfo::PriorityLabel &)>;
+
   // Defines the specification of a server that will be supplied by the users of
   // this class. This defines all the servers that the QueryRouter can
   // communicate with.
   struct ServerSpec {
     ServerInfo server_info;
-    std::unique_ptr<RedfishTransport> transport = nullptr;
+
     std::unique_ptr<IdAssigner> id_assigner = nullptr;
     std::optional<std::string> node_local_system_id = std::nullopt;
     // Gets set during QueryRouter initialization, based on the StableIdConfig
@@ -140,6 +153,11 @@ class QueryRouter : public QueryRouterIntf {
     // field is set to prevent QueryRouter constructors from repeating parsing
     // of the stable id config.
     bool parsed_stable_id_type_from_spec = false;
+
+    std::unique_ptr<RedfishTransport> transport = nullptr;
+
+    std::optional<RedfishTransportFactory> transport_factory = std::nullopt;
+    std::optional<StubArbiterInfo::Type> transport_arbiter_type;
 
     ServerSpec() = default;
     ServerSpec(const ServerSpec&) = delete;
@@ -155,7 +173,11 @@ class QueryRouter : public QueryRouterIntf {
       const QueryRouterSpec &router_spec, std::vector<ServerSpec> server_specs,
       QueryEngineFactory query_engine_factory = QueryEngine::Create,
       RedpathNormalizer::RedpathNormalizersFactory redpath_normalizers_factory =
-          DefaultRedpathNormalizerMap);
+          DefaultRedpathNormalizerMap,
+      TransportArbiterQueryEngineFactory
+          transport_arbiter_query_engine_factory =
+              QueryEngineWithTransportArbiter::
+                  CreateTransportArbiterQueryEngine);
 
   ~QueryRouter() override = default;
 
@@ -174,6 +196,10 @@ class QueryRouter : public QueryRouterIntf {
   absl::StatusOr<RedfishInterface *> GetRedfishInterface(
       const ServerInfo &server_info,
       RedfishInterfacePasskey unused_passkey) const override;
+
+  absl::Status ExecuteOnRedfishInterface(
+      const ServerInfo &server_info, RedfishInterfacePasskey unused_passkey,
+      const QueryEngineIntf::RedfishInterfaceOptions &options) const override;
 
  private:
   // Defines the core elements of the routing table - server info, query engine
@@ -229,7 +255,8 @@ using QueryRouterFactory = absl::AnyInvocable<
         const ecclesia::QueryRouterSpec &,
         std::vector<ecclesia::QueryRouter::ServerSpec>,
         ecclesia::QueryEngineFactory,
-        ecclesia::RedpathNormalizer::RedpathNormalizersFactory)>;
+        ecclesia::RedpathNormalizer::RedpathNormalizersFactory,
+        ecclesia::TransportArbiterQueryEngineFactory)>;
 
 }  // namespace ecclesia
 

@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/functional/any_invocable.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -137,6 +138,13 @@ class QueryEngineWithTransportArbiter : public QueryEngine {
 
   std::unique_ptr<TransportArbiter> transport_arbiter_ = nullptr;
 };
+
+using TransportArbiterQueryEngineFactory =
+    absl::AnyInvocable<absl::StatusOr<std::unique_ptr<QueryEngineIntf>>(
+        QuerySpec query_spec,
+        QueryEngineWithTransportArbiter::Params engine_params,
+        std::unique_ptr<IdAssigner> id_assigner,
+        RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers)>;
 
 }  // namespace ecclesia
 

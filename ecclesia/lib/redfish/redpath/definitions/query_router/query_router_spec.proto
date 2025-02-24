@@ -118,4 +118,7 @@ message QueryRouterSpec {
   StableIdConfig stable_id_config = 7;
   // Sets default stable id policy for all selection classes.
   StableIdConfig.StableIdType default_stable_id_type = 8;
+
+  // Specifies the TransportArbiter secondary transport freshness.
+  optional int32 transport_arbiter_refresh = 9;
 }

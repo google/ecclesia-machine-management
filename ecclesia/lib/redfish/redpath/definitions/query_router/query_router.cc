@@ -38,6 +38,7 @@
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
+#include "ecclesia/lib/redfish/dellicius/engine/transport_arbiter_query_engine.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_variables.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
@@ -86,6 +87,7 @@ void ExecuteQueries(QueryEngineIntf &query_engine,
   QueryIdToResult result;
   QueryEngineIntf::RedpathQueryOptions redpath_query_options{
       .service_root_uri = QueryEngine::ServiceRootType::kCustom,
+      .priority_label = options.priority_label
   };
   if (node_local_system_id.has_value()) {
     redpath_query_options.query_arguments = CreateQueryArgumentsWithSystemId(
@@ -106,7 +108,8 @@ void ExecuteQueries(QueryEngineIntf &query_engine,
 absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
     const QueryRouterSpec &router_spec, std::vector<ServerSpec> server_specs,
     QueryEngineFactory query_engine_factory,
-    RedpathNormalizer::RedpathNormalizersFactory redpath_normalizers_factory) {
+    RedpathNormalizer::RedpathNormalizersFactory redpath_normalizers_factory,
+    TransportArbiterQueryEngineFactory transport_arbiter_query_engine_factory) {
   switch (router_spec.query_pattern()) {
     case QueryPattern::PATTERN_SERIAL_ALL:
       break;
@@ -172,11 +175,39 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
       query_ids.insert(query_id);
     }
 
-    ECCLESIA_ASSIGN_OR_RETURN(
-        auto query_engine,
-        query_engine_factory(
-            std::move(query_spec), std::move(query_engine_params),
-            std::move(server_spec.id_assigner), redpath_normalizers_factory()));
+    std::unique_ptr<ecclesia::QueryEngineIntf> query_engine;
+    if (server_spec.transport == nullptr &&
+        server_spec.transport_factory.has_value() &&
+        server_spec.transport_arbiter_type.has_value()) {
+      QueryEngineWithTransportArbiter::Params
+          transport_arbiter_query_engine_params = {
+              .cache_factory = std::move(query_engine_params.cache_factory),
+              .entity_tag = query_engine_params.entity_tag,
+              .stable_id_type = query_engine_params.stable_id_type,
+              .features = std::move(query_engine_params.features),
+              .redfish_topology_config_name =
+                  query_engine_params.redfish_topology_config_name,
+              .transport_factory = std::move(*server_spec.transport_factory),
+              .transport_arbiter_type = *server_spec.transport_arbiter_type,
+          };
+
+      if (router_spec.has_transport_arbiter_refresh()) {
+        transport_arbiter_query_engine_params.transport_arbiter_refresh =
+            absl::Seconds(router_spec.transport_arbiter_refresh());
+      }
+      ECCLESIA_ASSIGN_OR_RETURN(
+          query_engine, transport_arbiter_query_engine_factory(
+                            std::move(query_spec),
+                            std::move(transport_arbiter_query_engine_params),
+                            std::move(server_spec.id_assigner),
+                            redpath_normalizers_factory()));
+    } else {
+      ECCLESIA_ASSIGN_OR_RETURN(
+          query_engine, query_engine_factory(std::move(query_spec),
+                                             std::move(query_engine_params),
+                                             std::move(server_spec.id_assigner),
+                                             redpath_normalizers_factory()));
+    }
 
     routing_table.push_back({
         .server_info = std::move(server_spec.server_info),
@@ -302,6 +333,24 @@ absl::StatusOr<RedfishInterface *> QueryRouter::GetRedfishInterface(
   return absl::NotFoundError(absl::StrFormat(
       "RedfishInterface not found for server: %s server type: %s server class: "
       "%s",
+      server_info.server_tag,
+      SelectionSpec::SelectionClass::ServerType_Name(server_info.server_type),
+      SelectionSpec::SelectionClass::ServerClass_Name(
+          server_info.server_class)));
+}
+
+absl::Status QueryRouter::ExecuteOnRedfishInterface(
+    const ServerInfo &server_info, RedfishInterfacePasskey unused_passkey,
+    const QueryEngineIntf::RedfishInterfaceOptions &options) const {
+  for (const QueryRoutingInfo &routing_info : routing_table_) {
+    if (routing_info.server_info == server_info) {
+      return routing_info.query_engine->ExecuteOnRedfishInterface(
+          unused_passkey, options);
+    }
+  }
+  return absl::NotFoundError(absl::StrFormat(
+      "Server: %s server type: %s server class: "
+      "%s was not found in the QueryRouter",
       server_info.server_tag,
       SelectionSpec::SelectionClass::ServerType_Name(server_info.server_type),
       SelectionSpec::SelectionClass::ServerClass_Name(
