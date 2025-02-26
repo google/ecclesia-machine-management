@@ -29,6 +29,7 @@
 #include "absl/log/check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/log/log.h"
+#include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -67,46 +68,6 @@ namespace ecclesia {
 namespace {
 
 using QueryExecutionResult = QueryPlannerIntf::QueryExecutionResult;
-
-ABSL_DEPRECATED("Use BuildRedpathNormalizerWithMachineDevpath instead.")
-std::unique_ptr<Normalizer> GetMachineDevpathNormalizer(
-    const QueryEngineParams &query_engine_params,
-    std::unique_ptr<IdAssigner> id_assigner,
-    RedfishInterface *redfish_interface) {
-  switch (query_engine_params.stable_id_type) {
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
-      return BuildNormalizerWithMachineDevpath(std::move(id_assigner));
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
-      if (query_engine_params.redfish_topology_config_name.empty()) {
-        return BuildNormalizerWithMachineDevpath(
-            std::move(id_assigner),
-            CreateTopologyFromRedfish(redfish_interface));
-      }
-      return BuildNormalizerWithMachineDevpath(
-          std::move(id_assigner),
-          CreateTopologyFromRedfish(
-              redfish_interface,
-              query_engine_params.redfish_topology_config_name));
-  }
-}
-
-ABSL_DEPRECATED("Use BuildDefaultRedpathNormalizer instead.")
-std::unique_ptr<Normalizer> BuildLocalDevpathNormalizer(
-    RedfishInterface *redfish_interface,
-    const QueryEngineParams &query_engine_params) {
-  switch (query_engine_params.stable_id_type) {
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocation:
-      return BuildDefaultNormalizer();
-    case QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived:
-      if (!query_engine_params.redfish_topology_config_name.empty()) {
-        return BuildDefaultNormalizerWithLocalDevpath(CreateTopologyFromRedfish(
-            redfish_interface,
-            query_engine_params.redfish_topology_config_name));
-      }
-      return BuildDefaultNormalizerWithLocalDevpath(
-          CreateTopologyFromRedfish(redfish_interface));
-  }
-}
 
 // RAII style wrapper to timestamp query.
 ABSL_DEPRECATED("Use RedpathQueryTimestamp instead.")
@@ -379,18 +340,6 @@ absl::Status QueryEngine::ExecuteOnRedfishInterface(
 }
 
 absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
-    QuerySpec query_spec, QueryEngineParams params,
-    std::unique_ptr<IdAssigner> id_assigner,
-    RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers) {
-  ECCLESIA_ASSIGN_OR_RETURN(
-      QueryEngine engine,
-      QueryEngine::CreateLegacy(std::move(query_spec), std::move(params),
-                                std::move(id_assigner),
-                                std::move(id_to_normalizers)));
-  return std::make_unique<QueryEngine>(std::move(engine));
-}
-
-absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
     QuerySpec query_spec, QueryEngineParams engine_params,
     std::unique_ptr<IdAssigner> id_assigner,
     RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers) {
@@ -415,35 +364,6 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
 
   std::unique_ptr<Normalizer> legacy_normalizer;
   std::unique_ptr<RedpathNormalizer> redpath_normalizer;
-  // Build legacy query engine when streaming feature is not requested.
-  if (!engine_params.features.enable_streaming()) {
-    if (id_assigner == nullptr) {
-      legacy_normalizer =
-          BuildLocalDevpathNormalizer(redfish_interface.get(), engine_params);
-    } else {
-      legacy_normalizer = GetMachineDevpathNormalizer(
-          engine_params, std::move(id_assigner), redfish_interface.get());
-    }
-    absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
-        id_to_query_plans;
-    id_to_query_plans.reserve(query_spec.query_id_to_info.size());
-
-    for (auto &[query_id, query_info] : query_spec.query_id_to_info) {
-      ECCLESIA_ASSIGN_OR_RETURN(
-          auto query_planner,
-          BuildDefaultQueryPlanner(
-              query_info.query,
-              ParseQueryRuleParams(std::move(query_info.rule)),
-              legacy_normalizer.get(), redfish_interface.get()));
-
-      id_to_query_plans[query_id] = std::move(query_planner);
-    }
-    return QueryEngine(
-        engine_params.entity_tag, std::move(id_to_query_plans),
-        query_spec.clock, std::move(legacy_normalizer),
-        std::move(redpath_normalizer), std::move(redfish_interface),
-        std::move(engine_params.features), metrical_transport_ptr);
-  }
 
   if (id_assigner == nullptr) {
     redpath_normalizer = BuildLocalDevpathRedpathNormalizer(
@@ -485,21 +405,13 @@ absl::StatusOr<QueryEngine> QueryEngine::CreateLegacy(
                            kContinueOnSubqueryErrors}));
     id_to_redpath_trie_plans[query_id] = std::move(query_planner);
   }
-  return QueryEngine(
+
+  return absl::WrapUnique(new QueryEngine(
       engine_params.entity_tag, std::move(id_to_redpath_trie_plans),
       query_spec.clock, std::move(legacy_normalizer),
       std::move(redpath_normalizer), std::move(redfish_interface),
       std::move(engine_params.features), metrical_transport_ptr,
-      std::move(id_to_normalizers));
-}
-
-absl::StatusOr<QueryEngine> CreateQueryEngine(
-    const QueryContext &query_context, QueryEngineParams engine_params,
-    std::unique_ptr<IdAssigner> id_assigner) {
-  ECCLESIA_ASSIGN_OR_RETURN(QuerySpec query_spec,
-                            QuerySpec::FromQueryContext(query_context));
-  return QueryEngine::CreateLegacy(
-      std::move(query_spec), std::move(engine_params), std::move(id_assigner));
+      std::move(id_to_normalizers)));
 }
 
 }  // namespace ecclesia

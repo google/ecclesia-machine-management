@@ -1080,6 +1080,7 @@ TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
     QueryEngineParams params{
         .stable_id_type =
             QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived,
+        .features = StandardQueryEngineFeatures(),
         .redfish_topology_config_name = "redfish_test.textpb"};
     ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<QueryEngineIntf> query_engine,
                             GetDefaultQueryEngine(server, kDelliciusQueries,
@@ -1123,7 +1124,9 @@ TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
   {
     QueryEngineParams params{
         .stable_id_type =
-            QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived};
+            QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived,
+        .features = StandardQueryEngineFeatures(),
+    };
     ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<QueryEngineIntf> query_engine,
                             GetDefaultQueryEngine(server, kDelliciusQueries,
                                                   kQueryRules, &clock, params));

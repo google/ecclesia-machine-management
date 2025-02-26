@@ -241,13 +241,6 @@ class QueryEngine : public QueryEngineIntf {
       RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizer =
           DefaultRedpathNormalizerMap());
 
-  ABSL_DEPRECATED("Use Create Instead")
-  static absl::StatusOr<QueryEngine> CreateLegacy(
-      QuerySpec query_spec, QueryEngineParams params,
-      std::unique_ptr<IdAssigner> id_assigner = nullptr,
-      RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizer =
-          DefaultRedpathNormalizerMap());
-
   QueryEngine(const QueryEngine &) = delete;
   QueryEngine &operator=(const QueryEngine &) = delete;
   QueryEngine(QueryEngine &&other) = default;
@@ -300,25 +293,6 @@ class QueryEngine : public QueryEngineIntf {
   // Collection of flags dictating query engine execution.
   QueryEngineFeatures features_;
 
- private:
-  ABSL_DEPRECATED("Use the constructor that uses QueryPlannerIntf instead")
-  QueryEngine(
-      std::string entity_tag,
-      absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
-          id_to_query_plans,
-      const Clock *clock, std::unique_ptr<Normalizer> legacy_normalizer,
-      std::unique_ptr<RedpathNormalizer> normalizer,
-      std::unique_ptr<RedfishInterface> redfish_interface,
-      QueryEngineFeatures features,
-      MetricalRedfishTransport *metrical_transport = nullptr)
-      : clock_(clock),
-        features_(std::move(features)),
-        entity_tag_(std::move(entity_tag)),
-        id_to_query_plans_(std::move(id_to_query_plans)),
-        legacy_normalizer_(std::move(legacy_normalizer)),
-        normalizer_(std::move(normalizer)),
-        redfish_interface_(std::move(redfish_interface)),
-        metrical_transport_(metrical_transport) {}
 
   std::vector<DelliciusQueryResult> ExecuteQueryLegacy(
       absl::Span<const absl::string_view> query_ids,
@@ -354,14 +328,6 @@ class QueryEngine : public QueryEngineIntf {
   // regular normalizer above, which are optional based on the query id.
   RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers_;
 };
-
-// Build query engine based on given `engine_params` to execute queries in
-// `query_context`. Optionally supply `id_assigner` to decorate the results
-// with devpaths.
-ABSL_DEPRECATED("Use QueryEngine::Create Instead")
-absl::StatusOr<QueryEngine> CreateQueryEngine(
-    const QueryContext &query_context, QueryEngineParams engine_params,
-    std::unique_ptr<IdAssigner> id_assigner = nullptr);
 
 // Factory for creating different variants of query engine.
 //
