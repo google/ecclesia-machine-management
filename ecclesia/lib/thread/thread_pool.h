@@ -25,7 +25,9 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/attributes.h"
 #include "absl/base/thread_annotations.h"
+#include "absl/functional/any_invocable.h"
 #include "absl/synchronization/mutex.h"
 
 namespace ecclesia {
@@ -55,7 +57,14 @@ class ThreadPool {
   }
 
   // Schedule a function to be run on a ThreadPool thread immediately.
+  ABSL_DEPRECATED("Use the AnyInvocable version instead.")
   void Schedule(std::function<void()> func) {
+    assert(func != nullptr);
+    absl::MutexLock l(&mu_);
+    queue_.push(std::move(func));
+  }
+
+  void ScheduleWork(absl::AnyInvocable<void()> func) {
     assert(func != nullptr);
     absl::MutexLock l(&mu_);
     queue_.push(std::move(func));
@@ -68,7 +77,7 @@ class ThreadPool {
 
   void WorkLoop() {
     while (true) {
-      std::function<void()> func;
+      absl::AnyInvocable<void()> func;
       {
         absl::MutexLock l(&mu_);
         mu_.Await(absl::Condition(this, &ThreadPool::WorkAvailable));
@@ -83,7 +92,7 @@ class ThreadPool {
   }
 
   absl::Mutex mu_;
-  std::queue<std::function<void()>> queue_ ABSL_GUARDED_BY(mu_);
+  std::queue<absl::AnyInvocable<void()>> queue_ ABSL_GUARDED_BY(mu_);
   std::vector<std::thread> threads_;
 };
 
