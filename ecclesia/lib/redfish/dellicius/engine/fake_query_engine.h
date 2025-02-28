@@ -54,6 +54,7 @@ class FakeQueryEngine : public QueryEngineIntf {
   enum class Annotations : uint8_t { kEnable = 0, kDisable };
   enum class Cache : uint8_t { kDisable = 0, kInfinite };
   enum class Streaming : uint8_t { kEnable = 0, kDisable };
+  enum class FailOnFirstError : uint8_t { kEnable = 0, kDisable };
 
   struct Params {
     Devpath devpath = Devpath::kEnable;
@@ -63,6 +64,7 @@ class FakeQueryEngine : public QueryEngineIntf {
     std::optional<std::string> entity_tag;
     std::unique_ptr<IdAssigner> id_assigner;
     Streaming streaming = Streaming::kDisable;
+    FailOnFirstError fail_on_first_error = FailOnFirstError::kDisable;
   };
 
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
@@ -128,6 +130,8 @@ class FakeQueryEngine : public QueryEngineIntf {
                                        Annotations::kEnable);
     features.set_enable_streaming(params.streaming == Streaming::kEnable);
     features.set_enable_redfish_metrics(params.metrics == Metrics::kEnable);
+    features.set_fail_on_first_error(params.fail_on_first_error ==
+                                     FailOnFirstError::kEnable);
 
     std::unique_ptr<QueryEngineIntf> query_engine;
     ECCLESIA_ASSIGN_OR_RETURN(
