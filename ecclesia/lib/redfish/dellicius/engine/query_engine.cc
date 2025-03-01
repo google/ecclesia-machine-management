@@ -17,13 +17,15 @@
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 
 #include <sys/types.h>
+#include <unistd.h>
 
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "google/rpc/status.pb.h"
+#include "absl/base/attributes.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/function_ref.h"
 #include "absl/log/check.h"
@@ -34,6 +36,8 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/mutex.h"
+#include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/factory.h"
@@ -171,8 +175,30 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
         query_ids, options.service_root_uri, options.query_arguments));
   }
 
+  {
+    absl::MutexLock lock(&execute_ref_count_mutex_);
+    ++execute_ref_count_;
+  }
   QueryIdToResult query_id_to_result;
+
+  // Stores the query execution cancellation state. This is done to avoid
+  // multiple calls to IsQueryExecutionCancelled() method which acquires the
+  // query_cancellation_state_mutex_.
+  bool is_query_execution_cancelled = IsQueryExecutionCancelled();
   for (const absl::string_view query_id : query_ids) {
+    QueryExecutionResult result_single;
+
+    // If query execution has been cancelled, do not execute query.
+    if (is_query_execution_cancelled) {
+      result_single.query_result.mutable_status()->add_errors(
+          "Query execution has been cancelled.");
+      result_single.query_result.mutable_status()->set_error_code(
+          ecclesia::ErrorCode::ERROR_CANCELLED);
+      query_id_to_result.mutable_results()->insert(
+          {result_single.query_result.query_id(), result_single.query_result});
+      continue;
+    }
+
     auto it = id_to_redpath_query_plans_.find(query_id);
     if (it == id_to_redpath_query_plans_.end()) {
       LOG(ERROR) << "Query plan does not exist for id " << query_id;
@@ -183,7 +209,6 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
     if (it_vars != options.query_arguments.end())
       vars = options.query_arguments.at(query_id);
 
-    QueryExecutionResult result_single;
     ExecutionFlags planner_execution_flags{
         .execution_mode =
             features_.fail_on_first_error()
@@ -206,6 +231,23 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
     }
     query_id_to_result.mutable_results()->insert(
         {result_single.query_result.query_id(), result_single.query_result});
+
+    // Gets the latest query execution cancellation state only if query
+    // execution has not been cancelled.
+    is_query_execution_cancelled = IsQueryExecutionCancelled();
+  }
+  {
+    absl::MutexLock lock(&execute_ref_count_mutex_);
+    --execute_ref_count_;
+  }
+
+  // If query cancellation is initiated and all query executions are
+  // completed/terminated, notify waiting
+  // cancellation thread to reset query cancellation state indicating that query
+  // cancellation is completed.
+  // If no query cancellation is initiated, the cv.Signal() call is a no-op.
+  if (GetExecuteRefCount() == 0) {
+    cancel_completion_cond_.Signal();
   }
   return query_id_to_result;
 }
@@ -412,6 +454,47 @@ absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
       std::move(redpath_normalizer), std::move(redfish_interface),
       std::move(engine_params.features), metrical_transport_ptr,
       std::move(id_to_normalizers)));
+}
+
+void QueryEngine::CancelQueryExecution(absl::Notification *notification) {
+  // If there are no active query executions, return early.
+  if (GetExecuteRefCount() == 0) {
+    return;
+  }
+  // Set query cancellation state in query engine.
+  absl::MutexLock lock(&query_cancellation_state_mutex_);
+
+  // If a query cancellation is already in progress, return early.
+  if (query_cancellation_state_) {
+    return;
+  }
+
+  query_cancellation_state_ = true;
+
+  // Set query cancellation state for all query planners.
+  for (auto &[_, query_planner] : id_to_redpath_query_plans_) {
+    query_planner->SetQueryCancellationState(true);
+  }
+
+  // If notification is not null, notify the caller thread that query
+  // cancellation has been initiated.
+  if (notification != nullptr && !notification->HasBeenNotified()) {
+    notification->Notify();
+  }
+
+  // The Wait() call atomically unlocks "query_cancellation_state_mutex_"
+  // (which the cancel thread must hold), and blocks on the condition variable
+  // "cancel_completion_cond_". When "Execute" thread signals the condition
+  // variable, the thread will reacquire the mutex.
+  cancel_completion_cond_.Wait(&query_cancellation_state_mutex_);
+
+  // Reset query cancellation state for all query planners.
+  for (auto &[_, query_planner] : id_to_redpath_query_plans_) {
+    query_planner->SetQueryCancellationState(false);
+  }
+
+  // Reset query cancellation state in query engine.
+  query_cancellation_state_ = false;
 }
 
 }  // namespace ecclesia

@@ -28,6 +28,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
@@ -102,6 +103,10 @@ class FakeQueryEngine : public QueryEngineIntf {
 
   absl::string_view GetAgentIdentifier() const override {
     return query_engine_->GetAgentIdentifier();
+  }
+
+  void CancelQueryExecution(absl::Notification *notification) override {
+    query_engine_->CancelQueryExecution(notification);
   }
 
  private:

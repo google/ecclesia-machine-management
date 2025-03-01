@@ -299,6 +299,8 @@ absl::Status StatusFromQueryResultStatus(const ecclesia::Status& status) {
       return absl::InternalError(error_message);
     case ecclesia::ErrorCode::ERROR_UNAVAILABLE:
       return absl::UnavailableError(error_message);
+    case ecclesia::ErrorCode::ERROR_CANCELLED:
+      return absl::CancelledError(error_message);
     // Account for all cases so method won't compile if new Statuses are
     // added.
     case ecclesia::ErrorCode_INT_MIN_SENTINEL_DO_NOT_USE_:

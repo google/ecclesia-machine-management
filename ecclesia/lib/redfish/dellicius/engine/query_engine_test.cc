@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <thread>  // NOLINT(build/c++11)
 #include <tuple>
 #include <utility>
 
@@ -525,6 +526,29 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
     EXPECT_THAT(processor_collection_fetched_counter, Eq(3));
   }
 }
+
+class QueryEngineGrpcTestRunner : public ::testing::Test {
+ protected:
+  QueryEngineGrpcTestRunner() = default;
+  void SetTestParams(absl::string_view mockup) {
+    int port = ecclesia::FindUnusedPortOrDie();
+    server_ = std::make_unique<ecclesia::GrpcDynamicMockupServer>(
+        mockup, "localhost", port);
+    StaticBufferBasedTlsOptions options;
+    options.SetToInsecure();
+    ECCLESIA_ASSIGN_OR_FAIL(
+        transport_, CreateGrpcRedfishTransport(
+                        absl::StrCat("localhost:", port), {.clock = &clock_},
+                        options.GetChannelCredentials()));
+  }
+
+  ecclesia::FakeClock clock_;
+  std::unique_ptr<ecclesia::GrpcDynamicMockupServer> server_;
+  std::unique_ptr<RedfishInterface> intf_;
+  absl::Duration cache_duration_ = absl::Seconds(1);
+  absl::Notification notification_;
+  std::unique_ptr<RedfishTransport> transport_;
+};
 
 // Tests that when transport metrics are enabled per QueryResult,
 // the metrics are independent of other QueryResult.
@@ -2032,31 +2056,6 @@ TEST(QueryEngineTest, CanExecuteNonStreamingQueryWithStreamingQueryEngine) {
                      std::move(intent_output_sensor));
 }
 
-// Sets up a grpc mockup server and creates a transport to connect to it.
-// Necessary to use this if testing QueryEngine with query level timeouts.
-class QueryEngineGrpcTestRunner : public ::testing::Test {
- protected:
-  QueryEngineGrpcTestRunner() = default;
-  void SetTestParams(absl::string_view mockup) {
-    int port = ecclesia::FindUnusedPortOrDie();
-    server_ = std::make_unique<ecclesia::GrpcDynamicMockupServer>(
-        mockup, "localhost", port);
-    StaticBufferBasedTlsOptions options;
-    options.SetToInsecure();
-    ECCLESIA_ASSIGN_OR_FAIL(
-        transport_, CreateGrpcRedfishTransport(
-                        absl::StrCat("localhost:", port), {.clock = &clock_},
-                        options.GetChannelCredentials()));
-  }
-
-  ecclesia::FakeClock clock_;
-  std::unique_ptr<ecclesia::GrpcDynamicMockupServer> server_;
-  std::unique_ptr<RedfishInterface> intf_;
-  absl::Duration cache_duration_ = absl::Seconds(1);
-  absl::Notification notification_;
-  std::unique_ptr<RedfishTransport> transport_;
-};
-
 TEST_F(QueryEngineGrpcTestRunner,
        StreamingQueryEngineRespectsQueryLevelTimeoutAtServiceRoot) {
   constexpr absl::string_view sensor_query_id = "SensorCollector";
@@ -2147,6 +2146,195 @@ TEST(QueryEngineTest, QueryEngineNoHaltOnFirstFailureWithStreamingEngine) {
   EXPECT_TRUE(
       query_result.stats().redfish_metrics().uri_to_metrics_map().contains(
           rotational_sensor_uri));
+}
+
+TEST_F(QueryEngineGrpcTestRunner, QueryEngineQueryCancellationTest) {
+  constexpr absl::string_view sensor_query_id = "SensorCollector";
+  SetTestParams(kIndusMockup);
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
+                                   .query_rules = kQueryRules,
+                                   .clock = &clock_}));
+
+  QueryEngineFeatures features = StandardQueryEngineFeatures();
+  ASSERT_TRUE(query_spec.query_id_to_info.contains(sensor_query_id));
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      QueryEngine::Create(std::move(query_spec),
+                          {.transport = std::move(transport_),
+                           .features = std::move(features)}));
+
+  absl::Notification cancel_notification;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/Sensors/indus_fan2_rpm",
+      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
+          ::redfish::v1::Response *response) {
+        response->set_code(200);
+
+        // Notifies the main thread to start query cancellation.
+        notification_.Notify();
+
+        // Waits for the query cancellation flag to be set in the query engine
+        // and query planners.
+        cancel_notification.WaitForNotification();
+        return grpc::Status::OK;
+      });
+
+  QueryIdToResult response_entries;
+  std::thread execution_thread([&]() {
+    QueryIdToResult response_entries_local =
+        query_engine->ExecuteRedpathQuery({sensor_query_id});
+    response_entries = std::move(response_entries_local);
+  });
+
+  notification_.WaitForNotification();
+  query_engine->CancelQueryExecution(&cancel_notification);
+
+  // main thread waits on execution threads to finish before checking the
+  // results.
+  execution_thread.join();
+
+  std::string query_result_str = R"pb(
+    results {
+      key: "SensorCollector"
+      value {
+        query_id: "SensorCollector"
+        status {
+          errors: "Query execution cancelled."
+          errors: "Unable to normalize: Redfish object is null in query execution context: /Chassis[*]/Sensors[*]"
+          error_code: ERROR_CANCELLED
+        }
+        stats {}
+        data {
+          fields {
+            key: "Sensors"
+            value {
+              list_value {
+                values {
+                  subquery_value {
+                    fields {
+                      key: "Name"
+                      value { string_value: "fan0" }
+                    }
+                    fields {
+                      key: "Reading"
+                      value { int_value: 16115 }
+                    }
+                    fields {
+                      key: "ReadingType"
+                      value { string_value: "Rotational" }
+                    }
+                    fields {
+                      key: "ReadingUnits"
+                      value { string_value: "RPM" }
+                    }
+                  }
+                }
+                values {
+                  subquery_value {
+                    fields {
+                      key: "Name"
+                      value { string_value: "fan1" }
+                    }
+                    fields {
+                      key: "Reading"
+                      value { int_value: 16115 }
+                    }
+                    fields {
+                      key: "ReadingType"
+                      value { string_value: "Rotational" }
+                    }
+                    fields {
+                      key: "ReadingUnits"
+                      value { string_value: "RPM" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb";
+  QueryIdToResult intent_output_sensor =
+      ParseTextAsProtoOrDie<QueryIdToResult>(query_result_str);
+  VerifyQueryResults(std::move(response_entries),
+                     std::move(intent_output_sensor));
+}
+
+TEST_F(QueryEngineGrpcTestRunner,
+       QueryEngineQueryCancellationParallelExecuteAndCancelTest) {
+  constexpr absl::string_view sensor_query_id = "SensorCollector";
+  SetTestParams(kIndusMockup);
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
+                                   .query_rules = kQueryRules,
+                                   .clock = &clock_}));
+
+  QueryEngineFeatures features = StandardQueryEngineFeatures();
+  ASSERT_TRUE(query_spec.query_id_to_info.contains(sensor_query_id));
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_engine,
+      QueryEngine::Create(std::move(query_spec),
+                          {.transport = std::move(transport_),
+                           .features = std::move(features)}));
+
+  absl::Notification cancel_notification;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/Sensors/indus_fan0_rpm",
+      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
+          ::redfish::v1::Response *response) {
+        response->set_code(200);
+        if (notification_.HasBeenNotified()) {
+          return grpc::Status::OK;
+        }
+        // Notifies the main thread to start query cancellation.
+        notification_.Notify();
+
+        // Waits for the query cancellation flag to be set in the query engine
+        // and query planners.
+        cancel_notification.WaitForNotification();
+        return grpc::Status::OK;
+      });
+
+  QueryIdToResult response_entries;
+  std::thread execution_thread([&]() {
+    QueryIdToResult response_entries_local =
+        query_engine->ExecuteRedpathQuery({sensor_query_id});
+    response_entries = std::move(response_entries_local);
+  });
+
+  QueryIdToResult response_entries_2;
+  std::thread execution_thread_2([&]() {
+    QueryIdToResult response_entries_local =
+        query_engine->ExecuteRedpathQuery({sensor_query_id});
+    response_entries_2 = std::move(response_entries_local);
+  });
+
+  notification_.WaitForNotification();
+  std::thread cancel_thread(
+      [&]() { query_engine->CancelQueryExecution(&cancel_notification); });
+  std::thread cancel_thread_2(
+      [&]() { query_engine->CancelQueryExecution(&cancel_notification); });
+
+  cancel_thread.join();
+  cancel_thread_2.join();
+
+  // main thread waits on execution threads to finish before checking the
+  // results.
+  execution_thread.join();
+  execution_thread_2.join();
+
+  EXPECT_THAT(
+      response_entries.results().at("SensorCollector").status().error_code(),
+      ecclesia::ErrorCode::ERROR_CANCELLED);
+
+  EXPECT_THAT(
+      response_entries_2.results().at("SensorCollector").status().error_code(),
+      ecclesia::ErrorCode::ERROR_CANCELLED);
 }
 
 }  // namespace

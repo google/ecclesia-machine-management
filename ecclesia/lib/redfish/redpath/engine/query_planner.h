@@ -113,6 +113,8 @@ class QueryPlannerIntf {
 
   // Resumes a query execution after an event.
   virtual QueryResult Resume(QueryResumeOptions query_resume_options) = 0;
+
+  virtual void SetQueryCancellationState(bool is_query_execution_cancelled) = 0;
 };
 
 }  // namespace ecclesia

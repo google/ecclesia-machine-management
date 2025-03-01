@@ -292,7 +292,7 @@ RedPathRedfishQueryParams CombineQueryParams(
 absl::StatusOr<std::unique_ptr<RedfishObject>> GetRedfishObjectWithFreshness(
     const GetParams &params, const RedfishVariant &variant,
     const std::optional<TraceInfo> &trace_info,
-    std::atomic<int64_t> *cache_miss) {
+    std::atomic<int64_t> *cache_miss, bool is_query_execution_cancelled) {
   std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
   if (!redfish_object) return nullptr;
   if (trace_info.has_value()) {
@@ -304,6 +304,11 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> GetRedfishObjectWithFreshness(
               << redfish_object->GetContentAsJson().dump(1);
   }
 
+  // Do not fetch the fresh payload if the query has been cancelled. Return a
+  // cancelled error
+  if (is_query_execution_cancelled) {
+    return absl::CancelledError("Query has been cancelled.");
+  }
   if (params.freshness != GetParams::Freshness::kRequired) {
     return redfish_object;
   }
@@ -352,6 +357,8 @@ void PopulateSubqueryErrorStatus(const absl::Status &node_status,
     error_code = ecclesia::ErrorCode::ERROR_UNAUTHENTICATED;
   } else if (code == absl::StatusCode::kDeadlineExceeded) {
     error_code = ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT;
+  } else if (code == absl::StatusCode::kCancelled) {
+    error_code = ecclesia::ErrorCode::ERROR_CANCELLED;
   }
   execution_context.result.mutable_status()->add_errors(error_message);
   execution_context.result.mutable_status()->set_error_code(error_code);
@@ -401,7 +408,7 @@ class QueryScopeStats {
 QueryExecutionContext QueryExecutionContext::FromExisting(
     const std::string &new_redpath_prefix,
     const GetParams &get_params_for_redpath,
-    RedfishResponse redfish_response_in) {
+    RedfishResponse redfish_response_in, bool is_query_cancelled) {
   if (redpath_query_tracker != nullptr) {
     redpath_query_tracker->executed_redpath_prefixes_and_params.insert(
         {new_redpath_prefix, get_params_for_redpath});
@@ -410,6 +417,12 @@ QueryExecutionContext QueryExecutionContext::FromExisting(
   RedPathPrefixTracker new_redpath_prefix_tracker(redpath_prefix_tracker);
   new_redpath_prefix_tracker.last_redpath_prefix = new_redpath_prefix;
 
+  if (is_query_cancelled &&
+      result.status().error_code() != ecclesia::ErrorCode::ERROR_CANCELLED) {
+    result.mutable_status()->add_errors("Query execution cancelled.");
+    result.mutable_status()->set_error_code(
+        ecclesia::ErrorCode::ERROR_CANCELLED);
+  }
   return QueryExecutionContext(
       &result, subquery_id_to_subquery_result, &query_variables,
       std::move(new_redpath_prefix_tracker), redpath_query_tracker,
@@ -675,8 +688,19 @@ QueryPlanner::ExecuteQueryExpression(
       // Get fresh Redfish Object if user has requested in the query rule.
       absl::StatusOr<std::unique_ptr<RedfishObject>> indexed_node_as_object =
           GetRedfishObjectWithFreshness(get_params_for_redpath, indexed_node,
-                                        trace_info, &cache_stats_.cache_miss);
+                                        trace_info, &cache_stats_.cache_miss,
+                                        IsQueryExecutionCancelled());
       if (!indexed_node.status().ok() || !indexed_node_as_object.ok()) {
+        // If a query has been cancelled, add a new execution context with a
+        // cancelled error for all the remaining indexed nodes.
+        if (indexed_node_as_object.status().code() ==
+            absl::StatusCode::kCancelled) {
+          execution_contexts.push_back(current_execution_context.FromExisting(
+              new_redpath_prefix, get_params_for_redpath, {nullptr, nullptr},
+              true));
+          continue;
+        }
+
         if (execution_mode_ == QueryPlanner::ExecutionMode::kFailOnFirstError) {
           return (!indexed_node.status().ok())
                      ? indexed_node.status()
@@ -731,6 +755,12 @@ QueryPlanner::ExecuteQueryExpression(
       return execution_contexts;
     }
 
+    // If the query has been cancelled, return a cancelled error.
+    // Do not fetch the fresh payload if the query has been cancelled.
+    if (IsQueryExecutionCancelled()) {
+      return absl::CancelledError("Query execution cancelled for NodeName: " +
+                                  expression.expression);
+    }
     RedfishVariant redfish_variant(absl::OkStatus());
     if (expression.type == RedPathExpression::Type::kNodeName) {
       if (get_params_for_redpath.filter.has_value()) {
@@ -824,7 +854,8 @@ QueryPlanner::ExecuteQueryExpression(
       ECCLESIA_ASSIGN_OR_RETURN(
           redfish_response.redfish_object,
           GetRedfishObjectWithFreshness(get_params_for_redpath, redfish_variant,
-                                        trace_info, &cache_stats_.cache_miss));
+                                        trace_info, &cache_stats_.cache_miss,
+                                        IsQueryExecutionCancelled()));
     }
     execution_contexts.push_back(current_execution_context.FromExisting(
         new_redpath_prefix, get_params_for_redpath,
@@ -1008,6 +1039,14 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
           ? redfish_interface_
           : query_execution_options.redfish_interface;
 
+  // If query execution has been cancelled, do not query service root.
+  if (IsQueryExecutionCancelled()) {
+    result.mutable_status()->add_errors("Query execution cancelled.");
+    result.mutable_status()->set_error_code(
+        ecclesia::ErrorCode::ERROR_CANCELLED);
+    return query_execution_result;
+  }
+
   // Query service root.
   // Get Query Parameters to use for service root
   GetParams get_params_service_root =
@@ -1032,9 +1071,11 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
         ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT);
     return query_execution_result;
   }
+
   absl::StatusOr<std::unique_ptr<RedfishObject>> service_root_object =
       GetRedfishObjectWithFreshness(get_params_service_root, variant,
-                                    std::nullopt, &cache_stats_.cache_miss);
+                                    std::nullopt, &cache_stats_.cache_miss,
+                                    IsQueryExecutionCancelled());
 
   // If service root is unreachable populate the error and return the result.
   if (!service_root_object.ok() || *service_root_object == nullptr) {
@@ -1045,7 +1086,10 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
         service_root_object.status().code() ==
                 absl::StatusCode::kDeadlineExceeded
             ? ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT
-            : ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE);
+            : (service_root_object.status().code() ==
+                       absl::StatusCode::kCancelled
+                   ? ecclesia::ErrorCode::ERROR_CANCELLED
+                   : ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE));
     return query_execution_result;
   }
   // Initialize query execution context to execute next RedPath expression.
@@ -1121,6 +1165,17 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
         }
         PopulateSubqueryErrorStatus(execution_contexts.status(),
                                     current_execution_context, expression);
+
+        if (execution_contexts.status().code() ==
+            absl::StatusCode::kCancelled) {
+          result.mutable_status()->add_errors(
+              absl::StrCat("Halted query execution: ",
+                           execution_contexts.status().message()));
+          result.mutable_status()->set_error_code(
+              ecclesia::ErrorCode::ERROR_CANCELLED);
+          return query_execution_result;
+        }
+
         if (execution_mode_ == ExecutionMode::kContinueOnSubqueryErrors) {
           continue;
         }
@@ -1148,6 +1203,13 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
           if (!normalize_status.ok()) {
             result.mutable_status()->add_errors(absl::StrCat(
                 "Unable to normalize: ", normalize_status.message()));
+            if (execution_context.result.has_status() &&
+                execution_context.result.status().error_code() ==
+                    ecclesia::ErrorCode::ERROR_CANCELLED) {
+              result.mutable_status()->set_error_code(
+                  execution_context.result.status().error_code());
+              return query_execution_result;
+            }
             result.mutable_status()->set_error_code(
                 ecclesia::ErrorCode::ERROR_INTERNAL);
             return query_execution_result;

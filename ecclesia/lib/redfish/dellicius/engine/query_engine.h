@@ -17,20 +17,26 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_QUERY_ENGINE_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_QUERY_ENGINE_H_
 
+#include <stdbool.h>
+
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "absl/base/attributes.h"
+#include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/any_invocable.h"
 #include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/mutex.h"
+#include "absl/synchronization/notification.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
@@ -228,6 +234,17 @@ class QueryEngineIntf {
 
   // Returns the server tag, if available
   virtual absl::string_view GetAgentIdentifier() const { return ""; }
+
+  // Cancels query execution.
+  // This function is overloaded:
+  // `virtual void CancelQueryExecution(absl::Notification* notification)`: This
+  // virtual overload accepts an `absl::Notification` pointer. The provided
+  // notification will be signaled when the cancellation state is set to true
+  // within QueryEngine.
+  // `CancelQueryExecution()`: A parameterless overload that performs the
+  // cancellation.
+  virtual void CancelQueryExecution(absl::Notification *notification) = 0;
+  void CancelQueryExecution() { CancelQueryExecution(nullptr); }
 };
 
 class QueryEngine : public QueryEngineIntf {
@@ -262,6 +279,8 @@ class QueryEngine : public QueryEngineIntf {
       RedfishInterfacePasskey unused_passkey,
       const RedfishInterfaceOptions &options) override;
 
+  void CancelQueryExecution(absl::Notification *notification) override;
+
   absl::string_view GetAgentIdentifier() const override { return entity_tag_; }
 
  protected:
@@ -293,7 +312,6 @@ class QueryEngine : public QueryEngineIntf {
   // Collection of flags dictating query engine execution.
   QueryEngineFeatures features_;
 
-
   std::vector<DelliciusQueryResult> ExecuteQueryLegacy(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri,
@@ -306,6 +324,16 @@ class QueryEngine : public QueryEngineIntf {
           void(const QueryResult &result,
                const RedPathSubscription::EventContext &event_context)>
           on_event_callback);
+
+  int GetExecuteRefCount() {
+    absl::MutexLock lock(&execute_ref_count_mutex_);
+    return execute_ref_count_;
+  }
+
+  bool IsQueryExecutionCancelled() {
+    absl::MutexLock lock(&query_cancellation_state_mutex_);
+    return query_cancellation_state_;
+  }
 
   std::string entity_tag_;
 
@@ -327,6 +355,23 @@ class QueryEngine : public QueryEngineIntf {
   // decorate the query result with additional information right after the
   // regular normalizer above, which are optional based on the query id.
   RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers_;
+
+  // Tracks the query cancellation.
+  // This flag is set to true when query cancellation is initiated and is reset
+  // when query cancellation is completed. Any subsequent query cancellation
+  // request will be terminated if this flag is set to true.
+  absl::Mutex query_cancellation_state_mutex_;
+  bool query_cancellation_state_
+      ABSL_GUARDED_BY(query_cancellation_state_mutex_) = false;
+
+  // Tracks the number of active query executions.
+  // Cancellation request is only processed when there are active query
+  // executions.
+  absl::Mutex execute_ref_count_mutex_;
+  int execute_ref_count_ ABSL_GUARDED_BY(execute_ref_count_mutex_) = 0;
+
+  // Condition variable to wait/signal for query cancellation completion.
+  absl::CondVar cancel_completion_cond_;
 };
 
 // Factory for creating different variants of query engine.

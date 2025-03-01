@@ -17,6 +17,8 @@
 #ifndef ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_IMPL_H_
 #define ECCLESIA_LIB_REDFISH_REDPATH_ENGINE_QUERY_PLANNER_IMPL_H_
 
+#include <stdbool.h>
+
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -25,12 +27,14 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/check.h"
 #include "absl/log/die_if_null.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -115,7 +119,8 @@ struct QueryExecutionContext {
 
   QueryExecutionContext FromExisting(const std::string &new_redpath_prefix,
                                      const GetParams &get_params_for_redpath,
-                                     RedfishResponse redfish_response);
+                                     RedfishResponse redfish_response,
+                                     bool is_query_cancelled = false);
 
   QueryExecutionContext(
       QueryResult *result_in,
@@ -239,7 +244,17 @@ class QueryPlanner final : public QueryPlannerIntf {
   // Resumes execution of a RedPath expression on receiving event.
   QueryResult Resume(QueryResumeOptions query_resume_options) override;
 
+  void SetQueryCancellationState(bool is_query_execution_cancelled) override {
+    absl::MutexLock lock(&query_cancellation_state_mutex_);
+    query_cancellation_state_ = is_query_execution_cancelled;
+  }
+
  private:
+  bool IsQueryExecutionCancelled() {
+    absl::MutexLock lock(&query_cancellation_state_mutex_);
+    return query_cancellation_state_;
+  }
+
   const DelliciusQuery &query_;
   const std::string plan_id_;
   // RedpathNormalizer is thread safe.
@@ -255,6 +270,13 @@ class QueryPlanner final : public QueryPlannerIntf {
   CacheStats cache_stats_;
   std::unique_ptr<QueryTimeoutManager> timeout_manager_ = nullptr;
   const ExecutionMode execution_mode_;
+
+  // Tracks the query cancellation.
+  // This flag is set to true when query cancellation is initiated and is reset
+  // when query cancellation is completed.
+  absl::Mutex query_cancellation_state_mutex_;
+  bool query_cancellation_state_
+      ABSL_GUARDED_BY(query_cancellation_state_mutex_) = false;
 };
 
 absl::StatusOr<std::unique_ptr<QueryPlannerIntf>> BuildQueryPlanner(

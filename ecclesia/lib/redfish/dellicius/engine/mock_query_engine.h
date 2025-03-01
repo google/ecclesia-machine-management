@@ -17,12 +17,11 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_MOCK_QUERY_ENGINE_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_MOCK_QUERY_ENGINE_H_
 
-#include <vector>
-
 #include "gmock/gmock.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/notification.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
@@ -53,6 +52,8 @@ class MockQueryEngine : public QueryEngineIntf {
               (override));
 
   MOCK_METHOD(absl::string_view, GetAgentIdentifier, (), (const, override));
+
+  MOCK_METHOD(void, CancelQueryExecution, (absl::Notification *), (override));
 };
 
 }  // namespace ecclesia

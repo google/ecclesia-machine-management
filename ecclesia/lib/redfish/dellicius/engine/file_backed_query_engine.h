@@ -17,6 +17,8 @@
 #ifndef ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_FILE_BACKED_QUERY_ENGINE_H_
 #define ECCLESIA_LIB_REDFISH_DELLICIUS_ENGINE_FILE_BACKED_QUERY_ENGINE_H_
 
+#include <stdbool.h>
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -30,6 +32,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
+#include "absl/synchronization/notification.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
@@ -84,6 +87,8 @@ class FileBackedQueryEngine : public QueryEngineIntf {
     return absl::UnimplementedError(
         "No redfish interface in FileBakedQueryEngine");
   }
+
+  void CancelQueryExecution(absl::Notification *notification) override {}
 
  private:
   using QueryIdToFilenameMap = absl::flat_hash_map<std::string, std::string>;
