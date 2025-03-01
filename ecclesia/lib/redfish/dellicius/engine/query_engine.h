@@ -83,7 +83,7 @@ struct QueryEngineParams {
   QueryEngineParams::RedfishStableIdType stable_id_type =
       QueryEngineParams::RedfishStableIdType::kRedfishLocation;
   // Captures toggleable features controlled by the user.
-  QueryEngineFeatures features = DefaultQueryEngineFeatures();
+  QueryEngineFeatures features = StandardQueryEngineFeatures();
 
   // Node topology configuration:-
   // This configuration is used with
