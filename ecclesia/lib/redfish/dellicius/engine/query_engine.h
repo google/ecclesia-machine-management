@@ -312,11 +312,6 @@ class QueryEngine : public QueryEngineIntf {
   // Collection of flags dictating query engine execution.
   QueryEngineFeatures features_;
 
-  std::vector<DelliciusQueryResult> ExecuteQueryLegacy(
-      absl::Span<const absl::string_view> query_ids,
-      ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments);
-
   void HandleRedfishEvent(
       const RedfishVariant &variant,
       const RedPathSubscription::EventContext &event_context,
@@ -337,9 +332,6 @@ class QueryEngine : public QueryEngineIntf {
 
   std::string entity_tag_;
 
-  ABSL_DEPRECATED("Use id_to_redpath_query_plans_ instead")
-  absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerInterface>>
-      id_to_query_plans_;
   // Maps query id to subscription context.
   // Subscription context is used to create subscriptions and resume query
   // operations on event.
