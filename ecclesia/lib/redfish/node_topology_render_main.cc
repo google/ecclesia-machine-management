@@ -17,6 +17,7 @@
 // Create a dot graph render of a Node Topology generated from a Redfish backend
 
 #include <algorithm>
+#include <cstdint>
 #include <deque>
 #include <iostream>
 #include <memory>
@@ -28,6 +29,8 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/log/initialize.h"
+#include "absl/log/log.h"
+#include "absl/strings/ascii.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
@@ -105,10 +108,15 @@ int RealMain(int argc, char* argv[]) {
       absl::StrAppend(&devpath, "_dupe_", current_counter);
       node_to_secondary_devpath[node.get()] = devpath;
     }
-
+    std::string node_label = node->name;
+    if (!node->model.empty()) {
+      node_label = node->model;
+    }
+    LOG(INFO) << absl::StrFormat("Node has name: %s and model: %s", node->name,
+                                 node->model);
     lines.push_back(absl::StrFormat(
         "  \"%s\" [tooltip=\"%s\", label=<<b>%s</b><br/><i>%s</i>>]", devpath,
-        absl::StrJoin(node->associated_uris, "\\n"), devpath, node->name));
+        absl::StrJoin(node->associated_uris, "\\n"), devpath, node_label));
   }
 
   auto it = topology.devpath_to_node_map.find("/phys");
