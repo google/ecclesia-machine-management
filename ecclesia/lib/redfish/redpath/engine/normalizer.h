@@ -61,6 +61,7 @@ class RedpathNormalizer {
   // Factory for creating a map of RedpathNormalizer, keyed by query id.
   using RedpathNormalizersFactory =
       absl::AnyInvocable<QueryIdToNormalizerMap()>;
+  // Map of RedpathNormalizersFactory, keyed by platform name.
   using NormalizersFactoryMap = absl::flat_hash_map<
       std::string, ecclesia::RedpathNormalizer::RedpathNormalizersFactory>;
 
