@@ -674,6 +674,35 @@ class RedfishObject {
                                                RedfishVariant value)>) = 0;
 };
 
+// DummyRedfishObject is a dummy implementation of RedfishObject that basically
+// returns unimplemented errors/empty values for all methods.
+// This is useful for testing, or where we need to pass a RedfishObject but
+// don't actually have a valid RedfishObject to pass.
+class DummyRedfishObject final : public RedfishObject {
+ public:
+  RedfishVariant operator[](absl::string_view node_name) const override {
+    return RedfishVariant(
+        absl::UnimplementedError("DummyRedfishObject [] unsupported"));
+  }
+  nlohmann::json GetContentAsJson() const override {
+    return nlohmann::json::value_t::discarded;
+  }
+  RedfishVariant Get(absl::string_view node_name,
+                     GetParams params) const override {
+    return RedfishVariant(
+        absl::UnimplementedError("DummyRedfishObject::Get unsupported"));
+  }
+  std::string DebugString() const override { return ""; }
+  std::optional<std::string> GetUriString() const override { return ""; }
+  absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
+      GetParams params) override {
+    return std::make_unique<DummyRedfishObject>();
+  }
+  void ForEachProperty(
+      absl::FunctionRef<ecclesia::RedfishIterReturnValue(
+          absl::string_view key, RedfishVariant value)> /*unused*/) override {}
+};
+
 // RedfishInterface provides initial access points to the Redfish resource tree.
 class RedfishInterface {
  public:

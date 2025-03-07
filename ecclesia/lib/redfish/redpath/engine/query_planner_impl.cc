@@ -548,12 +548,6 @@ absl::Status QueryPlanner::TryNormalize(
       normalized_query_result = QueryResultData();
     }
 
-    for (RedpathNormalizer *additional_normalizer : additional_normalizers_) {
-      ECCLESIA_RETURN_IF_ERROR(additional_normalizer->Normalize(
-          *query_execution_context->redfish_response.redfish_object,
-          find_subquery->second, *normalized_query_result, normalizer_options));
-    }
-
     // Add an empty subquery value to allow child subqueries to be executed.
     *normalized_query_value.mutable_subquery_value() =
         std::move(*normalized_query_result);
@@ -630,6 +624,23 @@ absl::Status QueryPlanner::TryNormalize(
   query_execution_context->subquery_id_to_subquery_result[subquery_id] =
       new_query_result;
   return absl::OkStatus();
+}
+
+void QueryPlanner::TryNormalizeOnFinalQueryResult(
+    ecclesia::QueryResult &result,
+    const RedpathNormalizerOptions &normalizer_options) {
+  for (RedpathNormalizer *additional_normalizer : additional_normalizers_) {
+    absl::Status normalize_status = additional_normalizer->Normalize(
+        *result.mutable_data(), normalizer_options);
+    if (!normalize_status.ok()) {
+      result.mutable_status()->add_errors(
+          absl::StrCat("Unable to normalize with additional normalizers: ",
+                       normalize_status.message()));
+      result.mutable_status()->set_error_code(
+          ecclesia::ErrorCode::ERROR_INTERNAL);
+      return;
+    }
+  }
 }
 
 absl::StatusOr<std::vector<QueryExecutionContext>>
@@ -966,6 +977,11 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
       }
     }
   }
+  // Final normalization with additional normalizers, running against the final
+  // query result.
+  TryNormalizeOnFinalQueryResult(
+      result,
+      {.enable_url_annotation = query_resume_options.enable_url_annotation});
   return result;
 }
 
@@ -1221,6 +1237,12 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
     }
   }
   query_execution_result.subscription_context = std::move(subscription_context);
+
+  // Final normalization with additional normalizers, running against the final
+  // query result.
+  TryNormalizeOnFinalQueryResult(
+      result,
+      {.enable_url_annotation = query_execution_options.enable_url_annotation});
 
   // Check if between the last RPC returning and now, the timeout has been
   // reached. If so, return a timeout error.

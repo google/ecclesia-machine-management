@@ -56,7 +56,6 @@
 #include "ecclesia/lib/testing/status.h"
 #include "ecclesia/lib/time/clock.h"
 #include "ecclesia/lib/time/clock_fake.h"
-#include "ecclesia/lib/time/proto.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
 #include "single_include/nlohmann/json.hpp"
@@ -87,6 +86,31 @@ constexpr absl::string_view kAssemblyRedPath = "/Chassis[*]/Assembly";
 constexpr absl::string_view kAssembliesRedPath =
     "/Chassis[*]/Assembly/Assemblies";
 constexpr absl::string_view kInvalidRedPath = "/Chassis[*]/Unknown";
+
+class TestRedpathNormalizerImpl final
+    : public RedpathNormalizer::ImplInterface {
+ public:
+  TestRedpathNormalizerImpl() = default;
+
+ protected:
+  absl::Status Normalize(const RedfishObject &redfish_object,
+                         const DelliciusQuery::Subquery &subquery,
+                         ecclesia::QueryResultData &data_set,
+                         const RedpathNormalizerOptions &options) override {
+    QueryValue test_value = ParseTextProtoOrDie(R"pb(
+      string_value: "normalized_value"
+    )pb");
+    (*data_set.mutable_fields())["normalized_key"] = test_value;
+    return absl::OkStatus();
+  }
+};
+
+inline std::unique_ptr<RedpathNormalizer> BuildTestRedpathNormalizer() {
+  auto normalizer = std::make_unique<RedpathNormalizer>();
+  normalizer->AddRedpathNormalizer(
+      std::make_unique<TestRedpathNormalizerImpl>());
+  return normalizer;
+}
 
 class QueryPlannerTestRunner : public ::testing::Test {
  protected:
@@ -468,6 +492,344 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
                                              .normalizer = normalizer.get(),
                                              .redfish_interface = intf_.get(),
                                              .redpath_rules = {}}));
+
+  ASSERT_THAT(qp, NotNull());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = qp->Run({.variables = args1});
+
+  EXPECT_FALSE(result.query_result.has_status());
+  EXPECT_THAT(expected_query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(result.query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerExecutesQueryWithAdditionalNormalizers) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "ChassisSubTreeTest"
+        subquery {
+          subquery_id: "Chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "Sensors"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[ReadingUnits=RPM]"
+          properties { property: "Name" type: STRING }
+        }
+        subquery {
+          subquery_id: "AllSensorsNoRpm"
+          redpath: "/Chassis[*]/Sensors[ReadingUnits!=RPM]"
+          properties { property: "Name" type: STRING }
+        }
+        subquery {
+          subquery_id: "Assembly"
+          root_subquery_ids: "Sensors"
+          redpath: "/RelatedItem[0]"
+          properties { property: "MemberId" type: STRING }
+        }
+        subquery {
+          subquery_id: "UnknownPropertySubquery"
+          root_subquery_ids: "Chassis"
+          redpath: "/Sensors[*]"
+          properties { property: "UnknownProperty" type: STRING }
+        }
+        subquery {
+          subquery_id: "UnknownNodeNameSubquery"
+          root_subquery_ids: "Sensors"
+          redpath: "/UnknownNodeName"
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "ChassisSubTreeTest"
+    stats { payload_size: 745 num_cache_misses: 70 }
+    data {
+      fields {
+        key: "normalized_key"
+        value { string_value: "normalized_value" }
+      }
+      fields {
+        key: "AllSensorsNoRpm"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "indus_eat_temp" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "indus_latm_temp" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU0" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU1" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU0" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "CPU1" }
+                }
+              }
+            }
+          }
+        }
+      }
+      fields {
+        key: "Chassis"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Id"
+                  value { string_value: "chassis" }
+                }
+                fields {
+                  key: "Sensors"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "1" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan0" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "2" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan1" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "4" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan2" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "5" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan3" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "6" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan4" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "7" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan5" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "8" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan6" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "Assembly"
+                            value {
+                              list_value {
+                                values {
+                                  subquery_value {
+                                    fields {
+                                      key: "MemberId"
+                                      value { string_value: "9" }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                          fields {
+                            key: "Name"
+                            value { string_value: "fan7" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+  std::unique_ptr<RedpathNormalizer> test_normalizer =
+      BuildTestRedpathNormalizer();
+
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner({.query = &query,
+                             .normalizer = normalizer.get(),
+                             .additional_normalizers = {test_normalizer.get()},
+                             .redfish_interface = intf_.get(),
+                             .redpath_rules = {}}));
 
   ASSERT_THAT(qp, NotNull());
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
@@ -1843,6 +2205,112 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
                 ecclesia::IgnoringRepeatedFieldOrdering(
                     ecclesia::EqualsProto(*resume_query_result)));
   }
+}
+
+TEST_F(QueryPlannerTestRunner,
+       ResumesQueryAfterEventWithAdditionalNormalizers) {
+  SetTestParams("indus_hmb_shim/mockup.shar");
+
+  // Setup: Build query planner and Execute query to create subscription.
+  DelliciusQuery subscription_query = GetSubscriptionQuery();
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+  std::unique_ptr<RedpathNormalizer> test_normalizer =
+      BuildTestRedpathNormalizer();
+
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      qp, BuildQueryPlanner(
+              {.query = &subscription_query,
+               .normalizer = normalizer.get(),
+               .additional_normalizers = {test_normalizer.get()},
+               .redfish_interface = intf_.get(),
+               .redpath_rules = {
+                   .redpaths_to_subscribe = {std::string(kSensorRedPath),
+                                             std::string(kAssemblyRedPath)}}}));
+
+  ASSERT_THAT(qp, NotNull());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result =
+      qp->Run({.variables = args1, .query_type = QueryType::kSubscription});
+  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
+      result.subscription_context;
+  ASSERT_THAT(context, NotNull());
+
+  // Case1: Sensor RedPath query resumes on receiving an event on specific
+  // Sensor resource in the collection `/Chassis[*]/Sensors[*]`.
+
+  // Setup: Make sure we have a trie node to resume Sensor RedPath query.
+  auto find_sensor_trie_node =
+      context->redpath_to_trie_node.find(kSensorRedPath);
+  ASSERT_TRUE(find_sensor_trie_node != context->redpath_to_trie_node.end());
+  ASSERT_THAT(find_sensor_trie_node->second, NotNull());
+
+  // Mock sensor event.
+  std::unique_ptr<ecclesia::RedfishInterface> sensor_json =
+      ecclesia::NewJsonMockupInterface(R"json(
+      {
+          "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/indus_fan3_rpm",
+          "@odata.type": "#Sensor.v1_2_0.Sensor",
+          "Id": "indus_fan3_rpm",
+          "Name": "fan3",
+          "Reading": 16115.0,
+          "ReadingUnits": "RPM",
+          "ReadingType": "Rotational",
+          "RelatedItem": [
+              {
+                  "@odata.id":
+"/redfish/v1/Chassis/chassis/Assembly#/Assemblies/5"
+              }
+          ],
+          "Status": {
+              "Health": "OK",
+              "State": "Enabled"
+          }
+      }
+    )json");
+  ecclesia::RedfishVariant sensor_variant = sensor_json->GetRoot();
+  absl::StatusOr<QueryResult> resume_query_result = qp->Resume({
+      .trie_node = find_sensor_trie_node->second,
+      .redfish_variant = sensor_variant,
+      .variables = args1,
+  });
+  EXPECT_THAT(resume_query_result, IsOk());
+
+  QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "SubscriptionTest"
+    data {
+      fields {
+        key: "normalized_key"
+        value { string_value: "normalized_value" }
+      }
+      fields {
+        key: "Sensors"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "Name"
+                  value { string_value: "fan3" }
+                }
+                fields {
+                  key: "Reading"
+                  value { double_value: 16115 }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  // Verify query result.
+  EXPECT_THAT(expect_query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(*resume_query_result)));
 }
 
 TEST_F(QueryPlannerTestRunner,

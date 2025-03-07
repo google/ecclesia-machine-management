@@ -222,6 +222,15 @@ class QueryPlanner final : public QueryPlannerIntf {
       QueryExecutionContext *query_execution_context,
       const RedpathNormalizerOptions &normalizer_options) const;
 
+  // Final normalization with additional normalizers, running against the final
+  // query result, after all the subqueries are executed.
+  // The status of the query result will be updated if any of the additional
+  // normalizers fail and this should be last step in the query execution, so we
+  // don't need to check the status after this function call.
+  void TryNormalizeOnFinalQueryResult(
+      ecclesia::QueryResult &query_result,
+      const RedpathNormalizerOptions &normalizer_options);
+
   // Executes a single RedPath expression.
   absl::StatusOr<std::vector<QueryExecutionContext>> ExecuteQueryExpression(
       QueryType query_type, const RedPathExpression &expression,

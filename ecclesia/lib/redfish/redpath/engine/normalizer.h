@@ -111,6 +111,14 @@ class RedpathNormalizer {
     return absl::OkStatus();
   }
 
+  // Similar to above method but does not require a RedfishObject or Subquery.
+  absl::Status Normalize(ecclesia::QueryResultData &data_set,
+                         const RedpathNormalizerOptions &options) {
+    DummyRedfishObject dummy_redfish_object;
+    return Normalize(dummy_redfish_object, DelliciusQuery::Subquery(), data_set,
+                     options);
+  }
+
   void AddRedpathNormalizer(std::unique_ptr<ImplInterface> impl) {
     absl::MutexLock l(&impl_chain_mu_);
     impl_chain_.push_back(std::move(impl));
