@@ -17,6 +17,8 @@
 #ifndef ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_ROUTER_QUERY_ROUTER_H_
 #define ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_ROUTER_QUERY_ROUTER_H_
 
+#include <stdbool.h>
+
 #include <functional>
 #include <memory>
 #include <optional>
@@ -26,6 +28,7 @@
 #include <vector>
 
 #include "absl/base/attributes.h"
+#include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/functional/any_invocable.h"
 #include "absl/log/die_if_null.h"
@@ -33,6 +36,8 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/mutex.h"
+#include "absl/synchronization/notification.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
@@ -81,7 +86,7 @@ class QueryRouterIntf {
   };
 
   using ResultCallback = std::function<void(
-      const ServerInfo &/* server_info */, QueryResult /* result */)>;
+      const ServerInfo & /* server_info */, QueryResult /* result */)>;
 
   virtual ~QueryRouterIntf() = default;
 
@@ -127,6 +132,17 @@ class QueryRouterIntf {
   virtual absl::Status ExecuteOnRedfishInterface(
       const ServerInfo &server_info, RedfishInterfacePasskey unused_passkey,
       const QueryEngineIntf::RedfishInterfaceOptions &options) const = 0;
+
+  // Cancels query execution.
+  // This function is overloaded:
+  // `virtual void CancelQueryExecution(absl::Notification* notification)`: This
+  // virtual overload accepts an `absl::Notification` pointer. The provided
+  // notification will be signaled when the cancellation state is set to true
+  // within QueryEngine.
+  // `CancelQueryExecution()`: A parameterless overload that performs the
+  // cancellation.
+  virtual void CancelQueryExecution(absl::Notification *notification) = 0;
+  void CancelQueryExecution() { return CancelQueryExecution(nullptr); }
 };
 
 // Concrete implementation of Query Router Interface that routes the queries
@@ -160,9 +176,9 @@ class QueryRouter : public QueryRouterIntf {
     std::optional<StubArbiterInfo::Type> transport_arbiter_type;
 
     ServerSpec() = default;
-    ServerSpec(const ServerSpec&) = delete;
+    ServerSpec(const ServerSpec &) = delete;
     ServerSpec &operator=(const ServerSpec &) = delete;
-    ServerSpec(ServerSpec&&) = default;
+    ServerSpec(ServerSpec &&) = default;
     ServerSpec &operator=(ServerSpec &&) = default;
   };
 
@@ -201,6 +217,10 @@ class QueryRouter : public QueryRouterIntf {
       const ServerInfo &server_info, RedfishInterfacePasskey unused_passkey,
       const QueryEngineIntf::RedfishInterfaceOptions &options) const override;
 
+  // This function will gracefully terminate all active QueryEngine threads
+  // associated with the target query.
+  void CancelQueryExecution(absl::Notification *notification) override;
+
  private:
   // Defines the core elements of the routing table - server info, query engine
   // and the query ids(applicable to this query engine)
@@ -214,7 +234,7 @@ class QueryRouter : public QueryRouterIntf {
   // Defines the elements to be sent as a batch to the query engine for parallel
   // execution.
   struct QueryBatch {
-    explicit QueryBatch(const QueryRoutingInfo* routing_info)
+    explicit QueryBatch(const QueryRoutingInfo *routing_info)
         : routing_info(*ABSL_DIE_IF_NULL(routing_info)) {}
 
     std::vector<absl::string_view> queries;
@@ -243,9 +263,32 @@ class QueryRouter : public QueryRouterIntf {
   void ExecuteQueryBatches(absl::Span<const QueryBatch> query_batches,
                            const RedpathQueryOptions &options) const;
 
+  // Returns the latest query cancellation state.
+  bool IsQueryExecutionCancelled() const {
+    absl::MutexLock lock(&query_cancellation_state_mutex_);
+    return query_cancellation_state_;
+  }
+
+  int GetExecuteRefCount() const {
+    absl::MutexLock lock(&execute_ref_count_mutex_);
+    return execute_ref_count_;
+  }
+
   RoutingTable routing_table_;
   ExecuteFunction execute_function_;
   int max_concurrent_threads_;
+
+  // mutable keyword allows locking and unlocking operations to be performed
+  // from within const methods
+  mutable absl::Mutex query_cancellation_state_mutex_;
+  bool query_cancellation_state_
+      ABSL_GUARDED_BY(query_cancellation_state_mutex_) = false;
+
+  mutable absl::Mutex execute_ref_count_mutex_;
+  mutable int execute_ref_count_ ABSL_GUARDED_BY(execute_ref_count_mutex_) = 0;
+
+  // Condition variable to wait/signal for query cancellation completion.
+  mutable absl::CondVar cancel_completion_cond_;
 };
 
 // Factory for creating different variants of query router.

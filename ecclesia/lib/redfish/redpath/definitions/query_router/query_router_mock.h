@@ -22,6 +22,7 @@
 #include "gmock/gmock.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/synchronization/notification.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -48,6 +49,8 @@ class QueryRouterMock : public QueryRouterIntf {
               (const ServerInfo &, RedfishInterfacePasskey,
                const QueryEngineIntf::RedfishInterfaceOptions &),
               (const, override));
+
+  MOCK_METHOD(void, CancelQueryExecution, (absl::Notification *), (override));
 };
 
 }  // namespace ecclesia
