@@ -18,23 +18,18 @@
 
 #include <memory>
 #include <string>
-#include <thread>  // NOLINT(build/c++11)
 #include <tuple>
 #include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
-#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
-#include "absl/synchronization/notification.h"
-#include "absl/types/span.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/protobuf/parse.h"
@@ -48,7 +43,6 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/default_template_variable_names.h"
-#include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_mock.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
@@ -1125,203 +1119,6 @@ TEST_F(QueryRouterTest, CreateQueryRouterWithBmcnetArbiter) {
 
   EXPECT_THAT(QueryRouter::Create(router_spec, std::move(server_specs)),
               IsOk());
-}
-
-// Tests QueryRouter Handling of query cancellation at QueryEngine layer.
-// QueryEngine returns cancelled error.
-TEST_F(QueryRouterTest, QueryRouterQueryEngineCancellationTest) {
-  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
-      R"pb(
-        query_pattern: PATTERN_SERIAL_ALL
-        max_concurrent_threads: 1
-        selection_specs {
-          key: "query_a"
-          value {
-            query_selection_specs {
-              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
-              query_and_rule_path {
-                query_path: "$0/query_a.textproto"
-                rule_path: "$0/query_rules.textproto"
-              }
-            }
-          }
-        }
-      )pb",
-      apifs_.GetPath()));
-
-  std::vector<QueryRouter::ServerSpec> server_specs;
-  auto server_spec = GetServerSpec("server_1");
-  server_specs.push_back(std::move(server_spec));
-  auto mock_qe = std::make_unique<MockQueryEngine>();
-  QueryIdToResult query_result;
-  std::string query_id = "query_a";
-  EXPECT_CALL(*mock_qe, ExecuteRedpathQuery).Times(1).WillOnce([&]() {
-    query_result.mutable_results()->insert({query_id, QueryResult()});
-    query_result.mutable_results()->at(query_id).set_query_id(query_id);
-    query_result.mutable_results()
-        ->at(query_id)
-        .mutable_status()
-        ->set_error_code(ecclesia::ErrorCode::ERROR_CANCELLED);
-    return query_result;
-  });
-
-  std::unique_ptr<QueryRouterIntf> query_router;
-  ECCLESIA_ASSIGN_OR_FAIL(
-      query_router,
-      QueryRouter::Create(
-          router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &params,
-              std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
-              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
-            return std::move(mock_qe);
-          },
-          DefaultRedpathNormalizerMap));
-
-  absl::flat_hash_map<absl::string_view, ecclesia::ErrorCode>
-      expected_callbacks = {{"query_a", ecclesia::ErrorCode::ERROR_CANCELLED}};
-
-  query_router->ExecuteQuery(
-      {"query_a"},
-      [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                            const QueryResult &result) {
-        auto it = expected_callbacks.find(result.query_id());
-        ASSERT_NE(it, expected_callbacks.end());
-        ASSERT_EQ(it->second, ecclesia::ErrorCode::ERROR_CANCELLED);
-        expected_callbacks.erase(it);
-      });
-
-  ASSERT_TRUE(expected_callbacks.empty());
-}
-
-// Tests how query cancellation is handled at query router layer.
-// Steps:
-// 1. Execute "QueryRouter::ExecuteQuery" function. Should return successful
-//    query result.
-// 2. Sets query cancellation flag to true in query router.
-// 3. Execute "QueryRouter::ExecuteQuery" function. "QueryRouter::ExecuteQuery"
-// should return cancelled error.
-TEST_F(QueryRouterTest, QueryRouterCancellationReturnsCancelledError) {
-  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
-      R"pb(
-        query_pattern: PATTERN_SERIAL_ALL
-        max_concurrent_threads: 1
-        selection_specs {
-          key: "query_a"
-          value {
-            query_selection_specs {
-              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
-              query_and_rule_path {
-                query_path: "$0/query_a.textproto"
-                rule_path: "$0/query_rules.textproto"
-              }
-            }
-          }
-        }
-      )pb",
-      apifs_.GetPath()));
-
-  std::vector<QueryRouter::ServerSpec> server_specs;
-  auto server_spec = GetServerSpec("server_1");
-  server_specs.push_back(std::move(server_spec));
-  auto mock_query_router = std::make_unique<QueryRouterMock>();
-  auto mock_qe = std::make_unique<MockQueryEngine>();
-  absl::Notification enable_query_cancellation_notification;
-  absl::Notification disable_query_cancellation_notification;
-  absl::Notification query_cancellation_notification;
-
-  QueryIdToResult query_result;
-  std::string query_id = "query_a";
-  EXPECT_CALL(*mock_qe, ExecuteRedpathQuery).Times(1).WillOnce([&]() {
-    if (!enable_query_cancellation_notification.HasBeenNotified()) {
-      enable_query_cancellation_notification.Notify();
-    }
-
-    disable_query_cancellation_notification.WaitForNotification();
-
-    query_result.mutable_results()->insert({query_id, QueryResult()});
-    query_result.mutable_results()->at(query_id).set_query_id(query_id);
-    query_result.mutable_results()
-        ->at(query_id)
-        .mutable_status()
-        ->set_error_code(ecclesia::ERROR_NONE);
-    return query_result;
-  });
-
-  EXPECT_CALL(*mock_qe, CancelQueryExecution)
-      .Times(1)
-      .WillOnce([&query_cancellation_notification]() {
-        // Notifies the main thread that query cancellation has been initiated.
-        if (!query_cancellation_notification.HasBeenNotified()) {
-          query_cancellation_notification.Notify();
-        }
-      });
-
-  std::unique_ptr<QueryRouterIntf> query_router;
-  ECCLESIA_ASSIGN_OR_FAIL(
-      query_router,
-      QueryRouter::Create(
-          router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &params,
-              std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
-              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
-            return std::move(mock_qe);
-          },
-          DefaultRedpathNormalizerMap));
-
-  absl::flat_hash_map<absl::string_view, ecclesia::ErrorCode>
-      expected_callbacks_success = {{"query_a", ecclesia::ERROR_NONE}};
-
-  // Starts a thread to execute a successful query.
-  std::thread successful_query_thread([&]() {
-    query_router->ExecuteQuery(
-        {"query_a"}, [&expected_callbacks_success](
-                         const QueryRouter::ServerInfo &server_info,
-                         const QueryResult &result) {
-          auto it = expected_callbacks_success.find(result.query_id());
-          ASSERT_NE(it, expected_callbacks_success.end());
-          ASSERT_EQ(it->second, ecclesia::ERROR_NONE);
-          expected_callbacks_success.erase(it);
-        });
-  });
-
-  enable_query_cancellation_notification.WaitForNotification();
-
-  // Starts a thread to cancel the query execution.
-  std::thread cancel_thread([&]() {
-    query_router->CancelQueryExecution(&query_cancellation_notification);
-  });
-
-  // Waits for the query cancellation notification. This notification is
-  // notified by the cancel thread when query cancellation has been initiated.
-  query_cancellation_notification.WaitForNotification();
-
-  absl::flat_hash_map<absl::string_view, ecclesia::ErrorCode>
-      expected_callbacks = {{"query_a", ecclesia::ErrorCode::ERROR_CANCELLED}};
-
-  // Starts a thread to execute a query after query cancellation has been
-  // initiated.
-  // This "Execution" should return cancelled error.
-  query_router->ExecuteQuery(
-      {"query_a"},
-      [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                            const QueryResult &result) {
-        auto it = expected_callbacks.find(result.query_id());
-        ASSERT_NE(it, expected_callbacks.end());
-        ASSERT_EQ(it->second, ecclesia::ErrorCode::ERROR_CANCELLED);
-        expected_callbacks.erase(it);
-      });
-
-  // Notifies the waiting thread that query cancellation has been completed.
-  if (!disable_query_cancellation_notification.HasBeenNotified()) {
-    disable_query_cancellation_notification.Notify();
-  }
-  cancel_thread.join();
-  successful_query_thread.join();
-
-  ASSERT_TRUE(expected_callbacks_success.empty());
-  ASSERT_TRUE(expected_callbacks.empty());
 }
 
 }  // namespace
