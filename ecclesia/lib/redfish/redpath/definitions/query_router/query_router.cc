@@ -34,6 +34,7 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
+#include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/dellicius/engine/internal/passkey.h"
@@ -78,17 +79,35 @@ QueryEngineIntf::QueryVariableSet CreateQueryArgumentsWithSystemId(
   return query_arguments_with_system_id;
 }
 
+void PopulateQueryWithCancelledErrorStatus(
+    absl::Span<const absl::string_view> queries,
+    const QueryRouterIntf::ServerInfo &server_info,
+    const QueryRouterIntf::ResultCallback &callback,
+    absl::Mutex &callback_mutex) {
+  for (const absl::string_view &query_id : queries) {
+    QueryResult result;
+    result.set_query_id(std::string(query_id));
+    result.mutable_status()->set_error_code(
+        ecclesia::ErrorCode::ERROR_CANCELLED);
+    absl::MutexLock lock(&callback_mutex);
+    callback(server_info, std::move(result));
+  }
+}
+
 void ExecuteQueries(QueryEngineIntf &query_engine,
                     absl::Span<const absl::string_view> queries,
                     const QueryRouterIntf::RedpathQueryOptions &options,
                     const QueryRouterIntf::ServerInfo &server_info,
                     const std::optional<std::string> &node_local_system_id,
-                    absl::Mutex &callback_mutex) {
+                    absl::Mutex &callback_mutex, bool is_query_cancelled) {
+  if (is_query_cancelled) {
+    return PopulateQueryWithCancelledErrorStatus(
+        queries, server_info, options.callback, callback_mutex);
+  }
   QueryIdToResult result;
   QueryEngineIntf::RedpathQueryOptions redpath_query_options{
       .service_root_uri = QueryEngine::ServiceRootType::kCustom,
-      .priority_label = options.priority_label
-  };
+      .priority_label = options.priority_label};
   if (node_local_system_id.has_value()) {
     redpath_query_options.query_arguments = CreateQueryArgumentsWithSystemId(
         queries, options.query_arguments, *node_local_system_id);
@@ -246,12 +265,28 @@ QueryRouter::QueryRouter(QueryRouter::RoutingTable routing_table,
 }
 
 void QueryRouter::ExecuteQuery(const RedpathQueryOptions &options) const {
+  {
+    absl::MutexLock lock(&execute_ref_count_mutex_);
+    ++execute_ref_count_;
+  }
   execute_function_(options);
+  absl::MutexLock lock(&execute_ref_count_mutex_);
+  --execute_ref_count_;
+
+  // If query cancellation is initiated and all query executions are
+  // completed/terminated, notify waiting
+  // cancellation thread to reset query cancellation state indicating that query
+  // cancellation is completed.
+  // If no query cancellation is initiated, the cv.Signal() call is a no-op.
+  if (execute_ref_count_ == 0) {
+    cancel_completion_cond_.Signal();
+  }
 }
 
 void QueryRouter::ExecuteQuerySerialAll(
     const RedpathQueryOptions &options) const {
   absl::Mutex callback_mutex;
+  bool is_query_cancelled = IsQueryExecutionCancelled();
   for (const QueryRoutingInfo &routing_info : routing_table_) {
     std::vector<absl::string_view> queries;
     queries.reserve(options.query_ids.size());
@@ -263,7 +298,15 @@ void QueryRouter::ExecuteQuerySerialAll(
     if (!queries.empty()) {
       ExecuteQueries(*routing_info.query_engine, queries, options,
                      routing_info.server_info,
-                     routing_info.node_local_system_id, callback_mutex);
+                     routing_info.node_local_system_id, callback_mutex,
+                     is_query_cancelled);
+    }
+
+    // Caches the query cancellation state if cancellation has been initiated.
+    // This is to avoid multiple calls to IsQueryExecutionCancelled() which
+    // acquires the mutex lock.
+    if (!is_query_cancelled) {
+      is_query_cancelled = IsQueryExecutionCancelled();
     }
   }
 }
@@ -312,13 +355,22 @@ void QueryRouter::ExecuteQueryBatches(
 
   absl::Mutex callback_mutex;
   ThreadPool thread_pool(num_threads);
+  bool is_query_cancelled = IsQueryExecutionCancelled();
   for (const QueryBatch &query_batch : query_batches) {
-    thread_pool.Schedule([&]() {
+    thread_pool.Schedule([&, is_query_cancelled]() {
       const QueryRoutingInfo &routing_info = query_batch.routing_info;
       ExecuteQueries(*routing_info.query_engine, query_batch.queries, options,
                      routing_info.server_info,
-                     routing_info.node_local_system_id, callback_mutex);
+                     routing_info.node_local_system_id, callback_mutex,
+                     is_query_cancelled);
     });
+
+    // Caches the query cancellation state if cancellation has been initiated.
+    // This is to avoid multiple calls to IsQueryExecutionCancelled() which
+    // acquires the mutex lock.
+    if (!is_query_cancelled) {
+      is_query_cancelled = IsQueryExecutionCancelled();
+    }
   }
 }
 
@@ -355,6 +407,36 @@ absl::Status QueryRouter::ExecuteOnRedfishInterface(
       SelectionSpec::SelectionClass::ServerType_Name(server_info.server_type),
       SelectionSpec::SelectionClass::ServerClass_Name(
           server_info.server_class)));
+}
+
+void QueryRouter::CancelQueryExecution(absl::Notification *notification) {
+  // If there are no active query executions, return early.
+  if (GetExecuteRefCount() == 0) {
+    return;
+  }
+
+  absl::MutexLock lock(&query_cancellation_state_mutex_);
+  // If query execution is already cancelled, return early.
+  if (query_cancellation_state_) {
+    return;
+  }
+
+  query_cancellation_state_ = true;
+
+  int num_threads = static_cast<int>(routing_table_.size());
+  ThreadPool thread_pool(num_threads);
+  for (const QueryRoutingInfo &routing_info : routing_table_) {
+    thread_pool.Schedule([&]() {
+      routing_info.query_engine->CancelQueryExecution(notification);
+    });
+  }
+
+  // The Wait() call atomically unlocks "query_cancellation_state_mutex_"
+  // (which the cancel thread must hold), and blocks on the condition variable
+  // "cancel_completion_cond_". When "Execute" thread signals the condition
+  // variable, the thread will reacquire the mutex.
+  cancel_completion_cond_.Wait(&query_cancellation_state_mutex_);
+  query_cancellation_state_ = false;
 }
 
 }  // namespace ecclesia
