@@ -173,7 +173,6 @@ enum class ResourceEntity : int {
   kNvidiaErrorInjection,
   kNvidiaHistogram,
   kNvidiaHistogramBucket,
-  kNvidiaHistogramBucketCollection,
   kNvidiaHistogramBuckets,
   kNvidiaHistogramCollection,
   kNvidiaPowerSmoothing,
