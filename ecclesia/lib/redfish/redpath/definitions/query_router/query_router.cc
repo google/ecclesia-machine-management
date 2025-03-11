@@ -87,6 +87,7 @@ void PopulateQueryWithCancelledErrorStatus(
   for (const absl::string_view &query_id : queries) {
     QueryResult result;
     result.set_query_id(std::string(query_id));
+    result.mutable_status()->add_errors("Query execution has been cancelled.");
     result.mutable_status()->set_error_code(
         ecclesia::ErrorCode::ERROR_CANCELLED);
     absl::MutexLock lock(&callback_mutex);

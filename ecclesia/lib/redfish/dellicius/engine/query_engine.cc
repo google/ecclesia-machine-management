@@ -119,6 +119,7 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
 
     // If query execution has been cancelled, do not execute query.
     if (is_query_execution_cancelled) {
+      result_single.query_result.set_query_id(std::string(query_id));
       result_single.query_result.mutable_status()->add_errors(
           "Query execution has been cancelled.");
       result_single.query_result.mutable_status()->set_error_code(
