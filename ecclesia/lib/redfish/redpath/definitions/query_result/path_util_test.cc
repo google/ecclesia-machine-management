@@ -228,7 +228,7 @@ TEST(GetQueryValueFromResult, IdentifierNotSpecified) {
     }
   )pb");
 
-  std::string path = "query1.subquery_id.name==.name";
+  std::string path = "query1.subquery_id[name==].name";
 
   EXPECT_THAT(GetQueryValueFromResult(result, path), IsStatusInvalidArgument());
 }
@@ -263,9 +263,77 @@ TEST(GetQueryValueFromResult, IdentifierNotMatching) {
     }
   )pb");
 
-  std::string path = "query1.subquery_id.name=no_value.name";
+  std::string path = "query1.subquery_id[name=no_value].name";
 
   EXPECT_THAT(GetQueryValueFromResult(result, path), IsStatusNotFound());
+}
+
+TEST(GetQueryValueFromResult, RightSquareBracketMissing) {
+  QueryResult result = ParseTextProtoOrDie(R"pb(
+    query_id: "query1"
+    data: {
+      fields {
+        key: "subquery_id"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "name"
+                  value { string_value: "value1" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "name"
+                  value { string_value: "value2" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  EXPECT_THAT(GetQueryValueFromResult(result, "query1.subquery_id[1.name"),
+              IsStatusNotFound());
+}
+
+TEST(GetQueryValueFromResult, ExtraLeftSquareBracket) {
+  QueryResult result = ParseTextProtoOrDie(R"pb(
+    query_id: "query1"
+    data: {
+      fields {
+        key: "subquery_id"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "name"
+                  value { string_value: "value1" }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "name"
+                  value { string_value: "value2" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  EXPECT_THAT(GetQueryValueFromResult(result, "query1.subquery_id[[1].name"),
+              IsStatusInvalidArgument());
 }
 
 TEST(GetQueryValueFromResult, IdentifierMatch) {
@@ -298,7 +366,7 @@ TEST(GetQueryValueFromResult, IdentifierMatch) {
     }
   )pb");
 
-  std::string path = "query1.subquery_id.name=\"value1\".name";
+  std::string path = "query1.subquery_id[name=\"value1\"].name";
 
   EXPECT_THAT(
       GetQueryValueFromResult(result, path),
@@ -344,7 +412,7 @@ TEST(GetQueryValueFromResult, IdentifierMatchOnIdentifier) {
   )pb");
 
   std::string path =
-      "query1.subquery_id._id_={\"_local_devpath_\":\"/phys\"}.name";
+      "query1.subquery_id[_id_={\"_local_devpath_\":\"/phys\"}].name";
 
   EXPECT_THAT(
       GetQueryValueFromResult(result, path),
@@ -389,7 +457,45 @@ TEST(GetQueryValueFromResult, IdentifierMatchManyValues) {
     }
   )pb");
 
-  std::string path = "query1.subquery_id.name=\"value1\".name";
+  std::string path = "query1.subquery_id[name=\"value1\"].name";
+
+  EXPECT_THAT(
+      GetQueryValueFromResult(result, path),
+      IsOkAndHolds(ecclesia::EqualsProto(R"pb(string_value: "value1")pb")));
+}
+
+TEST(GetQueryValueFromResult, IdentifierMatchMultiplePredicates) {
+  QueryResult result = ParseTextProtoOrDie(R"pb(
+    query_id: "query1"
+    data: {
+      fields {
+        key: "subquery_id"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "name1"
+                  value { string_value: "value1" }
+                }
+                fields {
+                  key: "name2"
+                  value { string_value: "value2" }
+                }
+                fields {
+                  key: "name3"
+                  value { string_value: "value3" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  std::string path =
+      "query1.subquery_id[name1=\"value1\",name2=\"value2\"].name1";
 
   EXPECT_THAT(
       GetQueryValueFromResult(result, path),
@@ -713,7 +819,7 @@ INSTANTIATE_TEST_SUITE_P(
              }
            }
          )pb"),
-         .path = "query1.subquery_id.name==.name",
+         .path = "query1.subquery_id[name==].name",
          .expected_status_code = IsStatusInvalidArgument()},
         {.result = ParseTextProtoOrDie(R"pb(
            query_id: "query1"
@@ -743,7 +849,7 @@ INSTANTIATE_TEST_SUITE_P(
              }
            }
          )pb"),
-         .path = "query1.subquery_id.name=no_value.name",
+         .path = "query1.subquery_id[name=no_value].name",
          .expected_status_code = IsStatusNotFound()},
         {.result = ParseTextProtoOrDie(R"pb(
            query_id: "query1"
@@ -963,7 +1069,7 @@ INSTANTIATE_TEST_SUITE_P(
                 }
               }
             )pb"),
-            .path = "query1.subquery_id.name=\"value1\".name",
+            .path = "query1.subquery_id[name=\"value1\"].name",
             .expected_value =
                 ParseTextProtoOrDie(R"pb(string_value: "value1")pb"),
         },
@@ -1007,7 +1113,7 @@ INSTANTIATE_TEST_SUITE_P(
               }
             )pb"),
             .path =
-                "query1.subquery_id._id_={\"_local_devpath_\":\"/phys\"}.name",
+                "query1.subquery_id[_id_={\"_local_devpath_\":\"/phys\"}].name",
             .expected_value =
                 ParseTextProtoOrDie(R"pb(string_value: "value1")pb"),
         },
@@ -1048,7 +1154,7 @@ INSTANTIATE_TEST_SUITE_P(
                 }
               }
             )pb"),
-            .path = "query1.subquery_id.name=\"value1\".name",
+            .path = "query1.subquery_id[name=\"value1\"].name",
             .expected_value =
                 ParseTextProtoOrDie(R"pb(string_value: "value1")pb"),
         },

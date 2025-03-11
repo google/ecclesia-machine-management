@@ -31,7 +31,7 @@ namespace ecclesia {
 // Example subquery id path: "query1.subquery_id1.subquery_id2.property_name"
 // Example list path: "query1.subquery_id1[2].subquery_id3[4].property_name"
 // Example identifier path:
-// "query1.subquery_id1.property_name="value".subquery_id2.property_name"
+// "query1.subquery_id1[property_name="value"].subquery_id2.property_name"
 //
 // Return type is QueryValue, so the result can be a primitive, list, or
 // subquery type.

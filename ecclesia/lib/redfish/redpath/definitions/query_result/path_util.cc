@@ -69,31 +69,35 @@ absl::StatusOr<QueryValue*> GetNextMutableQueryValue(
       return &it->second;
     }
     case QueryValue::kListValue: {
-      if (absl::StrContains(subquery_id, "=")) {
-        std::vector<std::pair<std::string, std::string>> identifier_parts;
-        for (absl::string_view identifier : absl::StrSplit(subquery_id, ',')) {
-          std::vector<std::string> parts = absl::StrSplit(identifier, '=');
-          if (parts.size() != 2) {
-            return absl::InvalidArgumentError(
-                absl::StrCat("Identifier '", subquery_id, "' is not valid"));
-          }
-          identifier_parts.push_back(std::make_pair(parts[0], parts[1]));
-        }
-
-        for (auto& list_value :
-             *value->mutable_list_value()->mutable_values()) {
-          if (CompareListIdentifier(list_value, identifier_parts)) {
-            return &list_value;
-          }
-        }
-        return absl::NotFoundError(
-            absl::StrCat("Identifier '", subquery_id, "' doesn't exist"));
-      }
-
       if (subquery_id.front() == '[' && subquery_id.back() == ']') {
+        absl::string_view identifier_set =
+            subquery_id.substr(1, subquery_id.size() - 2);
+        // [property_name="value1",property_name="value2"], contains comma
+        // separated list of <property_name,"value">
+        if (absl::StrContains(identifier_set, "=")) {
+          std::vector<std::pair<std::string, std::string>> identifier_parts;
+          for (absl::string_view identifier :
+               absl::StrSplit(identifier_set, ',')) {
+            std::vector<std::string> parts = absl::StrSplit(identifier, '=');
+            if (parts.size() != 2) {
+              return absl::InvalidArgumentError(
+                  absl::StrCat("Identifier '", subquery_id, "' is not valid"));
+            }
+            identifier_parts.push_back(std::make_pair(parts[0], parts[1]));
+          }
+          for (auto& list_value :
+               *value->mutable_list_value()->mutable_values()) {
+            if (CompareListIdentifier(list_value, identifier_parts)) {
+              return &list_value;
+            }
+          }
+          return absl::NotFoundError(
+              absl::StrCat("Identifier '", subquery_id, "' doesn't exist"));
+        }
+
+        // Contains index in brackets.
         int index;
-        if (!absl::SimpleAtoi(subquery_id.substr(1, subquery_id.size() - 2),
-                              &index)) {
+        if (!absl::SimpleAtoi(identifier_set, &index)) {
           return absl::InvalidArgumentError(absl::StrCat(
               "The list index is not valid, expected a valid integer: ",
               subquery_id));
