@@ -295,6 +295,7 @@ enum class Operation : uint8_t {
   kUndefined,
 };
 
+// copybara:strip_begin(g3-shared-libs)
 // Returns the string representation of the given resource entity.
 std::string ResourceEntityToString(ResourceEntity entity);
 
@@ -306,6 +307,7 @@ ResourceEntity StringToResourceEntity(absl::string_view resource);
 
 // Returns the operation of the given string.
 Operation StringToOperation(absl::string_view operation);
+// copybara:strip_end
 
 }  // namespace ecclesia
 
