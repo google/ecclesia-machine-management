@@ -363,7 +363,7 @@ TEST(QueryEngineTest, QueryEngineInvalidQueries) {
       auto query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
+          {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
            .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   // Invalid Query Id
@@ -391,7 +391,7 @@ TEST(QueryEngineTest, QueryEngineConcurrentQueries) {
       auto query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
+          {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
            .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -448,7 +448,7 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
       auto query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
+          {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
            .metrics = FakeQueryEngine::Metrics::kEnable,
            .annotations = FakeQueryEngine::Annotations::kDisable,
            .cache = FakeQueryEngine::Cache::kInfinite,
@@ -564,7 +564,7 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
       auto query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusHmbCnMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
+          {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
            .metrics = FakeQueryEngine::Metrics::kEnable,
            .annotations = FakeQueryEngine::Annotations::kDisable,
            .cache = FakeQueryEngine::Cache::kInfinite,
@@ -665,7 +665,7 @@ TEST(QueryEngineTest, QueryEngineWithUrlAnnotations) {
       auto query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusHmbCnMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
+          {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
            .metrics = FakeQueryEngine::Metrics::kDisable,
            .annotations = FakeQueryEngine::Annotations::kEnable,
            .cache = FakeQueryEngine::Cache::kInfinite,
@@ -857,7 +857,7 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedNoVars) {
       auto query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
+          {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
            .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -895,7 +895,7 @@ TEST(QueryEngineTest, QueryEngineTransportMetricsInResult) {
       auto query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
+          {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
            .metrics = FakeQueryEngine::Metrics::kEnable,
            .cache = FakeQueryEngine::Cache::kInfinite,
            .streaming = FakeQueryEngine::Streaming::kEnable}));
@@ -996,7 +996,7 @@ TEST(QueryEngineTest, QueryEngineWithTranslation) {
       auto query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
+          {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
            .streaming = FakeQueryEngine::Streaming::kEnable}));
 
   // Validate first query result with metrics.
@@ -1842,7 +1842,7 @@ TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnce) {
       auto query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusHmbCnMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
+          {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
            .metrics = FakeQueryEngine::Metrics::kEnable,
            .annotations = FakeQueryEngine::Annotations::kDisable,
            .streaming = FakeQueryEngine::Streaming::kEnable}));
@@ -1891,7 +1891,7 @@ TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnceMultithreaded) {
       auto query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusHmbCnMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
+          {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
            .metrics = FakeQueryEngine::Metrics::kEnable,
            .annotations = FakeQueryEngine::Annotations::kDisable,
            .cache = FakeQueryEngine::Cache::kDisable,
@@ -1956,7 +1956,7 @@ TEST(QueryEngineTest, QueryEngineExecutesQueryRuleWithUriPrefix) {
       auto query_engine,
       FakeQueryEngine::Create(
           std::move(*query_spec), kIndusMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
+          {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
            .metrics = FakeQueryEngine::Metrics::kEnable,
            .annotations = FakeQueryEngine::Annotations::kDisable,
            .cache = FakeQueryEngine::Cache::kInfinite,
@@ -1995,7 +1995,7 @@ TEST(QueryEngineTest, QueryEngineAppliesQueryRulesToServiceRoot) {
       auto query_engine,
       FakeQueryEngine::Create(
           std::move(*query_spec), kIndusMockup,
-          {.devpath = FakeQueryEngine::Devpath::kDisable,
+          {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
            .metrics = FakeQueryEngine::Metrics::kEnable,
            .annotations = FakeQueryEngine::Annotations::kDisable,
            .cache = FakeQueryEngine::Cache::kInfinite,

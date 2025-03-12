@@ -222,7 +222,6 @@ cc_library(
         "//ecclesia/lib/redfish/dellicius/engine/internal:passkey",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",
         "//ecclesia/lib/redfish/dellicius/utils:id_assigner",
-        "//ecclesia/lib/redfish/redpath/definitions/passkey:annotation_passkey",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_engine_features",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_spec",
         "//ecclesia/lib/redfish/redpath/definitions/query_result",

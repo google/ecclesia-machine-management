@@ -22,7 +22,6 @@
 #include <optional>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
@@ -36,7 +35,6 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/dellicius/utils/id_assigner.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/redpath/definitions/passkey/annotation_passkey.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
@@ -50,7 +48,7 @@ namespace ecclesia {
 
 class FakeQueryEngine : public QueryEngineIntf {
  public:
-  enum class Devpath : uint8_t { kEnable = 0, kDisable };
+  enum class DevpathMethod : uint8_t { kDevpath2 = 0, kDevpath3 };
   enum class Metrics : uint8_t { kEnable = 0, kDisable };
   enum class Annotations : uint8_t { kEnable = 0, kDisable };
   enum class Cache : uint8_t { kDisable = 0, kInfinite };
@@ -58,7 +56,9 @@ class FakeQueryEngine : public QueryEngineIntf {
   enum class FailOnFirstError : uint8_t { kEnable = 0, kDisable };
 
   struct Params {
-    Devpath devpath = Devpath::kEnable;
+    // Method to use for constructing/discovering devpaths. This defaults to
+    // using Devpath2 (crawling the Redfish tree) to discover devpaths.
+    DevpathMethod devpath_method = DevpathMethod::kDevpath2;
     Metrics metrics = Metrics::kDisable;
     Annotations annotations = Annotations::kDisable;
     Cache cache = Cache::kInfinite;
@@ -119,7 +119,7 @@ class FakeQueryEngine : public QueryEngineIntf {
     // Devpaths will not be generated if the stable_id_type is kRedfishLocation
     // without an IdAssigner passed to the Query Engine object.
     const QueryEngineParams::RedfishStableIdType stable_id_type =
-        (params.devpath == Devpath::kEnable)
+        (params.devpath_method == DevpathMethod::kDevpath2)
             ? QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived
             : QueryEngineParams::RedfishStableIdType::kRedfishLocation;
 
