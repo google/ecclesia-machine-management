@@ -179,6 +179,7 @@ class QueryEngineIntf {
 
   virtual ~QueryEngineIntf() = default;
 
+  ABSL_DEPRECATED("Use ExecuteRedpathQuery with RedpathQueryOptions instead.")
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri = ServiceRootType::kCustom) {
@@ -186,6 +187,7 @@ class QueryEngineIntf {
     return ExecuteRedpathQuery(query_ids, options);
   }
 
+  ABSL_DEPRECATED("Use ExecuteRedpathQuery with RedpathQueryOptions instead.")
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri,

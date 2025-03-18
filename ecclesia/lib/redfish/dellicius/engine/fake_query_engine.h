@@ -48,6 +48,9 @@ namespace ecclesia {
 
 class FakeQueryEngine : public QueryEngineIntf {
  public:
+  using QueryEngineIntf::ExecuteRedpathQuery;
+  using QueryEngineIntf::ExecuteSubscriptionQuery;
+
   enum class DevpathMethod : uint8_t { kDevpath2 = 0, kDevpath3 };
   enum class Metrics : uint8_t { kEnable = 0, kDisable };
   enum class Annotations : uint8_t { kEnable = 0, kDisable };
@@ -68,13 +71,15 @@ class FakeQueryEngine : public QueryEngineIntf {
     FailOnFirstError fail_on_first_error = FailOnFirstError::kDisable;
   };
 
-  static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
+  static absl::StatusOr<std::unique_ptr<FakeQueryEngine>> Create(
       QuerySpec query_spec, absl::string_view mockup_name, Params params) {
     auto query_engine = absl::WrapUnique(new FakeQueryEngine(mockup_name));
     ECCLESIA_RETURN_IF_ERROR(query_engine->InitializeQueryEngine(
         std::move(query_spec), std::move(params)));
     return std::move(query_engine);
   }
+
+  FakeRedfishServer *GetFakeRedfishServer() { return &redfish_server_; }
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,

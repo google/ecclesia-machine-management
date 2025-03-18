@@ -24,6 +24,7 @@
 #include <thread>  // NOLINT(build/c++11)
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -274,7 +275,7 @@ TEST(QueryEngineTest, QueryEngineDevpathConfiguration) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
   QueryIdToResult response_entries =
       query_engine->ExecuteRedpathQuery({"SensorCollector"});
@@ -296,7 +297,7 @@ TEST(QueryEngineTest, QueryEngineRedfishIntfAccessor) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
   EXPECT_TRUE(
       query_engine
@@ -313,7 +314,7 @@ TEST(QueryEngineTest, ExecuteOnRedfishIntface) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
   EXPECT_TRUE(query_engine
                   ->ExecuteOnRedfishInterface(
@@ -332,7 +333,7 @@ TEST(QueryEngineTest, QueryEngineTopConfiguration) {
           {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
   QueryIdToResult response_entries =
       query_engine->ExecuteRedpathQuery({"PaginatedSensorCollector"});
@@ -352,7 +353,7 @@ TEST(QueryEngineTest, QueryEngineInvalidQueries) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusMockup,
           {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3}));
@@ -379,7 +380,7 @@ TEST(QueryEngineTest, QueryEngineConcurrentQueries) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusMockup,
           {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3}));
@@ -410,7 +411,7 @@ TEST(QueryEngineTest, QueryEngineEmptyItemDevpath) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup,
                               {.entity_tag = "test_node_id"}));
 
@@ -433,7 +434,7 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
           {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusMockup,
           {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
@@ -548,7 +549,7 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
           {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusHmbCnMockup,
           {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
@@ -625,7 +626,7 @@ TEST(QueryEngineTest, QueryEngineTestGoogleRoot) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec),
                               kComponentIntegrityMockupPath, {}));
 
@@ -647,7 +648,7 @@ TEST(QueryEngineTest, QueryEngineWithUrlAnnotations) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusHmbCnMockup,
           {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
@@ -709,7 +710,7 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedQuery) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -744,7 +745,7 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedUnfilledVars) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   QueryIdToResult response_entries = query_engine->ExecuteRedpathQuery(
@@ -801,7 +802,7 @@ TEST(QueryEngineTest, DifferentVariableValuesWorkWithTemplatedQuery) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   // Execute query with first set of variable values.
@@ -832,7 +833,7 @@ TEST(QueryEngineTest, QueryEngineTestTemplatedNoVars) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusMockup,
           {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3}));
@@ -869,7 +870,7 @@ TEST(QueryEngineTest, QueryEngineTransportMetricsInResult) {
           {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusMockup,
           {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
@@ -969,7 +970,7 @@ TEST(QueryEngineTest, QueryEngineWithTranslation) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusMockup,
           {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3}));
@@ -991,7 +992,7 @@ TEST(QueryEngineTest, QueryEngineWithTranslationAndLocalDevpath) {
       QuerySpec::FromQueryContext({.query_files = kDelliciusQueries}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   // Validate first query result with metrics.
@@ -1049,12 +1050,13 @@ TEST(QueryEngineTest, QueryEngineNoHaltOnFirstFailure) {
   features.set_enable_redfish_metrics(true);
   features.set_fail_on_first_error(false);
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine, QueryEngine::Create(std::move(query_spec),
-                                             {.transport = std::move(transport),
-                                              .entity_tag = "test_node_id",
-                                              .features = features},
-                                             /*id_assigner=*/nullptr,
-                                             /*id_to_normalizers=*/{}));
+      std::unique_ptr<QueryEngineIntf> query_engine,
+      QueryEngine::Create(std::move(query_spec),
+                          {.transport = std::move(transport),
+                           .entity_tag = "test_node_id",
+                           .features = features},
+                          /*id_assigner=*/nullptr,
+                          /*id_to_normalizers=*/{}));
   EXPECT_EQ(query_engine->GetAgentIdentifier(), "test_node_id");
   // Issue the query and assert that both GETs were issued, ensuring that the
   // query execution continued AFTER the first error occurred.
@@ -1229,7 +1231,7 @@ TEST(QueryEngineTest, QueryEngineLocationContextSuccess) {
                                    .query_rules = kQueryRules,
                                    .clock = &clock}));
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<QueryEngineIntf> query_engine,
       QueryEngine::Create(
           std::move(query_spec),
           {.transport = std::move(transport),
@@ -1289,7 +1291,7 @@ TEST(QueryEngineTest, QueryEngineSubRootStableIdServiceLabel) {
   ECCLESIA_ASSIGN_OR_FAIL(QuerySpec query_spec,
                           QuerySpec::FromQueryContext(query_context));
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<QueryEngineIntf> query_engine,
       QueryEngine::Create(
           std::move(query_spec),
           {.transport = std::move(transport),
@@ -1324,7 +1326,7 @@ TEST(QueryEngineTest, QueryEngineCreateUsingQuerySpec) {
                                    .clock = &clock}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<QueryEngineIntf> query_engine,
       QueryEngine::Create(std::move(query_spec),
                           {.transport = std::move(transport),
                            .features = StandardQueryEngineFeatures()}));
@@ -1351,7 +1353,7 @@ TEST(QueryEngineTest, QueryEngineFilterConfiguration) {
           {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   QueryVariables::VariableValue val1;
@@ -1399,7 +1401,7 @@ TEST(QueryEngineTest, CanCreateQueryEngineWithStreamingFeature) {
                                    .clock = &clock}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<QueryEngineIntf> query_engine,
       QueryEngine::Create(std::move(query_spec),
                           {.transport = std::move(transport),
                            .features = StandardQueryEngineFeatures()}));
@@ -1412,7 +1414,7 @@ TEST(QueryEngineTest, CanExecuteSubscriptionQuerySuccessfully) {
           {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   bool found_thermal_config = false;
@@ -1520,7 +1522,7 @@ TEST(QueryEngineTest, CanHandleEventsCorrectly) {
           {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   bool found_assembly_query_result = false;
@@ -1646,7 +1648,7 @@ TEST(QueryEngineTest, CanHandleInvalidEvents) {
           {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   bool found_assembly_query_result = false;
@@ -1739,7 +1741,7 @@ TEST(QueryEngineTest, CanHandleInvalidSubscriptionRequest) {
           {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(std::move(query_spec), kIndusMockup, {}));
 
   // Set up callbacks for subscription query.
@@ -1782,7 +1784,7 @@ TEST(QueryEngineTest, QueryEngineFailsOnServiceUnavailability) {
   ECCLESIA_ASSIGN_OR_FAIL(ecclesia::QuerySpec query_spec,
                           ecclesia::QuerySpec::FromQueryContext(query_context));
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<QueryEngineIntf> query_engine,
       QueryEngine::Create(std::move(query_spec),
                           {.transport = std::move(transport),
                            .features = StandardQueryEngineFeatures()}));
@@ -1802,7 +1804,7 @@ TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnce) {
           {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusHmbCnMockup,
           {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
@@ -1850,7 +1852,7 @@ TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnceMultithreaded) {
           {.query_files = kDelliciusQueries, .query_rules = kQueryRules}));
 
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(
           std::move(query_spec), kIndusHmbCnMockup,
           {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
@@ -1914,7 +1916,7 @@ TEST(QueryEngineTest, QueryEngineExecutesQueryRuleWithUriPrefix) {
        .query_rules = {{.name = "query_rules.pb", .data = kQueryRuleStr}}});
   ASSERT_THAT(query_spec, IsOk());
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(
           std::move(*query_spec), kIndusMockup,
           {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
@@ -1952,7 +1954,7 @@ TEST(QueryEngineTest, QueryEngineAppliesQueryRulesToServiceRoot) {
        .query_rules = {{.name = "query_rules.pb", .data = kQueryRuleStr}}});
   ASSERT_THAT(query_spec, IsOk());
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<FakeQueryEngine> query_engine,
       FakeQueryEngine::Create(
           std::move(*query_spec), kIndusMockup,
           {.devpath_method = FakeQueryEngine::DevpathMethod::kDevpath3,
@@ -1999,7 +2001,7 @@ TEST(QueryEngineTest, CanExecuteNonStreamingQueryWithStreamingQueryEngine) {
 
   QueryEngineFeatures features = StandardQueryEngineFeatures();
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<QueryEngineIntf> query_engine,
       QueryEngine::Create(std::move(query_spec),
                           {.transport = std::move(transport),
                            .features = std::move(features)}));
@@ -2044,7 +2046,7 @@ TEST_F(QueryEngineGrpcTestRunner,
   ASSERT_TRUE(query_spec.query_id_to_info.contains(sensor_query_id));
   query_spec.query_id_to_info[sensor_query_id].timeout = absl::Seconds(2);
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<QueryEngineIntf> query_engine,
       QueryEngine::Create(std::move(query_spec),
                           {.transport = std::move(transport_),
                            .features = std::move(features)}));
@@ -2087,7 +2089,7 @@ TEST(QueryEngineTest, QueryEngineNoHaltOnFirstFailureWithStreamingEngine) {
   features.set_fail_on_first_error(false);
   features.set_enable_redfish_metrics(true);
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<QueryEngineIntf> query_engine,
       QueryEngine::Create(std::move(query_spec),
                           {.transport = std::move(transport),
                            .entity_tag = "test_node_id",
@@ -2119,7 +2121,7 @@ TEST_F(QueryEngineGrpcTestRunner, QueryEngineQueryCancellationTest) {
   QueryEngineFeatures features = StandardQueryEngineFeatures();
   ASSERT_TRUE(query_spec.query_id_to_info.contains(sensor_query_id));
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<QueryEngineIntf> query_engine,
       QueryEngine::Create(std::move(query_spec),
                           {.transport = std::move(transport_),
                            .features = std::move(features)}));
@@ -2236,7 +2238,7 @@ TEST_F(QueryEngineGrpcTestRunner,
   QueryEngineFeatures features = StandardQueryEngineFeatures();
   ASSERT_TRUE(query_spec.query_id_to_info.contains(sensor_query_id));
   ECCLESIA_ASSIGN_OR_FAIL(
-      auto query_engine,
+      std::unique_ptr<QueryEngineIntf> query_engine,
       QueryEngine::Create(std::move(query_spec),
                           {.transport = std::move(transport_),
                            .features = std::move(features)}));
