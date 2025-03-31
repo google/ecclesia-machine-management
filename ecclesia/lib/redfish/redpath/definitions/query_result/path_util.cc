@@ -17,6 +17,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/path_util.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <queue>
 #include <string>
 #include <utility>
@@ -36,12 +37,16 @@
 
 namespace ecclesia {
 namespace {
+
+enum class Operation : std::uint8_t { kGet, kRemove };
+
 bool CompareListIdentifier(
     const QueryValue& query_value,
     absl::Span<const std::pair<std::string, std::string>> identifier) {
   for (const auto& [key, value] : identifier) {
-    auto it = query_value.subquery_value().fields().find(key);
-    if (it == query_value.subquery_value().fields().end()) {
+    const auto& fields = query_value.subquery_value().fields();
+    auto it = fields.find(key);
+    if (it == fields.end()) {
       return false;
     }
     if (it->second.has_identifier() &&
@@ -56,17 +61,20 @@ bool CompareListIdentifier(
   return true;
 }
 
-absl::StatusOr<QueryValue*> GetNextMutableQueryValue(
-    QueryValue* value, absl::string_view subquery_id) {
+absl::StatusOr<QueryValue*> ProcessNextMutableQueryValue(
+    QueryValue* value, absl::string_view subquery_id, Operation operation) {
   switch (value->kind_case()) {
     case QueryValue::kSubqueryValue: {
-      auto it =
-          value->mutable_subquery_value()->mutable_fields()->find(subquery_id);
-      if (it == value->subquery_value().fields().end()) {
-        return absl::NotFoundError(
-            absl::StrCat("Subquery ID '", subquery_id, "' doesn't exist"));
+      auto& fields = *value->mutable_subquery_value()->mutable_fields();
+      if (auto it = fields.find(subquery_id); it != fields.end()) {
+        if (operation == Operation::kRemove) {
+          fields.erase(it);
+          return nullptr;
+        }
+        return &it->second;
       }
-      return &it->second;
+      return absl::NotFoundError(
+          absl::StrCat("Subquery ID '", subquery_id, "' doesn't exist"));
     }
     case QueryValue::kListValue: {
       if (subquery_id.front() == '[' && subquery_id.back() == ']') {
@@ -85,10 +93,15 @@ absl::StatusOr<QueryValue*> GetNextMutableQueryValue(
             }
             identifier_parts.push_back(std::make_pair(parts[0], parts[1]));
           }
-          for (auto& list_value :
-               *value->mutable_list_value()->mutable_values()) {
-            if (CompareListIdentifier(list_value, identifier_parts)) {
-              return &list_value;
+          for (int i = 0; i < value->list_value().values_size(); ++i) {
+            if (CompareListIdentifier(value->list_value().values(i),
+                                      identifier_parts)) {
+              if (operation == Operation::kRemove) {
+                auto& values = *value->mutable_list_value()->mutable_values();
+                values.erase(values.begin() + i);
+                return nullptr;
+              }
+              return value->mutable_list_value()->mutable_values(i);
             }
           }
           return absl::NotFoundError(
@@ -106,6 +119,11 @@ absl::StatusOr<QueryValue*> GetNextMutableQueryValue(
           return absl::NotFoundError(
               absl::StrCat("The list index is out of bounds: ", subquery_id));
         }
+        if (operation == Operation::kRemove) {
+          value->mutable_list_value()->mutable_values()->erase(
+              value->mutable_list_value()->mutable_values()->begin() + index);
+          return nullptr;
+        }
         return value->mutable_list_value()->mutable_values(index);
       }
       break;
@@ -117,10 +135,9 @@ absl::StatusOr<QueryValue*> GetNextMutableQueryValue(
       absl::StrCat("Path '", subquery_id, "' doesn't exist"));
 }
 
-}  // namespace
-
-absl::StatusOr<QueryValue*> GetMutableQueryValueFromResult(
-    QueryResult& result, absl::string_view path) {
+absl::StatusOr<QueryValue*> ProcessQueryValueFromResult(QueryResult& result,
+                                                        absl::string_view path,
+                                                        Operation operation) {
   if (path.empty()) {
     return absl::InvalidArgumentError("Path is empty.");
   }
@@ -166,14 +183,25 @@ absl::StatusOr<QueryValue*> GetMutableQueryValueFromResult(
         absl::StrCat("Subquery ID '", path_parts.front(), "' doesn't exist"));
   }
 
+  Operation actual_operation = Operation::kGet;
   while (!path_parts.empty()) {
+    if (operation == Operation::kRemove && path_parts.size() == 1) {
+      actual_operation = Operation::kRemove;
+    }
     ECCLESIA_ASSIGN_OR_RETURN(
         current_value,
-        GetNextMutableQueryValue(current_value, path_parts.front()));
-
+        ProcessNextMutableQueryValue(current_value, path_parts.front(),
+                                     actual_operation));
     path_parts.pop();
   }
   return current_value;
+}
+
+}  // namespace
+
+absl::StatusOr<QueryValue*> GetMutableQueryValueFromResult(
+    QueryResult& result, absl::string_view path) {
+  return ProcessQueryValueFromResult(result, path, Operation::kGet);
 }
 
 absl::StatusOr<QueryValue> GetQueryValueFromResult(const QueryResult& result,
@@ -182,6 +210,13 @@ absl::StatusOr<QueryValue> GetQueryValueFromResult(const QueryResult& result,
   ECCLESIA_ASSIGN_OR_RETURN(value, GetMutableQueryValueFromResult(
                                        const_cast<QueryResult&>(result), path));
   return *value;
+}
+
+absl::Status RemoveQueryValueFromResult(QueryResult& result,
+                                        absl::string_view path) {
+  ECCLESIA_RETURN_IF_ERROR(
+      ProcessQueryValueFromResult(result, path, Operation::kRemove).status());
+  return absl::OkStatus();
 }
 
 }  // namespace ecclesia

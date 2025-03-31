@@ -17,11 +17,13 @@
 #ifndef ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_RESULT_PATH_UTIL_H_
 #define ECCLESIA_LIB_REDFISH_REDPATH_DEFINITIONS_QUERY_RESULT_PATH_UTIL_H_
 
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 
 namespace ecclesia {
+
 // Return the QueryValue for the given path.
 //
 // The path is a dot-separated string that represents the hierarchical
@@ -42,6 +44,11 @@ absl::StatusOr<QueryValue> GetQueryValueFromResult(const QueryResult& result,
 // the QueryValue otherwise.
 absl::StatusOr<QueryValue*> GetMutableQueryValueFromResult(
     QueryResult& result, absl::string_view path);
+
+// Removes the QueryValue for the given path. Returns error if the `path`
+// doesn't exist in `result`.
+absl::Status RemoveQueryValueFromResult(QueryResult& result,
+                                        absl::string_view path);
 
 }  // namespace ecclesia
 
