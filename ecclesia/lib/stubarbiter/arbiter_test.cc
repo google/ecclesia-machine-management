@@ -192,6 +192,47 @@ TEST(StubArbiterTest, FailedExecuteFailover) {
                                       IsStatusUnavailable()))));
 }
 
+TEST(StubArbiterTest, FailedExecuteFailoverWithCustomFailoverCode) {
+  ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<MockStubArbiter> arbiter,
+                          CreateMockStubArbiter({
+                              .custom_failover_code =
+                                  std::vector<absl::StatusCode>{
+                                      absl::StatusCode::kUnavailable,
+                                      absl::StatusCode::kResourceExhausted},
+                          }));
+
+  StubArbiterInfo::Metrics metrics_deadline_exceeded = arbiter->Execute(
+      [](MockStub *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+        if (stub->GetName() == kPrimary) {
+          return absl::DeadlineExceededError("Deadline exceeded");
+        }
+        return absl::UnavailableError("Service unavailable");
+      });
+  EXPECT_THAT(metrics_deadline_exceeded.overall_status,
+              IsStatusDeadlineExceeded());
+
+  EXPECT_THAT(
+      metrics_deadline_exceeded.endpoint_metrics,
+      UnorderedElementsAre(Pair(StubArbiterInfo::PriorityLabel::kPrimary,
+                                Field(&StubArbiterInfo::EndpointMetrics::status,
+                                      IsStatusDeadlineExceeded()))));
+
+  StubArbiterInfo::Metrics metrics_unavailable = arbiter->Execute(
+      [](MockStub *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+        return absl::UnavailableError("Service secondary unavailable");
+      });
+  EXPECT_THAT(metrics_unavailable.overall_status, IsStatusUnavailable());
+
+  EXPECT_THAT(
+      metrics_unavailable.endpoint_metrics,
+      UnorderedElementsAre(Pair(StubArbiterInfo::PriorityLabel::kPrimary,
+                                Field(&StubArbiterInfo::EndpointMetrics::status,
+                                      IsStatusUnavailable())),
+                           Pair(StubArbiterInfo::PriorityLabel::kSecondary,
+                                Field(&StubArbiterInfo::EndpointMetrics::status,
+                                      IsStatusUnavailable()))));
+}
+
 TEST(StubArbiterTest, CheckExecutionTime) {
   FakeClock clock(absl::FromUnixSeconds(1700000000));
   ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<MockStubArbiter> arbiter,

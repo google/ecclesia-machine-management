@@ -74,7 +74,7 @@ struct StubArbiterInfo {
 
   struct Config {
     Type type = Type::kFailover;
-    std::optional<std::vector<absl::Status>> custom_failover_code;
+    std::optional<std::vector<absl::StatusCode>> custom_failover_code;
     absl::Duration refresh = absl::Seconds(5);
   };
 };
@@ -98,9 +98,8 @@ class StubArbiter {
 
     absl::flat_hash_set<absl::StatusCode> failover_codes;
     if (config.custom_failover_code.has_value()) {
-      for (const absl::Status &status : config.custom_failover_code.value()) {
-        failover_codes.insert(status.code());
-      }
+      failover_codes.insert(config.custom_failover_code.value().begin(),
+                            config.custom_failover_code.value().end());
     } else {
       failover_codes = absl::flat_hash_set<absl::StatusCode>{
           absl::StatusCode::kDeadlineExceeded, absl::StatusCode::kUnavailable,
