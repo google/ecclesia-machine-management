@@ -386,7 +386,7 @@ class HttpIntfObjectImpl : public RedfishObject {
     LOG(INFO) << "Object:\n" << DebugString();
   }
 
-  absl::StatusOr<absl::Nonnull<std::unique_ptr<RedfishObject>>>
+  absl::StatusOr< std::unique_ptr<RedfishObject>>
   EnsureFreshPayload(GetParams params) override {
     if (cache_state_ == CacheState::kIsFresh) {
       return std::make_unique<HttpIntfObjectImpl>(intf_, path_, result_,
