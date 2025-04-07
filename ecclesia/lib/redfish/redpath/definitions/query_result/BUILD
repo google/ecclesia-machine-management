@@ -1,3 +1,5 @@
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
+
 proto_library(
     name = "query_result_proto",
     srcs = ["query_result.proto"],
@@ -54,6 +56,14 @@ cc_test(
         "@com_google_absl//absl/time",
         "@com_google_googletest//:gtest_main",
     ],
+)
+
+py_proto_library(
+    name = "query_result_py_pb2",
+    visibility = [
+        "//third_party/meltan/diagnostics/accelerators/nvidia_thermal:__subpackages__",
+    ],
+    deps = [":query_result_proto"],
 )
 
 cc_library(
