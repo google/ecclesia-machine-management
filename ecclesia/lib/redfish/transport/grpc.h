@@ -25,7 +25,6 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/time/clock.h"
-#include "grpcpp/channel.h"
 #include "grpcpp/security/credentials.h"
 
 namespace ecclesia {
@@ -37,6 +36,8 @@ struct GrpcTransportParams {
   absl::Duration timeout = absl::Seconds(40);
   // Timeout used to wait for channel to be connected.
   std::optional<absl::Duration> wait_for_connected_timeout = std::nullopt;
+  // bmcweb specific header to force a fresh payload, from the bmcweb cache
+  absl::Duration max_age = absl::InfiniteDuration();
 };
 
 absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(

@@ -383,6 +383,52 @@ TEST(GrpcRedfishTransport, Timeout) {
   }
 }
 
+TEST(GrpcRedfishTransport, MaxAgeSec) {
+  int port = ecclesia::FindUnusedPortOrDie();
+  GrpcTransportParams params;
+  StaticBufferBasedTlsOptions options;
+
+  // Set max_age_sec to 1 second, forcing bmcweb to refresh the cache.
+  params.max_age = absl::Seconds(1);
+
+  std::string endpoint = absl::StrCat("localhost:", port);
+  testing::internal::Notification notification;
+  GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
+                                        "localhost", port);
+
+  nlohmann::json json_body = nlohmann::json::parse(R"json_str({
+                      "@odata.id": "/redfish/v1/json_resource",
+                      "Type": "JSON"
+                      })json_str");
+
+  google::protobuf::Struct json_body_struct = JsonToStruct(json_body);
+  mockup_server.AddHttpGetHandler(
+    "/redfish/v1/json_resource",
+    [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
+        Response *response) {
+      EXPECT_THAT(request->headers(),
+                  Contains(Pair("BMCWEB_HINT_MAX_AGE_SEC", "1")));
+      *response->mutable_json() = json_body_struct;
+      response->set_code(200);
+      response->mutable_headers()->insert({"OData-Version", "4.0"});
+      return grpc::Status::OK;
+    });
+
+  auto transport = CreateGrpcRedfishTransport(
+          endpoint, params, options.GetChannelCredentials());
+
+  EXPECT_EQ(transport.status().code(), absl::StatusCode::kOk);
+  if (transport.ok()) {   // avoids "unchecked access to 'absl::StatusOr' value"
+  EXPECT_THAT((*transport)->Get("/redfish/v1"),
+                internal_status::IsStatusPolyMatcher(
+                    absl::StatusCode::kOk));
+
+  EXPECT_THAT((*transport)->Get("/redfish/v1/json_resource"),
+                internal_status::IsStatusPolyMatcher(
+                    absl::StatusCode::kOk));
+  }
+}
+
 TEST(GrpcRedfishTransport, EndpointFqdn) {
   StaticBufferBasedTlsOptions options;
   auto transport =

@@ -34,6 +34,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/interface.h"
@@ -81,6 +82,11 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
   request.mutable_headers()->insert(
       {std::string(kHostHeader), std::string(target_fqdn)});
   request.set_url(std::string(path));
+  if (params.max_age != absl::InfiniteDuration()){
+      request.mutable_headers()->insert(
+          {"BMCWEB_HINT_MAX_AGE_SEC",
+           absl::StrFormat("%d", absl::ToInt64Seconds(params.max_age))});
+  }
   if (json_str && !json_str->empty()) {
     *request.mutable_json_str() = *json_str;
     // to JSON str.
@@ -244,7 +250,7 @@ class GrpcRedfishEventStream : public RedfishEventStream {
 
 class GrpcRedfishTransport : public RedfishTransport {
  public:
-  // Creates an GrpcRedfishTransport using a specified endpoint and customized
+  // Creates a GrpcRedfishTransport using a specified endpoint and customized
   // credentials.
   // Params:
   //   endpoint: e.g. "dns:///localhost:80", "unix:///var/run/my.socket"
