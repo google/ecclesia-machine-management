@@ -190,6 +190,7 @@ inline constexpr char kRfOemPropertyTimeoutCount[] = "TimeoutCount";
 inline constexpr char kRfOemPropertyWatchdog[] = "Watchdog";
 inline constexpr char kRfOemPropertyWatchdogSystemResets[] =
     "WatchdogSystemResets";
+inline constexpr char kRfOemPropertyGpioErrorCount[] = "GpioErrorCount";
 inline constexpr char kRfOemPropertyHft[] = "Hft";
 inline constexpr char kRfOemPropertyHftSensorList[] = "HftSensorList";
 inline constexpr char kRfOemPropertyHftSensorName[] = "name";
@@ -541,6 +542,7 @@ DEFINE_REDFISH_PROPERTY(OemGooglePropertyNerf, std::string, "NERF");
 DEFINE_REDFISH_PROPERTY(OemPropertyRootOfTrust, std::string, "RootOfTrust");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyWatchdogSystemResets, int,
                         "WatchdogSystemResets");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyGpioErrorCount, int, "GpioErrorCount");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyBusName, std::string, "BusName");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyRxErrorCount, int, "RxErrorCount");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyTotalRxPackets, int, "TotalRxPackets");
