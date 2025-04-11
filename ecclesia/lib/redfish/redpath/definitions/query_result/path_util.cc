@@ -85,7 +85,7 @@ absl::StatusOr<QueryValue*> ProcessNextMutableQueryValue(
         if (absl::StrContains(identifier_set, "=")) {
           std::vector<std::pair<std::string, std::string>> identifier_parts;
           for (absl::string_view identifier :
-               absl::StrSplit(identifier_set, ',')) {
+               absl::StrSplit(identifier_set, ';')) {
             std::vector<std::string> parts = absl::StrSplit(identifier, '=');
             if (parts.size() != 2) {
               return absl::InvalidArgumentError(

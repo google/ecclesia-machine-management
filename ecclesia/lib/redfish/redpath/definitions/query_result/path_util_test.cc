@@ -496,7 +496,7 @@ TEST(GetQueryValueFromResult, IdentifierMatchMultiplePredicates) {
   )pb");
 
   std::string path =
-      "query1.subquery_id[name1=\"value1\",name2=\"value2\"].name1";
+      "query1.subquery_id[name1=\"value1\";name2=\"value2\"].name1";
 
   EXPECT_THAT(
       GetQueryValueFromResult(result, path),
@@ -1115,6 +1115,55 @@ INSTANTIATE_TEST_SUITE_P(
             )pb"),
             .path =
                 "query1.subquery_id[_id_={\"_local_devpath_\":\"/phys\"}].name",
+            .expected_value =
+                ParseTextProtoOrDie(R"pb(string_value: "value1")pb"),
+        },
+        {
+            .result = ParseTextProtoOrDie(R"pb(
+              query_id: "query1"
+              data: {
+                fields {
+                  key: "subquery_id"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "_id_"
+                            value {
+                              identifier {
+                                local_devpath: "/phys",
+                                machine_devpath: "/phys"
+                              }
+                            }
+                          }
+                          fields {
+                            key: "name"
+                            value { string_value: "value1" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "_id_"
+                            value {
+                              identifier { local_devpath: "/phys/something" }
+                            }
+                          }
+                          fields {
+                            key: "name"
+                            value { string_value: "value2" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            )pb"),
+            .path = "query1.subquery_id[_id_={\"_local_devpath_\":\"/"
+                    "phys\",\"_machine_devpath_\":\"/phys\"}].name",
             .expected_value =
                 ParseTextProtoOrDie(R"pb(string_value: "value1")pb"),
         },
