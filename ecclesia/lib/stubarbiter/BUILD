@@ -40,3 +40,25 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "util",
+    srcs = ["util.cc"],
+    hdrs = ["util.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":arbiter",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+    ],
+)
+
+cc_test(
+    name = "util_test",
+    srcs = ["util_test.cc"],
+    deps = [
+        ":arbiter",
+        ":util",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
