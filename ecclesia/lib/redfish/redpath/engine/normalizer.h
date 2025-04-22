@@ -170,10 +170,9 @@ class RedpathNormalizerImplAddMachineBarepath final
  public:
   explicit RedpathNormalizerImplAddMachineBarepath(
       std::unique_ptr<IdAssigner> id_assigner,
-      bool use_local_devpath_for_machine_devpath = false)
+      bool use_redfish_location_as_fallback)
       : id_assigner_(std::move(id_assigner)),
-        use_local_devpath_for_machine_devpath_(
-            use_local_devpath_for_machine_devpath) {}
+      use_redfish_location_as_fallback_(use_redfish_location_as_fallback) {}
 
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
@@ -183,7 +182,7 @@ class RedpathNormalizerImplAddMachineBarepath final
 
  private:
   std::unique_ptr<IdAssigner> id_assigner_;
-  bool use_local_devpath_for_machine_devpath_ = false;
+  bool use_redfish_location_as_fallback_;
 };
 
 // Builds normalizer that transparently returns queried redfish property without
@@ -216,7 +215,7 @@ BuildRedpathNormalizerWithMachineDevpath(
 
   normalizer->AddRedpathNormalizer(
       std::make_unique<RedpathNormalizerImplAddMachineBarepath>(
-          std::move(id_assigner)));
+          std::move(id_assigner), /*use_redfish_location_as_fallback=*/true));
   return normalizer;
 }
 
@@ -230,8 +229,7 @@ BuildRedpathNormalizerWithMachineDevpath(
 
   normalizer->AddRedpathNormalizer(
       std::make_unique<RedpathNormalizerImplAddMachineBarepath>(
-          std::move(id_assigner),
-          /*use_local_devpath_for_machine_devpath=*/true));
+          std::move(id_assigner), /*use_redfish_location_as_fallback=*/false));
   return normalizer;
 }
 

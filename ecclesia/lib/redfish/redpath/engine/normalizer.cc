@@ -438,26 +438,17 @@ absl::Status RedpathNormalizerImplAddMachineBarepath::Normalize(
          .mutable_identifier() = {};
   }
 
-  // Try to find and set a machine devpath, prioritizing local devpath to
-  // machine devpath mappings from UHMM when desired.
+  // Try to find and set a machine devpath, prioritizing local devpath.
   absl::StatusOr<std::string> machine_devpath;
-  if (use_local_devpath_for_machine_devpath_) {
-    if (!query_value_reader.ok() ||
-        !query_value_reader->identifier().has_local_devpath()) {
-      return absl::OkStatus();
-    }
+  if (query_value_reader.ok() &&
+      query_value_reader->identifier().has_local_devpath()) {
     machine_devpath =
         id_assigner_->IdForLocalDevpathInQueryResult(data_set_local);
-  } else {
+  }
+  if (use_redfish_location_as_fallback_ &&
+      (!machine_devpath.ok() || machine_devpath->empty())) {
     machine_devpath = id_assigner_->IdForRedfishLocationInQueryResult(
         data_set_local, is_root);
-    // Attempt to fallback to local devpath to derive machine devpath if we
-    // cannot find a machine devpath using redfish location properties.
-    if (!machine_devpath.ok() && query_value_reader.ok() &&
-        query_value_reader->identifier().has_local_devpath()) {
-      machine_devpath =
-          id_assigner_->IdForLocalDevpathInQueryResult(data_set_local);
-    }
   }
   if (machine_devpath.ok() && !machine_devpath->empty()) {
     (*data_set_local.mutable_fields())[kIdentifierTag]
