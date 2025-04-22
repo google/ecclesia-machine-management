@@ -159,6 +159,8 @@ inline constexpr char kRfOemPropertyAttachedTo[] = "AttachedTo";
 inline constexpr char kRfOemPropertyGoogle[] = "Google";
 inline constexpr char kRfOemPropertyGoogleComputerSystemBootGuestOs[] =
     "#GoogleComputerSystem.BootGuestOS";
+inline constexpr char kRfOemPropertyGoogleBareMetalInstance[] =
+    "BareMetalInstance";
 inline constexpr char kRfOemPropertyComponents[] = "Components";
 inline constexpr char kRfOemPropertyMemoryErrorCounts[] = "MemoryErrorCounts";
 inline constexpr char kRfOemPropertyProcessorErrorCounts[] =
