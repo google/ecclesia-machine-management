@@ -31,6 +31,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/base/nullability.h"
 #include "absl/container/btree_map.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
@@ -98,15 +99,19 @@ absl::StatusOr<std::string> GetNavigationalPropertyToSubscribe(
   nlohmann::json json = current_redfish_obj->GetContentAsJson();
   auto find_node_name = json.find(expression.expression);
   if (find_node_name == json.end()) {
-    return absl::InternalError(
-        "Cannot find NodeName in Redfish Object for subscription.");
+    return absl::InternalError(absl::StrCat(
+        "Cannot find ",
+        (expression.type == RedPathExpression::Type::kPredicate)
+          ? absl::StrCat("predicate [", expression.expression, "]")
+          : absl::StrCat("node name ", expression.expression),
+        " in Redfish Object for subscription."));
   }
 
   auto find_navigational_property = find_node_name->find(PropertyOdataId::Name);
   if (find_navigational_property == find_node_name->end()) {
-    return absl::InternalError(
-        "Cannot find navigational property in Redfish Object for "
-        "subscription.");
+    return absl::InternalError(absl::StrCat(
+        "Cannot find navigational property: ", PropertyOdataId::Name,
+        " in Redfish Object for subscription."));
   }
   // Append query parameters to navigational property.
   std::string params = get_params_for_redpath.ToString();
@@ -289,12 +294,27 @@ RedPathRedfishQueryParams CombineQueryParams(
 // Gets RedfishObject from given RedfishVariant.
 // Issues fresh query if the object is served from cache and freshness is
 // required.
-absl::StatusOr<std::unique_ptr<RedfishObject>> GetRedfishObjectWithFreshness(
-    const GetParams &params, const RedfishVariant &variant,
-    const std::optional<TraceInfo> &trace_info,
-    std::atomic<int64_t> *cache_miss, bool is_query_execution_cancelled) {
+absl::StatusOr< std::unique_ptr<RedfishObject>>
+GetRedfishObjectWithFreshness(const GetParams &params,
+                              RedfishVariant &variant,
+                              const std::optional<TraceInfo> &trace_info,
+                              std::atomic<int64_t> *cache_miss,
+                              bool is_query_execution_cancelled) {
+  // Do not fetch the fresh payload if the query has been cancelled. Return a
+  // cancelled error
+  if (is_query_execution_cancelled) {
+    return absl::CancelledError("Query has been cancelled.");
+  }
+  if (!variant.status().ok()) {
+    return absl::FailedPreconditionError(absl::StrCat(
+      "RedfishVariant object has status: ", variant.status().message()));
+  }
   std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
-  if (!redfish_object) return nullptr;
+  if (!redfish_object) {
+    LOG(INFO) << "RedfishVariant object is null with OK status. "
+              << "This is only acceptable in test cases using mockups.";
+    return nullptr;
+  }
   if (trace_info.has_value()) {
     LOG(INFO) << "Redfish Object Trace:" << "\nredpath_current: "
               << trace_info->redpath_prefix
@@ -302,12 +322,6 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> GetRedfishObjectWithFreshness(
               << "\nquery_id: " << trace_info->query_id << '\n'
               << trace_info->redpath_node << "Query result:\n"
               << redfish_object->GetContentAsJson().dump(1);
-  }
-
-  // Do not fetch the fresh payload if the query has been cancelled. Return a
-  // cancelled error
-  if (is_query_execution_cancelled) {
-    return absl::CancelledError("Query has been cancelled.");
   }
   if (params.freshness != GetParams::Freshness::kRequired) {
     return redfish_object;
@@ -320,7 +334,7 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> GetRedfishObjectWithFreshness(
   if (variant.IsFresh() == CacheState::kIsCached) {
     (*cache_miss) = (*cache_miss) + 1;
   }
-  if (!refetch_obj.ok()) return nullptr;
+  if (!refetch_obj.ok()) return refetch_obj.status();
   return std::move(refetch_obj.value());
 }
 
@@ -338,19 +352,44 @@ absl::StatusOr<bool> ExecutePredicateExpression(
   return predicate_rule_result;
 }
 
+std::string GetUriFromContext(const QueryExecutionContext &execution_context,
+                              std::optional<int> index = std::nullopt) {
+  if (execution_context.redfish_response.redfish_object == nullptr) {
+    return "(Redfish Object not available from response)";
+  }
+  if (execution_context.redfish_response.redfish_iterable != nullptr &&
+      index != std::nullopt) {
+    const nlohmann::json response_content =
+        execution_context.redfish_response.redfish_object->GetContentAsJson();
+    if (response_content == nlohmann::json::value_t::discarded) {
+      return "(URI Not Available from Redfish Object)";
+    }
+    return response_content[PropertyMembers::Name][index.value()]
+                           [PropertyOdataId::Name];
+  }
+  return execution_context.redfish_response.redfish_object->GetUriString()
+        .value_or("(URI Not Available from Redfish Object)");
+}
+
 // Populates the result with the subquery error status that occurs.
 void PopulateSubqueryErrorStatus(const absl::Status &node_status,
                                  QueryExecutionContext &execution_context,
                                  const RedPathExpression &expression) {
+  std::string failed_redpath =
+      AddExpressionToRedPath(
+          execution_context.redpath_prefix_tracker.last_redpath_prefix,
+          expression);
+  std::string redfish_uri = GetUriFromContext(execution_context);
+  std::string error_message = absl::StrCat(
+      "Querying ",
+      (expression.type == RedPathExpression::Type::kPredicate)
+          ? absl::StrCat("predicate [", expression.expression, "]")
+          : absl::StrCat("node name ", expression.expression),
+      " from Redpath: ", failed_redpath,
+      " with URI: ", redfish_uri,
+      " resulted in error: ", node_status.message());
   ErrorCode error_code = ecclesia::ErrorCode::ERROR_INTERNAL;
   absl::StatusCode code = node_status.code();
-  std::string node_name = expression.expression;
-  std::string last_executed_redpath =
-      execution_context.redpath_prefix_tracker.last_redpath_prefix;
-  std::string error_message = absl::StrCat(
-      "Cannot resolve NodeName ", node_name,
-      " to valid Redfish object at path ", last_executed_redpath,
-      ". Redfish Request failed with error: ", node_status.message());
   if (code == absl::StatusCode::kUnavailable) {
     error_code = ecclesia::ErrorCode::ERROR_UNAVAILABLE;
   } else if (code == absl::StatusCode::kUnauthenticated) {
@@ -434,7 +473,7 @@ QueryPlanner::QueryPlanner(ImplOptions options_in)
       plan_id_(options_in.query->query_id()),
       normalizer_(*ABSL_DIE_IF_NULL(options_in.normalizer)),
       additional_normalizers_(options_in.additional_normalizers),
-      redpath_trie_node_(std::move(options_in.redpath_trie_node)),
+      redpath_trie_root_(std::move(options_in.redpath_trie_node)),
       redpath_rules_(std::move(options_in.redpath_rules)),
       redfish_interface_(options_in.redfish_interface),
       service_root_(query_.has_service_root()
@@ -712,10 +751,19 @@ QueryPlanner::ExecuteQueryExpression(
           continue;
         }
 
+        absl::Status error_status = indexed_node.status().ok()
+            ? indexed_node_as_object.status()
+            : indexed_node.status();
+        error_status = absl::Status(error_status.code(), absl::StrCat(
+            "At resource URI: ",
+            GetUriFromContext(current_execution_context, node_index), ": ",
+            error_status.message()));
         if (execution_mode_ == QueryPlanner::ExecutionMode::kFailOnFirstError) {
-          return (!indexed_node.status().ok())
-                     ? indexed_node.status()
-                     : indexed_node_as_object.status();
+          return error_status;
+        }
+        if (error_status.code() != absl::StatusCode::kNotFound) {
+          PopulateSubqueryErrorStatus(error_status, current_execution_context,
+                                      expression);
         }
         continue;
       }
@@ -917,7 +965,18 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
 
   if (query_resume_options.redfish_interface == nullptr &&
       redfish_interface_ == nullptr) {
-    result.mutable_status()->add_errors("Redfish interface is not set");
+    const absl::flat_hash_set<RedPathExpression> &expressions =
+        execution_context.redpath_trie_node->child_expressions;
+    if (expressions.empty()) {
+      result.mutable_status()->add_errors( "Redfish interface is not set when "
+          "resuming with no remaining expressions to query");
+    } else {
+      result.mutable_status()->add_errors(
+        absl::StrCat("Redfish interface is not set before querying ",
+          expressions.begin()->type == RedPathExpression::Type::kPredicate
+            ? absl::StrCat("predicate [", expressions.begin()->expression, "]")
+            : absl::StrCat("node ", expressions.begin()->expression)));
+    }
     result.mutable_status()->set_error_code(
         ecclesia::ErrorCode::ERROR_INTERNAL);
     return result;
@@ -967,7 +1026,8 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
             continue;
           }
           result.mutable_status()->add_errors(absl::StrCat(
-              "Unable to normalize: ", normalize_status.message()));
+              "Unable to normalize: ", normalize_status.message(),
+              " For URI: ", GetUriFromContext(new_execution_context)));
           result.mutable_status()->set_error_code(
               ecclesia::ErrorCode::ERROR_INTERNAL);
           return result;
@@ -1044,7 +1104,8 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
 
   if (query_execution_options.redfish_interface == nullptr &&
       redfish_interface_ == nullptr) {
-    result.mutable_status()->add_errors("Redfish interface is not set");
+    result.mutable_status()->add_errors(
+        "Redfish interface is not set before query execution");
     result.mutable_status()->set_error_code(
         ecclesia::ErrorCode::ERROR_INTERNAL);
     return query_execution_result;
@@ -1057,7 +1118,8 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
 
   // If query execution has been cancelled, do not query service root.
   if (IsQueryExecutionCancelled()) {
-    result.mutable_status()->add_errors("Query execution cancelled.");
+    result.mutable_status()->add_errors(
+        "Query execution cancelled before querying service root.");
     result.mutable_status()->set_error_code(
         ecclesia::ErrorCode::ERROR_CANCELLED);
     return query_execution_result;
@@ -1097,7 +1159,9 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
   if (!service_root_object.ok() || *service_root_object == nullptr) {
     result.mutable_status()->add_errors(
         absl::StrCat("Unable to query service root: ",
-                     service_root_object.status().message()));
+                     service_root_object.ok()
+                     ? "Getting object with freshness returned nullptr"
+                     : service_root_object.status().message()));
     result.mutable_status()->set_error_code(
         service_root_object.status().code() ==
                 absl::StatusCode::kDeadlineExceeded
@@ -1113,7 +1177,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
       &result, {}, &query_execution_options.variables, RedPathPrefixTracker(),
       query_execution_options.redpath_query_tracker,
       {std::move(*service_root_object), nullptr});
-  query_execution_context.redpath_trie_node = redpath_trie_node_.get();
+  query_execution_context.redpath_trie_node = redpath_trie_root_.get();
 
   // Populate subquery data from root node.
   if (!query_execution_context.redpath_trie_node->subquery_id.empty()) {
@@ -1218,7 +1282,8 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
                                 query_execution_options.enable_url_annotation});
           if (!normalize_status.ok()) {
             result.mutable_status()->add_errors(absl::StrCat(
-                "Unable to normalize: ", normalize_status.message()));
+                "Unable to normalize: ", normalize_status.message(),
+                " For URI: ", GetUriFromContext(execution_context)));
             if (execution_context.result.has_status() &&
                 execution_context.result.status().error_code() ==
                     ecclesia::ErrorCode::ERROR_CANCELLED) {

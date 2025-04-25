@@ -269,7 +269,7 @@ class QueryPlanner final : public QueryPlannerIntf {
   // RedpathNormalizer is thread safe.
   RedpathNormalizer &normalizer_;
   const std::vector<RedpathNormalizer *> additional_normalizers_;
-  const std::unique_ptr<RedPathTrieNode> redpath_trie_node_;
+  const std::unique_ptr<RedPathTrieNode> redpath_trie_root_;
   const RedPathRules redpath_rules_;
   // Redfish interface is thread safe.
   RedfishInterface *redfish_interface_ = nullptr;

@@ -1797,8 +1797,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerRunWithoutRedfishInterface) {
   EXPECT_TRUE(result.query_result.has_status());
   EXPECT_THAT(result.query_result.status().error_code(),
               ecclesia::ErrorCode::ERROR_INTERNAL);
-  EXPECT_THAT(result.query_result.status().errors(),
-              UnorderedElementsAre("Redfish interface is not set"));
+  EXPECT_THAT(
+      result.query_result.status().errors(),
+      UnorderedElementsAre("Redfish interface is not set before query "
+                           "execution"));
 }
 
 DelliciusQuery GetSubscriptionQuery() {
@@ -2612,7 +2614,9 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryWithoutRedfishInterfaceError) {
   EXPECT_THAT(resume_query_result->status().error_code(),
               ecclesia::ErrorCode::ERROR_INTERNAL);
   EXPECT_THAT(resume_query_result->status().errors(),
-              UnorderedElementsAre("Redfish interface is not set"));
+              UnorderedElementsAre("Redfish interface is not set when "
+                                   "resuming with no remaining expressions "
+                                   "to query"));
 }
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesUriCorrectly) {
@@ -3679,8 +3683,8 @@ TEST_F(QueryPlannerTestRunner, CheckQueryPlannerPopulatesStatus) {
   EXPECT_THAT(
       result.query_result.status().errors().at(0),
       HasSubstr(
-          "Cannot resolve NodeName Chassis to valid Redfish object at path . "
-          "Redfish Request failed with error: Service Unavailable"));
+          "Querying node name Chassis from Redpath: /Chassis with URI: "
+          "/redfish/v1 resulted in error: Service Unavailable"));
 }
 
 TEST_F(QueryPlannerTestRunner, TestNestedNodeNameInQueryProperty) {
@@ -3908,8 +3912,9 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulatedCollectionResource) {
   EXPECT_THAT(
       result->query_result.status().errors().at(0),
       HasSubstr(
-          "Cannot resolve NodeName * to valid Redfish object at path /Managers."
-          " Redfish Request failed with error: Unauthorized"));
+          "Querying predicate [*] from Redpath: /Managers[*] with URI: "
+          "/redfish/v1/Managers resulted in error: At resource URI: "
+          "/redfish/v1/Managers/ecclesia_agent: Unauthorized"));
 }
 
 TEST_F(QueryPlannerTestRunner, CheckUnresolvedNodeIsNotAnError) {
@@ -4690,12 +4695,15 @@ TEST_F(QueryPlannerTestRunner,
   absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(
       query, QueryPlanner::ExecutionMode::kContinueOnSubqueryErrors);
 
-  // Ensure that after encountering a NOT_FOUND error, the query status is
-  // OK and no error summaries are populated.
+  // Ensure that after encountering a NOT_FOUND error, the query status is OK.
   ASSERT_THAT(result, IsOk());
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "SensorCollector"
-    stats { payload_size: 1189 num_cache_misses: 18 }
+    status {
+      errors: "Querying predicate [*] from Redpath: /Chassis[*]/Sensors[*] with URI: /redfish/v1/Chassis/chassis/Sensors resulted in error: At resource URI: /redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm: Unauthorized"
+      error_code: ERROR_UNAUTHENTICATED
+    }
+    stats { payload_size: 1403 num_cache_misses: 18 }
     data {
       fields {
         key: "Sensors"
@@ -4997,10 +5005,10 @@ TEST_F(QueryPlannerTestRunner,
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "SensorCollector"
     status {
-      errors: "Cannot resolve NodeName * to valid Redfish object at path /Chassis[*]/Sensors. Redfish Request failed with error: Unauthorized"
+      errors: "Querying predicate [*] from Redpath: /Chassis[*]/Sensors[*] with URI: /redfish/v1/Chassis/chassis/Sensors resulted in error: At resource URI: /redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm: Unauthorized"
       error_code: ERROR_UNAUTHENTICATED
     }
-    stats { payload_size: 152 num_cache_misses: 12 }
+    stats { payload_size: 233 num_cache_misses: 12 }
   )pb");
   EXPECT_THAT(result->query_result,
               ecclesia::EqualsProto(expected_query_result));

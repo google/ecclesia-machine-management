@@ -2163,7 +2163,7 @@ TEST_F(QueryEngineGrpcTestRunner, QueryEngineQueryCancellationTest) {
         query_id: "SensorCollector"
         status {
           errors: "Query execution cancelled."
-          errors: "Unable to normalize: Redfish object is null in query execution context: /Chassis[*]/Sensors[*]"
+          errors: "Unable to normalize: Redfish object is null in query execution context: /Chassis[*]/Sensors[*] For URI: (Redfish Object not available from response)"
           error_code: ERROR_CANCELLED
         }
         stats {}
