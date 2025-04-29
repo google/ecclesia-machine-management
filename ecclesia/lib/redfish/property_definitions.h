@@ -558,6 +558,12 @@ DEFINE_REDFISH_PROPERTY(OemPropertyEmbeddedLocationContext,
 DEFINE_REDFISH_PROPERTY(OemPropertyControllerType, std::string,
                         "ControllerType");
 
+// OEM Nvidia properties
+DEFINE_REDFISH_PROPERTY(OemPropertyPowerLimitPersistency,
+                        bool, "PowerLimitPersistency");
+DEFINE_REDFISH_PROPERTY(OemPropertyRequestedPersistentPowerLimitWatts,
+                        int, "RequestedPersistentPowerLimitWatts");
+
 // OEM HFT properties
 DEFINE_REDFISH_PROPERTY(OemPropertyHftReading, std::string, "reading");
 DEFINE_REDFISH_PROPERTY(OemPropertyHftTimestamp, std::string, "timestamp");
