@@ -76,6 +76,8 @@ void RemoveUnpopulatedExpressions(PredicateObject &predicate_object) {
   for (PredicateObject child : predicate_object.child_predicates) {
     if (!child.relational_expression.rel_operator.empty()) {
       if (absl::StrContains(child.relational_expression.rhs, "$")) {
+        LOG(WARNING) << "Unpopulated query variable found: "
+                  << child.relational_expression.rhs;
         // If an unpopulated variable is found do not add it or the accompanying
         // logical operator.
         logical_operators_index++;
@@ -131,6 +133,8 @@ absl::StatusOr<std::string> InvalidateUnpopulatedVariables(
   // If the predicate is just a single expression with an unpopulated variable,
   // simply return the select-all symbol '*'.
   if (!predicate_object.relational_expression.rel_operator.empty()) {
+    LOG(WARNING) << "Unpopulated query variable found: "
+              << predicate_object.relational_expression.rhs;
     return std::string(kPredicateSelectAll);
   }
   // Call a recursive function to remove the relational expressions with an
