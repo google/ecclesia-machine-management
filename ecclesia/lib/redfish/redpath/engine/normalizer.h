@@ -185,8 +185,11 @@ class RedpathNormalizerImplAddMachineBarepath final
   bool use_redfish_location_as_fallback_;
 };
 
+// Step 1 for Devpath2 and Step 1 for Devpath3:
 // Builds normalizer that transparently returns queried redfish property without
 // normalization for client variables or devpaths.
+// Local Devpath derived here: From "GetAdditionalProperties()" collection.
+// Redfish Location derived here: From "GetAdditionalProperties()" collection.
 inline std::unique_ptr<RedpathNormalizer> BuildDefaultRedpathNormalizer() {
   auto normalizer = std::make_unique<RedpathNormalizer>();
   normalizer->AddRedpathNormalizer(
@@ -194,39 +197,47 @@ inline std::unique_ptr<RedpathNormalizer> BuildDefaultRedpathNormalizer() {
   return normalizer;
 }
 
-// Builds normalizer that transparently returns queried redfish property but
-// extends the QueryPlanner to construct devpath for normalized subquery output.
+// Step 2 for Devpath2:
+// Local Devpath derived here (Fallback to step 1): From node topology.
 inline std::unique_ptr<RedpathNormalizer>
 BuildDefaultRedpathNormalizerWithLocalDevpath(NodeTopology node_topology) {
+  // Includes step 1 for Devpath2
   auto normalizer = BuildDefaultRedpathNormalizer();
+  // Step 2 for Devpath2
   normalizer->AddRedpathNormalizer(
       std::make_unique<RedpathNormalizerImplAddDevpath>(
           std::move(node_topology)));
   return normalizer;
 }
 
-// Extends default normalizer to populate machine devpaths using Redfish stable
-// identifier.
+// Step 2 for Devpath3:
+// Machine Devpath derived here:
+// 1: From node_local_barepath map. Requires local devpath present from step 1.
+// 2 (Fallback): From redfish location map. Requires service label and part
+// location context present from step 1.
 inline std::unique_ptr<RedpathNormalizer>
 BuildRedpathNormalizerWithMachineDevpath(
     std::unique_ptr<IdAssigner> id_assigner) {
+  // Includes step 1 for Devpath3
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizer();
-
+  // Step 2 for Devpath3
   normalizer->AddRedpathNormalizer(
       std::make_unique<RedpathNormalizerImplAddMachineBarepath>(
           std::move(id_assigner), /*use_redfish_location_as_fallback=*/true));
   return normalizer;
 }
 
-// Extends default normalizer with local devpath to populate machine devpaths
-// using Redfish stable identifier.
+// Step 3 for Devpath2:
+// Machine Devpath derived here: From node_local_barepath map. Requires local
+// devpath present from step 1 or step 2. No fallback.
 inline std::unique_ptr<RedpathNormalizer>
 BuildRedpathNormalizerWithMachineDevpath(
     std::unique_ptr<IdAssigner> id_assigner, NodeTopology node_topology) {
+  // Includes steps 1 and 2 for Devpath2
   std::unique_ptr<RedpathNormalizer> normalizer =
       BuildDefaultRedpathNormalizerWithLocalDevpath(std::move(node_topology));
-
+  // Step 3 for Devpath2
   normalizer->AddRedpathNormalizer(
       std::make_unique<RedpathNormalizerImplAddMachineBarepath>(
           std::move(id_assigner), /*use_redfish_location_as_fallback=*/false));
@@ -238,11 +249,15 @@ inline RedpathNormalizer::QueryIdToNormalizerMap DefaultRedpathNormalizerMap() {
   return {};
 }
 
+// For stable_id_type = kRedfishLocationDerived, returns "Step 2 for Devpath2".
+// For stable_id_type = kRedfishLocation, returns "Step 1 for Devpath3".
 std::unique_ptr<RedpathNormalizer> BuildLocalDevpathRedpathNormalizer(
     RedfishInterface *redfish_interface,
     RedpathNormalizer::RedfishStableIdType stable_id_type,
     absl::string_view redfish_topology_config_name);
 
+// For stable_id_type = kRedfishLocationDerived, returns "Step 3 for Devpath2".
+// For stable_id_type = kRedfishLocation, returns "Step 2 for Devpath3".
 std::unique_ptr<RedpathNormalizer> GetMachineDevpathRedpathNormalizer(
     RedpathNormalizer::RedfishStableIdType stable_id_type,
     absl::string_view redfish_topology_config_name,
