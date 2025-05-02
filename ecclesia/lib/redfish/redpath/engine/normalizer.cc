@@ -366,8 +366,8 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
         std::move(identifier);
   }
 
-  // Add URI annotation to data set if it is not empty.
-  if (options.enable_url_annotation && data_set_local.fields_size() > 0) {
+  // Add URI annotation to data set.
+  if (options.enable_url_annotation) {
     if (auto it = json_content.find(ecclesia::PropertyOdataId::Name);
         it != json_content.end()) {
       QueryValue query_value;
