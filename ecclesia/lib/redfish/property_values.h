@@ -55,6 +55,7 @@ inline constexpr char kOemHpe[] = "Hpe";
 inline constexpr char kOemHpeOemChassisType[] = "OemChassisType";
 inline constexpr char kCertificateTypePEM[] = "PEM";
 inline constexpr char kCertificateTypePEMchain[] = "PEMchain";
+inline constexpr char kProtocolEmmc[] = "eMMC";
 inline constexpr char kProtocolSata[] = "SATA";
 inline constexpr char kProtocolNvme[] = "NVMe";
 inline constexpr char kProtocolPcie[] = "PCIe";
