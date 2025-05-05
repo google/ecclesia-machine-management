@@ -321,9 +321,6 @@ nlohmann::json ValueToJson(const QueryValue& value) {
       }
       break;
     }
-    case QueryValue::kNullValue:
-      json = nullptr;
-      break;
     case QueryValue::KIND_NOT_SET:
       json = nlohmann::json::object();
       break;
@@ -345,7 +342,7 @@ QueryResultData JsonToQueryResultData(const nlohmann::json& json) {
 QueryValue JsonToQueryValue(const nlohmann::json& json) {
   QueryValue value;
   if (json.is_null()) {
-    value.set_null_value(QueryValue::NULL_VALUE);
+    value.set_string_value("null");
   } else if (json.is_number_integer()) {
     value.set_int_value(json.get<int64_t>());
   } else if (json.is_number_float()) {

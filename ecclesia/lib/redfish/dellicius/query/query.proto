@@ -41,7 +41,6 @@ message DelliciusQuery {
       string name = 2;
       PrimitiveType type = 3;
       PropertyElementType property_element_type = 4;
-      bool nullable = 5;
     }
     // Uniquely identifies the subquery. It is the responsibility of client
     // application to use a unique string else the subquery output will be

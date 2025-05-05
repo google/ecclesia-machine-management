@@ -33,9 +33,6 @@ message QueryValue {
       bytes raw_bytes_value = 2;
     }
   }
-  enum NullValue {
-    NULL_VALUE = 0;
-  }
   // The kind of value.
   oneof kind {
     int64 int_value = 1;
@@ -55,8 +52,6 @@ message QueryValue {
     Identifier identifier = 8;
     // Represenst raw data value.
     RawData raw_data = 9;
-    // Represents a null value.
-    NullValue null_value = 10;
   }
 }
 

@@ -222,14 +222,11 @@ absl::StatusOr<QueryValue> GetPropertyFromRedfishObject(
     ECCLESIA_RETURN_IF_ERROR(GetCollectionPropertyFromRedfishObject(
         property, json_obj, query_value));
   } else if (json_obj.is_null()) {
-    if (!property.nullable()) {
-      std::string error_message = absl::StrCat(
-          "Encountered null property value during normalization. Property: ",
-          property.property(), " JSON: ", json_obj.dump());
-      LOG(ERROR) << error_message;
-      return absl::NotFoundError(error_message);
-    }
-    query_value.set_null_value(QueryValue::NULL_VALUE);
+    std::string error_message = absl::StrCat(
+        "Encountered null property value during normalization. Property: ",
+        property.property(), " JSON: ", json_obj.dump());
+    LOG(INFO) << error_message;
+    return absl::NotFoundError(error_message);
   } else {
     switch (property.type()) {
       case RedfishProperty::STRING: {
@@ -313,8 +310,7 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
   const nlohmann::json json_content = redfish_object.GetContentAsJson();
   for (const DelliciusQuery::Subquery::RedfishProperty &property :
        subquery.properties()) {
-    absl::StatusOr<QueryValue> property_out =
-        GetPropertyFromRedfishObject(json_content, property);
+    auto property_out = GetPropertyFromRedfishObject(json_content, property);
     // It is not an error if normalizer fails to normalize a property if
     // required property is not part of Resource attributes.
     if (!property_out.ok()) {
