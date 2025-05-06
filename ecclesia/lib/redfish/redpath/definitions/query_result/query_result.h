@@ -80,6 +80,12 @@ class QueryValueBuilder {
     return *this;
   }
 
+  // Sets `value` to a null value.
+  QueryValueBuilder& operator=(ecclesia::QueryValue::NullValue other) {
+    query_value_.set_null_value(other);
+    return *this;
+  }
+
   // Sets `value` to a string.
   QueryValueBuilder& operator=(const std::string& other) {
     query_value_.set_string_value(other);

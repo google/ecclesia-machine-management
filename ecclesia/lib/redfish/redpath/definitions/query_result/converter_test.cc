@@ -940,6 +940,12 @@ TEST(JsonToValueTest, ListValueTest) {
               )pb"));
 }
 
+TEST(JsonToValueTest, NullValueTest) {
+  nlohmann::json json = nlohmann::json::parse(R"json(null)json");
+  ASSERT_THAT(JsonToQueryValue(json),
+              EqualsProto(R"pb(null_value: NULL_VALUE)pb"));
+}
+
 TEST(JsonToValueTest, RawDataInQueryResultDataTest) {
   ecclesia::DelliciusQueryResult legacy_raw_data_result = ParseTextProtoOrDie(
       R"pb(

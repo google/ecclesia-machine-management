@@ -169,6 +169,7 @@ absl::Status CompareTypes(
     case QueryValue::kIdentifier:
       is_equal = true;
       break;
+    case QueryValue::kNullValue:
     case QueryValue::kListValue:
     case QueryValue::kTimestampValue:
     case QueryValue::kSubqueryValue:
