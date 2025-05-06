@@ -28,17 +28,59 @@
 #include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "absl/types/span.h"
-#include "ecclesia/lib/redfish/redpath/definitions/query_result/converter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/status/macros.h"
+#include "ecclesia/lib/time/proto.h"
 
 namespace ecclesia {
 namespace {
 
 enum class Operation : std::uint8_t { kGet, kRemove };
+
+absl::StatusOr<std::string> QueryValueToString(const QueryValue& query_value) {
+  switch (query_value.kind_case()) {
+    case QueryValue::kStringValue:
+      return query_value.string_value();
+    case QueryValue::kIntValue:
+      return absl::StrCat(query_value.int_value());
+    case QueryValue::kDoubleValue:
+      return absl::StrCat(query_value.double_value());
+    case QueryValue::kTimestampValue: {
+      return absl::FormatTime(
+          "%Y-%m-%dT%H:%M:%E*SZ",
+          AbslTimeFromProtoTime(query_value.timestamp_value()),
+          absl::UTCTimeZone());
+    }
+    case QueryValue::kBoolValue:
+      return absl::StrFormat("%v", query_value.bool_value());
+    case QueryValue::kIdentifier: {
+      std::vector<std::string> identifier_string;
+      if (query_value.identifier().has_local_devpath()) {
+        identifier_string.push_back(absl::StrCat(
+            "_local_devpath_:", query_value.identifier().local_devpath()));
+      }
+      if (query_value.identifier().has_machine_devpath()) {
+        identifier_string.push_back(absl::StrCat(
+            "_machine_devpath_:", query_value.identifier().machine_devpath()));
+      }
+
+      if (!identifier_string.empty()) {
+        return absl::StrCat("{", absl::StrJoin(identifier_string, ","), "}");
+      }
+      return absl::InvalidArgumentError("Identifier is empty");
+    }
+    default:
+      return absl::InvalidArgumentError("QueryValue is not a supported type");
+  }
+
+  return absl::InvalidArgumentError("QueryValue is not a supported type");
+}
 
 bool CompareListIdentifier(
     const QueryValue& query_value,
@@ -49,11 +91,8 @@ bool CompareListIdentifier(
     if (it == fields.end()) {
       return false;
     }
-    if (it->second.has_identifier() &&
-        IdentifierValueToJson(it->second.identifier()).dump() != value) {
-      return false;
-    }
-    if (ValueToJson(it->second).dump() != value) {
+    absl::StatusOr<std::string> value_str = QueryValueToString(it->second);
+    if (!value_str.ok() || *value_str != value) {
       return false;
     }
   }

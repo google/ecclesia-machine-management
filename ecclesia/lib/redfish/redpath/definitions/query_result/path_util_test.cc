@@ -367,7 +367,7 @@ TEST(GetQueryValueFromResult, IdentifierMatch) {
     }
   )pb");
 
-  std::string path = "query1.subquery_id[name=\"value1\"].name";
+  std::string path = "query1.subquery_id[name=value1].name";
 
   EXPECT_THAT(
       GetQueryValueFromResult(result, path),
@@ -412,8 +412,7 @@ TEST(GetQueryValueFromResult, IdentifierMatchOnIdentifier) {
     }
   )pb");
 
-  std::string path =
-      "query1.subquery_id[_id_={\"_local_devpath_\":\"/phys\"}].name";
+  std::string path = "query1.subquery_id[_id_={_local_devpath_:/phys}].name";
 
   EXPECT_THAT(
       GetQueryValueFromResult(result, path),
@@ -458,7 +457,7 @@ TEST(GetQueryValueFromResult, IdentifierMatchManyValues) {
     }
   )pb");
 
-  std::string path = "query1.subquery_id[name=\"value1\"].name";
+  std::string path = "query1.subquery_id[name=value1].name";
 
   EXPECT_THAT(
       GetQueryValueFromResult(result, path),
@@ -495,8 +494,7 @@ TEST(GetQueryValueFromResult, IdentifierMatchMultiplePredicates) {
     }
   )pb");
 
-  std::string path =
-      "query1.subquery_id[name1=\"value1\";name2=\"value2\"].name1";
+  std::string path = "query1.subquery_id[name1=value1;name2=value2].name1";
 
   EXPECT_THAT(
       GetQueryValueFromResult(result, path),
@@ -972,6 +970,84 @@ INSTANTIATE_TEST_SUITE_P(
          )pb"),
          .path = "query1.subquery_id[-1].name",
          .expected_status_code = IsStatusNotFound()},
+        {.result = ParseTextProtoOrDie(R"pb(
+           query_id: "query1"
+           data: {
+             fields {
+               key: "subquery_id"
+               value {
+                 list_value {
+                   values {
+                     subquery_value {
+                       fields {
+                         key: "_id_"
+                         value { identifier {} }
+                       }
+                       fields {
+                         key: "name"
+                         value { string_value: "value1" }
+                       }
+                     }
+                   }
+                   values {
+                     subquery_value {
+                       fields {
+                         key: "_id_"
+                         value { identifier {} }
+                       }
+                       fields {
+                         key: "name"
+                         value { string_value: "value2" }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+         )pb"),
+         .path = "query1.subquery_id[_id_={_local_devpath_:/"
+                 "phys,_machine_devpath_:}].name",
+         .expected_status_code = IsStatusNotFound()},
+        {.result = ParseTextProtoOrDie(R"pb(
+           query_id: "query1"
+           data: {
+             fields {
+               key: "subquery_id"
+               value {
+                 list_value {
+                   values {
+                     subquery_value {
+                       fields {
+                         key: "_id_"
+                         value {}
+                       }
+                       fields {
+                         key: "name"
+                         value { string_value: "value1" }
+                       }
+                     }
+                   }
+                   values {
+                     subquery_value {
+                       fields {
+                         key: "_id_"
+                         value {}
+                       }
+                       fields {
+                         key: "name"
+                         value { string_value: "value2" }
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+         )pb"),
+         .path = "query1.subquery_id[_id_={_local_devpath_:/"
+                 "phys,_machine_devpath_:}].name",
+         .expected_status_code = IsStatusNotFound()},
     }));
 
 using GetMutableQueryValueFromResultSuccessTest =
@@ -1070,9 +1146,145 @@ INSTANTIATE_TEST_SUITE_P(
                 }
               }
             )pb"),
-            .path = "query1.subquery_id[name=\"value1\"].name",
+            .path = "query1.subquery_id[name=value1].name",
             .expected_value =
                 ParseTextProtoOrDie(R"pb(string_value: "value1")pb"),
+        },
+        {
+            .result = ParseTextProtoOrDie(R"pb(
+              query_id: "query1"
+              data: {
+                fields {
+                  key: "subquery_id"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "int_value"
+                            value { int_value: 1 }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "int_value"
+                            value { int_value: 10 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            )pb"),
+            .path = "query1.subquery_id[int_value=1].int_value",
+            .expected_value = ParseTextProtoOrDie(R"pb(int_value: 1)pb"),
+        },
+        {
+            .result = ParseTextProtoOrDie(R"pb(
+              query_id: "query1"
+              data: {
+                fields {
+                  key: "subquery_id"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "double_value"
+                            value { double_value: 1 }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "double_value"
+                            value { double_value: 10 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            )pb"),
+            .path = "query1.subquery_id[double_value=1].double_value",
+            .expected_value = ParseTextProtoOrDie(R"pb(double_value: 1)pb"),
+        },
+        {
+            .result = ParseTextProtoOrDie(R"pb(
+              query_id: "query1"
+              data: {
+                fields {
+                  key: "subquery_id"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "bool_value"
+                            value { bool_value: true }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "bool_value"
+                            value { bool_value: false }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            )pb"),
+            .path = "query1.subquery_id[bool_value=true].bool_value",
+            .expected_value = ParseTextProtoOrDie(R"pb(bool_value: true)pb"),
+        },
+        {
+            .result = ParseTextProtoOrDie(R"pb(
+              query_id: "query1"
+              data: {
+                fields {
+                  key: "subquery_id"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "timestamp_value"
+                            value {
+                              timestamp_value { seconds: 1708980000 nanos: 0 }
+                            }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "timestamp_value"
+                            value {
+                              timestamp_value { seconds: 2708980000 nanos: 0 }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            )pb"),
+            .path = "query1.subquery_id[timestamp_value=2024-02-26T20:40:00Z]."
+                    "timestamp_value",
+            .expected_value = ParseTextProtoOrDie(R"pb(timestamp_value: {
+                                                         seconds: 1708980000
+                                                         nanos: 0
+                                                       })pb"),
         },
         {
             .result = ParseTextProtoOrDie(R"pb(
@@ -1113,10 +1325,113 @@ INSTANTIATE_TEST_SUITE_P(
                 }
               }
             )pb"),
-            .path =
-                "query1.subquery_id[_id_={\"_local_devpath_\":\"/phys\"}].name",
+            .path = "query1.subquery_id[_id_={_local_devpath_:/phys}].name",
             .expected_value =
                 ParseTextProtoOrDie(R"pb(string_value: "value1")pb"),
+        },
+        {
+            .result = ParseTextProtoOrDie(R"pb(
+              query_id: "query1"
+              data: {
+                fields {
+                  key: "subquery_id"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "_id_"
+                            value {
+                              identifier {
+                                local_devpath: "",
+                                machine_devpath: "/phys"
+                              }
+                            }
+                          }
+                          fields {
+                            key: "name"
+                            value { string_value: "value1" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "_id_"
+                            value {
+                              identifier {
+                                local_devpath: "/phys",
+                                machine_devpath: "/phys"
+                              }
+                            }
+                          }
+                          fields {
+                            key: "name"
+                            value { string_value: "value2" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            )pb"),
+            .path = "query1.subquery_id[_id_={_local_devpath_:/"
+                    "phys,_machine_devpath_:/phys}].name",
+            .expected_value =
+                ParseTextProtoOrDie(R"pb(string_value: "value2")pb"),
+        },
+        {
+            .result = ParseTextProtoOrDie(R"pb(
+              query_id: "query1"
+              data: {
+                fields {
+                  key: "subquery_id"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "_id_"
+                            value {
+                              identifier {
+                                local_devpath: "/phys",
+                                machine_devpath: ""
+                              }
+                            }
+                          }
+                          fields {
+                            key: "name"
+                            value { string_value: "value1" }
+                          }
+                        }
+                      }
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "_id_"
+                            value {
+                              identifier {
+                                local_devpath: "/phys",
+                                machine_devpath: "/phys"
+                              }
+                            }
+                          }
+                          fields {
+                            key: "name"
+                            value { string_value: "value2" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            )pb"),
+            .path = "query1.subquery_id[_id_={_local_devpath_:/"
+                    "phys,_machine_devpath_:/phys}].name",
+            .expected_value =
+                ParseTextProtoOrDie(R"pb(string_value: "value2")pb"),
         },
         {
             .result = ParseTextProtoOrDie(R"pb(
@@ -1162,8 +1477,8 @@ INSTANTIATE_TEST_SUITE_P(
                 }
               }
             )pb"),
-            .path = "query1.subquery_id[_id_={\"_local_devpath_\":\"/"
-                    "phys\",\"_machine_devpath_\":\"/phys\"}].name",
+            .path = "query1.subquery_id[_id_={_local_devpath_:/"
+                    "phys,_machine_devpath_:/phys}].name",
             .expected_value =
                 ParseTextProtoOrDie(R"pb(string_value: "value1")pb"),
         },
@@ -1204,7 +1519,7 @@ INSTANTIATE_TEST_SUITE_P(
                 }
               }
             )pb"),
-            .path = "query1.subquery_id[name=\"value1\"].name",
+            .path = "query1.subquery_id[name=value1].name",
             .expected_value =
                 ParseTextProtoOrDie(R"pb(string_value: "value1")pb"),
         },
@@ -1673,7 +1988,7 @@ INSTANTIATE_TEST_SUITE_P(
                 }
               }
             )pb"),
-            .path = "query1.subquery_id[name=\"value1\"].name",
+            .path = "query1.subquery_id[name=value1].name",
             .expected_output = ParseTextProtoOrDie(
                 R"pb(query_id: "query1"
                      data {
@@ -1734,8 +2049,7 @@ INSTANTIATE_TEST_SUITE_P(
                 }
               }
             )pb"),
-            .path =
-                "query1.subquery_id[_id_={\"_local_devpath_\":\"/phys\"}].name",
+            .path = "query1.subquery_id[_id_={_local_devpath_:/phys}].name",
             .expected_output = ParseTextProtoOrDie(
                 R"pb(query_id: "query1"
                      data {
@@ -1813,7 +2127,7 @@ INSTANTIATE_TEST_SUITE_P(
                 }
               }
             )pb"),
-            .path = "query1.subquery_id[_id_={\"_local_devpath_\":\"/phys\"}]",
+            .path = "query1.subquery_id[_id_={_local_devpath_:/phys}]",
             .expected_output = ParseTextProtoOrDie(
                 R"pb(query_id: "query1"
                      data {
@@ -1879,7 +2193,7 @@ INSTANTIATE_TEST_SUITE_P(
                 }
               }
             )pb"),
-            .path = "query1.subquery_id[name=\"value1\"].name",
+            .path = "query1.subquery_id[name=value1].name",
             .expected_output = ParseTextProtoOrDie(
                 R"pb(query_id: "query1"
                      data {

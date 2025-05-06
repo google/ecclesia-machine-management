@@ -62,13 +62,15 @@ cc_library(
     hdrs = ["path_util.h"],
     visibility = ["//visibility:public"],
     deps = [
-        ":converter",
         ":query_result_cc_proto",
         "//ecclesia/lib/status:macros",
+        "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
     ],
 )
