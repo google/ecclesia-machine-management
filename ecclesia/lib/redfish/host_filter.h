@@ -43,6 +43,8 @@ class RedfishObjectHostFilter {
       absl::flat_hash_map<std::string, std::string> system_to_host_domain_map,
       Sysmodel &sysmodel);
 
+  void UpdateUriHostDomainMap(Sysmodel &sysmodel);
+
   absl::StatusOr<absl::string_view> GetHostDomainForObj(
       const RedfishObject &obj);
   // Returns a map with computer system name as keys and the host domain name as

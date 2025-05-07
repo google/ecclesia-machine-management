@@ -395,5 +395,25 @@ TEST_F(RedfishMultiHostFilterTest, NoUriGetHostTest) {
   EXPECT_THAT(os_domain, IsStatusNotFound());
 }
 
+TEST_F(RedfishMultiHostFilterTest, UpdateUriHostDomainMapTest) {
+  absl::flat_hash_map<std::string, std::string> system_to_host_domain_map = {
+      {"system1", "host-compute-node-1"}, {"system2", "host-compute-node-2"}};
+  NullRedfish empty_intf;
+  Sysmodel empty_sysmodel(&empty_intf);
+  auto host_filter = std::make_unique<RedfishObjectHostFilter>(
+      system_to_host_domain_map, empty_sysmodel);
+
+  RedfishVariant var =
+      fake_intf_->UncachedGetUri("/redfish/v1/Systems/system_multi1");
+  std::unique_ptr<RedfishObject> obj = var.AsObject();
+  ASSERT_TRUE(obj != nullptr);
+  absl::StatusOr<absl::string_view> os_domain =
+      host_filter->GetHostDomainForObj(*obj);
+  EXPECT_THAT(os_domain, IsStatusNotFound());
+
+  host_filter->UpdateUriHostDomainMap(sysmodel_);
+  os_domain = host_filter->GetHostDomainForObj(*obj);
+  EXPECT_THAT(os_domain, IsOkAndHolds("host-compute-node-1"));
+}
 }  // namespace
 }  // namespace ecclesia

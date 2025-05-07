@@ -39,6 +39,18 @@ RedfishObjectHostFilter::RedfishObjectHostFilter(
     absl::flat_hash_map<std::string, std::string> system_to_host_domain_map,
     Sysmodel &sysmodel)
     : system_name_host_domain_map_(std::move(system_to_host_domain_map)) {
+  UpdateUriHostDomainMap(sysmodel);
+}
+
+void RedfishObjectHostFilter::UpdateUriHostDomainMap(Sysmodel &sysmodel) {
+  // Only update the map if there are multiple host domains. For single host
+  // domain the host domain is already set in ctor and it should not be
+  // dynamically updated.
+  if (host_domain_set_.size() == 1) {
+    LOG(INFO) << "Single host domain, skip updating uri host domain map";
+    return;
+  }
+  LOG(INFO) << "Multiple host domain, updating uri host domain map";
   // Go through all computer system and create a map that maps system uri to
   // host domain.
   auto computer_system_func =
@@ -52,10 +64,12 @@ RedfishObjectHostFilter::RedfishObjectHostFilter(
               system_name_host_domain_map_.find(property_name.value());
           uri_string.has_value() &&
           os_domain_iter != system_name_host_domain_map_.end()) {
+        LOG(INFO) << "Adding system uri: " << uri_string.value()
+                  << " to host domain map: " << os_domain_iter->second;
         if (auto [it, inserted] = uri_host_domain_map_.insert(
                 {uri_string.value(), os_domain_iter->second});
             !inserted) {
-          DLOG(WARNING) << "Failed to insert [uri, host domain] set: "
+          LOG(WARNING) << "Failed to insert [uri, host domain] set: "
                         << uri_string.value() << ", " << os_domain_iter->second;
         }
       }
@@ -64,8 +78,9 @@ RedfishObjectHostFilter::RedfishObjectHostFilter(
   };
   sysmodel.QueryAllResources<ResourceComputerSystem>(computer_system_func);
   for (const auto &[system_name, host_domain] : system_name_host_domain_map_) {
+    LOG(INFO) << "Adding host domain: " << host_domain;
     if (auto [it, inserted] = host_domain_set_.insert(host_domain); !inserted) {
-      DLOG(WARNING) << "Failed to insert host domain set: " << host_domain;
+      LOG(WARNING) << "Failed to insert host domain set: " << host_domain;
     }
   }
 
@@ -88,11 +103,14 @@ RedfishObjectHostFilter::RedfishObjectHostFilter(
             system_obj->GetUriString();
         if (system_uri_string.has_value() &&
             uri_host_domain_map_.contains(*system_uri_string)) {
+          LOG(INFO) << "Adding chassis uri: " << chassis_uri_string.value()
+                    << " to host domain map: "
+                    << uri_host_domain_map_.at(system_uri_string.value());
           if (auto [it, inserted] = uri_host_domain_map_.insert(
                   {chassis_uri_string.value(),
                    uri_host_domain_map_.at(system_uri_string.value())});
               !inserted) {
-            DLOG(WARNING) << "Failed to insert [uri, host domain] set: "
+            LOG(WARNING) << "Failed to insert [uri, host domain] set: "
                           << chassis_uri_string.value() << ", "
                           << uri_host_domain_map_.at(system_uri_string.value());
           }
@@ -108,7 +126,6 @@ RedfishObjectHostFilter::RedfishObjectHostFilter(
   };
   sysmodel.QueryAllResources<ResourceChassis>(chassis_func);
 }
-
 absl::StatusOr<absl::string_view> RedfishObjectHostFilter::GetHostDomainForObj(
     const RedfishObject &obj) {
   if (host_domain_set_.size() == 1) {
