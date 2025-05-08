@@ -50,6 +50,7 @@ struct SubjectAltName {
 // Parses the Subject Altenative Name (SAN) from the given PEM certificate
 // block. If there are multiple certificates in the block, it only parses the
 // first one.
+// TODO (b/378523997): Return multiple SANs when available.
 absl::StatusOr<SubjectAltName> GetSubjectAltName(absl::string_view pem);
 
 }  // namespace ecclesia

@@ -148,11 +148,6 @@ absl::StatusOr<SubjectAltName> GetSubjectAltName(absl::string_view pem) {
         absl::StrFormat("Expected one URI SAN, found %d; URIs are: [%s]",
                         uris.size(), absl::StrJoin(uris, ", ")));
   }
-  if (fqdns.size() > 1) {
-    return absl::InvalidArgumentError(
-        absl::StrFormat("Expected one DNS SAN, found %d; FQDNs are: [%s]",
-                        fqdns.size(), absl::StrJoin(fqdns, ", ")));
-  }
   SubjectAltName san = {.critical = out_critical == 1};
   if (!uris.empty()) {
     san.spiffe_id = std::move(uris[0]);
