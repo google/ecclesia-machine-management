@@ -82,7 +82,6 @@ cc_test(
         "//ecclesia/lib/testing:status",
         "//ecclesia/lib/time:clock",
         "//ecclesia/lib/time:clock_fake",
-        "//ecclesia/lib/time:proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/log:check",

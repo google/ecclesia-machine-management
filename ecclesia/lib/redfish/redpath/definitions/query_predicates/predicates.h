@@ -26,8 +26,11 @@
 namespace ecclesia {
 
 struct PredicateOptions {
+  // The predicate expression. Example: /redfish/v1/Chassis[predicate]
   std::string predicate;
+  // The element of the "Members" list being indexed from the Redfish response.
   int node_index;
+  // The number of elements in the "Members" list within the Redfish response.
   size_t node_set_size;
 };
 

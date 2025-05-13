@@ -3651,6 +3651,169 @@ TEST_F(QueryPlannerTestRunner,
   EXPECT_THAT(result_repeat.query_result.stats().num_cache_misses(), 0);
 }
 
+struct GetChildUriTestCase {
+  std::string test_name;
+  std::string redpath_query;
+  std::string parent_resource_uri;
+  std::string child_resource_uri;
+  std::string parent_json_response;
+  std::string expected_error_message;
+  HTTPStatusCode child_response_status_code;
+};
+
+class GetChildUriTest : public QueryPlannerTestRunner,
+    public ::testing::WithParamInterface<GetChildUriTestCase> {
+ public:
+  static std::string GetTestName(
+      const testing::TestParamInfo<GetChildUriTestCase> &info) {
+    return info.param.test_name;
+  }
+};
+
+TEST_P(GetChildUriTest, GetChildUriReturnsCorrectErrorMessage) {
+  const GetChildUriTestCase &test_case = GetParam();
+
+  DelliciusQuery query = ParseTextProtoOrDie(
+    R"pb(
+      query_id: "ChassisTest"
+      subquery {
+        subquery_id: "Chassis"
+        properties { property: "Id" type: STRING }
+        properties { property: "Name" type: STRING }
+      }
+    )pb");
+  query.mutable_subquery(0)->set_redpath(test_case.redpath_query);
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler(test_case.parent_resource_uri,
+    [&](ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(test_case.parent_json_response);
+        req->Reply();
+      });
+  server_->AddHttpGetHandler(test_case.child_resource_uri,
+    [&](ServerRequestInterface *req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({})json");
+        req->ReplyWithStatus(test_case.child_response_status_code);
+      });
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({
+                            .query = &query,
+                            .normalizer = normalizer.get(),
+                            .redfish_interface = intf_.get(),
+                            .redpath_rules = {}
+                          }));
+  ASSERT_THAT(qp, NotNull());
+
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  QueryExecutionResult result = qp->Run({.variables = args1});
+
+  ASSERT_THAT(result.query_result.status().errors().size(), Eq(1));
+  EXPECT_THAT(
+      result.query_result.status().errors().at(0),
+      HasSubstr(test_case.expected_error_message));
+}
+
+INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, GetChildUriTest,
+  testing::Values(
+    GetChildUriTestCase{
+      .test_name = "PredicateShowsParentUri",
+      .redpath_query = "/Chassis[*]",
+      .parent_resource_uri = "/redfish/v1/Chassis",
+      .child_resource_uri = "/redfish/v1/Chassis/IronFist_1",
+      .parent_json_response = R"json({
+        "@odata.id": "/redfish/v1/Chassis",
+        "Members": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/IronFist_1"
+          },
+          {
+            "@odata.id": "/redfish/v1/Chassis/IronFist_2"
+          }
+        ]
+      })json",
+      .expected_error_message = "Querying predicate [*] from Redpath: "
+        "/Chassis[*] resulted in error: At resource URI: "
+        "/redfish/v1/Chassis/IronFist_1: Service Unavailable",
+      .child_response_status_code = HTTPStatusCode::SERVICE_UNAV
+    },
+    GetChildUriTestCase{
+      .test_name = "NodenameShowsParentUri",
+      .redpath_query = "/Chassis/Node1",
+      .parent_resource_uri = "/redfish/v1/Chassis",
+      .child_resource_uri = "/redfish/v1/Chassis/Node1",
+      .parent_json_response = R"json({
+        "@odata.id": "/redfish/v1/Chassis",
+        "Node1": {
+          "@odata.id": "/redfish/v1/Chassis/Node1"
+        }
+      })json",
+      .expected_error_message = "Querying node name Node1 from Redpath: "
+        "/Chassis/Node1 resulted in error: At resource URI: "
+        "/redfish/v1/Chassis/Node1: Service Unavailable",
+      .child_response_status_code = HTTPStatusCode::SERVICE_UNAV
+    },
+    GetChildUriTestCase{
+      .test_name = "PredicateParentUriNotAvailable",
+      .redpath_query = "/Chassis[*]",
+      .parent_resource_uri = "/redfish/v1/Chassis",
+      .child_resource_uri = "/redfish/v1/Chassis/IronFist_1",
+      .parent_json_response = R"json({
+        "Members": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/IronFist_1"
+          }
+        ]
+      })json",
+      .expected_error_message = "Querying predicate [*] from Redpath: "
+        "/Chassis[*] resulted in error: At resource URI: "
+        "(Parent URI Not Available from RedfishObject: No @odata.id): "
+        "Service Unavailable",
+      .child_response_status_code = HTTPStatusCode::SERVICE_UNAV
+    },
+    GetChildUriTestCase{
+      .test_name = "NodenameParentUriNotAvailable",
+      .redpath_query = "/Chassis/Node1",
+      .parent_resource_uri = "/redfish/v1/Chassis",
+      .child_resource_uri = "/redfish/v1/Chassis/Node1",
+      .parent_json_response = R"json({
+        "Node1": {
+          "@odata.id": "/redfish/v1/Chassis/Node1"
+        }
+      })json",
+      .expected_error_message = "Querying node name Node1 from Redpath: "
+        "/Chassis/Node1 resulted in error: At resource URI: "
+        "(Parent URI Not Available from RedfishObject: No @odata.id): "
+        "Service Unavailable",
+      .child_response_status_code = HTTPStatusCode::SERVICE_UNAV
+    },
+    GetChildUriTestCase{
+      .test_name = "MalformedPredicateExpression",
+      .redpath_query = "/Chassis[(!]",
+      .parent_resource_uri = "/redfish/v1/Chassis",
+      .child_resource_uri = "/redfish/v1/Chassis/IronFist_1",
+      .parent_json_response = R"json({
+        "@odata.id": "/redfish/v1/Chassis",
+        "Members": [
+          {
+            "@odata.id": "/redfish/v1/Chassis/IronFist_1"
+          }
+        ]
+      })json",
+      .expected_error_message = "Querying predicate [(!] from Redpath: "
+        "/Chassis[*] resulted in error: At resource URI: "
+        "/redfish/v1/Chassis/IronFist_1: Invalid predicate with mismatched "
+        "parenthesis: (!",
+      .child_response_status_code = HTTPStatusCode::OK
+    }
+  ), GetChildUriTest::GetTestName
+);
+
 TEST_F(QueryPlannerTestRunner, CheckQueryPlannerPopulatesStatus) {
   DelliciusQuery query = ParseTextProtoOrDie(
       R"pb(
@@ -3683,8 +3846,8 @@ TEST_F(QueryPlannerTestRunner, CheckQueryPlannerPopulatesStatus) {
   EXPECT_THAT(
       result.query_result.status().errors().at(0),
       HasSubstr(
-          "Querying node name Chassis from Redpath: /Chassis with URI: "
-          "/redfish/v1 resulted in error: Service Unavailable"));
+          "Querying node name Chassis from Redpath: /Chassis resulted in "
+          "error: At resource URI: /redfish/v1/Chassis: Service Unavailable"));
 }
 
 TEST_F(QueryPlannerTestRunner, TestNestedNodeNameInQueryProperty) {
@@ -3852,6 +4015,11 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
   auto result = qp->Run({.variables = args1});
   EXPECT_THAT(result.query_result.status().error_code(),
               Eq(ecclesia::ErrorCode::ERROR_SERVICE_ROOT_UNREACHABLE));
+  EXPECT_THAT(
+      result.query_result.status().errors().at(0),
+      HasSubstr(
+          "Attempting to reach service root /redfish/v1 resulted in error: "
+          "RedfishVariant object has status: NullTransport"));
 
   // Redfish Metrics should indicate 1 failed GET request to service root.
   const RedfishMetrics &metrics = result.query_result.stats().redfish_metrics();
@@ -3912,9 +4080,9 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulatedCollectionResource) {
   EXPECT_THAT(
       result->query_result.status().errors().at(0),
       HasSubstr(
-          "Querying predicate [*] from Redpath: /Managers[*] with URI: "
-          "/redfish/v1/Managers resulted in error: At resource URI: "
-          "/redfish/v1/Managers/ecclesia_agent: Unauthorized"));
+          "Querying predicate [*] from Redpath: /Managers[*] resulted in "
+          "error: At resource URI: /redfish/v1/Managers/ecclesia_agent: "
+          "Unauthorized"));
 }
 
 TEST_F(QueryPlannerTestRunner, CheckUnresolvedNodeIsNotAnError) {
@@ -4700,10 +4868,10 @@ TEST_F(QueryPlannerTestRunner,
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "SensorCollector"
     status {
-      errors: "Querying predicate [*] from Redpath: /Chassis[*]/Sensors[*] with URI: /redfish/v1/Chassis/chassis/Sensors resulted in error: At resource URI: /redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm: Unauthorized"
+      errors: "Querying predicate [*] from Redpath: /Chassis[*]/Sensors[*] resulted in error: At resource URI: /redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm: Unauthorized"
       error_code: ERROR_UNAUTHENTICATED
     }
-    stats { payload_size: 1403 num_cache_misses: 18 }
+    stats { payload_size: 1357 num_cache_misses: 18 }
     data {
       fields {
         key: "Sensors"
@@ -5005,10 +5173,10 @@ TEST_F(QueryPlannerTestRunner,
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "SensorCollector"
     status {
-      errors: "Querying predicate [*] from Redpath: /Chassis[*]/Sensors[*] with URI: /redfish/v1/Chassis/chassis/Sensors resulted in error: At resource URI: /redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm: Unauthorized"
+      errors: "Querying predicate [*] from Redpath: /Chassis[*]/Sensors[*] resulted in error: At resource URI: /redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm: Unauthorized"
       error_code: ERROR_UNAUTHENTICATED
     }
-    stats { payload_size: 233 num_cache_misses: 12 }
+    stats { payload_size: 187 num_cache_misses: 12 }
   )pb");
   EXPECT_THAT(result->query_result,
               ecclesia::EqualsProto(expected_query_result));
