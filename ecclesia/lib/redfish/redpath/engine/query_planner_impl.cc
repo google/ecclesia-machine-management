@@ -331,6 +331,12 @@ absl::StatusOr<std::string> GetChildUriFromNode(
 
 absl::StatusOr<std::string> GetChildUriFromIterable(
     const QueryExecutionContext &execution_context, int index) {
+  // For complex Redfish Objects, the navigational property may be absent.
+  const auto &rf_iterable = execution_context.redfish_response.redfish_iterable;
+  if (execution_context.redfish_response.redfish_object == nullptr &&
+      rf_iterable != nullptr) {
+    return absl::InternalError("(Queried resource is a ComplexType; no URI)");
+  }
   ECCLESIA_ASSIGN_OR_RETURN(const nlohmann::json response,
                             GetResponseJsonFromContext(execution_context));
   std::string parent_uri = response[PropertyOdataId::Name];
@@ -340,8 +346,7 @@ absl::StatusOr<std::string> GetChildUriFromIterable(
         absl::StrCat("(RedfishObject is not an iterable: ",
                       parent_uri, " does not have Members[])"));
   }
-  if (index >= execution_context.redfish_response.redfish_iterable->Size() ||
-      index < 0) {
+  if (index >= rf_iterable->Size() || index < 0) {
     return absl::InternalError(
         absl::StrCat("(Index ", index, " out of bounds ",
                      "for RedfishIterable at URI: ", parent_uri, ")"));
@@ -397,7 +402,11 @@ GetRedfishObjectWithFreshness(const GetParams &params,
   if (variant.IsFresh() == CacheState::kIsCached) {
     (*cache_miss) = (*cache_miss) + 1;
   }
-  if (!refetch_obj.ok()) return refetch_obj.status();
+  // EnsureFreshPayload may return NotFoundError, which applies to the URI, not
+  // the resource. We convert it to InternalError to avoid ignoring it.
+  if (!refetch_obj.ok()) {
+    return absl::InternalError(refetch_obj.status().message());
+  }
   return std::move(refetch_obj.value());
 }
 
