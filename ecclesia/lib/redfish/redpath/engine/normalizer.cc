@@ -226,7 +226,7 @@ absl::StatusOr<QueryValue> GetPropertyFromRedfishObject(
       std::string error_message = absl::StrCat(
           "Encountered null property value during normalization. Property: ",
           property.property(), " JSON: ", json_obj.dump());
-      LOG(ERROR) << error_message;
+      LOG(INFO) << error_message;
       return absl::NotFoundError(error_message);
     }
     query_value.set_null_value(QueryValue::NULL_VALUE);
