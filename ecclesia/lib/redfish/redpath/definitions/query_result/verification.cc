@@ -1062,7 +1062,7 @@ absl::Status VerifySubqueryValue(
     }
   }
 
-  return ProcessResult(result);
+  return absl::OkStatus();
 }
 
 absl::Status VerifyQueryResult(const QueryResult& query_result,
@@ -1079,8 +1079,10 @@ absl::Status VerifyQueryResult(const QueryResult& query_result,
 
   VerificationContext context(query_result.query_id());
 
-  return VerifySubqueryValue(query_result.data(), verification.data_verify(),
-                             result, context, options);
+  ECCLESIA_RETURN_IF_ERROR(VerifySubqueryValue(query_result.data(),
+                                      verification.data_verify(), result,
+                                      context, options));
+  return ProcessResult(result);
 }
 
 }  // namespace ecclesia

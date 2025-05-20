@@ -2798,7 +2798,7 @@ INSTANTIATE_TEST_SUITE_P(
                          }
                        }
                      })pb"),
-            .expected_status = IsStatusInternal(),
+            .expected_status = IsOk(),
             .expected_result = ParseTextProtoOrDie(
                 R"pb(errors { msg: "Missing required property 'bar'" })pb"),
         },
