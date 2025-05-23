@@ -102,8 +102,8 @@ absl::StatusOr<std::string> GetNavigationalPropertyToSubscribe(
     return absl::InternalError(absl::StrCat(
         "Cannot find ",
         (expression.type == RedPathExpression::Type::kPredicate)
-          ? absl::StrCat("predicate [", expression.expression, "]")
-          : absl::StrCat("node name ", expression.expression),
+            ? absl::StrCat("predicate [", expression.expression, "]")
+            : absl::StrCat("node name ", expression.expression),
         " in Redfish Object for subscription."));
   }
 
@@ -182,27 +182,6 @@ bool IsInExpandPath(absl::string_view child_redpath,
     }
   }
   return expand_levels <= parent_expand_levels;
-}
-
-// Returns map of subquery id to root subquery ids derived from given
-// `query`.
-// If all subqueries are root subqueries i.e subqueries don't have
-// `root_subquery_ids` property then an empty map is returned.
-absl::flat_hash_map<std::string, std::vector<std::string>>
-GetSubqueryIdToRootIds(const DelliciusQuery &query) {
-  absl::flat_hash_map<std::string, std::vector<std::string>>
-      subquery_id_to_root_ids;
-  for (const auto &subquery : query.subquery()) {
-    std::vector<std::string> root_ids;
-    for (const auto &root_id : subquery.root_subquery_ids()) {
-      root_ids.push_back(root_id);
-    }
-    if (root_ids.empty()) {
-      continue;
-    }
-    subquery_id_to_root_ids[subquery.subquery_id()] = std::move(root_ids);
-  }
-  return subquery_id_to_root_ids;
 }
 
 // Returns combined GetParams{} for RedPath expressions in the query.
@@ -291,80 +270,11 @@ RedPathRedfishQueryParams CombineQueryParams(
           redpaths_to_query_params_ordered.end()};
 }
 
-absl::StatusOr<nlohmann::json> GetResponseJsonFromContext(
-    const QueryExecutionContext &execution_context) {
-  const auto &rf_object = execution_context.redfish_response.redfish_object;
-  if (rf_object == nullptr) {
-    return absl::InternalError("(RedfishObject is null)");
-  }
-  nlohmann::json response = rf_object->GetContentAsJson();
-  if (response == nlohmann::json::value_t::discarded) {
-    return absl::InternalError(
-        "(Cannot get content as Json from Parent RedfishObject)");
-  }
-  if (!response.contains(PropertyOdataId::Name)) {
-    return absl::InternalError(
-        "(Parent URI Not Available from RedfishObject: No @odata.id)");
-  }
-  return response;
-}
-
-absl::StatusOr<std::string> GetChildUriFromNode(
-    const QueryExecutionContext &execution_context,
-    const std::string &node_name) {
-  ECCLESIA_ASSIGN_OR_RETURN(const nlohmann::json response,
-                            GetResponseJsonFromContext(execution_context));
-  std::string parent_uri = response[PropertyOdataId::Name];
-
-  if (!response.contains(node_name)) {
-    return absl::InternalError(
-        absl::StrCat("(RedfishObject does not contain: ", node_name,
-                     " at URI: ", parent_uri, ")"));
-  }
-  if (!response[node_name].contains(PropertyOdataId::Name)) {
-    return absl::InternalError(
-        absl::StrCat("(@odata.id Not Available for ", node_name,
-                     " for URI: ", parent_uri, ")"));
-  }
-  return response[node_name][PropertyOdataId::Name];
-}
-
-absl::StatusOr<std::string> GetChildUriFromIterable(
-    const QueryExecutionContext &execution_context, int index) {
-  // For complex Redfish Objects, the navigational property may be absent.
-  const auto &rf_iterable = execution_context.redfish_response.redfish_iterable;
-  if (execution_context.redfish_response.redfish_object == nullptr &&
-      rf_iterable != nullptr) {
-    return absl::InternalError("(Queried resource is a ComplexType; no URI)");
-  }
-  ECCLESIA_ASSIGN_OR_RETURN(const nlohmann::json response,
-                            GetResponseJsonFromContext(execution_context));
-  std::string parent_uri = response[PropertyOdataId::Name];
-
-  if (!response.contains(PropertyMembers::Name)) {
-    return absl::InternalError(
-        absl::StrCat("(RedfishObject is not an iterable: ",
-                      parent_uri, " does not have Members[])"));
-  }
-  if (index >= rf_iterable->Size() || index < 0) {
-    return absl::InternalError(
-        absl::StrCat("(Index ", index, " out of bounds ",
-                     "for RedfishIterable at URI: ", parent_uri, ")"));
-  }
-  if (!response[PropertyMembers::Name][index].contains(PropertyOdataId::Name)) {
-    return absl::InternalError(
-        absl::StrCat("(@odata.id Not Available in Members[] at index ",
-                      index, " for URI: ", parent_uri, ")"));
-  }
-  return response[PropertyMembers::Name][index][PropertyOdataId::Name];
-}
-
 // Gets RedfishObject from given RedfishVariant.
 // Issues fresh query if the object is served from cache and freshness is
 // required.
 absl::StatusOr< std::unique_ptr<RedfishObject>>
-GetRedfishObjectWithFreshness(const GetParams &params,
-                              RedfishVariant &variant,
+GetRedfishObjectWithFreshness(const GetParams &params, RedfishVariant &variant,
                               const std::optional<TraceInfo> &trace_info,
                               std::atomic<int64_t> *cache_miss,
                               bool is_query_execution_cancelled) {
@@ -375,7 +285,7 @@ GetRedfishObjectWithFreshness(const GetParams &params,
   }
   if (!variant.status().ok()) {
     return absl::FailedPreconditionError(absl::StrCat(
-      "RedfishVariant object has status: ", variant.status().message()));
+        "RedfishVariant object has status: ", variant.status().message()));
   }
   std::unique_ptr<RedfishObject> redfish_object = variant.AsObject();
   if (!redfish_object) {
@@ -425,28 +335,27 @@ absl::StatusOr<bool> ExecutePredicateExpression(
   absl::StatusOr<std::string> child_uri = GetChildUriFromIterable(
       current_execution_context, predicate_options.node_index);
 
-  return absl::Status(predicate_rule_result.status().code(), absl::StrCat(
-    "At resource URI: ",
-    child_uri.ok() ? child_uri.value() : child_uri.status().message(),
-      ": ", predicate_rule_result.status().message()
-  ));
+  return absl::Status(
+      predicate_rule_result.status().code(),
+      absl::StrCat(
+          "At resource URI: ",
+          child_uri.ok() ? child_uri.value() : child_uri.status().message(),
+          ": ", predicate_rule_result.status().message()));
 }
 
 // Populates the result with the subquery error status that occurs.
 void PopulateSubqueryErrorStatus(const absl::Status &node_status,
                                  QueryExecutionContext &execution_context,
                                  const RedPathExpression &expression) {
-  std::string failed_redpath =
-      AddExpressionToRedPath(
-          execution_context.redpath_prefix_tracker.last_redpath_prefix,
-          expression);
-  std::string error_message = absl::StrCat(
-      "Querying ",
-      (expression.type == RedPathExpression::Type::kPredicate)
-          ? absl::StrCat("predicate [", expression.expression, "]")
-          : absl::StrCat("node name ", expression.expression),
-      " from Redpath: ", failed_redpath,
-      " resulted in error: ", node_status.message());
+  std::string failed_redpath = AddExpressionToRedPath(
+      execution_context.redpath_prefix_tracker.last_redpath_prefix, expression);
+  std::string error_message =
+      absl::StrCat("Querying ",
+                   (expression.type == RedPathExpression::Type::kPredicate)
+                       ? absl::StrCat("predicate [", expression.expression, "]")
+                       : absl::StrCat("node name ", expression.expression),
+                   " from Redpath: ", failed_redpath,
+                   " resulted in error: ", node_status.message());
   ErrorCode error_code = ecclesia::ErrorCode::ERROR_INTERNAL;
   absl::StatusCode code = node_status.code();
   if (code == absl::StatusCode::kUnavailable) {
@@ -501,7 +410,74 @@ class QueryScopeStats {
   CacheStats *cache_stats_;
 };
 
+absl::StatusOr<nlohmann::json> GetResponseJsonFromContext(
+    const QueryExecutionContext &execution_context) {
+  const auto &rf_object = execution_context.redfish_response.redfish_object;
+  if (rf_object == nullptr) {
+    return absl::InternalError("(RedfishObject is null)");
+  }
+  nlohmann::json response = rf_object->GetContentAsJson();
+  if (response.is_discarded()) {
+    return absl::InternalError(
+        "(Cannot get content as Json from Parent RedfishObject)");
+  }
+  if (!response.contains(PropertyOdataId::Name)) {
+    return absl::InternalError(
+        "(Parent URI Not Available from RedfishObject: No @odata.id)");
+  }
+  return response;
+}
+
 }  // namespace
+
+absl::StatusOr<std::string> GetChildUriFromNode(
+    const QueryExecutionContext &execution_context,
+    const std::string &node_name) {
+  ECCLESIA_ASSIGN_OR_RETURN(const nlohmann::json response,
+                            GetResponseJsonFromContext(execution_context));
+  std::string parent_uri = response[PropertyOdataId::Name];
+
+  if (!response.contains(node_name)) {
+    return absl::InternalError(
+        absl::StrCat("(RedfishObject does not contain: ", node_name,
+                     " at URI: ", parent_uri, ")"));
+  }
+  if (!response[node_name].contains(PropertyOdataId::Name)) {
+    return absl::InternalError(absl::StrCat(
+        "(@odata.id missing from: ", node_name, " at URI: ", parent_uri, ")"));
+  }
+  return response[node_name][PropertyOdataId::Name];
+}
+
+absl::StatusOr<std::string> GetChildUriFromIterable(
+    const QueryExecutionContext &execution_context, int index) {
+  // For complex Redfish Objects, the navigational property may be absent.
+  const auto &rf_iterable = execution_context.redfish_response.redfish_iterable;
+  if (execution_context.redfish_response.redfish_object == nullptr &&
+      rf_iterable != nullptr) {
+    return absl::InternalError("(Queried resource is a ComplexType; no URI)");
+  }
+  ECCLESIA_ASSIGN_OR_RETURN(const nlohmann::json response,
+                            GetResponseJsonFromContext(execution_context));
+  std::string parent_uri = response[PropertyOdataId::Name];
+
+  if (!response.contains(PropertyMembers::Name)) {
+    return absl::InternalError(
+        absl::StrCat("(RedfishObject is not an iterable: ", parent_uri,
+                     " does not have Members[])"));
+  }
+  if (index >= rf_iterable->Size() || index < 0) {
+    return absl::InternalError(
+        absl::StrCat("(Index ", index, " out of bounds ",
+                     "for RedfishIterable at URI: ", parent_uri, ")"));
+  }
+  if (!response[PropertyMembers::Name][index].contains(PropertyOdataId::Name)) {
+    return absl::InternalError(
+        absl::StrCat("(@odata.id Not Available in Members[] at index ", index,
+                     " at URI: ", parent_uri, ")"));
+  }
+  return response[PropertyMembers::Name][index][PropertyOdataId::Name];
+}
 
 QueryExecutionContext QueryExecutionContext::FromExisting(
     const std::string &new_redpath_prefix,
@@ -811,15 +787,17 @@ QueryPlanner::ExecuteQueryExpression(
         }
 
         absl::Status error_status = indexed_node.status().ok()
-            ? indexed_node_as_object.status()
-            : indexed_node.status();
+                                        ? indexed_node_as_object.status()
+                                        : indexed_node.status();
         absl::StatusOr<std::string> child_uri =
             GetChildUriFromIterable(current_execution_context, node_index);
 
-        error_status = absl::Status(error_status.code(), absl::StrCat(
-            "At resource URI: ",
-            child_uri.ok() ? child_uri.value() : child_uri.status().message(),
-            ": ", error_status.message()));
+        error_status = absl::Status(
+            error_status.code(),
+            absl::StrCat("At resource URI: ",
+                         child_uri.ok() ? child_uri.value()
+                                        : child_uri.status().message(),
+                         ": ", error_status.message()));
         if (execution_mode_ == QueryPlanner::ExecutionMode::kFailOnFirstError) {
           return error_status;
         }
@@ -948,10 +926,12 @@ QueryPlanner::ExecuteQueryExpression(
       absl::StatusOr<std::string> child_uri =
           GetChildUriFromNode(current_execution_context, expression.expression);
 
-      return absl::Status(redfish_variant.status().code(), absl::StrCat(
-          "At resource URI: ",
-          child_uri.ok() ? child_uri.value() : child_uri.status().message(),
-          ": ", redfish_variant.status().message()));
+      return absl::Status(
+          redfish_variant.status().code(),
+          absl::StrCat(
+              "At resource URI: ",
+              child_uri.ok() ? child_uri.value() : child_uri.status().message(),
+              ": ", redfish_variant.status().message()));
     }
     // Set timeout manager if it is available for the Variant so that requests
     // triggered by the variant can count against the query level timeout.
@@ -988,10 +968,12 @@ QueryPlanner::ExecuteQueryExpression(
         absl::StatusOr<std::string> child_uri = GetChildUriFromNode(
             current_execution_context, expression.expression);
 
-        return absl::Status(rf_object_or_status.status().code(), absl::StrCat(
-            "At resource URI: ",
-            child_uri.ok() ? child_uri.value() : child_uri.status().message(),
-            ": ", rf_object_or_status.status().message()));
+        return absl::Status(
+            rf_object_or_status.status().code(),
+            absl::StrCat("At resource URI: ",
+                         child_uri.ok() ? child_uri.value()
+                                        : child_uri.status().message(),
+                         ": ", rf_object_or_status.status().message()));
       }
       redfish_response.redfish_object = std::move(rf_object_or_status.value());
     }
@@ -1047,14 +1029,16 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
     const absl::flat_hash_set<RedPathExpression> &expressions =
         execution_context.redpath_trie_node->child_expressions;
     if (expressions.empty()) {
-      result.mutable_status()->add_errors( "Redfish interface is not set when "
+      result.mutable_status()->add_errors(
+          "Redfish interface is not set when "
           "resuming with no remaining expressions to query");
     } else {
-      result.mutable_status()->add_errors(
-        absl::StrCat("Redfish interface is not set before querying ",
+      result.mutable_status()->add_errors(absl::StrCat(
+          "Redfish interface is not set before querying ",
           expressions.begin()->type == RedPathExpression::Type::kPredicate
-            ? absl::StrCat("predicate [", expressions.begin()->expression, "]")
-            : absl::StrCat("node ", expressions.begin()->expression)));
+              ? absl::StrCat("predicate [", expressions.begin()->expression,
+                             "]")
+              : absl::StrCat("node ", expressions.begin()->expression)));
     }
     result.mutable_status()->set_error_code(
         ecclesia::ErrorCode::ERROR_INTERNAL);
@@ -1104,9 +1088,9 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
           if (normalize_status.ok()) {
             continue;
           }
-          result.mutable_status()->add_errors(absl::StrCat(
-              "Unable to normalize: ", normalize_status.message(),
-              " for subquery: ", subquery_id));
+          result.mutable_status()->add_errors(
+              absl::StrCat("Unable to normalize: ", normalize_status.message(),
+                           " for subquery: ", subquery_id));
           result.mutable_status()->set_error_code(
               ecclesia::ErrorCode::ERROR_INTERNAL);
           return result;
@@ -1236,13 +1220,12 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
 
   // If service root is unreachable populate the error and return the result.
   if (!service_root_object.ok() || *service_root_object == nullptr) {
-    result.mutable_status()->add_errors(
-        absl::StrCat("Attempting to reach service root ",
-                     get_params_service_root.uri_prefix, service_root_,
-                     " resulted in error: ",
-                     service_root_object.ok()
-                     ? "Getting object with freshness returned nullptr"
-                     : service_root_object.status().message()));
+    result.mutable_status()->add_errors(absl::StrCat(
+        "Attempting to reach service root ", get_params_service_root.uri_prefix,
+        service_root_, " resulted in error: ",
+        service_root_object.ok()
+            ? "Getting object with freshness returned nullptr"
+            : service_root_object.status().message()));
     result.mutable_status()->set_error_code(
         service_root_object.status().code() ==
                 absl::StatusCode::kDeadlineExceeded
@@ -1268,11 +1251,9 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
                      {.enable_url_annotation =
                           query_execution_options.enable_url_annotation});
     if (!normalize_status.ok()) {
-      result.mutable_status()->add_errors(
-          absl::StrCat("Querying service root: ",
-                       get_params_service_root.uri_prefix, service_root_,
-                       " resulted in error: ",
-                       normalize_status.message()));
+      result.mutable_status()->add_errors(absl::StrCat(
+          "Querying service root: ", get_params_service_root.uri_prefix,
+          service_root_, " resulted in error: ", normalize_status.message()));
       result.mutable_status()->set_error_code(
           ecclesia::ErrorCode::ERROR_INTERNAL);
       return query_execution_result;

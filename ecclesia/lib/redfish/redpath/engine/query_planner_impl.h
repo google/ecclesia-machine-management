@@ -139,6 +139,17 @@ struct QueryExecutionContext {
         redfish_response(std::move(redfish_object_and_iterable_in)) {}
 };
 
+// Helper function to get the URI of a child resource from the parent resource's
+// Redfish response if the child resource is inaccessible.
+absl::StatusOr<std::string> GetChildUriFromNode(
+  const QueryExecutionContext &execution_context,
+  const std::string &node_name);
+
+// Helper function to get the URI of a child resource from the Members list of
+// the parent's Redfish response if the child resource is inaccessible.
+absl::StatusOr<std::string> GetChildUriFromIterable(
+  const QueryExecutionContext &execution_context, int index);
+
 // Encapsulates information relevant per redfish object that is queried during
 // the overall query execution process; used to tag redfish jsons when logging.
 struct TraceInfo {

@@ -19,12 +19,14 @@
 #include <atomic>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/functional/function_ref.h"
 #include "absl/log/check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -73,12 +75,18 @@ using ::tensorflow::serving::net_http::HTTPStatusCode;
 using ::tensorflow::serving::net_http::ServerRequestInterface;
 using ::tensorflow::serving::net_http::SetContentType;
 using ::tensorflow::serving::net_http::SetContentTypeTEXT;
+using ::testing::AnyNumber;
+using ::testing::Eq;
 using ::testing::HasSubstr;
 using ::testing::NotNull;
+using ::testing::Return;
+using ::testing::TestParamInfo;
+using ::testing::TestWithParam;
 using ::testing::UnorderedElementsAre;
+using ::testing::Values;
+using ::testing::WithParamInterface;
 using QueryExecutionResult = QueryPlannerIntf::QueryExecutionResult;
 using QueryPlannerOptions = QueryPlanner::ImplOptions;
-using ::testing::Eq;
 
 constexpr absl::string_view kSensorRedPath = "/Chassis[*]/Sensors[*]";
 constexpr absl::string_view kSensorsRedPath = "/Chassis[*]/Sensors";
@@ -171,6 +179,39 @@ class QueryPlannerGrpcTestRunner : public ::testing::Test {
   std::unique_ptr<RedfishInterface> intf_;
   absl::Duration cache_duration_ = absl::Seconds(1);
   absl::Notification notification_;
+};
+
+class MockRedfishObject : public RedfishObject {
+ public:
+  MOCK_METHOD(RedfishVariant, Get, (absl::string_view, GetParams),
+              (const, override));
+  MOCK_METHOD(std::optional<std::string>, GetUriString, (), (const, override));
+  MOCK_METHOD(absl::StatusOr<std::unique_ptr<RedfishObject>>,
+              EnsureFreshPayload, (GetParams params), (override));
+  MOCK_METHOD(nlohmann::json, GetContentAsJson, (), (const, override));
+  MOCK_METHOD(std::string, DebugString, (), (const, override));
+  MOCK_METHOD(void, PrintDebugString, (), (const, override));
+  MOCK_METHOD(
+      void, ForEachProperty,
+      (absl::FunctionRef<RedfishIterReturnValue(absl::string_view key,
+                                                RedfishVariant value)>),
+      (override));
+  // Gmock does not support operator[] overloading, so we proxy with at().
+  MOCK_METHOD(RedfishVariant, at, (absl::string_view), (const));
+  RedfishVariant operator[](absl::string_view node_name) const override {
+    return at(node_name);
+  }
+};
+
+class MockRedfishIterable : public RedfishIterable {
+ public:
+  MOCK_METHOD(size_t, Size, (), (override));
+  MOCK_METHOD(bool, Empty, (), (override));
+  // Gmock does not support operator[] overloading, so we proxy with at().
+  MOCK_METHOD(RedfishVariant, at, (int), (const));
+  RedfishVariant operator[](int index) const override {
+    return at(index);
+  }
 };
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
@@ -3662,10 +3703,10 @@ struct GetChildUriTestCase {
 };
 
 class GetChildUriTest : public QueryPlannerTestRunner,
-    public ::testing::WithParamInterface<GetChildUriTestCase> {
+    public WithParamInterface<GetChildUriTestCase> {
  public:
   static std::string GetTestName(
-      const testing::TestParamInfo<GetChildUriTestCase> &info) {
+      const TestParamInfo<GetChildUriTestCase> &info) {
     return info.param.test_name;
   }
 };
@@ -3720,7 +3761,7 @@ TEST_P(GetChildUriTest, GetChildUriReturnsCorrectErrorMessage) {
 }
 
 INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, GetChildUriTest,
-  testing::Values(
+  Values(
     GetChildUriTestCase{
       .test_name = "PredicateShowsParentUri",
       .redpath_query = "/Chassis[*]",
@@ -3812,6 +3853,297 @@ INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, GetChildUriTest,
       .child_response_status_code = HTTPStatusCode::OK
     }
   ), GetChildUriTest::GetTestName
+);
+
+TEST(UriTestErrorMessages, CorrectUris) {
+  auto mock_redfish_object = std::make_unique<MockRedfishObject>();
+  EXPECT_CALL(*mock_redfish_object, GetContentAsJson()).Times(2)
+      .WillRepeatedly(Return(nlohmann::json::parse(R"json({
+        "@odata.id": "/redfish/v1/",
+        "Foo": {
+          "@odata.id": "/redfish/v1/foo"
+        },
+        "Members": [
+          {
+            "@odata.id": "/redfish/v1/bar"
+          }
+        ]
+      })json")));
+  auto mock_redfish_iterable = std::make_unique<MockRedfishIterable>();
+  EXPECT_CALL(*mock_redfish_iterable, Size()).WillOnce(Return(1));
+
+  RedfishResponse redfish_response;
+  redfish_response.redfish_object = std::move(mock_redfish_object);
+  redfish_response.redfish_iterable = std::move(mock_redfish_iterable);
+  QueryResult result;
+  QueryVariables query_variables;
+
+  QueryExecutionContext execution_context(
+      &result, {}, &query_variables, RedPathPrefixTracker(), nullptr,
+      std::move(redfish_response));
+
+  absl::StatusOr<std::string> node_uri =
+      GetChildUriFromNode(execution_context, "Foo");
+  absl::StatusOr<std::string> iterable_uri =
+      GetChildUriFromIterable(execution_context, 0);
+
+  ASSERT_TRUE(node_uri.ok());
+  EXPECT_EQ(*node_uri, "/redfish/v1/foo");
+  ASSERT_TRUE(iterable_uri.ok());
+  EXPECT_EQ(*iterable_uri, "/redfish/v1/bar");
+}
+
+TEST(UriTestErrorMessages, NullRedfishObject) {
+  QueryResult result;
+  QueryVariables query_variables;
+  QueryExecutionContext execution_context(
+      &result, {}, &query_variables, RedPathPrefixTracker(), nullptr);
+
+  absl::StatusOr<std::string> node_uri =
+      GetChildUriFromNode(execution_context, "foo");
+  absl::StatusOr<std::string> iterable_uri =
+      GetChildUriFromIterable(execution_context, 0xf00);
+
+  ASSERT_THAT(node_uri, IsStatusInternal());
+  EXPECT_THAT(node_uri.status().message(), "(RedfishObject is null)");
+  ASSERT_THAT(iterable_uri, IsStatusInternal());
+  EXPECT_THAT(iterable_uri.status().message(), "(RedfishObject is null)");
+}
+
+TEST(UriTestErrorMessages, ComplexTypeResource) {
+  RedfishResponse redfish_response;
+  redfish_response.redfish_iterable = std::make_unique<MockRedfishIterable>();
+  QueryResult result;
+  QueryVariables query_variables;
+
+  QueryExecutionContext execution_context(
+      &result, {}, &query_variables, RedPathPrefixTracker(), nullptr,
+      std::move(redfish_response));
+  absl::StatusOr<std::string> iterable_uri =
+      GetChildUriFromIterable(execution_context, 0xf00);
+
+  ASSERT_THAT(iterable_uri, IsStatusInternal());
+  EXPECT_THAT(iterable_uri.status().message(),
+              "(Queried resource is a ComplexType; no URI)");
+}
+
+struct GetChildUriFromNodeTestCase {
+  std::string test_name;
+  nlohmann::json json_response;
+  internal_status::IsStatusPolyMatcher status_poly_matcher;
+  std::string expected_error_message;
+};
+
+class ChildUriFromNodeTest : public TestWithParam<GetChildUriFromNodeTestCase> {
+ public:
+  static std::string GetTestName(
+      const TestParamInfo<GetChildUriFromNodeTestCase>& test_info) {
+    return test_info.param.test_name;
+  }
+};
+
+TEST_P(ChildUriFromNodeTest, GetChildUriFromNode) {
+  const GetChildUriFromNodeTestCase& param = GetParam();
+
+  auto mock_redfish_object = std::make_unique<MockRedfishObject>();
+  EXPECT_CALL(*mock_redfish_object, GetContentAsJson())
+      .WillOnce(Return(param.json_response));
+
+  RedfishResponse redfish_response;
+  redfish_response.redfish_object = std::move(mock_redfish_object);
+  QueryResult result;
+  QueryVariables query_variables;
+
+  QueryExecutionContext execution_context(
+      &result, {}, &query_variables, RedPathPrefixTracker(), nullptr,
+      std::move(redfish_response));
+  absl::StatusOr<std::string> node_uri =
+      GetChildUriFromNode(execution_context, "foo");
+
+  ASSERT_THAT(node_uri, param.status_poly_matcher);
+  EXPECT_THAT(node_uri.status().message(), param.expected_error_message);
+}
+
+INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, ChildUriFromNodeTest,
+  Values(
+    GetChildUriFromNodeTestCase{
+      .test_name = "DiscardedResponse",
+      .json_response = nlohmann::json::value_t::discarded,
+      .status_poly_matcher = IsStatusInternal(),
+      .expected_error_message = "(Cannot get content as Json from Parent "
+        "RedfishObject)"
+    },
+    GetChildUriFromNodeTestCase{
+      .test_name = "MissingNavigationalProperty",
+      .json_response = nlohmann::json::parse(R"json({
+      })json"),
+      .status_poly_matcher = IsStatusInternal(),
+      .expected_error_message = "(Parent URI Not Available from RedfishObject: "
+        "No @odata.id)"
+    },
+    GetChildUriFromNodeTestCase{
+      .test_name = "MissingNodeName",
+      .json_response = nlohmann::json::parse(R"json({
+        "@odata.id": "/redfish/v1/"
+      })json"),
+      .status_poly_matcher = IsStatusInternal(),
+      .expected_error_message = "(RedfishObject does not contain: foo at URI: "
+        "/redfish/v1/)"
+    },
+    GetChildUriFromNodeTestCase{
+      .test_name = "MissingNavigationPropertyInNode",
+      .json_response = nlohmann::json::parse(R"json({
+        "@odata.id": "/redfish/v1/",
+        "foo": {}
+      })json"),
+      .status_poly_matcher = IsStatusInternal(),
+      .expected_error_message = "(@odata.id missing from: foo at URI: "
+        "/redfish/v1/)"
+    },
+    GetChildUriFromNodeTestCase{
+      .test_name = "NoErrors",
+      .json_response = nlohmann::json::parse(R"json({
+        "@odata.id": "/redfish/v1/",
+        "foo": {
+          "@odata.id": "/redfish/v1/foo"
+        }
+      })json"),
+      .status_poly_matcher = IsOk(),
+      .expected_error_message = ""
+    }
+  ), ChildUriFromNodeTest::GetTestName
+);
+
+struct GetChildUriFromIterableTestCase {
+  std::string test_name;
+  nlohmann::json json_response;
+  int index;
+  internal_status::IsStatusPolyMatcher status_poly_matcher;
+  std::string expected_error_message;
+};
+
+class ChildUriFromIterableTest
+    : public TestWithParam<GetChildUriFromIterableTestCase> {
+ public:
+  static std::string GetTestName(
+      const TestParamInfo<GetChildUriFromIterableTestCase>& test_info) {
+    return test_info.param.test_name;
+  }
+};
+
+TEST_P(ChildUriFromIterableTest, GetChildUriFromIterable) {
+  const GetChildUriFromIterableTestCase& param = GetParam();
+
+  auto mock_redfish_object = std::make_unique<MockRedfishObject>();
+  EXPECT_CALL(*mock_redfish_object, GetContentAsJson())
+      .WillOnce(Return(param.json_response));
+  auto mock_redfish_iterable = std::make_unique<MockRedfishIterable>();
+  EXPECT_CALL(*mock_redfish_iterable, Size()).Times(AnyNumber())
+      .WillOnce(Return(1));
+
+  RedfishResponse redfish_response;
+  redfish_response.redfish_object = std::move(mock_redfish_object);
+  redfish_response.redfish_iterable = std::move(mock_redfish_iterable);
+  QueryResult result;
+  QueryVariables query_variables;
+
+  QueryExecutionContext execution_context(
+      &result, {}, &query_variables, RedPathPrefixTracker(), nullptr,
+      std::move(redfish_response));
+  absl::StatusOr<std::string> iterable_uri =
+      GetChildUriFromIterable(execution_context, param.index);
+
+  ASSERT_THAT(iterable_uri, param.status_poly_matcher);
+  EXPECT_THAT(iterable_uri.status().message(), param.expected_error_message);
+}
+
+INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, ChildUriFromIterableTest,
+  Values(
+    GetChildUriFromIterableTestCase{
+      .test_name = "DiscardedResponse",
+      .json_response = nlohmann::json::value_t::discarded,
+      .index = 0,
+      .status_poly_matcher = IsStatusInternal(),
+      .expected_error_message = "(Cannot get content as Json from Parent "
+        "RedfishObject)"
+    },
+    GetChildUriFromIterableTestCase{
+      .test_name = "MissingNavigationalProperty",
+      .json_response = nlohmann::json::parse(R"json({
+      })json"),
+      .index = 0,
+      .status_poly_matcher = IsStatusInternal(),
+      .expected_error_message = "(Parent URI Not Available from RedfishObject: "
+        "No @odata.id)"
+    },
+    GetChildUriFromIterableTestCase{
+      .test_name = "MissingMembersProperty",
+      .json_response = nlohmann::json::parse(R"json({
+        "@odata.id": "/redfish/v1/"
+      })json"),
+      .index = 0,
+      .status_poly_matcher = IsStatusInternal(),
+      .expected_error_message = "(RedfishObject is not an iterable: "
+        "/redfish/v1/ does not have Members[])"
+    },
+    GetChildUriFromIterableTestCase{
+      .test_name = "IndexOutOfRangeUnderflow",
+      .json_response = nlohmann::json::parse(R"json({
+        "@odata.id": "/redfish/v1/",
+        "Members": [
+          {
+            "@odata.id": "/redfish/v1/foo"
+          }
+        ]
+      })json"),
+      .index = -1,
+      .status_poly_matcher = IsStatusInternal(),
+      .expected_error_message = "(Index -1 out of bounds for RedfishIterable "
+        "at URI: /redfish/v1/)"
+    },
+    GetChildUriFromIterableTestCase{
+      .test_name = "IndexOutOfRangeOverflow",
+      .json_response = nlohmann::json::parse(R"json({
+        "@odata.id": "/redfish/v1/",
+        "Members": [
+          {
+            "@odata.id": "/redfish/v1/foo"
+          }
+        ]
+      })json"),
+      .index = 1,
+      .status_poly_matcher = IsStatusInternal(),
+      .expected_error_message = "(Index 1 out of bounds for RedfishIterable "
+        "at URI: /redfish/v1/)"
+    },
+    GetChildUriFromIterableTestCase{
+      .test_name = "MembersElementMissingNavigationalProperty",
+      .json_response = nlohmann::json::parse(R"json({
+        "@odata.id": "/redfish/v1/",
+        "Members": [
+          {}
+        ]
+      })json"),
+      .index = 0,
+      .status_poly_matcher = IsStatusInternal(),
+      .expected_error_message = "(@odata.id Not Available in Members[] at "
+        "index 0 at URI: /redfish/v1/)"
+    },
+    GetChildUriFromIterableTestCase{
+      .test_name = "NoErrors",
+      .json_response = nlohmann::json::parse(R"json({
+        "@odata.id": "/redfish/v1/",
+        "Members": [
+          {
+            "@odata.id": "/redfish/v1/foo"
+          }
+        ]
+      })json"),
+      .index = 0,
+      .status_poly_matcher = IsOk(),
+      .expected_error_message = ""
+    }
+  ), ChildUriFromIterableTest::GetTestName
 );
 
 TEST_F(QueryPlannerTestRunner, CheckQueryPlannerPopulatesStatus) {
@@ -4302,7 +4634,7 @@ TEST_F(QueryPlannerGrpcTestRunner, CheckQueryPlannerRespectsTimeoutOnGetRoot) {
   EXPECT_THAT(result.query_result.status().error_code(),
               Eq(ecclesia::ErrorCode::ERROR_QUERY_TIMEOUT));
   EXPECT_THAT(result.query_result.status().errors().at(0),
-              testing::HasSubstr("Timed out while querying service root"));
+              HasSubstr("Timed out while querying service root"));
   notification_.Notify();
 }
 
