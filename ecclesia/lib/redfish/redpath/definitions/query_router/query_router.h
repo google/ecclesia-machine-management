@@ -34,7 +34,7 @@
 #include "absl/log/die_if_null.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/synchronization/notification.h"
@@ -65,6 +65,27 @@ class QueryRouterIntf {
     SelectionSpec::SelectionClass::ServerType server_type;
     SelectionSpec::SelectionClass::ServerClass server_class;
 
+    static ServerInfo FromProto(const ecclesia::ServerInfo &proto) {
+      return ServerInfo{
+          .server_tag = proto.server_tag(),
+          .server_type = proto.server_type(),
+          .server_class = proto.server_class(),
+      };
+    }
+
+    static ecclesia::ServerInfo ToProto(const ServerInfo &info) {
+      ecclesia::ServerInfo proto;
+      proto.set_server_tag(info.server_tag);
+      proto.set_server_type(info.server_type);
+      proto.set_server_class(info.server_class);
+      return proto;
+    }
+
+    static std::string ToString(const ecclesia::ServerInfo &proto,
+                                bool include_label = true) {
+      return FromProto(proto).ToString(include_label);
+    }
+
     template <typename H>
     friend H AbslHashValue(H h, const ServerInfo &s) {
       return H::combine(std::move(h), s.server_tag, s.server_type,
@@ -76,12 +97,21 @@ class QueryRouterIntf {
              std::tie(other.server_tag, other.server_type, other.server_class);
     }
 
-    std::string ToString() const {
-      return absl::StrCat(
-          "server_tag: ", server_tag, ", server_type: ",
-          SelectionSpec::SelectionClass::ServerType_Name(server_type),
-          ", server_class: ",
-          SelectionSpec::SelectionClass::ServerClass_Name(server_class));
+    std::string ToString(bool include_label = true) const {
+      if (!include_label) {
+        return absl::StrFormat(
+            "'%s','%s','%s'", server_tag,
+            ecclesia::SelectionSpec::SelectionClass::ServerClass_Name(
+                server_class),
+            ecclesia::SelectionSpec::SelectionClass::ServerType_Name(
+                server_type));
+      }
+      return absl::StrFormat(
+          "server_tag: '%s', server_class: '%s', server_type: '%s'", server_tag,
+          ecclesia::SelectionSpec::SelectionClass::ServerClass_Name(
+              server_class),
+          ecclesia::SelectionSpec::SelectionClass::ServerType_Name(
+              server_type));
     }
   };
 

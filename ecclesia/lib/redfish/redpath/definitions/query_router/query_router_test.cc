@@ -54,6 +54,7 @@
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/status/test_macros.h"
 #include "ecclesia/lib/stubarbiter/arbiter.h"
+#include "ecclesia/lib/testing/proto.h"
 #include "ecclesia/lib/testing/status.h"
 #include "google/protobuf/text_format.h"
 
@@ -1319,6 +1320,60 @@ TEST_F(QueryRouterTest, QueryRouterCancellationReturnsCancelledError) {
 
   ASSERT_TRUE(expected_callbacks_success.empty());
   ASSERT_TRUE(expected_callbacks.empty());
+}
+
+TEST(ServerInfoTest, ServerInfoToString) {
+  QueryRouter::ServerInfo server_info = {
+      .server_tag = "server_1",
+      .server_type = SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+      .server_class = SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE};
+  EXPECT_EQ(server_info.ToString(),
+            "server_tag: 'server_1', server_class: 'SERVER_CLASS_COMPUTE', "
+            "server_type: 'SERVER_TYPE_BMCWEB'");
+  EXPECT_EQ(server_info.ToString(/*include_label=*/false),
+            "'server_1','SERVER_CLASS_COMPUTE','SERVER_TYPE_BMCWEB'");
+}
+
+TEST(ServerInfoTest, FromProto) {
+  ServerInfo server_info_proto = ParseTextProtoOrDie(R"pb(
+    server_tag: "server_1"
+    server_type: SERVER_TYPE_BMCWEB
+    server_class: SERVER_CLASS_COMPUTE
+  )pb");
+  QueryRouter::ServerInfo server_info =
+      QueryRouter::ServerInfo::FromProto(server_info_proto);
+  EXPECT_EQ(server_info.server_tag, "server_1");
+  EXPECT_EQ(server_info.server_type,
+            SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB);
+  EXPECT_EQ(server_info.server_class,
+            SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE);
+}
+
+TEST(ServerInfoTest, ToProto) {
+  QueryRouter::ServerInfo server_info = {
+      .server_tag = "server_1",
+      .server_type = SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+      .server_class = SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE};
+  ServerInfo server_info_proto = QueryRouter::ServerInfo::ToProto(server_info);
+  EXPECT_THAT(server_info_proto, EqualsProto(R"pb(
+                server_tag: "server_1"
+                server_type: SERVER_TYPE_BMCWEB
+                server_class: SERVER_CLASS_COMPUTE
+              )pb"));
+}
+
+TEST(ServerInfoTest, ToStringFromProto) {
+  ServerInfo server_info_proto = ParseTextProtoOrDie(R"pb(
+    server_tag: "server_1"
+    server_type: SERVER_TYPE_BMCWEB
+    server_class: SERVER_CLASS_COMPUTE
+  )pb");
+  EXPECT_EQ(QueryRouter::ServerInfo::ToString(server_info_proto),
+            "server_tag: 'server_1', server_class: 'SERVER_CLASS_COMPUTE', "
+            "server_type: 'SERVER_TYPE_BMCWEB'");
+  EXPECT_EQ(QueryRouter::ServerInfo::ToString(server_info_proto,
+                                              /*include_label=*/false),
+            "'server_1','SERVER_CLASS_COMPUTE','SERVER_TYPE_BMCWEB'");
 }
 
 }  // namespace

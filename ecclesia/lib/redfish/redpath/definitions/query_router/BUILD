@@ -96,6 +96,7 @@ cc_test(
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/status:test_macros",
         "//ecclesia/lib/stubarbiter:arbiter",
+        "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",

@@ -72,6 +72,12 @@ message SelectionSpec {
   repeated QuerySelectionSpec query_selection_specs = 1;
 }
 
+message ServerInfo {
+  string server_tag = 1;
+  SelectionSpec.SelectionClass.ServerType server_type = 2;
+  SelectionSpec.SelectionClass.ServerClass server_class = 3;
+}
+
 enum QueryPattern {
   PATTERN_UNSPECIFIED = 0;
   // All queries will be executed in series across all agents
