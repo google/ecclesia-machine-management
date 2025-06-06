@@ -205,10 +205,13 @@ class StubArbiter {
       return status;
     };
 
+    StubArbiterInfo::PriorityLabel attempted_stub_label =
+        StubArbiterInfo::PriorityLabel::kUnknown;
     absl::MutexLock lock(&stub_mutex_);
     // Check if active stub is empty and is the same as the initial stub.
     // If so, then check if the active stub is the primary or the stub is fresh
     // enough. If so, then execute the function on the active stub.
+
     if (active_stub_ != nullptr &&
         (clock_.Now() < (freshness_time_ + refresh_) ||
          active_stub_label_ == StubArbiterInfo::PriorityLabel::kPrimary)) {
@@ -219,6 +222,9 @@ class StubArbiter {
           !failover_codes_.contains(metrics.overall_status.code())) {
         return metrics;
       }
+
+      // Record the attempted stub label before we clean up the active stub.
+      attempted_stub_label = active_stub_label_;
     }
 
     // Before attempting to create a new stub, we
@@ -229,6 +235,11 @@ class StubArbiter {
          label != StubArbiterInfo::PriorityLabel::kUnknown;
          label = static_cast<StubArbiterInfo::PriorityLabel>(
              static_cast<int>(label) + 1)) {
+      // Want to skip the attempted stub label.
+      if (label == attempted_stub_label) {
+        continue;
+      }
+
       absl::StatusOr<std::unique_ptr<T>> stub = stub_factory_(label);
 
       if (!stub.ok()) {

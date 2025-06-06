@@ -274,21 +274,21 @@ TEST(StubArbiterTest, CheckExecutionTimeFailover) {
   EXPECT_THAT(metrics.overall_status, IsOk());
 
   EXPECT_EQ(metrics.arbiter_start_time, absl::FromUnixSeconds(1700000000));
-  EXPECT_EQ(metrics.arbiter_end_time, absl::FromUnixSeconds(1700000003));
+  EXPECT_EQ(metrics.arbiter_end_time, absl::FromUnixSeconds(1700000002));
 
   EXPECT_THAT(
       metrics.endpoint_metrics,
       UnorderedElementsAre(
           Pair(StubArbiterInfo::PriorityLabel::kPrimary,
                AllOf(Field(&StubArbiterInfo::EndpointMetrics::start_time,
-                           absl::FromUnixSeconds(1700000001)),
+                           absl::FromUnixSeconds(1700000000)),
                      Field(&StubArbiterInfo::EndpointMetrics::end_time,
-                           absl::FromUnixSeconds(1700000002)))),
+                           absl::FromUnixSeconds(1700000001)))),
           Pair(StubArbiterInfo::PriorityLabel::kSecondary,
                AllOf(Field(&StubArbiterInfo::EndpointMetrics::start_time,
-                           absl::FromUnixSeconds(1700000002)),
+                           absl::FromUnixSeconds(1700000001)),
                      Field(&StubArbiterInfo::EndpointMetrics::end_time,
-                           absl::FromUnixSeconds(1700000003))))));
+                           absl::FromUnixSeconds(1700000002))))));
 }
 
 TEST(StubArbiterTest, CheckPrimaryFreshness) {
@@ -401,7 +401,7 @@ TEST(StubArbiterTest, CheckPrimaryFreshnessFailover) {
   EXPECT_EQ(metrics.arbiter_end_time, absl::FromUnixSeconds(1700000010));
 
   EXPECT_THAT(counter,
-              UnorderedElementsAre(Pair("primary", 2), Pair("secondary", 1)));
+              UnorderedElementsAre(Pair("primary", 1), Pair("secondary", 1)));
 }
 
 TEST(StubArbiterTest, CheckSecondaryFreshness) {
@@ -430,9 +430,9 @@ TEST(StubArbiterTest, CheckSecondaryFreshness) {
       });
   ASSERT_THAT(metrics.overall_status, IsOk());
   EXPECT_EQ(metrics.arbiter_start_time, absl::FromUnixSeconds(1700000000));
-  EXPECT_EQ(metrics.arbiter_end_time, absl::FromUnixSeconds(1700000003));
+  EXPECT_EQ(metrics.arbiter_end_time, absl::FromUnixSeconds(1700000002));
   EXPECT_THAT(counter,
-              UnorderedElementsAre(Pair("primary", 2), Pair("secondary", 1)));
+              UnorderedElementsAre(Pair("primary", 1), Pair("secondary", 1)));
 
   clock.AdvanceTime(absl::Seconds(1));
   metrics = arbiter->Execute(
@@ -445,11 +445,11 @@ TEST(StubArbiterTest, CheckSecondaryFreshness) {
         return absl::OkStatus();
       });
   ASSERT_THAT(metrics.overall_status, IsOk());
-  EXPECT_EQ(metrics.arbiter_start_time, absl::FromUnixSeconds(1700000004));
-  EXPECT_EQ(metrics.arbiter_end_time, absl::FromUnixSeconds(1700000005));
+  EXPECT_EQ(metrics.arbiter_start_time, absl::FromUnixSeconds(1700000003));
+  EXPECT_EQ(metrics.arbiter_end_time, absl::FromUnixSeconds(1700000004));
 
   EXPECT_THAT(counter,
-              UnorderedElementsAre(Pair("primary", 2), Pair("secondary", 1)));
+              UnorderedElementsAre(Pair("primary", 1), Pair("secondary", 1)));
 
   clock.AdvanceTime(absl::Seconds(10));
   metrics = arbiter->Execute(
@@ -462,11 +462,11 @@ TEST(StubArbiterTest, CheckSecondaryFreshness) {
         return absl::OkStatus();
       });
   ASSERT_THAT(metrics.overall_status, IsOk());
-  EXPECT_EQ(metrics.arbiter_start_time, absl::FromUnixSeconds(1700000015));
-  EXPECT_EQ(metrics.arbiter_end_time, absl::FromUnixSeconds(1700000017));
+  EXPECT_EQ(metrics.arbiter_start_time, absl::FromUnixSeconds(1700000014));
+  EXPECT_EQ(metrics.arbiter_end_time, absl::FromUnixSeconds(1700000016));
 
   EXPECT_THAT(counter,
-              UnorderedElementsAre(Pair("primary", 3), Pair("secondary", 2)));
+              UnorderedElementsAre(Pair("primary", 2), Pair("secondary", 2)));
 }
 
 void MultiThreadedStubArbiterQuery(
