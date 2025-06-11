@@ -215,6 +215,8 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
         transport_arbiter_query_engine_params.transport_arbiter_refresh =
             absl::Seconds(router_spec.transport_arbiter_refresh());
       }
+      transport_arbiter_query_engine_params.export_metrics =
+          std::move(server_spec.export_metrics);
       ECCLESIA_ASSIGN_OR_RETURN(
           query_engine, transport_arbiter_query_engine_factory(
                             std::move(query_spec),
