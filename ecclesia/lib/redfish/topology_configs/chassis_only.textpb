@@ -1,0 +1,8 @@
+# proto-file: third_party/ecclesia/lib/redfish/topology_config.proto
+# proto-message: TopologyConfig
+
+# This text proto represents the valid linkages for DMTF Redfish version 2021.1
+
+resource_to_config {
+  key: "Chassis"
+}
