@@ -127,4 +127,19 @@ message QueryRouterSpec {
 
   // Specifies the TransportArbiter secondary transport freshness.
   optional int32 transport_arbiter_refresh = 9;
+
+  // Defines the minimum and/or maximum needed BMC version for a platform.
+  message VersionConfig {
+    message Policy {
+      SelectionSpec.SelectionClass select = 1;
+      // Defines the minimum needed (BMC) version for a platform.
+      //(greater than or equal to min_version)
+      optional string min_version = 2;
+      // Define the maximum needed (BMC) version for a platform.
+      // (less than or equal to max_version)
+      optional string max_version = 3;
+    }
+    repeated Policy policies = 1;
+  }
+  optional VersionConfig version_config = 10;
 }
