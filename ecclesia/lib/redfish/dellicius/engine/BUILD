@@ -83,6 +83,7 @@ cc_library(
         "//ecclesia/lib/redfish/transport:interface",
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/stubarbiter:arbiter",
+        "//ecclesia/lib/stubarbiter:util",
         "//ecclesia/lib/time:clock",
         "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/container:flat_hash_map",

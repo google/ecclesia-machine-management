@@ -46,6 +46,7 @@
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/stubarbiter/arbiter.h"
+#include "ecclesia/lib/stubarbiter/util.h"
 #include "ecclesia/lib/time/proto.h"
 
 namespace ecclesia {
@@ -157,23 +158,34 @@ QueryEngineWithTransportArbiter::CreateTransportArbiterQueryEngine(
           query_spec.clock));
 
   std::unique_ptr<ecclesia::RedpathNormalizer> redpath_normalizer;
-  arbiter->Execute([&](ecclesia::RedfishInterface *redfish_interface,
-                       StubArbiterInfo::PriorityLabel label) -> absl::Status {
-    if (id_assigner == nullptr) {
-      redpath_normalizer = BuildLocalDevpathRedpathNormalizer(
-          redfish_interface,
-          QueryEngineParams::GetRedpathNormalizerStableIdType(
-              engine_params.stable_id_type),
-          engine_params.redfish_topology_config_name);
-    } else {
-      redpath_normalizer = GetMachineDevpathRedpathNormalizer(
-          QueryEngineParams::GetRedpathNormalizerStableIdType(
-              engine_params.stable_id_type),
-          engine_params.redfish_topology_config_name, std::move(id_assigner),
-          redfish_interface);
+  StubArbiterInfo::Metrics metrics = arbiter->Execute(
+      [&](ecclesia::RedfishInterface *redfish_interface,
+          StubArbiterInfo::PriorityLabel label) -> absl::Status {
+        if (id_assigner == nullptr) {
+          redpath_normalizer = BuildLocalDevpathRedpathNormalizer(
+              redfish_interface,
+              QueryEngineParams::GetRedpathNormalizerStableIdType(
+                  engine_params.stable_id_type),
+              engine_params.redfish_topology_config_name);
+        } else {
+          redpath_normalizer = GetMachineDevpathRedpathNormalizer(
+              QueryEngineParams::GetRedpathNormalizerStableIdType(
+                  engine_params.stable_id_type),
+              engine_params.redfish_topology_config_name,
+              std::move(id_assigner), redfish_interface);
+        }
+        return absl::OkStatus();
+      });
+
+  if (!metrics.overall_status.ok()) {
+    LOG(ERROR) << "Redpath normalizer creation failed with status: "
+               << metrics.overall_status;
+    for (const auto &[label, endpoint_metrics] : metrics.endpoint_metrics) {
+      LOG(ERROR) << "Redpath normalizer created for label: "
+                 << PriorityLabelToString(label)
+                 << " with status: " << endpoint_metrics.status;
     }
-    return absl::OkStatus();
-  });
+  }
 
   if (redpath_normalizer == nullptr) {
     return absl::InternalError("Failed to create redpath normalizer.");
