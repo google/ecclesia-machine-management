@@ -18,7 +18,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/status/status.h"
 #include "ecclesia/lib/testing/status.h"
 #include "single_include/nlohmann/json.hpp"
 
@@ -34,6 +33,7 @@ TEST(ApplyPredicateRuleTest, ShouldApplyRelationalOperatorsCorrectly) {
                         {"Created", "2023-09-16T18:50:24.633362+00:00"},
                         {"BoolProperty", true},
                         {"Id", "CPU_1"},
+                        {"IdWithSpaces", "My Resource 42"},
                         {"StringProperty", "TestValue1"},
                         {"NullObject", {}}};
 
@@ -70,6 +70,9 @@ TEST(ApplyPredicateRuleTest, ShouldApplyRelationalOperatorsCorrectly) {
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
 
   options.predicate = "BoolProperty!=false";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "IdWithSpaces=My\\ Resource\\ 42";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
 
   options.predicate = "NullObject=null";
