@@ -469,6 +469,168 @@ TEST(StubArbiterTest, CheckSecondaryFreshness) {
               UnorderedElementsAre(Pair("primary", 2), Pair("secondary", 2)));
 }
 
+struct ArbiterMetrics {
+  std::string path;
+  absl::Status status;
+  absl::Duration latency;
+};
+
+TEST(StubArbiterTest, ExecuteFailoverWithMetrics) {
+  FakeClock clock(absl::FromUnixSeconds(1700000000));
+
+  std::vector<ArbiterMetrics> arbiter_metrics;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::unique_ptr<MockStubArbiter> arbiter,
+      MockStubArbiter::Create(
+          {.metrics_exporter =
+               [&arbiter_metrics](absl::string_view path,
+                                  const absl::Status &status,
+                                  absl::Duration latency) {
+                 arbiter_metrics.push_back(
+                     ArbiterMetrics{.path = std::string(path),
+                                    .status = status,
+                                    .latency = latency});
+               }},
+          [](StubArbiterInfo::PriorityLabel label)
+              -> absl::StatusOr<std::unique_ptr<MockStub>> {
+            std::string name = GetName(label);
+            return std::make_unique<MockStub>(name);
+          },
+          &clock));
+
+  arbiter->Execute(
+      [&clock](MockStub *stub,
+               StubArbiterInfo::PriorityLabel label) -> absl::Status {
+        clock.AdvanceTime(absl::Seconds(1));
+        return absl::OkStatus();
+      });
+  EXPECT_THAT(arbiter_metrics,
+              UnorderedElementsAre(
+                  AllOf(Field(&ArbiterMetrics::path, "primary"),
+                        Field(&ArbiterMetrics::status, IsOk()),
+                        Field(&ArbiterMetrics::latency, absl::Seconds(1)))));
+  arbiter_metrics.clear();
+
+  arbiter->Execute(
+      [&clock](MockStub *stub,
+               StubArbiterInfo::PriorityLabel label) -> absl::Status {
+        std::string name = stub->GetName();
+        clock.AdvanceTime(absl::Seconds(1));
+        if (name == kPrimary) {
+          return absl::DeadlineExceededError("Deadline exceeded");
+        }
+        return absl::OkStatus();
+      });
+
+  EXPECT_THAT(
+      arbiter_metrics,
+      UnorderedElementsAre(
+          AllOf(Field(&ArbiterMetrics::path, "primary"),
+                Field(&ArbiterMetrics::status, IsStatusDeadlineExceeded()),
+                Field(&ArbiterMetrics::latency, absl::Seconds(1))),
+          AllOf(Field(&ArbiterMetrics::path, "fallback"),
+                Field(&ArbiterMetrics::status, IsOk()),
+                Field(&ArbiterMetrics::latency, absl::Seconds(2)))));
+}
+
+TEST(StubArbiterTest, ExecuteStickyFailoverWithArbiterMetrics) {
+  FakeClock clock(absl::FromUnixSeconds(1700000000));
+
+  std::vector<ArbiterMetrics> arbiter_metrics;
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::unique_ptr<MockStubArbiter> arbiter,
+      MockStubArbiter::Create(
+          {.refresh = absl::Seconds(10),
+           .metrics_exporter =
+               [&arbiter_metrics](absl::string_view path,
+                                  const absl::Status &status,
+                                  absl::Duration latency) {
+                 arbiter_metrics.push_back(
+                     ArbiterMetrics{.path = std::string(path),
+                                    .status = status,
+                                    .latency = latency});
+               }},
+          [](StubArbiterInfo::PriorityLabel label)
+              -> absl::StatusOr<std::unique_ptr<MockStub>> {
+            std::string name = GetName(label);
+            return std::make_unique<MockStub>(name);
+          },
+          &clock));
+
+  arbiter->Execute(
+      [&clock](MockStub *stub,
+               StubArbiterInfo::PriorityLabel label) -> absl::Status {
+        clock.AdvanceTime(absl::Seconds(1));
+        if (stub->GetName() == kPrimary) {
+          return absl::DeadlineExceededError("Deadline exceeded");
+        }
+        return absl::OkStatus();
+      });
+
+  EXPECT_THAT(
+      arbiter_metrics,
+      UnorderedElementsAre(
+          AllOf(Field(&ArbiterMetrics::path, "primary"),
+                Field(&ArbiterMetrics::status, IsStatusDeadlineExceeded()),
+                Field(&ArbiterMetrics::latency, absl::Seconds(1))),
+          AllOf(Field(&ArbiterMetrics::path, "fallback"),
+                Field(&ArbiterMetrics::status, IsOk()),
+                Field(&ArbiterMetrics::latency, absl::Seconds(2)))));
+
+  // 1. Check that the sticky path is reported.
+  arbiter_metrics.clear();
+  arbiter->Execute(
+      [&clock](MockStub *stub,
+               StubArbiterInfo::PriorityLabel label) -> absl::Status {
+        clock.AdvanceTime(absl::Seconds(1));
+        return absl::OkStatus();
+      });
+
+  EXPECT_THAT(arbiter_metrics,
+              UnorderedElementsAre(
+                  AllOf(Field(&ArbiterMetrics::path, "sticky"),
+                        Field(&ArbiterMetrics::status, IsOk()),
+                        Field(&ArbiterMetrics::latency, absl::Seconds(1)))));
+
+  // 2. Check that the sticky and sticky-fallback path is reported.
+  arbiter_metrics.clear();
+  arbiter->Execute(
+      [&clock](MockStub *stub,
+               StubArbiterInfo::PriorityLabel label) -> absl::Status {
+        clock.AdvanceTime(absl::Seconds(1));
+        if (stub->GetName() == kSecondary) {
+          return absl::DeadlineExceededError("Deadline exceeded");
+        }
+        return absl::OkStatus();
+      });
+
+  EXPECT_THAT(
+      arbiter_metrics,
+      UnorderedElementsAre(
+          AllOf(Field(&ArbiterMetrics::path, "sticky"),
+                Field(&ArbiterMetrics::status, IsStatusDeadlineExceeded()),
+                Field(&ArbiterMetrics::latency, absl::Seconds(1))),
+          AllOf(Field(&ArbiterMetrics::path, "sticky-fallback"),
+                Field(&ArbiterMetrics::status, IsOk()),
+                Field(&ArbiterMetrics::latency, absl::Seconds(2)))));
+
+  // 3. Freshness expired, so the primary path is reported.
+  clock.AdvanceTime(absl::Seconds(10));
+  arbiter_metrics.clear();
+  arbiter->Execute(
+      [&clock](MockStub *stub,
+               StubArbiterInfo::PriorityLabel label) -> absl::Status {
+        clock.AdvanceTime(absl::Seconds(1));
+        return absl::OkStatus();
+      });
+
+  EXPECT_THAT(arbiter_metrics,
+              UnorderedElementsAre(
+                  AllOf(Field(&ArbiterMetrics::path, "primary"),
+                        Field(&ArbiterMetrics::status, IsOk()),
+                        Field(&ArbiterMetrics::latency, absl::Seconds(1)))));
+}
+
 void MultiThreadedStubArbiterQuery(
     MockStubArbiter *arbiter, ThreadFactoryInterface *thread_factory,
     absl::AnyInvocable<absl::Status(StubArbiterInfo::PriorityLabel)> func,

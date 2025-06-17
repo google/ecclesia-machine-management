@@ -18,8 +18,10 @@
 #define ECCLESIA_LIB_STUBARBITER_ARBITER_H_
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -32,6 +34,7 @@
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/time/clock.h"
@@ -39,6 +42,8 @@
 namespace ecclesia {
 
 struct StubArbiterInfo {
+  using MetricsExporter = std::function<void(
+      absl::string_view, const absl::Status &, absl::Duration)>;
   enum class Type : std::uint8_t { kManual = 0, kFailover, kUnknown };
 
   enum class PriorityLabel : std::uint8_t {
@@ -76,6 +81,7 @@ struct StubArbiterInfo {
     Type type = Type::kFailover;
     std::optional<std::vector<absl::StatusCode>> custom_failover_code;
     absl::Duration refresh = absl::Seconds(5);
+    std::optional<MetricsExporter> metrics_exporter = std::nullopt;
   };
 };
 
@@ -107,7 +113,7 @@ class StubArbiter {
     }
     return absl::WrapUnique(
         new StubArbiter(config.type, std::move(stub_factory), failover_codes,
-                        config.refresh, clock));
+                        config.refresh, clock, config.metrics_exporter));
   }
 
   // The Execute function runs the callback synchronously.
@@ -120,16 +126,19 @@ class StubArbiter {
   };
 
  private:
-  StubArbiter(StubArbiterInfo::Type type,
-              absl::AnyInvocable<absl::StatusOr<std::unique_ptr<T>>(
-                  StubArbiterInfo::PriorityLabel)>
-                  stub_factory,
-              absl::flat_hash_set<absl::StatusCode> failover_codes,
-              absl::Duration refresh, const Clock *clock)
+  StubArbiter(
+      StubArbiterInfo::Type type,
+      absl::AnyInvocable<
+          absl::StatusOr<std::unique_ptr<T>>(StubArbiterInfo::PriorityLabel)>
+          stub_factory,
+      absl::flat_hash_set<absl::StatusCode> failover_codes,
+      absl::Duration refresh, const Clock *clock,
+      const std::optional<StubArbiterInfo::MetricsExporter> &metrics_exporter)
       : failover_codes_(std::move(failover_codes)),
         stub_factory_(std::move(stub_factory)),
         clock_(*ABSL_DIE_IF_NULL(clock)),
-        refresh_(refresh) {
+        refresh_(refresh),
+        metrics_exporter_(metrics_exporter) {
     switch (type) {
       case StubArbiterInfo::Type::kManual:
         policy_ = absl::bind_front(&StubArbiter<T>::Manual, this);
@@ -191,17 +200,25 @@ class StubArbiter {
       absl::AnyInvocable<absl::Status(T *, StubArbiterInfo::PriorityLabel)>
           func,
       StubArbiterInfo::PriorityLabel initial_stub) {
+    std::string stub_path;
     StubArbiterInfo::Metrics metrics;
     StubArbiterInfo::MetricsWrapper metrics_wrapper(&metrics, &clock_);
 
-    auto execute_func =
-        [&](T *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+    auto execute_func = [&](T *stub, StubArbiterInfo::PriorityLabel label,
+                            absl::string_view stub_path) -> absl::Status {
       StubArbiterInfo::EndpointMetrics &endpoint_metrics =
           metrics.endpoint_metrics[label];
       endpoint_metrics.start_time = clock_.Now();
       absl::Status status = func(stub, label);
       endpoint_metrics.end_time = clock_.Now();
       endpoint_metrics.status = status;
+
+      if (metrics_exporter_.has_value()) {
+        (*metrics_exporter_)(
+            stub_path, status,
+            endpoint_metrics.end_time - metrics.arbiter_start_time);
+      }
+
       return status;
     };
 
@@ -215,14 +232,22 @@ class StubArbiter {
     if (active_stub_ != nullptr &&
         (clock_.Now() < (freshness_time_ + refresh_) ||
          active_stub_label_ == StubArbiterInfo::PriorityLabel::kPrimary)) {
+      stub_path = active_stub_label_ == StubArbiterInfo::PriorityLabel::kPrimary
+                      ? "primary"
+                      : "sticky";
+
       metrics.overall_status =
-          execute_func(active_stub_.get(), active_stub_label_);
+          execute_func(active_stub_.get(), active_stub_label_, stub_path);
 
       if (metrics.overall_status.ok() ||
           !failover_codes_.contains(metrics.overall_status.code())) {
         return metrics;
       }
 
+      stub_path = "";
+      if (active_stub_label_ == StubArbiterInfo::PriorityLabel::kSecondary) {
+        stub_path = "sticky-fallback";
+      }
       // Record the attempted stub label before we clean up the active stub.
       attempted_stub_label = active_stub_label_;
     }
@@ -251,7 +276,13 @@ class StubArbiter {
         break;
       }
 
-      metrics.overall_status = execute_func(stub->get(), label);
+      // If the stub path is empty, then sticky behavior was skipped..
+      if (stub_path.empty()) {
+        stub_path = label == StubArbiterInfo::PriorityLabel::kPrimary
+                        ? "primary"
+                        : "fallback";
+      }
+      metrics.overall_status = execute_func(stub->get(), label, stub_path);
       // If the overall status is ok or the status code is not in the failover
       // codes, then we can break out of the loop.
       if (metrics.overall_status.ok() ||
@@ -261,6 +292,7 @@ class StubArbiter {
         freshness_time_ = clock_.Now();
         break;
       }
+      stub_path = "";
     }
     return metrics;
   }
@@ -280,6 +312,7 @@ class StubArbiter {
       ABSL_GUARDED_BY(stub_mutex_);
   absl::Time freshness_time_ ABSL_GUARDED_BY(stub_mutex_);
   absl::Duration refresh_;
+  std::optional<StubArbiterInfo::MetricsExporter> metrics_exporter_;
 };
 
 }  // namespace ecclesia
