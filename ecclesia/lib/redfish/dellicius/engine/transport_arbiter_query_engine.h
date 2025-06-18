@@ -82,6 +82,8 @@ class QueryEngineWithTransportArbiter : public QueryEngine {
     // Type of StubArbiter to use: failover or manual.
     std::optional<StubArbiterInfo::Type> transport_arbiter_type;
     std::optional<absl::Duration> transport_arbiter_refresh;
+    std::optional<StubArbiterInfo::MetricsExporter> export_metrics =
+        std::nullopt;
   };
 
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>>

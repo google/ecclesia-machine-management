@@ -136,13 +136,15 @@ QueryEngineWithTransportArbiter::CreateTransportArbiterQueryEngine(
       TransportArbiter::Create(
           {.type = engine_params.transport_arbiter_type.value_or(
                StubArbiterInfo::Type::kFailover),
-           .custom_failover_code = std::vector<absl::StatusCode>{
-               absl::StatusCode::kDeadlineExceeded,
-               absl::StatusCode::kUnavailable,
-               absl::StatusCode::kResourceExhausted,
-               absl::StatusCode::kFailedPrecondition},
+           .custom_failover_code =
+               std::vector<absl::StatusCode>{
+                   absl::StatusCode::kDeadlineExceeded,
+                   absl::StatusCode::kUnavailable,
+                   absl::StatusCode::kResourceExhausted,
+                   absl::StatusCode::kFailedPrecondition},
            .refresh = engine_params.transport_arbiter_refresh.value_or(
-               absl::Seconds(5))},
+               absl::Seconds(5)),
+           .metrics_exporter = engine_params.export_metrics},
           [transport_factory = std::move(engine_params.transport_factory),
            cache_factory = std::move(engine_params.cache_factory)](
               StubArbiterInfo::PriorityLabel label)
