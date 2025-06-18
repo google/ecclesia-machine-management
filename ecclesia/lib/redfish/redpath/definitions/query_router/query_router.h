@@ -204,6 +204,8 @@ class QueryRouter : public QueryRouterIntf {
 
     std::optional<RedfishTransportFactory> transport_factory = std::nullopt;
     std::optional<StubArbiterInfo::Type> transport_arbiter_type;
+    std::optional<StubArbiterInfo::MetricsExporter> export_metrics =
+        std::nullopt;
 
     ServerSpec() = default;
     ServerSpec(const ServerSpec &) = delete;
