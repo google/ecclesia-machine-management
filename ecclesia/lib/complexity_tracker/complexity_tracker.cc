@@ -17,11 +17,11 @@
 #include "ecclesia/lib/complexity_tracker/complexity_tracker.h"
 
 #include <memory>
+#include <utility>
 
-#include "absl/log/log.h"
-#include "absl/memory/memory.h"
 #include "absl/status/status.h"
-#include "absl/synchronization/mutex.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 
 namespace ecclesia {
 
@@ -47,10 +47,11 @@ ApiComplexityContextManager::ApiComplexityContextManager(
     : impl_(std::move(impl)) {}
 
 ApiComplexityContextManager::ReportOnDestroy
-ApiComplexityContextManager::PrepareForInboundApi(std::string name) const {
+ApiComplexityContextManager::PrepareForInboundApi(
+    absl::string_view name) const {
   absl::StatusOr<ApiComplexityContext *> context = impl_->GetContext();
   if (context.ok() && *context != nullptr) {
-    (*context)->PrepareForInboundApi(std::move(name));
+    (*context)->PrepareForInboundApi(name);
     return ReportOnDestroy(this, *context);
   }
   return ReportOnDestroy(this, nullptr);
