@@ -22,10 +22,8 @@
 #include <memory>
 #include <string>
 
-#include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/synchronization/mutex.h"
 
 namespace ecclesia {
 
@@ -40,15 +38,19 @@ namespace ecclesia {
 // more details.
 class ApiComplexityContext {
  public:
-  enum class CallType { kCachedRedfish, kUncachedRedfish, kUncachedGsys };
+  enum class CallType : std::uint8_t {
+    kCachedRedfish,
+    kUncachedRedfish,
+    kUncachedGsys
+  };
 
   // Resets context for new inbound API processing has started. Inbound API
   // handlers need to call this method in order to reset counters.
   // Why?
   //  Sometimes the same thread can be re-used without destroying for multiple
   // APIs. The result is the same ApiComplexityContext instance to be used.
-  void PrepareForInboundApi(std::string name) {
-    api_name_ = std::move(name);
+  void PrepareForInboundApi(absl::string_view name) {
+    api_name_ = name;
     uncached_redfish_calls_ = 0;
     cached_redfish_calls_ = 0;
     uncached_gsys_calls_ = 0;
@@ -69,16 +71,14 @@ class ApiComplexityContext {
   }
 
   // accessors for cached/uncached counters and current API name
-  const uint64_t uncached_redfish_calls() const {
-    return uncached_redfish_calls_;
-  }
-  const uint64_t cached_redfish_calls() const { return cached_redfish_calls_; }
-  const uint64_t uncached_gsys_calls() const { return uncached_gsys_calls_; }
+  uint64_t uncached_redfish_calls() const { return uncached_redfish_calls_; }
+  uint64_t cached_redfish_calls() const { return cached_redfish_calls_; }
+  uint64_t uncached_gsys_calls() const { return uncached_gsys_calls_; }
 
   absl::string_view api_name() const { return api_name_; }
 
  private:
-  std::string api_name_ = "";
+  std::string api_name_;
   uint64_t uncached_redfish_calls_ = 0;
   uint64_t cached_redfish_calls_ = 0;
   uint64_t uncached_gsys_calls_ = 0;
@@ -139,35 +139,35 @@ class ApiComplexityContextManager {
     // Move forces other instance to 'forget' reporting on destroy
     ReportOnDestroy(ReportOnDestroy &&other)
         : manager_(other.manager_), context_(other.context_) {
-      other.report_on_destroy = false;
+      other.report_on_destroy_ = false;
     }
 
     ReportOnDestroy &operator=(ReportOnDestroy &&other) {
       manager_ = other.manager_;
       context_ = other.context_;
-      report_on_destroy = other.report_on_destroy;
-      other.report_on_destroy = false;
+      report_on_destroy_ = other.report_on_destroy_;
+      other.report_on_destroy_ = false;
       return *this;
     }
 
     // Allows unused result
-    void CancelAutoreport() { report_on_destroy = false; }
+    void CancelAutoreport() { report_on_destroy_ = false; }
 
     // On destroy delete context
     ~ReportOnDestroy() {
-      if (context_ != nullptr && report_on_destroy) {
+      if (context_ != nullptr && report_on_destroy_) {
         manager_.get().ReportContextResult(*context_);
       }
     }
 
    private:
-    bool report_on_destroy = true;
+    bool report_on_destroy_ = true;
     std::reference_wrapper<const ApiComplexityContextManager> manager_;
     const ApiComplexityContext *context_;
   };
 
   ApiComplexityContextManager();
-  ApiComplexityContextManager(std::unique_ptr<ImplInterface> impl);
+  explicit ApiComplexityContextManager(std::unique_ptr<ImplInterface> impl);
 
   // Returns context local to a thread/fiber. It should return the same pointer
   // when called multiple times from the same handler, regardless of the stack
@@ -194,7 +194,8 @@ class ApiComplexityContextManager {
   // Resets counters to track a new API.
   // Why: Threading implementation can reuse threads and that can lead to the
   // stale context.
-  [[nodiscard]] ReportOnDestroy PrepareForInboundApi(std::string name) const;
+  [[nodiscard]] ReportOnDestroy PrepareForInboundApi(
+      absl::string_view name) const;
 
   // Increments downstream call counter depending on the call type.
   void RecordDownstreamCall(ApiComplexityContext::CallType call_type) const;
