@@ -419,7 +419,8 @@ OverridePolicy GetOverridePolicy(absl::string_view policy_file_path) {
   absl::StatusOr<OverridePolicy> policy =
       TryGetOverridePolicy(policy_file_path);
   if (!policy.ok()) {
-    LOG(WARNING) << "Read policy file failed: " << policy.status().message();
+    LOG_FIRST_N(WARNING, 20)
+        << "Read policy file failed: " << policy.status().message();
     return OverridePolicy::default_instance();
   }
   return *std::move(policy);
@@ -431,8 +432,8 @@ OverridePolicy GetOverridePolicy(
   absl::StatusOr<OverridePolicy> policy =
       TryGetOverridePolicy(hostname, port, creds);
   if (!policy.ok()) {
-    LOG(WARNING) << "Remote fetching the policy file failed: "
-                 << policy.status().message();
+    LOG_FIRST_N(WARNING, 20) << "Remote fetching the policy file failed: "
+                             << policy.status().message();
     return OverridePolicy::default_instance();
   }
   return *std::move(policy);
@@ -455,8 +456,8 @@ RedfishTransportWithOverride::TryApplyingOverride(
     }
     has_override_policy_ = true;
     override_policy_ = *std::move(override_policy);
-    LOG(INFO) << "Applying Redfish override: "
-              << override_policy_.DebugString();
+    DLOG(INFO) << "Applying Redfish override: "
+               << override_policy_.DebugString();
   }
 
   std::string checked_path = std::string(path);
@@ -473,7 +474,7 @@ RedfishTransportWithOverride::TryApplyingOverride(
           override_policy_, override_re2_and_content_, &json,
           redfish_transport_.get(), visited_json);
       !status.ok()) {
-    LOG(WARNING) << "Override apply failed: " << status;
+    LOG_FIRST_N(WARNING, 20) << "Override apply failed: " << status;
   }
   return get_result;
 }
