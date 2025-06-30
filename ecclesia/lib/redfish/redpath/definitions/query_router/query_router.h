@@ -29,6 +29,7 @@
 
 #include "absl/base/attributes.h"
 #include "absl/base/thread_annotations.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/functional/any_invocable.h"
 #include "absl/log/die_if_null.h"
@@ -126,6 +127,8 @@ class QueryRouterIntf {
     StubArbiterInfo::PriorityLabel priority_label =
         StubArbiterInfo::PriorityLabel::kUnknown;
     const ResultCallback &callback;
+    absl::flat_hash_map<QueryRouterIntf::ServerInfo, std::string>
+        server_info_to_bmc_version;
   };
 
   // Overloaded function for executing non-templated queries
@@ -261,6 +264,10 @@ class QueryRouter : public QueryRouterIntf {
     std::unique_ptr<QueryEngineIntf> query_engine;
     absl::flat_hash_set<std::string> query_ids;
     std::optional<std::string> node_local_system_id = std::nullopt;
+
+    absl::flat_hash_map<std::string,
+                        QueryRouterSpec::VersionConfig::Policy::BmcVersion>
+        query_id_to_bmc_version;
   };
 
   // Defines the elements to be sent as a batch to the query engine for parallel
@@ -321,6 +328,8 @@ class QueryRouter : public QueryRouterIntf {
 
   // Condition variable to wait/signal for query cancellation completion.
   mutable absl::CondVar cancel_completion_cond_;
+
+  absl::flat_hash_map<ServerInfo, std::string> server_info_to_bmc_version_;
 };
 
 // Factory for creating different variants of query router.

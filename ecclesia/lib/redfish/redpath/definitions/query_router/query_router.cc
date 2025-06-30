@@ -123,6 +123,25 @@ void ExecuteQueries(QueryEngineIntf &query_engine,
   }
 }
 
+bool IsBmcVersionCompatible(
+    const QueryRouterSpec::VersionConfig::Policy::BmcVersion &bmc_version,
+    absl::string_view bmc_version_string) {
+  // compatibility for the query.
+  if (bmc_version.has_min_version() &&
+      bmc_version_string < bmc_version.min_version()) {
+    return false;
+  }
+  if (bmc_version.has_max_version() &&
+      bmc_version_string > bmc_version.max_version()) {
+    return false;
+  }
+  // If both min_version and max_version are not set, it means that the bmc
+  // version is compatible with the query.
+  // If both min_version and max_version are set and the bmc version is
+  // within the range, it is compatible with the query.
+  return true;
+}
+
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
@@ -169,6 +188,14 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
     } else {
       query_engine_params.stable_id_type = server_spec.stable_id_type;
     }
+    absl::flat_hash_map<std::string,
+                        QueryRouterSpec::VersionConfig::Policy::BmcVersion>
+        query_id_to_bmc_version;
+    if (router_spec.query_id_to_version_config_size() > 0) {
+      query_id_to_bmc_version = GetQueryIdToBmcVersionFromRouterSpec(
+          router_spec, server_info.server_tag, server_info.server_type,
+          server_info.server_class);
+    }
 
     if (router_spec.has_features()) {
       query_engine_params.features = router_spec.features();
@@ -189,6 +216,7 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
         QuerySpec query_spec,
         GetQuerySpec(router_spec, server_info.server_tag,
                      server_info.server_type, server_info.server_class));
+
     absl::flat_hash_set<std::string> query_ids;
     query_ids.reserve(query_spec.query_id_to_info.size());
     for (const auto &[query_id, info] : query_spec.query_id_to_info) {
@@ -236,6 +264,7 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
         .query_engine = std::move(query_engine),
         .query_ids = std::move(query_ids),
         .node_local_system_id = std::move(server_spec.node_local_system_id),
+        .query_id_to_bmc_version = std::move(query_id_to_bmc_version),
     });
   }
 
@@ -295,9 +324,41 @@ void QueryRouter::ExecuteQuerySerialAll(
     queries.reserve(options.query_ids.size());
     for (absl::string_view query_id : options.query_ids) {
       if (routing_info.query_ids.contains(query_id)) {
+        LOG(INFO) << "query_id: " << query_id;
+        LOG(INFO) << "routing_info.server_info: "
+                  << routing_info.server_info.server_tag << " "
+                  << routing_info.server_info.server_type << " "
+                  << routing_info.server_info.server_class;
+        if (options.server_info_to_bmc_version.contains(
+                routing_info.server_info)) {
+          // If the server info is not found in the server_info_to_bmc_version
+          // map, it means that the query router spec does not have any
+          // version config for the server info. Hence, we skip the version
+          // check for this query.
+          std::string bmc_version =
+              options.server_info_to_bmc_version.at(routing_info.server_info);
+          // If the query id is not found in the query_id_to_bmc_version map, it
+          // means that the query router spec does not have any version config
+          // for the query id. Hence, we skip the version check for this query.
+          // We get the bmc version for the query id from the client through the
+          // options.
+          // We get the min and max bmc version for the query id from the query
+          // router spec.
+          // If the bmc version from the client is not within the
+          // min and max bmc version for the query id, we skip the query.
+          if (routing_info.query_id_to_bmc_version.contains(query_id) &&
+              !IsBmcVersionCompatible(
+                  routing_info.query_id_to_bmc_version.at(query_id),
+                  bmc_version)) {
+            LOG(INFO) << "bmc_version is not compatible for query id: "
+                      << query_id;
+            continue;
+          }
+        }
         queries.push_back(query_id);
       }
     }
+
     if (!queries.empty()) {
       ExecuteQueries(*routing_info.query_engine, queries, options,
                      routing_info.server_info,

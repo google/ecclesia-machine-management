@@ -132,14 +132,17 @@ message QueryRouterSpec {
   message VersionConfig {
     message Policy {
       SelectionSpec.SelectionClass select = 1;
-      // Defines the minimum needed (BMC) version for a platform.
-      //(greater than or equal to min_version)
-      optional string min_version = 2;
-      // Define the maximum needed (BMC) version for a platform.
-      // (less than or equal to max_version)
-      optional string max_version = 3;
+      message BmcVersion {
+        // Defines the minimum needed (BMC) version for a platform.
+        //(greater than or equal to min_version)
+        optional string min_version = 1;
+        // Define the maximum needed (BMC) version for a platform.
+        // (less than or equal to max_version)
+        optional string max_version = 2;
+      }
+      BmcVersion bmc_version = 2;
     }
     repeated Policy policies = 1;
   }
-  optional VersionConfig version_config = 10;
+  map<string, VersionConfig> query_id_to_version_config = 10;
 }

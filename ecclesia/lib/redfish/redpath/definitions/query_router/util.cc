@@ -23,6 +23,7 @@
 
 #include "google/protobuf/duration.pb.h"
 #include "absl/algorithm/container.h"
+#include "absl/container/flat_hash_map.h"
 #include "absl/functional/any_invocable.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -220,6 +221,48 @@ GetStableIdTypeFromRouterSpec(
   }
   // If nothing has matched, return the default.
   return router_spec.default_stable_id_type();
+}
+
+absl::flat_hash_map<std::string,
+                    QueryRouterSpec::VersionConfig::Policy::BmcVersion>
+GetQueryIdToBmcVersionFromRouterSpec(
+    const ecclesia::QueryRouterSpec& router_spec,
+    absl::string_view node_entity_tag,
+    SelectionSpec::SelectionClass::ServerType server_type,
+    SelectionSpec::SelectionClass::ServerClass server_class) {
+  absl::flat_hash_map<std::string,
+                      QueryRouterSpec::VersionConfig::Policy::BmcVersion>
+      query_id_to_bmc_version;
+  // match inputs against the SelectionClasses specified in the devpath policies
+  for (const auto& [query_id, version_config] :
+       router_spec.query_id_to_version_config()) {
+    for (const ecclesia::QueryRouterSpec::VersionConfig::Policy& policy :
+         version_config.policies()) {
+      // If agent is specified in the spec, it must match input being
+      // registered.
+      if (policy.select().has_server_type()) {
+        if (policy.select().server_type() != server_type) {
+          continue;
+        }
+      }
+      // Now ensure either the policy's server_class or node entity tag matches.
+      if (absl::c_linear_search(policy.select().server_class(), server_class) ||
+          absl::c_linear_search(policy.select().server_tag(),
+                                node_entity_tag)) {
+        QueryRouterSpec::VersionConfig::Policy::BmcVersion bmc_version;
+
+        if (policy.bmc_version().has_min_version()) {
+          bmc_version.set_min_version(policy.bmc_version().min_version());
+        }
+        if (policy.bmc_version().has_max_version()) {
+          bmc_version.set_max_version(policy.bmc_version().max_version());
+        }
+        query_id_to_bmc_version[query_id] = std::move(bmc_version);
+      }
+    }
+  }
+  // If nothing has matched, return the default.
+  return query_id_to_bmc_version;
 }
 
 ecclesia::QueryEngineParams::RedfishStableIdType
