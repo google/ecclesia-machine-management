@@ -32,6 +32,42 @@ cc_library(
 )
 
 cc_library(
+    name = "fake_interface",
+    testonly = True,
+    srcs = ["fake_interface.cc"],
+    hdrs = ["fake_interface.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":interface",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/functional:any_invocable",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/time",
+    ],
+)
+
+cc_test(
+    name = "fake_interface_test",
+    srcs = ["fake_interface_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/indus_hmb_shim:mockup.shar",
+    ],
+    deps = [
+        ":fake_interface",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "//ecclesia/lib/status:test_macros",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/types:variant",
+        "@com_google_googletest//:gtest_main",
+        "@com_json//:json",
+    ],
+)
+
+cc_library(
     name = "grpc_dynamic_fake_server",
     testonly = True,
     srcs = ["grpc_dynamic_fake_server.cc"],
