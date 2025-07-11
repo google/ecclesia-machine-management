@@ -1,5 +1,7 @@
 # Presubmit check for validating modified and new redpath query files.
 
+load("//third_party/bazel_rules/rules_cc/cc:cc_test.bzl", "cc_test")
+
 licenses(["notice"])
 
 cc_test(
