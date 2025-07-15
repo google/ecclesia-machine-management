@@ -28,6 +28,7 @@
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
+#include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
 
@@ -73,7 +74,8 @@ absl::StatusOr<QuerySpec> GetQuerySpec(
     const QueryRouterSpec& router_spec, absl::string_view server_tag,
     SelectionSpec::SelectionClass::ServerType server_type,
     std::optional<SelectionSpec::SelectionClass::ServerClass> server_class =
-        std::nullopt);
+        std::nullopt,
+    const Clock* clock = Clock::RealClock());
 
 QueryRouterSpec::StableIdConfig::StableIdType GetStableIdTypeFromRouterSpec(
     const ecclesia::QueryRouterSpec& router_spec,

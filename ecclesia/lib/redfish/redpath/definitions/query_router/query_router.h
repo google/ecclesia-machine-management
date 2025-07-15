@@ -52,6 +52,7 @@
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/stubarbiter/arbiter.h"
+#include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
 
@@ -228,7 +229,8 @@ class QueryRouter : public QueryRouterIntf {
       TransportArbiterQueryEngineFactory
           transport_arbiter_query_engine_factory =
               QueryEngineWithTransportArbiter::
-                  CreateTransportArbiterQueryEngine);
+                  CreateTransportArbiterQueryEngine,
+      const Clock *clock = Clock::RealClock());
 
   ~QueryRouter() override = default;
 
@@ -340,7 +342,7 @@ using QueryRouterFactory = absl::AnyInvocable<
         std::vector<ecclesia::QueryRouter::ServerSpec>,
         ecclesia::QueryEngineFactory,
         ecclesia::RedpathNormalizer::RedpathNormalizersFactory,
-        ecclesia::TransportArbiterQueryEngineFactory)>;
+        ecclesia::TransportArbiterQueryEngineFactory, const ecclesia::Clock *)>;
 
 }  // namespace ecclesia
 

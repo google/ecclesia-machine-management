@@ -35,6 +35,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/status/macros.h"
+#include "ecclesia/lib/time/clock.h"
 #include "google/protobuf/text_format.h"
 
 namespace ecclesia {
@@ -142,8 +143,10 @@ absl::Status ExecuteOnMatchingQuerySelections(
 absl::StatusOr<QuerySpec> GetQuerySpec(
     const QueryRouterSpec& router_spec, absl::string_view server_tag,
     SelectionSpec::SelectionClass::ServerType server_type,
-    std::optional<SelectionSpec::SelectionClass::ServerClass> server_class) {
+    std::optional<SelectionSpec::SelectionClass::ServerClass> server_class,
+    const Clock* clock) {
   QuerySpec query_spec;
+  query_spec.clock = clock;
   auto add_to_query_spec =
       [&query_spec](absl::string_view query_id,
                     const SelectionSpec::QuerySelectionSpec& selection_spec)

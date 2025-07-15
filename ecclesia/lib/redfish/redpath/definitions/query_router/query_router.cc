@@ -54,6 +54,7 @@
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/thread/thread_pool.h"
+#include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
 
@@ -148,7 +149,8 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
     const QueryRouterSpec &router_spec, std::vector<ServerSpec> server_specs,
     QueryEngineFactory query_engine_factory,
     RedpathNormalizer::RedpathNormalizersFactory redpath_normalizers_factory,
-    TransportArbiterQueryEngineFactory transport_arbiter_query_engine_factory) {
+    TransportArbiterQueryEngineFactory transport_arbiter_query_engine_factory,
+    const ecclesia::Clock *clock) {
   switch (router_spec.query_pattern()) {
     case QueryPattern::PATTERN_SERIAL_ALL:
       break;
@@ -215,7 +217,7 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
     ECCLESIA_ASSIGN_OR_RETURN(
         QuerySpec query_spec,
         GetQuerySpec(router_spec, server_info.server_tag,
-                     server_info.server_type, server_info.server_class));
+                     server_info.server_type, server_info.server_class, clock));
 
     absl::flat_hash_set<std::string> query_ids;
     query_ids.reserve(query_spec.query_id_to_info.size());
