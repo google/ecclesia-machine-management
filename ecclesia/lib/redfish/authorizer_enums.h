@@ -94,6 +94,8 @@ enum class ResourceEntity : int {
   kFan,
   kFanCollection,
   kGoogleAsicAgingData,
+  kGoogleAsicAgingDataT0,
+  kGoogleAsicCalibrationData,
   kGoogleAsicErrorCounters,
   kGoogleAsicFleetCounters,
   kGoogleAsicHbmErrors,
