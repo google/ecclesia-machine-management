@@ -1,3 +1,6 @@
+load("//third_party/bazel_rules/rules_cc/cc:cc_library.bzl", "cc_library")
+load("//third_party/bazel_rules/rules_cc/cc:cc_test.bzl", "cc_test")
+
 proto_library(
     name = "query_result_proto",
     srcs = ["query_result.proto"],
