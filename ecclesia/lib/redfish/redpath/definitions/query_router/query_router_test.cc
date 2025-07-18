@@ -1377,7 +1377,7 @@ TEST(ServerInfoTest, ToStringFromProto) {
 }
 
 TEST_F(QueryRouterTest,
-       CheckBmcVersionCompatibilityForQueryIdMinandMaxVersionSet) {
+       CheckBmcVersionCompatibilityForQueryIdMinandMaxVersionSetSerialAll) {
   QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
       R"pb(
         query_pattern: PATTERN_SERIAL_ALL
@@ -1583,7 +1583,7 @@ TEST_F(QueryRouterTest,
 }
 
 TEST_F(QueryRouterTest,
-       CheckBmcVersionCompatibilityForQueryIdMinandMaxVersionNotSet) {
+       CheckBmcVersionCompatibilityForQueryIdMinandMaxVersionNotSetSerialAll) {
   QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
       R"pb(
         query_pattern: PATTERN_SERIAL_ALL
@@ -1709,7 +1709,8 @@ TEST_F(QueryRouterTest,
   }
 }
 
-TEST_F(QueryRouterTest, CheckBmcVersionCompatibilityForQueryIdMinVersionSet) {
+TEST_F(QueryRouterTest,
+       CheckBmcVersionCompatibilityForQueryIdMinVersionSetSerialAll) {
   QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
       R"pb(
         query_pattern: PATTERN_SERIAL_ALL
@@ -1847,7 +1848,8 @@ TEST_F(QueryRouterTest, CheckBmcVersionCompatibilityForQueryIdMinVersionSet) {
   }
 }
 
-TEST_F(QueryRouterTest, CheckBmcVersionCompatibilityForQueryIdMaxVersionSet) {
+TEST_F(QueryRouterTest,
+       CheckBmcVersionCompatibilityForQueryIdMaxVersionSetSerialAll) {
   QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
       R"pb(
         query_pattern: PATTERN_SERIAL_ALL
@@ -1982,5 +1984,1234 @@ TEST_F(QueryRouterTest, CheckBmcVersionCompatibilityForQueryIdMaxVersionSet) {
     query_router->ExecuteQuery(options);
   }
 }
+
+TEST_F(QueryRouterTest,
+       CheckBmcVersionCompatibilityForQueryIdMinandMaxVersionSetSerialAgent) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_SERIAL_AGENT
+        max_concurrent_threads: 1
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+          }
+        }
+        query_id_to_version_config {
+          key: "query_a"
+          value {
+            policies {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              bmc_version {
+                min_version: "gbmc-release-20.49.1.1"
+                max_version: "gbmc-release-20.49.1.5"
+              }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_router,
+      QueryRouter::Create(
+          router_spec, std::move(server_specs),
+          [&](const QuerySpec &, const QueryEngineParams &,
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+            return FileBackedQueryEngine::Create(
+                fs_.GetTruePath(kQueryResultDir));
+          },
+          DefaultRedpathNormalizerMap));
+  // gbmc version is greater than the max version, so the query should not be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_EQ(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.7"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is less than the min version, so the query should not be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_EQ(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.0"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is within the min and max version, so the query should be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.3"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is within the min and max version, so the query
+  // should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.1"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is within the min and max version, so the query
+  // should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.5"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+}
+
+TEST_F(
+    QueryRouterTest,
+    CheckBmcVersionCompatibilityForQueryIdMinandMaxVersionNotSetSerialAgent) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_SERIAL_AGENT
+        max_concurrent_threads: 1
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_router,
+      QueryRouter::Create(
+          router_spec, std::move(server_specs),
+          [&](const QuerySpec &, const QueryEngineParams &,
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+            return FileBackedQueryEngine::Create(
+                fs_.GetTruePath(kQueryResultDir));
+          },
+          DefaultRedpathNormalizerMap));
+  // min and max version are not set, so the query should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.7"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // min and max version are not set, so the query should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.0"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // min and max version are not set, so the query should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.3"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+}
+
+TEST_F(QueryRouterTest,
+       CheckBmcVersionCompatibilityForQueryIdMinVersionSetSerialAgent) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_SERIAL_AGENT
+        max_concurrent_threads: 1
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+          }
+        }
+        query_id_to_version_config {
+          key: "query_a"
+          value {
+            policies {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              bmc_version { min_version: "gbmc-release-20.49.1.1" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_router,
+      QueryRouter::Create(
+          router_spec, std::move(server_specs),
+          [&](const QuerySpec &, const QueryEngineParams &,
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+            return FileBackedQueryEngine::Create(
+                fs_.GetTruePath(kQueryResultDir));
+          },
+          DefaultRedpathNormalizerMap));
+  // gbmc version is greater than the min version, so the query should be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.7"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is less than the min version, so the query should not be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_EQ(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.0"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is greater than the min version, so the query should be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.3"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+}
+
+TEST_F(QueryRouterTest,
+       CheckBmcVersionCompatibilityForQueryIdMaxVersionSetSerialAgent) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_SERIAL_AGENT
+        max_concurrent_threads: 1
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+          }
+        }
+        query_id_to_version_config {
+          key: "query_a"
+          value {
+            policies {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              bmc_version { max_version: "gbmc-release-20.49.1.5" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_router,
+      QueryRouter::Create(
+          router_spec, std::move(server_specs),
+          [&](const QuerySpec &, const QueryEngineParams &,
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+            return FileBackedQueryEngine::Create(
+                fs_.GetTruePath(kQueryResultDir));
+          },
+          DefaultRedpathNormalizerMap));
+  // gbmc version is greater than the max version, so the query should not be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_EQ(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.7"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is less than the max version, so the query should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.0"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is less than the max version, so the query should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.3"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+}
+
+TEST_F(QueryRouterTest,
+       CheckBmcVersionCompatibilityForQueryIdMinandMaxVersionSetParallelAll) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_PARALLEL_ALL
+        max_concurrent_threads: 1
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+          }
+        }
+        query_id_to_version_config {
+          key: "query_a"
+          value {
+            policies {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              bmc_version {
+                min_version: "gbmc-release-20.49.1.1"
+                max_version: "gbmc-release-20.49.1.5"
+              }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_router,
+      QueryRouter::Create(
+          router_spec, std::move(server_specs),
+          [&](const QuerySpec &, const QueryEngineParams &,
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+            return FileBackedQueryEngine::Create(
+                fs_.GetTruePath(kQueryResultDir));
+          },
+          DefaultRedpathNormalizerMap));
+  // gbmc version is greater than the max version, so the query should not be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_EQ(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.7"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is less than the min version, so the query should not be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_EQ(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.0"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is within the min and max version, so the query should be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.3"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is within the min and max version, so the query
+  // should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.1"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is within the min and max version, so the query
+  // should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.5"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+}
+
+TEST_F(
+    QueryRouterTest,
+    CheckBmcVersionCompatibilityForQueryIdMinandMaxVersionNotSetParallelAll) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_PARALLEL_ALL
+        max_concurrent_threads: 1
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_router,
+      QueryRouter::Create(
+          router_spec, std::move(server_specs),
+          [&](const QuerySpec &, const QueryEngineParams &,
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+            return FileBackedQueryEngine::Create(
+                fs_.GetTruePath(kQueryResultDir));
+          },
+          DefaultRedpathNormalizerMap));
+  // min and max version are not set, so the query should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.7"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // min and max version are not set, so the query should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.0"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // min and max version are not set, so the query should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.3"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+}
+
+TEST_F(QueryRouterTest,
+       CheckBmcVersionCompatibilityForQueryIdMinVersionSetParallelAll) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_PARALLEL_ALL
+        max_concurrent_threads: 1
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+          }
+        }
+        query_id_to_version_config {
+          key: "query_a"
+          value {
+            policies {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              bmc_version { min_version: "gbmc-release-20.49.1.1" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_router,
+      QueryRouter::Create(
+          router_spec, std::move(server_specs),
+          [&](const QuerySpec &, const QueryEngineParams &,
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+            return FileBackedQueryEngine::Create(
+                fs_.GetTruePath(kQueryResultDir));
+          },
+          DefaultRedpathNormalizerMap));
+  // gbmc version is greater than the min version, so the query should be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.7"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is less than the min version, so the query should not be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_EQ(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.0"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is greater than the min version, so the query should be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.3"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+}
+
+TEST_F(QueryRouterTest,
+       CheckBmcVersionCompatibilityForQueryIdMaxVersionSetParallelAll) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_PARALLEL_ALL
+        max_concurrent_threads: 1
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+          }
+        }
+        query_id_to_version_config {
+          key: "query_a"
+          value {
+            policies {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              bmc_version { max_version: "gbmc-release-20.49.1.5" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_router,
+      QueryRouter::Create(
+          router_spec, std::move(server_specs),
+          [&](const QuerySpec &, const QueryEngineParams &,
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+            return FileBackedQueryEngine::Create(
+                fs_.GetTruePath(kQueryResultDir));
+          },
+          DefaultRedpathNormalizerMap));
+  // gbmc version is greater than the max version, so the query should not be
+  // executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_EQ(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.7"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is less than the max version, so the query should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.0"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+  // gbmc version is less than the max version, so the query should be executed.
+  {
+    absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+        {"query_a",
+         {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+          SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}}};
+
+    std::vector<absl::string_view> query_ids = {"query_a"};
+    QueryRouterIntf::RedpathQueryOptions options = {
+        .query_ids = query_ids,
+        .callback =
+            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
+                                  const QueryResult &result) {
+              auto it = expected_callbacks.find(
+                  QueryRouterCallbacks{result.query_id(), server_info});
+              ASSERT_NE(it, expected_callbacks.end());
+            },
+        .server_info_to_bmc_version =
+            {
+                {QueryRouter::ServerInfo{
+                     .server_tag = "server_1",
+                     .server_type =
+                         SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+                     .server_class =
+                         SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE,
+                 },
+                 "gbmc-release-20.49.1.3"},
+            },
+    };
+    query_router->ExecuteQuery(options);
+  }
+}
+
 }  // namespace
 }  // namespace ecclesia

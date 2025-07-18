@@ -304,6 +304,15 @@ class QueryRouter : public QueryRouterIntf {
   void ExecuteQueryBatches(absl::Span<const QueryBatch> query_batches,
                            const RedpathQueryOptions &options) const;
 
+  // Returns true if the query can be included in the query batch.
+  // The query can be included in the query batch if the bmc version of the
+  // query is compatible with the bmc version of the server.
+  // If the bmc version of the query is not set in the query router spec,
+  // the query is always included in the query batch.
+  bool CanIncludeQuery(absl::string_view query_id,
+                       const RedpathQueryOptions &options,
+                       const QueryRoutingInfo &routing_info) const;
+
   // Returns the latest query cancellation state.
   bool IsQueryExecutionCancelled() const {
     absl::MutexLock lock(&query_cancellation_state_mutex_);

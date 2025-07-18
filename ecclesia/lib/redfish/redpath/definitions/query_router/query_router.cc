@@ -317,6 +317,34 @@ void QueryRouter::ExecuteQuery(const RedpathQueryOptions &options) const {
   }
 }
 
+bool QueryRouter::CanIncludeQuery(absl::string_view query_id,
+                                  const RedpathQueryOptions &options,
+                                  const QueryRoutingInfo &routing_info) const {
+  if (options.server_info_to_bmc_version.contains(routing_info.server_info)) {
+    // If the server info is not found in the server_info_to_bmc_version
+    // map, it means that the query router spec does not have any
+    // version config for the server info. Hence, we skip the version
+    // check for this query.
+    std::string bmc_version =
+        options.server_info_to_bmc_version.at(routing_info.server_info);
+    // If the query id is not found in the query_id_to_bmc_version map, it
+    // means that the query router spec does not have any version config
+    // for the query id. Hence, we skip the version check for this query.
+    // We get the bmc version for the query id from the client through the
+    // options.
+    // We get the min and max bmc version for the query id from the query
+    // router spec.
+    // If the bmc version from the client is not within the
+    // min and max bmc version for the query id, we skip the query.
+    if (routing_info.query_id_to_bmc_version.contains(query_id) &&
+        !IsBmcVersionCompatible(
+            routing_info.query_id_to_bmc_version.at(query_id), bmc_version)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void QueryRouter::ExecuteQuerySerialAll(
     const RedpathQueryOptions &options) const {
   absl::Mutex callback_mutex;
@@ -326,38 +354,11 @@ void QueryRouter::ExecuteQuerySerialAll(
     queries.reserve(options.query_ids.size());
     for (absl::string_view query_id : options.query_ids) {
       if (routing_info.query_ids.contains(query_id)) {
-        LOG(INFO) << "query_id: " << query_id;
-        LOG(INFO) << "routing_info.server_info: "
-                  << routing_info.server_info.server_tag << " "
-                  << routing_info.server_info.server_type << " "
-                  << routing_info.server_info.server_class;
-        if (options.server_info_to_bmc_version.contains(
-                routing_info.server_info)) {
-          // If the server info is not found in the server_info_to_bmc_version
-          // map, it means that the query router spec does not have any
-          // version config for the server info. Hence, we skip the version
-          // check for this query.
-          std::string bmc_version =
-              options.server_info_to_bmc_version.at(routing_info.server_info);
-          // If the query id is not found in the query_id_to_bmc_version map, it
-          // means that the query router spec does not have any version config
-          // for the query id. Hence, we skip the version check for this query.
-          // We get the bmc version for the query id from the client through the
-          // options.
-          // We get the min and max bmc version for the query id from the query
-          // router spec.
-          // If the bmc version from the client is not within the
-          // min and max bmc version for the query id, we skip the query.
-          if (routing_info.query_id_to_bmc_version.contains(query_id) &&
-              !IsBmcVersionCompatible(
-                  routing_info.query_id_to_bmc_version.at(query_id),
-                  bmc_version)) {
-            LOG(INFO) << "bmc_version is not compatible for query id: "
-                      << query_id;
-            continue;
-          }
+        bool can_include_query =
+            CanIncludeQuery(query_id, options, routing_info);
+        if (can_include_query) {
+          queries.push_back(query_id);
         }
-        queries.push_back(query_id);
       }
     }
 
@@ -386,7 +387,11 @@ void QueryRouter::ExecuteQuerySerialAgent(
     QueryBatch query_batch(&routing_info);
     for (absl::string_view query_id : options.query_ids) {
       if (routing_info.query_ids.contains(query_id)) {
-        query_batch.queries.push_back(query_id);
+        bool can_include_query =
+            CanIncludeQuery(query_id, options, routing_info);
+        if (can_include_query) {
+          query_batch.queries.push_back(query_id);
+        }
       }
     }
     if (!query_batch.queries.empty()) {
@@ -404,9 +409,13 @@ void QueryRouter::ExecuteQueryParallelAll(
   for (const QueryRoutingInfo &routing_info : routing_table_) {
     for (absl::string_view query_id : options.query_ids) {
       if (routing_info.query_ids.contains(query_id)) {
-        QueryBatch query_batch(&routing_info);
-        query_batch.queries.push_back(query_id);
-        query_batches.push_back(std::move(query_batch));
+        bool can_include_query =
+            CanIncludeQuery(query_id, options, routing_info);
+        if (can_include_query) {
+          QueryBatch query_batch(&routing_info);
+          query_batch.queries.push_back(query_id);
+          query_batches.push_back(std::move(query_batch));
+        }
       }
     }
   }
