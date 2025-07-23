@@ -3,7 +3,9 @@ load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
 proto_library(
     name = "query_router_spec_proto",
     srcs = ["query_router_spec.proto"],
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//visibility:public",
+    ],
     deps = [
         "//ecclesia/lib/redfish/dellicius/engine:query_rules_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_proto",
