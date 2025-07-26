@@ -8,5 +8,8 @@ proto_library(
 
 cc_proto_library(
     name = "node_class_assignment_cc_proto",
+    visibility = [
+        "//visibility:public",
+    ],
     deps = [":node_class_assignment_proto"],
 )
