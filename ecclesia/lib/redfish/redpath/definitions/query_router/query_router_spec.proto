@@ -5,6 +5,7 @@ package ecclesia;
 import "google/protobuf/duration.proto";
 import "ecclesia/lib/redfish/dellicius/engine/query_rules.proto";
 import "ecclesia/lib/redfish/dellicius/query/query.proto";
+import "ecclesia/lib/redfish/redpath/definitions/node_class/node_class_assignment.proto";
 import "ecclesia/lib/redfish/redpath/definitions/query_engine/query_engine_features.proto";
 import "ecclesia/lib/redfish/redpath/definitions/query_result/query_result_verification.proto";
 
@@ -47,14 +48,16 @@ message SelectionSpec {
     // or the other.
     optional ServerType server_type = 1;
     repeated string server_tag = 2;
-    // We also support the concept of a "server class". This is a more general
+
+    // We also support the concept of a "node class". This is a more general
     // concept than a server tag, and allows us to select a group of servers of
     // the same class. Please note that this field can be set instead of
     // server_type and/or server_tag fields. The AND operation still applies; if
     // all are set, all server criteria must be met. Ideally, this field can be
     // used in conjection with server_tag to select a specific server within a
     // class.
-    repeated ServerClass server_class = 3;
+    repeated ServerClass server_class = 3 [deprecated = true];
+    repeated NodeClassAssignment.NodeClass node_class = 4;
   }
 
   message QuerySelectionSpec {
