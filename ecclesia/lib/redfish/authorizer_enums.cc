@@ -31,6 +31,7 @@ constexpr std::array<absl::string_view,
                      static_cast<size_t>(ResourceEntity::kUndefined) + 1>
     kEntityNames = {
         // go/keep-sorted start
+
         "AccelerationFunction",
         "AccelerationFunctionCollection",
         "AccountService",
@@ -275,6 +276,7 @@ constexpr std::array<absl::string_view,
         "TlBMCAllSensors",
         "TlBMCDebugApp",
         "TlBMCDebugEndpoint",
+        "TlBMCDebugHftService",
         "TlBMCDebugStore",
         "TlBMCMetrics",
         "TlBMCSchedulerStats",
