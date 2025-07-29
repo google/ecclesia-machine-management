@@ -21,6 +21,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -31,7 +32,10 @@
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/match.h"
+#include "absl/strings/numbers.h"
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/synchronization/notification.h"
@@ -124,17 +128,57 @@ void ExecuteQueries(QueryEngineIntf &query_engine,
   }
 }
 
+absl::StatusOr<std::tuple<int, int, int>> ParseVersion(
+    const std::string &bmc_version_string) {
+  constexpr absl::string_view kGbmcReleasePrefix = "gbmc-release-";
+  if (!absl::StartsWith(bmc_version_string, kGbmcReleasePrefix)) {
+    return absl::InvalidArgumentError("Invalid bmc version string");
+  }
+  std::string bmc_version_string_without_prefix =
+      bmc_version_string.substr(kGbmcReleasePrefix.size());
+  std::vector<std::string> v =
+      absl::StrSplit(bmc_version_string_without_prefix, '.');
+  if (v.size() < 3) {
+    return absl::InvalidArgumentError("Invalid bmc version string");
+  }
+  int year_version;
+  if (!absl::SimpleAtoi(v[0], &year_version)) {
+    return absl::InvalidArgumentError("Invalid bmc version string");
+  }
+  int week_version;
+  if (!absl::SimpleAtoi(v[1], &week_version)) {
+    return absl::InvalidArgumentError("Invalid bmc version string");
+  }
+  int rc_version;
+  if (!absl::SimpleAtoi(v[2], &rc_version)) {
+    return absl::InvalidArgumentError("Invalid bmc version string");
+  }
+  return std::make_tuple(year_version, week_version, rc_version);
+}
+
 bool IsBmcVersionCompatible(
     const QueryRouterSpec::VersionConfig::Policy::BmcVersion &bmc_version,
-    absl::string_view bmc_version_string) {
-  // compatibility for the query.
-  if (bmc_version.has_min_version() &&
-      bmc_version_string < bmc_version.min_version()) {
-    return false;
+    const std::string &bmc_version_string) {
+  absl::StatusOr<std::tuple<int, int, int>> current_version_tuple =
+      ParseVersion(bmc_version_string);
+
+  if (bmc_version.has_min_version()) {
+    absl::StatusOr<std::tuple<int, int, int>> min_version_tuple =
+        ParseVersion(bmc_version.min_version());
+
+    if (current_version_tuple.ok() && min_version_tuple.ok() &&
+        *current_version_tuple < *min_version_tuple) {
+      return false;
+    }
   }
-  if (bmc_version.has_max_version() &&
-      bmc_version_string > bmc_version.max_version()) {
-    return false;
+
+  if (bmc_version.has_max_version()) {
+    absl::StatusOr<std::tuple<int, int, int>> max_version_tuple =
+        ParseVersion(bmc_version.max_version());
+    if (current_version_tuple.ok() && max_version_tuple.ok() &&
+        *current_version_tuple > *max_version_tuple) {
+      return false;
+    }
   }
   // If both min_version and max_version are not set, it means that the bmc
   // version is compatible with the query.
