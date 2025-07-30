@@ -365,6 +365,41 @@ TEST(StubArbiterTest, FailoverFailPrimaryStub) {
                Field(&StubArbiterInfo::EndpointMetrics::status, IsOk()))));
 }
 
+TEST(StubArbiterTest, FailoverFailSecondaryStub) {
+  FakeClock clock(absl::FromUnixSeconds(1700000000));
+
+  absl::flat_hash_map<std::string, int> counter;
+  ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<MockStubArbiter> arbiter,
+                          MockStubArbiter::Create(
+                              {},
+                              [&counter](StubArbiterInfo::PriorityLabel label)
+                                  -> absl::StatusOr<std::unique_ptr<MockStub>> {
+                                std::string name = GetName(label);
+                                counter[name]++;
+                                if (name == kPrimary) {
+                                  return std::make_unique<MockStub>(name);
+                                }
+                                return absl::InternalError("Internal error");
+                              },
+                              &clock));
+
+  StubArbiterInfo::Metrics metrics = arbiter->Execute(
+      [](MockStub *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+        return absl::DeadlineExceededError("Deadline exceeded");
+      });
+
+  EXPECT_THAT(counter,
+              UnorderedElementsAre(Pair("primary", 1), Pair("secondary", 1)));
+  EXPECT_THAT(
+      metrics.endpoint_metrics,
+      UnorderedElementsAre(Pair(StubArbiterInfo::PriorityLabel::kPrimary,
+                                Field(&StubArbiterInfo::EndpointMetrics::status,
+                                      IsStatusDeadlineExceeded())),
+                           Pair(StubArbiterInfo::PriorityLabel::kSecondary,
+                                Field(&StubArbiterInfo::EndpointMetrics::status,
+                                      IsStatusInternal()))));
+}
+
 TEST(StubArbiterTest, CheckPrimaryFreshnessFailover) {
   FakeClock clock(absl::FromUnixSeconds(1700000000));
 
