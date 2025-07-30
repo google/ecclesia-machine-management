@@ -71,7 +71,6 @@ message SelectionSpec {
     VerificationConfig verification_config = 6;
     reserved 7;
   }
-
   repeated QuerySelectionSpec query_selection_specs = 1;
 }
 
@@ -131,6 +130,7 @@ message QueryRouterSpec {
   // Specifies the TransportArbiter secondary transport freshness.
   optional int32 transport_arbiter_refresh = 9;
 
+  // checked in.
   // Defines the minimum and/or maximum needed BMC version for a platform.
   message VersionConfig {
     message Policy {
