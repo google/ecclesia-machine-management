@@ -1,4 +1,5 @@
 load("@com_google_emboss//:build_defs.bzl", "emboss_cc_library")
+load("//third_party/bazel_rules/rules_cc/cc:cc_library.bzl", "cc_library")
 
 licenses(["notice"])
 
