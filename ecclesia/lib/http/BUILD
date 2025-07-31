@@ -1,5 +1,8 @@
 # A http library that wraps around curl.
 
+load("//third_party/bazel_rules/rules_cc/cc:cc_library.bzl", "cc_library")
+load("//third_party/bazel_rules/rules_cc/cc:cc_test.bzl", "cc_test")
+
 licenses(["notice"])
 
 cc_library(
