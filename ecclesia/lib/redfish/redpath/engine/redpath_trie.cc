@@ -102,7 +102,6 @@ std::string RedPathTrieNode::ToString(absl::string_view prefix) const {
   }
   result += "\n";
 
-  absl::flat_hash_map<RedPathExpression, std::string> expression_to_log;
   for (const RedPathExpression &expression : child_expressions) {
     std::string new_prefix(prefix);
     if (expression.type == RedPathExpression::Type::kPredicate) {
