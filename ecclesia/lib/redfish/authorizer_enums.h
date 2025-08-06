@@ -263,6 +263,7 @@ enum class ResourceEntity : int {
   kStorageControllerCollection,
   kSwitch,
   kSwitchCollection,
+  kSwitchMetrics,
   kTask,
   kTaskCollection,
   kTaskService,
