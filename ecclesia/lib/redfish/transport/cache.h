@@ -164,26 +164,30 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
  public:
   static std::unique_ptr<RedfishCachedGetterInterface> Create(
       RedfishTransport *transport, absl::Duration max_age,
-      const Clock *clock = Clock::RealClock()) {
-    return std::make_unique<TimeBasedCache>(transport, clock, max_age);
+      const Clock *clock = Clock::RealClock(), bool enable_blocklist = true) {
+    return std::make_unique<TimeBasedCache>(
+        transport, clock, max_age, std::nullopt, false /*enable_blocklist=*/,
+        enable_blocklist);
   }
 
   static std::unique_ptr<RedfishCachedGetterInterface> CreateDeepCache(
       RedfishTransport *transport, absl::Duration max_age,
-      const Clock *clock = Clock::RealClock()) {
+      const Clock *clock = Clock::RealClock(), bool enable_blocklist = true) {
     return std::make_unique<TimeBasedCache>(transport, clock, max_age,
-                                            std::nullopt, true);
+                                            std::nullopt, true /*deep_cache=*/,
+                                            enable_blocklist);
   }
 
   TimeBasedCache(
       RedfishTransport *transport, const Clock *clock, absl::Duration max_age,
       std::optional<const ApiComplexityContextManager *> manager = std::nullopt,
-      bool deep_cache = false)
+      bool deep_cache = false, bool enable_blocklist = true)
       : RedfishCachedGetterInterface(manager),
         transport_(transport),
         clock_(clock),
         get_max_age_(max_age),
-        deep_cache_(deep_cache) {}
+        deep_cache_(deep_cache),
+        enable_blocklist_(enable_blocklist) {}
 
  protected:
   OperationResult CachedGetInternal(
@@ -382,6 +386,7 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
                       std::unique_ptr<CacheNode>>
       post_cache_ ABSL_GUARDED_BY(post_cache_lock_);
   bool deep_cache_;
+  const bool enable_blocklist_;
 };
 
 }  // namespace ecclesia

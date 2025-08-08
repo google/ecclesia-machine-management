@@ -24,6 +24,8 @@
 #include <variant>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/log/log.h"
+#include "absl/strings/match.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
@@ -32,6 +34,10 @@
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
+
+static bool IsPathBlocklisted(absl::string_view path) {
+  return absl::StrContains(path, "/LogServices/");
+}
 
 RedfishCachedGetterInterface::OperationResult NullCache::CachedGetInternal(
     absl::string_view path,
@@ -155,6 +161,11 @@ TimeBasedCache::CacheNode &TimeBasedCache::RetrieveCacheNode(
 RedfishCachedGetterInterface::OperationResult TimeBasedCache::CachedGetInternal(
     absl::string_view path,
     std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr) {
+  // Check if the path is in the blocklist for caching.
+  if (enable_blocklist_ && IsPathBlocklisted(path)) {
+    DLOG(INFO) << "Skipping cache for blocklisted path: " << path;
+    return UncachedGetInternal(path, Relevance::kNotRelevant, timeout_mgr);
+  }
   TimeBasedCache::CacheNode &store = RetrieveCacheNode(path);
   auto result = store.CachedRead(timeout_mgr);
   if (deep_cache_ && result.is_fresh && result.result.ok()) {

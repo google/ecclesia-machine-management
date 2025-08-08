@@ -2042,5 +2042,65 @@ TEST_F(HttpRedfishInterfaceTest, HttpRedfishInterfaceIsNotStaticInterface) {
   EXPECT_THAT(intf_->IsStaticInterface(), Eq(false));
 }
 
+TEST_F(HttpRedfishInterfaceTest, LogServiceCacheBlocklist) {
+  constexpr absl::string_view kLogEntriesPath =
+      "/redfish/v1/Managers/bmc/LogServices/Journal/Entries";
+  int call_count = 0;
+
+  server_->AddHttpGetHandler(
+      std::string(kLogEntriesPath), [&](ServerRequestInterface *req) {
+        call_count++;
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        nlohmann::json entry;
+        entry["@odata.id"] = absl::StrCat(kLogEntriesPath, "/", call_count);
+        entry["Id"] = absl::StrCat(call_count);
+        req->WriteResponseString(entry.dump());
+        req->Reply();
+      });
+
+  // Default cache has blocklist enabled.
+  // First call, should call server.
+  intf_->CachedGetUri(kLogEntriesPath);
+  EXPECT_THAT(call_count, Eq(1));
+  // Second call, should also call server as LogServices are not cached.
+  intf_->CachedGetUri(kLogEntriesPath);
+  EXPECT_THAT(call_count, Eq(2));
+
+  // Advance time, still should not cache.
+  clock_.AdvanceTime(absl::Seconds(10));
+  intf_->CachedGetUri(kLogEntriesPath);
+  EXPECT_THAT(call_count, Eq(3));
+
+  // Create a new interface with blocklist disabled.
+  auto config = server_->GetConfig();
+  ecclesia::HttpCredential creds;
+  auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
+      ecclesia::LibCurlProxy::CreateInstance(), creds);
+  auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
+      std::move(curl_http_client),
+      absl::StrFormat("%s:%d", config.hostname, config.port));
+  auto cache_factory = [this](RedfishTransport *transport) {
+    return std::make_unique<ecclesia::TimeBasedCache>(
+        transport, &clock_, absl::Minutes(1), std::nullopt, false,
+        /*enable_blocklist=*/false);
+  };
+  auto intf_no_blocklist = NewHttpInterface(std::move(transport), cache_factory,
+                                            RedfishInterface::kTrusted);
+
+  call_count = 0;
+  // First call, should call server.
+  intf_no_blocklist->CachedGetUri(kLogEntriesPath);
+  EXPECT_THAT(call_count, Eq(1));
+  // Second call, should hit cache.
+  intf_no_blocklist->CachedGetUri(kLogEntriesPath);
+  EXPECT_THAT(call_count, Eq(1));
+
+  // Advance time beyond cache duration, should call server.
+  clock_.AdvanceTime(absl::Minutes(2));
+  intf_no_blocklist->CachedGetUri(kLogEntriesPath);
+  EXPECT_THAT(call_count, Eq(2));
+}
+
 }  // namespace
 }  // namespace ecclesia
