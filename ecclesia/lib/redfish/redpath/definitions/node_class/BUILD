@@ -1,9 +1,7 @@
 proto_library(
     name = "node_class_assignment_proto",
     srcs = ["node_class_assignment.proto"],
-    visibility = [
-        "//visibility:public",
-    ],
+    visibility = ["//visibility:public"],
 )
 
 cc_proto_library(
