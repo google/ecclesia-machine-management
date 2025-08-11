@@ -1,6 +1,8 @@
 # Description:
 #   Libraries to for supporting the logging of errors and information.
 
+# load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 licenses(["notice"])
 
 cc_library(
