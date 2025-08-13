@@ -7,6 +7,7 @@ very simple numeric and string data this provides a much simpler and lighter
 weight mechanism that something like protocol buffers.
 """
 
+load("//third_party/bazel_rules/rules_cc/cc:cc_library.bzl", "cc_library")
 load("//third_party/bazel_rules/rules_python/python:py_library.bzl", "py_library")
 load("@bazel_skylib//lib:types.bzl", "types")
 
@@ -120,7 +121,7 @@ def constant_lib(
         content = "\n".join(cc_lines),
         out = cc_header,
     )
-    native.cc_library(
+    cc_library(
         name = cc_name,
         hdrs = [cc_header],
         visibility = visibility,
