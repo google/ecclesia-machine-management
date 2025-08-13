@@ -189,6 +189,8 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
         deep_cache_(deep_cache),
         enable_blocklist_(enable_blocklist) {}
 
+  absl::Duration GetCacheTimeout() const { return max_age_; }
+
  protected:
   OperationResult CachedGetInternal(
       absl::string_view path,
