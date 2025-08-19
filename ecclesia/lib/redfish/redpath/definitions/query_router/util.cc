@@ -241,17 +241,28 @@ GetQueryIdToBmcVersionFromRouterSpec(
        router_spec.query_id_to_version_config()) {
     for (const ecclesia::QueryRouterSpec::VersionConfig::Policy& policy :
          version_config.policies()) {
-      // If agent is specified in the spec, it must match input being
-      // registered.
+      bool server_type_matched = true;
       if (policy.select().has_server_type()) {
-        if (policy.select().server_type() != server_type) {
-          continue;
+        server_type_matched = policy.select().server_type() == server_type;
+      }
+      bool server_tag_matched =
+          policy.select().server_tag().empty()
+              ? true
+              : std::find(policy.select().server_tag().begin(),
+                          policy.select().server_tag().end(),
+                          node_entity_tag) !=
+                    policy.select().server_tag().end();
+      bool server_class_matched = true;
+      if (!policy.select().server_class().empty()) {
+        server_class_matched = false;
+        for (int server_class_select : policy.select().server_class()) {
+          if (server_class_select == server_class) {
+            server_class_matched = true;
+            break;
+          }
         }
       }
-      // Now ensure either the policy's server_class or node entity tag matches.
-      if (absl::c_linear_search(policy.select().server_class(), server_class) ||
-          absl::c_linear_search(policy.select().server_tag(),
-                                node_entity_tag)) {
+      if (server_type_matched && server_tag_matched && server_class_matched) {
         QueryRouterSpec::VersionConfig::Policy::BmcVersion bmc_version;
 
         if (policy.bmc_version().has_min_version()) {
