@@ -43,6 +43,7 @@
 #include "absl/strings/escaping.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_replace.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
@@ -56,6 +57,7 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_predicates/filter.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_predicates/predicates.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_predicates/variable_substitution.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 #include "ecclesia/lib/redfish/redpath/engine/query_planner.h"
@@ -620,6 +622,31 @@ absl::Status QueryPlanner::TryNormalize(
       // If the subquery is a root subquery, we need to create an empty subquery
       // result to allow child subqueries to be executed.
       normalized_query_result = QueryResultData();
+    }
+
+    for (const auto& prop : find_subquery->second.properties()) {
+      if (prop.collect_as().empty()) {
+        continue;
+      }
+      std::string prop_name =
+          prop.name().empty() ? prop.property() : prop.name();
+      if (prop.name().empty()) {
+        absl::StrReplaceAll({{"\\.", "."}}, &prop_name);
+      }
+      auto it = normalized_query_result->fields().find(prop_name);
+      if (it == normalized_query_result->fields().end()) {
+        continue;
+      }
+      CollectedProperty* collected_property =
+          (*query_execution_context->result
+                .mutable_collected_properties())[prop.collect_as()]
+              .add_properties();
+      *collected_property->mutable_value() = it->second;
+      auto id_it = normalized_query_result->fields().find(kIdentifierTag);
+      if (id_it != normalized_query_result->fields().end() &&
+          id_it->second.has_identifier()) {
+        *collected_property->mutable_identifier() = id_it->second.identifier();
+      }
     }
 
     // Add an empty subquery value to allow child subqueries to be executed.

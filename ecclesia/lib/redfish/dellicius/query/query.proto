@@ -42,6 +42,12 @@ message DelliciusQuery {
       PrimitiveType type = 3;
       PropertyElementType property_element_type = 4;
       bool nullable = 5;
+      // If specified, query engine will collect all values for this property
+      // across all resources queried and store them in
+      // QueryResult.collected_properties map with collect_as as key. If
+      // multiple subqueries use the same collect_as key, all properties will be
+      // collected in the same list.
+      string collect_as = 6;
     }
     // Uniquely identifies the subquery. It is the responsibility of client
     // application to use a unique string else the subquery output will be

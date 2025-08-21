@@ -19,6 +19,8 @@ message QueryResult {
   Statistics stats = 3;
   // Query Result Data
   QueryResultData data = 4;
+  // Map of collected property name to list of values.
+  map<string, CollectedProperties> collected_properties = 5;
 }
 
 message QueryResultData {
@@ -63,6 +65,15 @@ message QueryValue {
 message ListValue {
   // Repeated field of dynamically typed values.
   repeated QueryValue values = 1;
+}
+
+message CollectedProperty {
+  Identifier identifier = 1;
+  QueryValue value = 2;
+}
+
+message CollectedProperties {
+  repeated CollectedProperty properties = 1;
 }
 
 // Represents a Redfish Location object as defined in the Redfish spec.

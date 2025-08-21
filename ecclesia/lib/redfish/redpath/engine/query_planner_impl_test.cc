@@ -2934,6 +2934,77 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
                   ecclesia::EqualsProto(result.query_result)));
 }
 
+TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollection) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "Names"
+        subquery {
+          subquery_id: "chassis"
+          redpath: "/Chassis[*]"
+          properties { property: "Name" type: STRING collect_as: "test_names" }
+        }
+        subquery {
+          root_subquery_ids: "chassis"
+          subquery_id: "assembly"
+          redpath: "/Sensors[*]"
+          properties { property: "Name" type: STRING collect_as: "test_names" }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Chassis/chassis",
+          "Id": "chassis",
+          "Name": "Indus Chassis",
+          "Sensors": {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors"
+          },
+          "Location": {
+            "PartLocation": {
+              "LocationType": "Slot",
+              "ServiceLabel": "IO1"
+            },
+            "PartLocationContext": "PE4"
+          }
+        })json");
+        req->Reply();
+      });
+
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result, IsOk());
+  EXPECT_FALSE(result->query_result.has_status());
+
+  CollectedProperties expected_collected_properties = ParseTextProtoOrDie(R"pb(
+    properties {
+      identifier {
+        redfish_location { service_label: "IO1" part_location_context: "PE4" }
+      }
+      value { string_value: "Indus Chassis" }
+    }
+    properties { value { string_value: "fan0" } }
+    properties { value { string_value: "fan1" } }
+    properties { value { string_value: "fan2" } }
+    properties { value { string_value: "fan3" } }
+    properties { value { string_value: "fan4" } }
+    properties { value { string_value: "fan5" } }
+    properties { value { string_value: "fan6" } }
+    properties { value { string_value: "fan7" } }
+    properties { value { string_value: "indus_eat_temp" } }
+    properties { value { string_value: "indus_latm_temp" } }
+    properties { value { string_value: "CPU0" } }
+    properties { value { string_value: "CPU1" } }
+    properties { value { string_value: "CPU0" } }
+    properties { value { string_value: "CPU1" } }
+  )pb");
+  EXPECT_THAT(result->query_result.collected_properties().at("test_names"),
+              IgnoringRepeatedFieldOrdering(
+                  EqualsProto(expected_collected_properties)));
+}
+
 TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
   DelliciusQuery query = ParseTextProtoOrDie(
       R"pb(
@@ -4610,9 +4681,9 @@ TEST_F(QueryPlannerGrpcTestRunner, CheckQueryPlannerRespectsTimeoutOnGetRoot) {
   // Make root request wait past the timeout.
   server_->AddHttpGetHandler(
       "/redfish/v1",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          redfish::v1::Response *response) {
-        response->set_json_str(std::string(expected_str));
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          redfish::v1::Response* response) {
+        response->set_json_str(expected_str);
         response->set_code(200);
         notification_.WaitForNotification();
         return grpc::Status::OK;
