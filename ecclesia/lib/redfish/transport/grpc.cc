@@ -82,18 +82,24 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
   request.mutable_headers()->insert(
       {std::string(kHostHeader), std::string(target_fqdn)});
   request.set_url(std::string(path));
-  if (params.max_age != absl::InfiniteDuration()){
-      request.mutable_headers()->insert(
-          {"BMCWEB_HINT_MAX_AGE_SEC",
-           absl::StrFormat("%d", absl::ToInt64Seconds(params.max_age))});
+  if (params.max_age != absl::InfiniteDuration()) {
+    request.mutable_headers()->insert(
+        {"BMCWEB_HINT_MAX_AGE_SEC",
+         absl::StrFormat("%d", absl::ToInt64Seconds(params.max_age))});
   }
   if (json_str && !json_str->empty()) {
     *request.mutable_json_str() = *json_str;
     // to JSON str.
     ::google::protobuf::Struct request_body;
-    ECCLESIA_RETURN_IF_ERROR(AsAbslStatus(
-        google::protobuf::util::JsonStringToMessage(std::string(*json_str), &request_body,
-                                          google::protobuf::util::JsonParseOptions())));
+    if (auto status = google::protobuf::util::JsonStringToMessage(
+            std::string(*json_str), &request_body,
+            google::protobuf::util::JsonParseOptions());
+        !status.ok()) {
+      // We don't want to fail the request if the JSON string cannot be parsed
+      // to a protobuf Struct as it can be an opaque binary blob.
+      LOG(WARNING) << "Failed to parse JSON string to message: " << status;
+    }
+
     *request.mutable_json() = request_body;
   }
   grpc::ClientContext context;
@@ -151,8 +157,8 @@ class GrpcRedfishCredentials : public grpc::MetadataCredentialsPlugin {
   // gRPC credentials.
   grpc::Status GetMetadata(
       grpc::string_ref /*service_url*/, grpc::string_ref /*method_name*/,
-      const grpc::AuthContext & /*channel_auth_context*/,
-      std::multimap<grpc::string, grpc::string> *metadata) override {
+      const grpc::AuthContext& /*channel_auth_context*/,
+      std::multimap<grpc::string, grpc::string>* metadata) override {
     metadata->insert(std::make_pair(kTargetKey, target_fqdn_));
     metadata->insert(std::make_pair(kResourceKey, resource_));
     return grpc::Status::OK;
@@ -166,11 +172,11 @@ class GrpcRedfishCredentials : public grpc::MetadataCredentialsPlugin {
 class GrpcRedfishSubscribeReactor
     : public grpc::ClientReadReactor<::redfish::v1::Response> {
  public:
-  GrpcRedfishSubscribeReactor(grpc::ClientContext &context,
-                              GrpcRedfishV1::Stub &stub,
-                              const redfish::v1::Request &request,
-                              RedfishTransport::EventCallback &&on_event,
-                              RedfishTransport::StopCallback &&on_stop)
+  GrpcRedfishSubscribeReactor(grpc::ClientContext& context,
+                              GrpcRedfishV1::Stub& stub,
+                              const redfish::v1::Request& request,
+                              RedfishTransport::EventCallback&& on_event,
+                              RedfishTransport::StopCallback&& on_stop)
       : request_(request),
         on_event_(std::move(on_event)),
         on_stop_(std::move(on_stop)) {
@@ -209,7 +215,7 @@ class GrpcRedfishSubscribeReactor
   }
 
   // OnDone will always take place after all other reactions.
-  void OnDone(const grpc::Status &status) override {
+  void OnDone(const grpc::Status& status) override {
     DLOG(INFO) << "OnDone invoked! Executing StopCallback.";
     on_stop_(AsAbslStatus(status));
   }
@@ -223,10 +229,10 @@ class GrpcRedfishSubscribeReactor
 
 class GrpcRedfishEventStream : public RedfishEventStream {
  public:
-  GrpcRedfishEventStream(GrpcRedfishV1::Stub &stub,
-                         const redfish::v1::Request &request,
-                         RedfishTransport::EventCallback &&on_event,
-                         RedfishTransport::StopCallback &&on_stop)
+  GrpcRedfishEventStream(GrpcRedfishV1::Stub& stub,
+                         const redfish::v1::Request& request,
+                         RedfishTransport::EventCallback&& on_event,
+                         RedfishTransport::StopCallback&& on_stop)
       : reactor_(std::make_unique<GrpcRedfishSubscribeReactor>(
             context_, stub, request, std::move(on_event), std::move(on_stop))) {
   }
@@ -255,8 +261,8 @@ class GrpcRedfishTransport : public RedfishTransport {
   // Params:
   //   endpoint: e.g. "dns:///localhost:80", "unix:///var/run/my.socket"
   GrpcRedfishTransport(absl::string_view endpoint,
-                       const GrpcTransportParams &params,
-                       const std::shared_ptr<grpc::Channel> &channel)
+                       const GrpcTransportParams& params,
+                       const std::shared_ptr<grpc::Channel>& channel)
       : client_(GrpcRedfishV1::NewStub(channel)),
         params_(params),
         fqdn_(EndpointToFqdn(endpoint)) {}
@@ -278,9 +284,9 @@ class GrpcRedfishTransport : public RedfishTransport {
   absl::StatusOr<Result> Get(absl::string_view path) override {
     return DoRpc(
         path, std::nullopt, fqdn_, params_,
-        [this, path](grpc::ClientContext &context,
-                     const redfish::v1::Request &request,
-                     ::redfish::v1::Response *response) -> grpc::Status {
+        [this, path](grpc::ClientContext& context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response) -> grpc::Status {
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
@@ -303,8 +309,8 @@ class GrpcRedfishTransport : public RedfishTransport {
     return DoRpc(
         path, std::nullopt, fqdn_, params_,
         [this, path, timeout](
-            grpc::ClientContext &context, const redfish::v1::Request &request,
-            ::redfish::v1::Response *response) -> grpc::Status {
+            grpc::ClientContext& context, const redfish::v1::Request& request,
+            ::redfish::v1::Response* response) -> grpc::Status {
           // Use timeout if set.
           context.set_deadline(
               absl::ToChronoTime(params_.clock->Now() + timeout));
@@ -321,9 +327,9 @@ class GrpcRedfishTransport : public RedfishTransport {
                               absl::string_view data) override {
     return DoRpc(
         path, data, fqdn_, params_,
-        [this, path](grpc::ClientContext &context,
-                     const redfish::v1::Request &request,
-                     ::redfish::v1::Response *response) -> grpc::Status {
+        [this, path](grpc::ClientContext& context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response) -> grpc::Status {
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
@@ -336,9 +342,9 @@ class GrpcRedfishTransport : public RedfishTransport {
                                absl::string_view data) override {
     return DoRpc(
         path, data, fqdn_, params_,
-        [this, path](grpc::ClientContext &context,
-                     const redfish::v1::Request &request,
-                     ::redfish::v1::Response *response) -> grpc::Status {
+        [this, path](grpc::ClientContext& context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response) -> grpc::Status {
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
@@ -351,9 +357,9 @@ class GrpcRedfishTransport : public RedfishTransport {
                                 absl::string_view data) override {
     return DoRpc(
         path, data, fqdn_, params_,
-        [this, path](grpc::ClientContext &context,
-                     const redfish::v1::Request &request,
-                     ::redfish::v1::Response *response) -> grpc::Status {
+        [this, path](grpc::ClientContext& context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response) -> grpc::Status {
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
@@ -364,8 +370,8 @@ class GrpcRedfishTransport : public RedfishTransport {
   }
 
   absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
-      absl::string_view data, EventCallback &&on_event,
-      StopCallback &&on_stop) override {
+      absl::string_view data, EventCallback&& on_event,
+      StopCallback&& on_stop) override {
     ::redfish::v1::Request request;
     // This header is used when authorizing peers without trust bundle.
     request.mutable_headers()->insert(
@@ -411,8 +417,8 @@ absl::Status ValidateEndpoint(absl::string_view endpoint) {
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
-    absl::string_view endpoint, const GrpcTransportParams &params,
-    const std::shared_ptr<grpc::ChannelCredentials> &creds) {
+    absl::string_view endpoint, const GrpcTransportParams& params,
+    const std::shared_ptr<grpc::ChannelCredentials>& creds) {
   ECCLESIA_RETURN_IF_ERROR(ValidateEndpoint(endpoint));
 
   // Set keepalive parameters according to default values of the OSS version.
