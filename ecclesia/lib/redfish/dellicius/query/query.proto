@@ -47,7 +47,7 @@ message DelliciusQuery {
       // QueryResult.collected_properties map with collect_as as key. If
       // multiple subqueries use the same collect_as key, all properties will be
       // collected in the same list.
-      string collect_as = 6;
+      repeated string collect_as = 6;
     }
     // Uniquely identifies the subquery. It is the responsibility of client
     // application to use a unique string else the subquery output will be

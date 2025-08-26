@@ -2941,7 +2941,12 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollection) {
         subquery {
           subquery_id: "chassis"
           redpath: "/Chassis[*]"
-          properties { property: "Name" type: STRING collect_as: "test_names" }
+          properties {
+            property: "Name"
+            type: STRING
+            collect_as: "test_names"
+            collect_as: "chassis_names"
+          }
         }
         subquery {
           root_subquery_ids: "chassis"
@@ -2960,6 +2965,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollection) {
           "@odata.id": "/redfish/v1/Chassis/chassis",
           "Id": "chassis",
           "Name": "Indus Chassis",
+          "Type": "Server",
           "Sensors": {
             "@odata.id": "/redfish/v1/Chassis/chassis/Sensors"
           },
@@ -3000,9 +3006,21 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollection) {
     properties { value { string_value: "CPU0" } }
     properties { value { string_value: "CPU1" } }
   )pb");
-  EXPECT_THAT(result->query_result.collected_properties().at("test_names"),
-              IgnoringRepeatedFieldOrdering(
-                  EqualsProto(expected_collected_properties)));
+  CollectedProperties expected_chassis_names = ParseTextProtoOrDie(R"pb(
+    properties {
+      identifier {
+        redfish_location { service_label: "IO1" part_location_context: "PE4" }
+      }
+      value { string_value: "Indus Chassis" }
+    }
+  )pb");
+  EXPECT_THAT(
+      result->query_result.collected_properties(),
+      UnorderedElementsAre(
+          Pair("test_names", IgnoringRepeatedFieldOrdering(
+                                 EqualsProto(expected_collected_properties))),
+          Pair("chassis_names", IgnoringRepeatedFieldOrdering(
+                                    EqualsProto(expected_chassis_names)))));
 }
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {

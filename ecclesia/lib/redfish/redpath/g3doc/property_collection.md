@@ -30,7 +30,7 @@ message DelliciusQuery {
       // If specified, query engine will collect all values for this property
       // across all resources queried by this subquery and store them in
       // QueryResult.collected_properties map with collect_as as key.
-      string collect_as = 6;
+      repeated string collect_as = 6;
     }
     ...
   }
@@ -40,8 +40,8 @@ message DelliciusQuery {
 ### Query Result
 
 The `QueryResult` message contains a `collected_properties` map field. If
-`collect_as` is used in any subquery, this map will be populated. - The **key**
-of the map is the string provided in `collect_as`. - The **value** is a
+`collect_as` is used in any subquery, this map will be populated. The **key** of
+the map is the string provided in `collect_as`. The **value** is a
 `CollectedProperties` message, which contains a list of `CollectedProperty`
 messages.
 
@@ -254,6 +254,54 @@ collected_properties {
     properties {
       identifier { local_devpath: "/phys/SYS/DRIVE0" }
       value { string_value: "DRV456" }
+    }
+  }
+}
+```
+
+## Collecting a Single Property Under Multiple Keys
+
+Since `collect_as` is a repeated field, a single property can be collected into
+multiple lists.
+
+### Sample Query
+
+```textproto
+query_id: "all_chassis_serials_in_two_lists"
+subquery {
+  subquery_id: "chassis"
+  redpath: "/Chassis"
+  properties {
+    property: "SerialNumber"
+    type: STRING
+    collect_as: "serial_numbers"
+    collect_as: "all_serials"
+  }
+}
+```
+
+### Resulting `QueryResult`
+
+The `collected_properties` map will contain two entries, one for
+`serial_numbers` and one for `all_serials`, both containing the same collected
+property.
+
+```textproto
+collected_properties {
+  key: "serial_numbers"
+  value {
+    properties {
+      identifier { local_devpath: "/phys/CHASSIS" }
+      value { string_value: "CHAS123" }
+    }
+  }
+}
+collected_properties {
+  key: "all_serials"
+  value {
+    properties {
+      identifier { local_devpath: "/phys/CHASSIS" }
+      value { string_value: "CHAS123" }
     }
   }
 }

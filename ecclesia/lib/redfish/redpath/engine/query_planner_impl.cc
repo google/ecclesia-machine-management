@@ -637,15 +637,18 @@ absl::Status QueryPlanner::TryNormalize(
       if (it == normalized_query_result->fields().end()) {
         continue;
       }
-      CollectedProperty* collected_property =
-          (*query_execution_context->result
-                .mutable_collected_properties())[prop.collect_as()]
-              .add_properties();
-      *collected_property->mutable_value() = it->second;
       auto id_it = normalized_query_result->fields().find(kIdentifierTag);
-      if (id_it != normalized_query_result->fields().end() &&
-          id_it->second.has_identifier()) {
-        *collected_property->mutable_identifier() = id_it->second.identifier();
+      for (const std::string& collect_as_key : prop.collect_as()) {
+        CollectedProperty* collected_property =
+            (*query_execution_context->result
+                  .mutable_collected_properties())[collect_as_key]
+                .add_properties();
+        *collected_property->mutable_value() = it->second;
+        if (id_it != normalized_query_result->fields().end() &&
+            id_it->second.has_identifier()) {
+          *collected_property->mutable_identifier() =
+              id_it->second.identifier();
+        }
       }
     }
 
