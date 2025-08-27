@@ -13,4 +13,6 @@ message QueryEngineFeatures {
   bool enable_url_annotation = 4;
   // Enable subscription API
   bool enable_streaming = 5;
+  // Only build topology (devpath2 map) on first query.
+  bool lazy_build_topology = 6;
 }

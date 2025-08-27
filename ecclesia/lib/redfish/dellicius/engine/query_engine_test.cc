@@ -84,6 +84,7 @@
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
 #include "tensorflow_serving/util/net_http/public/response_code_enum.h"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
 
@@ -2296,6 +2297,114 @@ TEST_F(QueryEngineGrpcTestRunner,
   EXPECT_THAT(
       response_entries_2.results().at("SensorCollector").status().error_code(),
       ecclesia::ErrorCode::ERROR_CANCELLED);
+}
+
+TEST(QueryEngineTest, QueryEngineLazyBuildTopologyEnabled) {
+  FakeRedfishServer server(kIndusMockup);
+  FakeClock clock{clock_time};
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
+                                   .query_rules = kQueryRules,
+                                   .clock = &clock}));
+  absl::Notification topology_built;
+
+  // Add a handler to the fake server to notify when topology build starts.
+  // We assume that fetching the service root is part of topology creation.
+  server.AddHttpGetHandler(
+      "/redfish/v1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        if (!topology_built.HasBeenNotified()) {
+          topology_built.Notify();
+        }
+        // Provide a minimal valid Service Root response.
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::OK);
+      });
+
+  QueryEngineFeatures features = StandardQueryEngineFeatures();
+  features.set_lazy_build_topology(true);
+  QueryEngineParams params{
+      .stable_id_type =
+          QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived,
+      .features = std::move(features)};
+
+  ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<QueryEngineIntf> query_engine,
+                          GetDefaultQueryEngine(server, kDelliciusQueries,
+                                                kQueryRules, &clock, params));
+
+  // Topology should not be built yet.
+  EXPECT_FALSE(topology_built.HasBeenNotified());
+
+  // Execute a query, this should trigger topology build.
+  query_engine->ExecuteRedpathQuery({"SensorCollector"});
+
+  // Topology should be built now.
+  EXPECT_TRUE(topology_built.HasBeenNotified());
+
+  // Execute again, should not re-trigger build, but notification stays true.
+  query_engine->ExecuteRedpathQuery({"SensorCollector"});
+  EXPECT_TRUE(topology_built.HasBeenNotified());
+}
+
+TEST(QueryEngineTest, QueryEngineLazyBuildTopologyDisabled) {
+  FakeRedfishServer server(kIndusMockup);
+  FakeClock clock{clock_time};
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
+                                   .query_rules = kQueryRules,
+                                   .clock = &clock}));
+  absl::Notification topology_built;
+
+  // Add a handler to the fake server to notify when topology build starts.
+  // We assume that fetching the service root is part of topology creation.
+  server.AddHttpGetHandler(
+      "/redfish/v1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        if (!topology_built.HasBeenNotified()) {
+          topology_built.Notify();
+        }
+        // Provide a minimal valid Service Root response.
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::OK);
+      });
+
+  QueryEngineFeatures features = StandardQueryEngineFeatures();
+  features.set_lazy_build_topology(false);
+  QueryEngineParams params{
+      .stable_id_type =
+          QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived,
+      .features = std::move(features)};
+
+  ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<QueryEngineIntf> query_engine,
+                          GetDefaultQueryEngine(server, kDelliciusQueries,
+                                                kQueryRules, &clock, params));
+
+  // Topology should be built eagerly during QueryEngine creation.
+  EXPECT_TRUE(topology_built.HasBeenNotified());
+
+  // Execute a query, should not change notification status.
+  query_engine->ExecuteRedpathQuery({"SensorCollector"});
+  EXPECT_TRUE(topology_built.HasBeenNotified());
 }
 
 }  // namespace

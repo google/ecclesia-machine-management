@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -151,8 +152,14 @@ class RedpathNormalizerImplDefault final
 class RedpathNormalizerImplAddDevpath final
     : public RedpathNormalizer::ImplInterface {
  public:
-  explicit RedpathNormalizerImplAddDevpath(NodeTopology node_topology)
-      : topology_(std::move(node_topology)) {}
+  RedpathNormalizerImplAddDevpath(
+      std::optional<NodeTopology> node_topology,
+      RedfishInterface* redfish_interface,
+      absl::string_view redfish_topology_config_name)
+      : topology_(std::move(node_topology)),
+        redfish_interface_(redfish_interface),
+        redfish_topology_config_name_(
+            std::string(redfish_topology_config_name)) {}
 
  protected:
   absl::Status Normalize(const RedfishObject &redfish_object,
@@ -161,7 +168,10 @@ class RedpathNormalizerImplAddDevpath final
                          const RedpathNormalizerOptions &options) override;
 
  private:
-  NodeTopology topology_;
+  absl::Mutex topology_mu_;
+  std::optional<NodeTopology> topology_ ABSL_GUARDED_BY(topology_mu_);
+  RedfishInterface* redfish_interface_;
+  std::string redfish_topology_config_name_;
 };
 
 // Adds machine level barepath to subquery output.
@@ -200,13 +210,17 @@ inline std::unique_ptr<RedpathNormalizer> BuildDefaultRedpathNormalizer() {
 // Step 2 for Devpath2:
 // Local Devpath derived here (Fallback to step 1): From node topology.
 inline std::unique_ptr<RedpathNormalizer>
-BuildDefaultRedpathNormalizerWithLocalDevpath(NodeTopology node_topology) {
+BuildDefaultRedpathNormalizerWithLocalDevpath(
+    std::optional<NodeTopology> node_topology,
+    RedfishInterface* redfish_interface,
+    absl::string_view redfish_topology_config_name) {
   // Includes step 1 for Devpath2
   auto normalizer = BuildDefaultRedpathNormalizer();
   // Step 2 for Devpath2
   normalizer->AddRedpathNormalizer(
       std::make_unique<RedpathNormalizerImplAddDevpath>(
-          std::move(node_topology)));
+          std::move(node_topology), redfish_interface,
+          redfish_topology_config_name));
   return normalizer;
 }
 
@@ -233,10 +247,15 @@ BuildRedpathNormalizerWithMachineDevpath(
 // devpath present from step 1 or step 2. No fallback.
 inline std::unique_ptr<RedpathNormalizer>
 BuildRedpathNormalizerWithMachineDevpath(
-    std::unique_ptr<IdAssigner> id_assigner, NodeTopology node_topology) {
+    std::unique_ptr<IdAssigner> id_assigner,
+    std::optional<NodeTopology> node_topology,
+    RedfishInterface* redfish_interface,
+    absl::string_view redfish_topology_config_name) {
   // Includes steps 1 and 2 for Devpath2
   std::unique_ptr<RedpathNormalizer> normalizer =
-      BuildDefaultRedpathNormalizerWithLocalDevpath(std::move(node_topology));
+      BuildDefaultRedpathNormalizerWithLocalDevpath(
+          std::move(node_topology), redfish_interface,
+          redfish_topology_config_name);
   // Step 3 for Devpath2
   normalizer->AddRedpathNormalizer(
       std::make_unique<RedpathNormalizerImplAddMachineBarepath>(
@@ -252,9 +271,9 @@ inline RedpathNormalizer::QueryIdToNormalizerMap DefaultRedpathNormalizerMap() {
 // For stable_id_type = kRedfishLocationDerived, returns "Step 2 for Devpath2".
 // For stable_id_type = kRedfishLocation, returns "Step 1 for Devpath3".
 std::unique_ptr<RedpathNormalizer> BuildLocalDevpathRedpathNormalizer(
-    RedfishInterface *redfish_interface,
+    RedfishInterface* redfish_interface,
     RedpathNormalizer::RedfishStableIdType stable_id_type,
-    absl::string_view redfish_topology_config_name);
+    absl::string_view redfish_topology_config_name, bool lazy_build_topology);
 
 // For stable_id_type = kRedfishLocationDerived, returns "Step 3 for Devpath2".
 // For stable_id_type = kRedfishLocation, returns "Step 2 for Devpath3".
@@ -262,7 +281,7 @@ std::unique_ptr<RedpathNormalizer> GetMachineDevpathRedpathNormalizer(
     RedpathNormalizer::RedfishStableIdType stable_id_type,
     absl::string_view redfish_topology_config_name,
     std::unique_ptr<IdAssigner> id_assigner,
-    RedfishInterface *redfish_interface);
+    RedfishInterface* redfish_interface, bool lazy_build_topology);
 
 }  // namespace ecclesia
 

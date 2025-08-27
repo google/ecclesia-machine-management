@@ -34,6 +34,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
@@ -41,6 +42,7 @@
 #include "ecclesia/lib/redfish/dellicius/utils/path_util.h"
 #include "ecclesia/lib/redfish/devpath.h"
 #include "ecclesia/lib/redfish/interface.h"
+#include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
@@ -300,6 +302,15 @@ absl::StatusOr<QueryValue> GetPropertyFromRedfishObject(
   return query_value;
 }
 
+NodeTopology CreateTopology(RedfishInterface* redfish_interface,
+                            absl::string_view redfish_topology_config_name) {
+  if (!redfish_topology_config_name.empty()) {
+    return CreateTopologyFromRedfish(redfish_interface,
+                                     redfish_topology_config_name);
+  }
+  return CreateTopologyFromRedfish(redfish_interface);
+}
+
 }  // namespace
 
 RedpathNormalizerImplDefault::RedpathNormalizerImplDefault()
@@ -388,6 +399,7 @@ absl::Status RedpathNormalizerImplAddDevpath::Normalize(
     const DelliciusQuery::Subquery &subquery,
     ecclesia::QueryResultData &data_set_local,
     const RedpathNormalizerOptions &options) {
+  absl::MutexLock l(&topology_mu_);
   QueryResultDataReader reader(&data_set_local);
   absl::StatusOr<QueryValueReader> query_value_reader =
       reader.Get(kIdentifierTag);
@@ -397,9 +409,14 @@ absl::Status RedpathNormalizerImplAddDevpath::Normalize(
     return absl::OkStatus();
   }
 
+  if (!topology_.has_value()) {
+    topology_ =
+        CreateTopology(redfish_interface_, redfish_topology_config_name_);
+  }
+
   // Derive devpath from Node Topology (URI to local devpath map).
   std::optional<std::string> devpath =
-      GetDevpathForObjectAndNodeTopology(redfish_object, topology_);
+      GetDevpathForObjectAndNodeTopology(redfish_object, topology_.value());
 
   if (devpath.has_value()) {
     (*data_set_local.mutable_fields())[kIdentifierTag]
@@ -463,20 +480,20 @@ absl::Status RedpathNormalizerImplAddMachineBarepath::Normalize(
 }
 
 std::unique_ptr<RedpathNormalizer> BuildLocalDevpathRedpathNormalizer(
-    RedfishInterface *redfish_interface,
+    RedfishInterface* redfish_interface,
     RedpathNormalizer::RedfishStableIdType stable_id_type,
-    absl::string_view redfish_topology_config_name) {
+    absl::string_view redfish_topology_config_name, bool lazy_build_topology) {
   switch (stable_id_type) {
     case RedpathNormalizer::RedfishStableIdType::kRedfishLocation:
       return BuildDefaultRedpathNormalizer();
     case RedpathNormalizer::RedfishStableIdType::kRedfishLocationDerived:
-      if (!redfish_topology_config_name.empty()) {
-        return BuildDefaultRedpathNormalizerWithLocalDevpath(
-            CreateTopologyFromRedfish(redfish_interface,
-                                      redfish_topology_config_name));
+      std::optional<NodeTopology> topology = std::nullopt;
+      if (!lazy_build_topology) {
+        topology =
+            CreateTopology(redfish_interface, redfish_topology_config_name);
       }
       return BuildDefaultRedpathNormalizerWithLocalDevpath(
-          CreateTopologyFromRedfish(redfish_interface));
+          std::move(topology), redfish_interface, redfish_topology_config_name);
   }
 
   return nullptr;
@@ -486,20 +503,20 @@ std::unique_ptr<RedpathNormalizer> GetMachineDevpathRedpathNormalizer(
     RedpathNormalizer::RedfishStableIdType stable_id_type,
     absl::string_view redfish_topology_config_name,
     std::unique_ptr<IdAssigner> id_assigner,
-    RedfishInterface *redfish_interface) {
+    RedfishInterface* redfish_interface, bool lazy_build_topology) {
   switch (stable_id_type) {
     case RedpathNormalizer::RedfishStableIdType::kRedfishLocation:
       return BuildRedpathNormalizerWithMachineDevpath(std::move(id_assigner));
     case RedpathNormalizer::RedfishStableIdType::kRedfishLocationDerived:
-      if (redfish_topology_config_name.empty()) {
-        return BuildRedpathNormalizerWithMachineDevpath(
-            std::move(id_assigner),
-            CreateTopologyFromRedfish(redfish_interface));
+
+      std::optional<NodeTopology> topology = std::nullopt;
+      if (!lazy_build_topology) {
+        topology =
+            CreateTopology(redfish_interface, redfish_topology_config_name);
       }
       return BuildRedpathNormalizerWithMachineDevpath(
-          std::move(id_assigner),
-          CreateTopologyFromRedfish(redfish_interface,
-                                    redfish_topology_config_name));
+          std::move(id_assigner), std::move(topology), redfish_interface,
+          redfish_topology_config_name);
   }
 
   return nullptr;
