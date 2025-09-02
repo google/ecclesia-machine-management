@@ -1,6 +1,11 @@
 """Starlark definitions for build rules embed data files directly into code libraries."""
 
+# load("@rules_cc//cc:cc_binary.bzl", _cc_binary = "cc_binary")
+# load("@rules_cc//cc:cc_library.bzl", _cc_library = "cc_library")
 load(":file.bzl", "expand_template")
+
+_cc_library = native.cc_library
+_cc_binary = native.cc_binary
 
 def cc_data_library(
         name,
@@ -71,7 +76,7 @@ def cc_data_library(
     )
 
     # Encapsulate the code an header files into a cc_library.
-    native.cc_library(
+    _cc_library(
         name = name,
         srcs = [name + ".cc"],
         hdrs = [name + ".h"],
@@ -140,7 +145,7 @@ def shar_binary(
     )
 
     # Combine the stub and data library into an actual binary.
-    native.cc_binary(
+    _cc_binary(
         name = name,
         srcs = [name + "__stub.cc"],
         deps = [

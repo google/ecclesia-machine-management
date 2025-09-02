@@ -68,8 +68,8 @@ class RedfishTransport {
     absl::flat_hash_map<std::string, std::string> headers;
   };
 
-  using EventCallback = std::function<void(const Result &)>;
-  using StopCallback = std::function<void(const absl::Status &)>;
+  using EventCallback = std::function<void(const Result&)>;
+  using StopCallback = std::function<void(const absl::Status&)>;
 
   virtual ~RedfishTransport() = default;
 
@@ -84,6 +84,14 @@ class RedfishTransport {
                                      absl::Duration timeout) = 0;
   virtual absl::StatusOr<Result> Post(absl::string_view path,
                                       absl::string_view data) = 0;
+  // If octet_stream is true, the data will be sent as octet_stream.
+  virtual absl::StatusOr<Result> Post(absl::string_view path,
+                                      absl::string_view data, bool octet_stream,
+                                      absl::Duration timeout) {
+    return absl::UnimplementedError(
+        "Post with timeout and octet_stream is not implemented yet for this "
+        "transport.");
+  }
   virtual absl::StatusOr<Result> Patch(absl::string_view path,
                                        absl::string_view data) = 0;
   virtual absl::StatusOr<Result> Delete(absl::string_view path,
@@ -98,8 +106,8 @@ class RedfishTransport {
   // Returns a Redfish event stream on success where clients can start or stop
   // the streaming.
   virtual absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
-      absl::string_view data, EventCallback &&on_event,
-      StopCallback &&on_stop) {
+      absl::string_view data, EventCallback&& on_event,
+      StopCallback&& on_stop) {
     return absl::UnimplementedError("Streaming is not implemented yet.");
   }
 };
@@ -109,7 +117,7 @@ class RedfishTransport {
 class NullTransport : public RedfishTransport {
   absl::string_view GetRootUri() override { return ""; }
   absl::StatusOr<Result> Get(absl::string_view path) override {
-  return absl::InternalError("NullTransport");
+    return absl::InternalError("NullTransport");
   }
   absl::StatusOr<Result> Get(absl::string_view path,
                              absl::Duration timeout) override {
@@ -128,8 +136,8 @@ class NullTransport : public RedfishTransport {
     return absl::InternalError("NullTransport");
   }
   absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
-      absl::string_view data, EventCallback &&callback,
-      StopCallback &&on_stop) override {
+      absl::string_view data, EventCallback&& callback,
+      StopCallback&& on_stop) override {
     return absl::InternalError("NullTransport");
   }
 };

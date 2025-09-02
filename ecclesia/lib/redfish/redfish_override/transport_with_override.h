@@ -44,14 +44,14 @@ absl::StatusOr<OverridePolicy> TryGetOverridePolicy(
 // Otherwise, the target address will be "{hostname}:{port}."
 absl::StatusOr<OverridePolicy> TryGetOverridePolicy(
     absl::string_view hostname, std::optional<int> port,
-    const std::shared_ptr<grpc::ChannelCredentials> &creds);
+    const std::shared_ptr<grpc::ChannelCredentials>& creds);
 
 // Same as TryGetOverridePolicy, except returns a default OverridePolicy on
 // failure.
 OverridePolicy GetOverridePolicy(absl::string_view policy_file_path);
 OverridePolicy GetOverridePolicy(
     absl::string_view hostname, std::optional<int> port,
-    const std::shared_ptr<grpc::ChannelCredentials> &creds);
+    const std::shared_ptr<grpc::ChannelCredentials>& creds);
 
 class RedfishTransportWithOverride : public RedfishTransport {
  public:
@@ -65,7 +65,7 @@ class RedfishTransportWithOverride : public RedfishTransport {
     // Precompile regex for overrides.
     override_re2_and_content_.reserve(
         override_policy->override_content_map_regex_size());
-    for (auto &[regex_str, override_content] :
+    for (auto& [regex_str, override_content] :
          *override_policy->mutable_override_content_map_regex()) {
       override_re2_and_content_.push_back(std::make_pair(
           std::make_unique<RE2>(regex_str), std::move(override_content)));
@@ -104,6 +104,11 @@ class RedfishTransportWithOverride : public RedfishTransport {
   absl::StatusOr<Result> Post(absl::string_view path,
                               absl::string_view data) override {
     return redfish_transport_->Post(path, data);
+  }
+  absl::StatusOr<Result> Post(absl::string_view path, absl::string_view data,
+                              bool octet_stream,
+                              absl::Duration timeout) override {
+    return redfish_transport_->Post(path, data, octet_stream, timeout);
   }
 
   absl::StatusOr<Result> Patch(absl::string_view path,

@@ -1,3 +1,6 @@
+# load("@rules_cc//cc:cc_library.bzl", "cc_library")
+# load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 proto_library(
     name = "query_engine_features_proto",
     srcs = ["query_engine_features.proto"],

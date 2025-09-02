@@ -83,6 +83,12 @@ QueryRouterSpec::StableIdConfig::StableIdType GetStableIdTypeFromRouterSpec(
     SelectionSpec::SelectionClass::ServerType server_type,
     SelectionSpec::SelectionClass::ServerClass server_class);
 
+std::optional<std::string> GetTopologyConfigNameFromRouterSpec(
+    const ecclesia::QueryRouterSpec& router_spec,
+    absl::string_view node_entity_tag,
+    SelectionSpec::SelectionClass::ServerType server_type,
+    SelectionSpec::SelectionClass::ServerClass server_class);
+
 absl::flat_hash_map<std::string,
                     QueryRouterSpec::VersionConfig::Policy::BmcVersion>
 GetQueryIdToBmcVersionFromRouterSpec(
