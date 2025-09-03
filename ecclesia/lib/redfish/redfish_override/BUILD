@@ -1,5 +1,7 @@
 # Redfish override (a RedfishTransport layer) library
 
+# load("@rules_cc//cc:cc_library.bzl", "cc_library")
+# load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("//ecclesia/build_defs:proto.bzl", "proto_data")
 
 licenses(["notice"])
