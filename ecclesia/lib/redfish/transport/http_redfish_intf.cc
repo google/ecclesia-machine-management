@@ -69,9 +69,11 @@ struct RedfishExtendedPath {
   std::vector<std::variant<absl::string_view, int>> properties;
   std::string GetFullPath() const {
     std::string raw_path = uri;
-    for (const auto &item : properties) {
+    for (const auto& item : properties) {
       std::visit(
-          [&](auto &&typed_item) { raw_path += absl::StrCat("/", typed_item); },
+          [&](auto&& typed_item) {
+            absl::StrAppend(&raw_path, "/", typed_item);
+          },
           item);
     }
     return raw_path;
@@ -81,27 +83,27 @@ struct RedfishExtendedPath {
 // Helper function to convert a key-value span to a JSON object that can be
 // used as a request body.
 
-nlohmann::json ProcessValueVariant(const RedfishInterface::ListValue &val);
-nlohmann::json ProcessValueVariant(const RedfishInterface::ObjectValue &val);
+nlohmann::json ProcessValueVariant(const RedfishInterface::ListValue& val);
+nlohmann::json ProcessValueVariant(const RedfishInterface::ObjectValue& val);
 nlohmann::json ProcessValueVariant(int val) { return nlohmann::json(val); }
 nlohmann::json ProcessValueVariant(absl::string_view val) {
   return nlohmann::json(val);
 }
-nlohmann::json ProcessValueVariant(const char *val) {
+nlohmann::json ProcessValueVariant(const char* val) {
   return nlohmann::json(val);
 }
 nlohmann::json ProcessValueVariant(bool val) { return nlohmann::json(val); }
 nlohmann::json ProcessValueVariant(double val) { return nlohmann::json(val); }
-nlohmann::json ProcessValueVariant(const RedfishInterface::ListValue &val) {
+nlohmann::json ProcessValueVariant(const RedfishInterface::ListValue& val) {
   nlohmann::json array(nlohmann::json::value_t::array);
-  for (const auto &item : val.items) {
+  for (const auto& item : val.items) {
     std::visit([&](auto i) { array.push_back(ProcessValueVariant(i)); }, item);
   }
   return array;
 }
-nlohmann::json ProcessValueVariant(const RedfishInterface::ObjectValue &val) {
+nlohmann::json ProcessValueVariant(const RedfishInterface::ObjectValue& val) {
   nlohmann::json obj(nlohmann::json::value_t::object);
-  for (const auto &i : val.items) {
+  for (const auto& i : val.items) {
     std::visit([&](auto v) { obj[i.first] = ProcessValueVariant(v); },
                i.second);
   }
@@ -112,7 +114,7 @@ nlohmann::json KvSpanToJson(
     absl::Span<const std::pair<std::string, RedfishInterface::ValueVariant>>
         kv_span) {
   nlohmann::json json(nlohmann::json::value_t::object);
-  for (const auto &kv_pair : kv_span) {
+  for (const auto& kv_pair : kv_span) {
     std::visit(
         [&](auto val) { json[kv_pair.first] = ProcessValueVariant(val); },
         kv_pair.second);
@@ -122,7 +124,7 @@ nlohmann::json KvSpanToJson(
 
 class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
  public:
-  HttpIntfVariantImpl(RedfishInterface *intf, RedfishExtendedPath path,
+  HttpIntfVariantImpl(RedfishInterface* intf, RedfishExtendedPath path,
                       ecclesia::RedfishTransport::Result result,
                       CacheState cache_state)
       : intf_(intf),
@@ -136,20 +138,20 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
 
   CacheState IsFresh() const override { return cache_state_; }
 
-  bool GetValue(std::string *val) const override {
+  bool GetValue(std::string* val) const override {
     if (!std::holds_alternative<nlohmann::json>(result_.body)) {
       return false;
     }
-    const auto &json = std::get<nlohmann::json>(result_.body);
+    const auto& json = std::get<nlohmann::json>(result_.body);
     if (!json.is_string()) return false;
     *val = json.get<std::string>();
     return true;
   }
-  bool GetValue(int32_t *val) const override {
+  bool GetValue(int32_t* val) const override {
     if (!std::holds_alternative<nlohmann::json>(result_.body)) {
       return false;
     }
-    const auto &json = std::get<nlohmann::json>(result_.body);
+    const auto& json = std::get<nlohmann::json>(result_.body);
     if (json.is_number_integer()) {
       *val = json.get<int32_t>();
       return true;
@@ -167,11 +169,11 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
     }
     return false;
   }
-  bool GetValue(int64_t *val) const override {
+  bool GetValue(int64_t* val) const override {
     if (!std::holds_alternative<nlohmann::json>(result_.body)) {
       return false;
     }
-    const auto &json = std::get<nlohmann::json>(result_.body);
+    const auto& json = std::get<nlohmann::json>(result_.body);
     if (json.is_number_integer()) {
       *val = json.get<int64_t>();
       return true;
@@ -189,25 +191,25 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
     }
     return false;
   }
-  bool GetValue(double *val) const override {
+  bool GetValue(double* val) const override {
     if (!std::holds_alternative<nlohmann::json>(result_.body)) {
       return false;
     }
-    const auto &json = std::get<nlohmann::json>(result_.body);
+    const auto& json = std::get<nlohmann::json>(result_.body);
     if (!json.is_number()) return false;
     *val = json.get<double>();
     return true;
   }
-  bool GetValue(bool *val) const override {
+  bool GetValue(bool* val) const override {
     if (!std::holds_alternative<nlohmann::json>(result_.body)) {
       return false;
     }
-    const auto &json = std::get<nlohmann::json>(result_.body);
+    const auto& json = std::get<nlohmann::json>(result_.body);
     if (!json.is_boolean()) return false;
     *val = json.get<bool>();
     return true;
   }
-  bool GetValue(absl::Time *val) const override {
+  bool GetValue(absl::Time* val) const override {
     std::string dt_string;
     if (!GetValue(&dt_string)) {
       return false;
@@ -233,16 +235,16 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
     return std::nullopt;
   }
 
-  void SetTimeoutManager(ecclesia::QueryTimeoutManager *timeout_mgr) override {
+  void SetTimeoutManager(ecclesia::QueryTimeoutManager* timeout_mgr) override {
     timeout_mgr_ = timeout_mgr;
   }
 
  private:
-  RedfishInterface *intf_;
+  RedfishInterface* intf_;
   RedfishExtendedPath path_;
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
-  std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr_;
+  std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr_;
 };
 
 // Helper function for automatically fetching an @odata.id reference using
@@ -256,10 +258,10 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
 // performed.
 RedfishVariant ResolveReference(
     int reuse_code, nlohmann::json json,
-    const absl::flat_hash_map<std::string, std::string> &headers,
-    RedfishInterface *intf, RedfishExtendedPath path, CacheState cache_state,
+    const absl::flat_hash_map<std::string, std::string>& headers,
+    RedfishInterface* intf, RedfishExtendedPath path, CacheState cache_state,
     GetParams params = {}) {
-  auto get_uri = [intf](const RedfishExtendedPath &path, GetParams params) {
+  auto get_uri = [intf](const RedfishExtendedPath& path, GetParams params) {
     return params.freshness == GetParams::Freshness::kRequired
                ? intf->UncachedGetUri(path.GetFullPath(), std::move(params))
                : intf->CachedGetUri(path.GetFullPath(), std::move(params));
@@ -294,16 +296,16 @@ RedfishVariant ResolveReference(
 class HttpIntfObjectImpl : public RedfishObject {
  public:
   explicit HttpIntfObjectImpl(
-      RedfishInterface *intf, RedfishExtendedPath path,
+      RedfishInterface* intf, RedfishExtendedPath path,
       ecclesia::RedfishTransport::Result result, CacheState cache_state,
-      std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr = std::nullopt)
+      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr = std::nullopt)
       : intf_(intf),
         path_(std::move(path)),
         result_(std::move(result)),
         cache_state_(cache_state),
         timeout_mgr_(timeout_mgr) {}
-  HttpIntfObjectImpl(const HttpIntfObjectImpl &) = delete;
-  HttpIntfObjectImpl &operator=(const HttpIntfObjectImpl &) = delete;
+  HttpIntfObjectImpl(const HttpIntfObjectImpl&) = delete;
+  HttpIntfObjectImpl& operator=(const HttpIntfObjectImpl&) = delete;
 
   RedfishVariant operator[](absl::string_view node_name) const override {
     return Get(node_name, GetParams{.timeout_manager = timeout_mgr_});
@@ -315,7 +317,7 @@ class HttpIntfObjectImpl : public RedfishObject {
       return RedfishVariant(
           absl::InternalError("Result body is not holding JSON"));
     }
-    const auto &json = std::get<nlohmann::json>(result_.body);
+    const auto& json = std::get<nlohmann::json>(result_.body);
     // Update path with a new node name
     RedfishExtendedPath new_path = path_;
     new_path.properties.push_back(node_name);
@@ -361,7 +363,7 @@ class HttpIntfObjectImpl : public RedfishObject {
     if (!std::holds_alternative<nlohmann::json>(result_.body)) {
       return std::nullopt;
     }
-    const auto &json = std::get<nlohmann::json>(result_.body);
+    const auto& json = std::get<nlohmann::json>(result_.body);
     auto itr = json.find(PropertyOdataId::Name);
     if (itr == json.end()) return std::nullopt;
     return std::string(itr.value());
@@ -415,8 +417,8 @@ class HttpIntfObjectImpl : public RedfishObject {
     if (!std::holds_alternative<nlohmann::json>(result_.body)) {
       return;
     }
-    const auto &json = std::get<nlohmann::json>(result_.body);
-    for (const auto &items : json.items()) {
+    const auto& json = std::get<nlohmann::json>(result_.body);
+    for (const auto& items : json.items()) {
       RedfishExtendedPath path = path_;
       path.properties.push_back(items.key());
       if (itr_func(items.key(),
@@ -437,11 +439,11 @@ class HttpIntfObjectImpl : public RedfishObject {
   }
 
  private:
-  RedfishInterface *intf_;
+  RedfishInterface* intf_;
   RedfishExtendedPath path_;
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
-  std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr_;
+  std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr_;
 };
 
 // HttpIntfArrayIterableImpl implements the RedfishIterable interface with a
@@ -450,10 +452,10 @@ class HttpIntfObjectImpl : public RedfishObject {
 class HttpIntfArrayIterableImpl : public RedfishIterable {
  public:
   explicit HttpIntfArrayIterableImpl(
-      RedfishInterface *intf, RedfishExtendedPath path,
+      RedfishInterface* intf, RedfishExtendedPath path,
       ecclesia::RedfishTransport::Result result, CacheState cache_state,
       RedfishVariant::IterableMode mode, GetParams params,
-      std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr = std::nullopt)
+      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr = std::nullopt)
       : intf_(intf),
         path_(std::move(path)),
         result_(std::move(result)),
@@ -462,8 +464,8 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
         params_(std::move(params)),
         timeout_mgr_(timeout_mgr) {}
 
-  HttpIntfArrayIterableImpl(const HttpIntfArrayIterableImpl &) = delete;
-  HttpIntfObjectImpl &operator=(const HttpIntfArrayIterableImpl &) = delete;
+  HttpIntfArrayIterableImpl(const HttpIntfArrayIterableImpl&) = delete;
+  HttpIntfObjectImpl& operator=(const HttpIntfArrayIterableImpl&) = delete;
 
   size_t Size() override {
     return std::get<nlohmann::json>(result_.body).size();
@@ -474,7 +476,7 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
   }
 
   RedfishVariant operator[](int index) const override {
-    const auto &json = std::get<nlohmann::json>(result_.body);
+    const auto& json = std::get<nlohmann::json>(result_.body);
     if (index < 0 || index >= json.size()) {
       return RedfishVariant(absl::OutOfRangeError(
           absl::StrFormat("Index %d out of range for json array", index)));
@@ -503,13 +505,13 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
   }
 
  private:
-  RedfishInterface *intf_;
+  RedfishInterface* intf_;
   RedfishExtendedPath path_;
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
   RedfishVariant::IterableMode mode_;
   GetParams params_;
-  std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr_;
+  std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr_;
 };
 
 // HttpIntfCollectionIterableImpl implements the RedfishIterable interface
@@ -519,10 +521,10 @@ class HttpIntfArrayIterableImpl : public RedfishIterable {
 class HttpIntfCollectionIterableImpl : public RedfishIterable {
  public:
   explicit HttpIntfCollectionIterableImpl(
-      RedfishInterface *intf, RedfishExtendedPath path,
+      RedfishInterface* intf, RedfishExtendedPath path,
       ecclesia::RedfishTransport::Result result, CacheState cache_state,
       RedfishVariant::IterableMode mode, GetParams params,
-      std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr = std::nullopt)
+      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr = std::nullopt)
       : intf_(intf),
         path_(std::move(path)),
         result_(std::move(result)),
@@ -530,13 +532,12 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
         mode_(mode),
         params_(std::move(params)),
         timeout_mgr_(timeout_mgr) {}
-  HttpIntfCollectionIterableImpl(const HttpIntfCollectionIterableImpl &) =
+  HttpIntfCollectionIterableImpl(const HttpIntfCollectionIterableImpl&) =
       delete;
-  HttpIntfObjectImpl &operator=(const HttpIntfCollectionIterableImpl &) =
-      delete;
+  HttpIntfObjectImpl& operator=(const HttpIntfCollectionIterableImpl&) = delete;
 
   size_t Size() override {
-    const auto &json = std::get<nlohmann::json>(result_.body);
+    const auto& json = std::get<nlohmann::json>(result_.body);
     // Return size based on the number of elements in Members array.
     auto itr = json.find(PropertyMembers::Name);
     if (itr == json.end() || !itr.value().is_array()) return 0;
@@ -544,7 +545,7 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
   }
 
   bool Empty() override {
-    const auto &json = std::get<nlohmann::json>(result_.body);
+    const auto& json = std::get<nlohmann::json>(result_.body);
     // Determine emptiness by checking if Members array is empty.
     auto itr = json.find(PropertyMembers::Name);
     if (itr == json.end() || !itr.value().is_array()) return true;
@@ -552,7 +553,7 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
   }
 
   RedfishVariant operator[](int index) const override {
-    const auto &json = std::get<nlohmann::json>(result_.body);
+    const auto& json = std::get<nlohmann::json>(result_.body);
     // Check the bounds based on the array in the Members property and access
     // the Members array directly.
     auto itr = json.find(PropertyMembers::Name);
@@ -585,13 +586,13 @@ class HttpIntfCollectionIterableImpl : public RedfishIterable {
   }
 
  private:
-  RedfishInterface *intf_;
+  RedfishInterface* intf_;
   RedfishExtendedPath path_;
   ecclesia::RedfishTransport::Result result_;
   CacheState cache_state_;
   RedfishVariant::IterableMode mode_;
   GetParams params_;
-  std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr_;
+  std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr_;
   absl::Time query_start_time_;
 };
 
@@ -599,7 +600,7 @@ std::unique_ptr<RedfishObject> HttpIntfVariantImpl::AsObject() const {
   if (!std::holds_alternative<nlohmann::json>(result_.body)) {
     return nullptr;
   }
-  const auto &json = std::get<nlohmann::json>(result_.body);
+  const auto& json = std::get<nlohmann::json>(result_.body);
   if (!json.is_object()) return nullptr;
   return std::make_unique<HttpIntfObjectImpl>(intf_, path_, result_,
                                               cache_state_);
@@ -610,7 +611,7 @@ std::unique_ptr<RedfishIterable> HttpIntfVariantImpl::AsIterable(
   if (!std::holds_alternative<nlohmann::json>(result_.body)) {
     return nullptr;
   }
-  const auto &json = std::get<nlohmann::json>(result_.body);
+  const auto& json = std::get<nlohmann::json>(result_.body);
   bool is_collection_iterable = json.is_object() &&
                                 json.contains(PropertyMembers::Name) &&
                                 json[PropertyMembers::Name].is_array();
@@ -768,6 +769,20 @@ class HttpRedfishInterface : public RedfishInterface {
                           ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
+  RedfishVariant PostUri(absl::string_view uri, absl::string_view data,
+                         bool octet_stream, absl::Duration timeout) override {
+    absl::ReaderMutexLock mu(&transport_mutex_);
+    absl::StatusOr<ecclesia::RedfishTransport::Result> result =
+        transport_->Post(uri, data, octet_stream, timeout);
+    if (!result.ok()) return RedfishVariant(result.status());
+    int code = result->code;
+    absl::flat_hash_map<std::string, std::string> headers = result->headers;
+    return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
+                              this, RedfishExtendedPath{std::string(uri)},
+                              std::move(*result), CacheState::kIsFresh),
+                          ecclesia::HttpResponseCodeFromInt(code), headers);
+  }
+
   RedfishVariant DeleteUri(
       absl::string_view uri,
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
@@ -820,10 +835,10 @@ class HttpRedfishInterface : public RedfishInterface {
 
   absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
       absl::string_view data,
-      std::function<void(const RedfishVariant &event)> &&on_event,
-      std::function<void(const absl::Status &status)> &&on_stop) override {
+      std::function<void(const RedfishVariant& event)>&& on_event,
+      std::function<void(const absl::Status& status)>&& on_stop) override {
     auto new_callback = [on_event = std::move(on_event),
-                         this](const RedfishTransport::Result &result) {
+                         this](const RedfishTransport::Result& result) {
       int code = result.code;
       absl::flat_hash_map<std::string, std::string> headers = result.headers;
       RedfishVariant variant(
@@ -840,7 +855,7 @@ class HttpRedfishInterface : public RedfishInterface {
  private:
   // Helper function to resolve JSON pointers after doing a GET.
   RedfishVariant GetUriHelper(
-      absl::string_view uri, const GetParams &params,
+      absl::string_view uri, const GetParams& params,
       ecclesia::RedfishCachedGetterInterface::OperationResult get_res) {
     if (!get_res.result.ok()) return RedfishVariant(get_res.result.status());
 
@@ -878,7 +893,7 @@ class HttpRedfishInterface : public RedfishInterface {
         ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
-  void PopulateSupportedFeatures(const RedfishVariant &root) {
+  void PopulateSupportedFeatures(const RedfishVariant& root) {
     absl::MutexLock lock(&supported_features_mutex_);
     if (supported_features_.has_value() || !root.status().ok()) {
       return;
