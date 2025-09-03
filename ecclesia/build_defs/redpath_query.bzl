@@ -1,5 +1,9 @@
 """Rule for collating redpath queries and query rules into a single unit"""
 
+# load("@rules_cc//cc:cc_library.bzl", _cc_library = "cc_library")
+
+_cc_library = native.cc_library
+
 def _camel_case(s):
     """Given xxx_yyy_zzz return XxxYyyZzz."""
     ret = ""
@@ -49,8 +53,7 @@ def redpath_query(name, cc_namespace, queries, query_rules = [], extension_files
               (generator, camel_case_name, native.package_name(), cc_namespace, _get_file_location_str(queries), cmd_suffix),
         tools = [generator],
     )
-
-    native.cc_library(
+    _cc_library(
         name = name,
         srcs = [name + ".cc"],
         hdrs = [name + ".h"],
