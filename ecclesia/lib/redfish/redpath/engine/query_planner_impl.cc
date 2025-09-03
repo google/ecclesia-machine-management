@@ -83,6 +83,7 @@ namespace {
 
 using RedPathRedfishQueryParams =
     absl::flat_hash_map<std::string /* RedPath */, GetParams>;
+using SensorIdentifier = CollectedProperty::SensorIdentifier;
 
 // Pattern for location step: NodeName[Predicate]
 constexpr LazyRE2 kLocationStepRegex = {
@@ -412,6 +413,92 @@ class QueryScopeStats {
   CacheStats *cache_stats_;
 };
 
+// Creates SensorIdentifier from the given redfish object if it is a sensor
+// resource.
+std::optional<SensorIdentifier> CreateSensorIdentifier(
+    const RedfishObject& redfish_object) {
+  std::string resource_type;
+  // This function is called unconditionally, therefore short-circuit
+  // inexpensively if this object is not a Sensor.
+  if (!redfish_object.Get(ecclesia::PropertyOdataType::Name)
+           .GetValue(&resource_type) ||
+      !absl::StrContains(resource_type, "Sensor")) {
+    return std::nullopt;
+  }
+  SensorIdentifier identifier;
+  std::optional<std::string> name = redfish_object.GetNodeValue<PropertyName>();
+  if (name.has_value()) {
+    identifier.set_name(*name);
+  }
+  std::optional<std::string> reading_type =
+      redfish_object.GetNodeValue<PropertyReadingType>();
+  if (reading_type.has_value()) {
+    identifier.set_reading_type(*reading_type);
+  }
+  std::optional<std::string> reading_units =
+      redfish_object.GetNodeValue<PropertyReadingUnits>();
+  if (reading_units.has_value()) {
+    identifier.set_reading_units(*reading_units);
+  }
+  return identifier;
+}
+
+// Gets identifier from RelatedItem property of a sensor resource.
+std::optional<Identifier> GetRelatedItemIdentifier(
+    const RedfishObject& sensor_obj, RedfishInterface* redfish_interface,
+    QueryTimeoutManager* timeout_manager, RedpathNormalizer& normalizer,
+    const RedpathNormalizerOptions& normalizer_options) {
+  if (redfish_interface == nullptr) {
+    return std::nullopt;
+  }
+  nlohmann::json sensor_json = sensor_obj.GetContentAsJson();
+  auto related_item_it = sensor_json.find("RelatedItem");
+  if (related_item_it == sensor_json.end() || !related_item_it->is_array() ||
+      related_item_it->empty()) {
+    return std::nullopt;
+  }
+
+  const auto& first_item = (*related_item_it)[0];
+  auto odata_id_it = first_item.find(PropertyOdataId::Name);
+  if (odata_id_it == first_item.end() || !odata_id_it->is_string()) {
+    return std::nullopt;
+  }
+
+  std::string related_item_uri = odata_id_it->get<std::string>();
+  // It's ok to use optional freshness here because we are only interested in
+  // the identifier of the related item which is not expected to change once
+  // created.
+  GetParams params{.freshness = GetParams::Freshness::kOptional};
+  if (timeout_manager != nullptr) {
+    params.timeout_manager = timeout_manager;
+  }
+  RedfishVariant variant =
+      redfish_interface->CachedGetUri(related_item_uri, params);
+  if (!variant.status().ok()) {
+    return std::nullopt;
+  }
+
+  std::unique_ptr<RedfishObject> related_item_obj = variant.AsObject();
+  if (related_item_obj == nullptr) {
+    return std::nullopt;
+  }
+
+  DelliciusQuery::Subquery subquery;
+  absl::StatusOr<QueryResultData> related_item_result =
+      normalizer.Normalize(*related_item_obj, subquery, normalizer_options);
+  if (!related_item_result.ok()) {
+    return std::nullopt;
+  }
+
+  auto it = related_item_result->fields().find(kIdentifierTag);
+  if (it != related_item_result->fields().end() &&
+      it->second.has_identifier()) {
+    return it->second.identifier();
+  }
+
+  return std::nullopt;
+}
+
 absl::StatusOr<nlohmann::json> GetResponseJsonFromContext(
     const QueryExecutionContext &execution_context) {
   const auto &rf_object = execution_context.redfish_response.redfish_object;
@@ -428,6 +515,70 @@ absl::StatusOr<nlohmann::json> GetResponseJsonFromContext(
         "(Parent URI Not Available from RedfishObject: No @odata.id)");
   }
   return response;
+}
+
+// Applies collect_as logic to the given normalized query result.
+void ApplyCollectAs(const DelliciusQuery::Subquery& subquery,
+                    const RedpathNormalizerOptions& normalizer_options,
+                    const QueryResultData& normalized_query_result,
+                    RedfishInterface* redfish_interface,
+                    QueryTimeoutManager* timeout_manager,
+                    RedpathNormalizer& normalizer,
+                    QueryExecutionContext* query_execution_context) {
+  bool collect_as_required = false;
+  for (const auto& prop : subquery.properties()) {
+    if (!prop.collect_as().empty()) {
+      collect_as_required = true;
+      break;
+    }
+  }
+
+  if (!collect_as_required) {
+    // If there is no collect_as, we can skip the whole computation involved.
+    return;
+  }
+
+  std::optional<SensorIdentifier> sensor_identifier = CreateSensorIdentifier(
+      *query_execution_context->redfish_response.redfish_object);
+  std::optional<Identifier> related_item_identifier;
+  if (sensor_identifier.has_value()) {
+    related_item_identifier = GetRelatedItemIdentifier(
+        *query_execution_context->redfish_response.redfish_object,
+        redfish_interface, timeout_manager, normalizer, normalizer_options);
+  }
+
+  for (const auto& prop : subquery.properties()) {
+    if (prop.collect_as().empty()) {
+      continue;
+    }
+    std::string prop_name = prop.name().empty() ? prop.property() : prop.name();
+    if (prop.name().empty()) {
+      absl::StrReplaceAll({{"\\.", "."}}, &prop_name);
+    }
+    auto it = normalized_query_result.fields().find(prop_name);
+    if (it == normalized_query_result.fields().end()) {
+      continue;
+    }
+    auto id_it = normalized_query_result.fields().find(kIdentifierTag);
+    for (const std::string& collect_as_key : prop.collect_as()) {
+      CollectedProperty* collected_property =
+          (*query_execution_context->result
+                .mutable_collected_properties())[collect_as_key]
+              .add_properties();
+      *collected_property->mutable_value() = it->second;
+      if (related_item_identifier.has_value()) {
+        *collected_property->mutable_identifier() =
+            std::move(*related_item_identifier);
+      } else if (id_it != normalized_query_result.fields().end() &&
+                 id_it->second.has_identifier()) {
+        *collected_property->mutable_identifier() = id_it->second.identifier();
+      }
+      if (sensor_identifier.has_value()) {
+        *collected_property->mutable_sensor_identifier() =
+            std::move(*sensor_identifier);
+      }
+    }
+  }
 }
 
 }  // namespace
@@ -557,8 +708,8 @@ GetParams QueryPlanner::GetQueryParamsForRedPath(
 // the root subquery result in the `query_execution_context`.
 absl::Status QueryPlanner::TryNormalize(
     absl::string_view subquery_id,
-    QueryExecutionContext *query_execution_context,
-    const RedpathNormalizerOptions &normalizer_options) const {
+    QueryExecutionContext* query_execution_context,
+    const RedpathNormalizerOptions& normalizer_options) {
   auto find_subquery =
       subquery_associations_.subquery_id_to_subquery.find(subquery_id);
   if (find_subquery == subquery_associations_.subquery_id_to_subquery.end()) {
@@ -624,33 +775,10 @@ absl::Status QueryPlanner::TryNormalize(
       normalized_query_result = QueryResultData();
     }
 
-    for (const auto& prop : find_subquery->second.properties()) {
-      if (prop.collect_as().empty()) {
-        continue;
-      }
-      std::string prop_name =
-          prop.name().empty() ? prop.property() : prop.name();
-      if (prop.name().empty()) {
-        absl::StrReplaceAll({{"\\.", "."}}, &prop_name);
-      }
-      auto it = normalized_query_result->fields().find(prop_name);
-      if (it == normalized_query_result->fields().end()) {
-        continue;
-      }
-      auto id_it = normalized_query_result->fields().find(kIdentifierTag);
-      for (const std::string& collect_as_key : prop.collect_as()) {
-        CollectedProperty* collected_property =
-            (*query_execution_context->result
-                  .mutable_collected_properties())[collect_as_key]
-                .add_properties();
-        *collected_property->mutable_value() = it->second;
-        if (id_it != normalized_query_result->fields().end() &&
-            id_it->second.has_identifier()) {
-          *collected_property->mutable_identifier() =
-              id_it->second.identifier();
-        }
-      }
-    }
+    ApplyCollectAs(find_subquery->second, normalizer_options,
+                   *normalized_query_result, redfish_interface_,
+                   timeout_manager_.get(), normalizer_,
+                   query_execution_context);
 
     // Add an empty subquery value to allow child subqueries to be executed.
     *normalized_query_value.mutable_subquery_value() =

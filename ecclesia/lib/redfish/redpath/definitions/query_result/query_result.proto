@@ -67,9 +67,25 @@ message ListValue {
   repeated QueryValue values = 1;
 }
 
+// Represents a collected property.
+// A collected property is a query result flattening concept where we use
+// `collect_as` annotation with property definition in a subquery to collect
+// multiple properties in a flat list mapped to the `collect_as` name.
+//
+// See property_collection.md for more details.
 message CollectedProperty {
+  message SensorIdentifier {
+    string name = 1;
+    string reading_type = 2;
+    string reading_units = 3;
+  }
+
   Identifier identifier = 1;
   QueryValue value = 2;
+  oneof additional_identifier {
+    SensorIdentifier sensor_identifier = 3;
+    // Add more specific identifiers here as needed.
+  }
 }
 
 message CollectedProperties {

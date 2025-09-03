@@ -228,10 +228,9 @@ class QueryPlanner final : public QueryPlannerIntf {
   // Normalization of Redfish Object into query result is a best effort process
   // which does not error out if requested properties are not found in Redfish
   // Object.
-  absl::Status TryNormalize(
-      absl::string_view subquery_id,
-      QueryExecutionContext *query_execution_context,
-      const RedpathNormalizerOptions &normalizer_options) const;
+  absl::Status TryNormalize(absl::string_view subquery_id,
+                            QueryExecutionContext* query_execution_context,
+                            const RedpathNormalizerOptions& normalizer_options);
 
   // Final normalization with additional normalizers, running against the final
   // query result, after all the subqueries are executed.

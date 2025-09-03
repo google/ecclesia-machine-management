@@ -2944,15 +2944,19 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollection) {
           properties {
             property: "Name"
             type: STRING
-            collect_as: "test_names"
+            collect_as: "test_resources"
             collect_as: "chassis_names"
           }
         }
         subquery {
           root_subquery_ids: "chassis"
-          subquery_id: "assembly"
+          subquery_id: "sensors"
           redpath: "/Sensors[*]"
-          properties { property: "Name" type: STRING collect_as: "test_names" }
+          properties {
+            property: "Reading"
+            type: DOUBLE
+            collect_as: "test_resources"
+          }
         }
       )pb");
 
@@ -2980,6 +2984,42 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollection) {
         req->Reply();
       });
 
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis/Sensors/indus_cpu0_pwmon",
+      [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/indus_cpu0_pwmon",
+          "@odata.type": "#Sensor.v1_8_0.Sensor",
+          "Name": "CPU0",
+          "ReadingType": "Power",
+          "ReadingUnits": "W",
+          "Reading": 30,
+          "RelatedItem": [{"@odata.id": "/redfish/v1/Systems/system/Processors/cpu0"}]
+        })json");
+        req->Reply();
+      });
+
+  server_->AddHttpGetHandler("/redfish/v1/Systems/system/Processors/cpu0",
+                             [&](ServerRequestInterface* req) {
+                               SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
+                               req->WriteResponseString(R"json({
+            "@odata.id": "/redfish/v1/Systems/system/Processors/cpu0",
+            "Name": "cpu0",
+            "Location": {
+                "PartLocation": {
+                    "ServiceLabel": "CPU0",
+                    "LocationType": "Slot"
+                },
+                "PartLocationContext": "ROOT"
+            }
+        })json");
+                               req->Reply();
+                             });
+
   absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
   ASSERT_THAT(result, IsOk());
   EXPECT_FALSE(result->query_result.has_status());
@@ -2991,20 +3031,113 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollection) {
       }
       value { string_value: "Indus Chassis" }
     }
-    properties { value { string_value: "fan0" } }
-    properties { value { string_value: "fan1" } }
-    properties { value { string_value: "fan2" } }
-    properties { value { string_value: "fan3" } }
-    properties { value { string_value: "fan4" } }
-    properties { value { string_value: "fan5" } }
-    properties { value { string_value: "fan6" } }
-    properties { value { string_value: "fan7" } }
-    properties { value { string_value: "indus_eat_temp" } }
-    properties { value { string_value: "indus_latm_temp" } }
-    properties { value { string_value: "CPU0" } }
-    properties { value { string_value: "CPU1" } }
-    properties { value { string_value: "CPU0" } }
-    properties { value { string_value: "CPU1" } }
+    properties {
+      value { double_value: 16115 }
+      sensor_identifier {
+        name: "fan0"
+        reading_type: "Rotational"
+        reading_units: "RPM"
+      }
+    }
+    properties {
+      value { double_value: 16115 }
+      sensor_identifier {
+        name: "fan1"
+        reading_type: "Rotational"
+        reading_units: "RPM"
+      }
+    }
+    properties {
+      value { double_value: 16115 }
+      sensor_identifier {
+        name: "fan2"
+        reading_type: "Rotational"
+        reading_units: "RPM"
+      }
+    }
+    properties {
+      value { double_value: 16115 }
+      sensor_identifier {
+        name: "fan3"
+        reading_type: "Rotational"
+        reading_units: "RPM"
+      }
+    }
+    properties {
+      value { double_value: 16115 }
+      sensor_identifier {
+        name: "fan4"
+        reading_type: "Rotational"
+        reading_units: "RPM"
+      }
+    }
+    properties {
+      value { double_value: 16115 }
+      sensor_identifier {
+        name: "fan5"
+        reading_type: "Rotational"
+        reading_units: "RPM"
+      }
+    }
+    properties {
+      value { double_value: 16115 }
+      sensor_identifier {
+        name: "fan6"
+        reading_type: "Rotational"
+        reading_units: "RPM"
+      }
+    }
+    properties {
+      value { double_value: 28 }
+      sensor_identifier {
+        name: "indus_eat_temp"
+        reading_type: "Temperature"
+        reading_units: "Cel"
+      }
+    }
+    properties {
+      value { double_value: 35 }
+      sensor_identifier {
+        name: "indus_latm_temp"
+        reading_type: "Temperature"
+        reading_units: "Cel"
+      }
+    }
+    properties {
+      value { double_value: 30 }
+      identifier {
+        redfish_location { part_location_context: "ROOT" service_label: "CPU0" }
+      }
+      sensor_identifier {
+        name: "CPU0"
+        reading_type: "Power"
+        reading_units: "W"
+      }
+    }
+    properties {
+      value { double_value: 30 }
+      sensor_identifier {
+        name: "CPU1"
+        reading_type: "Power"
+        reading_units: "W"
+      }
+    }
+    properties {
+      value { double_value: 60 }
+      sensor_identifier {
+        name: "CPU0"
+        reading_type: "Temperature"
+        reading_units: "Cel"
+      }
+    }
+    properties {
+      value { double_value: 60 }
+      sensor_identifier {
+        name: "CPU1"
+        reading_type: "Temperature"
+        reading_units: "Cel"
+      }
+    }
   )pb");
   CollectedProperties expected_chassis_names = ParseTextProtoOrDie(R"pb(
     properties {
@@ -3017,8 +3150,8 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollection) {
   EXPECT_THAT(
       result->query_result.collected_properties(),
       UnorderedElementsAre(
-          Pair("test_names", IgnoringRepeatedFieldOrdering(
-                                 EqualsProto(expected_collected_properties))),
+          Pair("test_resources", IgnoringRepeatedFieldOrdering(EqualsProto(
+                                     expected_collected_properties))),
           Pair("chassis_names", IgnoringRepeatedFieldOrdering(
                                     EqualsProto(expected_chassis_names)))));
 }
