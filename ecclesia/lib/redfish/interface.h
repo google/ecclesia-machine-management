@@ -143,7 +143,7 @@ class RedfishQueryParamExpand : public GetParamQueryInterface {
   // Redfish agent is supposed to return ProtocolFeaturesSupported as part of
   // the /redfish/v1 object
   absl::Status ValidateRedfishSupport(
-      const std::optional<RedfishSupportedFeatures> &features) const;
+      const std::optional<RedfishSupportedFeatures>& features) const;
 
   std::string ToString() const override;
 
@@ -169,7 +169,7 @@ class RedfishQueryParamTop : public GetParamQueryInterface {
   // Redfish agent is supposed to return ProtocolFeaturesSupported as part of
   // the /redfish/v1 object
   static absl::Status ValidateRedfishSupport(
-      const absl::optional<RedfishSupportedFeatures> &features);
+      const absl::optional<RedfishSupportedFeatures>& features);
 
   std::string ToString() const override;
 
@@ -210,8 +210,8 @@ class RedfishQueryParamFilter : public GetParamQueryInterface {
 struct GetParams {
   enum class Freshness : uint8_t { kOptional, kRequired };
 
-  std::vector<const GetParamQueryInterface *> GetQueryParams() const {
-    std::vector<const GetParamQueryInterface *> query_params;
+  std::vector<const GetParamQueryInterface*> GetQueryParams() const {
+    std::vector<const GetParamQueryInterface*> query_params;
     if (top.has_value()) {
       query_params.push_back(&top.value());
     }
@@ -226,7 +226,7 @@ struct GetParams {
 
   std::string ToString() const {
     std::string result;
-    for (const auto *query_param : GetQueryParams()) {
+    for (const auto* query_param : GetQueryParams()) {
       if (!result.empty()) result.append("&");
       absl::StrAppend(&result, query_param->ToString());
     }
@@ -240,7 +240,7 @@ struct GetParams {
   std::optional<RedfishQueryParamTop> top;
   std::optional<RedfishQueryParamExpand> expand;
   std::optional<RedfishQueryParamFilter> filter;
-  std::optional<ecclesia::QueryTimeoutManager *> timeout_manager;
+  std::optional<ecclesia::QueryTimeoutManager*> timeout_manager;
 
   // Clients can set a custom uri prefix to work with different service roots.
   // This approach allows a Redfish service to implement the data model with
@@ -312,12 +312,12 @@ class RedfishVariant final {
     virtual std::unique_ptr<RedfishIterable> AsIterable(
         IterableMode mode, GetParams params) const = 0;
     virtual std::optional<RedfishTransport::bytes> AsRaw() const = 0;
-    virtual bool GetValue(std::string *val) const = 0;
-    virtual bool GetValue(int32_t *val) const = 0;
-    virtual bool GetValue(int64_t *val) const = 0;
-    virtual bool GetValue(double *val) const = 0;
-    virtual bool GetValue(bool *val) const = 0;
-    virtual bool GetValue(absl::Time *val) const = 0;
+    virtual bool GetValue(std::string* val) const = 0;
+    virtual bool GetValue(int32_t* val) const = 0;
+    virtual bool GetValue(int64_t* val) const = 0;
+    virtual bool GetValue(double* val) const = 0;
+    virtual bool GetValue(bool* val) const = 0;
+    virtual bool GetValue(absl::Time* val) const = 0;
     virtual std::string DebugString() const = 0;
     virtual void PrintDebugString() const {}
     virtual CacheState IsFresh() const = 0;
@@ -333,7 +333,7 @@ class RedfishVariant final {
     // operator for RedfishIterables and EnsureFreshPayload() calls for
     // RedfishObjects.
     virtual void SetTimeoutManager(
-        ecclesia::QueryTimeoutManager *timeout_manager) {}
+        ecclesia::QueryTimeoutManager* timeout_manager) {}
   };
 
   // Helper structures used with IndexHelper class
@@ -353,13 +353,13 @@ class RedfishVariant final {
   class IndexHelper {
    public:
     IndexHelper() = delete;
-    explicit IndexHelper(const RedfishVariant &root) : root_(root) {}
-    IndexHelper(const RedfishVariant &root, const IndexType &index)
+    explicit IndexHelper(const RedfishVariant& root) : root_(root) {}
+    IndexHelper(const RedfishVariant& root, const IndexType& index)
         : root_(root) {
       AppendIndex(index);
     }
 
-    void AppendIndex(const IndexType &index) { indices_.push_back(index); }
+    void AppendIndex(const IndexType& index) { indices_.push_back(index); }
 
     bool IsEmpty() const { return indices_.empty(); }
 
@@ -373,7 +373,7 @@ class RedfishVariant final {
       return *this;
     }
 
-    IndexHelper &operator[](const IndexType &index) {
+    IndexHelper& operator[](const IndexType& index) {
       AppendIndex(index);
       return *this;
     }
@@ -390,12 +390,12 @@ class RedfishVariant final {
    private:
     // Private helper to evaluate the entire chain recursively.
     template <typename F>
-    RedfishIterReturnValue Do(const RedfishVariant &root,
+    RedfishIterReturnValue Do(const RedfishVariant& root,
                               absl::Span<const IndexType> indices,
                               F what) const;
 
     std::vector<IndexType> indices_;
-    const RedfishVariant &root_;
+    const RedfishVariant& root_;
   };
 
   // Construct from Status.
@@ -410,17 +410,17 @@ class RedfishVariant final {
   // converting the provided httpcode.
   RedfishVariant(
       std::unique_ptr<ImplIntf> ptr, ecclesia::HttpResponseCode httpcode,
-      const absl::flat_hash_map<std::string, std::string> &httpheaders)
+      const absl::flat_hash_map<std::string, std::string>& httpheaders)
       : RedfishVariant(
             std::move(ptr),
             absl::Status(ecclesia::HttpResponseCodeToCanonical(httpcode),
                          ecclesia::HttpResponseCodeToReasonPhrase(httpcode)),
             httpcode, httpheaders) {}
 
-  RedfishVariant(const RedfishVariant &) = delete;
-  RedfishVariant &operator=(const RedfishVariant &) = delete;
-  RedfishVariant(RedfishVariant &&other) = default;
-  RedfishVariant &operator=(RedfishVariant &&other) = default;
+  RedfishVariant(const RedfishVariant&) = delete;
+  RedfishVariant& operator=(const RedfishVariant&) = delete;
+  RedfishVariant(RedfishVariant&& other) = default;
+  RedfishVariant& operator=(RedfishVariant&& other) = default;
 
   inline RedfishVariant operator[](IndexGetWithArgs property) const;
   inline RedfishVariant operator[](absl::string_view property) const;
@@ -471,11 +471,11 @@ class RedfishVariant final {
   // Returns the status of the RedfishVariant.
   // Note that the status is independent from the Redfish Payload. See the
   // class-level docstring for more information.
-  const absl::Status &status() const { return status_; }
+  const absl::Status& status() const { return status_; }
 
   // Returns the httpcode, if one is available. See the class-level docstring
   // for more information.
-  const std::optional<ecclesia::HttpResponseCode> &httpcode() const {
+  const std::optional<ecclesia::HttpResponseCode>& httpcode() const {
     return httpcode_;
   }
 
@@ -487,27 +487,27 @@ class RedfishVariant final {
 
   // If the underlying Redfish payload is the provided val type, retrieves the
   // value into val and return true. Otherwise return false.
-  bool GetValue(std::string *val) const {
+  bool GetValue(std::string* val) const {
     if (!ptr_) return false;
     return ptr_->GetValue(val);
   }
-  bool GetValue(int32_t *val) const {
+  bool GetValue(int32_t* val) const {
     if (!ptr_) return false;
     return ptr_->GetValue(val);
   }
-  bool GetValue(int64_t *val) const {
+  bool GetValue(int64_t* val) const {
     if (!ptr_) return false;
     return ptr_->GetValue(val);
   }
-  bool GetValue(double *val) const {
+  bool GetValue(double* val) const {
     if (!ptr_) return false;
     return ptr_->GetValue(val);
   }
-  bool GetValue(bool *val) const {
+  bool GetValue(bool* val) const {
     if (!ptr_) return false;
     return ptr_->GetValue(val);
   }
-  bool GetValue(absl::Time *val) const {
+  bool GetValue(absl::Time* val) const {
     if (!ptr_) return false;
     return ptr_->GetValue(val);
   }
@@ -522,7 +522,7 @@ class RedfishVariant final {
     ptr_->PrintDebugString();
   }
 
-  void SetTimeoutManager(ecclesia::QueryTimeoutManager *timeout_manager) const {
+  void SetTimeoutManager(ecclesia::QueryTimeoutManager* timeout_manager) const {
     ptr_->SetTimeoutManager(timeout_manager);
   }
 
@@ -578,7 +578,7 @@ class RedfishIterable {
           "index %zu is out of bounds (iterable has size %zu)", index_, size)));
     }
 
-    Iterator &operator++() {
+    Iterator& operator++() {
       ++index_;
       return *this;
     }
@@ -588,18 +588,18 @@ class RedfishIterable {
       return temp;
     }
 
-    bool operator==(const Iterator &other) const {
+    bool operator==(const Iterator& other) const {
       return std::tie(iterable_, index_) ==
              std::tie(other.iterable_, other.index_);
     }
-    bool operator!=(const Iterator &other) const { return !operator==(other); }
+    bool operator!=(const Iterator& other) const { return !operator==(other); }
 
    private:
-    Iterator(RedfishIterable *iterable, size_t index)
+    Iterator(RedfishIterable* iterable, size_t index)
         : iterable_(iterable), index_(index) {}
     friend class RedfishIterable;
 
-    RedfishIterable *iterable_;
+    RedfishIterable* iterable_;
     size_t index_;
   };
   Iterator begin() { return Iterator(this, 0); }
@@ -712,8 +712,8 @@ class RedfishInterface {
   struct ListValue;
   struct ObjectValue;
 
-  using ValueVariant = std::variant<int, bool, std::string, const char *,
-                                    double, ListValue, ObjectValue>;
+  using ValueVariant = std::variant<int, bool, std::string, const char*, double,
+                                    ListValue, ObjectValue>;
 
   struct ListValue {
     std::vector<ValueVariant> items;
@@ -788,6 +788,11 @@ class RedfishInterface {
   virtual RedfishVariant PostUri(absl::string_view uri,
                                  absl::string_view data) = 0;
 
+  // Post to the given URI and returns result. The caller can specify whether
+  // the request is an octet stream request and the timeout for the request.
+  virtual RedfishVariant PostUri(absl::string_view uri, absl::string_view data,
+                                 bool octet_stream, absl::Duration timeout);
+
   // Delete to the given URI and returns result.
   virtual RedfishVariant DeleteUri(
       absl::string_view uri,
@@ -834,8 +839,8 @@ class RedfishInterface {
   // executed at a given time.
   virtual absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
       absl::string_view data,
-      std::function<void(const RedfishVariant &event)> &&on_event,
-      std::function<void(const absl::Status &end_status)> &&on_stop) {
+      std::function<void(const RedfishVariant& event)>&& on_event,
+      std::function<void(const absl::Status& end_status)>&& on_stop) {
     return absl::UnimplementedError("Not implemented");
   }
 
@@ -939,7 +944,7 @@ RedfishVariant RedfishVariant::operator[](const size_t index) const {
 // Evaluates the index chain in a recursive fashion.
 template <typename F>
 RedfishIterReturnValue RedfishVariant::IndexHelper::Do(
-    const RedfishVariant &root, absl::Span<const IndexType> indices,
+    const RedfishVariant& root, absl::Span<const IndexType> indices,
     F what) const {
   if (indices.empty()) {
     // The chain is empty. That means we have evaluated the whole chain. Variant
@@ -953,9 +958,9 @@ RedfishIterReturnValue RedfishVariant::IndexHelper::Do(
 
   // The chain is not empty. We will evaluate the 1st index in the chain, and
   // leave the rest to the next layer of recursion.
-  const IndexType &index = indices[0];
+  const IndexType& index = indices[0];
   return std::visit(
-      [&](auto &&index_value) -> RedfishIterReturnValue {
+      [&](auto&& index_value) -> RedfishIterReturnValue {
         using T = std::decay_t<decltype(index_value)>;
         auto rest = indices.last(indices.size() - 1);
         if constexpr (std::is_same_v<T, IndexGetWithArgs>) {
@@ -965,8 +970,8 @@ RedfishIterReturnValue RedfishVariant::IndexHelper::Do(
             // query after expand+auto_adjust_levels. The expectation is that
             // number of expands is similar to number of 'each' indexes.
             IndexGetWithArgs index_get = index_value;
-            RedfishQueryParamExpand &expand = index_get.args.expand.value();
-            for (const auto &rest_index : rest) {
+            RedfishQueryParamExpand& expand = index_get.args.expand.value();
+            for (const auto& rest_index : rest) {
               if (std::get_if<IndexEach>(&rest_index) != nullptr) {
                 expand.IncrementLevels();
               }
