@@ -234,6 +234,15 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
     } else {
       query_engine_params.stable_id_type = server_spec.stable_id_type;
     }
+
+    std::optional<std::string> redfish_topology_config_name =
+        GetTopologyConfigNameFromRouterSpec(router_spec, server_info.server_tag,
+                                            server_info.server_type,
+                                            server_info.server_class);
+    if (redfish_topology_config_name.has_value()) {
+      query_engine_params.redfish_topology_config_name =
+          *redfish_topology_config_name;
+    }
     absl::flat_hash_map<std::string,
                         QueryRouterSpec::VersionConfig::Policy::BmcVersion>
         query_id_to_bmc_version;
@@ -250,12 +259,21 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
     }
 
     if (router_spec.cache_duration_ms() > 0) {
-      query_engine_params.cache_factory =
-          [cache_duration =
-               router_spec.cache_duration_ms()](RedfishTransport *transport) {
-            return TimeBasedCache::Create(transport,
-                                          absl::Milliseconds(cache_duration));
-          };
+      if (router_spec.deep_cache()) {
+        query_engine_params.cache_factory =
+            [cache_duration =
+                 router_spec.cache_duration_ms()](RedfishTransport* transport) {
+              return TimeBasedCache::CreateDeepCache(
+                  transport, absl::Milliseconds(cache_duration));
+            };
+      } else {
+        query_engine_params.cache_factory =
+            [cache_duration =
+                 router_spec.cache_duration_ms()](RedfishTransport* transport) {
+              return TimeBasedCache::Create(transport,
+                                            absl::Milliseconds(cache_duration));
+            };
+      }
     }
 
     ECCLESIA_ASSIGN_OR_RETURN(
