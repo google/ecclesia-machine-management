@@ -1,3 +1,6 @@
+# load("@rules_cc//cc:cc_library.bzl", "cc_library")
+# load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 licenses(["notice"])
 
 cc_library(
@@ -195,6 +198,19 @@ cc_test(
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "normalizer_test",
+    srcs = ["normalizer_test.cc"],
+    deps = [
+        ":normalizer",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "@com_google_absl//absl/status",
         "@com_google_googletest//:gtest_main",
     ],
 )

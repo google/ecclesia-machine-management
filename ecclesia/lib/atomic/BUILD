@@ -2,6 +2,9 @@
 #   Utilities for doing various tasks and functions involving atomic operations
 #   or basic synchronization and sequencing.
 
+# load("@rules_cc//cc:cc_library.bzl", "cc_library")
+# load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 licenses(["notice"])
 
 cc_library(

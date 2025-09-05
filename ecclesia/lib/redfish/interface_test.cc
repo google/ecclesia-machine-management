@@ -27,6 +27,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/http/codes.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
@@ -97,7 +98,7 @@ TEST(RedfishVariant, IndexingError) {
   auto raw_intf = mockup.RedfishClientInterface();
 
   mockup.AddHttpGetHandler("/redfish/v1/Chassis/chassis",
-                           [](ServerRequestInterface *req) {
+                           [](ServerRequestInterface* req) {
                              req->ReplyWithStatus(HTTPStatusCode::IM_A_TEAPOT);
                            });
 
@@ -134,7 +135,7 @@ TEST(RedfishVariant, PropertyError) {
   auto raw_intf = mockup.RedfishClientInterface();
 
   mockup.AddHttpGetHandler("/redfish/v1/Chassis",
-                           [](ServerRequestInterface *req) {
+                           [](ServerRequestInterface* req) {
                              req->ReplyWithStatus(HTTPStatusCode::IM_A_TEAPOT);
                            });
 
@@ -256,10 +257,9 @@ TEST(RedfishInterface, DefaultBehavior) {
   std::unique_ptr<RedfishInterface> interface = std::make_unique<NullRedfish>();
   EXPECT_EQ(interface->SupportedFeatures(), std::nullopt);
 
-  std::function<void(const RedfishVariant &)> on_event =
-      [](const RedfishVariant &) {};
-  std::function<void(const absl::Status &)> on_stop = [](const absl::Status &) {
-  };
+  std::function<void(const RedfishVariant&)> on_event =
+      [](const RedfishVariant&) {};
+  std::function<void(const absl::Status&)> on_stop = [](const absl::Status&) {};
 
   EXPECT_THAT(interface->Subscribe("", std::move(on_event), std::move(on_stop)),
               ecclesia::IsStatusUnimplemented());
@@ -316,6 +316,15 @@ TEST(RedfishVariant, ValidateIsCached) {
   EXPECT_THAT(chassis_repeat.httpcode(),
               ecclesia::HttpResponseCode::HTTP_CODE_REQUEST_OK);
   EXPECT_THAT(chassis_repeat.IsFresh(), Eq(CacheState::kIsCached));
+}
+
+TEST(RedfishVariant, PostUriWithOctetStreamReturnsUnimplementedError) {
+  ecclesia::FakeRedfishServer mockup("barebones_session_auth/mockup.shar");
+  auto raw_intf = mockup.RedfishClientInterface();
+  RedfishVariant variant =
+      raw_intf->PostUri("/redfish/v1/UpdateService/FirmwareInventory",
+                        "test_data", true, absl::ZeroDuration());
+  EXPECT_THAT(variant.status(), ecclesia::IsStatusUnimplemented());
 }
 
 }  // namespace

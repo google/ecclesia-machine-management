@@ -150,6 +150,10 @@ message ListValueVerification {
   repeated string identifiers = 1;
   // The verification to perform on the list values.
   QueryValueVerification verify = 2;
+  // Presence check for the list itself.
+  optional Verification.Presence presence = 3;
+  // The minimum size of the list.
+  int64 min_size = 4;
 }
 
 message QueryResultDataVerification {

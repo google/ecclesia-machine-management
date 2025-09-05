@@ -121,8 +121,8 @@ TEST(GrpcRedfishTransport, GetWithTimeout) {
     "Name": "Root Service",
     "RedfishVersion": "1.6.1"
   })json";
-  nlohmann::json expected = nlohmann::json::parse(std::string(expected_str),
-                                                  nullptr, false);
+  nlohmann::json expected =
+      nlohmann::json::parse(std::string(expected_str), nullptr, false);
   // Get with 0 timeout should return deadline exceeded.
   ASSERT_THAT(
       (*transport)->Get("/redfish/v1", absl::ZeroDuration()).status().code(),
@@ -142,8 +142,8 @@ TEST(GrpcRedfishTransport, GetWithTimeout) {
   // Get with 2 sec timeout should fail if server doesn't respond for 3 secs.
   mockup_server.AddHttpGetHandler(
       "/redfish/v1",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          Response* response) {
         absl::SleepFor(absl::Seconds(3));
         response->set_json_str(std::string(expected_str));
         response->set_code(200);
@@ -403,29 +403,27 @@ TEST(GrpcRedfishTransport, MaxAgeSec) {
 
   google::protobuf::Struct json_body_struct = JsonToStruct(json_body);
   mockup_server.AddHttpGetHandler(
-    "/redfish/v1/json_resource",
-    [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-        Response *response) {
-      EXPECT_THAT(request->headers(),
-                  Contains(Pair("BMCWEB_HINT_MAX_AGE_SEC", "1")));
-      *response->mutable_json() = json_body_struct;
-      response->set_code(200);
-      response->mutable_headers()->insert({"OData-Version", "4.0"});
-      return grpc::Status::OK;
-    });
+      "/redfish/v1/json_resource",
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          Response* response) {
+        EXPECT_THAT(request->headers(),
+                    Contains(Pair("BMCWEB_HINT_MAX_AGE_SEC", "1")));
+        *response->mutable_json() = json_body_struct;
+        response->set_code(200);
+        response->mutable_headers()->insert({"OData-Version", "4.0"});
+        return grpc::Status::OK;
+      });
 
-  auto transport = CreateGrpcRedfishTransport(
-          endpoint, params, options.GetChannelCredentials());
+  auto transport = CreateGrpcRedfishTransport(endpoint, params,
+                                              options.GetChannelCredentials());
 
   EXPECT_EQ(transport.status().code(), absl::StatusCode::kOk);
-  if (transport.ok()) {   // avoids "unchecked access to 'absl::StatusOr' value"
-  EXPECT_THAT((*transport)->Get("/redfish/v1"),
-                internal_status::IsStatusPolyMatcher(
-                    absl::StatusCode::kOk));
+  if (transport.ok()) {  // avoids "unchecked access to 'absl::StatusOr' value"
+    EXPECT_THAT((*transport)->Get("/redfish/v1"),
+                internal_status::IsStatusPolyMatcher(absl::StatusCode::kOk));
 
-  EXPECT_THAT((*transport)->Get("/redfish/v1/json_resource"),
-                internal_status::IsStatusPolyMatcher(
-                    absl::StatusCode::kOk));
+    EXPECT_THAT((*transport)->Get("/redfish/v1/json_resource"),
+                internal_status::IsStatusPolyMatcher(absl::StatusCode::kOk));
   }
 }
 
@@ -471,8 +469,8 @@ TEST(GrpcRedfishTransport, GetCorrectResultBodyAndRequestHeaders) {
   // from RedfishTransport Get to be set to JSON.
   mockup_server.AddHttpGetHandler(
       "/redfish/v1/json_resource",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          Response* response) {
         auto it = request->headers().find("Host");
         EXPECT_NE(it, request->headers().end());
         if (it != request->headers().end()) {
@@ -495,8 +493,8 @@ TEST(GrpcRedfishTransport, GetCorrectResultBodyAndRequestHeaders) {
   std::string octet_stream = "octet_stream 123456789abcxyz";
   mockup_server.AddHttpGetHandler(
       "/redfish/v1/octet_stream",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          Response* response) {
         *response->mutable_octet_stream() = octet_stream;
         response->set_code(200);
         response->mutable_headers()->insert({"OData-Version", "4.0"});
@@ -509,6 +507,43 @@ TEST(GrpcRedfishTransport, GetCorrectResultBodyAndRequestHeaders) {
                   std::get<RedfishTransport::bytes>(result->body)),
               Eq(octet_stream));
   EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
+}
+
+TEST(GrpcRedfishTransport, PostOctetStream) {
+  GrpcDynamicMockupServer mockup_server("barebones_session_auth/mockup.shar",
+                                        "localhost", 0);
+  StaticBufferBasedTlsOptions options;
+  options.SetToInsecure();
+  auto port = mockup_server.Port();
+  ASSERT_TRUE(port.has_value());
+  auto transport = CreateGrpcRedfishTransport(
+      absl::StrCat("localhost:", *port), {}, options.GetChannelCredentials());
+  ASSERT_THAT(transport, IsOk());
+
+  nlohmann::json response_body = nlohmann::json::parse(R"json_str({
+    "@odata.id": "/redfish/v1/TaskService/Task/1"
+    })json_str");
+
+  mockup_server.AddHttpPostHandler(
+      "/redfish/v1/UpdateService/MultipartUpdate",
+      [&response_body](grpc::ServerContext* context,
+                       const ::redfish::v1::Request* request,
+                       Response* response) {
+        *response->mutable_json_str() = response_body.dump();
+        response->set_code(202);
+        response->mutable_headers()->insert({"OData-Version", "4.0"});
+        EXPECT_EQ(request->octet_stream(), "test_data");
+        return grpc::Status::OK;
+      });
+
+  auto result = (*transport)
+                    ->Post("/redfish/v1/UpdateService/MultipartUpdate",
+                           "test_data", true, absl::Seconds(10));
+  ASSERT_THAT(result, IsOk());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
+  EXPECT_THAT(std::get<nlohmann::json>(result->body), Eq(response_body));
+  EXPECT_THAT(result->code, Eq(202));
   EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
 }
 
