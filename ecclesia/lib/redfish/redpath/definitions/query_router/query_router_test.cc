@@ -848,6 +848,46 @@ TEST_F(QueryRouterTest, CheckLocationDerivedStableIdConfiguration) {
               IsOk());
 }
 
+TEST_F(QueryRouterTest, CheckTopologyConfigStableIdConfiguration) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_SERIAL_ALL
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+          }
+        }
+        stable_id_config: {
+          policies: {
+            select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+            topology_config_path: "topology_config_1"
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+
+  EXPECT_THAT(QueryRouter::Create(
+                  router_spec, std::move(server_specs),
+                  [&](const QuerySpec&, const QueryEngineParams& params,
+                      std::unique_ptr<IdAssigner>,
+                      const RedpathNormalizer::QueryIdToNormalizerMap&)
+                      -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+                    EXPECT_EQ(params.redfish_topology_config_name,
+                              "topology_config_1");
+                    return FileBackedQueryEngine::Create(
+                        fs_.GetTruePath(kQueryResultDir));
+                  },
+                  DefaultRedpathNormalizerMap),
+              IsOk());
+}
+
 TEST_F(QueryRouterTest, CheckStableIdConfigurationInheritsFromServerSpec) {
   QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
       R"pb(
