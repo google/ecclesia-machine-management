@@ -100,8 +100,6 @@ message QueryRouterSpec {
   QueryEngineFeatures features = 2;
   // Duration of Timebased cache. Value of 0 signifies NullCache
   int64 cache_duration_ms = 3;
-  // Flag to denote if deep cache should be used
-  bool deep_cache = 12;
   // Pattern for issuing the query to all the query engine instances
   QueryPattern query_pattern = 4;
 
@@ -123,7 +121,6 @@ message QueryRouterSpec {
     message Policy {
       SelectionSpec.SelectionClass select = 1;
       StableIdType stable_id_type = 2;
-      string topology_config_path = 3;
     }
     repeated Policy policies = 1;
   }

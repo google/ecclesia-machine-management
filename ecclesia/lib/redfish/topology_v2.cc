@@ -216,8 +216,7 @@ std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
 // Helper function to find root chassis from service root
 absl::StatusOr<std::unique_ptr<RedfishObject>> FindRootChassisUri(
     RedfishInterface *redfish_intf, const TopologyConfig &config) {
-  auto chassis =
-      redfish_intf->CachedGetUri("/redfish/v1/Chassis?$expand=.($levels=1)");
+  auto chassis = redfish_intf->GetRoot()[kRfPropertyChassis];
   if (!chassis.status().ok()) {
     return chassis.status();
   }
