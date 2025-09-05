@@ -73,10 +73,19 @@ constexpr absl::string_view kResourceKey = "redfish-resource";
 // https://www.rfc-editor.org/rfc/rfc6749#section-5.1
 constexpr absl::string_view kHostHeader = "Host";
 
+struct RequestBody {
+  std::optional<absl::string_view> json_str = std::nullopt;
+  bool octet_stream = false;
+};
+
+constexpr RequestBody kNullRequestBody = RequestBody();
+
 template <typename RpcFunc>
-absl::StatusOr<RedfishTransport::Result> DoRpc(
-    absl::string_view path, std::optional<absl::string_view> json_str,
-    absl::string_view target_fqdn, GrpcTransportParams params, RpcFunc rpc) {
+absl::StatusOr<RedfishTransport::Result> DoRpc(absl::string_view path,
+                                               const RequestBody& body,
+                                               absl::string_view target_fqdn,
+                                               GrpcTransportParams params,
+                                               RpcFunc rpc) {
   redfish::v1::Request request;
   // This header is used when authorizing peers without trust bundle.
   request.mutable_headers()->insert(
@@ -87,20 +96,25 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(
         {"BMCWEB_HINT_MAX_AGE_SEC",
          absl::StrFormat("%d", absl::ToInt64Seconds(params.max_age))});
   }
-  if (json_str && !json_str->empty()) {
-    *request.mutable_json_str() = *json_str;
-    // to JSON str.
-    ::google::protobuf::Struct request_body;
-    if (auto status = google::protobuf::util::JsonStringToMessage(
-            std::string(*json_str), &request_body,
-            google::protobuf::util::JsonParseOptions());
-        !status.ok()) {
-      // We don't want to fail the request if the JSON string cannot be parsed
-      // to a protobuf Struct as it can be an opaque binary blob.
-      LOG(WARNING) << "Failed to parse JSON string to message: " << status;
-    }
+  if (body.json_str && !body.json_str->empty()) {
+    if (body.octet_stream) {
+      LOG(INFO) << "Setting octet stream for path: " << path;
+      *request.mutable_octet_stream() = *body.json_str;
+    } else {
+      *request.mutable_json_str() = *body.json_str;
+      // to JSON str.
+      ::google::protobuf::Struct request_body;
+      if (auto status = google::protobuf::util::JsonStringToMessage(
+              std::string(*body.json_str), &request_body,
+              google::protobuf::util::JsonParseOptions());
+          !status.ok()) {
+        // We don't want to fail the request if the JSON string cannot be parsed
+        // to a protobuf Struct as it can be an opaque binary blob.
+        LOG(WARNING) << "Failed to parse JSON string to message: " << status;
+      }
 
-    *request.mutable_json() = request_body;
+      *request.mutable_json() = request_body;
+    }
   }
   grpc::ClientContext context;
   context.set_deadline(
@@ -283,7 +297,7 @@ class GrpcRedfishTransport : public RedfishTransport {
 
   absl::StatusOr<Result> Get(absl::string_view path) override {
     return DoRpc(
-        path, std::nullopt, fqdn_, params_,
+        path, kNullRequestBody, fqdn_, params_,
         [this, path](grpc::ClientContext& context,
                      const redfish::v1::Request& request,
                      ::redfish::v1::Response* response) -> grpc::Status {
@@ -307,7 +321,7 @@ class GrpcRedfishTransport : public RedfishTransport {
           "Timeout for GET request cannot be infinite");
     }
     return DoRpc(
-        path, std::nullopt, fqdn_, params_,
+        path, kNullRequestBody, fqdn_, params_,
         [this, path, timeout](
             grpc::ClientContext& context, const redfish::v1::Request& request,
             ::redfish::v1::Response* response) -> grpc::Status {
@@ -325,11 +339,20 @@ class GrpcRedfishTransport : public RedfishTransport {
 
   absl::StatusOr<Result> Post(absl::string_view path,
                               absl::string_view data) override {
+    return Post(path, data, /*octet_stream=*/false, params_.timeout);
+  }
+
+  absl::StatusOr<Result> Post(absl::string_view path, absl::string_view data,
+                              bool octet_stream,
+                              absl::Duration timeout) override {
     return DoRpc(
-        path, data, fqdn_, params_,
-        [this, path](grpc::ClientContext& context,
-                     const redfish::v1::Request& request,
-                     ::redfish::v1::Response* response) -> grpc::Status {
+        path, RequestBody{.json_str = data, .octet_stream = octet_stream},
+        fqdn_, params_,
+        [this, path, timeout](
+            grpc::ClientContext& context, const redfish::v1::Request& request,
+            ::redfish::v1::Response* response) -> grpc::Status {
+          context.set_deadline(
+              absl::ToChronoTime(params_.clock->Now() + timeout));
           context.set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
@@ -338,10 +361,11 @@ class GrpcRedfishTransport : public RedfishTransport {
           return client_->Post(&context, request, response);
         });
   }
+
   absl::StatusOr<Result> Patch(absl::string_view path,
                                absl::string_view data) override {
     return DoRpc(
-        path, data, fqdn_, params_,
+        path, RequestBody{.json_str = data}, fqdn_, params_,
         [this, path](grpc::ClientContext& context,
                      const redfish::v1::Request& request,
                      ::redfish::v1::Response* response) -> grpc::Status {
@@ -356,7 +380,7 @@ class GrpcRedfishTransport : public RedfishTransport {
   absl::StatusOr<Result> Delete(absl::string_view path,
                                 absl::string_view data) override {
     return DoRpc(
-        path, data, fqdn_, params_,
+        path, RequestBody{.json_str = data}, fqdn_, params_,
         [this, path](grpc::ClientContext& context,
                      const redfish::v1::Request& request,
                      ::redfish::v1::Response* response) -> grpc::Status {
