@@ -4,6 +4,9 @@
 #   decoding text into 6-bit packed ASCII) as well as more basic things like
 #   loading and storing big and little endian integers.
 
+# load("@rules_cc//cc:cc_library.bzl", "cc_library")
+# load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 licenses(["notice"])
 
 cc_library(

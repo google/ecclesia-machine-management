@@ -25,6 +25,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "absl/types/optional.h"
 
 namespace ecclesia {
@@ -37,7 +38,7 @@ std::string RedfishQueryParamTop::ToString() const {
 }
 
 absl::Status RedfishQueryParamTop::ValidateRedfishSupport(
-    const absl::optional<RedfishSupportedFeatures> &features) {
+    const absl::optional<RedfishSupportedFeatures>& features) {
   if (!features.has_value()) {
     return absl::InternalError("Top query parameter is not supported.");
   }
@@ -68,7 +69,7 @@ std::string RedfishQueryParamExpand::ToString() const {
 }
 
 absl::Status RedfishQueryParamExpand::ValidateRedfishSupport(
-    const absl::optional<RedfishSupportedFeatures> &features) const {
+    const absl::optional<RedfishSupportedFeatures>& features) const {
   if (!features.has_value()) {
     return absl::InternalError("Expands are not supported.");
   }
@@ -101,6 +102,14 @@ std::unique_ptr<RedfishObject> RedfishVariant::AsFreshObject() const {
   std::unique_ptr<RedfishObject> obj = ptr_->AsObject();
   if (!obj) return nullptr;
   return obj->EnsureFreshPayload().value_or(nullptr);
+}
+
+RedfishVariant RedfishInterface::PostUri(absl::string_view uri,
+                                         absl::string_view data,
+                                         bool octet_stream,
+                                         absl::Duration timeout) {
+  return RedfishVariant(
+      absl::UnimplementedError("Octet stream post is not implemented."));
 }
 
 }  // namespace ecclesia
