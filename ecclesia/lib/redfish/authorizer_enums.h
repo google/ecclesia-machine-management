@@ -106,6 +106,8 @@ enum class ResourceEntity : int {
   kGoogleAsicHbmPpr,
   kGoogleAsicUtilization,
   kGoogleBareMetalInstance,
+  kGoogleBmcNfMetrics,
+  kGoogleBmcSocketMetrics,
   kGoogleBootNumber,
   kGoogleBootTime,
   kGoogleErrorCounter,
