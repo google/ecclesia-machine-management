@@ -226,6 +226,32 @@ GetStableIdTypeFromRouterSpec(
   return router_spec.default_stable_id_type();
 }
 
+std::optional<std::string> GetTopologyConfigNameFromRouterSpec(
+    const ecclesia::QueryRouterSpec& router_spec,
+    absl::string_view node_entity_tag,
+    SelectionSpec::SelectionClass::ServerType server_type,
+    SelectionSpec::SelectionClass::ServerClass server_class) {
+  if (!router_spec.has_stable_id_config()) {
+    return std::nullopt;
+  }
+  for (const ecclesia::QueryRouterSpec::StableIdConfig::Policy& policy :
+       router_spec.stable_id_config().policies()) {
+    // If agent is specified in the spec, it must match input being registered.
+    if (policy.select().has_server_type()) {
+      if (policy.select().server_type() != server_type) {
+        continue;
+      }
+    }
+    // Now ensure either the policy's server_class or node entity tag matches.
+    if (absl::c_linear_search(policy.select().server_class(), server_class) ||
+        absl::c_linear_search(policy.select().server_tag(), node_entity_tag)) {
+      return policy.topology_config_path();
+    }
+  }
+  // If nothing has matched, return the default.
+  return std::nullopt;
+}
+
 absl::flat_hash_map<std::string,
                     QueryRouterSpec::VersionConfig::Policy::BmcVersion>
 GetQueryIdToBmcVersionFromRouterSpec(

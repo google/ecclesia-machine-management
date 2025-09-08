@@ -296,7 +296,8 @@ TEST(TopologyTestRunner, TestingMockupFindingRootChassis) {
   {
     // Reorder chassis so that root chassis has to be found via Link traversal
     // and via existing Cabling (multi-level)
-    mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis", R"json(
+    mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis?$expand=.($levels=1)",
+                                     R"json(
       {
         "@odata.id": "/redfish/v1/Chassis",
         "@odata.type": "#ChassisCollection.ChassisCollection",
@@ -329,7 +330,8 @@ TEST(TopologyTestRunner, TestingMockupFindingRootChassis) {
   }
   {
     // No Chassis to find a root from
-    mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis", R"json(
+    mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis?$expand=.($levels=1)",
+                                     R"json(
       {
         "@odata.id": "/redfish/v1/Chassis",
         "@odata.type": "#ChassisCollection.ChassisCollection",
@@ -631,6 +633,29 @@ TEST(TopologyTestRunner, UriUnqueryableRootChassisBad) {
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
       });
+  mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis?$expand=.($levels=1)",
+                                   R"json(
+    {
+      "@odata.id": "/redfish/v1/Chassis",
+      "@odata.type": "#ChassisCollection.ChassisCollection",
+      "Members": [
+        {
+          "@odata.id": "/redfish/v1/Chassis/child1"
+        },
+        {
+          "@odata.id": "/redfish/v1/Chassis/child2"
+        },
+        {
+          "@odata.id": "/redfish/v1/Chassis/expansion_tray"
+        },
+        {
+          "@odata.id": "/redfish/v1/Chassis/expansion_child"
+        }
+      ],
+      "Members@odata.count": 4,
+      "Name": "Chassis Collection"
+    }
+  )json");
   NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
   const std::vector<Node> expected_nodes = {
       Node{.name = "child1",
@@ -669,6 +694,17 @@ TEST(TopologyTestRunner, UriUnqueryableAllChassisBad) {
   FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
   // If all Chassis are unqueryable.
+  mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis?$expand=.($levels=1)",
+                                   R"json(
+    {
+      "@odata.id": "/redfish/v1/Chassis",
+      "@odata.type": "#ChassisCollection.ChassisCollection",
+      "Members": [
+      ],
+      "Members@odata.count": 0,
+      "Name": "Chassis Collection"
+    }
+  )json");
   mockup.AddHttpGetHandler(
       "/redfish/v1/Chassis/root",
       [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
@@ -708,8 +744,8 @@ TEST(TopologyTestRunner, UriUnqueryableChassisCollectionBad) {
   auto raw_intf = mockup.RedfishClientInterface();
   // If Chassis Collection is unqueryable.
   mockup.AddHttpGetHandler(
-      "/redfish/v1/Chassis",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      "/redfish/v1/Chassis?$expand=.($levels=1)",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::UNAUTHORIZED);
       });
