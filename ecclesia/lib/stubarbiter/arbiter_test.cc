@@ -508,6 +508,7 @@ struct ArbiterMetrics {
   std::string path;
   absl::Status status;
   absl::Duration latency;
+  StubArbiterInfo::PriorityLabel label;
 };
 
 TEST(StubArbiterTest, ExecuteFailoverWithMetrics) {
@@ -518,13 +519,14 @@ TEST(StubArbiterTest, ExecuteFailoverWithMetrics) {
       std::unique_ptr<MockStubArbiter> arbiter,
       MockStubArbiter::Create(
           {.metrics_exporter =
-               [&arbiter_metrics](absl::string_view path,
-                                  const absl::Status &status,
-                                  absl::Duration latency) {
+               [&arbiter_metrics](
+                   StubArbiterInfo::PriorityLabel label, absl::string_view path,
+                   const absl::Status& status, absl::Duration latency) {
                  arbiter_metrics.push_back(
                      ArbiterMetrics{.path = std::string(path),
                                     .status = status,
-                                    .latency = latency});
+                                    .latency = latency,
+                                    .label = label});
                }},
           [](StubArbiterInfo::PriorityLabel label)
               -> absl::StatusOr<std::unique_ptr<MockStub>> {
@@ -543,7 +545,9 @@ TEST(StubArbiterTest, ExecuteFailoverWithMetrics) {
               UnorderedElementsAre(
                   AllOf(Field(&ArbiterMetrics::path, "primary"),
                         Field(&ArbiterMetrics::status, IsOk()),
-                        Field(&ArbiterMetrics::latency, absl::Seconds(1)))));
+                        Field(&ArbiterMetrics::latency, absl::Seconds(1)),
+                        Field(&ArbiterMetrics::label,
+                              StubArbiterInfo::PriorityLabel::kPrimary))));
   arbiter_metrics.clear();
 
   arbiter->Execute(
@@ -562,10 +566,14 @@ TEST(StubArbiterTest, ExecuteFailoverWithMetrics) {
       UnorderedElementsAre(
           AllOf(Field(&ArbiterMetrics::path, "primary"),
                 Field(&ArbiterMetrics::status, IsStatusDeadlineExceeded()),
-                Field(&ArbiterMetrics::latency, absl::Seconds(1))),
+                Field(&ArbiterMetrics::latency, absl::Seconds(1)),
+                Field(&ArbiterMetrics::label,
+                      StubArbiterInfo::PriorityLabel::kPrimary)),
           AllOf(Field(&ArbiterMetrics::path, "fallback"),
                 Field(&ArbiterMetrics::status, IsOk()),
-                Field(&ArbiterMetrics::latency, absl::Seconds(2)))));
+                Field(&ArbiterMetrics::latency, absl::Seconds(2)),
+                Field(&ArbiterMetrics::label,
+                      StubArbiterInfo::PriorityLabel::kSecondary))));
 }
 
 TEST(StubArbiterTest, ExecuteStickyFailoverWithArbiterMetrics) {
@@ -577,13 +585,15 @@ TEST(StubArbiterTest, ExecuteStickyFailoverWithArbiterMetrics) {
       MockStubArbiter::Create(
           {.refresh = absl::Seconds(10),
            .metrics_exporter =
-               [&arbiter_metrics](absl::string_view path,
-                                  const absl::Status &status,
-                                  absl::Duration latency) {
-                 arbiter_metrics.push_back(
-                     ArbiterMetrics{.path = std::string(path),
-                                    .status = status,
-                                    .latency = latency});
+               [&arbiter_metrics](
+                   StubArbiterInfo::PriorityLabel label, absl::string_view path,
+                   const absl::Status& status, absl::Duration latency) {
+                 arbiter_metrics.push_back(ArbiterMetrics{
+                     .path = std::string(path),
+                     .status = status,
+                     .latency = latency,
+                     .label = label,
+                 });
                }},
           [](StubArbiterInfo::PriorityLabel label)
               -> absl::StatusOr<std::unique_ptr<MockStub>> {
@@ -607,10 +617,14 @@ TEST(StubArbiterTest, ExecuteStickyFailoverWithArbiterMetrics) {
       UnorderedElementsAre(
           AllOf(Field(&ArbiterMetrics::path, "primary"),
                 Field(&ArbiterMetrics::status, IsStatusDeadlineExceeded()),
-                Field(&ArbiterMetrics::latency, absl::Seconds(1))),
+                Field(&ArbiterMetrics::latency, absl::Seconds(1)),
+                Field(&ArbiterMetrics::label,
+                      StubArbiterInfo::PriorityLabel::kPrimary)),
           AllOf(Field(&ArbiterMetrics::path, "fallback"),
                 Field(&ArbiterMetrics::status, IsOk()),
-                Field(&ArbiterMetrics::latency, absl::Seconds(2)))));
+                Field(&ArbiterMetrics::latency, absl::Seconds(2)),
+                Field(&ArbiterMetrics::label,
+                      StubArbiterInfo::PriorityLabel::kSecondary))));
 
   // 1. Check that the sticky path is reported.
   arbiter_metrics.clear();
@@ -625,7 +639,9 @@ TEST(StubArbiterTest, ExecuteStickyFailoverWithArbiterMetrics) {
               UnorderedElementsAre(
                   AllOf(Field(&ArbiterMetrics::path, "sticky"),
                         Field(&ArbiterMetrics::status, IsOk()),
-                        Field(&ArbiterMetrics::latency, absl::Seconds(1)))));
+                        Field(&ArbiterMetrics::latency, absl::Seconds(1)),
+                        Field(&ArbiterMetrics::label,
+                              StubArbiterInfo::PriorityLabel::kSecondary))));
 
   // 2. Check that the sticky and sticky-fallback path is reported.
   arbiter_metrics.clear();
@@ -644,10 +660,14 @@ TEST(StubArbiterTest, ExecuteStickyFailoverWithArbiterMetrics) {
       UnorderedElementsAre(
           AllOf(Field(&ArbiterMetrics::path, "sticky"),
                 Field(&ArbiterMetrics::status, IsStatusDeadlineExceeded()),
-                Field(&ArbiterMetrics::latency, absl::Seconds(1))),
+                Field(&ArbiterMetrics::latency, absl::Seconds(1)),
+                Field(&ArbiterMetrics::label,
+                      StubArbiterInfo::PriorityLabel::kSecondary)),
           AllOf(Field(&ArbiterMetrics::path, "sticky-fallback"),
                 Field(&ArbiterMetrics::status, IsOk()),
-                Field(&ArbiterMetrics::latency, absl::Seconds(2)))));
+                Field(&ArbiterMetrics::latency, absl::Seconds(2)),
+                Field(&ArbiterMetrics::label,
+                      StubArbiterInfo::PriorityLabel::kPrimary))));
 
   // 3. Freshness expired, so the primary path is reported.
   clock.AdvanceTime(absl::Seconds(10));

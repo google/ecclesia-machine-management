@@ -42,8 +42,6 @@
 namespace ecclesia {
 
 struct StubArbiterInfo {
-  using MetricsExporter = std::function<void(
-      absl::string_view, const absl::Status &, absl::Duration)>;
   enum class Type : std::uint8_t { kManual = 0, kFailover, kUnknown };
 
   enum class PriorityLabel : std::uint8_t {
@@ -76,6 +74,9 @@ struct StubArbiterInfo {
     Metrics &metrics;
     const Clock &clock;
   };
+
+  using MetricsExporter = std::function<void(
+      PriorityLabel, absl::string_view, const absl::Status&, absl::Duration)>;
 
   struct Config {
     Type type = Type::kFailover;
@@ -215,7 +216,7 @@ class StubArbiter {
 
       if (metrics_exporter_.has_value()) {
         (*metrics_exporter_)(
-            stub_path, status,
+            label, stub_path, status,
             endpoint_metrics.end_time - metrics.arbiter_start_time);
       }
 
