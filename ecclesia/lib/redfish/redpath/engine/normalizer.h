@@ -91,10 +91,11 @@ class RedpathNormalizer {
 
   // Similar to above method but accepts an existing dataset, so we can chain
   // multiple normalizers.
-  absl::Status Normalize(const RedfishObject &redfish_object,
-                         const DelliciusQuery::Subquery &query,
-                         ecclesia::QueryResultData &data_set,
-                         const RedpathNormalizerOptions &options) {
+  absl::Status Normalize(const RedfishObject& redfish_object,
+                         const DelliciusQuery::Subquery& query,
+                         ecclesia::QueryResultData& data_set,
+                         const RedpathNormalizerOptions& options,
+                         bool return_error_on_empty_dataset = true) {
     // It's ok to use a simple mutex here. If we ever detect lock contention
     // and we know that the writes are less frequent, we can convert this mutex
     // to Reader-writer lock.
@@ -106,8 +107,9 @@ class RedpathNormalizer {
           impl->Normalize(redfish_object, query, data_set, options));
     }
 
-    // Return an error if data set is empty - no field and no devpath
-    if (data_set.fields_size() <= 0) {
+    // If the flag is set, return an error if data set is empty - no field and
+    // no devpath.
+    if (return_error_on_empty_dataset && data_set.fields_size() <= 0) {
       return absl::NotFoundError("Resulting dataset is empty");
     }
     return absl::OkStatus();
@@ -117,8 +119,10 @@ class RedpathNormalizer {
   absl::Status Normalize(ecclesia::QueryResultData &data_set,
                          const RedpathNormalizerOptions &options) {
     DummyRedfishObject dummy_redfish_object;
+    // As this normalization starts from dummy redfish object, we only return
+    // empty dataset on error if the original dataset is not empty.
     return Normalize(dummy_redfish_object, DelliciusQuery::Subquery(), data_set,
-                     options);
+                     options, data_set.fields_size() > 0);
   }
 
   void AddRedpathNormalizer(std::unique_ptr<ImplInterface> impl) {
