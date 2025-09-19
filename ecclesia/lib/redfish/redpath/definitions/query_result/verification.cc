@@ -990,6 +990,14 @@ absl::Status VerifyListValue(const ListValue& list_value,
                              QueryVerificationResult& result,
                              VerificationContext context,
                              const VerificationOptions& options) {
+  if (verification.min_size() > 0 &&
+      list_value.values_size() < verification.min_size()) {
+    return AddAndReturnError(
+        result,
+        absl::StrFormat("List size %d is less than min_size %d",
+                        list_value.values_size(), verification.min_size()),
+        context);
+  }
   if (!verification.has_verify()) {
     return absl::OkStatus();
   }
@@ -1032,9 +1040,13 @@ absl::Status VerifySubqueryValue(
         GetVerification(&value, operations, context);
     auto it = fields.find(property);
     if (it == fields.end()) {
-      if (local_verification.has_verify() &&
-          local_verification.verify().presence() ==
-              Verification::PRESENCE_REQUIRED) {
+      Verification::Presence presence = Verification::PRESENCE_UNKNOWN;
+      if (local_verification.has_verify()) {
+        presence = local_verification.verify().presence();
+      } else if (local_verification.has_list_compare()) {
+        presence = local_verification.list_compare().presence();
+      }
+      if (presence == Verification::PRESENCE_REQUIRED) {
         AddError(result,
                  absl::StrCat("Missing required property '", property, "'"),
                  context);
