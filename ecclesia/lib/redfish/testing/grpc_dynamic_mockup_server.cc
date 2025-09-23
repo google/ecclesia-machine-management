@@ -203,7 +203,13 @@ GrpcDynamicMockupServer::GrpcDynamicMockupServer(
   server_ = builder.BuildAndStart();
 }
 
-GrpcDynamicMockupServer::~GrpcDynamicMockupServer() { ClearHandlers(); }
+GrpcDynamicMockupServer::~GrpcDynamicMockupServer() {
+  ClearHandlers();
+  if (server_ != nullptr) {
+    server_->Shutdown();
+    server_->Wait();
+  }
+}
 
 void GrpcDynamicMockupServer::ClearHandlers() {
   redfish_v1_impl_->ClearHandlers();

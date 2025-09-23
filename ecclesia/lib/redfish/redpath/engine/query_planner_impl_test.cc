@@ -175,10 +175,10 @@ class QueryPlannerGrpcTestRunner : public ::testing::Test {
   }
 
   ecclesia::FakeClock clock_;
+  absl::Notification notification_;
   std::unique_ptr<ecclesia::GrpcDynamicMockupServer> server_;
   std::unique_ptr<RedfishInterface> intf_;
   absl::Duration cache_duration_ = absl::Seconds(1);
-  absl::Notification notification_;
 };
 
 class MockRedfishObject : public RedfishObject {
