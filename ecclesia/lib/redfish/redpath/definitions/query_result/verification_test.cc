@@ -2739,6 +2739,72 @@ TEST(VerifyListValueTest, ListofListVerification) {
   ASSERT_THAT(result, EqualsProto(R"pb()pb"));
 }
 
+TEST(VerifyListValueTest, MinSizeCheckSuccessWhenSizeIsMet) {
+  ListValue lv = ParseTextProtoOrDie(R"pb(
+    values { int_value: 1 }
+    values { int_value: 2 }
+  )pb");
+  ListValueVerification verification =
+      ParseTextProtoOrDie(R"pb(min_size: 2)pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyListValue(lv, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
+}
+
+TEST(VerifyListValueTest, MinSizeCheckSuccessWhenSizeIsOver) {
+  ListValue lv = ParseTextProtoOrDie(R"pb(
+    values { int_value: 1 }
+    values { int_value: 2 }
+  )pb");
+  ListValueVerification verification =
+      ParseTextProtoOrDie(R"pb(min_size: 1)pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyListValue(lv, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
+}
+
+TEST(VerifyListValueTest, MinSizeCheckSuccessWhenMinSizeIsZeroAndListIsEmpty) {
+  ListValue lv = ParseTextProtoOrDie(R"pb()pb");
+  ListValueVerification verification =
+      ParseTextProtoOrDie(R"pb(min_size: 0)pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyListValue(lv, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
+}
+
+TEST(VerifyListValueTest, MinSizeCheckSuccessWhenNotSetAndListIsEmpty) {
+  ListValue lv = ParseTextProtoOrDie(R"pb()pb");
+  ListValueVerification verification = ParseTextProtoOrDie(R"pb()pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyListValue(lv, verification, result), IsOk());
+  ASSERT_THAT(result, EqualsProto(R"pb()pb"));
+}
+
+TEST(VerifyListValueTest, MinSizeCheckFailsWhenListIsEmpty) {
+  ListValue lv = ParseTextProtoOrDie(R"pb()pb");
+  ListValueVerification verification =
+      ParseTextProtoOrDie(R"pb(min_size: 1)pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyListValue(lv, verification, result), IsStatusInternal());
+  ASSERT_THAT(result.errors(), SizeIs(1));
+  EXPECT_THAT(result.errors(0).msg(),
+              HasSubstr("List size 0 is less than min_size 1"));
+}
+
+TEST(VerifyListValueTest, MinSizeCheckFailsWhenSizeIsUnder) {
+  ListValue lv = ParseTextProtoOrDie(R"pb(
+    values { int_value: 1 }
+    values { int_value: 2 }
+  )pb");
+  ListValueVerification verification =
+      ParseTextProtoOrDie(R"pb(min_size: 3)pb");
+  QueryVerificationResult result;
+  EXPECT_THAT(VerifyListValue(lv, verification, result), IsStatusInternal());
+  ASSERT_THAT(result.errors(), SizeIs(1));
+  EXPECT_THAT(result.errors(0).msg(),
+              HasSubstr("List size 2 is less than min_size 3"));
+}
+
 struct VerifyQueryValueInputsWithExpectations {
   QueryValue query_value;
   QueryResultDataVerification data_compare;
@@ -2876,6 +2942,22 @@ INSTANTIATE_TEST_SUITE_P(
                        value: { list_compare { verify {} } }
                      })pb"),
             .expected_status = IsOk(),
+        },
+        VerifyQueryValueInputsWithExpectations{
+            .query_value = ParseTextProtoOrDie(R"pb(subquery_value {})pb"),
+            .data_compare = ParseTextProtoOrDie(
+                R"pb(fields {
+                       key: "foo"
+                       value {
+                         list_compare {
+                           presence: PRESENCE_REQUIRED
+                           verify {}
+                         }
+                       }
+                     })pb"),
+            .expected_status = IsOk(),
+            .expected_result = ParseTextProtoOrDie(
+                R"pb(errors { msg: "Missing required property 'foo'" })pb"),
         }));
 
 TEST(VerifyQueryResultTest, QueryIdsMismatchForVerification) {
