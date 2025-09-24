@@ -77,13 +77,13 @@ using QueryExecutionResult = QueryPlannerIntf::QueryExecutionResult;
 ABSL_DEPRECATED("Use RedpathQueryTimestamp instead.")
 class QueryTimestamp {
  public:
-  QueryTimestamp(DelliciusQueryResult *result, const Clock *clock)
+  QueryTimestamp(DelliciusQueryResult* result, const Clock* clock)
       : result_(*ABSL_DIE_IF_NULL(result)),
         clock_(*ABSL_DIE_IF_NULL(clock)),
         start_time_(clock_.Now()) {}
 
   ~QueryTimestamp() {
-    auto set_time = [](absl::Time time, google::protobuf::Timestamp &field) {
+    auto set_time = [](absl::Time time, google::protobuf::Timestamp& field) {
       if (auto timestamp = AbslTimeToProtoTime(time); timestamp.ok()) {
         field = *std::move(timestamp);
       }
@@ -93,8 +93,8 @@ class QueryTimestamp {
   }
 
  private:
-  DelliciusQueryResult &result_;
-  const Clock &clock_;
+  DelliciusQueryResult& result_;
+  const Clock& clock_;
   absl::Time start_time_;
 };
 
@@ -103,7 +103,7 @@ class QueryTimestamp {
 // Executes Redpath query and returns results in updated QueryResult format.
 QueryIdToResult QueryEngine::ExecuteRedpathQuery(
     absl::Span<const absl::string_view> query_ids,
-    const RedpathQueryOptions &options) {
+    const RedpathQueryOptions& options) {
   {
     absl::MutexLock lock(&execute_ref_count_mutex_);
     ++execute_ref_count_;
@@ -131,7 +131,8 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
 
     auto it = id_to_redpath_query_plans_.find(query_id);
     if (it == id_to_redpath_query_plans_.end()) {
-      LOG(ERROR) << "Query plan does not exist for id " << query_id;
+      LOG_EVERY_N_SEC(INFO, 60)
+          << "Query plan does not exist for id " << query_id;
       continue;
     }
     QueryVariables vars = QueryVariables();
@@ -183,24 +184,24 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
 }
 
 void QueryEngine::HandleRedfishEvent(
-    const RedfishVariant &variant,
-    const RedPathSubscription::EventContext &event_context,
+    const RedfishVariant& variant,
+    const RedPathSubscription::EventContext& event_context,
     absl::FunctionRef<
-        void(const QueryResult &result,
-             const RedPathSubscription::EventContext &event_context)>
+        void(const QueryResult& result,
+             const RedPathSubscription::EventContext& event_context)>
         on_event_callback) {
   auto find_context = id_to_subscription_context_.find(event_context.query_id);
   if (find_context != id_to_subscription_context_.end()) {
     auto find_trie_node =
         find_context->second->redpath_to_trie_node.find(event_context.redpath);
     if (find_trie_node == find_context->second->redpath_to_trie_node.end()) {
-      LOG(ERROR) << "Cannot resume query. RedpathTrieNode not found for "
+      LOG(WARNING) << "Cannot resume query. RedpathTrieNode not found for "
                  << event_context.query_id;
       return;
     }
 
     // Get query plan to resume query operation with the received Redfish event.
-    const std::unique_ptr<QueryPlannerIntf> &query_plan =
+    const std::unique_ptr<QueryPlannerIntf>& query_plan =
         id_to_redpath_query_plans_.at(event_context.query_id);
 
     QueryResult resume_query_result = query_plan->Resume(
@@ -213,7 +214,7 @@ void QueryEngine::HandleRedfishEvent(
       std::string error_message = resume_query_result.status().errors().empty()
                                       ? ""
                                       : resume_query_result.status().errors(0);
-      LOG(ERROR) << "Cannot resume query. Error: " << error_message;
+      LOG(WARNING) << "Cannot resume query. Error: " << error_message;
       return;
     }
     on_event_callback(resume_query_result, event_context);
@@ -222,7 +223,7 @@ void QueryEngine::HandleRedfishEvent(
 
 absl::StatusOr<SubscriptionQueryResult> QueryEngine::ExecuteSubscriptionQuery(
     absl::Span<const absl::string_view> query_ids,
-    const QueryVariableSet &query_arguments,
+    const QueryVariableSet& query_arguments,
     StreamingOptions streaming_options) {
   QueryIdToResult query_id_to_result;
   std::vector<RedPathSubscription::Configuration> subscription_configs;
@@ -278,12 +279,12 @@ absl::StatusOr<SubscriptionQueryResult> QueryEngine::ExecuteSubscriptionQuery(
       streaming_options.subscription_broker(
           subscription_configs, *redfish_interface_.get(),
           [on_event_callback = std::move(streaming_options.on_event_callback),
-           this](const RedfishVariant &variant,
-                 const RedPathSubscription::EventContext &event_context) {
+           this](const RedfishVariant& variant,
+                 const RedPathSubscription::EventContext& event_context) {
             HandleRedfishEvent(variant, event_context, on_event_callback);
           },
           [on_stop_callback(std::move(streaming_options.on_stop_callback))](
-              const absl::Status &status) { on_stop_callback(status); }));
+              const absl::Status& status) { on_stop_callback(status); }));
 
   // Populate subscription result.
   SubscriptionQueryResult subscription_result;
@@ -292,7 +293,7 @@ absl::StatusOr<SubscriptionQueryResult> QueryEngine::ExecuteSubscriptionQuery(
   return subscription_result;
 }
 
-absl::StatusOr<RedfishInterface *> QueryEngine::GetRedfishInterface(
+absl::StatusOr<RedfishInterface*> QueryEngine::GetRedfishInterface(
     RedfishInterfacePasskey unused_passkey) {
   if (redfish_interface_ == nullptr) {
     return absl::InternalError(
@@ -303,7 +304,7 @@ absl::StatusOr<RedfishInterface *> QueryEngine::GetRedfishInterface(
 
 absl::Status QueryEngine::ExecuteOnRedfishInterface(
     RedfishInterfacePasskey unused_passkey,
-    const RedfishInterfaceOptions &options) {
+    const RedfishInterfaceOptions& options) {
   if (redfish_interface_ == nullptr) {
     return absl::InternalError(
         "QueryEngine contains uninitialized RedfishInterface");
@@ -316,7 +317,7 @@ absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
     std::unique_ptr<IdAssigner> id_assigner,
     RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers) {
   std::unique_ptr<RedfishInterface> redfish_interface;
-  MetricalRedfishTransport *metrical_transport_ptr = nullptr;
+  MetricalRedfishTransport* metrical_transport_ptr = nullptr;
   if (engine_params.features.enable_redfish_metrics()) {
     auto metrical_transport = std::make_unique<MetricalRedfishTransport>(
         std::move(engine_params.transport), ecclesia::Clock::RealClock());
@@ -355,8 +356,8 @@ absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
   // Build RedPath trie based query planner.
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
       id_to_redpath_trie_plans;
-  for (auto &[query_id, query_info] : query_spec.query_id_to_info) {
-    std::vector<RedpathNormalizer *> additional_normalizers;
+  for (auto& [query_id, query_info] : query_spec.query_id_to_info) {
+    std::vector<RedpathNormalizer*> additional_normalizers;
     if (auto it = id_to_normalizers.find(query_id);
         it != id_to_normalizers.end() && it->second != nullptr) {
       additional_normalizers.push_back(it->second.get());
@@ -387,7 +388,7 @@ absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
       std::move(id_to_normalizers)));
 }
 
-void QueryEngine::CancelQueryExecution(absl::Notification *notification) {
+void QueryEngine::CancelQueryExecution(absl::Notification* notification) {
   // If there are no active query executions, return early.
   if (GetExecuteRefCount() == 0) {
     return;
@@ -403,7 +404,7 @@ void QueryEngine::CancelQueryExecution(absl::Notification *notification) {
   query_cancellation_state_ = true;
 
   // Set query cancellation state for all query planners.
-  for (auto &[_, query_planner] : id_to_redpath_query_plans_) {
+  for (auto& [_, query_planner] : id_to_redpath_query_plans_) {
     query_planner->SetQueryCancellationState(true);
   }
 
@@ -420,7 +421,7 @@ void QueryEngine::CancelQueryExecution(absl::Notification *notification) {
   cancel_completion_cond_.Wait(&query_cancellation_state_mutex_);
 
   // Reset query cancellation state for all query planners.
-  for (auto &[_, query_planner] : id_to_redpath_query_plans_) {
+  for (auto& [_, query_planner] : id_to_redpath_query_plans_) {
     query_planner->SetQueryCancellationState(false);
   }
 
