@@ -433,28 +433,21 @@ class RedfishVariant final {
   }
 
   CacheState IsFresh() const {
-    if (!ptr_) return CacheState::kUnknown;
+    if (ptr_ == nullptr) return CacheState::kUnknown;
     return ptr_->IsFresh();
   }
 
   std::unique_ptr<RedfishObject> AsObject() const {
-    if (!ptr_) {
-      DLOG(INFO) << "RedfishVariant unable to create an Object: " << status();
-      return nullptr;
-    }
-    return ptr_->AsObject();
+    return (ptr_ == nullptr) ? nullptr : ptr_->AsObject();
   }
   std::unique_ptr<RedfishIterable> AsIterable(
       IterableMode mode = IterableMode::kAllowExpand,
       GetParams params = {.freshness = GetParams::Freshness::kOptional}) const {
-    if (!ptr_) {
-      DLOG(INFO) << "RedfishVariant unable to create an Iterable: " << status();
-      return nullptr;
-    }
-    return ptr_->AsIterable(mode, std::move(params));
+    return (ptr_ == nullptr) ? nullptr
+                             : ptr_->AsIterable(mode, std::move(params));
   }
   std::optional<RedfishTransport::bytes> AsRaw() const {
-    if (!ptr_) {
+    if (ptr_ == nullptr) {
       DLOG(INFO) << "RedfishVariant unable to create Raw: " << status();
       return std::nullopt;
     }
