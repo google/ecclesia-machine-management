@@ -9,7 +9,6 @@ cc_library(
     visibility = [
         "//ecclesia/lib/redfish:__subpackages__",
         "//ecclesia/redfish/dellicius:__subpackages__",
-        "//platforms/ecclesia/lib/redfish/redpath/engine/tests:__subpackages__",
         "//platforms/gbmc/mtest:__subpackages__",
         "//platforms/redfish/lib/query_engine:__subpackages__",
     ],

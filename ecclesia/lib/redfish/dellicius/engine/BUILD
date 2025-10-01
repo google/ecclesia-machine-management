@@ -276,7 +276,6 @@ cc_library(
     hdrs = ["factory.h"],
     visibility = [
         "//ecclesia/lib/redfish:__subpackages__",
-        "//platforms/ecclesia/lib/redfish/redpath/engine/tests:__subpackages__",
         "//platforms/redfish/lib/query_engine:__subpackages__",
     ],
     deps = [
