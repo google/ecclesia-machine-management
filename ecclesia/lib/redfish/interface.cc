@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "absl/log/log.h"
 #include "absl/status/status.h"
@@ -27,6 +28,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
+#include "absl/types/span.h"
 
 namespace ecclesia {
 
@@ -104,10 +106,10 @@ std::unique_ptr<RedfishObject> RedfishVariant::AsFreshObject() const {
   return obj->EnsureFreshPayload().value_or(nullptr);
 }
 
-RedfishVariant RedfishInterface::PostUri(absl::string_view uri,
-                                         absl::string_view data,
-                                         bool octet_stream,
-                                         absl::Duration timeout) {
+RedfishVariant RedfishInterface::PostUri(
+    absl::string_view uri, absl::string_view data, bool octet_stream,
+    absl::Duration timeout,
+    absl::Span<const std::pair<std::string, std::string>> headers) {
   return RedfishVariant(
       absl::UnimplementedError("Octet stream post is not implemented."));
 }

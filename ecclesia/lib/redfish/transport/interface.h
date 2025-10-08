@@ -21,6 +21,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -29,6 +30,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "absl/types/span.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
@@ -85,9 +87,10 @@ class RedfishTransport {
   virtual absl::StatusOr<Result> Post(absl::string_view path,
                                       absl::string_view data) = 0;
   // If octet_stream is true, the data will be sent as octet_stream.
-  virtual absl::StatusOr<Result> Post(absl::string_view path,
-                                      absl::string_view data, bool octet_stream,
-                                      absl::Duration timeout) {
+  virtual absl::StatusOr<Result> Post(
+      absl::string_view path, absl::string_view data, bool octet_stream,
+      absl::Duration timeout,
+      absl::Span<const std::pair<std::string, std::string>> headers) {
     return absl::UnimplementedError(
         "Post with timeout and octet_stream is not implemented yet for this "
         "transport.");

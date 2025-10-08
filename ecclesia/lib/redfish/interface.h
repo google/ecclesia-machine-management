@@ -782,9 +782,12 @@ class RedfishInterface {
                                  absl::string_view data) = 0;
 
   // Post to the given URI and returns result. The caller can specify whether
-  // the request is an octet stream request and the timeout for the request.
-  virtual RedfishVariant PostUri(absl::string_view uri, absl::string_view data,
-                                 bool octet_stream, absl::Duration timeout);
+  // the request is an octet stream request, the timeout for the request, and
+  // the additional headers to be added to the request.
+  virtual RedfishVariant PostUri(
+      absl::string_view uri, absl::string_view data, bool octet_stream,
+      absl::Duration timeout,
+      absl::Span<const std::pair<std::string, std::string>> headers);
 
   // Delete to the given URI and returns result.
   virtual RedfishVariant DeleteUri(

@@ -37,6 +37,7 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "absl/types/span.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
@@ -76,6 +77,7 @@ constexpr absl::string_view kHostHeader = "Host";
 struct RequestBody {
   std::optional<absl::string_view> json_str = std::nullopt;
   bool octet_stream = false;
+  absl::Span<const std::pair<std::string, std::string>> headers;
 };
 
 constexpr RequestBody kNullRequestBody = RequestBody();
@@ -90,6 +92,9 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(absl::string_view path,
   // This header is used when authorizing peers without trust bundle.
   request.mutable_headers()->insert(
       {std::string(kHostHeader), std::string(target_fqdn)});
+  for (const auto& [key, value] : body.headers) {
+    request.mutable_headers()->insert({key, value});
+  }
   request.set_url(std::string(path));
   if (params.max_age != absl::InfiniteDuration()) {
     request.mutable_headers()->insert(
@@ -98,7 +103,6 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(absl::string_view path,
   }
   if (body.json_str && !body.json_str->empty()) {
     if (body.octet_stream) {
-      LOG(INFO) << "Setting octet stream for path: " << path;
       *request.mutable_octet_stream() = *body.json_str;
     } else {
       *request.mutable_json_str() = *body.json_str;
@@ -339,14 +343,17 @@ class GrpcRedfishTransport : public RedfishTransport {
 
   absl::StatusOr<Result> Post(absl::string_view path,
                               absl::string_view data) override {
-    return Post(path, data, /*octet_stream=*/false, params_.timeout);
+    return Post(path, data, /*octet_stream=*/false, params_.timeout, {});
   }
 
-  absl::StatusOr<Result> Post(absl::string_view path, absl::string_view data,
-                              bool octet_stream,
-                              absl::Duration timeout) override {
+  absl::StatusOr<Result> Post(
+      absl::string_view path, absl::string_view data, bool octet_stream,
+      absl::Duration timeout,
+      absl::Span<const std::pair<std::string, std::string>> headers) override {
     return DoRpc(
-        path, RequestBody{.json_str = data, .octet_stream = octet_stream},
+        path,
+        RequestBody{
+            .json_str = data, .octet_stream = octet_stream, .headers = headers},
         fqdn_, params_,
         [this, path, timeout](
             grpc::ClientContext& context, const redfish::v1::Request& request,

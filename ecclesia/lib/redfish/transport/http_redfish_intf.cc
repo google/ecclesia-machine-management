@@ -769,18 +769,22 @@ class HttpRedfishInterface : public RedfishInterface {
                           ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
-  RedfishVariant PostUri(absl::string_view uri, absl::string_view data,
-                         bool octet_stream, absl::Duration timeout) override {
+  RedfishVariant PostUri(
+      absl::string_view uri, absl::string_view data, bool octet_stream,
+      absl::Duration timeout,
+      absl::Span<const std::pair<std::string, std::string>> headers) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
     absl::StatusOr<ecclesia::RedfishTransport::Result> result =
-        transport_->Post(uri, data, octet_stream, timeout);
+        transport_->Post(uri, data, octet_stream, timeout, headers);
     if (!result.ok()) return RedfishVariant(result.status());
     int code = result->code;
-    absl::flat_hash_map<std::string, std::string> headers = result->headers;
+    absl::flat_hash_map<std::string, std::string> response_headers =
+        result->headers;
     return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
                               this, RedfishExtendedPath{std::string(uri)},
                               std::move(*result), CacheState::kIsFresh),
-                          ecclesia::HttpResponseCodeFromInt(code), headers);
+                          ecclesia::HttpResponseCodeFromInt(code),
+                          response_headers);
   }
 
   RedfishVariant DeleteUri(

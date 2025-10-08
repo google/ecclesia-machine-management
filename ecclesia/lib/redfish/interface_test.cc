@@ -323,7 +323,7 @@ TEST(RedfishVariant, PostUriWithOctetStreamReturnsUnimplementedError) {
   auto raw_intf = mockup.RedfishClientInterface();
   RedfishVariant variant =
       raw_intf->PostUri("/redfish/v1/UpdateService/FirmwareInventory",
-                        "test_data", true, absl::ZeroDuration());
+                        "test_data", true, absl::ZeroDuration(), {});
   EXPECT_THAT(variant.status(), ecclesia::IsStatusUnimplemented());
 }
 

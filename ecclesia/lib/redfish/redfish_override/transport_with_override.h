@@ -105,10 +105,11 @@ class RedfishTransportWithOverride : public RedfishTransport {
                               absl::string_view data) override {
     return redfish_transport_->Post(path, data);
   }
-  absl::StatusOr<Result> Post(absl::string_view path, absl::string_view data,
-                              bool octet_stream,
-                              absl::Duration timeout) override {
-    return redfish_transport_->Post(path, data, octet_stream, timeout);
+  absl::StatusOr<Result> Post(
+      absl::string_view path, absl::string_view data, bool octet_stream,
+      absl::Duration timeout,
+      absl::Span<const std::pair<std::string, std::string>> headers) override {
+    return redfish_transport_->Post(path, data, octet_stream, timeout, headers);
   }
 
   absl::StatusOr<Result> Patch(absl::string_view path,

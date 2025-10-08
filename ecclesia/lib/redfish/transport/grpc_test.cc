@@ -530,6 +530,8 @@ TEST(GrpcRedfishTransport, PostOctetStream) {
       [&response_body](grpc::ServerContext* context,
                        const ::redfish::v1::Request* request,
                        Response* response) {
+        EXPECT_THAT(request->headers(),
+                    Contains(Pair("MagicHeader", "Awesome")));
         *response->mutable_json_str() = response_body.dump();
         response->set_code(202);
         response->mutable_headers()->insert({"OData-Version", "4.0"});
@@ -537,9 +539,10 @@ TEST(GrpcRedfishTransport, PostOctetStream) {
         return grpc::Status::OK;
       });
 
-  auto result = (*transport)
-                    ->Post("/redfish/v1/UpdateService/MultipartUpdate",
-                           "test_data", true, absl::Seconds(10));
+  auto result =
+      (*transport)
+          ->Post("/redfish/v1/UpdateService/MultipartUpdate", "test_data", true,
+                 absl::Seconds(10), {{"MagicHeader", "Awesome"}});
   ASSERT_THAT(result, IsOk());
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
   EXPECT_THAT(std::get<nlohmann::json>(result->body), Eq(response_body));
