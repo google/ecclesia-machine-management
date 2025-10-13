@@ -1,6 +1,8 @@
 # load("@rules_cc//cc:cc_library.bzl", "cc_library")
 # load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
+
 proto_library(
     name = "query_result_proto",
     srcs = ["query_result.proto"],
@@ -9,6 +11,12 @@ proto_library(
         "//ecclesia/lib/redfish/transport:transport_metrics_proto",
         "@com_google_protobuf//:timestamp_proto",
     ],
+)
+
+py_proto_library(
+    name = "query_result_py_pb2",
+    visibility = ["//visibility:public"],
+    deps = [":query_result_proto"],
 )
 
 cc_proto_library(
