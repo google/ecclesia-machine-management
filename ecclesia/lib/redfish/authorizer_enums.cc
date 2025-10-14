@@ -288,6 +288,10 @@ constexpr std::array<absl::string_view,
         "TlBMCMetrics",
         "TlBMCSchedulerStats",
         "TlBMCServiceRoot",
+        "TpuManagerDevice",
+        "TpuManagerDeviceCollection",
+        "TpuManagerDeviceMetrics",
+        "TpuManagerServiceRoot",
         "Triggers",
         "TriggersCollection",
         "TrustedComponent",
@@ -329,7 +333,7 @@ std::string OperationToString(Operation operation) {
 }
 
 ResourceEntity StringToResourceEntity(absl::string_view resource) {
-  const auto *it = std::lower_bound(kEntityNames.cbegin(),
+  const auto* it = std::lower_bound(kEntityNames.cbegin(),
                                     std::prev(kEntityNames.cend()), resource);
   if (it == std::prev(kEntityNames.cend()) || *it != resource) {
     return ResourceEntity::kUndefined;
