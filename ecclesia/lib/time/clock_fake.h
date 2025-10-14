@@ -21,6 +21,7 @@
 #ifndef ECCLESIA_LIB_TIME_CLOCK_FAKE_H_
 #define ECCLESIA_LIB_TIME_CLOCK_FAKE_H_
 
+#include <atomic>
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/time/clock.h"
@@ -45,7 +46,9 @@ class FakeClock : public Clock {
   }
 
   // Move time forward by duration. This cannot be used to move time back.
-  void AdvanceTime(absl::Duration duration) { time_ += duration; }
+  void AdvanceTime(absl::Duration duration) {
+    time_.store(time_.load() + duration);
+  }
 
  private:
   // A function which will be called on every sleep. The default implementation
@@ -54,7 +57,7 @@ class FakeClock : public Clock {
   virtual void SleepCallback(absl::Duration d) {}
 
   // The current time this clock holds, can be provided at construction
-  absl::Time time_;
+  std::atomic<absl::Time> time_;
 };
 
 }  // namespace ecclesia

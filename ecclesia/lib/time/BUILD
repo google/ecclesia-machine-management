@@ -15,6 +15,9 @@ cc_library(
     name = "clock_fake",
     testonly = True,
     hdrs = ["clock_fake.h"],
+    linkopts = [
+        "-latomic",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         ":clock",
