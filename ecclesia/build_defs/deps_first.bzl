@@ -374,26 +374,6 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             urls = ["https://github.com/jedisct1/libsodium/archive/1.0.18.tar.gz"],
         )
 
-    if not native.existing_rule("zeromq"):
-        patch_file = "zmq.01.add_platform_hpp.patch"
-        http_archive(
-            name = "zeromq",
-            build_file = _format_oss_path("zeromq.BUILD", package_name),
-            patches = _make_patch_paths("zeromq.patches", [patch_file], package_name),
-            sha256 = "27d1e82a099228ee85a7ddb2260f40830212402c605a4a10b5e5498a7e0e9d03",
-            strip_prefix = "zeromq-4.2.1",
-            urls = ["https://github.com/zeromq/libzmq/releases/download/v4.2.1/zeromq-4.2.1.tar.gz"],
-        )
-
-    if not native.existing_rule("cppzmq"):
-        http_archive(
-            name = "cppzmq",
-            build_file = _format_oss_path("cppzmq.BUILD", package_name),
-            sha256 = "9853e0437d834cbed5d3c223bf1d755cadee70e7c964c6e42c4c6783dee5d02c",
-            strip_prefix = "cppzmq-4.7.1",
-            urls = ["https://github.com/zeromq/cppzmq/archive/v4.7.1.tar.gz"],
-        )
-
     if not native.existing_rule("jinja2"):
         http_archive(
             name = "jinja2",
