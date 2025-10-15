@@ -21,21 +21,6 @@ package_group(
     packages = ["//ecclesia/redfish_mockups/tests/..."],
 )
 
-# Machine agent shared libraries, for use in agent code.
-package_group(
-    name = "magent_library_users",
-    packages = [
-        "//ecclesia/lib/redfish/...",
-        "//ecclesia/magent/...",
-    ],
-)
-
-# Machine agent frontend code.
-package_group(
-    name = "magent_frontend_users",
-    packages = ["//ecclesia/magent/daemons/..."],
-)
-
 # Machine manager frontend code.
 package_group(name = "mmanager_frontend_users")
 
