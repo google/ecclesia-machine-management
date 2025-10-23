@@ -34,6 +34,7 @@
 #include "absl/types/optional.h"
 #include "ecclesia/lib/status/macros.h"
 #include "openssl/base.h"
+#include "openssl/bio.h"
 #include "openssl/pem.h"
 #include "openssl/x509.h"
 #include "openssl/x509v3.h"
@@ -156,6 +157,21 @@ absl::StatusOr<SubjectAltName> GetSubjectAltName(absl::string_view pem) {
     san.fqdn = std::move(fqdns[0]);
   }
   return san;
+}
+
+absl::StatusOr<std::string> GetPublicKey(absl::string_view pem) {
+  ECCLESIA_ASSIGN_OR_RETURN(bssl::UniquePtr<X509> cert,
+                            FirstX509FromPemChain(pem));
+  bssl::UniquePtr<EVP_PKEY> pkey(X509_get_pubkey(cert.get()));
+  bssl::UniquePtr<BIO> pkey_bio(BIO_new(BIO_s_mem()));
+  if (PEM_write_bio_PUBKEY(pkey_bio.get(), pkey.get()) != 1) {
+    return absl::InternalError(
+        absl::StrCat("Failed to write public key to BIO: ", GetOpenSslError()));
+  }
+
+  char* public_key = nullptr;
+  auto public_key_len = BIO_get_mem_data(pkey_bio.get(), &public_key);
+  return std::string(public_key, public_key_len);
 }
 
 }  // namespace ecclesia

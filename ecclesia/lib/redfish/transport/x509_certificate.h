@@ -53,6 +53,8 @@ struct SubjectAltName {
 // TODO (b/416357292): Return multiple SANs when available.
 absl::StatusOr<SubjectAltName> GetSubjectAltName(absl::string_view pem);
 
+absl::StatusOr<std::string> GetPublicKey(absl::string_view pem);
+
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TRANSPORT_X509_CERTIFICATE_H_
