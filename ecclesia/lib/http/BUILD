@@ -11,7 +11,6 @@ cc_library(
     hdrs = ["client.h"],
     visibility = ["//visibility:public"],
     deps = [
-        "//ecclesia/lib/status:macros",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
@@ -37,7 +36,10 @@ cc_library(
     name = "codes",
     srcs = ["codes.cc"],
     hdrs = ["codes.h"],
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//cloud/cluster/tenant_controller/bare_metal:__subpackages__",
+        "//visibility:public",
+    ],
     deps = [
         "@com_google_absl//absl/algorithm:container",
         "@com_google_absl//absl/status",
@@ -117,8 +119,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//ecclesia/lib/thread:thread_pool",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
