@@ -28,6 +28,7 @@
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_split.h"
@@ -64,7 +65,7 @@ LazyRE2 kPciBusEntryRegex = {R"(pci([[:xdigit:]]{4}):([[:xdigit:]]{2}))"};
 // entry_name_speed should be "<current/max>_link_width" and
 // "<current/max>_link_speed", respectively.
 absl::StatusOr<PcieLinkCapabilities> GetSysfsPcieLinkCapabilities(
-    const ApifsDirectory &pci_device_dir, absl::string_view entry_name_width,
+    const ApifsDirectory& pci_device_dir, absl::string_view entry_name_width,
     absl::string_view entry_name_speed) {
   ApifsFile file_link_width(pci_device_dir, entry_name_width);
   ECCLESIA_ASSIGN_OR_RETURN(std::string link_width, file_link_width.Read());
@@ -93,11 +94,11 @@ absl::StatusOr<PcieLinkCapabilities> GetSysfsPcieLinkCapabilities(
 
 }  // namespace
 
-SysPciRegion::SysPciRegion(const PciDbdfLocation &loc)
+SysPciRegion::SysPciRegion(const PciDbdfLocation& loc)
     : SysPciRegion(kSysPciRoot, loc) {}
 
 SysPciRegion::SysPciRegion(absl::string_view sys_pci_devices_dir,
-                           const PciDbdfLocation &loc)
+                           const PciDbdfLocation& loc)
     : PciRegion(kMaxSysFileSize),
       apifs_(absl::StrFormat("%s/%s/config", sys_pci_devices_dir,
                              absl::FormatStreamed(loc))),
@@ -193,12 +194,12 @@ absl::StatusOr<PciResources::BarInfo> SysfsPciResources::GetBaseAddressImpl(
 }
 
 std::unique_ptr<SysfsPciDevice> SysfsPciDevice::TryCreateDevice(
-    const PciDbdfLocation &location) {
+    const PciDbdfLocation& location) {
   return TryCreateDevice(kSysPciRoot, location);
 }
 
 std::unique_ptr<SysfsPciDevice> SysfsPciDevice::TryCreateDevice(
-    absl::string_view sys_pci_devices_dir, const PciDbdfLocation &location) {
+    absl::string_view sys_pci_devices_dir, const PciDbdfLocation& location) {
   ApifsDirectory apifs((std::string(sys_pci_devices_dir)));
   if (!apifs.Exists(location.ToString())) {
     return nullptr;
@@ -207,7 +208,7 @@ std::unique_ptr<SysfsPciDevice> SysfsPciDevice::TryCreateDevice(
 }
 
 SysfsPciDevice::SysfsPciDevice(absl::string_view sys_pci_devices_dir,
-                               const PciDbdfLocation &location)
+                               const PciDbdfLocation& location)
     : PciDevice(
           location,
           std::make_unique<SysPciRegion>(sys_pci_devices_dir, location),
@@ -229,7 +230,7 @@ SysfsPciDevice::PcieLinkCurrentCapabilities() const {
 
 SysfsPciTopology::SysfsPciTopology() : SysfsPciTopology("/sys/devices") {}
 
-SysfsPciTopology::SysfsPciTopology(const std::string &sys_devices_dir)
+SysfsPciTopology::SysfsPciTopology(const std::string& sys_devices_dir)
     : sys_devices_dir_(sys_devices_dir) {}
 
 absl::StatusOr<PciTopologyInterface::PciNodeMap>
@@ -248,11 +249,11 @@ SysfsPciTopology::EnumerateAllNodes() const {
   return status;
 }
 
-std::vector<PciTopologyInterface::Node *> SysfsPciTopology::ScanDirectory(
+std::vector<PciTopologyInterface::Node*> SysfsPciTopology::ScanDirectory(
     absl::string_view directory_path, size_t depth,
-    PciTopologyInterface::Node *parent,
-    PciTopologyInterface::PciNodeMap *pci_node_map) const {
-  std::vector<Node *> nodes_in_this_dir;
+    PciTopologyInterface::Node* parent,
+    PciTopologyInterface::PciNodeMap* pci_node_map) const {
+  std::vector<Node*> nodes_in_this_dir;
   WithEachFileInDirectory(directory_path, [&](absl::string_view entry_name) {
     auto maybe_loc = PciDbdfLocation::FromString(entry_name);
     if (maybe_loc.has_value()) {
@@ -288,14 +289,57 @@ SysfsPciTopology::EnumeratePciAcpiPaths() const {
               if (pos != std::string::npos) {
                 fw_path.erase(pos + 1);
               }
-              acpi_nodes.push_back({*PciDomain::TryMake(domain),
-                                    *PciBusNum::TryMake(bus), fw_path});
+              auto pci_domain = PciDomain::TryMake(domain);
+              auto pci_bus = PciBusNum::TryMake(bus);
+              if (pci_domain.has_value() && pci_bus.has_value()) {
+                acpi_nodes.push_back({*pci_domain,
+                                      *pci_bus, fw_path});
+              }
             }
           }
         }
       });
   if (status.ok()) {
     return acpi_nodes;
+  }
+  return status;
+}
+
+absl::StatusOr<std::vector<PciTopologyInterface::PciPlatformPath>>
+SysfsPciTopology::EnumeratePciPlatformPaths() const {
+  std::vector<PciTopologyInterface::PciPlatformPath> platform_paths;
+  ApifsDirectory platform_dir(JoinFilePaths(sys_devices_dir_, "platform"));
+  if (!platform_dir.Exists()) {
+    return platform_paths;
+  }
+
+  // Scan /sys/devices/platform for  devices that are PCI buses, which
+  // have subdirectories named "pciXXXX:YY".
+  //  E.g. /sys/devices/platform/2041800000.pcie/pci0000:00
+  absl::Status status = WithEachFileInDirectory(
+      platform_dir.GetPath(), [&](absl::string_view platform_entry_name) {
+        if (absl::EndsWith(platform_entry_name, ".pcie")) {
+          WithEachFileInDirectory(
+              JoinFilePaths(platform_dir.GetPath(), platform_entry_name),
+              [&](absl::string_view pci_bus_entry) {
+                int domain;
+                int bus;
+                if (RE2::FullMatch(pci_bus_entry, *kPciBusEntryRegex,
+                                   RE2::Hex(&domain), RE2::Hex(&bus))) {
+                  auto pci_domain = PciDomain::TryMake(domain);
+                  auto pci_bus = PciBusNum::TryMake(bus);
+                  if (pci_domain.has_value() && pci_bus.has_value()) {
+                    platform_paths.push_back(
+                        {*pci_domain, *pci_bus,
+                         std::string(platform_entry_name)});
+                  }
+                }
+              })
+              .IgnoreError();
+        }
+      });
+  if (status.ok()) {
+    return platform_paths;
   }
   return status;
 }

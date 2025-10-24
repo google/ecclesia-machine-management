@@ -124,6 +124,12 @@ class SysfsPciTopology : public PciTopologyInterface {
   absl::StatusOr<std::vector<PciAcpiPath>> EnumeratePciAcpiPaths()
       const override;
 
+  // This method scans /sys/devices/platform/ for directories that contain
+  // pci<domain>:<bus> entries and map the platform directory name to
+  // domain:bus.
+  absl::StatusOr<std::vector<PciPlatformPath>> EnumeratePciPlatformPaths()
+      const override;
+
  private:
   // This helper function recursively scans the input directory and its
   // subdirectories for any PCI nodes. The found nodes will be added to the

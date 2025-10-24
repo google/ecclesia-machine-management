@@ -48,38 +48,38 @@ class PciTopologyInterface {
   // This class represents a node in the PCI topology tree.
   class Node {
    public:
-    Node(const PciDbdfLocation &location, size_t depth, Node *parent)
+    Node(const PciDbdfLocation& location, size_t depth, Node* parent)
         : location_(location), depth_(depth), parent_(parent) {}
 
-    Node(const Node &) = delete;
-    Node &operator=(const Node &) = delete;
-    Node(Node &&) = delete;
-    Node &operator=(Node &&) = delete;
+    Node(const Node&) = delete;
+    Node& operator=(const Node&) = delete;
+    Node(Node&&) = delete;
+    Node& operator=(Node&&) = delete;
 
-    const PciDbdfLocation &Location() const { return location_; }
+    const PciDbdfLocation& Location() const { return location_; }
 
     // This gets the depth in the PCI tree. For a root node, the depth is 0.
     size_t Depth() const { return depth_; }
 
     // This gets the parent of this node, for a root node, this
     // function returns nullptr.
-    Node *Parent() const { return parent_; }
+    Node* Parent() const { return parent_; }
 
     // This gets the children of this node, for a endpoint node without
     // children, the return vector is empty.
-    absl::Span<const Node *const> Children() const { return children_; }
+    absl::Span<const Node* const> Children() const { return children_; }
 
-    void AddChild(Node *node) { children_.push_back(node); }
+    void AddChild(Node* node) { children_.push_back(node); }
 
-    void SetChildren(std::vector<Node *> children) {
+    void SetChildren(std::vector<Node*> children) {
       children_ = std::move(children);
     }
 
    private:
     const PciDbdfLocation location_;
     size_t depth_;
-    Node *parent_;
-    std::vector<Node *> children_;
+    Node* parent_;
+    std::vector<Node*> children_;
   };
 
   using PciNodeMap =
@@ -91,7 +91,7 @@ class PciTopologyInterface {
   // location. If no such PCI device with the given location exists, return
   // nullptr.
   virtual std::unique_ptr<PciDevice> CreateDevice(
-      const PciDbdfLocation &location) const = 0;
+      const PciDbdfLocation& location) const = 0;
 
   // This struct associates the root PCI bus with the corresponding ACPI path.
   struct PciAcpiPath {
@@ -101,11 +101,11 @@ class PciTopologyInterface {
     // sysfs, e.g., "\_SB_.PC00"
     std::string acpi_path;
 
-    bool operator==(const PciAcpiPath &other) const {
+    bool operator==(const PciAcpiPath& other) const {
       return std::tie(domain, bus, acpi_path) ==
              std::tie(other.domain, other.bus, other.acpi_path);
     }
-    bool operator!=(const PciAcpiPath &other) const {
+    bool operator!=(const PciAcpiPath& other) const {
       return !(*this == other);
     }
   };
@@ -113,6 +113,28 @@ class PciTopologyInterface {
   // Enumerate the PCI buses that corresponds to ACPI device paths.
   virtual absl::StatusOr<std::vector<PciAcpiPath>> EnumeratePciAcpiPaths()
       const = 0;
+
+  // This struct associates the root PCI bus with the corresponding
+  // platform path in /sys/devices/platform/.
+  struct PciPlatformPath {
+    PciDomain domain;
+    PciBusNum bus;
+    // platform_path corresponds to the directory name in
+    // /sys/devices/platform/, e.g., "2041800000.pcie"
+    std::string platform_path;
+
+    bool operator==(const PciPlatformPath& other) const {
+      return std::tie(domain, bus, platform_path) ==
+             std::tie(other.domain, other.bus, other.platform_path);
+    }
+    bool operator!=(const PciPlatformPath& other) const {
+      return !(*this == other);
+    }
+  };
+
+  // Enumerate the PCI buses that corresponds to platform paths.
+  virtual absl::StatusOr<std::vector<PciPlatformPath>>
+  EnumeratePciPlatformPaths() const = 0;
 };
 
 }  // namespace ecclesia

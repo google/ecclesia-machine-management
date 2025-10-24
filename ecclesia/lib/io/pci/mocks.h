@@ -164,6 +164,9 @@ class MockPciTopology : public PciTopologyInterface {
 
   MOCK_METHOD(absl::StatusOr<std::vector<PciAcpiPath>>, EnumeratePciAcpiPaths,
               (), (const, override));
+
+  MOCK_METHOD(absl::StatusOr<std::vector<PciPlatformPath>>,
+              EnumeratePciPlatformPaths, (), (const, override));
 };
 
 }  // namespace ecclesia

@@ -43,6 +43,7 @@ using ::testing::Not;
 using ::testing::UnorderedElementsAre;
 
 using PciAcpiPath = PciTopologyInterface::PciAcpiPath;
+using PciPlatformPath = PciTopologyInterface::PciPlatformPath;
 
 // Helper matchers that can check if a BarInfo is a memory or I/O BAR with the
 // given base address.
@@ -367,6 +368,69 @@ TEST_F(PciTopologyTest, EnumeratePciAcpiPaths) {
                               "\\_SB_.PC00"},
                   PciAcpiPath{PciDomain::Make<0>(), PciBusNum::Make<0xd7>(),
                               "\\_SB_.PC01"}));
+}
+
+TEST(SysfsPciTopologyTest, EnumeratePciPlatformPaths) {
+  TestFilesystem fs(GetTestTempdirPath());
+  // This contents reflects the /sys/devices directory on a dioriteimc node.
+  fs.CreateDir("/sys/devices");
+  fs.CreateDir("/sys/devices/platform/2041800000.pcie/pci0000:00");
+  fs.CreateDir("/sys/devices/platform/204e400000.pcie/pci0001:00");
+  fs.CreateDir("/sys/devices/platform/204ec00000.pcie");
+  fs.CreateDir("/sys/devices/platform/2053a00000.core-mbox");
+  fs.CreateDir("/sys/devices/platform/20c0010000.cpe_gcsr");
+
+  SysfsPciTopology pci_topology(fs.GetTruePath("/sys/devices/"));
+  auto maybe_pci_platform_paths = pci_topology.EnumeratePciPlatformPaths();
+  ASSERT_TRUE(maybe_pci_platform_paths.ok());
+  auto &pci_platform_paths = maybe_pci_platform_paths.value();
+  ASSERT_EQ(pci_platform_paths.size(), 2);
+
+  EXPECT_THAT(
+      pci_platform_paths,
+      UnorderedElementsAre(
+          PciPlatformPath{PciDomain::Make<0>(), PciBusNum::Make<00>(),
+                          "2041800000.pcie"},
+          PciPlatformPath{PciDomain::Make<1>(), PciBusNum::Make<00>(),
+                          "204e400000.pcie"}));
+}
+
+TEST(SysfsPciTopologyTest, EnumeratePciPlatformPathsHexParsing) {
+  TestFilesystem fs(GetTestTempdirPath());
+  fs.CreateDir("/sys/devices");
+  fs.CreateDir("/sys/devices/platform/123456789.pcie/pci000a:bc");
+  SysfsPciTopology pci_topology(fs.GetTruePath("/sys/devices/"));
+  auto maybe_pci_platform_paths = pci_topology.EnumeratePciPlatformPaths();
+  ASSERT_TRUE(maybe_pci_platform_paths.ok());
+  auto &pci_platform_paths = maybe_pci_platform_paths.value();
+  ASSERT_EQ(pci_platform_paths.size(), 1);
+
+  EXPECT_THAT(
+      pci_platform_paths,
+      UnorderedElementsAre(
+          PciPlatformPath{PciDomain::Make<0xa>(), PciBusNum::Make<0xbc>(),
+                          "123456789.pcie"}));
+}
+
+TEST(SysfsPciTopologyTest, EnumeratePciPlatformPathsNoPlatformDir) {
+  TestFilesystem fs(GetTestTempdirPath());
+  fs.CreateDir("/sys/devices");
+  SysfsPciTopology pci_topology(fs.GetTruePath("/sys/devices/"));
+  auto maybe_pci_platform_paths = pci_topology.EnumeratePciPlatformPaths();
+  ASSERT_TRUE(maybe_pci_platform_paths.ok());
+  auto &pci_platform_paths = maybe_pci_platform_paths.value();
+  ASSERT_EQ(pci_platform_paths.size(), 0);
+}
+
+TEST(SysfsPciTopologyTest, EnumeratePciPlatformPathsEmptyPlatformDir) {
+  TestFilesystem fs(GetTestTempdirPath());
+  fs.CreateDir("/sys/devices");
+  fs.CreateDir("/sys/devices/platform");
+  SysfsPciTopology pci_topology(fs.GetTruePath("/sys/devices/"));
+  auto maybe_pci_platform_paths = pci_topology.EnumeratePciPlatformPaths();
+  ASSERT_TRUE(maybe_pci_platform_paths.ok());
+  auto &pci_platform_paths = maybe_pci_platform_paths.value();
+  ASSERT_EQ(pci_platform_paths.size(), 0);
 }
 
 }  // namespace
