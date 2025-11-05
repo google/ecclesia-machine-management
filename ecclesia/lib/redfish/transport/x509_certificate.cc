@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "absl/base/casts.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/match.h"
@@ -51,7 +52,7 @@ std::string GetOpenSslError() {
 
 // Returns short name of the corresponding numeric identifier.
 std::string GetNidShortName(int nid) {
-  const char *short_name = OBJ_nid2sn(nid);
+  const char* short_name = OBJ_nid2sn(nid);
   if (short_name == nullptr) {
     return absl::StrCat("Unknown NID: ", nid);
   }
@@ -59,11 +60,11 @@ std::string GetNidShortName(int nid) {
 }
 
 absl::StatusOr<bssl::UniquePtr<GENERAL_NAMES>> GetSubjectAltNameExtension(
-    const X509 &cert, int &out_critical) {
+    const X509& cert, int& out_critical) {
   // Find and decode the extension of type |GENERAL_NAMES|
   // The const_cast is necessary for the openssl call.
-  bssl::UniquePtr<GENERAL_NAMES> extension(static_cast<GENERAL_NAMES *>(
-      X509_get_ext_d2i(const_cast<X509 *>(&cert), NID_subject_alt_name,
+  bssl::UniquePtr<GENERAL_NAMES> extension(static_cast<GENERAL_NAMES*>(
+      X509_get_ext_d2i(const_cast<X509*>(&cert), NID_subject_alt_name,
                        &out_critical, /*out_idx=*/nullptr)));
   if (extension == nullptr && out_critical == -1) {
     return absl::NotFoundError(
@@ -88,15 +89,15 @@ absl::StatusOr<bssl::UniquePtr<GENERAL_NAMES>> GetSubjectAltNameExtension(
 }
 
 // Returns UTF8 string from the given Abstract Syntax Notation One (ASN1) string
-absl::StatusOr<std::string> Asn1ToUtf8(ASN1_STRING *asn1) {
-  unsigned char *utf8 = nullptr;
+absl::StatusOr<std::string> Asn1ToUtf8(ASN1_STRING* asn1) {
+  unsigned char* utf8 = nullptr;
   int len = ASN1_STRING_to_UTF8(&utf8, asn1);
   if (len < 0) {
     return absl::InvalidArgumentError("Failed to parse ASN1 string as UTF8.");
   }
   // Free |utf8| when the pointer |owned| goes out of scope.
   bssl::UniquePtr<unsigned char> owned(utf8);
-  return std::string(absl::bit_cast<const char *>(utf8), len);
+  return std::string(absl::bit_cast<const char*>(utf8), len);
 }
 
 absl::StatusOr<bssl::UniquePtr<X509>> X509FromPem(absl::string_view pem) {
@@ -125,7 +126,7 @@ absl::StatusOr<SubjectAltName> GetSubjectAltName(absl::string_view pem) {
   std::vector<std::string> uris;
   std::vector<std::string> fqdns;
   for (int i = 0; i < sk_GENERAL_NAME_num(names.get()); i++) {
-    GENERAL_NAME *name = sk_GENERAL_NAME_value(names.get(), i);
+    GENERAL_NAME* name = sk_GENERAL_NAME_value(names.get(), i);
     switch (name->type) {
       case GEN_URI: {
         ECCLESIA_ASSIGN_OR_RETURN(
@@ -135,9 +136,11 @@ absl::StatusOr<SubjectAltName> GetSubjectAltName(absl::string_view pem) {
       }
       case GEN_DNS: {
         ECCLESIA_ASSIGN_OR_RETURN(std::string dns, Asn1ToUtf8(name->d.dNSName));
-        if (absl::EndsWith(dns, ".prod.google.com")) {
-          fqdns.push_back(std::move(dns));
+        if (!absl::EndsWith(dns, ".prod.google.com")) {
+          LOG(WARNING) << absl::StrFormat(
+              "FQDN %s is not a prod FQDN", dns);
         }
+        fqdns.push_back(std::move(dns));
         break;
       }
       default:
