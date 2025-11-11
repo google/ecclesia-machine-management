@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -23,11 +24,14 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.pb.h"
 #include "ecclesia/lib/status/macros.h"
 #include "ecclesia/lib/time/clock.h"
+#include "ecclesia/lib/time/proto.h"
 #include "google/protobuf/text_format.h"
 
 namespace ecclesia {
@@ -101,6 +105,26 @@ absl::StatusOr<QuerySpec> QuerySpec::FromQueryFiles(
                                 .clock = clock};
 
   return QuerySpec::FromQueryContext(query_context);
+}
+
+absl::Status QuerySpec::Add(RedpathQuerySpec&& query_spec) {
+  if (query_spec.query().query_id().empty()) {
+    return absl::InvalidArgumentError("Query id is empty");
+  }
+  std::string query_id = query_spec.query().query_id();
+  if (query_id_to_info.contains(query_id)) {
+    return absl::AlreadyExistsError(
+        absl::StrCat("Query id ", query_id, " already exists in QuerySpec"));
+  }
+  std::optional<absl::Duration> timeout = std::nullopt;
+  if (query_spec.has_timeout()) {
+    ECCLESIA_ASSIGN_OR_RETURN(
+        timeout, AbslDurationFromProtoDuration(query_spec.timeout()));
+  }
+  query_id_to_info[query_id] = {.query = std::move(*query_spec.mutable_query()),
+                                .rule = std::move(*query_spec.mutable_rule()),
+                                .timeout = std::move(timeout)};
+  return absl::OkStatus();
 }
 
 }  // namespace ecclesia

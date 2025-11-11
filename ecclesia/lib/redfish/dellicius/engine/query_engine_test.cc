@@ -1345,6 +1345,52 @@ TEST(QueryEngineTest, QueryEngineCreateUsingQuerySpec) {
       EqualsProto(intent_output.results().at("GoogleServiceRoot").data()));
 }
 
+TEST(QueryEngineTest, QueryEngineCreateUsingRedpathQuerySpec) {
+  FakeRedfishServer server(kComponentIntegrityMockupPath);
+  FakeClock clock{clock_time};
+
+  FakeRedfishServer::Config config = server.GetConfig();
+  auto http_client = std::make_unique<CurlHttpClient>(
+      LibCurlProxy::CreateInstance(), HttpCredential{});
+  std::string network_endpoint =
+      absl::StrFormat("%s:%d", config.hostname, config.port);
+  std::unique_ptr<RedfishTransport> transport =
+      HttpRedfishTransport::MakeNetwork(std::move(http_client),
+                                        network_endpoint);
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      QuerySpec query_spec,
+      QuerySpec::FromQueryContext({.query_files = kDelliciusQueries,
+                                   .query_rules = kQueryRules,
+                                   .clock = &clock}));
+
+  std::vector<RedpathQuerySpec> redpath_query_specs;
+  for (auto& [query_id, query_info] : query_spec.query_id_to_info) {
+    RedpathQuerySpec redpath_query_spec;
+    *redpath_query_spec.mutable_query() = query_info.query;
+    *redpath_query_spec.mutable_rule() = std::move(query_info.rule);
+    redpath_query_specs.push_back(std::move(redpath_query_spec));
+  }
+
+  ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<QueryEngineIntf> query_engine,
+                          QueryEngine::CreateQueryEngine(
+                              std::move(redpath_query_specs),
+                              {.transport = std::move(transport),
+                               .features = StandardQueryEngineFeatures()}));
+
+  // Execute query where custom service root is set to /google/v1.
+  QueryIdToResult response =
+      query_engine->ExecuteRedpathQuery({"CustomServiceRoot"});
+  QueryIdToResult intent_output = ParseTextFileAsProtoOrDie<QueryIdToResult>(
+      GetTestDataDependencyPath(JoinFilePaths(
+          kQuerySamplesLocation,
+          "query_out/service_root_google_out_translated.textproto")));
+
+  EXPECT_THAT(
+      response.results().at("CustomServiceRoot").data(),
+      EqualsProto(intent_output.results().at("GoogleServiceRoot").data()));
+}
+
 // Test $filter query, include multiple predicates and variable substitution.
 // Filter support is enabled in the query rules.
 TEST(QueryEngineTest, QueryEngineFilterConfiguration) {
