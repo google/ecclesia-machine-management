@@ -74,8 +74,7 @@ namespace {
 using QueryExecutionResult = QueryPlannerIntf::QueryExecutionResult;
 
 // RAII style wrapper to timestamp query.
-ABSL_DEPRECATED("Use RedpathQueryTimestamp instead.")
-class QueryTimestamp {
+class ABSL_DEPRECATED("Use RedpathQueryTimestamp instead.") QueryTimestamp {
  public:
   QueryTimestamp(DelliciusQueryResult* result, const Clock* clock)
       : result_(*ABSL_DIE_IF_NULL(result)),
