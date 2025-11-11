@@ -68,6 +68,8 @@ inline constexpr char kRfPropertyEnvironmentMetrics[] = "EnvironmentMetrics";
 inline constexpr char kRfPropertyMemoryMetrics[] = "MemoryMetrics";
 inline constexpr char kRfPropertySessions[] = "Sessions";
 inline constexpr char kRfPropertySessionService[] = "SessionService";
+inline constexpr char kRfPropertyEndTime[] = "EndTime";
+inline constexpr char kRfPropertyStartTime[] = "StartTime";
 inline constexpr char kRfPropertySystems[] = "Systems";
 inline constexpr char kRfPropertySystemReset[] = "#ComputerSystem.Reset";
 inline constexpr char kRfPropertyManagers[] = "Managers";
@@ -265,6 +267,8 @@ inline constexpr char kRfPropertyConnectedPorts[] = "ConnectedPorts";
 inline constexpr char kRfPropertyConnectedSwitchPorts[] =
     "ConnectedSwitchPorts";
 inline constexpr char kRfPropertyActiveSoftwareImage[] = "ActiveSoftwareImage";
+inline constexpr char kRfPropertyTargetUri[] = "TargetUri";
+inline constexpr char kRfPropertyJsonBody[] = "JsonBody";
 
 DEFINE_REDFISH_RESOURCE(ResourceCertificate, "Certificate");
 DEFINE_REDFISH_RESOURCE(ResourceSystem, "ComputerSystem");
