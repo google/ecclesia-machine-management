@@ -74,8 +74,15 @@ message DelliciusQuery {
       // Absolute uri served by the Redfish service.
       string uri = 11;
     }
+
     Freshness freshness = 7;
     repeated RedfishProperty properties = 3;
+    // Normalized properties are properties that have had the normalizers
+    // applied to the data. Please note, the essential purpose for
+    // normalized_properties is to allow for the collection_as feature to be
+    // used and these propertiees are considered after the RedfishProperties are
+    // applied.
+    repeated RedfishProperty normalized_properties = 12;
 
     message RawData {
       enum Type {

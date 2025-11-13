@@ -533,7 +533,7 @@ void ApplyCollectAs(const DelliciusQuery::Subquery& subquery,
     }
   }
 
-  if (!collect_as_required) {
+  if (!collect_as_required && subquery.normalized_properties().empty()) {
     // If there is no collect_as, we can skip the whole computation involved.
     return;
   }
@@ -547,38 +547,55 @@ void ApplyCollectAs(const DelliciusQuery::Subquery& subquery,
         redfish_interface, timeout_manager, normalizer, normalizer_options);
   }
 
-  for (const auto& prop : subquery.properties()) {
-    if (prop.collect_as().empty()) {
-      continue;
-    }
-    std::string prop_name = prop.name().empty() ? prop.property() : prop.name();
-    if (prop.name().empty()) {
-      absl::StrReplaceAll({{"\\.", "."}}, &prop_name);
-    }
-    auto it = normalized_query_result.fields().find(prop_name);
-    if (it == normalized_query_result.fields().end()) {
-      continue;
-    }
-    auto id_it = normalized_query_result.fields().find(kIdentifierTag);
-    for (const std::string& collect_as_key : prop.collect_as()) {
-      CollectedProperty* collected_property =
-          (*query_execution_context->result
-                .mutable_collected_properties())[collect_as_key]
-              .add_properties();
-      *collected_property->mutable_value() = it->second;
-      if (related_item_identifier.has_value()) {
-        *collected_property->mutable_identifier() =
-            std::move(*related_item_identifier);
-      } else if (id_it != normalized_query_result.fields().end() &&
-                 id_it->second.has_identifier()) {
-        *collected_property->mutable_identifier() = id_it->second.identifier();
+  absl::flat_hash_set<std::string> collected_properties_set;
+  auto get_collected_property =
+      [&](const google::protobuf::RepeatedPtrField<
+          ecclesia::DelliciusQuery_Subquery_RedfishProperty>& properties)
+      -> void {
+    for (const auto& prop : properties) {
+      if (prop.collect_as().empty()) {
+        continue;
       }
-      if (sensor_identifier.has_value()) {
-        *collected_property->mutable_sensor_identifier() =
-            std::move(*sensor_identifier);
+
+      auto [_, inserted] = collected_properties_set.insert(prop.property());
+      if (!inserted) {
+        continue;
+      }
+
+      std::string prop_name =
+          prop.name().empty() ? prop.property() : prop.name();
+      if (prop_name.empty()) {
+        absl::StrReplaceAll({{"\\.", "."}}, &prop_name);
+      }
+      auto it = normalized_query_result.fields().find(prop_name);
+      if (it == normalized_query_result.fields().end()) {
+        return;
+      }
+      auto id_it = normalized_query_result.fields().find(kIdentifierTag);
+      for (const std::string& collect_as_key : prop.collect_as()) {
+        CollectedProperty* collected_property =
+            (*query_execution_context->result
+                  .mutable_collected_properties())[collect_as_key]
+                .add_properties();
+        *collected_property->mutable_value() = it->second;
+        if (related_item_identifier.has_value()) {
+          *collected_property->mutable_identifier() =
+              std::move(*related_item_identifier);
+        } else if (id_it != normalized_query_result.fields().end() &&
+                   id_it->second.has_identifier()) {
+          *collected_property->mutable_identifier() =
+              id_it->second.identifier();
+        }
+        if (sensor_identifier.has_value()) {
+          *collected_property->mutable_sensor_identifier() =
+              std::move(*sensor_identifier);
+        }
       }
     }
-  }
+  };
+
+  get_collected_property(subquery.properties());
+  get_collected_property(subquery.normalized_properties());
 }
 
 }  // namespace

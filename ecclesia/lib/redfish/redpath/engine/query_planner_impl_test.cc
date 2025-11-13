@@ -78,6 +78,7 @@ using ::tensorflow::serving::net_http::SetContentTypeTEXT;
 using ::testing::AnyNumber;
 using ::testing::Eq;
 using ::testing::HasSubstr;
+using ::testing::IsEmpty;
 using ::testing::NotNull;
 using ::testing::Return;
 using ::testing::TestParamInfo;
@@ -3154,6 +3155,123 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollection) {
                                      expected_collected_properties))),
           Pair("chassis_names", IgnoringRepeatedFieldOrdering(
                                     EqualsProto(expected_chassis_names)))));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerPropertyCollectionWithMissingProperties) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "Names"
+        subquery {
+          subquery_id: "chassis"
+          redpath: "/Chassis[*]"
+          properties {
+            property: "RandomProperty"
+            type: STRING
+            collect_as: "test_resources"
+          }
+          normalized_properties {
+            property: "RandomProperty"
+            collect_as: "chassis_names"
+          }
+        }
+      )pb");
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Chassis/chassis",
+          "Id": "chassis",
+          "Name": "Indus Chassis",
+          "Type": "Server",
+          "Sensors": {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors"
+          },
+          "Location": {
+            "PartLocation": {
+              "LocationType": "Slot",
+              "ServiceLabel": "IO1"
+            },
+            "PartLocationContext": "PE4"
+          }
+        })json");
+        req->Reply();
+      });
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result, IsOk());
+  EXPECT_FALSE(result->query_result.has_status());
+  EXPECT_THAT(result->query_result.collected_properties(), IsEmpty());
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerPropertyCollectionWithNormalizedProperties) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "Names"
+        subquery {
+          subquery_id: "chassis"
+          redpath: "/Chassis[*]"
+          properties {
+            property: "Name"
+            type: STRING
+            collect_as: "test_resources"
+          }
+          properties { property: "Id" type: STRING }
+          normalized_properties { property: "Id" collect_as: "chassis_ids" }
+        }
+      )pb");
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Chassis/chassis",
+          "Id": "chassis",
+          "Name": "Indus Chassis",
+          "Type": "Server",
+          "Sensors": {
+            "@odata.id": "/redfish/v1/Chassis/chassis/Sensors"
+          },
+          "Location": {
+            "PartLocation": {
+              "LocationType": "Slot",
+              "ServiceLabel": "IO1"
+            },
+            "PartLocationContext": "PE4"
+          }
+        })json");
+        req->Reply();
+      });
+  CollectedProperties expected_chassis_names = ParseTextProtoOrDie(R"pb(
+    properties {
+      identifier {
+        redfish_location { service_label: "IO1" part_location_context: "PE4" }
+      }
+      value { string_value: "Indus Chassis" }
+    }
+  )pb");
+  CollectedProperties expected_chassis_ids = ParseTextProtoOrDie(R"pb(
+    properties {
+      identifier {
+        redfish_location { service_label: "IO1" part_location_context: "PE4" }
+      }
+      value { string_value: "chassis" }
+    }
+  )pb");
+
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result, IsOk());
+  EXPECT_FALSE(result->query_result.has_status());
+  EXPECT_THAT(
+      result->query_result.collected_properties(),
+      UnorderedElementsAre(
+          Pair("test_resources", IgnoringRepeatedFieldOrdering(
+                                     EqualsProto(expected_chassis_names))),
+          Pair("chassis_ids", IgnoringRepeatedFieldOrdering(
+                                  EqualsProto(expected_chassis_ids)))));
 }
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesRedfishMetricsCorrectly) {
