@@ -21,12 +21,14 @@
 #include <string>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_rules.pb.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.pb.h"
 #include "ecclesia/lib/time/clock.h"
 
 namespace ecclesia {
@@ -65,6 +67,11 @@ struct QuerySpec {
       absl::Span<const std::string> query_files,
       absl::Span<const std::string> query_rules,
       const Clock *clock = Clock::RealClock());
+
+  // Adds a query spec to the QuerySpec.
+  // Returns an error if the query spec already exists or if the query spec is
+  // invalid.
+  absl::Status Add(RedpathQuerySpec&& query_spec);
 };
 
 }  // namespace ecclesia

@@ -2,6 +2,23 @@
 # load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 proto_library(
+    name = "query_spec_proto",
+    srcs = ["query_spec.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//ecclesia/lib/redfish/dellicius/engine:query_rules_proto",
+        "//ecclesia/lib/redfish/dellicius/query:query_proto",
+        "@com_google_protobuf//:duration_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "query_spec_cc_proto",
+    visibility = ["//visibility:public"],
+    deps = [":query_spec_proto"],
+)
+
+proto_library(
     name = "query_engine_features_proto",
     srcs = ["query_engine_features.proto"],
     visibility = ["//visibility:public"],
@@ -31,12 +48,14 @@ cc_library(
     hdrs = ["query_spec.h"],
     visibility = ["//visibility:public"],
     deps = [
+        ":query_spec_cc_proto",
         "//ecclesia/lib/apifs",
         "//ecclesia/lib/file:cc_embed_interface",
         "//ecclesia/lib/redfish/dellicius/engine:query_rules_cc_proto",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/time:clock",
+        "//ecclesia/lib/time:proto",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -98,6 +117,7 @@ cc_test(
         "//ecclesia/lib/testing:proto",
         "//ecclesia/lib/testing:status",
         "//ecclesia/lib/time:clock_fake",
+        "@com_google_absl//absl/time",
         "@com_google_googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",
     ],

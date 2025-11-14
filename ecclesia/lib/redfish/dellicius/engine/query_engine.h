@@ -254,8 +254,15 @@ class QueryEngine : public QueryEngineIntf {
   using QueryEngineIntf::ExecuteRedpathQuery;
 
   // Creates query engine for machine devpath decorator extensions.
+  ABSL_DEPRECATED("Use CreateQueryEngine instead.")
   static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> Create(
       QuerySpec query_spec, QueryEngineParams params,
+      std::unique_ptr<IdAssigner> id_assigner = nullptr,
+      RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizer =
+          DefaultRedpathNormalizerMap());
+
+  static absl::StatusOr<std::unique_ptr<QueryEngineIntf>> CreateQueryEngine(
+      std::vector<RedpathQuerySpec> query_specs, QueryEngineParams params,
       std::unique_ptr<IdAssigner> id_assigner = nullptr,
       RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizer =
           DefaultRedpathNormalizerMap());
