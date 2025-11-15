@@ -499,6 +499,68 @@ std::optional<Identifier> GetRelatedItemIdentifier(
   return std::nullopt;
 }
 
+// Gets identifier from PcieDevice property of a chassis resource.
+std::optional<Identifier> GetPcieDeviceIdentifier(
+    const RedfishObject& redfish_obj, RedfishInterface* redfish_interface,
+    QueryTimeoutManager* timeout_manager, RedpathNormalizer& normalizer,
+    const RedpathNormalizerOptions& normalizer_options) {
+  if (redfish_interface == nullptr) {
+    return std::nullopt;
+  }
+  nlohmann::json redfish_json = redfish_obj.GetContentAsJson();
+  auto odata_type_it = redfish_json.find(PropertyOdataType::Name);
+  if (odata_type_it == redfish_json.end() || !odata_type_it->is_string() ||
+      !absl::EndsWith(odata_type_it->get<std::string>(), "PCIeDevice")) {
+    return std::nullopt;
+  }
+
+  auto links_it = redfish_json.find("Links");
+  if (links_it == redfish_json.end()) {
+    return std::nullopt;
+  }
+
+  auto chassis_it = links_it->find("Chassis");
+  if (chassis_it == links_it->end()) {
+    return std::nullopt;
+  }
+  auto odata_id_it = chassis_it->find(PropertyOdataId::Name);
+  if (odata_id_it == chassis_it->end() || !odata_id_it->is_string()) {
+    return std::nullopt;
+  }
+
+  std::string chassis_uri = odata_id_it->get<std::string>();
+  // It's ok to use optional freshness here because we are only interested in
+  // the identifier of the related item which is not expected to change once
+  // created.
+  GetParams params{.freshness = GetParams::Freshness::kOptional};
+  if (timeout_manager != nullptr) {
+    params.timeout_manager = timeout_manager;
+  }
+  RedfishVariant variant = redfish_interface->CachedGetUri(chassis_uri, params);
+  if (!variant.status().ok()) {
+    return std::nullopt;
+  }
+
+  std::unique_ptr<RedfishObject> chassis_obj = variant.AsObject();
+  if (chassis_obj == nullptr) {
+    return std::nullopt;
+  }
+
+  DelliciusQuery::Subquery subquery;
+  absl::StatusOr<QueryResultData> chassis_result =
+      normalizer.Normalize(*chassis_obj, subquery, normalizer_options);
+  if (!chassis_result.ok()) {
+    return std::nullopt;
+  }
+
+  auto it = chassis_result->fields().find(kIdentifierTag);
+  if (it != chassis_result->fields().end() && it->second.has_identifier()) {
+    return it->second.identifier();
+  }
+
+  return std::nullopt;
+}
+
 absl::StatusOr<nlohmann::json> GetResponseJsonFromContext(
     const QueryExecutionContext &execution_context) {
   const auto &rf_object = execution_context.redfish_response.redfish_object;
@@ -547,6 +609,10 @@ void ApplyCollectAs(const DelliciusQuery::Subquery& subquery,
         redfish_interface, timeout_manager, normalizer, normalizer_options);
   }
 
+  std::optional<Identifier> pcie_device_identifier = GetPcieDeviceIdentifier(
+      *query_execution_context->redfish_response.redfish_object,
+      redfish_interface, timeout_manager, normalizer, normalizer_options);
+
   absl::flat_hash_set<std::string> collected_properties_set;
   auto get_collected_property =
       [&](const google::protobuf::RepeatedPtrField<
@@ -585,6 +651,9 @@ void ApplyCollectAs(const DelliciusQuery::Subquery& subquery,
                    id_it->second.has_identifier()) {
           *collected_property->mutable_identifier() =
               id_it->second.identifier();
+        } else if (pcie_device_identifier.has_value()) {
+          *collected_property->mutable_identifier() =
+              std::move(*pcie_device_identifier);
         }
         if (sensor_identifier.has_value()) {
           *collected_property->mutable_sensor_identifier() =

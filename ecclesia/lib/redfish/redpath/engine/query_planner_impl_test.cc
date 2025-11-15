@@ -3157,6 +3157,505 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollection) {
                                     EqualsProto(expected_chassis_names)))));
 }
 
+TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollectionOfPCIeDevices) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "CollectFWStates"
+        subquery {
+          subquery_id: "FWState_LaneStatus"
+          redpath: "/Systems[*]/PCIeDevices[*]"
+          properties: { property: "Id" name: "Id" type: STRING }
+          properties: {
+            property: "PCIeInterface.Oem.Google.LaneStatus"
+            name: "LaneStatus"
+            type: STRING
+            collect_as: "FWState_LaneStatus_PCIeDevices"
+          }
+          properties: {
+            property: "Links.Chassis.@odata\\.id"
+            name: "ChassisLink"
+            type: STRING
+          }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Chassis/chassis",
+          "Id": "Habanero16_1",
+          "Name": "Habanero16_1",
+          "Type": "Server",
+          "Location": {
+            "PartLocation": {
+              "LocationType": "Slot",
+              "ServiceLabel": "IO1"
+            },
+            "PartLocationContext": "PE4"
+          }
+        })json");
+        req->Reply();
+      });
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Systems/system", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system",
+          "Id": "system",
+          "Name": "system",
+          "PCIeDevices": {
+            "@odata.id": "/redfish/v1/Systems/system/PCIeDevices"
+          }
+        })json");
+        req->Reply();
+      });
+  server_->AddHttpGetHandler("/redfish/v1/Systems/system/PCIeDevices",
+                             [&](ServerRequestInterface* req) {
+                               SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
+                               req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices",
+          "Members": [
+            {
+              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0"
+            }
+          ]
+        })json");
+                               req->Reply();
+                             });
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+      [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+          "@odata.type": "#PCIeDevice.v1_4_0.PCIeDevice",
+          "Id": "Habanero16_1_Link_0",
+          "Links": {
+            "Chassis": {
+              "@odata.id": "/redfish/v1/Chassis/chassis"
+            }
+          },
+
+          "Name": "PCIe Device",
+          "PCIeInterface": {
+            "Oem": {
+              "Google": {
+                "LaneStatus": "JSON_STRING of Data"
+              }
+            }
+          }
+        })json");
+        req->Reply();
+      });
+
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result, IsOk());
+  EXPECT_FALSE(result->query_result.has_status());
+
+  CollectedProperties expected_collected_properties = ParseTextProtoOrDie(R"pb(
+    properties {
+      identifier {
+        redfish_location { service_label: "IO1" part_location_context: "PE4" }
+      }
+      value { string_value: "JSON_STRING of Data" }
+    }
+  )pb");
+  EXPECT_THAT(
+      result->query_result.collected_properties(),
+      UnorderedElementsAre(Pair("FWState_LaneStatus_PCIeDevices",
+                                IgnoringRepeatedFieldOrdering(EqualsProto(
+                                    expected_collected_properties)))));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerPropertyCollectionOfPCIeDevicesMissingLink) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "CollectFWStates"
+        subquery {
+          subquery_id: "FWState_LaneStatus"
+          redpath: "/Systems[*]/PCIeDevices[*]"
+          properties: { property: "Id" name: "Id" type: STRING }
+          properties: {
+            property: "PCIeInterface.Oem.Google.LaneStatus"
+            name: "LaneStatus"
+            type: STRING
+            collect_as: "FWState_LaneStatus_PCIeDevices"
+          }
+          properties: {
+            property: "Links.Chassis.@odata\\.id"
+            name: "ChassisLink"
+            type: STRING
+          }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Systems/system", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system",
+          "Id": "system",
+          "Name": "system",
+          "PCIeDevices": {
+            "@odata.id": "/redfish/v1/Systems/system/PCIeDevices"
+          }
+        })json");
+        req->Reply();
+      });
+  server_->AddHttpGetHandler("/redfish/v1/Systems/system/PCIeDevices",
+                             [&](ServerRequestInterface* req) {
+                               SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
+                               req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices",
+          "Members": [
+            {
+              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0"
+            }
+          ]
+        })json");
+                               req->Reply();
+                             });
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+      [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+          "@odata.type": "#PCIeDevice.v1_4_0.PCIeDevice",
+          "Id": "Habanero16_1_Link_0",
+          "Name": "PCIe Device",
+          "PCIeInterface": {
+            "Oem": {
+              "Google": {
+                "LaneStatus": "JSON_STRING of Data"
+              }
+            }
+          }
+        })json");
+        req->Reply();
+      });
+
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result, IsOk());
+  EXPECT_FALSE(result->query_result.has_status());
+
+  CollectedProperties expected_collected_properties = ParseTextProtoOrDie(R"pb(
+    properties { value { string_value: "JSON_STRING of Data" } }
+  )pb");
+  EXPECT_THAT(
+      result->query_result.collected_properties(),
+      UnorderedElementsAre(Pair("FWState_LaneStatus_PCIeDevices",
+                                IgnoringRepeatedFieldOrdering(EqualsProto(
+                                    expected_collected_properties)))));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerPropertyCollectionOfPCIeDevicesMissingChassisLink) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "CollectFWStates"
+        subquery {
+          subquery_id: "FWState_LaneStatus"
+          redpath: "/Systems[*]/PCIeDevices[*]"
+          properties: { property: "Id" name: "Id" type: STRING }
+          properties: {
+            property: "PCIeInterface.Oem.Google.LaneStatus"
+            name: "LaneStatus"
+            type: STRING
+            collect_as: "FWState_LaneStatus_PCIeDevices"
+          }
+          properties: {
+            property: "Links.Chassis.@odata\\.id"
+            name: "ChassisLink"
+            type: STRING
+          }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Systems/system", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system",
+          "Id": "system",
+          "Name": "system",
+          "PCIeDevices": {
+            "@odata.id": "/redfish/v1/Systems/system/PCIeDevices"
+          }
+        })json");
+        req->Reply();
+      });
+  server_->AddHttpGetHandler("/redfish/v1/Systems/system/PCIeDevices",
+                             [&](ServerRequestInterface* req) {
+                               SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
+                               req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices",
+          "Members": [
+            {
+              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0"
+            }
+          ]
+        })json");
+                               req->Reply();
+                             });
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+      [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+          "@odata.type": "#PCIeDevice.v1_4_0.PCIeDevice",
+          "Id": "Habanero16_1_Link_0",
+          "Links": {
+            "SomethingElse": {
+              "@odata.id": "/redfish/v1/Chassis/chassis"
+            }
+          },
+
+          "Name": "PCIe Device",
+          "PCIeInterface": {
+            "Oem": {
+              "Google": {
+                "LaneStatus": "JSON_STRING of Data"
+              }
+            }
+          }
+        })json");
+        req->Reply();
+      });
+
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result, IsOk());
+  EXPECT_FALSE(result->query_result.has_status());
+
+  CollectedProperties expected_collected_properties = ParseTextProtoOrDie(R"pb(
+    properties { value { string_value: "JSON_STRING of Data" } }
+  )pb");
+  EXPECT_THAT(
+      result->query_result.collected_properties(),
+      UnorderedElementsAre(Pair("FWState_LaneStatus_PCIeDevices",
+                                IgnoringRepeatedFieldOrdering(EqualsProto(
+                                    expected_collected_properties)))));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerPropertyCollectionOfPCIeDevicesMalformedChassisLinks) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "CollectFWStates"
+        subquery {
+          subquery_id: "FWState_LaneStatus"
+          redpath: "/Systems[*]/PCIeDevices[*]"
+          properties: { property: "Id" name: "Id" type: STRING }
+          properties: {
+            property: "PCIeInterface.Oem.Google.LaneStatus"
+            name: "LaneStatus"
+            type: STRING
+            collect_as: "FWState_LaneStatus_PCIeDevices"
+          }
+          properties: {
+            property: "Links.Chassis.@odata\\.id"
+            name: "ChassisLink"
+            type: STRING
+          }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Systems/system", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system",
+          "Id": "system",
+          "Name": "system",
+          "PCIeDevices": {
+            "@odata.id": "/redfish/v1/Systems/system/PCIeDevices"
+          }
+        })json");
+        req->Reply();
+      });
+  server_->AddHttpGetHandler("/redfish/v1/Systems/system/PCIeDevices",
+                             [&](ServerRequestInterface* req) {
+                               SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
+                               req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices",
+          "Members": [
+            {
+              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0"
+            }
+          ]
+        })json");
+                               req->Reply();
+                             });
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+      [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+          "@odata.type": "#PCIeDevice.v1_4_0.PCIeDevice",
+          "Id": "Habanero16_1_Link_0",
+          "Links": {
+            "Chassis": {
+              "SomethingElse": "/redfish/v1/Chassis/chassis"
+            }
+          },
+
+          "Name": "PCIe Device",
+          "PCIeInterface": {
+            "Oem": {
+              "Google": {
+                "LaneStatus": "JSON_STRING of Data"
+              }
+            }
+          }
+        })json");
+        req->Reply();
+      });
+
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result, IsOk());
+  EXPECT_FALSE(result->query_result.has_status());
+
+  CollectedProperties expected_collected_properties = ParseTextProtoOrDie(R"pb(
+    properties { value { string_value: "JSON_STRING of Data" } }
+  )pb");
+  EXPECT_THAT(
+      result->query_result.collected_properties(),
+      UnorderedElementsAre(Pair("FWState_LaneStatus_PCIeDevices",
+                                IgnoringRepeatedFieldOrdering(EqualsProto(
+                                    expected_collected_properties)))));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerPropertyCollectionOfPCIeDevicesMissingChassisLocation) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "CollectFWStates"
+        subquery {
+          subquery_id: "FWState_LaneStatus"
+          redpath: "/Systems[*]/PCIeDevices[*]"
+          properties: { property: "Id" name: "Id" type: STRING }
+          properties: {
+            property: "PCIeInterface.Oem.Google.LaneStatus"
+            name: "LaneStatus"
+            type: STRING
+            collect_as: "FWState_LaneStatus_PCIeDevices"
+          }
+          properties: {
+            property: "Links.Chassis.@odata\\.id"
+            name: "ChassisLink"
+            type: STRING
+          }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Chassis/chassis",
+          "Id": "Habanero16_1",
+          "Name": "Habanero16_1",
+          "Type": "Server",
+        })json");
+        req->Reply();
+      });
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Systems/system", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system",
+          "Id": "system",
+          "Name": "system",
+          "PCIeDevices": {
+            "@odata.id": "/redfish/v1/Systems/system/PCIeDevices"
+          }
+        })json");
+        req->Reply();
+      });
+  server_->AddHttpGetHandler("/redfish/v1/Systems/system/PCIeDevices",
+                             [&](ServerRequestInterface* req) {
+                               SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
+                               req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices",
+          "Members": [
+            {
+              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0"
+            }
+          ]
+        })json");
+                               req->Reply();
+                             });
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+      [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+          "@odata.type": "#PCIeDevice.v1_4_0.PCIeDevice",
+          "Id": "Habanero16_1_Link_0",
+          "Links": {
+            "Chassis": {
+              "@odata.id": "/redfish/v1/Chassis/chassis"
+            }
+          },
+
+          "Name": "PCIe Device",
+          "PCIeInterface": {
+            "Oem": {
+              "Google": {
+                "LaneStatus": "JSON_STRING of Data"
+              }
+            }
+          }
+        })json");
+        req->Reply();
+      });
+
+  absl::StatusOr<QueryExecutionResult> result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result, IsOk());
+  EXPECT_FALSE(result->query_result.has_status());
+
+  CollectedProperties expected_collected_properties = ParseTextProtoOrDie(R"pb(
+    properties { value { string_value: "JSON_STRING of Data" } }
+  )pb");
+  EXPECT_THAT(
+      result->query_result.collected_properties(),
+      UnorderedElementsAre(Pair("FWState_LaneStatus_PCIeDevices",
+                                IgnoringRepeatedFieldOrdering(EqualsProto(
+                                    expected_collected_properties)))));
+}
+
 TEST_F(QueryPlannerTestRunner,
        QueryPlannerPropertyCollectionWithMissingProperties) {
   DelliciusQuery query = ParseTextProtoOrDie(
