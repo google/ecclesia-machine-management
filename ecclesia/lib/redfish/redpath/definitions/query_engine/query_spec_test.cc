@@ -22,6 +22,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/file/cc_embed_interface.h"
 #include "ecclesia/lib/file/test_filesystem.h"
@@ -43,6 +44,8 @@ MATCHER_P(QueryInfoEq, query_info, "") {
   return ExplainMatchResult(EqualsProto(query_info.query), arg.query,
                             result_listener) &&
          ExplainMatchResult(EqualsProto(query_info.rule), arg.rule,
+                            result_listener) &&
+         ExplainMatchResult(testing::Eq(query_info.timeout), arg.timeout,
                             result_listener);
 }
 
@@ -273,6 +276,70 @@ TEST_F(QuerySpecConvertTest, ConvertFromQueryFilesUnableToReadQueryRule) {
                   {fs_.GetTruePath("/tmp/test/query_a.textproto")},
                   {fs_.GetTruePath("/tmp/test/query_rule.textproto")}),
               IsStatusInternal());
+}
+
+TEST(QuerySpecTest, AddQuerySpecPass) {
+  QuerySpec spec;
+  RedpathQuerySpec query_spec = ParseTextProtoOrDie(
+      R"pb(query {
+             query_id: "query_a"
+             property_sets {
+               properties { property: "property_1" type: STRING }
+             }
+           }
+           rule {
+             redpath_prefix_with_params {
+               expand_configuration { level: 1 type: ONLY_LINKS }
+             }
+           }
+           timeout { seconds: 10 }
+      )pb");
+  EXPECT_THAT(spec.Add(std::move(query_spec)), IsOk());
+  EXPECT_THAT(
+      spec.query_id_to_info,
+      UnorderedElementsAre(
+          Pair("query_a",
+               QueryInfoEq(QuerySpec::QueryInfo{
+                   .query = ParseTextProtoOrDie(
+                       R"pb(query_id: "query_a"
+                            property_sets {
+                              properties { property: "property_1" type: STRING }
+                            })pb"),
+                   .rule = ParseTextProtoOrDie(
+                       R"pb(redpath_prefix_with_params {
+                              expand_configuration { level: 1 type: ONLY_LINKS }
+                            })pb"),
+                   .timeout = absl::Seconds(10)}))));
+}
+
+TEST(QuerySpecTest, AddQuerySpecDuplicateQueryId) {
+  QuerySpec spec;
+  RedpathQuerySpec query_spec = ParseTextProtoOrDie(
+      R"pb(query {
+             query_id: "query_a"
+             property_sets {
+               properties { property: "property_1" type: STRING }
+             }
+           }
+           rule {
+             redpath_prefix_with_params {
+               expand_configuration { level: 1 type: ONLY_LINKS }
+             }
+           }
+           timeout { seconds: 10 }
+      )pb");
+  EXPECT_THAT(spec.Add(std::move(query_spec)), IsOk());
+  RedpathQuerySpec duplicate_query_spec = ParseTextProtoOrDie(
+      R"pb(query {
+             query_id: "query_a"
+             property_sets {
+               properties { property: "property_2" type: STRING }
+             }
+           }
+           timeout { seconds: 15 }
+      )pb");
+  EXPECT_THAT(spec.Add(std::move(duplicate_query_spec)),
+              IsStatusAlreadyExists());
 }
 
 }  // namespace

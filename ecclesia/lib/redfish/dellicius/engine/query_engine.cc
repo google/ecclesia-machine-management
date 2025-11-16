@@ -388,6 +388,18 @@ absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
       std::move(id_to_normalizers)));
 }
 
+absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::CreateQueryEngine(
+    std::vector<RedpathQuerySpec> query_specs, QueryEngineParams engine_params,
+    std::unique_ptr<IdAssigner> id_assigner,
+    RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers) {
+  QuerySpec query_spec;
+  for (RedpathQuerySpec& spec : query_specs) {
+    ECCLESIA_RETURN_IF_ERROR(query_spec.Add(std::move(spec)));
+  }
+  return Create(std::move(query_spec), std::move(engine_params),
+                std::move(id_assigner), std::move(id_to_normalizers));
+}
+
 void QueryEngine::CancelQueryExecution(absl::Notification* notification) {
   // If there are no active query executions, return early.
   if (GetExecuteRefCount() == 0) {

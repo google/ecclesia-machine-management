@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package ecclesia;
+
+import "google/protobuf/duration.proto";
+import "ecclesia/lib/redfish/dellicius/engine/query_rules.proto";
+import "ecclesia/lib/redfish/dellicius/query/query.proto";
+
+message RedpathQuerySpec {
+  // The query to be executed.
+  DelliciusQuery query = 1;
+  // The rules to be applied to the query.
+  QueryRules.RedPathPrefixSetWithQueryParams rule = 2;
+  // The timeout for the query. If not set, the default timeout will be used.
+  google.protobuf.Duration timeout = 3;
+}
