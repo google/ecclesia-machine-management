@@ -793,7 +793,7 @@ GetParams QueryPlanner::GetQueryParamsForRedPath(
 // If the subquery has a root subquery ID, the normalized result is nested under
 // the root subquery result in the `query_execution_context`.
 absl::Status QueryPlanner::TryNormalize(
-    absl::string_view subquery_id,
+    absl::string_view subquery_id, RedfishInterface* redfish_interface,
     QueryExecutionContext* query_execution_context,
     const RedpathNormalizerOptions& normalizer_options) {
   auto find_subquery =
@@ -862,7 +862,7 @@ absl::Status QueryPlanner::TryNormalize(
     }
 
     ApplyCollectAs(find_subquery->second, normalizer_options,
-                   *normalized_query_result, redfish_interface_,
+                   *normalized_query_result, redfish_interface,
                    timeout_manager_.get(), normalizer_,
                    query_execution_context);
 
@@ -1257,7 +1257,8 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
   if (!execution_context.redpath_trie_node->subquery_id.empty() &&
       execution_context.redfish_response.redfish_object != nullptr) {
     absl::Status normalize_status = TryNormalize(
-        execution_context.redpath_trie_node->subquery_id, &execution_context,
+        execution_context.redpath_trie_node->subquery_id, redfish_interface_,
+        &execution_context,
         {.enable_url_annotation = query_resume_options.enable_url_annotation});
     if (!normalize_status.ok()) {
       result.mutable_status()->add_errors(absl::StrCat(
@@ -1325,10 +1326,10 @@ QueryResult QueryPlanner::Resume(QueryResumeOptions query_resume_options) {
         const std::unique_ptr<RedfishObject> &object =
             new_execution_context.redfish_response.redfish_object;
         if (!subquery_id.empty() && object != nullptr) {
-          absl::Status normalize_status =
-              TryNormalize(subquery_id, &new_execution_context,
-                           {.enable_url_annotation =
-                                query_resume_options.enable_url_annotation});
+          absl::Status normalize_status = TryNormalize(
+              subquery_id, redfish_interface_, &new_execution_context,
+              {.enable_url_annotation =
+                   query_resume_options.enable_url_annotation});
           if (normalize_status.ok()) {
             continue;
           }
@@ -1491,7 +1492,7 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
   if (!query_execution_context.redpath_trie_node->subquery_id.empty()) {
     absl::Status normalize_status =
         TryNormalize(query_execution_context.redpath_trie_node->subquery_id,
-                     &query_execution_context,
+                     local_redfish_interface, &query_execution_context,
                      {.enable_url_annotation =
                           query_execution_options.enable_url_annotation});
     if (!normalize_status.ok()) {
@@ -1584,10 +1585,10 @@ QueryPlanner::QueryExecutionResult QueryPlanner::Run(
       for (auto &execution_context : *execution_contexts) {
         // Populate subquery data before processing next expression
         if (!subquery_id.empty()) {
-          absl::Status normalize_status =
-              TryNormalize(subquery_id, &execution_context,
-                           {.enable_url_annotation =
-                                query_execution_options.enable_url_annotation});
+          absl::Status normalize_status = TryNormalize(
+              subquery_id, local_redfish_interface, &execution_context,
+              {.enable_url_annotation =
+                   query_execution_options.enable_url_annotation});
           if (!normalize_status.ok()) {
             result.mutable_status()->add_errors(absl::StrCat(
                 "Unable to normalize: ", normalize_status.message(),

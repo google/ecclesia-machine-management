@@ -229,6 +229,7 @@ class QueryPlanner final : public QueryPlannerIntf {
   // which does not error out if requested properties are not found in Redfish
   // Object.
   absl::Status TryNormalize(absl::string_view subquery_id,
+                            RedfishInterface* redfish_interface,
                             QueryExecutionContext* query_execution_context,
                             const RedpathNormalizerOptions& normalizer_options);
 
