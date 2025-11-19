@@ -635,7 +635,7 @@ void ApplyCollectAs(const DelliciusQuery::Subquery& subquery,
       }
       auto it = normalized_query_result.fields().find(prop_name);
       if (it == normalized_query_result.fields().end()) {
-        return;
+        continue;
       }
       auto id_it = normalized_query_result.fields().find(kIdentifierTag);
       for (const std::string& collect_as_key : prop.collect_as()) {
