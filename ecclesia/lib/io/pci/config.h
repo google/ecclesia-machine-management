@@ -47,9 +47,7 @@
 #ifndef ECCLESIA_LIB_IO_PCI_CONFIG_H_
 #define ECCLESIA_LIB_IO_PCI_CONFIG_H_
 
-#include <cstddef>
 #include <cstdint>
-#include <iterator>
 #include <type_traits>
 
 #include "absl/functional/function_ref.h"
@@ -75,6 +73,8 @@ enum class PcieLinkSpeed : uint8_t {
   kGen3Speed8GT = 3,     // 8 GT/s
   kGen4Speed16GT = 4,    // 16 GT/s
   kGen5Speed32GT = 5,    // 32 GT/s
+  kGen6Speed64GT = 6,    // 64 GT/s
+  kGen7Speed128GT = 7,   // 128 GT/s
 };
 
 // The width of a link. This bit pattern is used by multiple registers in

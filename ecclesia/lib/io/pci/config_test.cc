@@ -107,6 +107,8 @@ TEST(PciConfigSpaceHelperTest, NumToPcieLinkSpeed) {
   EXPECT_EQ(NumToPcieLinkSpeed(8), PcieLinkSpeed::kGen3Speed8GT);
   EXPECT_EQ(NumToPcieLinkSpeed(16), PcieLinkSpeed::kGen4Speed16GT);
   EXPECT_EQ(NumToPcieLinkSpeed(32), PcieLinkSpeed::kGen5Speed32GT);
+  EXPECT_EQ(NumToPcieLinkSpeed(64), PcieLinkSpeed::kGen6Speed64GT);
+  EXPECT_EQ(NumToPcieLinkSpeed(128), PcieLinkSpeed::kGen7Speed128GT);
   EXPECT_EQ(NumToPcieLinkSpeed(99), PcieLinkSpeed::kUnknown);
 }
 
@@ -116,7 +118,9 @@ TEST(PciConfigSpaceHelperTest, PcieGenToLinkSpeed) {
   EXPECT_EQ(PcieGenToLinkSpeed("Gen3"), PcieLinkSpeed::kGen3Speed8GT);
   EXPECT_EQ(PcieGenToLinkSpeed("Gen4"), PcieLinkSpeed::kGen4Speed16GT);
   EXPECT_EQ(PcieGenToLinkSpeed("Gen5"), PcieLinkSpeed::kGen5Speed32GT);
-  EXPECT_EQ(PcieGenToLinkSpeed("Gen6"), PcieLinkSpeed::kUnknown);
+  EXPECT_EQ(PcieGenToLinkSpeed("Gen6"), PcieLinkSpeed::kGen6Speed64GT);
+  EXPECT_EQ(PcieGenToLinkSpeed("Gen7"), PcieLinkSpeed::kGen7Speed128GT);
+  EXPECT_EQ(PcieGenToLinkSpeed("Gen99"), PcieLinkSpeed::kUnknown);
 }
 
 TEST(PciConfigSpaceHelperTest, PcieLinkSpeedToMts) {
@@ -125,6 +129,8 @@ TEST(PciConfigSpaceHelperTest, PcieLinkSpeedToMts) {
   EXPECT_EQ(PcieLinkSpeedToMts(PcieLinkSpeed::kGen3Speed8GT), 8000);
   EXPECT_EQ(PcieLinkSpeedToMts(PcieLinkSpeed::kGen4Speed16GT), 16000);
   EXPECT_EQ(PcieLinkSpeedToMts(PcieLinkSpeed::kGen5Speed32GT), 32000);
+  EXPECT_EQ(PcieLinkSpeedToMts(PcieLinkSpeed::kGen6Speed64GT), 64000);
+  EXPECT_EQ(PcieLinkSpeedToMts(PcieLinkSpeed::kGen7Speed128GT), 128000);
   EXPECT_EQ(PcieLinkSpeedToMts(PcieLinkSpeed::kUnknown), 0);
 }
 

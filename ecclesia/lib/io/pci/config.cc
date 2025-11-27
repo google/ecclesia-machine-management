@@ -57,6 +57,10 @@ PcieLinkSpeed NumToPcieLinkSpeed(double speed_gts) {
       return PcieLinkSpeed::kGen4Speed16GT;
     case 320:
       return PcieLinkSpeed::kGen5Speed32GT;
+    case 640:
+      return PcieLinkSpeed::kGen6Speed64GT;
+    case 1280:
+      return PcieLinkSpeed::kGen7Speed128GT;
     default:
       return PcieLinkSpeed::kUnknown;
   }
@@ -78,6 +82,12 @@ PcieLinkSpeed PcieGenToLinkSpeed(absl::string_view gen) {
   if (gen == "Gen5") {
     return PcieLinkSpeed::kGen5Speed32GT;
   }
+  if (gen == "Gen6") {
+    return PcieLinkSpeed::kGen6Speed64GT;
+  }
+  if (gen == "Gen7") {
+    return PcieLinkSpeed::kGen7Speed128GT;
+  }
   return PcieLinkSpeed::kUnknown;
 }
 
@@ -93,6 +103,10 @@ int PcieLinkSpeedToMts(PcieLinkSpeed speed) {
       return 16000;
     case PcieLinkSpeed::kGen5Speed32GT:
       return 32000;
+    case PcieLinkSpeed::kGen6Speed64GT:
+      return 64000;
+    case PcieLinkSpeed::kGen7Speed128GT:
+      return 128000;
     case PcieLinkSpeed::kUnknown:
     default:
       return 0;
