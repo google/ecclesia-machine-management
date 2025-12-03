@@ -233,6 +233,7 @@ enum class ResourceEntity : int {
   kProcessorCollection,
   kProcessorMetrics,
   kProcessorResetMetrics,
+  kRateLimiterConfig,
   kResourceBlock,
   kResourceBlockCollection,
   kRole,
