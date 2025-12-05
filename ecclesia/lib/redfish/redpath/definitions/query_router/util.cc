@@ -32,6 +32,7 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/apifs/apifs.h"
 #include "ecclesia/lib/redfish/dellicius/engine/query_engine.h"
+#include "ecclesia/lib/redfish/redpath/definitions/node_class/node_class_assignment.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_engine/query_spec.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_router/query_router_spec.pb.h"
 #include "ecclesia/lib/status/macros.h"
@@ -64,7 +65,19 @@ void AddTimeoutFromSelectionSpec(
   }
 }
 
+SelectionSpec::SelectionClass::ServerClass ServerClassFromNodeClass(
+    NodeClassAssignment::NodeClass node_class) {
+  switch (node_class) {
+    case NodeClassAssignment::NODE_CLASS_COMPUTE:
+      return SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE;
+    default:
+      return SelectionSpec::SelectionClass::SERVER_CLASS_UNSPECIFIED;
+  }
+}
+
 }  // namespace
+
+using NodeClass = NodeClassAssignment::NodeClass;
 
 absl::Status ExecuteOnMatchingSelections(
     const google::protobuf::RepeatedPtrField<SelectionSpec::SelectionClass>& select_specs,
@@ -74,7 +87,7 @@ absl::Status ExecuteOnMatchingSelections(
     absl::AnyInvocable<absl::Status()> execute_fn) {
   for (const SelectionSpec::SelectionClass& select : select_specs) {
     if (!select.has_server_type() && select.server_tag().empty() &&
-        select.server_class().empty()) {
+        select.node_class().empty() && select.server_class().empty()) {
       // This means that no select conditions are specified.
       return absl::FailedPreconditionError("No select conditions specified");
     }
@@ -92,9 +105,22 @@ absl::Status ExecuteOnMatchingSelections(
             ? true
             : std::find(select.server_tag().begin(), select.server_tag().end(),
                         server_tag) != select.server_tag().end();
-    bool server_class_matched = true;
-    if (!select.server_class().empty() && server_class.has_value()) {
-      server_class_matched = false;
+    bool node_class_matched = true;
+    if (!select.node_class().empty() && server_class.has_value()) {
+      node_class_matched = false;
+      for (int node_class_select : select.node_class()) {
+        if (node_class_select == NodeClassAssignment::NODE_CLASS_UNSPECIFIED) {
+          return absl::FailedPreconditionError(
+              "Node class cannot be NODE_CLASS_UNSPECIFIED");
+        }
+        if (ServerClassFromNodeClass(
+                static_cast<NodeClass>(node_class_select)) == *server_class) {
+          node_class_matched = true;
+          break;
+        }
+      }
+    } else if (!select.server_class().empty() && server_class.has_value()) {
+      node_class_matched = false;
       for (int server_class_select : select.server_class()) {
         if (server_class_select ==
             SelectionSpec::SelectionClass::SERVER_CLASS_UNSPECIFIED) {
@@ -102,12 +128,12 @@ absl::Status ExecuteOnMatchingSelections(
               "Server class cannot be SERVER_CLASS_UNSPECIFIED");
         }
         if (server_class_select == server_class) {
-          server_class_matched = true;
+          node_class_matched = true;
           break;
         }
       }
     }
-    if (server_type_matched && server_tag_matched && server_class_matched) {
+    if (server_type_matched && server_tag_matched && node_class_matched) {
       ECCLESIA_RETURN_IF_ERROR(execute_fn());
     }
   }
@@ -278,17 +304,17 @@ GetQueryIdToBmcVersionFromRouterSpec(
                           policy.select().server_tag().end(),
                           node_entity_tag) !=
                     policy.select().server_tag().end();
-      bool server_class_matched = true;
+      bool node_class_matched = true;
       if (!policy.select().server_class().empty()) {
-        server_class_matched = false;
+        node_class_matched = false;
         for (int server_class_select : policy.select().server_class()) {
           if (server_class_select == server_class) {
-            server_class_matched = true;
+            node_class_matched = true;
             break;
           }
         }
       }
-      if (server_type_matched && server_tag_matched && server_class_matched) {
+      if (server_type_matched && server_tag_matched && node_class_matched) {
         QueryRouterSpec::VersionConfig::Policy::BmcVersion bmc_version;
 
         if (policy.bmc_version().has_min_version()) {

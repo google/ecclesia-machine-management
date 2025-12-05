@@ -141,6 +141,7 @@ cc_library(
         ":query_router_spec_cc_proto",
         "//ecclesia/lib/apifs",
         "//ecclesia/lib/redfish/dellicius/engine:query_engine_cc",
+        "//ecclesia/lib/redfish/redpath/definitions/node_class:node_class_assignment_cc_proto",
         "//ecclesia/lib/redfish/redpath/definitions/query_engine:query_spec",
         "//ecclesia/lib/status:macros",
         "//ecclesia/lib/time:clock",
