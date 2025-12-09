@@ -102,14 +102,21 @@ class TestRedpathNormalizerImpl final
   TestRedpathNormalizerImpl() = default;
 
  protected:
-  absl::Status Normalize(const RedfishObject &redfish_object,
-                         const DelliciusQuery::Subquery &subquery,
-                         ecclesia::QueryResultData &data_set,
-                         const RedpathNormalizerOptions &options) override {
+  absl::Status Normalize(const RedfishObject& redfish_object,
+                         const DelliciusQuery::Subquery& subquery,
+                         ecclesia::QueryResultData& data_set,
+                         const RedpathNormalizerOptions& options) override {
+    return absl::OkStatus();
+  }
+
+  absl::Status Normalize(const DelliciusQuery& query,
+                         ecclesia::QueryResult& query_result,
+                         const RedpathNormalizerOptions& options) override {
     QueryValue test_value = ParseTextProtoOrDie(R"pb(
       string_value: "normalized_value"
     )pb");
-    (*data_set.mutable_fields())["normalized_key"] = test_value;
+    (*query_result.mutable_data()->mutable_fields())["normalized_key"] =
+        test_value;
     return absl::OkStatus();
   }
 };
