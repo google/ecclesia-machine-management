@@ -275,7 +275,7 @@ class QueryPlanner final : public QueryPlannerIntf {
     return query_cancellation_state_;
   }
 
-  const DelliciusQuery &query_;
+  const DelliciusQuery query_;
   const std::string plan_id_;
   // RedpathNormalizer is thread safe.
   RedpathNormalizer &normalizer_;
