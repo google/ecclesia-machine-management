@@ -74,6 +74,10 @@ class RedpathNormalizer {
                                    const DelliciusQuery::Subquery &query,
                                    ecclesia::QueryResultData &data_set,
                                    const RedpathNormalizerOptions &options) = 0;
+
+    virtual absl::Status Normalize(const DelliciusQuery& query,
+                                   ecclesia::QueryResult& query_result,
+                                   const RedpathNormalizerOptions& options) = 0;
   };
 
   // Returns normalized dataset, possibly empty. RedpathNormalizers can be
@@ -125,6 +129,18 @@ class RedpathNormalizer {
                      options, data_set.fields_size() > 0);
   }
 
+  absl::Status Normalize(const DelliciusQuery& query,
+                         ecclesia::QueryResult& query_result,
+                         const RedpathNormalizerOptions& options) {
+    absl::MutexLock l(&impl_chain_mu_);
+    if (impl_chain_.empty()) return absl::NotFoundError("No normalizers added");
+
+    for (const auto& impl : impl_chain_) {
+      ECCLESIA_RETURN_IF_ERROR(impl->Normalize(query, query_result, options));
+    }
+    return absl::OkStatus();
+  }
+
   void AddRedpathNormalizer(std::unique_ptr<ImplInterface> impl) {
     absl::MutexLock l(&impl_chain_mu_);
     impl_chain_.push_back(std::move(impl));
@@ -147,6 +163,12 @@ class RedpathNormalizerImplDefault final
                          const DelliciusQuery::Subquery &subquery,
                          ecclesia::QueryResultData &data_set,
                          const RedpathNormalizerOptions &options) override;
+
+  absl::Status Normalize(const DelliciusQuery& query,
+                         ecclesia::QueryResult& query_result,
+                         const RedpathNormalizerOptions& options) override {
+    return absl::OkStatus();
+  }
 
  private:
   std::vector<DelliciusQuery::Subquery::RedfishProperty> additional_properties_;
@@ -171,6 +193,12 @@ class RedpathNormalizerImplAddDevpath final
                          ecclesia::QueryResultData &data_set,
                          const RedpathNormalizerOptions &options) override;
 
+  absl::Status Normalize(const DelliciusQuery& query,
+                         ecclesia::QueryResult& query_result,
+                         const RedpathNormalizerOptions& options) override {
+    return absl::OkStatus();
+  }
+
  private:
   absl::Mutex topology_mu_;
   std::optional<NodeTopology> topology_ ABSL_GUARDED_BY(topology_mu_);
@@ -193,6 +221,12 @@ class RedpathNormalizerImplAddMachineBarepath final
                          const DelliciusQuery::Subquery &subquery,
                          ecclesia::QueryResultData &data_set,
                          const RedpathNormalizerOptions &options) override;
+
+  absl::Status Normalize(const DelliciusQuery& query,
+                         ecclesia::QueryResult& query_result,
+                         const RedpathNormalizerOptions& options) override {
+    return absl::OkStatus();
+  }
 
  private:
   std::unique_ptr<IdAssigner> id_assigner_;
