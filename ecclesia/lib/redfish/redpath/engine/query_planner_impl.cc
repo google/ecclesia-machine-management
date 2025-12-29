@@ -948,8 +948,8 @@ void QueryPlanner::TryNormalizeOnFinalQueryResult(
     ecclesia::QueryResult &result,
     const RedpathNormalizerOptions &normalizer_options) {
   for (RedpathNormalizer *additional_normalizer : additional_normalizers_) {
-    absl::Status normalize_status = additional_normalizer->Normalize(
-        *result.mutable_data(), normalizer_options);
+    absl::Status normalize_status =
+        additional_normalizer->Normalize(query_, result, normalizer_options);
     if (!normalize_status.ok()) {
       result.mutable_status()->add_errors(
           absl::StrCat("Unable to normalize with additional normalizers: ",

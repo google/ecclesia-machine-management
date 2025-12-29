@@ -40,6 +40,10 @@ class MockNormalizerImpl : public RedpathNormalizer::ImplInterface {
                ecclesia::QueryResultData& data_set,
                const RedpathNormalizerOptions& options),
               (override));
+  MOCK_METHOD(absl::Status, Normalize,
+              (const DelliciusQuery& query, ecclesia::QueryResult& query_result,
+               const RedpathNormalizerOptions& options),
+              (override));
 };
 
 TEST(RedpathNormalizerTest, NoNormalizersAdded) {
