@@ -174,14 +174,40 @@ absl::StatusOr<QueryValue*> ProcessNextMutableQueryValue(
       absl::StrCat("Path '", subquery_id, "' doesn't exist"));
 }
 
+// Splits the path by '.' and handles escaped '.' characters.
+std::vector<std::string> SplitPath(absl::string_view path) {
+  std::vector<std::string> parts;
+  if (path.empty()) {
+    return parts;
+  }
+  std::string current_part;
+  current_part.reserve(path.size());
+  for (size_t i = 0; i < path.length(); ++i) {
+    if (path[i] == '\\' && i + 1 < path.length() && path[i + 1] == '.') {
+      current_part += '.';
+      i++;  // consume '.'
+    } else if (path[i] == '.') {
+      parts.push_back(current_part);
+      current_part.clear();
+    } else {
+      current_part += path[i];
+    }
+  }
+  parts.push_back(current_part);
+  return parts;
+}
+
 absl::StatusOr<QueryValue*> ProcessQueryValueFromResult(QueryResult& result,
                                                         absl::string_view path,
                                                         Operation operation) {
   if (path.empty()) {
     return absl::InvalidArgumentError("Path is empty.");
   }
-
-  std::queue<absl::string_view> path_parts(absl::StrSplit(path, '.'));
+  std::vector<std::string> path_parts_vec = SplitPath(path);
+  std::queue<absl::string_view> path_parts;
+  for (absl::string_view part : path_parts_vec) {
+    path_parts.push(part);
+  }
   if (path_parts.front() != result.query_id()) {
     return absl::InvalidArgumentError(
         absl::StrCat("Query ID does not match: ", path_parts.front(), " vs ",

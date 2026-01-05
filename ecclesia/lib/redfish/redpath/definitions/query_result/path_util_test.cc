@@ -164,6 +164,30 @@ TEST(GetQueryValueFromResult, GetPropertyName) {
                                                       })pb")));
 }
 
+TEST(GetQueryValueFromResult, GetPropertyNameWithEscapedDots) {
+  QueryResult result = ParseTextProtoOrDie(R"pb(
+    query_id: "query1"
+    data: {
+      fields {
+        key: "subquery_id1"
+        value {
+          subquery_value {
+            fields {
+              key: "Oem.Google.PluginName"
+              value { string_value: "value1" }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  EXPECT_THAT(
+      GetQueryValueFromResult(result,
+                              "query1.subquery_id1.Oem\\.Google\\.PluginName"),
+      IsOkAndHolds(ecclesia::EqualsProto(R"pb(string_value: "value1")pb")));
+}
+
 TEST(GetQueryValueFromResult, IdentifierNotFormatted) {
   QueryResult result = ParseTextProtoOrDie(R"pb(
     query_id: "query1"
@@ -1100,6 +1124,27 @@ INSTANTIATE_TEST_SUITE_P(
                   value {
                     subquery_value {
                       fields {
+                        key: "Oem.Google.PluginName"
+                        value { string_value: "value1" }
+                      }
+                    }
+                  }
+                }
+              }
+            )pb"),
+            .path = "query1.subquery_id1.Oem\\.Google\\.PluginName",
+            .expected_value =
+                ParseTextProtoOrDie(R"pb(string_value: "value1")pb"),
+        },
+        {
+            .result = ParseTextProtoOrDie(R"pb(
+              query_id: "query1"
+              data: {
+                fields {
+                  key: "subquery_id1"
+                  value {
+                    subquery_value {
+                      fields {
                         key: "_id_"
                         value { identifier { local_devpath: "/phys" } }
                       }
@@ -1915,6 +1960,44 @@ INSTANTIATE_TEST_SUITE_P(
                              fields {
                                key: "_id_"
                                value { identifier { local_devpath: "/phys" } }
+                             }
+                           }
+                         }
+                       }
+                     })pb"),
+        },
+        {
+            .result = ParseTextProtoOrDie(R"pb(
+              query_id: "query1"
+              data: {
+                fields {
+                  key: "subquery_id1"
+                  value {
+                    subquery_value {
+                      fields {
+                        key: "Oem.Google.PluginName"
+                        value { string_value: "value1" }
+                      }
+                      fields {
+                        key: "name1"
+                        value { string_value: "value1" }
+                      }
+                    }
+                  }
+                }
+              }
+            )pb"),
+            .path = "query1.subquery_id1.Oem\\.Google\\.PluginName",
+            .expected_output = ParseTextProtoOrDie(
+                R"pb(query_id: "query1"
+                     data {
+                       fields {
+                         key: "subquery_id1"
+                         value {
+                           subquery_value {
+                             fields {
+                               key: "name1"
+                               value { string_value: "value1" }
                              }
                            }
                          }
