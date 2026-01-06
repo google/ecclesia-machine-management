@@ -118,6 +118,7 @@ enum class ResourceEntity : int {
   kGoogleNvmeMetric,
   kGooglePower,
   kGooglePowerCap,
+  kGooglePowerFaultAttachment,
   kGooglePowerTpu,
   kGooglePowerTpuCollection,
   kGooglePowerVCore,
