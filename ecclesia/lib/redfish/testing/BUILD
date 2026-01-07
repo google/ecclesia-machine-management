@@ -103,7 +103,10 @@ cc_library(
     testonly = True,
     srcs = ["grpc_dynamic_mockup_server.cc"],
     hdrs = ["grpc_dynamic_mockup_server.h"],
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//cloud/cluster/tenant_controller/bare_metal:__subpackages__",
+        "//visibility:public",
+    ],
     deps = [
         "//ecclesia/lib/http:codes",
         "//ecclesia/lib/redfish:interface",
