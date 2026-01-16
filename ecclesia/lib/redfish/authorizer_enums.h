@@ -126,6 +126,8 @@ enum class ResourceEntity : int {
   kGooglePowerVCore,
   kGooglePowerVCoreCollection,
   kGoogleProcessor,
+  kGooglePsiMetrics,
+  kGooglePsiMetricsCollection,
   kGoogleRasService,
   kGooglegRPCStatistics,
   kGraphicsController,
