@@ -70,6 +70,11 @@ class FakeRedfishTransport : public RedfishTransport {
     return base_transport_->Delete(path, data);
   }
 
+  absl::StatusOr<Result> Put(absl::string_view path,
+                             absl::string_view data) override {
+    return base_transport_->Put(path, data);
+  }
+
  private:
   std::unique_ptr<RedfishTransport> base_transport_;
   absl::AnyInvocable<bool(absl::string_view, absl::StatusOr<Result>&)>

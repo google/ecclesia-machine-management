@@ -38,9 +38,8 @@ namespace ecclesia {
 class MetricalRedfishTransport : public RedfishTransport {
  public:
   explicit MetricalRedfishTransport(std::unique_ptr<RedfishTransport> base,
-                                    const Clock *clock)
-      : base_transport_(std::move(base)),
-        clock_(clock) {
+                                    const Clock* clock)
+      : base_transport_(std::move(base)), clock_(clock) {
     ResetMetrics();
   }
 
@@ -54,14 +53,16 @@ class MetricalRedfishTransport : public RedfishTransport {
                                absl::string_view data) override;
   absl::StatusOr<Result> Delete(absl::string_view path,
                                 absl::string_view data) override;
+  absl::StatusOr<Result> Put(absl::string_view path,
+                             absl::string_view data) override;
   // Reset metrics once the metric collection is complete.
   static void ResetMetrics();
   static RedfishMetrics GetMetrics();
-  static const RedfishMetrics *GetConstMetrics();
+  static const RedfishMetrics* GetConstMetrics();
 
  private:
   std::unique_ptr<RedfishTransport> base_transport_;
-  const Clock *clock_;
+  const Clock* clock_;
   inline static thread_local RedfishMetrics redfish_transport_metrics_;
 };
 

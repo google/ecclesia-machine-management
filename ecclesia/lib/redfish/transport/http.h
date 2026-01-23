@@ -93,6 +93,8 @@ class HttpRedfishTransport : public RedfishTransport {
       ABSL_LOCKS_EXCLUDED(mutex_) override;
   absl::StatusOr<Result> Delete(absl::string_view path, absl::string_view data)
       ABSL_LOCKS_EXCLUDED(mutex_) override;
+  absl::StatusOr<Result> Put(absl::string_view path, absl::string_view data)
+      ABSL_LOCKS_EXCLUDED(mutex_) override;
 
  private:
   // Simple struct wrappers to define a TCP endpoint or a UDS endpoint.
@@ -114,6 +116,9 @@ class HttpRedfishTransport : public RedfishTransport {
       ABSL_SHARED_LOCKS_REQUIRED(mutex_);
   absl::StatusOr<Result> LockedDelete(absl::string_view path,
                                       absl::string_view data)
+      ABSL_SHARED_LOCKS_REQUIRED(mutex_);
+  absl::StatusOr<Result> LockedPut(absl::string_view path,
+                                   absl::string_view data)
       ABSL_SHARED_LOCKS_REQUIRED(mutex_);
 
   // Actually perform the session auth procedure using member variables.

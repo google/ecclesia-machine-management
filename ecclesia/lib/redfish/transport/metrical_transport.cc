@@ -19,6 +19,7 @@
 #include <memory>
 
 #include "absl/log/check.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
@@ -43,8 +44,8 @@ struct RedfishRequest {
 // synchronization is not needed for thread safety.
 class RedfishTrace final {
  public:
-  RedfishTrace(RedfishRequest request, const Clock *clock,
-               RedfishMetrics *redfish_metrics)
+  RedfishTrace(RedfishRequest request, const Clock* clock,
+               RedfishMetrics* redfish_metrics)
       : request_(request), clock_(clock), redfish_metrics_(redfish_metrics) {
     start_timestamp_ = clock->Now();
   }
@@ -52,8 +53,8 @@ class RedfishTrace final {
     if (redfish_metrics_ == nullptr) return;
     double response_time_ms =
         absl::ToDoubleMilliseconds(clock_->Now() - start_timestamp_);
-    RedfishMetrics::RequestMetadata *metadata;
-    RedfishMetrics::Metrics *uri_metrics =
+    RedfishMetrics::RequestMetadata* metadata;
+    RedfishMetrics::Metrics* uri_metrics =
         &(*redfish_metrics_->mutable_uri_to_metrics_map())[request_.uri];
     if (!has_request_failed_) {
       metadata =
@@ -61,7 +62,7 @@ class RedfishTrace final {
     } else {
       metadata =
           &(*uri_metrics
-               ->mutable_request_type_to_metadata_failures())[request_.type];
+                 ->mutable_request_type_to_metadata_failures())[request_.type];
     }
     if (metadata->request_count() == 0) {
       metadata->set_max_response_time_ms(response_time_ms);
@@ -81,8 +82,8 @@ class RedfishTrace final {
 
  private:
   const RedfishRequest request_;
-  const Clock *clock_;
-  RedfishMetrics *redfish_metrics_;
+  const Clock* clock_;
+  RedfishMetrics* redfish_metrics_;
   absl::Time start_timestamp_;
   // Flag used to populate request metadata for transport failures.
   bool has_request_failed_ = false;
@@ -132,8 +133,8 @@ absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Get(
 absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Post(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
-  auto trace = RedfishTrace({path, "POST"}, clock_,
-                            &redfish_transport_metrics_);
+  auto trace =
+      RedfishTrace({path, "POST"}, clock_, &redfish_transport_metrics_);
   auto result = base_transport_->Post(path, data);
   if (!result.ok()) {
     trace.RecordError();
@@ -143,8 +144,8 @@ absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Post(
 absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Patch(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
-  auto trace = RedfishTrace({path, "PATCH"}, clock_,
-                            &redfish_transport_metrics_);
+  auto trace =
+      RedfishTrace({path, "PATCH"}, clock_, &redfish_transport_metrics_);
   auto result = base_transport_->Patch(path, data);
   if (!result.ok()) {
     trace.RecordError();
@@ -154,9 +155,21 @@ absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Patch(
 absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Delete(
     absl::string_view path, absl::string_view data) {
   CHECK(base_transport_ != nullptr);
-  auto trace = RedfishTrace({path, "DELETE"}, clock_,
-                            &redfish_transport_metrics_);
+  auto trace =
+      RedfishTrace({path, "DELETE"}, clock_, &redfish_transport_metrics_);
   auto result = base_transport_->Delete(path, data);
+  if (!result.ok()) {
+    trace.RecordError();
+  }
+  return result;
+}
+absl::StatusOr<RedfishTransport::Result> MetricalRedfishTransport::Put(
+    absl::string_view path, absl::string_view data) {
+  if (base_transport_ == nullptr) {
+    return absl::InternalError("base_transport_ is null");
+  }
+  auto trace = RedfishTrace({path, "PUT"}, clock_, &redfish_transport_metrics_);
+  auto result = base_transport_->Put(path, data);
   if (!result.ok()) {
     trace.RecordError();
   }

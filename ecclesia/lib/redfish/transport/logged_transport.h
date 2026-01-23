@@ -54,6 +54,8 @@ class RedfishLoggedTransport : public RedfishTransport {
                                absl::string_view data) override;
   absl::StatusOr<Result> Delete(absl::string_view path,
                                 absl::string_view data) override;
+  absl::StatusOr<Result> Put(absl::string_view path,
+                             absl::string_view data) override;
 
  private:
   std::unique_ptr<RedfishTransport> base_transport_;

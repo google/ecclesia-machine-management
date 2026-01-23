@@ -34,6 +34,8 @@ std::string GetHttpMethodName(ecclesia::Protocol protocol) {
       return "DELETE";
     case Protocol::kPatch:
       return "PATCH";
+    case Protocol::kPut:
+      return "PUT";
   }
   // We use assert here to avoid g3 dependencies.
   CHECK(false) << "Unexpected value for Protocol";

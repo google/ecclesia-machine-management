@@ -53,32 +53,32 @@ class JsonMockupVariantImpl : public RedfishVariant::ImplIntf {
 
   CacheState IsFresh() const override { return CacheState::kUnknown; }
 
-  bool GetValue(std::string *val) const override {
+  bool GetValue(std::string* val) const override {
     if (!json_view_.is_string()) return false;
     *val = json_view_.get<std::string>();
     return true;
   }
-  bool GetValue(int32_t *val) const override {
+  bool GetValue(int32_t* val) const override {
     if (!json_view_.is_number_integer()) return false;
     *val = json_view_.get<int32_t>();
     return true;
   }
-  bool GetValue(int64_t *val) const override {
+  bool GetValue(int64_t* val) const override {
     if (!json_view_.is_number_integer()) return false;
     *val = json_view_.get<int64_t>();
     return true;
   }
-  bool GetValue(double *val) const override {
+  bool GetValue(double* val) const override {
     if (!json_view_.is_number()) return false;
     *val = json_view_.get<double>();
     return true;
   }
-  bool GetValue(bool *val) const override {
+  bool GetValue(bool* val) const override {
     if (!json_view_.is_boolean()) return false;
     *val = json_view_.get<bool>();
     return true;
   }
-  bool GetValue(absl::Time *val) const override {
+  bool GetValue(absl::Time* val) const override {
     if (!json_view_.is_string()) return false;
     std::string dt_string = json_view_.get<std::string>();
     std::string err;
@@ -159,7 +159,7 @@ std::string JsonMockupVariantImpl::DebugString() const {
 
 class EditableJsonMockupMockup : public RedfishInterface {
  public:
-  explicit EditableJsonMockupMockup(nlohmann::json *json_model)
+  explicit EditableJsonMockupMockup(nlohmann::json* json_model)
       : json_model_(json_model) {
     if (json_model_ == nullptr) LOG(FATAL) << "Provided json_model is null";
   }
@@ -188,7 +188,7 @@ class EditableJsonMockupMockup : public RedfishInterface {
 
     auto current_json = *json_model_;
     auto path_list = absl::StrSplit(uri, '/');
-    for (const auto &p : path_list) {
+    for (const auto& p : path_list) {
       if (p.empty()) continue;
       if (current_json.is_object()) {
         // Treat it as a pure JSON object:
@@ -265,9 +265,14 @@ class EditableJsonMockupMockup : public RedfishInterface {
     return RedfishVariant(
         absl::UnimplementedError("Updates to json_mockup are not supported."));
   }
+  RedfishVariant PutUri(absl::string_view uri,
+                        absl::string_view data) override {
+    return RedfishVariant(
+        absl::UnimplementedError("Updates to json_mockup are not supported."));
+  }
 
  private:
-  nlohmann::json *json_model_;
+  nlohmann::json* json_model_;
 };
 
 class JsonMockupMockup : public EditableJsonMockupMockup {
@@ -298,7 +303,7 @@ void JsonMockupObject::ForEachProperty(
     absl::FunctionRef<RedfishIterReturnValue(absl::string_view,
                                              RedfishVariant value)>
         itr_func) {
-  for (const auto &items : json_view_.items()) {
+  for (const auto& items : json_view_.items()) {
     if (itr_func(items.key(),
                  RedfishVariant(std::make_unique<JsonMockupVariantImpl>(
                      items.value()))) == RedfishIterReturnValue::kStop) {
@@ -313,7 +318,7 @@ std::unique_ptr<RedfishInterface> NewJsonMockupInterface(
 }
 
 std::unique_ptr<RedfishInterface> NewEditableJsonMockupInterface(
-    nlohmann::json *json_model) {
+    nlohmann::json* json_model) {
   return std::make_unique<EditableJsonMockupMockup>(json_model);
 }
 

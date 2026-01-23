@@ -36,10 +36,10 @@
 namespace ecclesia {
 namespace {
 
-std::string PrintResult(const nlohmann::json &result) {
+std::string PrintResult(const nlohmann::json& result) {
   return JsonToString(result, /*indent=*/1);
 }
-std::string PrintResult(const RedfishTransport::bytes &result) {
+std::string PrintResult(const RedfishTransport::bytes& result) {
   return "<bytes output>";
 }
 
@@ -74,7 +74,7 @@ RedfishLoggedTransport::LogMethodDataAndResult(
     LOG(INFO) << absl::StrCat(
         message,
         log_payload_
-            ? std::visit([&](const auto &body) { return PrintResult(body); },
+            ? std::visit([&](const auto& body) { return PrintResult(body); },
                          result->body)
             : " Success");
   } else {
@@ -122,6 +122,15 @@ absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Delete(
   CHECK(base_transport_ != nullptr);
   return LogMethodDataAndResult("Delete", path, data, [&]() {
     return base_transport_->Delete(path, data);
+  });
+}
+absl::StatusOr<RedfishTransport::Result> RedfishLoggedTransport::Put(
+    absl::string_view path, absl::string_view data) {
+  if (base_transport_ == nullptr) {
+    return absl::InternalError("base_transport_ is null");
+  }
+  return LogMethodDataAndResult("Put", path, data, [this, path, data]() {
+    return base_transport_->Put(path, data);
   });
 }
 

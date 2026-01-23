@@ -827,6 +827,20 @@ class HttpRedfishInterface : public RedfishInterface {
                           ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
+  RedfishVariant PutUri(absl::string_view uri,
+                        absl::string_view data) override {
+    absl::ReaderMutexLock mu(&transport_mutex_);
+    absl::StatusOr<ecclesia::RedfishTransport::Result> result =
+        transport_->Put(uri, data);
+    if (!result.ok()) return RedfishVariant(result.status());
+    int code = result->code;
+    absl::flat_hash_map<std::string, std::string> headers = result->headers;
+    return RedfishVariant(std::make_unique<HttpIntfVariantImpl>(
+                              this, RedfishExtendedPath{std::string(uri)},
+                              std::move(*result), CacheState::kIsFresh),
+                          ecclesia::HttpResponseCodeFromInt(code), headers);
+  }
+
   std::optional<RedfishSupportedFeatures> SupportedFeatures() const override {
     absl::MutexLock lock(&supported_features_mutex_);
     return supported_features_;

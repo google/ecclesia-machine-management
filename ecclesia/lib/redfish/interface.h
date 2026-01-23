@@ -819,6 +819,10 @@ class RedfishInterface {
   virtual RedfishVariant PatchUri(absl::string_view uri,
                                   absl::string_view data) = 0;
 
+  // Put to the given URI and returns result.
+  virtual RedfishVariant PutUri(absl::string_view uri,
+                                absl::string_view data) = 0;
+
   virtual std::optional<RedfishSupportedFeatures> SupportedFeatures() const {
     return std::nullopt;
   }
@@ -903,6 +907,10 @@ class NullRedfish : public RedfishInterface {
   }
   RedfishVariant PatchUri(absl::string_view uri,
                           absl::string_view data) override {
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
+  }
+  RedfishVariant PutUri(absl::string_view uri,
+                        absl::string_view data) override {
     return RedfishVariant(absl::UnimplementedError("NullRedfish"));
   }
 };

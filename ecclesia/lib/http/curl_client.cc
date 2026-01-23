@@ -385,6 +385,13 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
       libcurl_->curl_easy_setopt(curl, CURLOPT_POSTFIELDS,
                                  request->body.data());
       break;
+    case Protocol::kPut:
+      libcurl_->curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+      libcurl_->curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE,
+                                 request->body.size());
+      libcurl_->curl_easy_setopt(curl, CURLOPT_POSTFIELDS,
+                                 request->body.data());
+      break;
   }
 
   struct curl_slist *request_headers = NULL;

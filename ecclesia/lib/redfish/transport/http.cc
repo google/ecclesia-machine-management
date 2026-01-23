@@ -56,7 +56,7 @@ constexpr absl::string_view kLocation = "Location";
 template <typename RestOp>
 absl::StatusOr<RedfishTransport::Result> RestHelper(
     std::unique_ptr<HttpClient::HttpRequest> request, RestOp rest_func,
-    const HttpHeaderCondition &header_for_json) {
+    const HttpHeaderCondition& header_for_json) {
   ECCLESIA_ASSIGN_OR_RETURN(HttpClient::HttpResponse resp,
                             rest_func(std::move(request)));
   RedfishTransport::Result result;
@@ -232,7 +232,7 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Get(
 
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedGet(
     absl::string_view path) {
-  return RestHelper(std::visit([&](const auto &t) ABSL_SHARED_LOCKS_REQUIRED(
+  return RestHelper(std::visit([&](const auto& t) ABSL_SHARED_LOCKS_REQUIRED(
                                    mutex_) { return MakeRequest(t, path, ""); },
                                target_),
                     absl::bind_front(&HttpClient::Get, client_.get()),
@@ -248,7 +248,7 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Post(
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedPost(
     absl::string_view path, absl::string_view data) {
   return RestHelper(
-      std::visit([&](const auto &t) ABSL_SHARED_LOCKS_REQUIRED(
+      std::visit([&](const auto& t) ABSL_SHARED_LOCKS_REQUIRED(
                      mutex_) { return MakeRequest(t, path, data); },
                  target_),
       absl::bind_front(&HttpClient::Post, client_.get()),
@@ -264,7 +264,7 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Patch(
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedPatch(
     absl::string_view path, absl::string_view data) {
   return RestHelper(
-      std::visit([&](const auto &t) ABSL_SHARED_LOCKS_REQUIRED(
+      std::visit([&](const auto& t) ABSL_SHARED_LOCKS_REQUIRED(
                      mutex_) { return MakeRequest(t, path, data); },
                  target_),
       absl::bind_front(&HttpClient::Patch, client_.get()),
@@ -280,10 +280,26 @@ absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Delete(
 absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedDelete(
     absl::string_view path, absl::string_view data) {
   return RestHelper(
-      std::visit([&](const auto &t) ABSL_SHARED_LOCKS_REQUIRED(
+      std::visit([&](const auto& t) ABSL_SHARED_LOCKS_REQUIRED(
                      mutex_) { return MakeRequest(t, path, data); },
                  target_),
       absl::bind_front(&HttpClient::Delete, client_.get()),
+      header_for_json_payload_);
+}
+
+absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::Put(
+    absl::string_view path, absl::string_view data) {
+  absl::MutexLock mu(&mutex_);
+  return LockedPut(path, data);
+}
+
+absl::StatusOr<RedfishTransport::Result> HttpRedfishTransport::LockedPut(
+    absl::string_view path, absl::string_view data) {
+  return RestHelper(
+      std::visit([this, path, data](const auto& t) ABSL_SHARED_LOCKS_REQUIRED(
+                     mutex_) { return MakeRequest(t, path, data); },
+                 target_),
+      absl::bind_front(&HttpClient::Put, client_.get()),
       header_for_json_payload_);
 }
 

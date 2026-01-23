@@ -38,6 +38,8 @@ class RedfishTransportMock : public RedfishTransport {
               (absl::string_view path, absl::string_view data), (override));
   MOCK_METHOD(absl::StatusOr<Result>, Delete,
               (absl::string_view path, absl::string_view data), (override));
+  MOCK_METHOD(absl::StatusOr<Result>, Put,
+              (absl::string_view path, absl::string_view data), (override));
 };
 
 }  // namespace ecclesia

@@ -99,6 +99,11 @@ class RedfishTransport {
                                        absl::string_view data) = 0;
   virtual absl::StatusOr<Result> Delete(absl::string_view path,
                                         absl::string_view data) = 0;
+  virtual absl::StatusOr<Result> Put(absl::string_view path,
+                                     absl::string_view data) {
+    return absl::UnimplementedError(
+        "Put is not implemented yet for this transport.");
+  }
 
   // A Redfish eventing implemented by a server side stream RPC.
   // 1. |data| represents the subscription configuration. TODO(nanzhou): link
@@ -136,6 +141,10 @@ class NullTransport : public RedfishTransport {
   }
   absl::StatusOr<Result> Delete(absl::string_view path,
                                 absl::string_view data) override {
+    return absl::InternalError("NullTransport");
+  }
+  absl::StatusOr<Result> Put(absl::string_view path,
+                             absl::string_view data) override {
     return absl::InternalError("NullTransport");
   }
   absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(

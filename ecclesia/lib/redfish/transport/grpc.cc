@@ -400,6 +400,22 @@ class GrpcRedfishTransport : public RedfishTransport {
         });
   }
 
+  absl::StatusOr<Result> Put(absl::string_view path,
+                             absl::string_view data) override {
+    return DoRpc(
+        path, RequestBody{.json_str = data}, fqdn_, params_,
+        [this, path](grpc::ClientContext& context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response) -> grpc::Status {
+          context.set_credentials(
+              grpc::experimental::MetadataCredentialsFromPlugin(
+                  std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                      std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
+                  GRPC_SECURITY_NONE));
+          return client_->Put(&context, request, response);
+        });
+  }
+
   absl::StatusOr<std::unique_ptr<RedfishEventStream>> Subscribe(
       absl::string_view data, EventCallback&& on_event,
       StopCallback&& on_stop) override {

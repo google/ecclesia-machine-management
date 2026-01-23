@@ -122,6 +122,11 @@ class RedfishTransportWithOverride : public RedfishTransport {
     return redfish_transport_->Delete(path, data);
   }
 
+  absl::StatusOr<Result> Put(absl::string_view path,
+                             absl::string_view data) override {
+    return redfish_transport_->Put(path, data);
+  }
+
  private:
   // If we do not have an override, try to fetch it fresh before calling Get.
   absl::StatusOr<RedfishTransport::Result> TryApplyingOverride(
