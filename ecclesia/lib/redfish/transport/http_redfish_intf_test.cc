@@ -126,12 +126,12 @@ TEST(HttpRedfishInterfaceMultithreadedTest, NoMultithreadedIssuesOnGet) {
   };
 
   // Create a bunch of threads and make them do the same work.
-  auto *thread_factory = GetDefaultThreadFactory();
+  auto* thread_factory = GetDefaultThreadFactory();
   threads.reserve(kThreads);
   for (int i = 0; i < kThreads; ++i) {
     threads.push_back(thread_factory->New(my_getter_func));
   }
-  for (auto &t : threads) {
+  for (auto& t : threads) {
     t->Join();
   }
 }
@@ -150,7 +150,7 @@ class HttpRedfishInterfaceTest : public ::testing::Test {
     auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
         std::move(curl_http_client),
         absl::StrFormat("%s:%d", config.hostname, config.port));
-    auto cache_factory = [this](RedfishTransport *transport) {
+    auto cache_factory = [this](RedfishTransport* transport) {
       return std::make_unique<ecclesia::TimeBasedCache>(transport, &clock_,
                                                         absl::Minutes(1));
     };
@@ -179,7 +179,7 @@ class HttpRedfishInterfaceWithGrpcTest : public ::testing::Test {
         CreateGrpcRedfishTransport(absl::StrCat("localhost:", port), {},
                                    options.GetChannelCredentials());
     CHECK_OK(transport.status());
-    auto cache_factory = [this](RedfishTransport *transport) {
+    auto cache_factory = [this](RedfishTransport* transport) {
       return std::make_unique<ecclesia::TimeBasedCache>(transport, &clock_,
                                                         cache_duration_);
     };
@@ -188,10 +188,13 @@ class HttpRedfishInterfaceWithGrpcTest : public ::testing::Test {
   }
 
   ecclesia::FakeClock clock_;
+  // `notification_` must be declared before `server_` and `intf_` to ensure it
+  // is destroyed after them. The server uses `notification_` in its handlers,
+  // so the notification must outlive the server.
+  absl::Notification notification_;
   std::unique_ptr<ecclesia::GrpcDynamicMockupServer> server_;
   std::unique_ptr<RedfishInterface> intf_;
   absl::Duration cache_duration_ = absl::Seconds(1);
-  absl::Notification notification_;
 };
 
 TEST_F(HttpRedfishInterfaceTest, UpdateTransport) {
@@ -208,7 +211,7 @@ TEST_F(HttpRedfishInterfaceTest, UpdateTransport) {
   "Description": "My Test Resource"
 })json";
   int called_count = 0;
-  server2->AddHttpGetHandler(kChassisUri, [&](ServerRequestInterface *req) {
+  server2->AddHttpGetHandler(kChassisUri, [&](ServerRequestInterface* req) {
     called_count++;
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -325,8 +328,8 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest, GetRootWithTimeout) {
   clock_.Sleep(cache_duration_);
   server_->AddHttpGetHandler(
       "/redfish/v1",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          redfish::v1::Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          redfish::v1::Response* response) {
         response->set_json_str(std::string(expected_str));
         response->set_code(200);
         // Wait to purposefully exceed the timeout.
@@ -399,8 +402,8 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest,
   // Make the server request triggered by the [] operator wait past the timeout.
   server_->AddHttpGetHandler(
       kChassisUri,
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          redfish::v1::Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          redfish::v1::Response* response) {
         response->set_code(200);
         // Wait to purposefully exceed the timeout.
         notification_.WaitForNotification();
@@ -467,8 +470,8 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest, UncachedGetUriWithTimeout) {
   // Make server delay response till after timeout.
   server_->AddHttpGetHandler(
       kChassisUri,
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          redfish::v1::Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          redfish::v1::Response* response) {
         response->set_json_str(std::string(expected_str));
         response->set_code(200);
         notification_.WaitForNotification();
@@ -494,8 +497,8 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest,
   // Make server delay response till after timeout for chassis.
   server_->AddHttpGetHandler(
       kChassisUri,
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          redfish::v1::Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          redfish::v1::Response* response) {
         response->set_json_str(R"json({
               "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
           })json");
@@ -507,8 +510,8 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest,
   // Make server return with simulated time passing of 5 sec for systems query.
   server_->AddHttpGetHandler(
       kSystemUri,
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          redfish::v1::Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          redfish::v1::Response* response) {
         clock.AdvanceTime(system_query_response_time);
         response->set_json_str(R"json({
               "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
@@ -550,7 +553,7 @@ TEST_F(HttpRedfishInterfaceTest, GetUriFragmentObject) {
 TEST_F(HttpRedfishInterfaceTest, EachTest) {
   std::vector<std::string> names;
   intf_->GetRoot()[kRfPropertyChassis].Each().Do(
-      [&names](std::unique_ptr<RedfishObject> &obj) {
+      [&names](std::unique_ptr<RedfishObject>& obj) {
         auto name = obj->GetNodeValue<PropertyName>();
         if (name.has_value()) names.push_back(*std::move(name));
         return RedfishIterReturnValue::kContinue;
@@ -598,7 +601,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedGet) {
     "Name": "MyResource",
     "Description": "My Test Resource"
   })json");
-  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface* req) {
     called_count++;
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -647,7 +650,7 @@ class HttpRedfishInterfaceTestCache : public ::testing::Test {
     auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
         std::move(curl_http_client),
         absl::StrFormat("%s:%d", config.hostname, config.port));
-    auto cache_factory = [this](RedfishTransport *transport) {
+    auto cache_factory = [this](RedfishTransport* transport) {
       return TimeBasedCache::CreateDeepCache(transport, absl::Minutes(1),
                                              &clock_);
     };
@@ -756,7 +759,7 @@ TEST_F(HttpRedfishInterfaceTestCache, GetFromDeepCache) {
   })json");
 
   server_->AddHttpGetHandler(
-      "/redfish/v1/Systems/1", [&](ServerRequestInterface *req) {
+      "/redfish/v1/Systems/1", [&](ServerRequestInterface* req) {
         called_count++;
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -765,7 +768,7 @@ TEST_F(HttpRedfishInterfaceTestCache, GetFromDeepCache) {
       });
 
   server_->AddHttpGetHandler(
-      "/redfish/v1/Systems/1/Memory/1", [&](ServerRequestInterface *req) {
+      "/redfish/v1/Systems/1/Memory/1", [&](ServerRequestInterface* req) {
         memory_called_count++;
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -826,8 +829,8 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest, CachedGetUriWithTimeout) {
   // response past the timeout.
   server_->AddHttpGetHandler(
       kChassisUri,
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          redfish::v1::Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          redfish::v1::Response* response) {
         response->set_code(200);
         notification_.WaitForNotification();
         return grpc::Status::OK;
@@ -851,7 +854,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedPostWorkWithJson) {
     "Name": "MyResource",
     "Description": "My Test Resource"
   })json");
-  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface* req) {
     called_count++;
     int64_t size;
     auto buf = req->ReadRequestBytes(&size);
@@ -904,7 +907,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedPostWorkWithBytes) {
       0x4d, 0x50, 0x4b, 0x44, 0x30, 0x50, 0x31, 0x35,
   };
   std::string test_bytes_str = "MPKD0P15";
-  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface* req) {
     called_count++;
     int64_t size;
     auto buf = req->ReadRequestBytes(&size);
@@ -961,7 +964,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedPostWorkWithSameUriDifferentPayload) {
     "Name": "MyResource2",
     "Description": "My Test Resource2"
   })json");
-  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface* req) {
     int64_t size;
     auto buf = req->ReadRequestBytes(&size);
     ASSERT_THAT(size, Gt(0));
@@ -1047,7 +1050,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetAndPostWorkTogether) {
     "Name": "MyResource",
     "Description": "My Test Resource"
   })json");
-  server_->AddHttpGetHandler("/my/get/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/my/get/uri", [&](ServerRequestInterface* req) {
     get_called_count++;
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -1061,7 +1064,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetAndPostWorkTogether) {
     "Name": "MyResource",
     "Description": "My Test Resource"
   })json");
-  server_->AddHttpPostHandler("/my/post/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpPostHandler("/my/post/uri", [&](ServerRequestInterface* req) {
     post_called_count++;
     int64_t size;
     auto buf = req->ReadRequestBytes(&size);
@@ -1141,7 +1144,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetNotWorkWithBytes) {
       0x4d, 0x50, 0x4b, 0x44, 0x30, 0x50, 0x31, 0x35,
   };
   std::string test_bytes_str = "MPKD0P15";
-  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface* req) {
     called_count++;
     // Construct the expected response. We don't set any headers here, so
     // the Redfish transport will treat the body as bytes.
@@ -1173,7 +1176,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedPostOnlyFirstCallDurationIsValid) {
     "Name": "MyResource",
     "Description": "My Test Resource"
   })json");
-  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface* req) {
     called_count++;
     int64_t size;
     auto buf = req->ReadRequestBytes(&size);
@@ -1234,7 +1237,7 @@ TEST_F(HttpRedfishInterfaceTest, CachedPostOnlyFirstCallDurationIsValid) {
 }
 
 TEST_F(HttpRedfishInterfaceTest, GetWithExpand) {
-  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface* req) {
     req->OverwriteResponseHeader("OData-Version", "4.0");
     SetContentType(req, "application/json");
     // Reply will redirect the chassis
@@ -1260,7 +1263,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithExpand) {
   });
   int called_chassis_expanded_count = 0;
   server_->AddHttpGetHandler("/redfish/v2/Chassis?$expand=*($levels=1)",
-                             [&](ServerRequestInterface *req) {
+                             [&](ServerRequestInterface* req) {
                                SetContentType(req, "application/json");
                                req->OverwriteResponseHeader("OData-Version",
                                                             "4.0");
@@ -1271,7 +1274,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithExpand) {
   int called_fake_item_expanded_count = 0;
   server_->AddHttpGetHandler(
       "/redfish/v1/FakeItemWithoutId?$expand=.($levels=1)",
-      [&](ServerRequestInterface *req) {
+      [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         called_fake_item_expanded_count++;
@@ -1292,7 +1295,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithExpand) {
 
 TEST_F(HttpRedfishInterfaceTest, GetWithoutExpand) {
   int called_expanded_count = 0;
-  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface* req) {
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
     auto reply = nlohmann::json::parse(
@@ -1306,14 +1309,14 @@ TEST_F(HttpRedfishInterfaceTest, GetWithoutExpand) {
     req->Reply();
   });
   server_->AddHttpGetHandler(
-      "/redfish/v1/Chassis", [&](ServerRequestInterface *req) {
+      "/redfish/v1/Chassis", [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(R"json({})json");
         req->Reply();
       });
   server_->AddHttpGetHandler("/redfish/v1/Chassis?$expand=.($levels=1)",
-                             [&](ServerRequestInterface *req) {
+                             [&](ServerRequestInterface* req) {
                                SetContentType(req, "application/json");
                                req->OverwriteResponseHeader("OData-Version",
                                                             "4.0");
@@ -1329,7 +1332,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithoutExpand) {
 }
 
 TEST_F(HttpRedfishInterfaceTest, GetWithFilter) {
-  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface* req) {
     req->OverwriteResponseHeader("OData-Version", "4.0");
     SetContentType(req, "application/json");
     // Reply will redirect the chassis
@@ -1349,7 +1352,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithFilter) {
   int called_chassis_filter_count = 0;
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis?$filter=expression",
-      [&](ServerRequestInterface *req) {
+      [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         called_chassis_filter_count++;
@@ -1365,7 +1368,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithFilter) {
 }
 
 TEST_F(HttpRedfishInterfaceTest, GetWithoutFilter) {
-  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface* req) {
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
     auto reply = nlohmann::json::parse(
@@ -1381,7 +1384,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithoutFilter) {
   int called_chassis_filter_count = 0;
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis?$filter=expression",
-      [&](ServerRequestInterface *req) {
+      [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         called_chassis_filter_count++;
@@ -1410,14 +1413,14 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetWithOperator) {
     "Name": "MyOtherResource",
     "Description": "My Other Test Resource"
   })json");
-  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface* req) {
     parent_called_count++;
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(json_parent.dump());
     req->Reply();
   });
-  server_->AddHttpGetHandler("/my/other/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/my/other/uri", [&](ServerRequestInterface* req) {
     child_called_count++;
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -1484,14 +1487,14 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetWithIterable) {
     "Description": "My Other Test Resource"
   })json");
   server_->AddHttpGetHandler(
-      "/redfish/v1/Chassis", [&](ServerRequestInterface *req) {
+      "/redfish/v1/Chassis", [&](ServerRequestInterface* req) {
         parent_called_count++;
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(json_parent.dump());
         req->Reply();
       });
-  server_->AddHttpGetHandler(kChassisUri, [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler(kChassisUri, [&](ServerRequestInterface* req) {
     child_called_count++;
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -1544,13 +1547,13 @@ TEST_F(HttpRedfishInterfaceTest, GetFreshWithGetMethod) {
     "Name": "MyOtherResource",
     "Description": "My Other Test Resource"
   })json");
-  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface* req) {
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(json_parent.dump());
     req->Reply();
   });
-  server_->AddHttpGetHandler("/my/other/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/my/other/uri", [&](ServerRequestInterface* req) {
     child_called_count++;
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -1587,7 +1590,7 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGet) {
     "Name": "MyResource",
     "Description": "My Test Resource"
   })json");
-  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface* req) {
     called_count++;
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -1655,7 +1658,7 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadDoesNotDoubleGetUncached) {
     "Name": "MyResource",
     "Description": "My Test Resource"
   })json");
-  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface* req) {
     called_count++;
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -1701,7 +1704,7 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadFailsWithNoOdataId) {
     "Name": "MyResource",
     "Description": "My Test Resource With no @odata.id property"
   })json");
-  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface* req) {
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(result_json.dump());
@@ -1720,7 +1723,7 @@ TEST_F(HttpRedfishInterfaceTest, EnsureFreshPayloadFailsWithNoOdataId) {
 
 TEST_F(HttpRedfishInterfaceTest, PostHandler) {
   bool called = false;
-  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface* req) {
     int64_t size;
     auto buf = req->ReadRequestBytes(&size);
     ASSERT_THAT(size, Gt(0));
@@ -1815,7 +1818,7 @@ TEST_F(HttpRedfishInterfaceTest, DeleteHandler) {
   bool called = false;
   server_->AddHttpDeleteHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -1835,7 +1838,7 @@ TEST_F(HttpRedfishInterfaceTest, DeleteHandler) {
 
 TEST_F(HttpRedfishInterfaceTest, PatchHandler) {
   bool called = false;
-  server_->AddHttpPatchHandler("/my/uri", [&](ServerRequestInterface *req) {
+  server_->AddHttpPatchHandler("/my/uri", [&](ServerRequestInterface* req) {
     int64_t size;
     auto buf = req->ReadRequestBytes(&size);
     ASSERT_THAT(size, Gt(0));
@@ -1935,7 +1938,7 @@ TEST_F(HttpRedfishInterfaceTest, GetUnresolvedNavigationProperty) {
   })json");
 
   server_->AddHttpGetHandler(
-      "/redfish/v1/Chassis", [&](ServerRequestInterface *req) {
+      "/redfish/v1/Chassis", [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(return_json.dump());
@@ -1953,14 +1956,13 @@ TEST_F(HttpRedfishInterfaceTest, GetUnresolvedNavigationProperty) {
 }
 
 TEST_F(HttpRedfishInterfaceTest, SubscribeReturnsUnimplementedError) {
-  EXPECT_THAT(
-      intf_->Subscribe(
-          "", [](const RedfishVariant &) {}, [](const absl::Status &) {}),
-      ecclesia::IsStatusUnimplemented());
+  EXPECT_THAT(intf_->Subscribe(
+                  "", [](const RedfishVariant&) {}, [](const absl::Status&) {}),
+              ecclesia::IsStatusUnimplemented());
 }
 
 TEST_F(HttpRedfishInterfaceTest, GetWithTopSkip) {
-  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface* req) {
     req->OverwriteResponseHeader("OData-Version", "4.0");
     SetContentType(req, "application/json");
     // Reply will redirect the chassis
@@ -1979,7 +1981,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithTopSkip) {
   });
   int called_top_skip_query_count = 0;
   server_->AddHttpGetHandler(
-      "/redfish/v1/Chassis?$top=1111", [&](ServerRequestInterface *req) {
+      "/redfish/v1/Chassis?$top=1111", [&](ServerRequestInterface* req) {
         req->OverwriteResponseHeader("OData-Version", "4.0");
         SetContentType(req, "application/json");
         called_top_skip_query_count++;
@@ -2001,7 +2003,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithTopSkip) {
 }
 
 TEST_F(HttpRedfishInterfaceTest, GetWithoutTopSkip) {
-  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface* req) {
     req->OverwriteResponseHeader("OData-Version", "4.0");
     SetContentType(req, "application/json");
     // Reply will redirect the chassis
@@ -2017,7 +2019,7 @@ TEST_F(HttpRedfishInterfaceTest, GetWithoutTopSkip) {
   });
   int called_top_query_count = 0;
   server_->AddHttpGetHandler(
-      "/redfish/v1/Chassis?$top=1111", [&](ServerRequestInterface *req) {
+      "/redfish/v1/Chassis?$top=1111", [&](ServerRequestInterface* req) {
         req->OverwriteResponseHeader("OData-Version", "4.0");
         SetContentType(req, "application/json");
         called_top_query_count++;
@@ -2048,7 +2050,7 @@ TEST_F(HttpRedfishInterfaceTest, LogServiceCacheBlocklist) {
   int call_count = 0;
 
   server_->AddHttpGetHandler(
-      std::string(kLogEntriesPath), [&](ServerRequestInterface *req) {
+      std::string(kLogEntriesPath), [&](ServerRequestInterface* req) {
         call_count++;
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -2080,7 +2082,7 @@ TEST_F(HttpRedfishInterfaceTest, LogServiceCacheBlocklist) {
   auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
       std::move(curl_http_client),
       absl::StrFormat("%s:%d", config.hostname, config.port));
-  auto cache_factory = [this](RedfishTransport *transport) {
+  auto cache_factory = [this](RedfishTransport* transport) {
     return std::make_unique<ecclesia::TimeBasedCache>(
         transport, &clock_, absl::Minutes(1), std::nullopt, false,
         /*enable_blocklist=*/false);
