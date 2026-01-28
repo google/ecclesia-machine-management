@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -26,6 +27,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "absl/types/span.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "grpcpp/security/credentials.h"

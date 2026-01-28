@@ -179,7 +179,7 @@ class RedfishOverrideTest : public ::testing::Test {
             .code = 200, .body = expected_collection_expand_}));
   }
   std::unique_ptr<RedfishTransportMock> transport_;
-  RedfishTransportMock *transport_mock_ptr_;
+  RedfishTransportMock* transport_mock_ptr_;
   nlohmann::json expected_result1_;
   nlohmann::json expected_result2_;
   nlohmann::json expected_collection_;

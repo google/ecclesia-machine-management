@@ -48,6 +48,7 @@
 #include "grpcpp/support/config.h"
 #include "grpcpp/support/status.h"
 #include "grpcpp/support/string_ref.h"
+#include "single_include/nlohmann/json.hpp"
 #include "google/protobuf/message.h"
 #include "google/protobuf/text_format.h"
 #include "re2/re2.h"
@@ -69,8 +70,8 @@ class GrpcCredentialsForOverride : public grpc::MetadataCredentialsPlugin {
   // gRPC credentials.
   grpc::Status GetMetadata(
       grpc::string_ref /*service_url*/, grpc::string_ref /*method_name*/,
-      const grpc::AuthContext & /*channel_auth_context*/,
-      std::multimap<grpc::string, grpc::string> *metadata) override {
+      const grpc::AuthContext& /*channel_auth_context*/,
+      std::multimap<grpc::string, grpc::string>* metadata) override {
     metadata->insert(std::make_pair(kTargetKey, target_fqdn_));
     metadata->insert(std::make_pair(kResourceKey, "/redfish/v1"));
     return grpc::Status::OK;
@@ -80,7 +81,7 @@ class GrpcCredentialsForOverride : public grpc::MetadataCredentialsPlugin {
   std::string target_fqdn_;
 };
 
-absl::Status GetBinaryProto(absl::string_view path, google::protobuf::Message *message) {
+absl::Status GetBinaryProto(absl::string_view path, google::protobuf::Message* message) {
   std::ifstream ifs((std::string(path)));
   if (!ifs) {
     return absl::InvalidArgumentError(
@@ -93,9 +94,9 @@ absl::Status GetBinaryProto(absl::string_view path, google::protobuf::Message *m
   return absl::OkStatus();
 }
 
-absl::Status JsonReplace(nlohmann::json &json,
-                         const OverrideValue &override_value,
-                         RedfishTransport *transport) {
+absl::Status JsonReplace(nlohmann::json& json,
+                         const OverrideValue& override_value,
+                         RedfishTransport* transport) {
   if (override_value.has_value()) {
     nlohmann::json replace_json = ValueToJson(override_value.value());
     if (json.type() != replace_json.type()) {
@@ -111,10 +112,10 @@ absl::Status JsonReplace(nlohmann::json &json,
   return absl::InvalidArgumentError("Replace Json not found.");
 }
 
-absl::Status JsonAdd(nlohmann::json &json,
-                     const IndividualObjectIdentifier &object_identifier,
-                     const OverrideValue &override_value,
-                     RedfishTransport *transport) {
+absl::Status JsonAdd(nlohmann::json& json,
+                     const IndividualObjectIdentifier& object_identifier,
+                     const OverrideValue& override_value,
+                     RedfishTransport* transport) {
   nlohmann::json add_json;
   if (override_value.has_value()) {
     add_json = ValueToJson(override_value.value());
@@ -157,8 +158,8 @@ absl::Status JsonAdd(nlohmann::json &json,
   return absl::InvalidArgumentError("Added Json not found.");
 }
 
-absl::Status JsonClear(nlohmann::json &json,
-                       const IndividualObjectIdentifier &object_identifier) {
+absl::Status JsonClear(nlohmann::json& json,
+                       const IndividualObjectIdentifier& object_identifier) {
   if (object_identifier.has_field_name()) {
     json.erase(json.find(object_identifier.field_name()));
     return absl::OkStatus();
@@ -191,10 +192,10 @@ absl::Status JsonClear(nlohmann::json &json,
 // Recursively find the target sub-JSON object in a JSON object till, then call
 // the action functions (JsonReplace, JsonAdd, JsonClear). The idx is the index
 // to do recursive find with object_identifier
-absl::Status FindObjectAndAct(nlohmann::json &json,
-                              const ObjectIdentifier &object_identifier,
-                              int idx, const OverrideValue &override_value,
-                              ecclesia::RedfishTransport *transport,
+absl::Status FindObjectAndAct(nlohmann::json& json,
+                              const ObjectIdentifier& object_identifier,
+                              int idx, const OverrideValue& override_value,
+                              ecclesia::RedfishTransport* transport,
                               OverrideField::ActionCase action) {
   if (action == OverrideField::ActionCase::kActionReplace &&
       idx == object_identifier.individual_object_identifier_size()) {
@@ -265,9 +266,9 @@ absl::Status FindObjectAndAct(nlohmann::json &json,
   return absl::InvalidArgumentError("Required Json not found.");
 }
 // Updating the result by the specific OverrideField
-absl::Status ResultUpdateHelper(const OverrideField &field,
-                                nlohmann::json &json,
-                                RedfishTransport *transport) {
+absl::Status ResultUpdateHelper(const OverrideField& field,
+                                nlohmann::json& json,
+                                RedfishTransport* transport) {
   switch (field.Action_case()) {
     case OverrideField::kActionReplace: {
       auto result_check =
@@ -306,10 +307,10 @@ absl::Status ResultUpdateHelper(const OverrideField &field,
 }
 
 absl::Status ResultExpandUpdateHelper(
-    const OverridePolicy &override_policy,
-    const RE2AndOverrideContext &re2_and_override_context, nlohmann::json *json,
-    RedfishTransport *transport,
-    absl::flat_hash_set<nlohmann::json *> &visited_json) {
+    const OverridePolicy& override_policy,
+    const RE2AndOverrideContext& re2_and_override_context, nlohmann::json* json,
+    RedfishTransport* transport,
+    absl::flat_hash_set<nlohmann::json*>& visited_json) {
   if (visited_json.contains(json)) {
     return absl::OkStatus();
   }
@@ -379,7 +380,7 @@ absl::StatusOr<OverridePolicy> TryGetOverridePolicy(
 
 absl::StatusOr<OverridePolicy> TryGetOverridePolicy(
     absl::string_view hostname, std::optional<int> port,
-    const std::shared_ptr<grpc::ChannelCredentials> &creds) {
+    const std::shared_ptr<grpc::ChannelCredentials>& creds) {
   OverridePolicy policy;
   std::string service_address(port.has_value()
                                   ? absl::StrCat(hostname, ":", *port)
@@ -428,7 +429,7 @@ OverridePolicy GetOverridePolicy(absl::string_view policy_file_path) {
 
 OverridePolicy GetOverridePolicy(
     absl::string_view hostname, std::optional<int> port,
-    const std::shared_ptr<grpc::ChannelCredentials> &creds) {
+    const std::shared_ptr<grpc::ChannelCredentials>& creds) {
   absl::StatusOr<OverridePolicy> policy =
       TryGetOverridePolicy(hostname, port, creds);
   if (!policy.ok()) {
@@ -445,7 +446,7 @@ RedfishTransportWithOverride::TryApplyingOverride(
   if (!std::holds_alternative<nlohmann::json>(get_result.body)) {
     return get_result;
   }
-  auto &json = std::get<nlohmann::json>(get_result.body);
+  auto& json = std::get<nlohmann::json>(get_result.body);
   // Try to fetch the override policy.
   if (!has_override_policy_) {
     auto override_policy = override_policy_cb_();
@@ -469,7 +470,7 @@ RedfishTransportWithOverride::TryApplyingOverride(
   if (extend_pos != std::string::npos) {
     checked_path = path.substr(0, extend_pos);
   }
-  absl::flat_hash_set<nlohmann::json *> visited_json;
+  absl::flat_hash_set<nlohmann::json*> visited_json;
   if (auto status = ResultExpandUpdateHelper(
           override_policy_, override_re2_and_content_, &json,
           redfish_transport_.get(), visited_json);
