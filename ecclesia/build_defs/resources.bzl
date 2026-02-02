@@ -8,7 +8,7 @@ proto_library = native.proto_library
 
 _DEFAULT_VISIBILITY = ["//ecclesia:mmanager_users"]
 
-def resource_proto(resource, name, srcs, deps = None):
+def resource_proto(resource, name, srcs, deps = None, option_deps = []):
     """Generates a standardized set of proto libraries for a given MManager Resource.
 
     <name>_proto    - proto_library
@@ -19,6 +19,7 @@ def resource_proto(resource, name, srcs, deps = None):
           provided).
       srcs: Sources for the resulting proto_library.
       deps: Additional dependencies for the resulting proto_library.
+      option_deps: Additional option dependencies for the resulting proto_library.
     """
 
     # Fail if name was provided with '_proto' suffix. '_proto' suffix is added automatically via
@@ -33,6 +34,7 @@ def resource_proto(resource, name, srcs, deps = None):
         srcs = srcs,
         exports = ["//platforms/ecclesia/mmanager/service/resource/" + resource + ":" + name + "_proto"],
         deps = deps,
+        option_deps = option_deps,
         visibility = _DEFAULT_VISIBILITY,
     )
 
@@ -55,5 +57,8 @@ def resource_proto(resource, name, srcs, deps = None):
 
 register_extension_info(
     extension = resource_proto,
-    label_regex_for_dep = "{extension_name}_proto",
+    label_regex_map = {
+        "deps": "deps:{extension_name}_proto",
+        "option_deps": "option_deps:{extension_name}_proto",
+    },
 )
