@@ -19,12 +19,14 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/redfish_override/rf_override.pb.h"
@@ -357,6 +359,99 @@ TEST_F(RedfishOverrideTest, GetReplaceValue) {
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
   EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
+}
+
+TEST_F(RedfishOverrideTest, GetReplaceValueWithTimeout) {
+  OverridePolicy policy = ParseTextProtoOrDie(R"pb(
+    override_content_map_uri: {
+      key: "/expected/result/1"
+      value: {
+        override_field:
+        [ {
+          action_replace: {
+            object_identifier: {
+              individual_object_identifier:
+              [ { field_name: "TestString" }]
+            }
+            override_value: {
+              value: { string_value: "OverrideReplaceByField" }
+            }
+          }
+        }
+          , {
+            action_replace: {
+              object_identifier: {
+                individual_object_identifier:
+                [ { field_name: "TestArray" }
+                  , {
+                    array_field: {
+                      field_name: "TestNumber"
+                      value: { number_value: 1234 }
+                    }
+                  }
+                  , { field_name: "TestNumber" }]
+              }
+              override_value: { value: { number_value: 54321 } }
+            }
+          }
+          , {
+            action_replace: {
+              object_identifier: {
+                individual_object_identifier:
+                [ { field_name: "TestArray" }
+                  , { array_idx: 0 }
+                  , { field_name: "TestStruct" }]
+              }
+              override_value: {
+                value: { string_value: "OverrideReplaceByIndex" }
+              }
+            }
+          }]
+      }
+    }
+  )pb");
+  auto rf_override = std::make_unique<RedfishTransportWithOverride>(
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
+
+  absl::string_view expected_get_str = R"json({
+    "@odata.id": "/expected/result/1",
+    "TestString": "OverrideReplaceByField",
+    "TestNumber": 123.0,
+    "TestBool": true,
+    "TestArray":[
+      {"TestStruct":"OverrideReplaceByIndex"},
+      {
+        "TestStruct":"tests1"
+      },
+      {
+        "TestStruct": "tests2"
+      },
+      {
+        "TestNumber": 54321.0
+      },
+      "TestArrayString",
+      [ "TestArrayInArray1" ]
+    ]})json";
+  nlohmann::json expected_get =
+      nlohmann::json::parse(expected_get_str, nullptr, false);
+
+  EXPECT_CALL(*transport_mock_ptr_, Get("/expected/result/1", absl::Seconds(1)))
+      .WillOnce(Return(
+          RedfishTransport::Result{.code = 200, .body = expected_result1_}));
+  absl::StatusOr<RedfishTransport::Result> res_get =
+      rf_override->Get("/expected/result/1", absl::Seconds(1));
+  ASSERT_THAT(res_get, IsOk());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
+  EXPECT_THAT(res_get->code, Eq(200));
+
+  // Test timeout behavior.
+  EXPECT_CALL(*transport_mock_ptr_,
+              Get("/expected/result/1", absl::ZeroDuration()))
+      .WillOnce(Return(absl::DeadlineExceededError("Timeout")));
+  res_get = rf_override->Get("/expected/result/1", absl::ZeroDuration());
+  ASSERT_THAT(res_get, IsStatusDeadlineExceeded());
 }
 
 TEST_F(RedfishOverrideTest, GetExpandReplaceValue) {
