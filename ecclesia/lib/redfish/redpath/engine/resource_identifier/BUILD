@@ -81,3 +81,41 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "pcie_device_extractor",
+    srcs = ["extractors/pcie_device.cc"],
+    hdrs = ["extractors/pcie_device.h"],
+    deps = [
+        ":extractor",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish:property_definitions",
+        "@com_google_absl//absl/log:die_if_null",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_json//:json",
+    ],
+)
+
+cc_test(
+    name = "pcie_device_extractor_test",
+    srcs = ["extractors/pcie_device_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/indus_hmb_shim:mockup.shar",
+    ],
+    deps = [
+        ":extractor",
+        ":pcie_device_extractor",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "//ecclesia/lib/redfish/redpath/engine:normalizer",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "//ecclesia/lib/testing:proto",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
