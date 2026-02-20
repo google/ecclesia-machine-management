@@ -270,6 +270,13 @@ TEST(RedfishInterface, NullRedfishIsStaticInterface) {
   EXPECT_THAT(interface->IsStaticInterface(), Eq(true));
 }
 
+TEST(RedfishInterface, NullRedfishPutIsUnimplemented) {
+  std::unique_ptr<RedfishInterface> interface = std::make_unique<NullRedfish>();
+  EXPECT_THAT(interface->PutUri("test", "test").status(),
+              ecclesia::IsStatusUnimplemented());
+  EXPECT_THAT(interface->PutUri("test", {{"", ""}}).status(),
+              ecclesia::IsStatusUnimplemented());
+}
 TEST(RedfishVariant, RedfishQueryParamTop) {
   EXPECT_EQ(RedfishQueryParamTop(/*numMembers*/ 100).ToString(), "$top=100");
 }

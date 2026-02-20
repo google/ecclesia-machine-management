@@ -49,7 +49,7 @@ namespace {
 using ::redfish::v1::Request;
 
 absl::Status SetGrpcResponseAndReturnStatus(RedfishVariant variant,
-                                            redfish::v1::Response *response) {
+                                            redfish::v1::Response* response) {
   if (!variant.httpcode().has_value()) {
     return absl::InternalError("The response doesn't have HTTP code.");
   }
@@ -66,8 +66,8 @@ absl::Status SetGrpcResponseAndReturnStatus(RedfishVariant variant,
 }  // namespace
 
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Get(
-    grpc::ServerContext *context, const Request *request,
-    redfish::v1::Response *response) {
+    grpc::ServerContext* context, const Request* request,
+    redfish::v1::Response* response) {
   absl::MutexLock mu(&patch_lock_);
   if (auto itr = rest_get_handlers_.find(request->url());
       itr != rest_get_handlers_.end()) {
@@ -77,8 +77,8 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Get(
       redfish_intf_->UncachedGetUri(request->url()), response));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Post(
-    grpc::ServerContext *context, const Request *request,
-    redfish::v1::Response *response) {
+    grpc::ServerContext* context, const Request* request,
+    redfish::v1::Response* response) {
   absl::MutexLock mu(&patch_lock_);
   if (auto itr = rest_post_handlers_.find(request->url());
       itr != rest_post_handlers_.end()) {
@@ -91,8 +91,8 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Post(
       redfish_intf_->PostUri(request->url(), message), response));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Patch(
-    grpc::ServerContext *context, const Request *request,
-    redfish::v1::Response *response) {
+    grpc::ServerContext* context, const Request* request,
+    redfish::v1::Response* response) {
   absl::MutexLock mu(&patch_lock_);
   if (auto itr = rest_patch_handlers_.find(request->url());
       itr != rest_patch_handlers_.end()) {
@@ -105,22 +105,29 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Patch(
       redfish_intf_->PatchUri(request->url(), message), response));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Put(
-    grpc::ServerContext *context, const Request *request,
-    redfish::v1::Response *response) {
+    grpc::ServerContext* context, const Request* request,
+    redfish::v1::Response* response) {
+  absl::MutexLock mu(&patch_lock_);  // NOLINT
+  if (auto itr = rest_put_handlers_.find(request->url());
+      itr != rest_put_handlers_.end()) {
+    return itr->second(context, request, response);
+  }
+
+  // Add implementation once libredfish's RawIntf supports PUT.
   return StatusToGrpcStatus(
       absl::UnimplementedError("Put RPC is not implemented yet."));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Delete(
-    grpc::ServerContext *context, const Request *request,
-    redfish::v1::Response *response) {
+    grpc::ServerContext* context, const Request* request,
+    redfish::v1::Response* response) {
   // DELETE.
   return StatusToGrpcStatus(
       absl::UnimplementedError("Delete RPC is not implemented yet."));
 }
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::GetOverridePolicy(
-    ::grpc::ServerContext *context,
-    const ::redfish::v1::GetOverridePolicyRequest *request,
-    ::redfish::v1::GetOverridePolicyResponse *response) {
+    ::grpc::ServerContext* context,
+    const ::redfish::v1::GetOverridePolicyRequest* request,
+    ::redfish::v1::GetOverridePolicyResponse* response) {
   absl::MutexLock mu(&patch_lock_);
   if (!override_policy_str_.empty()) {
     response->set_policy(override_policy_str_);
@@ -145,6 +152,12 @@ void GrpcDynamicMockupServer::RedfishV1Impl::AddHttpPostHandler(
     ABSL_LOCKS_EXCLUDED(patch_lock_) {
   absl::MutexLock mu(&patch_lock_);
   rest_post_handlers_[uri] = std::move(handler);
+}
+void GrpcDynamicMockupServer::RedfishV1Impl::AddHttpPutHandler(
+    absl::string_view uri, HandlerFunc handler)
+    ABSL_LOCKS_EXCLUDED(patch_lock_) {
+  absl::MutexLock mu(&patch_lock_);  // NOLINT
+  rest_put_handlers_[uri] = std::move(handler);
 }
 void GrpcDynamicMockupServer::RedfishV1Impl::AddOverridePolicy(
     absl::string_view override_policy_str) ABSL_LOCKS_EXCLUDED(patch_lock_) {
@@ -225,6 +238,10 @@ void GrpcDynamicMockupServer::AddHttpPatchHandler(absl::string_view uri,
 void GrpcDynamicMockupServer::AddHttpPostHandler(absl::string_view uri,
                                                  HandlerFunc handler) {
   redfish_v1_impl_->AddHttpPostHandler(uri, std::move(handler));
+}
+void GrpcDynamicMockupServer::AddHttpPutHandler(absl::string_view uri,
+                                                HandlerFunc handler) {
+  redfish_v1_impl_->AddHttpPutHandler(uri, std::move(handler));
 }
 void GrpcDynamicMockupServer::AddOverridePolicy(
     absl::string_view override_policy_str) {

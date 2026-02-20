@@ -270,6 +270,12 @@ class EditableJsonMockupMockup : public RedfishInterface {
     return RedfishVariant(
         absl::UnimplementedError("Updates to json_mockup are not supported."));
   }
+  RedfishVariant PutUri(
+      absl::string_view uri,
+      absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
+    return RedfishVariant(
+        absl::UnimplementedError("Updates to json_mockup are not supported."));
+  }
 
  private:
   nlohmann::json* json_model_;

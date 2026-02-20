@@ -841,6 +841,12 @@ class HttpRedfishInterface : public RedfishInterface {
                           ecclesia::HttpResponseCodeFromInt(code), headers);
   }
 
+  RedfishVariant PutUri(
+      absl::string_view uri,
+      absl::Span<const std::pair<std::string, ValueVariant>> kv_span) override {
+    return PutUri(uri, KvSpanToJson(kv_span).dump());
+  }
+
   std::optional<RedfishSupportedFeatures> SupportedFeatures() const override {
     absl::MutexLock lock(&supported_features_mutex_);
     return supported_features_;

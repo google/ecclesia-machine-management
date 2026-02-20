@@ -56,7 +56,7 @@ constexpr auto kSupportedProtocols = CURLPROTO_HTTP | CURLPROTO_HTTPS;
 
 // SetCurlOpts is an overloaded helper function for setting curl options from
 // the different credential configs supported.
-void SetCurlOpts(LibCurl *libcurl, CURL *curl, const HttpCredential &creds) {
+void SetCurlOpts(LibCurl* libcurl, CURL* curl, const HttpCredential& creds) {
   libcurl->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false);
   libcurl->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, false);
   if (!creds.username().empty() && !creds.password().empty()) {
@@ -65,7 +65,7 @@ void SetCurlOpts(LibCurl *libcurl, CURL *curl, const HttpCredential &creds) {
         absl::StrCat(creds.username(), ":", creds.password()));
   }
 }
-void SetCurlOpts(LibCurl *libcurl, CURL *curl, const TlsCredential &creds) {
+void SetCurlOpts(LibCurl* libcurl, CURL* curl, const TlsCredential& creds) {
   libcurl->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST,
                             creds.verify_hostname());
   libcurl->curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, creds.verify_peer());
@@ -88,125 +88,125 @@ std::unique_ptr<LibCurlProxy> LibCurlProxy::CreateInstance() {
   return std::make_unique<LibCurlProxy>();
 }
 
-CURL *LibCurlProxy::curl_easy_init() { return ::curl_easy_init(); }
+CURL* LibCurlProxy::curl_easy_init() { return ::curl_easy_init(); }
 
-void LibCurlProxy::curl_easy_reset(CURL *curl) { ::curl_easy_reset(curl); }
+void LibCurlProxy::curl_easy_reset(CURL* curl) { ::curl_easy_reset(curl); }
 
-CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
+CURLcode LibCurlProxy::curl_easy_setopt(CURL* curl, CURLoption option,
                                         bool param) {
   return ::curl_easy_setopt(curl, option, param);
 }
 
-CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
+CURLcode LibCurlProxy::curl_easy_setopt(CURL* curl, CURLoption option,
                                         uint32_t param) {
   return ::curl_easy_setopt(curl, option, param);
 }
 
-CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
+CURLcode LibCurlProxy::curl_easy_setopt(CURL* curl, CURLoption option,
                                         uint64_t param) {
   return ::curl_easy_setopt(curl, option, param);
 }
 
-CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
-                                        size_t (*param)(void *, size_t, size_t,
-                                                        FILE *)) {
+CURLcode LibCurlProxy::curl_easy_setopt(CURL* curl, CURLoption option,
+                                        size_t (*param)(void*, size_t, size_t,
+                                                        FILE*)) {
   return ::curl_easy_setopt(curl, option, param);
 }
 
-CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
+CURLcode LibCurlProxy::curl_easy_setopt(CURL* curl, CURLoption option,
                                         curl_off_t param) {
   return ::curl_easy_setopt(curl, option, param);
 }
 
-CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
-                                        const char *param) {
+CURLcode LibCurlProxy::curl_easy_setopt(CURL* curl, CURLoption option,
+                                        const char* param) {
   return ::curl_easy_setopt(curl, option, param);
 }
 
-CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
-                                        const std::string &param) {
+CURLcode LibCurlProxy::curl_easy_setopt(CURL* curl, CURLoption option,
+                                        const std::string& param) {
   return ::curl_easy_setopt(curl, option, param.c_str());
 }
 
-CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
-                                        void *param) {
+CURLcode LibCurlProxy::curl_easy_setopt(CURL* curl, CURLoption option,
+                                        void* param) {
   return ::curl_easy_setopt(curl, option, param);
 }
 
-CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
-                                        size_t (*param)(const void *, size_t,
-                                                        size_t, void *)) {
+CURLcode LibCurlProxy::curl_easy_setopt(CURL* curl, CURLoption option,
+                                        size_t (*param)(const void*, size_t,
+                                                        size_t, void*)) {
   return ::curl_easy_setopt(curl, option, param);
 }
 
-CURLcode LibCurlProxy::curl_easy_setopt(CURL *curl, CURLoption option,
-                                        size_t (*param)(char *, size_t, size_t,
-                                                        void *)) {
+CURLcode LibCurlProxy::curl_easy_setopt(CURL* curl, CURLoption option,
+                                        size_t (*param)(char*, size_t, size_t,
+                                                        void*)) {
   return ::curl_easy_setopt(curl, option, param);
 }
 
 CURLcode LibCurlProxy::curl_easy_setopt(
-    CURL *curl, CURLoption option,
-    int (*param)(void *clientp, curl_off_t dltotal, curl_off_t dlnow,
+    CURL* curl, CURLoption option,
+    int (*param)(void* clientp, curl_off_t dltotal, curl_off_t dlnow,
                  curl_off_t ultotal, curl_off_t ulnow)) {
   return ::curl_easy_setopt(curl, option, param);
 }
 
-CURLcode LibCurlProxy::curl_easy_perform(CURL *curl) {
+CURLcode LibCurlProxy::curl_easy_perform(CURL* curl) {
   return ::curl_easy_perform(curl);
 }
 
-CURLcode LibCurlProxy::curl_easy_getinfo(CURL *curl, CURLINFO info,
-                                         uint64_t *value) {
+CURLcode LibCurlProxy::curl_easy_getinfo(CURL* curl, CURLINFO info,
+                                         uint64_t* value) {
   return ::curl_easy_getinfo(curl, info, value);
 }
 
-CURLcode LibCurlProxy::curl_easy_getinfo(CURL *curl, CURLINFO info,
-                                         double *value) {
+CURLcode LibCurlProxy::curl_easy_getinfo(CURL* curl, CURLINFO info,
+                                         double* value) {
   return ::curl_easy_getinfo(curl, info, value);
 }
 
-void LibCurlProxy::curl_easy_cleanup(CURL *curl) {
+void LibCurlProxy::curl_easy_cleanup(CURL* curl) {
   return ::curl_easy_cleanup(curl);
 }
 
-void LibCurlProxy::curl_free(void *p) { ::curl_free(p); }
+void LibCurlProxy::curl_free(void* p) { ::curl_free(p); }
 
-CURLSH *LibCurlProxy::curl_share_init() { return ::curl_share_init(); }
+CURLSH* LibCurlProxy::curl_share_init() { return ::curl_share_init(); }
 
-void LibCurlProxy::curl_share_cleanup(CURLSH *share) {
+void LibCurlProxy::curl_share_cleanup(CURLSH* share) {
   ::curl_share_cleanup(share);
 }
 
-CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH *share, CURLSHoption option,
+CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH* share, CURLSHoption option,
                                            curl_lock_data param) {
   return ::curl_share_setopt(share, option, param);
 }
 
-CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH *share, CURLSHoption option,
-                                           void (*param)(CURL *, curl_lock_data,
+CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH* share, CURLSHoption option,
+                                           void (*param)(CURL*, curl_lock_data,
                                                          curl_lock_access,
-                                                         void *)) {
+                                                         void*)) {
   return ::curl_share_setopt(share, option, param);
 }
 
-CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH *share, CURLSHoption option,
-                                           void *param) {
+CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH* share, CURLSHoption option,
+                                           void* param) {
   return ::curl_share_setopt(share, option, param);
 }
 
-CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH *share, CURLSHoption option,
-                                           void (*param)(CURL *, curl_lock_data,
-                                                         void *)) {
+CURLSHcode LibCurlProxy::curl_share_setopt(CURLSH* share, CURLSHoption option,
+                                           void (*param)(CURL*, curl_lock_data,
+                                                         void*)) {
   return ::curl_share_setopt(share, option, param);
 }
 
-void LibCurlProxy::curl_slist_free_all(struct curl_slist *list) {
+void LibCurlProxy::curl_slist_free_all(struct curl_slist* list) {
   return ::curl_slist_free_all(list);
 }
 
-struct curl_slist *LibCurlProxy::curl_slist_append(struct curl_slist *list,
-                                                   const char *data) {
+struct curl_slist* LibCurlProxy::curl_slist_append(struct curl_slist* list,
+                                                   const char* data) {
   return ::curl_slist_append(list, data);
 }
 
@@ -256,35 +256,40 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Patch(
   return HttpMethod(Protocol::kPatch, std::move(request));
 }
 
+absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::Put(
+    std::unique_ptr<HttpRequest> request) {
+  return HttpMethod(Protocol::kPut, std::move(request));
+}
+
 absl::Status CurlHttpClient::GetIncremental(
-    std::unique_ptr<HttpRequest> request, IncrementalResponseHandler *handler) {
+    std::unique_ptr<HttpRequest> request, IncrementalResponseHandler* handler) {
   return HttpMethod(Protocol::kGet, std::move(request), handler).status();
 }
 
 absl::Status CurlHttpClient::PostIncremental(
-    std::unique_ptr<HttpRequest> request, IncrementalResponseHandler *handler) {
+    std::unique_ptr<HttpRequest> request, IncrementalResponseHandler* handler) {
   return HttpMethod(Protocol::kPost, std::move(request), handler).status();
 }
 
 absl::Status CurlHttpClient::DeleteIncremental(
-    std::unique_ptr<HttpRequest> request, IncrementalResponseHandler *handler) {
+    std::unique_ptr<HttpRequest> request, IncrementalResponseHandler* handler) {
   return HttpMethod(Protocol::kDelete, std::move(request), handler).status();
 }
 
 absl::Status CurlHttpClient::PatchIncremental(
-    std::unique_ptr<HttpRequest> request, IncrementalResponseHandler *handler) {
+    std::unique_ptr<HttpRequest> request, IncrementalResponseHandler* handler) {
   return HttpMethod(Protocol::kPatch, std::move(request), handler).status();
 }
 
 class ResponseContext {
  public:
-  ResponseContext(LibCurl *libcurl, CURL *curl,
-                  HttpClient::IncrementalResponseHandler *handler)
+  ResponseContext(LibCurl* libcurl, CURL* curl,
+                  HttpClient::IncrementalResponseHandler* handler)
       : libcurl_(libcurl),
         curl_(curl),
         handler_(handler),
         status_(absl::OkStatus()) {}
-  HttpClient::HttpResponse &GetResponse() {
+  HttpClient::HttpResponse& GetResponse() {
     if (!response_.has_value()) {
       uint64_t long_response_code = 0;
       int returned_code = 0;
@@ -327,9 +332,9 @@ class ResponseContext {
   absl::Status status() const { return status_; }
 
  private:
-  LibCurl *libcurl_;
-  CURL *curl_;
-  HttpClient::IncrementalResponseHandler *handler_;
+  LibCurl* libcurl_;
+  CURL* curl_;
+  HttpClient::IncrementalResponseHandler* handler_;
   absl::Status status_;
   std::optional<HttpClient::HttpResponse> response_;
   std::string response_body_;
@@ -338,8 +343,8 @@ class ResponseContext {
 
 absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
     Protocol cmd, std::unique_ptr<HttpRequest> request,
-    IncrementalResponseHandler *handler) {
-  CURL *curl = libcurl_->curl_easy_init();
+    IncrementalResponseHandler* handler) {
+  CURL* curl = libcurl_->curl_easy_init();
   if (curl == nullptr) {
     return absl::InternalError("Failed to create curl handle");
   }
@@ -359,7 +364,7 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
   }
 
   std::visit(
-      [&](const auto &creds) -> void {
+      [&](const auto& creds) -> void {
         SetCurlOpts(libcurl_.get(), curl, creds);
       },
       cred_);
@@ -394,12 +399,12 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
       break;
   }
 
-  struct curl_slist *request_headers = NULL;
+  struct curl_slist* request_headers = NULL;
   absl::Cleanup cleanup = [&request_headers]() -> void {
     curl_slist_free_all(request_headers);
   };
-  for (const auto &[key, value] : request->headers) {
-    struct curl_slist *list = curl_slist_append(
+  for (const auto& [key, value] : request->headers) {
+    struct curl_slist* list = curl_slist_append(
         request_headers, absl::StrCat(key, ":", value).c_str());
     if (list == nullptr) {
       return absl::ResourceExhaustedError("request header list");
@@ -444,10 +449,10 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
 }
 
 // userp is set through framework over third_CURLOPT_WRITEDATA
-size_t CurlHttpClient::HeaderCallback(const void *data, size_t size,
-                                      size_t nmemb, void *userp) {
-  auto *context = static_cast<ResponseContext *>(userp);
-  const auto *str = static_cast<const char *>(data);
+size_t CurlHttpClient::HeaderCallback(const void* data, size_t size,
+                                      size_t nmemb, void* userp) {
+  auto* context = static_cast<ResponseContext*>(userp);
+  const auto* str = static_cast<const char*>(data);
 
   if (str[0] != '\r' && str[1] != '\n') {
     auto s = std::string(str, size * nmemb);
@@ -469,10 +474,10 @@ size_t CurlHttpClient::HeaderCallback(const void *data, size_t size,
 }
 
 // userp is set through framework over third_CURLOPT_WRITEHEADER
-size_t CurlHttpClient::BodyCallback(const void *data, size_t size, size_t nmemb,
-                                    void *userp) {
-  auto *context = static_cast<ResponseContext *>(userp);
-  absl::string_view data_str(static_cast<const char *>(data), size * nmemb);
+size_t CurlHttpClient::BodyCallback(const void* data, size_t size, size_t nmemb,
+                                    void* userp) {
+  auto* context = static_cast<ResponseContext*>(userp);
+  absl::string_view data_str(static_cast<const char*>(data), size * nmemb);
   absl::Status result = context->HandleBodyData(data_str);
   if (!result.ok()) {
     // Use CURL_WRITEFUNC_ERROR when it is available
@@ -481,22 +486,21 @@ size_t CurlHttpClient::BodyCallback(const void *data, size_t size, size_t nmemb,
   return size * nmemb;
 }
 
-int CurlHttpClient::ProgressCallback(void *userp, curl_off_t dltotal,
+int CurlHttpClient::ProgressCallback(void* userp, curl_off_t dltotal,
                                      curl_off_t dlnow, curl_off_t ultotal,
                                      curl_off_t ulnow) {
-  auto *context = static_cast<ResponseContext *>(userp);
+  auto* context = static_cast<ResponseContext*>(userp);
   return (context->IsCancelled())
              ? 1  // Any non-zero value will abort the transfer.
              : CURL_PROGRESSFUNC_CONTINUE;
 }
 
-ABSL_CONST_INIT absl::Mutex CurlHttpClient::data_share_mutex_(
-    absl::kConstInit);
+ABSL_CONST_INIT absl::Mutex CurlHttpClient::data_share_mutex_(absl::kConstInit);
 ABSL_CONST_INIT absl::Mutex CurlHttpClient::data_connect_mutex_(
     absl::kConstInit);
 
-void CurlHttpClient::LockSharedMutex(CURL *handle, curl_lock_data data,
-                                     curl_lock_access laccess, void *useptr) {
+void CurlHttpClient::LockSharedMutex(CURL* handle, curl_lock_data data,
+                                     curl_lock_access laccess, void* useptr) {
   // `CURLSHOPT_LOCKFUNC` expects a function pointer to a callback that handles
   // locking multiple mutexes based on the `data` parameter. In this library, we
   // only share the `shared_connection_` pointer, so we only need to handle the
@@ -514,8 +518,8 @@ void CurlHttpClient::LockSharedMutex(CURL *handle, curl_lock_data data,
   }
 }
 
-void CurlHttpClient::UnlockSharedMutex(CURL *handle, curl_lock_data data,
-                                       void *useptr) {
+void CurlHttpClient::UnlockSharedMutex(CURL* handle, curl_lock_data data,
+                                       void* useptr) {
   // `CURLSHOPT_UNLOCKFUNC` expects a function pointer to a callback that
   // handles unlocking multiple mutexes based on the `data` parameter. In this
   // library, we only share the `shared_connection_` pointer, so we only need to
@@ -533,7 +537,7 @@ void CurlHttpClient::UnlockSharedMutex(CURL *handle, curl_lock_data data,
   }
 }
 
-void CurlHttpClient::SetDefaultCurlOpts(CURL *curl) const {
+void CurlHttpClient::SetDefaultCurlOpts(CURL* curl) const {
   if (curl == nullptr) {
     LOG(ERROR) << "curl is nullptr.";
     return;

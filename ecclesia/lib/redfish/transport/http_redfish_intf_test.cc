@@ -1919,6 +1919,20 @@ TEST_F(HttpRedfishInterfaceTest, PatchHandler) {
   EXPECT_TRUE(called);
 }
 
+TEST_F(HttpRedfishInterfaceTest, PutUriWorks) {
+  server_->AddHttpPutHandler(
+      "/my/uri/object", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+
+  EXPECT_THAT(intf_->PutUri("/my/uri/object", "test").status(), IsOk());
+  EXPECT_THAT(intf_->PutUri("/my/uri/object", {{"", ""}}).status(),
+             IsOk());
+}
+
 TEST_F(HttpRedfishInterfaceTest, GetUnresolvedNavigationProperty) {
   auto return_json = nlohmann::json::parse(R"json({
     "@odata.context": "/redfish/v1/$metadata#ChassisCollection.ChassisCollection",

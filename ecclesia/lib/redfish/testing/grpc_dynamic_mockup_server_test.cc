@@ -118,14 +118,6 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPostPatchAndGetRequest) {
   EXPECT_EQ(result_get->code, ecclesia::HttpResponseCode::HTTP_CODE_REQUEST_OK);
 }
 
-TEST_F(GrpcRedfishMockUpServerTest, TestPutRequests) {
-  grpc::ClientContext context;
-  Request request;
-  Response response;
-  EXPECT_THAT(AsAbslStatus(stub_->Put(&context, request, &response)),
-              IsStatusUnimplemented());
-}
-
 TEST_F(GrpcRedfishMockUpServerTest, TestDeleteRequests) {
   grpc::ClientContext context;
   Request request;
@@ -143,8 +135,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomGet) {
   )pb");
   mockup_server_->AddHttpGetHandler(
       "/redfish/v1/MyResource",
-      [&kResponse](grpc::ServerContext *context,
-                   const ::redfish::v1::Request *request, Response *response) {
+      [&kResponse](grpc::ServerContext* context,
+                   const ::redfish::v1::Request* request, Response* response) {
         *response->mutable_json() = kResponse;
         return grpc::Status::OK;
       });
@@ -181,8 +173,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPost) {
   bool called = false;
   mockup_server_->AddHttpPostHandler(
       "/redfish/v1/MyResource",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          Response* response) {
         called = true;
         EXPECT_THAT(*request, EqualsProto(kRequest));
         *response->mutable_json() = kResponse;
@@ -226,8 +218,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPatch) {
   bool called = false;
   mockup_server_->AddHttpPatchHandler(
       "/redfish/v1/MyResource",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          Response* response) {
         called = true;
         EXPECT_THAT(*request, EqualsProto(kRequest));
         *response->mutable_json() = kResponse;
@@ -246,13 +238,61 @@ TEST_F(GrpcRedfishMockUpServerTest, TestCustomPatch) {
   EXPECT_THAT(name, Eq("OK"));
 }
 
+TEST_F(GrpcRedfishMockUpServerTest, TestCustomPut) {
+  // Before adding any handlers, PUT should return unimplemented.
+  EXPECT_THAT(client_->Put("/redfish/v1/MyResource", "").status(),
+              ecclesia::IsStatusUnimplemented());
+
+  const ::redfish::v1::Request kRequest = ParseTextProtoOrDie(R"pb(
+    url: "/redfish/v1/MyResource"
+    json {
+      fields {
+        key: "num"
+        value: { number_value: 1 }
+      }
+      fields {
+        key: "str"
+        value: { string_value: "hi" }
+      }
+    }
+    json_str: "{\n    \"num\": 1,\n    \"str\": \"hi\"\n  }"
+    headers { key: "Host" value: "localhost" }
+  )pb");
+  const google::protobuf::Struct kResponse = ParseTextProtoOrDie(R"pb(
+    fields {
+      key: "Result"
+      value: { string_value: "OK" }
+    }
+  )pb");
+  bool called = false;
+  mockup_server_->AddHttpPutHandler(
+      "/redfish/v1/MyResource",
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          Response* response) {
+        called = true;
+        EXPECT_THAT(*request, EqualsProto(kRequest));
+        *response->mutable_json() = kResponse;
+        return grpc::Status::OK;
+      });
+  absl::string_view data_put = R"json({
+    "num": 1,
+    "str": "hi"
+  })json";
+  absl::StatusOr<RedfishTransport::Result> result_put =
+      client_->Put("/redfish/v1/MyResource", data_put);
+  ASSERT_TRUE(result_put.status().ok()) << result_put.status().message();
+  EXPECT_TRUE(called);
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result_put->body));
+  std::string name = std::get<nlohmann::json>(result_put->body)["Result"];
+  EXPECT_THAT(name, Eq("OK"));
+}
 TEST_F(GrpcRedfishMockUpServerTest, TestPostReset) {
   bool called = false;
   // Register the handler.
   mockup_server_->AddHttpPostHandler(
       "/redfish/v1/Chassis",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          Response* response) {
         called = true;
         return grpc::Status::OK;
       });
@@ -278,8 +318,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestPatchReset) {
   // Register the handler.
   mockup_server_->AddHttpPatchHandler(
       "/redfish/v1",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          Response* response) {
         called = true;
         return grpc::Status::OK;
       });
@@ -304,8 +344,8 @@ TEST_F(GrpcRedfishMockUpServerTest, TestGetReset) {
   // Register the handler.
   mockup_server_->AddHttpGetHandler(
       "/redfish/v1",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          Response* response) {
         called = true;
         return grpc::Status::OK;
       });

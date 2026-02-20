@@ -54,7 +54,7 @@ constexpr int kNumThreads = 5;
 
 // Create HTTP Transport
 std::unique_ptr<RedfishTransport> MakeHttpRedfishTransport(
-    ::tensorflow::serving::net_http::HTTPServerInterface *proxy_server) {
+    ::tensorflow::serving::net_http::HTTPServerInterface* proxy_server) {
   std::string endpoint =
       absl::StrCat("http://localhost:", proxy_server->listen_port());
 
@@ -89,7 +89,7 @@ void FakeRedfishServer::AddHttpGetHandlerWithData(std::string uri,
                                                   absl::Span<const char> data) {
   AddHttpGetHandler(
       std::move(uri),
-      [&, data](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&, data](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -103,7 +103,7 @@ void FakeRedfishServer::AddHttpGetHandlerWithOwnedData(std::string uri,
   AddHttpGetHandler(
       std::move(uri),
       [&, data = std::move(data)](
-          ::tensorflow::serving::net_http::ServerRequestInterface *req) {
+          ::tensorflow::serving::net_http::ServerRequestInterface* req) {
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -118,7 +118,7 @@ void FakeRedfishServer::AddHttpGetHandlerWithStatus(
   AddHttpGetHandler(
       std::move(uri),
       [&, data,
-       status](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+       status](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -129,7 +129,7 @@ void FakeRedfishServer::AddHttpGetHandlerWithStatus(
 }
 
 void FakeRedfishServer::HandleHttpGet(
-    ::tensorflow::serving::net_http::ServerRequestInterface *req) {
+    ::tensorflow::serving::net_http::ServerRequestInterface* req) {
   absl::MutexLock mu(&patch_lock_);
   auto itr = http_get_handlers_.find(req->uri_path());
   if (itr == http_get_handlers_.end()) {
@@ -149,7 +149,7 @@ void FakeRedfishServer::HandleHttpGet(
 }
 
 void FakeRedfishServer::HandleHttpPatch(
-    ::tensorflow::serving::net_http::ServerRequestInterface *req) {
+    ::tensorflow::serving::net_http::ServerRequestInterface* req) {
   absl::MutexLock mu(&patch_lock_);
   auto itr = http_patch_handlers_.find(req->uri_path());
   if (itr == http_patch_handlers_.end()) {
@@ -160,7 +160,7 @@ void FakeRedfishServer::HandleHttpPatch(
 }
 
 void FakeRedfishServer::HandleHttpPost(
-    ::tensorflow::serving::net_http::ServerRequestInterface *req) {
+    ::tensorflow::serving::net_http::ServerRequestInterface* req) {
   absl::MutexLock mu(&patch_lock_);
   auto itr = http_post_handlers_.find(req->uri_path());
   if (itr == http_post_handlers_.end()) {
@@ -171,11 +171,22 @@ void FakeRedfishServer::HandleHttpPost(
 }
 
 void FakeRedfishServer::HandleHttpDelete(
-    ::tensorflow::serving::net_http::ServerRequestInterface *req) {
+    ::tensorflow::serving::net_http::ServerRequestInterface* req) {
   absl::MutexLock mu(&patch_lock_);
   auto itr = http_delete_handlers_.find(req->uri_path());
   if (itr == http_delete_handlers_.end()) {
     LOG(FATAL) << "Unhandled DELETE to URI: " << req->uri_path();
+    return;
+  }
+  itr->second(req);
+}
+
+void FakeRedfishServer::HandleHttpPut(
+    ::tensorflow::serving::net_http::ServerRequestInterface* req) {
+  absl::MutexLock mu(&patch_lock_);  // NOLINT
+  auto itr = http_put_handlers_.find(req->uri_path());
+  if (itr == http_put_handlers_.end()) {
+    LOG(FATAL) << "Unhandled PUT to URI: " << req->uri_path();
     return;
   }
   itr->second(req);
@@ -212,6 +223,12 @@ void FakeRedfishServer::AddHttpDeleteHandler(std::string uri,
   http_delete_handlers_[uri] = std::move(handler);
 }
 
+void FakeRedfishServer::AddHttpPutHandler(std::string uri,
+                                          HandlerFunc handler) {
+  absl::MutexLock mu(&patch_lock_);  // NOLINT
+  http_put_handlers_[uri] = std::move(handler);
+}
+
 std::unique_ptr<RedfishInterface> FakeRedfishServer::RedfishClientInterface(
     bool is_cached) {
   std::unique_ptr<RedfishTransport> transport =
@@ -237,7 +254,7 @@ FakeRedfishServer::FakeRedfishServer(absl::string_view mockup_shar,
       mockup_server_(mockup_shar, mockup_uds_path),
       redfish_intf_(mockup_server_.RedfishClientInterface()) {
   auto handler =
-      [this](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [this](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         if (req->http_method() == "GET") {
           this->HandleHttpGet(req);
         } else if (req->http_method() == "POST") {
@@ -246,11 +263,13 @@ FakeRedfishServer::FakeRedfishServer(absl::string_view mockup_shar,
           this->HandleHttpPatch(req);
         } else if (req->http_method() == "DELETE") {
           this->HandleHttpDelete(req);
+        } else if (req->http_method() == "PUT") {
+          this->HandleHttpPut(req);
         }
       };
   proxy_server_->RegisterRequestDispatcher(
       [handler = std::move(handler)](
-          ::tensorflow::serving::net_http::ServerRequestInterface *req)
+          ::tensorflow::serving::net_http::ServerRequestInterface* req)
           -> ::tensorflow::serving::net_http::RequestHandler {
         return handler;
       },
@@ -290,7 +309,7 @@ void FakeRedfishServer::EnableExpandGetHandler(ExpandQuery expand_query) {
   std::string result = json_res.dump();
   AddHttpGetHandler(
       "/redfish/v1",
-      [&, result](tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&, result](tensorflow::serving::net_http::ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(result);
@@ -311,7 +330,7 @@ void FakeRedfishServer::EnableTopSkipGetHandler(bool enable) {
   std::string result = json_res.dump();
   AddHttpGetHandler(
       "/redfish/v1",
-      [&, result](tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&, result](tensorflow::serving::net_http::ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(result);
@@ -339,7 +358,7 @@ void FakeRedfishServer::EnableAllParamsGetHandler(ExpandQuery expand_query,
   std::string result = json_res.dump();
   AddHttpGetHandler(
       "/redfish/v1",
-      [&, result](tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&, result](tensorflow::serving::net_http::ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(result);
