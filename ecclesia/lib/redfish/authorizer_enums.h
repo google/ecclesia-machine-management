@@ -287,6 +287,7 @@ enum class ResourceEntity : int {
   kTlBMCDebugEndpoint,
   kTlBMCDebugHftService,
   kTlBMCDebugStore,
+  kTlBMCDebugStoreSharedMemorySensors,
   kTlBMCMetrics,
   kTlBMCSchedulerStats,
   kTlBMCServiceRoot,
