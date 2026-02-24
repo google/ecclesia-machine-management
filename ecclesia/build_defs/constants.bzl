@@ -151,6 +151,7 @@ def constant_lib(
     py_library(
         name = py_name,
         srcs = [py_source],
+        strict_deps = False,
         visibility = visibility,
         srcs_version = "PY2AND3",
         tags = ["py3-compatible"],
