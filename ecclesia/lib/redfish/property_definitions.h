@@ -37,6 +37,8 @@ inline constexpr char kRfPropertyRedfish[] = "redfish";
 inline constexpr char kRfPropertyV1[] = "v1";
 inline constexpr char kRfPropertyActions[] = "Actions";
 inline constexpr char kRfPropertyAllowableValues[] = "AllowableValues";
+inline constexpr char kRfPropertyAppliedPresetProfile[] =
+    "AppliedPresetProfile";
 inline constexpr char kRfPropertyAssemblies[] = "Assemblies";
 inline constexpr char kRfPropertyAssembly[] = "Assembly";
 inline constexpr char kRfPropertyAssociatedMACAddresses[] =
@@ -94,8 +96,10 @@ inline constexpr char kRfPropertyParameters[] = "Parameters";
 inline constexpr char kRfPropertyPorts[] = "Ports";
 inline constexpr char kRfPropertyPower[] = "Power";
 inline constexpr char kRfPropertyPowerLimitWatts[] = "PowerLimitWatts";
+inline constexpr char kRfPropertyPowerSmoothing[] = "PowerSmoothing";
 inline constexpr char kRfPropertyPowerState[] = "PowerState";
 inline constexpr char kRfPropertyPowerWatts[] = "PowerWatts";
+inline constexpr char kRfPropertyPresetProfiles[] = "PresetProfiles";
 inline constexpr char kRfPropertyProcessorStatistics[] = "ProcessorStatistics";
 inline constexpr char kRfPropertyTopProcesses[] = "TopProcesses";
 inline constexpr char kRfPropertyBootTimeStatistics[] = "BootTimeStatistics";
@@ -566,10 +570,20 @@ DEFINE_REDFISH_PROPERTY(OemPropertyControllerType, std::string,
                         "ControllerType");
 
 // OEM Nvidia properties
-DEFINE_REDFISH_PROPERTY(OemPropertyPowerLimitPersistency,
-                        bool, "PowerLimitPersistency");
-DEFINE_REDFISH_PROPERTY(OemPropertyRequestedPersistentPowerLimitWatts,
-                        int, "RequestedPersistentPowerLimitWatts");
+DEFINE_REDFISH_PROPERTY(OemPropertyPowerLimitPersistency, bool,
+                        "PowerLimitPersistency");
+DEFINE_REDFISH_PROPERTY(OemPropertyRequestedPersistentPowerLimitWatts, int,
+                        "RequestedPersistentPowerLimitWatts");
+
+// Power smoothing properties
+DEFINE_REDFISH_PROPERTY(PropertyPowerSmoothingEnabled, bool, "Enabled");
+DEFINE_REDFISH_PROPERTY(PropertyRampDownHysteresisSeconds, double,
+                        "RampDownHysteresisSeconds");
+DEFINE_REDFISH_PROPERTY(PropertyRampDownWattsPerSecond, double,
+                        "RampDownWattsPerSecond");
+DEFINE_REDFISH_PROPERTY(PropertyRampUpWattsPerSecond, double,
+                        "RampUpWattsPerSecond");
+DEFINE_REDFISH_PROPERTY(PropertyTmpFloorPercent, double, "TMPFloorPercent");
 
 // OEM HFT properties
 DEFINE_REDFISH_PROPERTY(OemPropertyHftReading, std::string, "reading");
