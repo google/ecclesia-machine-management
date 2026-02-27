@@ -505,6 +505,13 @@ class RedfishVariant final {
     return ptr_->GetValue(val);
   }
 
+  template <typename T>
+  std::optional<T> GetValue() const {
+    T val;
+    if (GetValue(&val)) return val;
+    return std::nullopt;
+  }
+
   std::string DebugString() const {
     if (!ptr_) return "";
     return ptr_->DebugString();
