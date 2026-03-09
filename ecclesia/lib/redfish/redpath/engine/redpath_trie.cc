@@ -42,7 +42,7 @@ namespace {
 
 // Pattern for location step: NodeName[Predicate]
 constexpr LazyRE2 kLocationStepRegex = {
-    "^([a-zA-Z#@][0-9a-zA-Z.]+|)(?:\\[(.*?)\\]|)$"};
+    "^([a-zA-Z#@][0-9a-zA-Z._]+|)(?:\\[(.*?)\\]|)$"};
 
 // Inserts RedPath expression into RedPath trie.
 RedPathTrieNode *InsertRedPathExpressions(
