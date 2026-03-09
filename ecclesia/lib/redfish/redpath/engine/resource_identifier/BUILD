@@ -119,3 +119,40 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "sensor_extractor",
+    srcs = ["extractors/sensor.cc"],
+    hdrs = ["extractors/sensor.h"],
+    deps = [
+        ":extractor",
+        "//ecclesia/lib/redfish:interface",
+        "@com_google_absl//absl/log:die_if_null",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "sensor_extractor_test",
+    srcs = ["extractors/sensor_test.cc"],
+    data = [
+        "//ecclesia/redfish_mockups/indus_hmb_shim:mockup.shar",
+    ],
+    deps = [
+        ":extractor",
+        ":sensor_extractor",
+        "//ecclesia/lib/protobuf:parse",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
+        "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "//ecclesia/lib/redfish/redpath/engine:normalizer",
+        "//ecclesia/lib/redfish/testing:fake_redfish_server",
+        "//ecclesia/lib/testing:proto",
+        "//ecclesia/lib/testing:status",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
