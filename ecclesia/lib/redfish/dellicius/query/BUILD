@@ -69,7 +69,7 @@ cc_proto_library(
 
 py_proto_library(
     name = "query_py_pb2",
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
     deps = [":query_proto"],
 )
 
