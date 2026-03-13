@@ -51,7 +51,7 @@
 #include "single_include/nlohmann/json.hpp"
 #include "google/protobuf/message.h"
 #include "google/protobuf/text_format.h"
-#include "re2/re2.h"
+#include "re2/re2.h"  // IWYU pragma: keep
 
 namespace ecclesia {
 namespace {
@@ -395,7 +395,8 @@ absl::StatusOr<OverridePolicy> TryGetOverridePolicy(
   redfish::v1::GetOverridePolicyResponse response;
   GrpcTransportParams params;
 
-  context.set_deadline(ToChronoTime(params.clock->Now() + params.timeout));
+  context.set_deadline(
+      absl::ToChronoTime(params.clock->Now() + params.timeout));
   context.set_credentials(grpc::experimental::MetadataCredentialsFromPlugin(
       std::unique_ptr<grpc::MetadataCredentialsPlugin>(
           std::make_unique<GrpcCredentialsForOverride>(service_address)),
@@ -449,16 +450,15 @@ RedfishTransportWithOverride::TryApplyingOverride(
   auto& json = std::get<nlohmann::json>(get_result.body);
   // Try to fetch the override policy.
   if (!has_override_policy_) {
-    auto override_policy = override_policy_cb_();
+    absl::StatusOr<OverridePolicy> override_policy = override_policy_cb_();
     if (!override_policy.ok()) {
       LOG(ERROR) << "Unexpectedly unable to retrieve Redfish Override. "
                     "Returning unedited Redfish response.";
       return get_result;
     }
-    has_override_policy_ = true;
-    override_policy_ = *std::move(override_policy);
     DLOG(INFO) << "Applying Redfish override: "
-               << override_policy_.DebugString();
+               << override_policy->DebugString();
+    SetOverridePolicy(*std::move(override_policy));
   }
 
   std::string checked_path = std::string(path);
@@ -478,6 +478,25 @@ RedfishTransportWithOverride::TryApplyingOverride(
     LOG_FIRST_N(WARNING, 20) << "Override apply failed: " << status;
   }
   return get_result;
+}
+
+void RedfishTransportWithOverride::SetOverridePolicy(OverridePolicy policy) {
+  override_policy_ = std::move(policy);
+  has_override_policy_ = true;
+  override_re2_and_content_.clear();
+  override_re2_and_content_.reserve(
+      override_policy_.override_content_map_regex_size());
+  for (const auto& [regex_str, override_content] :
+       override_policy_.override_content_map_regex()) {
+    auto re2 = std::make_unique<RE2>(regex_str);
+    if (!re2->ok()) {
+      LOG(WARNING) << "Invalid regex provided in Redfish override policy: "
+                   << regex_str << " Error: " << re2->error();
+      continue;
+    }
+    override_re2_and_content_.push_back(
+        std::make_pair(std::move(re2), override_content));
+  }
 }
 
 absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(

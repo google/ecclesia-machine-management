@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -37,6 +38,15 @@
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
+
+class RedfishTransportWithOverrideTestPeer {
+ public:
+  static void SetOverridePolicy(RedfishTransportWithOverride* transport,
+                                OverridePolicy policy) {
+    transport->SetOverridePolicy(std::move(policy));
+  }
+};
+
 namespace {
 using ::testing::Eq;
 using ::testing::Return;
@@ -765,7 +775,7 @@ TEST_F(RedfishOverrideTest, EmptyIdentifierFail) {
   EXPECT_THAT(res_get, IsOk());
 }
 
-TEST_F(RedfishOverrideTest, OverrideGottenOnceOnly) {
+TEST_F(RedfishOverrideTest, OverridePolicyFetchedOnce) {
   int count = 0;
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
       std::move(transport_), [&count]() -> absl::StatusOr<OverridePolicy> {
@@ -796,21 +806,17 @@ TEST_F(RedfishOverrideTest, OverrideGottenOnceOnly) {
     ]})json";
   nlohmann::json expected_get =
       nlohmann::json::parse(expected_get_str, nullptr, false);
-  absl::StatusOr<RedfishTransport::Result> res_get1 =
-      rf_override->Get("/expected/result/1");
+  auto res_get1 = rf_override->Get("/expected/result/1");
   ASSERT_THAT(res_get1, IsOk());
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get1->body));
   EXPECT_THAT(std::get<nlohmann::json>(res_get1->body), Eq(expected_get));
   EXPECT_THAT(res_get1->code, Eq(200));
-  absl::StatusOr<RedfishTransport::Result> res_get2 =
-      rf_override->Get("/expected/result/1");
+  auto res_get2 = rf_override->Get("/expected/result/1");
   ASSERT_THAT(res_get2, IsOk());
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get2->body));
   EXPECT_THAT(std::get<nlohmann::json>(res_get2->body), Eq(expected_get));
   EXPECT_THAT(res_get2->code, Eq(200));
-  // We expect the count to be 2 since it should be gotten once to do the
-  // precompiling of the regex.
-  EXPECT_THAT(count, Eq(2));
+  EXPECT_THAT(count, Eq(1));
 }
 
 TEST_F(RedfishOverrideTest, FailedGetNoOverride) {
@@ -825,8 +831,8 @@ TEST_F(RedfishOverrideTest, FailedGetNoOverride) {
   absl::StatusOr<RedfishTransport::Result> res_get =
       rf_override->Get("/my/test/uri");
   ASSERT_THAT(res_get, IsStatusInternal());
-  // We expect the count to be 1 since it should be gotten once to do the
-  // precompiling of the regex.
+  // We expect the count to be 1 since it should be gotten once in ctor and
+  // not in Get() because the underlying transport Get fails.
   EXPECT_THAT(count, Eq(1));
 }
 
@@ -867,7 +873,7 @@ TEST_F(RedfishOverrideTest, GetReplaceValueFailedOverride) {
   EXPECT_THAT(res_get->code, Eq(200));
 }
 
-TEST_F(RedfishOverrideTest, GetReplaceValueFailedOverrideTryAgain) {
+TEST_F(RedfishOverrideTest, GetSucceedsWithOverrideAfterInitialFetchFails) {
   OverridePolicy policy = ParseTextProtoOrDie(R"pb(
     override_content_map_uri: {
       key: "/expected/result/1"
@@ -891,7 +897,7 @@ TEST_F(RedfishOverrideTest, GetReplaceValueFailedOverrideTryAgain) {
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
       std::move(transport_),
       [&policy, &count]() -> absl::StatusOr<OverridePolicy> {
-        if (count++ == 1) {
+        if (count++ == 0) {
           return absl::InternalError("test fail");
         }
         return policy;
@@ -924,7 +930,7 @@ TEST_F(RedfishOverrideTest, GetReplaceValueFailedOverrideTryAgain) {
       rf_override->Get("/expected/result/1");
   ASSERT_THAT(res_get1, IsOk());
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get1->body));
-  EXPECT_THAT(std::get<nlohmann::json>(res_get1->body), Eq(expected_result1_));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get1->body), Eq(expected_get));
   EXPECT_THAT(res_get1->code, Eq(200));
 
   absl::StatusOr<RedfishTransport::Result> res_get2 =
@@ -1045,6 +1051,71 @@ TEST_F(RedfishOverrideTest, GetReplaceValueUsingExpand) {
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
   EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
+}
+
+TEST_F(RedfishOverrideTest, SetOverridePolicyClearsPreviousRegex) {
+  OverridePolicy policy1 = ParseTextProtoOrDie(R"pb(
+    override_content_map_regex: {
+      key: "/expected/result/1"
+      value: {
+        override_field:
+        [ {
+          action_replace: {
+            object_identifier: {
+              individual_object_identifier:
+              [ { field_name: "TestString" }]
+            }
+            override_value: { value: { string_value: "FromPolicy1" } }
+          }
+        }]
+      }
+    }
+  )pb");
+  OverridePolicy policy2 = ParseTextProtoOrDie(R"pb(
+    override_content_map_regex: {
+      key: "/expected/result/1"
+      value: {
+        override_field:
+        [ {
+          action_replace: {
+            object_identifier: {
+              individual_object_identifier:
+              [ { field_name: "TestNumber" }]
+            }
+            override_value: { value: { number_value: 999 } }
+          }
+        }]
+      }
+    }
+  )pb");
+
+  auto rf_override = std::make_unique<RedfishTransportWithOverride>(
+      std::move(transport_), []() -> absl::StatusOr<OverridePolicy> {
+        return OverridePolicy::default_instance();
+      });
+
+  RedfishTransportWithOverrideTestPeer::SetOverridePolicy(rf_override.get(),
+                                                          policy1);
+  {
+    auto res_get = rf_override->Get("/expected/result/1");
+    ASSERT_THAT(res_get, IsOk());
+    ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+    EXPECT_EQ(std::get<nlohmann::json>(res_get->body)["TestString"],
+              "FromPolicy1");
+    EXPECT_EQ(std::get<nlohmann::json>(res_get->body)["TestNumber"], 123);
+  }
+
+  // If SetOverridePolicy clears context, policy2 will be applied
+  // correctly, and policy1 override will not linger.
+  RedfishTransportWithOverrideTestPeer::SetOverridePolicy(rf_override.get(),
+                                                          policy2);
+  {
+    auto res_get = rf_override->Get("/expected/result/1");
+    ASSERT_THAT(res_get, IsOk());
+    ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+    EXPECT_EQ(std::get<nlohmann::json>(res_get->body)["TestString"], "test123");
+    EXPECT_EQ(std::get<nlohmann::json>(res_get->body)["TestNumber"], 999);
+  }
 }
 
 }  // namespace

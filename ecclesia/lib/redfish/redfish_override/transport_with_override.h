@@ -35,6 +35,8 @@
 
 namespace ecclesia {
 
+class RedfishTransportWithOverrideTestPeer;
+
 // Returns the policy by reading file on the machine directly.
 absl::StatusOr<OverridePolicy> TryGetOverridePolicy(
     absl::string_view policy_file_path);
@@ -64,14 +66,8 @@ class RedfishTransportWithOverride : public RedfishTransport {
         override_policy_cb_(std::move(override_policy_cb)) {
     absl::StatusOr<OverridePolicy> override_policy = override_policy_cb_();
     if (!override_policy.ok()) return;
-    // Precompile regex for overrides.
-    override_re2_and_content_.reserve(
-        override_policy->override_content_map_regex_size());
-    for (auto& [regex_str, override_content] :
-         *override_policy->mutable_override_content_map_regex()) {
-      override_re2_and_content_.push_back(std::make_pair(
-          std::make_unique<RE2>(regex_str), std::move(override_content)));
-    }
+    // Set the override policy and pre-compile the override regex.
+    SetOverridePolicy(*std::move(override_policy));
   }
   RedfishTransportWithOverride(
       std::unique_ptr<RedfishTransport> redfish_transport,
@@ -133,6 +129,15 @@ class RedfishTransportWithOverride : public RedfishTransport {
   // If we do not have an override, try to fetch it fresh before calling Get.
   absl::StatusOr<RedfishTransport::Result> TryApplyingOverride(
       absl::string_view path, RedfishTransport::Result result);
+
+  // Sets override policy, marks policy as present, and initializes
+  // override pre-compiled regex.
+  // We only expect this to be called once, but if it is called multiple times
+  // it will clear any existing data in `override_re2_and_content_` before
+  // attempting to re-populate it.
+  void SetOverridePolicy(OverridePolicy policy);
+
+  friend class RedfishTransportWithOverrideTestPeer;
 
   std::unique_ptr<RedfishTransport> redfish_transport_;
   bool has_override_policy_ = false;
