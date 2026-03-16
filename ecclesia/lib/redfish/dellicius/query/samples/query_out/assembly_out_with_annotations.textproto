@@ -16,6 +16,14 @@ results: {
             values {
               subquery_value {
                 fields {
+                  key: "_id_"
+                  value {
+                    identifier {
+                      is_root: true
+                    }
+                  }
+                }
+                fields {
                   key: "part_number"
                   value { string_value: "1043652-02" }
                 }

@@ -108,6 +108,7 @@ message Identifier {
   reserved 4;
   // Redfish Location object as defined in the Redfish spec.
   optional RedfishLocation redfish_location = 5;
+  optional bool is_root = 6;
 }
 
 enum TransportPriority {

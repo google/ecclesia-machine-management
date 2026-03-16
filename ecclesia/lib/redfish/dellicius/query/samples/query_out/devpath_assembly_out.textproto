@@ -15,7 +15,7 @@ results: {
               subquery_value {
                 fields {
                   key: "_id_"
-                  value { identifier { local_devpath: "/phys" } }
+                  value { identifier { local_devpath: "/phys" is_root: true } }
                 }
                 fields {
                   key: "part_number"

@@ -210,7 +210,13 @@ cc_test(
         "//ecclesia/lib/redfish:interface",
         "//ecclesia/lib/redfish/dellicius/query:query_cc_proto",
         "//ecclesia/lib/redfish/redpath/definitions/query_result:query_result_cc_proto",
+        "//ecclesia/lib/redfish/transport:interface",
+        "@com_google_absl//absl/functional:function_ref",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/time",
         "@com_google_googletest//:gtest_main",
+        "@com_json//:json",
     ],
 )

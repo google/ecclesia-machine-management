@@ -264,7 +264,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 707 num_cache_misses: 70 }
+    stats { payload_size: 721 num_cache_misses: 70 }
     data {
       fields {
         key: "AllSensorsNoRpm"
@@ -522,6 +522,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
                     }
                   }
                 }
+                fields {
+                  key: "_id_"
+                  value { identifier { is_root: true } }
+                }
               }
             }
           }
@@ -547,9 +551,9 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
   QueryExecutionResult result = qp->Run({.variables = args1});
 
   EXPECT_FALSE(result.query_result.has_status());
-  EXPECT_THAT(expected_query_result,
+  EXPECT_THAT(result.query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
-                  ecclesia::EqualsProto(result.query_result)));
+                  ecclesia::EqualsProto(expected_query_result)));
 }
 
 TEST_F(QueryPlannerTestRunner,
@@ -595,7 +599,7 @@ TEST_F(QueryPlannerTestRunner,
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 745 num_cache_misses: 70 }
+    stats { payload_size: 759 num_cache_misses: 70 }
     data {
       fields {
         key: "normalized_key"
@@ -856,6 +860,10 @@ TEST_F(QueryPlannerTestRunner,
                       }
                     }
                   }
+                }
+                fields {
+                  key: "_id_"
+                  value { identifier { is_root: true } }
                 }
               }
             }
@@ -1183,7 +1191,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
 
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 160 num_cache_misses: 47 }
+    stats { payload_size: 178 num_cache_misses: 47 }
     data {
       fields {
         key: "Chassis"
@@ -1228,6 +1236,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesTemplatedQueryCorrectly) {
                       }
                     }
                   }
+                }
+                fields {
+                  key: "_id_"
+                  value { identifier { is_root: true } }
                 }
               }
             }
@@ -1310,7 +1322,7 @@ TEST_F(QueryPlannerTestRunner,
 
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 157 num_cache_misses: 18 }
+    stats { payload_size: 174 num_cache_misses: 18 }
     data {
       fields {
         key: "Chassis"
@@ -1352,6 +1364,10 @@ TEST_F(QueryPlannerTestRunner,
                       }
                     }
                   }
+                }
+                fields {
+                  key: "_id_"
+                  value { identifier { is_root: true } }
                 }
               }
             }
@@ -1420,7 +1436,7 @@ TEST_F(QueryPlannerTestRunner,
 
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 435 num_cache_misses: 18 }
+    stats { payload_size: 449 num_cache_misses: 18 }
     data {
       fields {
         key: "Chassis"
@@ -1531,6 +1547,10 @@ TEST_F(QueryPlannerTestRunner,
                     }
                   }
                 }
+                fields {
+                  key: "_id_"
+                  value { identifier { is_root: true } }
+                }
               }
             }
           }
@@ -1607,7 +1627,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesWithUrlAnnotations) {
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 386 num_cache_misses: 32 }
+    stats { payload_size: 400 num_cache_misses: 32 }
     data {
       fields {
         key: "Chassis"
@@ -1676,6 +1696,10 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesWithUrlAnnotations) {
                   }
                 }
                 fields {
+                  key: "_id_"
+                  value { identifier { is_root: true } }
+                }
+                fields {
                   key: "_uri_"
                   value { string_value: "/redfish/v1/Chassis/chassis" }
                 }
@@ -1737,7 +1761,7 @@ TEST_F(QueryPlannerTestRunner,
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 153 num_cache_misses: 32 }
+    stats { payload_size: 169 num_cache_misses: 32 }
     data {
       fields {
         key: "Chassis"
@@ -1786,6 +1810,10 @@ TEST_F(QueryPlannerTestRunner,
                       }
                     }
                   }
+                }
+                fields {
+                  key: "_id_"
+                  value { identifier { is_root: true } }
                 }
               }
             }
@@ -1880,7 +1908,7 @@ DelliciusQuery GetSubscriptionQuery() {
 TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
   QueryResult expect_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "SubscriptionTest"
-    stats { payload_size: 58 num_cache_misses: 18 }
+    stats { payload_size: 72 num_cache_misses: 18 }
     data {
       fields {
         key: "Chassis"
@@ -1891,6 +1919,10 @@ TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
                 fields {
                   key: "Id"
                   value { string_value: "chassis" }
+                }
+                fields {
+                  key: "_id_"
+                  value { identifier { is_root: true } }
                 }
               }
             }
@@ -5333,7 +5365,7 @@ TEST_F(QueryPlannerTestRunner, TestServiceRootQuery) {
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ServiceRoot"
-    stats { payload_size: 196 num_cache_misses: 3 }
+    stats { payload_size: 210 num_cache_misses: 3 }
     data {
       fields {
         key: "RedfishVersion"
@@ -5347,6 +5379,10 @@ TEST_F(QueryPlannerTestRunner, TestServiceRootQuery) {
                     list_value {
                       values {
                         subquery_value {
+                          fields {
+                            key: "_id_"
+                            value { identifier { is_root: true } }
+                          }
                           fields {
                             key: "part_number"
                             value { string_value: "1043652-02" }
@@ -5979,7 +6015,7 @@ TEST_F(QueryPlannerTestRunner, CollectionResourceCanBeQueried) {
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ChassisSubTreeTest"
-    stats { payload_size: 60 num_cache_misses: 4 }
+    stats { payload_size: 74 num_cache_misses: 4 }
     data: {
       fields {
         key: "Chassis"
@@ -5990,6 +6026,10 @@ TEST_F(QueryPlannerTestRunner, CollectionResourceCanBeQueried) {
                 fields {
                   key: "Id"
                   value { string_value: "chassis" }
+                }
+                fields {
+                  key: "_id_"
+                  value { identifier { is_root: true } }
                 }
               }
             }
@@ -6577,7 +6617,7 @@ TEST_F(QueryPlannerTestRunner, TestEmptyRootSubQuerySuccess) {
 
   QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
     query_id: "ServiceRoot"
-    stats { payload_size: 133 num_cache_misses: 3 }
+    stats { payload_size: 149 num_cache_misses: 3 }
     data {
       fields {
         key: "RedfishVersion"
@@ -6591,6 +6631,10 @@ TEST_F(QueryPlannerTestRunner, TestEmptyRootSubQuerySuccess) {
                     list_value {
                       values {
                         subquery_value {
+                          fields {
+                            key: "_id_"
+                            value { identifier { is_root: true } }
+                          }
                           fields {
                             key: "part_number"
                             value { string_value: "1043652-02" }

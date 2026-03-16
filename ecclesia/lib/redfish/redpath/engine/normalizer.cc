@@ -311,6 +311,28 @@ NodeTopology CreateTopology(RedfishInterface* redfish_interface,
   return CreateTopologyFromRedfish(redfish_interface);
 }
 
+// Returns true if the resource is a root chassis.
+bool IsRootChassis(const RedfishObject& redfish_object,
+                   const absl::StatusOr<QueryValueReader>& identifier_reader) {
+  std::string service_label;
+  std::string part_location_context;
+  if (identifier_reader.ok()) {
+    service_label =
+        identifier_reader->identifier().redfish_location().service_label();
+    part_location_context = identifier_reader->identifier()
+                                .redfish_location()
+                                .part_location_context();
+  }
+
+  // Root devpath is assigned to the root Chassis, to do this we need to track
+  // if the resource is Chassis type and has no redfish location.
+  std::string resource_type;
+  redfish_object.Get(ecclesia::PropertyOdataType::Name)
+      .GetValue(&resource_type);
+  return absl::StrContains(resource_type, "#Chassis.") &&
+         service_label.empty() && part_location_context.empty();
+}
+
 }  // namespace
 
 RedpathNormalizerImplDefault::RedpathNormalizerImplDefault()
@@ -349,6 +371,14 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
 
   // Identifier to house stable id properties for the query result normalized.
   Identifier identifier;
+
+  // Check if the resource is a root chassis.
+  QueryResultDataReader reader(&data_set_local);
+  absl::StatusOr<QueryValueReader> identifier_reader =
+      reader.Get(kIdentifierTag);
+  if (IsRootChassis(redfish_object, identifier_reader)) {
+    identifier.set_is_root(true);
+  }
 
   // We add additional properties to populate stable id based on Redfish
   // Location.
@@ -432,37 +462,21 @@ absl::Status RedpathNormalizerImplAddMachineBarepath::Normalize(
     ecclesia::QueryResultData &data_set_local,
     const RedpathNormalizerOptions &options) {
   QueryResultDataReader reader(&data_set_local);
-  absl::StatusOr<QueryValueReader> query_value_reader =
+  absl::StatusOr<QueryValueReader> identifier_reader =
       reader.Get(kIdentifierTag);
-  std::string service_label;
-  std::string part_location_context;
-  if (query_value_reader.ok()) {
-    service_label =
-        query_value_reader->identifier().redfish_location().service_label();
-    part_location_context = query_value_reader->identifier()
-                                .redfish_location()
-                                .part_location_context();
-  }
-
-  // Root devpath is assigned to the root Chassis, to do this we need to track
-  // if the resource is Chassis type and has no redfish location.
-  std::string resource_type;
-  redfish_object.Get(ecclesia::PropertyOdataType::Name)
-      .GetValue(&resource_type);
-  bool is_root = absl::StrContains(resource_type, "#Chassis.") &&
-                 service_label.empty() && part_location_context.empty();
+  bool is_root = IsRootChassis(redfish_object, identifier_reader);
 
   // Root Chassis may not have the identifier tag populated but by definition it
   // is a root. Need to populate it with empty redfish location.
-  if (!query_value_reader.ok() && is_root) {
+  if (!identifier_reader.ok() && is_root) {
     *(*data_set_local.mutable_fields())[kIdentifierTag]
          .mutable_identifier() = {};
   }
 
   // Try to find and set a machine devpath, prioritizing local devpath.
   absl::StatusOr<std::string> machine_devpath;
-  if (query_value_reader.ok() &&
-      query_value_reader->identifier().has_local_devpath()) {
+  if (identifier_reader.ok() &&
+      identifier_reader->identifier().has_local_devpath()) {
     machine_devpath =
         id_assigner_->IdForLocalDevpathInQueryResult(data_set_local);
   }

@@ -16,15 +16,24 @@
 
 #include "ecclesia/lib/redfish/redpath/engine/normalizer.h"
 
+#include <cstdint>
 #include <memory>
+#include <optional>
+#include <string>
 #include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "absl/functional/function_ref.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "ecclesia/lib/redfish/dellicius/query/query.pb.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
+#include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 namespace {
@@ -252,6 +261,92 @@ TEST(RedpathNormalizerTest, EmptyDatasetErrorFlagFalse) {
                                      options, false);
   EXPECT_EQ(status.code(), absl::StatusCode::kOk);
   EXPECT_EQ(data_set.fields_size(), 0);
+}
+
+class TestRedfishObject : public RedfishObject {
+ public:
+  TestRedfishObject(nlohmann::json content, std::string odata_type)
+      : content_(std::move(content)), odata_type_(std::move(odata_type)) {}
+
+  RedfishVariant operator[](absl::string_view node_name) const override {
+    return RedfishVariant(absl::UnimplementedError(""));
+  }
+  RedfishVariant Get(absl::string_view node_name,
+                     GetParams params) const override {
+    if (node_name == "@odata.type") {
+      class TypeVariantImpl : public RedfishVariant::ImplIntf {
+       public:
+        explicit TypeVariantImpl(std::string val) : val_(std::move(val)) {}
+        std::unique_ptr<RedfishObject> AsObject() const override {
+          return nullptr;
+        }
+        std::unique_ptr<RedfishIterable> AsIterable(
+            RedfishVariant::IterableMode mode,
+            GetParams params) const override {
+          return nullptr;
+        }
+        std::optional<ecclesia::RedfishTransport::bytes> AsRaw()
+            const override {
+          return std::nullopt;
+        }
+        bool GetValue(std::string* val) const override {
+          *val = val_;
+          return true;
+        }
+        bool GetValue(int32_t* val) const override { return false; }
+        bool GetValue(int64_t* val) const override { return false; }
+        bool GetValue(double* val) const override { return false; }
+        bool GetValue(bool* val) const override { return false; }
+        bool GetValue(absl::Time* val) const override { return false; }
+        std::string DebugString() const override { return val_; }
+        CacheState IsFresh() const override { return CacheState::kUnknown; }
+
+       private:
+        std::string val_;
+      };
+      return RedfishVariant(std::make_unique<TypeVariantImpl>(odata_type_));
+    }
+    return RedfishVariant(absl::UnimplementedError(""));
+  }
+  std::optional<std::string> GetUriString() const override { return ""; }
+  absl::StatusOr<std::unique_ptr<RedfishObject>> EnsureFreshPayload(
+      GetParams params) override {
+    return absl::UnimplementedError("");
+  }
+  nlohmann::json GetContentAsJson() const override { return content_; }
+  std::string DebugString() const override { return ""; }
+  void ForEachProperty(
+      absl::FunctionRef<RedfishIterReturnValue(
+          absl::string_view key, RedfishVariant value)> /*unused*/) override {}
+
+ private:
+  nlohmann::json content_;
+  std::string odata_type_;
+};
+
+TEST(RedpathNormalizerTest, RedpathNormalizerImplDefaultSetsIsRootChassis) {
+  auto normalizer = BuildDefaultRedpathNormalizer();
+
+  DelliciusQuery::Subquery subquery;
+  // Create JSON that represents a root chassis: no ServiceLabel or
+  // PartLocationContext
+  nlohmann::json content = nlohmann::json::parse(R"json(
+    {
+      "Name": "root_chassis"
+    }
+  )json");
+  TestRedfishObject redfish_object(content, "#Chassis.v1_17_0.Chassis");
+
+  RedpathNormalizerOptions options;
+  ecclesia::QueryResultData data_set;
+  auto status =
+      normalizer->Normalize(redfish_object, subquery, data_set, options,
+                            /*return_error_on_empty_dataset=*/false);
+  ASSERT_TRUE(status.ok());
+
+  // The identifier should be created and is_root should be true
+  ASSERT_TRUE(data_set.fields().contains("_id_"));
+  EXPECT_TRUE(data_set.fields().at("_id_").identifier().is_root());
 }
 
 }  // namespace

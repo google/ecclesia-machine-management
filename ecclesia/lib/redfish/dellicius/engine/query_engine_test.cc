@@ -1101,7 +1101,25 @@ TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
                     subquery_value {
                       fields {
                         key: "_id_"
-                        value { identifier { local_devpath: "/phys" } }
+                        value {
+                          identifier { local_devpath: "/phys" is_root: true }
+                        }
+                      }
+                    }
+                  }
+                  values {
+                    subquery_value {
+                      fields {
+                        key: "_id_"
+                        value { identifier { is_root: true } }
+                      }
+                    }
+                  }
+                  values {
+                    subquery_value {
+                      fields {
+                        key: "_id_"
+                        value { identifier { is_root: true } }
                       }
                     }
                   }
@@ -1146,16 +1164,8 @@ TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
                     subquery_value {
                       fields {
                         key: "_id_"
-                        value { identifier { local_devpath: "/phys" } }
-                      }
-                    }
-                  }
-                  values {
-                    subquery_value {
-                      fields {
-                        key: "_id_"
                         value {
-                          identifier { local_devpath: "/phys:device:erot-gpu1" }
+                          identifier { local_devpath: "/phys" is_root: true }
                         }
                       }
                     }
@@ -1165,7 +1175,23 @@ TEST(QueryEngineTest, QueryEngineUsesGivenTopologyConfig) {
                       fields {
                         key: "_id_"
                         value {
-                          identifier { local_devpath: "/phys:device:erot-gpu2" }
+                          identifier {
+                            local_devpath: "/phys:device:erot-gpu1"
+                            is_root: true
+                          }
+                        }
+                      }
+                    }
+                  }
+                  values {
+                    subquery_value {
+                      fields {
+                        key: "_id_"
+                        value {
+                          identifier {
+                            local_devpath: "/phys:device:erot-gpu2"
+                            is_root: true
+                          }
                         }
                       }
                     }
@@ -1529,34 +1555,37 @@ TEST(QueryEngineTest, CanExecuteSubscriptionQuerySuccessfully) {
 
   // Verify the query result captured in subscription query. This will have
   // results for all subqueries that don't have a subscribe rule configured.
-  EXPECT_THAT(subscription_query_result->result.results()
-                  .at("AssemblyCollectorWithPropertyNameNormalization")
-                  .data(),
-              IgnoringRepeatedFieldOrdering(EqualsProto(R"pb(
-                fields {
-                  key: "Chassis"
-                  value {
-                    list_value {
-                      values {
-                        subquery_value {
-                          fields {
-                            key: "_id_"
-                            value { identifier { local_devpath: "/phys" } }
-                          }
-                          fields {
-                            key: "part_number"
-                            value { string_value: "1043652-02" }
-                          }
-                          fields {
-                            key: "serial_number"
-                            value { string_value: "MBBQTW194106556" }
-                          }
-                        }
-                      }
+  EXPECT_THAT(
+      subscription_query_result->result.results()
+          .at("AssemblyCollectorWithPropertyNameNormalization")
+          .data(),
+      IgnoringRepeatedFieldOrdering(EqualsProto(R"pb(
+        fields {
+          key: "Chassis"
+          value {
+            list_value {
+              values {
+                subquery_value {
+                  fields {
+                    key: "_id_"
+                    value {
+                      identifier { local_devpath: "/phys" is_root: true }
                     }
                   }
+                  fields {
+                    key: "part_number"
+                    value { string_value: "1043652-02" }
+                  }
+                  fields {
+                    key: "serial_number"
+                    value { string_value: "MBBQTW194106556" }
+                  }
                 }
-              )pb")));
+              }
+            }
+          }
+        }
+      )pb")));
 
   EXPECT_THAT(subscription_query_result->result.results().at("Thermal").data(),
               IgnoringRepeatedFieldOrdering(EqualsProto(R"pb()pb")));
