@@ -51,6 +51,7 @@ inline constexpr char kRfPropertyComponentIntegrity[] = "ComponentIntegrity";
 inline constexpr char kRfPropertyComponentIntegritySPDMGetSignedMeasurements[] =
     "#ComponentIntegrity.SPDMGetSignedMeasurements";
 inline constexpr char kRfPropertyMemory[] = "Memory";
+inline constexpr char kRfPropertyBios[] = "Bios";
 inline constexpr char kRfPropertyStorage[] = "Storage";
 inline constexpr char kRfPropertyDrives[] = "Drives";
 inline constexpr char kRfPropertyDriveReset[] = "#Drive.Reset";
