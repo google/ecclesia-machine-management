@@ -1,0 +1,8 @@
+from "third_party/absl/python/optional.h" import *  # NoneOr
+
+use `absl::string_view` as str
+use `::std::string` as str
+
+from "third_party/ecclesia/lib/devpath/devpath.h":
+  namespace `ecclesia`:
+    def GetUpstreamDevpath(devpath: str) -> NoneOr<str>
