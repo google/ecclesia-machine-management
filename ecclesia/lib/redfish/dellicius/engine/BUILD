@@ -1,4 +1,5 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//ecclesia/build_defs:embed.bzl", "cc_data_library")
 
 licenses(["notice"])

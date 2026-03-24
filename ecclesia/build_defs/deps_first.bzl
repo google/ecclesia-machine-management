@@ -61,22 +61,61 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
     Args:
       package_name: The name of the Ecclesia external package.
     """
+
+    if not native.existing_rule("bazel_skylib"):
+        # bazel-skylib 1.7.1 is the last version that is compatible with Bazel 8
+        http_archive(
+            name = "bazel_skylib",
+            sha256 = "bc283cdfcd526a52c3201279cda4bc298652efa898b10b4db0837dc51652756f",
+            urls = ["https://github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz"],
+        )
+
     if not native.existing_rule("com_google_absl"):
-        # Abseil. Picked up Abseil LTS 20230802.2.
+        # Abseil. Official release 20250814.0.
         http_archive(
             name = "com_google_absl",
-            sha256 = "7c11539617af1f332f0854a6fb21e296a1b29c27d03f23c7b49d4adefcd102cc",
-            strip_prefix = "abseil-cpp-20230802.2",
-            urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.2.tar.gz"],
+            sha256 = "9b2b72d4e8367c0b843fa2bcfa2b08debbe3cee34f7aaa27de55a6cbb3e843db",
+            strip_prefix = "abseil-cpp-20250814.0",
+            urls = ["https://github.com/abseil/abseil-cpp/archive/refs/tags/20250814.0.tar.gz"],
+            repo_mapping = {"@googletest": "@com_google_googletest"},
+        )
+
+    if not native.existing_rule("com_google_protobuf"):
+        http_archive(
+            name = "com_google_protobuf",
+            sha256 = "d0e3a75876a81e1536028bb9cf9181382b198da4cc6fa6aef86879ef629ac807",
+            strip_prefix = "protobuf-74211c0dfc2777318ab53c2cd2c317a2ef9012de",
+            urls = ["https://github.com/protocolbuffers/protobuf/archive/74211c0dfc2777318ab53c2cd2c317a2ef9012de.tar.gz"],
+            repo_mapping = {"@abseil-cpp": "@com_google_absl"},
+            patch_cmds = [
+                "find . -type f \\( -name 'BUILD' -o -name 'BUILD.bazel' \\) -exec sed -i 's|^license(|license(visibility=[\"//visibility:public\"], license_kinds=[\"@rules_license//licenses/spdx:BSD-3-Clause\"],|g' {} +",
+                "python3 -c 'import os, re; [(lambda p, c: open(p, \"w\").write(c))(os.path.join(r,f), re.sub(r\"package\\(\\s*\\)\", \"\", re.sub(r\"default_applicable_licenses\\s*=\\s*\\[[^\\]]+\\]\\,?\", \"\", open(os.path.join(r,f)).read()))) for r,d,fs in os.walk(\".\") for f in fs if f in (\"BUILD\",\"BUILD.bazel\")]'",
+                "mkdir -p bazel/common",
+                "if [ ! -f bazel/common/BUILD.bazel ]; then echo 'package(default_visibility = [\"//visibility:public\"])' > bazel/common/BUILD.bazel; echo 'exports_files([\"proto_info.bzl\"])' >> bazel/common/BUILD.bazel; fi",
+            ],
+        )
+
+    if not native.existing_rule("com_github_grpc_grpc"):
+        patch_files = [
+            "grpc_ios_build_fix.patch",
+        ]
+        http_archive(
+            name = "com_github_grpc_grpc",
+            sha256 = "7bf97c11cf3808d650a3a025bbf9c5f922c844a590826285067765dfd055d228",
+            strip_prefix = "grpc-1.74.1",
+            urls = ["https://github.com/grpc/grpc/archive/refs/tags/v1.74.1.tar.gz"],
+            repo_mapping = {"@abseil-cpp": "@com_google_absl"},
+            patches = _make_patch_paths("grpc.patches", patch_files, package_name),
+            patch_args = ["-p1"],
         )
 
     if not native.existing_rule("com_google_googletest"):
-        # Google Test. Official release 1.10.0.
         http_archive(
             name = "com_google_googletest",
-            sha256 = "9dc9157a9a1551ec7a7e43daea9a694a0bb5fb8bec81235d8a1e6ef64c716dcb",
-            strip_prefix = "googletest-release-1.10.0",
-            urls = ["https://github.com/google/googletest/archive/release-1.10.0.tar.gz"],
+            sha256 = "7b42b4d6ed48810c5362c265a17faebe90dc2373c885e5216439d37927f02926",
+            strip_prefix = "googletest-1.15.2",
+            urls = ["https://github.com/google/googletest/archive/refs/tags/v1.15.2.tar.gz"],
+            repo_mapping = {"@abseil-cpp": "@com_google_absl"},
         )
 
     if not native.existing_rule("com_github_google_benchmark"):
@@ -119,15 +158,6 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             urls = ["https://github.com/google/emboss/archive/5cb347f85c9f1d2b7d00c29bd08ef706d8cd0461.tar.gz"],
         )
 
-    if not native.existing_rule("com_google_protobuf"):
-        # Protocol buffers. Official release 3.17.0.
-        http_archive(
-            name = "com_google_protobuf",
-            sha256 = "eaba1dd133ac5167e8b08bc3268b2d33c6e9f2dcb14ec0f97f3d3eed9b395863",
-            strip_prefix = "protobuf-3.17.0",
-            urls = ["https://github.com/protocolbuffers/protobuf/archive/v3.17.0.tar.gz"],
-        )
-
     if not native.existing_rule("com_google_googleapis"):
         # Google APIs. Latest commit as of Nov 16, 2020.
         http_archive(
@@ -152,43 +182,6 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             ],
         )
 
-    if not native.existing_rule("com_github_grpc_grpc"):
-        # gRPC. Taken from commit to include compiler fix for gcc error.
-        patch_files = [
-            # Add visibility to GRPC testing
-            "grpc.visibility.patch",
-            # Remove any iOS dependencies
-            "grpc.delete_ios.patch",
-            # Workaround for GCC bug
-            "grpc.xds_listener.patch",
-        ]
-        http_archive(
-            name = "com_github_grpc_grpc",
-            patches = _make_patch_paths("grpc.patches", patch_files, package_name),
-            patch_args = ["-p1"],
-            sha256 = "b55696fb249669744de3e71acc54a9382bea0dce7cd5ba379b356b12b82d4229",
-            strip_prefix = "grpc-1.51.1",
-            urls = ["https://github.com/grpc/grpc/archive/refs/tags/v1.51.1.tar.gz"],
-        )
-
-    if not native.existing_rule("bazel_skylib"):
-        # Skylib libraries.
-        http_archive(
-            name = "bazel_skylib",
-            sha256 = "61352d78e4a89405853b939853cf76d7c323f90e5507f25a22fa523acb71ea14",
-            strip_prefix = "bazel-skylib-1.2.0",
-            urls = ["https://github.com/bazelbuild/bazel-skylib/archive/refs/tags/1.2.0.tar.gz"],
-        )
-
-    if not native.existing_rule("rules_python"):
-        # Extra build rules for various languages.
-        http_archive(
-            name = "rules_python",
-            sha256 = "e5470e92a18aa51830db99a4d9c492cc613761d5bdb7131c04bd92b9834380f6",
-            strip_prefix = "rules_python-4b84ad270387a7c439ebdccfd530e2339601ef27",
-            urls = ["https://github.com/bazelbuild/rules_python/archive/4b84ad270387a7c439ebdccfd530e2339601ef27.tar.gz"],
-        )
-
     if not native.existing_rule("rules_pkg"):
         http_archive(
             name = "rules_pkg",
@@ -197,15 +190,6 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
                 "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.7.0/rules_pkg-0.7.0.tar.gz",
                 "https://github.com/bazelbuild/rules_pkg/releases/download/0.7.0/rules_pkg-0.7.0.tar.gz",
             ],
-        )
-
-    if not native.existing_rule("build_bazel_rules_swift"):
-        http_archive(
-            # Needed for gRPC.
-            name = "build_bazel_rules_swift",
-            sha256 = "d0833bc6dad817a367936a5f902a0c11318160b5e80a20ece35fb85a5675c886",
-            strip_prefix = "rules_swift-3eeeb53cebda55b349d64c9fc144e18c5f7c0eb8",
-            urls = ["https://github.com/bazelbuild/rules_swift/archive/3eeeb53cebda55b349d64c9fc144e18c5f7c0eb8.tar.gz"],
         )
 
     if not native.existing_rule("com_github_nelhage_rules_boost"):
@@ -250,6 +234,7 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             urls = [
                 "https://github.com/google/re2/archive/refs/tags/2021-06-01.tar.gz",
             ],
+            repo_mapping = {"@abseil-cpp": "@com_google_absl"},
         )
 
     if not native.existing_rule("org_tensorflow"):
@@ -273,6 +258,10 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             sha256 = "013fb45df1f8d18c1a912aafa793834adab39a667705e84862880bc72eaac199",
             strip_prefix = "serving-a17d0388ff0146c6ee2b66c75054845cdbd26677",
             urls = ["https://github.com/tensorflow/serving/archive/a17d0388ff0146c6ee2b66c75054845cdbd26677.zip"],
+            patch_cmds = [
+                "find tensorflow_serving/util/net_http -name BUILD -exec sed -i 's|default_visibility = \\[\"|default_visibility = [\"//visibility:public\", \"|g' {} +",
+                "find tensorflow_serving/util/net_http -name BUILD -exec sed -i 's|default_visibility = \\[$|default_visibility = [\"//visibility:public\", |g' {} +",
+            ],
         )
 
     if not native.existing_rule("com_json"):
@@ -384,6 +373,7 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
             # https://github.com/pallets/jinja2 links to pallets/jinja.
             urls = ["https://github.com/pallets/jinja/archive/refs/tags/3.0.3.tar.gz"],
         )
+
     if not native.existing_rule("markupsafe"):
         http_archive(
             name = "markupsafe",

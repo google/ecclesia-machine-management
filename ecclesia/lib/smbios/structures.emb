@@ -538,8 +538,8 @@ struct IpmiDeviceStructure:
   2  [+2]         UInt               handle
   4  [+1]         IpmiInterfaceType  interface_type
   5  [+1]  bits:
-    0  [+4]       UInt:4             minor
-    4  [+4]       UInt:4             major
+    0  [+4]       UInt:4             minor_version
+    4  [+4]       UInt:4             major_version
 
   6  [+1]         UInt               i2c_address
   7  [+1]         UInt               nv_storage_device_address

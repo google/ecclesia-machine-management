@@ -1,3 +1,5 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
 proto_library(
     name = "node_class_assignment_proto",
     srcs = ["node_class_assignment.proto"],

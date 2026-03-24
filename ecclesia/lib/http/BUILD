@@ -2,6 +2,7 @@
 
 # load("@rules_cc//cc:cc_library.bzl", "cc_library")
 # load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 licenses(["notice"])
 

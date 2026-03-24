@@ -1,6 +1,7 @@
 """BUILD rules for converting proto text files into binary format."""
 
 load("@bazel_skylib//lib:new_sets.bzl", "sets")
+load("@rules_proto//proto:defs.bzl", "ProtoInfo")
 
 def _descriptor_set_list(deps):
     """Makes a list of distinct FileDescriptorSet files of deps's transitive dependencies"""

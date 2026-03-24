@@ -1,0 +1,20 @@
+diff '--color=auto' -ruN grpc-1.74.1.orig/bazel/grpc_build_system.bzl grpc-1.74.1/bazel/grpc_build_system.bzl
+--- grpc-1.74.1.orig/bazel/grpc_build_system.bzl	2026-03-23 20:25:23.474950175 +0000
++++ grpc-1.74.1/bazel/grpc_build_system.bzl	2026-03-23 20:25:34.588938986 +0000
+@@ -27,9 +27,6 @@
+ Contains macros used throughout the repo.
+ """
+ 
+-load("@build_bazel_apple_support//rules:universal_binary.bzl", "universal_binary")
+-load("@build_bazel_rules_apple//apple:ios.bzl", "ios_unit_test")
+-load("@build_bazel_rules_apple//apple/testing/default_runner:ios_test_runner.bzl", "ios_test_runner")
+ load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+ load("@com_google_protobuf//bazel:upb_proto_library.bzl", "upb_proto_library", "upb_proto_reflection_library")
+ load("@rules_proto//proto:defs.bzl", "proto_library")
+@@ -841,3 +838,6 @@
+             "@bazel_tools//tools/cpp:clang-cl",
+         ],
+     )
++def ios_unit_test(**kwargs): pass
++def ios_test_runner(**kwargs): pass
++def universal_binary(**kwargs): pass

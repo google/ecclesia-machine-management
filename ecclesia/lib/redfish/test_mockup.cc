@@ -64,7 +64,7 @@ constexpr absl::Duration kDaemonStartSleepDuration = absl::Milliseconds(50);
 constexpr absl::Duration kDaemonAuthStartEstimation = absl::Seconds(1);
 
 constexpr absl::string_view kMockupServerPath =
-    "com_google_ecclesia/external/redfishMockupServer/redfishMockupServer.par";
+    "redfishMockupServer/redfishMockupServer.par";
 
 std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
     std::unique_ptr<ecclesia::HttpClient> client, absl::string_view scheme,
