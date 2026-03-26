@@ -26,6 +26,7 @@
 #include <variant>
 #include <vector>
 
+#include "absl/base/call_once.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
@@ -33,6 +34,7 @@
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "absl/types/span.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.grpc.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1.pb.h"
 #include "ecclesia/lib/redfish/proto/redfish_v1_grpc_include.h"
@@ -51,14 +53,14 @@
 #include "single_include/nlohmann/json.hpp"
 #include "google/protobuf/message.h"
 #include "google/protobuf/text_format.h"
-#include "re2/re2.h"  // IWYU pragma: keep
+#include "re2/re2.h"
 
 namespace ecclesia {
 namespace {
+
 using OverrideValue = OverrideField::OverrideValue;
 using IndividualObjectIdentifier = ObjectIdentifier::IndividualObjectIdentifier;
-using RE2AndOverrideContext = std::vector<
-    std::pair<std::unique_ptr<RE2>, OverridePolicy::OverrideContent>>;
+
 constexpr absl::string_view kTargetKey = "target";
 constexpr absl::string_view kResourceKey = "redfish-resource";
 
@@ -230,7 +232,7 @@ absl::Status FindObjectAndAct(nlohmann::json& json,
     if (!json.is_array()) {
       return absl::InvalidArgumentError("Json is not an array type");
     }
-    for (auto &iter : json) {
+    for (auto& iter : json) {
       if (iter.contains(object_identifier.individual_object_identifier()
                             .Get(idx)
                             .array_field()
@@ -308,8 +310,10 @@ absl::Status ResultUpdateHelper(const OverrideField& field,
 
 absl::Status ResultExpandUpdateHelper(
     const OverridePolicy& override_policy,
-    const RE2AndOverrideContext& re2_and_override_context, nlohmann::json* json,
-    RedfishTransport* transport,
+    absl::Span<
+        const std::pair<std::unique_ptr<RE2>, OverridePolicy::OverrideContent>>
+        re2_and_override_context,
+    nlohmann::json* json, RedfishTransport* transport,
     absl::flat_hash_set<nlohmann::json*>& visited_json) {
   if (visited_json.contains(json)) {
     return absl::OkStatus();
@@ -326,7 +330,7 @@ absl::Status ResultExpandUpdateHelper(
     std::string checked_path = json->at("@odata.id");
     auto iter = override_policy.override_content_map_uri().find(checked_path);
     if (iter != override_policy.override_content_map_uri().end()) {
-      for (const auto &field : iter->second.override_field()) {
+      for (const auto& field : iter->second.override_field()) {
         if (field.has_apply_condition() &&
             field.apply_condition().is_expand()) {
           continue;
@@ -339,11 +343,11 @@ absl::Status ResultExpandUpdateHelper(
         }
       }
     }
-    for (const auto &[uri_re2, override_content] : re2_and_override_context) {
+    for (const auto& [uri_re2, override_content] : re2_and_override_context) {
       if (!RE2::FullMatch(checked_path, *uri_re2)) {
         continue;
       }
-      for (const auto &field : override_content.override_field()) {
+      for (const auto& field : override_content.override_field()) {
         auto update_status = ResultUpdateHelper(field, *json, transport);
         if (!update_status.ok()) {
           DLOG(WARNING) << absl::StrFormat(
@@ -354,7 +358,7 @@ absl::Status ResultExpandUpdateHelper(
     }
   }
 
-  for (nlohmann::json &subjson : *json) {
+  for (nlohmann::json& subjson : *json) {
     if (absl::Status status =
             ResultExpandUpdateHelper(override_policy, re2_and_override_context,
                                      &subjson, transport, visited_json);
@@ -443,60 +447,83 @@ OverridePolicy GetOverridePolicy(
 
 absl::StatusOr<RedfishTransport::Result>
 RedfishTransportWithOverride::TryApplyingOverride(
-    absl::string_view path, RedfishTransport::Result get_result) {
+    RedfishTransport::Result get_result) {
   if (!std::holds_alternative<nlohmann::json>(get_result.body)) {
     return get_result;
   }
   auto& json = std::get<nlohmann::json>(get_result.body);
-  // Try to fetch the override policy.
-  if (!has_override_policy_) {
+
+  // If the override policy has not been initialized, try to fetch it fresh.
+  if (!override_context_initialized_.HasBeenNotified()) {
     absl::StatusOr<OverridePolicy> override_policy = override_policy_cb_();
     if (!override_policy.ok()) {
-      LOG(ERROR) << "Unexpectedly unable to retrieve Redfish Override. "
-                    "Returning unedited Redfish response.";
+      LOG_EVERY_N(WARNING, 20)
+          << "Unexpectedly unable to retrieve Redfish Override. "
+             "Returning unedited Redfish response.";
       return get_result;
     }
-    DLOG(INFO) << "Applying Redfish override: "
-               << override_policy->DebugString();
-    SetOverridePolicy(*std::move(override_policy));
+    SetOverridePolicyOnce(*std::move(override_policy));
   }
 
-  std::string checked_path = std::string(path);
-  auto extend_pos = path.find_first_of('?');
-  if (extend_pos != std::string::npos) {
-    checked_path = path.substr(0, extend_pos);
+  // If the override context is valid, use it. Otherwise, use a default
+  // instance. `HasBeenNotified` should always guarantee != nullptr, but we
+  // check after `HasBeenNotified` just to be safe, further protecting against
+  // the possibility of attempting to dereference a null pointer.
+  bool is_initialized = override_context_initialized_.HasBeenNotified() &&
+                        override_context_ != nullptr;
+
+  const OverridePolicy& current_policy =
+      is_initialized ? override_context_->policy
+                     : OverridePolicy::default_instance();
+  absl::Span<
+      const std::pair<std::unique_ptr<RE2>, OverridePolicy::OverrideContent>>
+      current_re2_and_content;
+  if (is_initialized) {
+    current_re2_and_content = override_context_->re2_and_content;
   }
-  extend_pos = path.find_first_of('#');
-  if (extend_pos != std::string::npos) {
-    checked_path = path.substr(0, extend_pos);
-  }
+
   absl::flat_hash_set<nlohmann::json*> visited_json;
-  if (auto status = ResultExpandUpdateHelper(
-          override_policy_, override_re2_and_content_, &json,
-          redfish_transport_.get(), visited_json);
-      !status.ok()) {
+  absl::Status status =
+      ResultExpandUpdateHelper(current_policy, current_re2_and_content, &json,
+                               redfish_transport_.get(), visited_json);
+  if (!status.ok()) {
     LOG_FIRST_N(WARNING, 20) << "Override apply failed: " << status;
   }
+
   return get_result;
 }
 
-void RedfishTransportWithOverride::SetOverridePolicy(OverridePolicy policy) {
-  override_policy_ = std::move(policy);
-  has_override_policy_ = true;
-  override_re2_and_content_.clear();
-  override_re2_and_content_.reserve(
-      override_policy_.override_content_map_regex_size());
-  for (const auto& [regex_str, override_content] :
-       override_policy_.override_content_map_regex()) {
-    auto re2 = std::make_unique<RE2>(regex_str);
-    if (!re2->ok()) {
-      LOG(WARNING) << "Invalid regex provided in Redfish override policy: "
-                   << regex_str << " Error: " << re2->error();
-      continue;
-    }
-    override_re2_and_content_.push_back(
-        std::make_pair(std::move(re2), override_content));
-  }
+void RedfishTransportWithOverride::SetOverridePolicyOnce(
+    OverridePolicy new_policy) {
+  // Should only be set once, so we use a `call_once` to enforce this.
+  absl::call_once(
+      override_initialized_once_flag_,
+      [this, new_policy = std::move(new_policy)]() -> void {
+        DLOG(INFO) << "Applying Redfish override: " << new_policy;
+
+        auto new_ctx = std::make_unique<OverrideContext>();
+        new_ctx->re2_and_content.reserve(
+            new_policy.override_content_map_regex_size());
+
+        for (const auto& [regex_str, override_content] :
+             new_policy.override_content_map_regex()) {
+          auto re2 = std::make_unique<RE2>(regex_str);
+          if (!re2->ok()) {
+            LOG(WARNING)
+                << "Invalid regex provided in Redfish override policy: "
+                << regex_str << " Error: " << re2->error();
+            continue;
+          }
+          new_ctx->re2_and_content.push_back(
+              std::make_pair(std::move(re2), override_content));
+        }
+
+        new_ctx->policy = std::move(new_policy);
+        override_context_ = std::move(new_ctx);
+        // Notify last to ensure `override_context_` is valid when
+        // `HasBeenNotified` is checked.
+        override_context_initialized_.Notify();
+      });
 }
 
 absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
@@ -505,7 +532,7 @@ absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
   if (!get_result.ok()) {
     return get_result;
   }
-  return TryApplyingOverride(path, *std::move(get_result));
+  return TryApplyingOverride(*std::move(get_result));
 }
 
 absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
@@ -514,7 +541,7 @@ absl::StatusOr<RedfishTransport::Result> RedfishTransportWithOverride::Get(
   if (!get_result.ok()) {
     return get_result;
   }
-  return TryApplyingOverride(path, *std::move(get_result));
+  return TryApplyingOverride(*std::move(get_result));
 }
 
 }  // namespace ecclesia

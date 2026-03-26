@@ -38,16 +38,8 @@
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
-
-class RedfishTransportWithOverrideTestPeer {
- public:
-  static void SetOverridePolicy(RedfishTransportWithOverride* transport,
-                                OverridePolicy policy) {
-    transport->SetOverridePolicy(std::move(policy));
-  }
-};
-
 namespace {
+
 using ::testing::Eq;
 using ::testing::Return;
 
@@ -1053,36 +1045,30 @@ TEST_F(RedfishOverrideTest, GetReplaceValueUsingExpand) {
   EXPECT_THAT(res_get->code, Eq(200));
 }
 
-TEST_F(RedfishOverrideTest, SetOverridePolicyClearsPreviousRegex) {
-  OverridePolicy policy1 = ParseTextProtoOrDie(R"pb(
+TEST_F(RedfishOverrideTest, InvalidRegexInPolicy) {
+  OverridePolicy policy = ParseTextProtoOrDie(R"pb(
     override_content_map_regex: {
-      key: "/expected/result/1"
+      key: "/expected/(.*)/1"
       value: {
-        override_field:
-        [ {
+        override_field: [ {
           action_replace: {
             object_identifier: {
-              individual_object_identifier:
-              [ { field_name: "TestString" }]
+              individual_object_identifier: [ { field_name: "TestString" }]
             }
-            override_value: { value: { string_value: "FromPolicy1" } }
+            override_value: { value: { string_value: "ValidOverride" } }
           }
         }]
       }
     }
-  )pb");
-  OverridePolicy policy2 = ParseTextProtoOrDie(R"pb(
     override_content_map_regex: {
-      key: "/expected/result/1"
+      key: "["  # Invalid regex: unbalanced bracket
       value: {
-        override_field:
-        [ {
+        override_field: [ {
           action_replace: {
             object_identifier: {
-              individual_object_identifier:
-              [ { field_name: "TestNumber" }]
+              individual_object_identifier: [ { field_name: "TestString" }]
             }
-            override_value: { value: { number_value: 999 } }
+            override_value: { value: { string_value: "InvalidOverride" } }
           }
         }]
       }
@@ -1090,32 +1076,16 @@ TEST_F(RedfishOverrideTest, SetOverridePolicyClearsPreviousRegex) {
   )pb");
 
   auto rf_override = std::make_unique<RedfishTransportWithOverride>(
-      std::move(transport_), []() -> absl::StatusOr<OverridePolicy> {
-        return OverridePolicy::default_instance();
-      });
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
 
-  RedfishTransportWithOverrideTestPeer::SetOverridePolicy(rf_override.get(),
-                                                          policy1);
-  {
-    auto res_get = rf_override->Get("/expected/result/1");
-    ASSERT_THAT(res_get, IsOk());
-    ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
-    EXPECT_EQ(std::get<nlohmann::json>(res_get->body)["TestString"],
-              "FromPolicy1");
-    EXPECT_EQ(std::get<nlohmann::json>(res_get->body)["TestNumber"], 123);
-  }
-
-  // If SetOverridePolicy clears context, policy2 will be applied
-  // correctly, and policy1 override will not linger.
-  RedfishTransportWithOverrideTestPeer::SetOverridePolicy(rf_override.get(),
-                                                          policy2);
-  {
-    auto res_get = rf_override->Get("/expected/result/1");
-    ASSERT_THAT(res_get, IsOk());
-    ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
-    EXPECT_EQ(std::get<nlohmann::json>(res_get->body)["TestString"], "test123");
-    EXPECT_EQ(std::get<nlohmann::json>(res_get->body)["TestNumber"], 999);
-  }
+  // Verify valid regex still works.
+  absl::StatusOr<RedfishTransport::Result> res_get =
+      rf_override->Get("/expected/result/1");
+  ASSERT_THAT(res_get, IsOk());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  nlohmann::json json = std::get<nlohmann::json>(res_get->body);
+  EXPECT_THAT(json["TestString"], Eq("ValidOverride"));
 }
 
 }  // namespace
