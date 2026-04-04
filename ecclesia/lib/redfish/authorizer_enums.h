@@ -59,6 +59,8 @@ enum class ResourceEntity : int {
   kCertificateService,
   kChassis,
   kChassisCollection,
+  kChassisErrorCounter,
+  kChassisErrorCounterCollection,
   kCircuit,
   kCircuitCollection,
   kComponentIntegrity,
