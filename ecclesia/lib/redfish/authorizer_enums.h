@@ -119,6 +119,7 @@ enum class ResourceEntity : int {
   kGoogleHbmOnlineRepair,
   kGoogleHft,
   kGoogleManagedObjectStoreMetrics,
+  kGoogleMinValveConfig,
   kGoogleNvmeMetric,
   kGooglePower,
   kGooglePowerCap,
