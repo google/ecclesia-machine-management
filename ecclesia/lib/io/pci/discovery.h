@@ -45,54 +45,6 @@ class PciTopologyInterface {
  public:
   virtual ~PciTopologyInterface() = default;
 
-  // This class represents a node in the PCI topology tree.
-  class Node {
-   public:
-    Node(const PciDbdfLocation& location, size_t depth, Node* parent)
-        : location_(location), depth_(depth), parent_(parent) {}
-
-    Node(const Node&) = delete;
-    Node& operator=(const Node&) = delete;
-    Node(Node&&) = delete;
-    Node& operator=(Node&&) = delete;
-
-    const PciDbdfLocation& Location() const { return location_; }
-
-    // This gets the depth in the PCI tree. For a root node, the depth is 0.
-    size_t Depth() const { return depth_; }
-
-    // This gets the parent of this node, for a root node, this
-    // function returns nullptr.
-    Node* Parent() const { return parent_; }
-
-    // This gets the children of this node, for a endpoint node without
-    // children, the return vector is empty.
-    absl::Span<const Node* const> Children() const { return children_; }
-
-    void AddChild(Node* node) { children_.push_back(node); }
-
-    void SetChildren(std::vector<Node*> children) {
-      children_ = std::move(children);
-    }
-
-   private:
-    const PciDbdfLocation location_;
-    size_t depth_;
-    Node* parent_;
-    std::vector<Node*> children_;
-  };
-
-  using PciNodeMap =
-      absl::flat_hash_map<PciDbdfLocation, std::unique_ptr<Node>>;
-  virtual absl::StatusOr<PciNodeMap> EnumerateAllNodes() const = 0;
-
-  // A method to convert a PCI location to a PCI device instance. The created
-  // PCI device can facilitate the accesses to the PCI device with the given
-  // location. If no such PCI device with the given location exists, return
-  // nullptr.
-  virtual std::unique_ptr<PciDevice> CreateDevice(
-      const PciDbdfLocation& location) const = 0;
-
   // This struct associates the root PCI bus with the corresponding ACPI path.
   struct PciAcpiPath {
     PciDomain domain;

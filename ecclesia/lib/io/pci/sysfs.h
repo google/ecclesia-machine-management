@@ -111,13 +111,6 @@ class SysfsPciTopology : public PciTopologyInterface {
   // testing purpose.
   SysfsPciTopology(const std::string &sys_devices_dir);
 
-  absl::StatusOr<PciNodeMap> EnumerateAllNodes() const override;
-
-  std::unique_ptr<PciDevice> CreateDevice(
-      const PciDbdfLocation &location) const override {
-    return SysfsPciDevice::TryCreateDevice(location);
-  }
-
   // This method scans the /sys/devices/pci<domain>:<bus> and associate the
   // domain:bus with the ACPI path content in
   // /sys/devices/pci<domain>:<bus>/firmware_node/path
@@ -131,15 +124,6 @@ class SysfsPciTopology : public PciTopologyInterface {
       const override;
 
  private:
-  // This helper function recursively scans the input directory and its
-  // subdirectories for any PCI nodes. The found nodes will be added to the
-  // pci_node_map and linked to the PCI topology tree. The return vector is the
-  // nodes in this directory only (exclude subdirectories).
-  std::vector<PciTopologyInterface::Node *> ScanDirectory(
-      absl::string_view directory_path, size_t depth,
-      PciTopologyInterface::Node *parent,
-      PciTopologyInterface::PciNodeMap *pci_node_map) const;
-
   // The sysfs dir in Linux is always /sys/devices. This variable is only for
   // testing purpose.
   const std::string sys_devices_dir_;

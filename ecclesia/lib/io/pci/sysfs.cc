@@ -233,42 +233,6 @@ SysfsPciTopology::SysfsPciTopology() : SysfsPciTopology("/sys/devices") {}
 SysfsPciTopology::SysfsPciTopology(const std::string& sys_devices_dir)
     : sys_devices_dir_(sys_devices_dir) {}
 
-absl::StatusOr<PciTopologyInterface::PciNodeMap>
-SysfsPciTopology::EnumerateAllNodes() const {
-  PciTopologyInterface::PciNodeMap pci_node_map;
-  absl::Status status = WithEachFileInDirectory(
-      sys_devices_dir_, [&](absl::string_view entry_name) {
-        if (RE2::FullMatch(entry_name, *kPciBusEntryRegex)) {
-          ScanDirectory(JoinFilePaths(sys_devices_dir_, entry_name), 0, nullptr,
-                        &pci_node_map);
-        }
-      });
-  if (status.ok()) {
-    return pci_node_map;
-  }
-  return status;
-}
-
-std::vector<PciTopologyInterface::Node*> SysfsPciTopology::ScanDirectory(
-    absl::string_view directory_path, size_t depth,
-    PciTopologyInterface::Node* parent,
-    PciTopologyInterface::PciNodeMap* pci_node_map) const {
-  std::vector<Node*> nodes_in_this_dir;
-  WithEachFileInDirectory(directory_path, [&](absl::string_view entry_name) {
-    auto maybe_loc = PciDbdfLocation::FromString(entry_name);
-    if (maybe_loc.has_value()) {
-      auto node = std::make_unique<PciTopologyInterface::Node>(
-          maybe_loc.value(), depth, parent);
-      node->SetChildren(ScanDirectory(JoinFilePaths(directory_path, entry_name),
-                                      depth + 1, node.get(), pci_node_map));
-
-      nodes_in_this_dir.push_back(node.get());
-      pci_node_map->emplace(maybe_loc.value(), std::move(node));
-    }
-  }).IgnoreError();
-  return nodes_in_this_dir;
-}
-
 absl::StatusOr<std::vector<PciTopologyInterface::PciAcpiPath>>
 SysfsPciTopology::EnumeratePciAcpiPaths() const {
   std::vector<PciTopologyInterface::PciAcpiPath> acpi_nodes;

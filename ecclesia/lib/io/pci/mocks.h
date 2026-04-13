@@ -156,12 +156,6 @@ class MockPciDevice : public PciDevice {
 
 class MockPciTopology : public PciTopologyInterface {
  public:
-  MOCK_METHOD(absl::StatusOr<PciNodeMap>, EnumerateAllNodes, (),
-              (const, override));
-
-  MOCK_METHOD(std::unique_ptr<PciDevice>, CreateDevice,
-              (const PciDbdfLocation &), (const, override));
-
   MOCK_METHOD(absl::StatusOr<std::vector<PciAcpiPath>>, EnumeratePciAcpiPaths,
               (), (const, override));
 
