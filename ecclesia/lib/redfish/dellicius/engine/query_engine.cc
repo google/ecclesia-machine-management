@@ -123,8 +123,9 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
           "Query execution has been cancelled.");
       result_single.query_result.mutable_status()->set_error_code(
           ecclesia::ErrorCode::ERROR_CANCELLED);
-      query_id_to_result.mutable_results()->insert(
-          {result_single.query_result.query_id(), result_single.query_result});
+      query_id_to_result.mutable_results()->try_emplace(
+          result_single.query_result.query_id(),
+          std::move(result_single.query_result));
       continue;
     }
 
