@@ -45,7 +45,7 @@ namespace {
 
 // Pattern for predicate formatted with relational operators:
 constexpr LazyRE2 kPredicateRegexRelationalOperator = {
-    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=|~>|<~|~>=|<~=))([a-zA-Z0-9._\+\-\:#\\ ]+)$)"};
+    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=|~>|<~|~>=|<~=))([a-zA-Z0-9._\+\-\:#\\ /]+)$)"};
 
 // Pattern for Redfish standard (ISO 8601) datetime string.
 // Example: 2022-03-16T15:52:00

@@ -35,6 +35,7 @@ TEST(ApplyPredicateRuleTest, ShouldApplyRelationalOperatorsCorrectly) {
                         {"Id", "CPU_1"},
                         {"IdWithSpaces", "My Resource 42"},
                         {"StringProperty", "TestValue1"},
+                        {"CommandLine", "/usr/bin/bmcweb - bmcweb.service"},
                         {"NullObject", {}}};
 
   PredicateOptions options;
@@ -73,6 +74,9 @@ TEST(ApplyPredicateRuleTest, ShouldApplyRelationalOperatorsCorrectly) {
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
 
   options.predicate = "IdWithSpaces=My\\ Resource\\ 42";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "CommandLine=/usr/bin/bmcweb\\ -\\ bmcweb.service";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
 
   options.predicate = "NullObject=null";
