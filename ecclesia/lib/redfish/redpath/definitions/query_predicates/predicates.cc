@@ -27,6 +27,7 @@
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "absl/strings/ascii.h"
 #include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
@@ -44,8 +45,9 @@ namespace ecclesia {
 namespace {
 
 // Pattern for predicate formatted with relational operators:
+// Value portion now supports single quotes to allow for spaces and slashes.
 constexpr LazyRE2 kPredicateRegexRelationalOperator = {
-    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=|~>|<~|~>=|<~=))([a-zA-Z0-9._\+\-\:#\\ /]+)$)"};
+    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=|~>|<~|~>=|<~=))([a-zA-Z0-9._\+\-\:#\\ /']+)$)"};
 
 // Pattern for Redfish standard (ISO 8601) datetime string.
 // Example: 2022-03-16T15:52:00
@@ -208,6 +210,12 @@ absl::StatusOr<bool> PredicateFilterByNodeComparison(
     // For the property value's type is string.
     const auto condition = [json_obj, &test_value]() {
       absl::StrReplaceAll({{"\\", ""}}, &test_value);
+      // Strip outer single quotes from the test value if both exist.
+      // This allows [Prop='Value'] to match a JSON property with value "Value".
+      if (test_value.size() >= 2 && test_value.front() == '\'' &&
+          test_value.back() == '\'') {
+        test_value = test_value.substr(1, test_value.size() - 2);
+      }
       return *json_obj == test_value;
     };
     ret = ApplyStringComparisonFilter(condition, op);
@@ -244,8 +252,39 @@ absl::StatusOr<bool> ApplyPredicateRule(const nlohmann::json &json_object,
   // Set to true to create a default boolean operand for logical operations.
   // A single predicate translates `True and <predicate>`.
   bool is_filter_success = true;
-  std::vector<absl::string_view> expressions =
-      SplitExprByDelimiterWithEscape(options.predicate, " ", '\\');
+  // Split the predicate into expressions by spaces, while respecting single
+  // quotes. This ensures that spaces within quoted strings are not treated
+  // as logical delimiters (like 'and'/'or').
+  std::vector<absl::string_view> expressions;
+  bool in_quotes = false;
+  char quote_char = '\0';
+  size_t start = 0;
+  absl::string_view predicate = absl::StripAsciiWhitespace(options.predicate);
+  for (size_t i = 0; i < predicate.size(); ++i) {
+    char c = predicate[i];
+    // Skip escaped characters.
+    if (c == '\\' && i + 1 < predicate.size()) {
+      i++;
+      continue;
+    }
+    // Track if we are inside a single-quoted string.
+    if (c == '\'' && !in_quotes) {
+      in_quotes = true;
+      quote_char = c;
+    } else if (c == quote_char && in_quotes) {
+      in_quotes = false;
+    }
+    // Only split on spaces if we are not inside quotes.
+    if (!in_quotes && c == ' ') {
+      if (i > start) {
+        expressions.push_back(predicate.substr(start, i - start));
+      }
+      start = i + 1;
+    }
+  }
+  if (start < predicate.size()) {
+    expressions.push_back(predicate.substr(start));
+  }
 
   // When we detect a "(", the state of the predicate evaluation so far and the
   // operator to use on the saved expression is pushed onto the stack.
@@ -257,7 +296,7 @@ absl::StatusOr<bool> ApplyPredicateRule(const nlohmann::json &json_object,
     // and save the state of the evaluated predicate so far on the stack.
     if (absl::StartsWith(expr, kLeftParen)) {
       int paren_idx = 0;
-      while (expr[paren_idx] == '(') {
+      while (paren_idx < expr.size() && expr[paren_idx] == '(') {
         paren_depth++, paren_idx++;
         // default to using logical AND for the operator to use, if there is
         // none before the parenthesis, as it will just AND it with true.
@@ -276,12 +315,13 @@ absl::StatusOr<bool> ApplyPredicateRule(const nlohmann::json &json_object,
     int saved_state_count = 0;
     if (absl::EndsWith(expr, kRightParen) &&
         expr != kPredicateSelectLastIndex) {
-      while (expr[expr.size() - 1] == ')' &&
+      while (!expr.empty() && expr.back() == ')' &&
              expr != kPredicateSelectLastIndex) {
         saved_state_count++, paren_depth--;
         expr = expr.substr(0, expr.size() - 1);
       }
     }
+    if (expr.empty()) continue;
     // If expression is a logical operator, capture it and move to next
     // expression.
     if (expr == kLogicalOperatorAnd || expr == kLogicalOperatorOr) {

@@ -154,6 +154,38 @@ TEST(RedPathTrieTest, RedPathTrieIsBuiltCorrectly) {
   EXPECT_THAT(sensors_node->trie_node->subquery_id, "Sensors");
 }
 
+TEST(RedPathTrieTest, RedPathTrieHandlesSlashesInPredicates) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "SlashInPredicate"
+        subquery {
+          subquery_id: "Processes"
+          redpath: "/TopProcesses[CommandLine='/usr/bin/bmcweb']"
+          properties { property: "CommandLine" type: STRING }
+        }
+      )pb");
+
+  RedPathTrieBuilder redpath_trie_builder(&query);
+  absl::StatusOr<std::unique_ptr<RedPathTrieNode>> redpath_trie =
+      redpath_trie_builder.CreateRedPathTrie();
+  ASSERT_THAT(redpath_trie, IsOk());
+
+  // Validate NodeName "TopProcesses"
+  auto processes_node =
+      (*redpath_trie)
+          ->child_expressions.find(RedPathExpression(
+              RedPathExpression::Type::kNodeName, "TopProcesses"));
+  EXPECT_TRUE(processes_node != (*redpath_trie)->child_expressions.end());
+
+  // Validate Predicate "CommandLine=/usr/bin/bmcweb" (must NOT be split)
+  auto predicate_node = processes_node->trie_node->child_expressions.find(
+      RedPathExpression(RedPathExpression::Type::kPredicate,
+                        "CommandLine='/usr/bin/bmcweb'"));
+  EXPECT_TRUE(predicate_node !=
+              processes_node->trie_node->child_expressions.end());
+  EXPECT_THAT(predicate_node->trie_node->subquery_id, "Processes");
+}
+
 TEST(RedPathTrieTest, RedPathTrieDoesNotBuildOnMalformedPath) {
   DelliciusQuery query = ParseTextProtoOrDie(
       R"pb(
@@ -161,6 +193,34 @@ TEST(RedPathTrieTest, RedPathTrieDoesNotBuildOnMalformedPath) {
         subquery {
           subquery_id: "Processor"
           redpath: "/Systems[*/Processors[ProcessorType=CPU]"
+          properties { property: "Id" type: STRING }
+        }
+      )pb");
+  EXPECT_THAT(RedPathTrieBuilder(&query).CreateRedPathTrie(),
+              IsStatusInvalidArgument());
+}
+
+TEST(RedPathTrieTest, RedPathTrieDoesNotBuildOnNestedBrackets) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "Nested"
+        subquery {
+          subquery_id: "Nested"
+          redpath: "/Systems[[Id=1]]"
+          properties { property: "Id" type: STRING }
+        }
+      )pb");
+  EXPECT_THAT(RedPathTrieBuilder(&query).CreateRedPathTrie(),
+              IsStatusInvalidArgument());
+}
+
+TEST(RedPathTrieTest, RedPathTrieDoesNotBuildOnMismatchedBrackets) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "Mismatched"
+        subquery {
+          subquery_id: "Mismatched"
+          redpath: "/Systems[Id=1"
           properties { property: "Id" type: STRING }
         }
       )pb");

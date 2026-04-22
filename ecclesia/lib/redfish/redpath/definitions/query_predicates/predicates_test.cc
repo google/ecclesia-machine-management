@@ -100,6 +100,13 @@ TEST(ApplyPredicateRuleTest, ShouldApplyRelationalOperatorsCorrectly) {
 
   options.predicate = "Created=2023-09-16T18:50:24.633362+00:00";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  // Quoted strings with spaces and slashes
+  options.predicate = "CommandLine='/usr/bin/bmcweb - bmcweb.service'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "Status.State='Enabled'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
 }
 
 TEST(ApplyPredicateRuleTest, FuzzyStringComparisonPredicatesCorrectly) {
@@ -344,6 +351,73 @@ TEST(ApplyPredicateRuleTest, ShouldReturnErrorOnInvalidPredicates) {
 
   options.predicate = "InvalidCreated=2023-09-16T18:50:24.633362+00:00";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsStatusInternal());
+}
+
+TEST(ApplyPredicateRuleTest, QuotedStringsAndSplitterEdgeCases) {
+  nlohmann::json obj = {{"Prop", "Value"},
+                        {"WithSpace", "Value with space"},
+                        {"WithSlash", "Value/With/Slash"},
+                        {"StartsWithQuote", "'Value"},
+                        {"EndsWithQuote", "Value'"},
+                        {"EscapedQuote", "Value's"},
+                        {"Empty", ""},
+                        {"QuoteOnly", "'"}};
+  PredicateOptions options;
+
+  // 1. Single quote at start only - should not be stripped
+  options.predicate = "StartsWithQuote='Value";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+  // Verify it doesn't match unquoted version (i.e. wasn't stripped)
+  options.predicate = "Prop='Value";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+
+  // 2. Single quote at end only - should not be stripped
+  options.predicate = "EndsWithQuote=Value'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+  options.predicate = "Prop=Value'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+
+  // 3. Just a single quote
+  options.predicate = "QuoteOnly='";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  // 4. Empty quoted string
+  options.predicate = "Empty=''";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  // 5. Multiple spaces in predicate
+  options.predicate = "Prop=Value   and   WithSpace='Value with space'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  // 6. Escaped space
+  options.predicate = "WithSpace=Value\\ with\\ space";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  // 7. Escaped quote in unquoted value
+  options.predicate = "EscapedQuote=Value\\'s";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  // 8. Escaped quote inside single quotes
+  options.predicate = "EscapedQuote='Value\\'s'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  // 9. Unbalanced quote at the end of string
+  options.predicate = "StartsWithQuote='Value";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  // 10. Quoted value with leading/trailing spaces inside quotes
+  nlohmann::json space_obj = {{"Spaced", "  Value  "}};
+  options.predicate = "Spaced='  Value  '";
+  EXPECT_THAT(ApplyPredicateRule(space_obj, options), IsOkAndHolds(true));
+
+  // 11. Verify backslash removal (existing behavior)
+  nlohmann::json slash_obj = {{"Slash", "Value"}};
+  options.predicate = "Slash=Value\\\\";
+  EXPECT_THAT(ApplyPredicateRule(slash_obj, options), IsOkAndHolds(true));
+
+  // 12. Parenthesis with spaces
+  options.predicate = "( Prop=Value )";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
 }
 
 }  // namespace

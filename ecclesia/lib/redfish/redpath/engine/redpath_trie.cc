@@ -16,7 +16,7 @@
 
 #include "ecclesia/lib/redfish/redpath/engine/redpath_trie.h"
 
-#include <array>
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
@@ -71,8 +71,39 @@ RedPathTrieNode *InsertRedPathExpressions(
 absl::StatusOr<std::vector<RedPathExpression>> SplitRedPath(
     const std::string &redpath, RedPathExpression::Type type) {
   std::vector<RedPathExpression> redpath_expressions;
-  for (const auto &redpath_step :
-       absl::StrSplit(redpath, '/', absl::SkipEmpty())) {
+  std::vector<absl::string_view> redpath_steps;
+  int bracket_depth = 0;
+  size_t step_start = 0;
+  for (size_t i = 0; i < redpath.size(); ++i) {
+    if (redpath[i] == '[') {
+      if (bracket_depth > 0) {
+        return absl::InvalidArgumentError(
+            absl::StrCat("Nested brackets in RedPath: ", redpath));
+      }
+      bracket_depth++;
+    } else if (redpath[i] == ']') {
+      bracket_depth--;
+      if (bracket_depth < 0) {
+        return absl::InvalidArgumentError(
+            absl::StrCat("Mismatched brackets in RedPath: ", redpath));
+      }
+    } else if (redpath[i] == '/' && bracket_depth == 0) {
+      if (i > step_start) {
+        redpath_steps.push_back(
+            absl::string_view(redpath).substr(step_start, i - step_start));
+      }
+      step_start = i + 1;
+    }
+  }
+  if (bracket_depth != 0) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Mismatched brackets in RedPath: ", redpath));
+  }
+  if (step_start < redpath.size()) {
+    redpath_steps.push_back(absl::string_view(redpath).substr(step_start));
+  }
+
+  for (const auto& redpath_step : redpath_steps) {
     std::string node_name;
     std::string predicate;
     if (!RE2::FullMatch(redpath_step, *kLocationStepRegex, &node_name,

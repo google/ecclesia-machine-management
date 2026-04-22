@@ -6682,6 +6682,110 @@ TEST(RedpathQueryTimestampTest, TestTimestamp) {
               EqualsProto(R"pb(seconds: 110)pb"));
 }
 
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerExecutesQueryWithPredicateContainingSpacesAndSlashes) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "DiagnosticDataTest"
+        subquery {
+          subquery_id: "ManagerDiagnosticData"
+          redpath: "/Managers[*]/ManagerDiagnosticData"
+        }
+        subquery {
+          subquery_id: "TopProcesses"
+          root_subquery_ids: "ManagerDiagnosticData"
+          redpath: "/TopProcesses[CommandLine='/usr/bin/bmcweb - bmcweb.service']"
+          properties { property: "CommandLine" type: STRING }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+
+  // Add handlers to provide the data for the query.
+  server_->AddHttpGetHandler("/redfish/v1", [](ServerRequestInterface* req) {
+    SetContentType(req, "application/json");
+    req->WriteResponseString(R"json({
+      "Managers": {"@odata.id": "/redfish/v1/Managers"}
+    })json");
+    req->Reply();
+  });
+
+  server_->AddHttpGetHandler("/redfish/v1/Managers",
+                             [](ServerRequestInterface* req) {
+                               SetContentType(req, "application/json");
+                               req->WriteResponseString(R"json({
+      "Members": [{"@odata.id": "/redfish/v1/Managers/bmc"}]
+    })json");
+                               req->Reply();
+                             });
+
+  server_->AddHttpGetHandler("/redfish/v1/Managers/bmc",
+                             [](ServerRequestInterface* req) {
+                               SetContentType(req, "application/json");
+                               req->WriteResponseString(R"json({
+      "ManagerDiagnosticData": {"@odata.id": "/redfish/v1/Managers/bmc/ManagerDiagnosticData"}
+    })json");
+                               req->Reply();
+                             });
+
+  server_->AddHttpGetHandler("/redfish/v1/Managers/bmc/ManagerDiagnosticData",
+                             [](ServerRequestInterface* req) {
+                               SetContentType(req, "application/json");
+                               req->WriteResponseString(R"json({
+      "TopProcesses": [
+        {
+          "CommandLine": "/usr/bin/bmcweb - bmcweb.service"
+        },
+        {
+          "CommandLine": "other"
+        }
+      ]
+    })json");
+                               req->Reply();
+                             });
+
+  auto result = PlanAndExecuteQuery(query);
+  ASSERT_THAT(result, IsOk());
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "DiagnosticDataTest"
+    data {
+      fields {
+        key: "ManagerDiagnosticData"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "TopProcesses"
+                  value {
+                    list_value {
+                      values {
+                        subquery_value {
+                          fields {
+                            key: "CommandLine"
+                            value {
+                              string_value: "/usr/bin/bmcweb - bmcweb.service"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  EXPECT_THAT(result->query_result.data(),
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(expected_query_result.data())));
+}
+
 }  // namespace
 
 }  // namespace ecclesia
