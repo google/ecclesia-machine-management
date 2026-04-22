@@ -120,6 +120,8 @@ enum class ResourceEntity : int {
   kGoogleHft,
   kGoogleManagedObjectStoreMetrics,
   kGoogleMinValveConfig,
+  kGoogleNvmeFeature,
+  kGoogleNvmeFeatureCollection,
   kGoogleNvmeMetric,
   kGooglePower,
   kGooglePowerCap,
