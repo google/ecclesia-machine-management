@@ -18,9 +18,11 @@
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_X509_CERTIFICATE_H_
 
 #include <string>
+#include <vector>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/optional.h"
 #include "openssl/base.h"
@@ -34,15 +36,15 @@ namespace ecclesia {
 struct SubjectAltName {
   // |spiffe_id| is a URI SAN, used in Google internal services.
   absl::optional<std::string> spiffe_id = absl::nullopt;
-  // |fqdn| is a DNS SAN.
-  absl::optional<std::string> fqdn = absl::nullopt;
+  // |fqdns| is a list of DNS SANs
+  std::vector<std::string> fqdns;
   // |critical| represents whether these SANs are critical. See
   // https://www.openssl.org/docs/manmaster/man5/x509v3_config.html
   bool critical = false;
 
   std::string DebugInfo() const {
-    return absl::StrCat("spiffe_id=", spiffe_id.value_or("empty"),
-                        "; fqdn=", fqdn.value_or("empty"),
+    return absl::StrCat("spiffe_id=", spiffe_id.value_or("empty"), "; fqdns={",
+                        absl::StrJoin(fqdns, ","), "}",
                         "; critical=", critical ? "true" : "false");
   }
 };

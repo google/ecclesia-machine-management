@@ -20,7 +20,6 @@
 #include <functional>
 
 #include "absl/status/status.h"
-#include "absl/strings/string_view.h"
 #include "ecclesia/lib/redfish/transport/x509_certificate.h"
 #include "grpcpp/security/tls_certificate_verifier.h"
 #include "grpcpp/support/status.h"
@@ -37,7 +36,7 @@ class BmcVerifier : public grpc::experimental::ExternalCertificateVerifier {
 
   // Constructs a verifier for the node identified by the given SubjectAltName.
   //  |SubjectAltName.spiffe_id| shall be extracted from node's certificate.
-  //  |SubjectAltName.fqdn| shall be the authorized FQDN of the node.
+  //  |SubjectAltName.fqdns| shall be the authorized FQDNs of the node.
   // Users shall also specify how to perform verification via |verify| which
   //  takes the node's SAN and Peer's SAN.
   BmcVerifier(const SubjectAltName &node_san,

@@ -157,7 +157,7 @@ absl::StatusOr<SubjectAltName> GetSubjectAltName(absl::string_view pem) {
     san.spiffe_id = std::move(uris[0]);
   }
   if (!fqdns.empty()) {
-    san.fqdn = std::move(fqdns[0]);
+    san.fqdns = std::move(fqdns);
   }
   return san;
 }
