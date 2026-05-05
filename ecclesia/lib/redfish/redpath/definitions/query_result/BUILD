@@ -172,9 +172,20 @@ cc_library(
         "@com_google_absl//absl/time",
         "@com_google_googleapis//google/rpc:code_cc_proto",
         "@com_google_googleapis//google/rpc:status_cc_proto",
+        "@com_google_protobuf//:protobuf",
         "@com_googlesource_code_re2//:re2",
         "@com_json//:json",
     ],
+)
+
+proto_library(
+    name = "converter_test_proto",
+    srcs = ["converter_test.proto"],
+)
+
+cc_proto_library(
+    name = "converter_test_cc_proto",
+    deps = [":converter_test_proto"],
 )
 
 cc_test(
@@ -182,6 +193,7 @@ cc_test(
     srcs = ["converter_test.cc"],
     deps = [
         ":converter",
+        ":converter_test_cc_proto",
         ":query_result_cc_proto",
         "//ecclesia/lib/protobuf:parse",
         "//ecclesia/lib/redfish/dellicius/query:query_result_cc_proto",

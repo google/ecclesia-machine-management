@@ -28,6 +28,7 @@
 #include "absl/time/time.h"
 #include "ecclesia/lib/protobuf/parse.h"
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
+#include "ecclesia/lib/redfish/redpath/definitions/query_result/converter_test.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/testing/proto.h"
 #include "single_include/nlohmann/json.hpp"

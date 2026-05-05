@@ -20,6 +20,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "google/rpc/code.pb.h"
 #include "google/rpc/status.pb.h"
@@ -33,6 +34,8 @@
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "ecclesia/lib/redfish/transport/transport_metrics.pb.h"
 #include "single_include/nlohmann/json.hpp"
+#include "google/protobuf/descriptor.h"
+#include "google/protobuf/message.h"
 #include "re2/re2.h"
 
 namespace ecclesia {

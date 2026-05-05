@@ -22,6 +22,7 @@
 #include "ecclesia/lib/redfish/dellicius/query/query_result.pb.h"
 #include "ecclesia/lib/redfish/redpath/definitions/query_result/query_result.pb.h"
 #include "single_include/nlohmann/json.hpp"
+#include "google/protobuf/message.h"
 
 namespace ecclesia {
 
