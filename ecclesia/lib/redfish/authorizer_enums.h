@@ -78,6 +78,7 @@ enum class ResourceEntity : int {
   kControlCollection,
   kDrive,
   kDriveCollection,
+  kDriveMetrics,
   kEndpoint,
   kEndpointCollection,
   kEndpointGroup,
