@@ -103,15 +103,39 @@ std::vector<std::string> SplitNodeNameForNestedNodes(
     absl::string_view expression) {
   absl::string_view stripped = absl::StripAsciiWhitespace(expression);
   if (stripped.empty()) return {};
-  // Avoid creating locals. This is an equivalent of
-  //
-  // std::string step_1 = absl::StrReplaceAll(stripped, {{".", " "}});
-  // std::string step_2 = absl::StrReplaceAll(step_1, {{"\\", "."}});
-  // return absl::StrSplit(step_2, ' ');
-  return absl::StrSplit(
-      absl::StrReplaceAll(absl::StrReplaceAll(stripped, {{".", " "}}),
-                          {{"\\ ", "."}}),
-      ' ');
+
+  std::vector<std::string> result;
+  const char* start = stripped.data();
+  const char* end = stripped.data() + stripped.size();
+  const char* current = start;
+
+  while (current < end) {
+    if (*current == '\\' && current + 1 < end && *(current + 1) == '.') {
+      current += 2;  // Skip escaped dot
+    } else if (*current == '.') {
+      // Found a delimiter
+      absl::string_view part(start, current - start);
+      if (absl::StrContains(part, "\\.")) {
+        result.push_back(absl::StrReplaceAll(part, {{"\\.", "."}}));
+      } else {
+        result.push_back(std::string(part));
+      }
+      start = current + 1;
+      current = start;
+    } else {
+      current++;
+    }
+  }
+  // Add last part
+  if (start <= end) {
+    absl::string_view part(start, end - start);
+    if (absl::StrContains(part, "\\.")) {
+      result.push_back(absl::StrReplaceAll(part, {{"\\.", "."}}));
+    } else {
+      result.push_back(std::string(part));
+    }
+  }
+  return result;
 }
 
 absl::StatusOr<nlohmann::json> ResolveRedPathNodeToJson(
