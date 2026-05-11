@@ -61,9 +61,8 @@ using Subquery = DelliciusQuery::Subquery;
 
 // Returns number of nodes in the given redpath.
 size_t CountNodes(absl::string_view redpath) {
-  return static_cast<std::vector<absl::string_view>>(
-             absl::StrSplit(redpath, '/', absl::SkipEmpty()))
-      .size();
+  auto split = absl::StrSplit(redpath, '/', absl::SkipEmpty());
+  return std::distance(split.begin(), split.end());
 }
 
 void CheckForSubqueryIdRootPropertyConflicts(
@@ -169,18 +168,33 @@ void TestForConflictingIds(const DelliciusQuery& redpath_query,
   }
 }
 
-std::vector<std::string> ParsePredicate(absl::string_view predicate) {
+std::vector<absl::string_view> ParsePredicate(absl::string_view predicate) {
   auto open_bracket = predicate.find_first_of('[');
-  // Strip the predicates out of the brackets, it may be composed of multipple
-  // predicates with " and " and/or " or " operators in between.
-  absl::string_view predicates = predicate.substr(
-      open_bracket + 1,
-      predicate.find_first_of(']', open_bracket) - open_bracket - 1);
-  std::string predicates_string(predicates);
-  // Replace all instances of " and " and " or " with a custom delimiter,
-  // then return the predicates all split by that delimiter.
-  RE2::GlobalReplace(&predicates_string, *kLogicalOperatorRegex, "//");
-  return absl::StrSplit(predicates_string, "//");
+  if (open_bracket == absl::string_view::npos) return {};
+  auto close_bracket = predicate.find_first_of(']', open_bracket);
+  if (close_bracket == absl::string_view::npos) return {};
+
+  absl::string_view predicates =
+      predicate.substr(open_bracket + 1, close_bracket - open_bracket - 1);
+
+  std::vector<absl::string_view> result;
+  absl::string_view remaining = predicates;
+
+  static const LazyRE2 kLogicalOperatorRegexCapturing = {"( and | or )"};
+  absl::string_view op;
+
+  const char* start_ptr = predicates.data();
+
+  while (
+      RE2::FindAndConsume(&remaining, *kLogicalOperatorRegexCapturing, &op)) {
+    size_t len = op.data() - start_ptr;
+    result.push_back(absl::string_view(start_ptr, len));
+    start_ptr = remaining.data();
+  }
+  result.push_back(absl::string_view(
+      start_ptr, predicates.data() + predicates.size() - start_ptr));
+
+  return result;
 }
 
 // Populates errors when encountering invalid templated query predicates.
@@ -199,11 +213,9 @@ void TestForDisallowedPredicates(const DelliciusQuery& redpath_query,
   for (const Subquery& subquery : redpath_query.subquery()) {
     // split a redpath into redpath step expressions:
     // /Systems[*]/LogServices[Id=$id] -> ["Systems[*]", "LogServices[Id=$id]"]
-    std::vector<std::string> redpath_steps =
-        absl::StrSplit(subquery.redpath(), '/');
-    if (redpath_steps.empty()) continue;
     // Check that predicates conform to the allowed format.
-    for (absl::string_view redpath_step : redpath_steps) {
+    for (absl::string_view redpath_step :
+         absl::StrSplit(subquery.redpath(), '/')) {
       if (redpath_step.empty()) continue;
       // Parse out all base predicates, stripping away the logical operators.
       for (absl::string_view bare_predicate : ParsePredicate(redpath_step)) {
