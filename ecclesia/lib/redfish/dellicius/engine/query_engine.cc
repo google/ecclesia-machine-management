@@ -160,8 +160,9 @@ QueryIdToResult QueryEngine::ExecuteRedpathQuery(
                    : "",
            .redfish_interface = redfish_interface_.get()});
     }
-    query_id_to_result.mutable_results()->insert(
-        {result_single.query_result.query_id(), result_single.query_result});
+    query_id_to_result.mutable_results()->try_emplace(
+        result_single.query_result.query_id(),
+        std::move(result_single.query_result));
 
     // Gets the latest query execution cancellation state only if query
     // execution has not been cancelled.
