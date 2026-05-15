@@ -20,12 +20,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <fstream>  // IWYU pragma: keep
+#include <ios>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "absl/log/log.h"
-#include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -117,6 +117,9 @@ bool ExtractSmbiosStructure(uint8_t *start_address, std::size_t max_length,
 
 std::vector<TableEntry> BuildEntries(std::vector<uint8_t> &table_data) {
   std::vector<TableEntry> entries;
+  if (table_data.empty()) {
+    return entries;  // Return empty vector if there's no data
+  }
 
   // Start extracting the SMBIOS structures one by one
   uint8_t *start_address = table_data.data();
@@ -213,11 +216,12 @@ std::vector<MemoryDevice> SmbiosReader::GetAllMemoryDevices() const {
     }
   }
   // Sort the memory devices based on the device locator string
-  std::sort(memory_devices.begin(), memory_devices.end(), [](auto &x, auto &y) {
-    return NaturalSortLessThan(
-        x.GetString(x.GetMessageView().device_locator_snum().Read()),
-        y.GetString(y.GetMessageView().device_locator_snum().Read()));
-  });
+  std::sort(memory_devices.begin(), memory_devices.end(),
+            [](const MemoryDevice &x, const MemoryDevice &y) {
+              return NaturalSortLessThan(
+                  x.GetString(x.GetMessageView().device_locator_snum().Read()),
+                  y.GetString(y.GetMessageView().device_locator_snum().Read()));
+            });
   return memory_devices;
 }
 
@@ -256,7 +260,7 @@ std::vector<ProcessorInformation> SmbiosReader::GetAllProcessors() const {
   // Sort the processors based on the socket designation
   std::sort(
       processor_information.begin(), processor_information.end(),
-      [](auto &x, auto &y) {
+      [](const ProcessorInformation &x, const ProcessorInformation &y) {
         return x.GetString(
                    x.GetMessageView().socket_designation_snum().Read()) <
                y.GetString(y.GetMessageView().socket_designation_snum().Read());
@@ -267,17 +271,16 @@ std::vector<ProcessorInformation> SmbiosReader::GetAllProcessors() const {
 absl::StatusOr<int32_t> SmbiosReader::GetBootNumberFromSystemBootInformation()
     const {
   for (const auto &entry : entries_) {
-    const auto &structure_view = entry.GetSmbiosStructureView();
+    const auto structure_view = entry.GetSmbiosStructureView();
     if (structure_view.structure_type().Read() ==
             StructureType::SYSTEM_BOOT_INFORMATION &&
         structure_view.system_boot_information().Ok()) {
-      const auto &system_boot_info = structure_view.system_boot_information();
+      const auto system_boot_info = structure_view.system_boot_information();
       if (system_boot_info.boot_count().Ok()) {
         return system_boot_info.boot_count().Read();
-      } else {
-        return absl::NotFoundError(
-            "System Boot Information did not contain boot count");
       }
+      return absl::NotFoundError(
+          "System Boot Information did not contain boot count");
     }
   }
   return absl::NotFoundError("No System boot information found");
