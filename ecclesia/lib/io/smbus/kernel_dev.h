@@ -60,6 +60,9 @@ class KernelSmbusAccess : public SmbusAccessInterface {
   absl::Status ReadBlockI2C(const SmbusLocation &loc, int command,
                             absl::Span<unsigned char> data,
                             size_t *len) const override;
+  absl::Status ReadBlock16BitAddr(const SmbusLocation& loc, int command,
+                                  absl::Span<unsigned char> data,
+                                  size_t* len) const override;
   bool SupportBlockRead(const SmbusLocation &loc) const override;
 
  private:

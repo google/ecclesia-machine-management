@@ -22,6 +22,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -683,6 +684,111 @@ TEST_F(KernelSmbusAccessTest1, ReadBlockFailReadData) {
       access.ReadBlockI2C(loc, reg, absl::MakeSpan(data, sizeof(data)), &len)
           .code(),
       absl::StatusCode::kInternal);
+}
+
+TEST_F(KernelSmbusAccessTest1, ReadBlock16BitAddrSuccess) {
+  auto loc = SmbusLocation::Make<1, 0>();
+  int command = 0xabcd;
+  KernelSmbusAccess access(dev_dir_, &mock_ioctl_);
+
+  uint8_t expected_data[] = {0x01, 0x02, 0x03, 0x04};
+
+  EXPECT_CALL(mock_ioctl_, I2cReadWrite(_, _, 2))
+      .WillOnce(
+          [&expected_data, command](int fd, struct i2c_msg* msgs, int nmsgs) {
+            EXPECT_EQ(nmsgs, 2);
+            EXPECT_EQ(msgs[0].flags, 0);
+            EXPECT_EQ(msgs[0].len, 2);
+            EXPECT_EQ(msgs[0].buf[0], (command >> 8) & 0xff);
+            EXPECT_EQ(msgs[0].buf[1], command & 0xff);
+
+            EXPECT_EQ(msgs[1].len, sizeof(expected_data));
+            EXPECT_EQ(msgs[1].flags, I2C_M_RD);
+            std::memcpy(msgs[1].buf, expected_data, sizeof(expected_data));
+            return 2;
+          });
+
+  unsigned char data[sizeof(expected_data)] = {0};
+  size_t len = 0;
+
+  EXPECT_TRUE(
+      access.ReadBlock16BitAddr(loc, command, absl::MakeSpan(data), &len).ok());
+  EXPECT_EQ(len, sizeof(expected_data));
+  EXPECT_THAT(data, ElementsAre(0x01, 0x02, 0x03, 0x04));
+}
+
+TEST_F(KernelSmbusAccessTest1, ReadBlock16BitAddrEmptyData) {
+  auto loc = SmbusLocation::Make<1, 0>();
+  int command = 0xabcd;
+  KernelSmbusAccess access(dev_dir_, &mock_ioctl_);
+
+  size_t len = 10;
+  EXPECT_TRUE(
+      access.ReadBlock16BitAddr(loc, command, absl::Span<unsigned char>(), &len)
+          .ok());
+  EXPECT_EQ(len, 0);
+}
+
+TEST_F(KernelSmbusAccessTest1, ReadBlock16BitAddrEmptyDataNullLen) {
+  auto loc = SmbusLocation::Make<1, 0>();
+  int command = 0xabcd;
+  KernelSmbusAccess access(dev_dir_, &mock_ioctl_);
+
+  EXPECT_TRUE(access
+                  .ReadBlock16BitAddr(loc, command, absl::Span<unsigned char>(),
+                                      nullptr)
+                  .ok());
+}
+
+TEST_F(KernelSmbusAccessTest1, ReadBlock16BitAddrFail) {
+  auto loc = SmbusLocation::Make<1, 0>();
+  int command = 0xabcd;
+  KernelSmbusAccess access(dev_dir_, &mock_ioctl_);
+
+  uint8_t expected_data[] = {0x01, 0x02, 0x03, 0x04};
+
+  EXPECT_CALL(mock_ioctl_, I2cReadWrite(_, _, 2)).WillOnce(Return(-1));
+
+  unsigned char data[sizeof(expected_data)] = {0};
+  size_t len = 0;
+
+  EXPECT_EQ(access.ReadBlock16BitAddr(loc, command, absl::MakeSpan(data), &len)
+                .code(),
+            absl::StatusCode::kInternal);
+}
+
+TEST_F(KernelSmbusAccessTest1, ReadBlock16BitAddrPartialSuccessFail) {
+  auto loc = SmbusLocation::Make<1, 0>();
+  int command = 0xabcd;
+  KernelSmbusAccess access(dev_dir_, &mock_ioctl_);
+
+  uint8_t expected_data[] = {0x01, 0x02, 0x03, 0x04};
+
+  EXPECT_CALL(mock_ioctl_, I2cReadWrite(_, _, 2)).WillOnce(Return(1));
+
+  unsigned char data[sizeof(expected_data)] = {0};
+  size_t len = 0;
+
+  EXPECT_EQ(access.ReadBlock16BitAddr(loc, command, absl::MakeSpan(data), &len)
+                .code(),
+            absl::StatusCode::kInternal);
+}
+
+TEST_F(KernelSmbusAccessTest1, ReadBlock16BitAddrZeroMessagesProcessedFail) {
+  auto loc = SmbusLocation::Make<1, 0>();
+  int command = 0xabcd;
+  KernelSmbusAccess access(dev_dir_, &mock_ioctl_);
+
+  uint8_t expected_data[] = {0x01, 0x02, 0x03, 0x04};
+
+  EXPECT_CALL(mock_ioctl_, I2cReadWrite(_, _, 2)).WillOnce(Return(0));
+
+  unsigned char data[sizeof(expected_data)] = {0};
+  size_t len = 0;
+
+  EXPECT_EQ(access.ReadBlock16BitAddr(loc, command, absl::MakeSpan(data), &len)
+                .code(),
+            absl::StatusCode::kInternal);
 }
 
 }  // namespace

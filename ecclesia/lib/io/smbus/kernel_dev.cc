@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/io/smbus/kernel_dev.h"
 
+#include <endian.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/i2c-dev.h>
@@ -388,6 +389,53 @@ absl::Status KernelSmbusAccess::ReadBlockI2C(const SmbusLocation &loc,
   }
 
   return status;
+}
+
+absl::Status KernelSmbusAccess::ReadBlock16BitAddr(
+    const SmbusLocation& loc, int command, absl::Span<unsigned char> data,
+    size_t* len) const {
+  if (data.empty()) {
+    if (len != nullptr) {
+      *len = 0;
+    }
+    return absl::OkStatus();
+  }
+
+  // Open connection to i2c slave.
+  int fd = OpenI2CSlaveFile(loc);
+  if (fd < 0) {
+    return absl::InternalError(
+        absl::StrFormat("Open device %s failed.", absl::FormatStreamed(loc)));
+  }
+  absl::Cleanup fd_closer = [fd]() { close(fd); };
+
+  uint16_t mem_offset = htobe16(static_cast<uint16_t>(command));
+
+  struct i2c_msg msgs[2] = {};
+  struct i2c_rdwr_ioctl_data rdwr = {};
+
+  msgs[0].addr = static_cast<uint16_t>(loc.address().value());
+  msgs[0].len = sizeof(mem_offset);
+  msgs[0].buf = reinterpret_cast<uint8_t*>(&mem_offset);
+
+  msgs[1].addr = static_cast<uint16_t>(loc.address().value());
+  msgs[1].flags = I2C_M_RD;
+  msgs[1].len = static_cast<uint16_t>(data.size());
+  msgs[1].buf = reinterpret_cast<uint8_t*>(data.data());
+
+  rdwr.msgs = msgs;
+  rdwr.nmsgs = 2;
+
+  if (ioctl_->Call(fd, I2C_RDWR, &rdwr) != 2) {
+    return absl::InternalError(
+        absl::StrFormat("I2C_RDWR transaction failed at device %s.",
+                        absl::FormatStreamed(loc)));
+  }
+
+  if (len != nullptr) {
+    *len = data.size();
+  }
+  return absl::OkStatus();
 }
 
 bool KernelSmbusAccess::SupportBlockRead(const SmbusLocation &loc) const {

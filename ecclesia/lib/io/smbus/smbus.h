@@ -161,6 +161,9 @@ class SmbusAccessInterface {
   virtual absl::Status ReadBlockI2C(const SmbusLocation &loc, int command,
                                     absl::Span<unsigned char> data,
                                     size_t *len) const = 0;
+  virtual absl::Status ReadBlock16BitAddr(const SmbusLocation& loc, int command,
+                                          absl::Span<unsigned char> data,
+                                          size_t* len) const = 0;
   virtual bool SupportBlockRead(const SmbusLocation &loc) const = 0;
 };
 
@@ -211,6 +214,10 @@ class SmbusDevice {
   absl::Status ReadBlockI2C(int command, absl::Span<unsigned char> data,
                             size_t *len) const {
     return access()->ReadBlockI2C(location(), command, data, len);
+  }
+  absl::Status ReadBlock16BitAddr(int command, absl::Span<unsigned char> data,
+                                  size_t* len) const {
+    return access()->ReadBlock16BitAddr(location(), command, data, len);
   }
 
  private:
