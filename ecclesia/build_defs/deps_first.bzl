@@ -101,9 +101,9 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
         ]
         http_archive(
             name = "com_github_grpc_grpc",
-            sha256 = "7bf97c11cf3808d650a3a025bbf9c5f922c844a590826285067765dfd055d228",
-            strip_prefix = "grpc-1.74.1",
-            urls = ["https://github.com/grpc/grpc/archive/refs/tags/v1.74.1.tar.gz"],
+            sha256 = "38f58596277fa632064cc0719b9ece4381c8c77461cb51e9b66ca149574b7865",
+            strip_prefix = "grpc-1.80.0",
+            urls = ["https://github.com/grpc/grpc/archive/refs/tags/v1.80.0.tar.gz"],
             repo_mapping = {"@abseil-cpp": "@com_google_absl"},
             patches = _make_patch_paths("grpc.patches", patch_files, package_name),
             patch_args = ["-p1"],
@@ -169,16 +169,12 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
 
     if not native.existing_rule("boringssl"):
         # Needs to come before grpc_deps() to be respected.
-        patch_files = [
-            "01.no_array_parameter.patch",
-        ]
         http_archive(
             name = "boringssl",
-            patches = _make_patch_paths("boringssl.patches", patch_files, package_name),
-            sha256 = "66e1b0675d58b35f9fe3224b26381a6d707c3293eeee359c813b4859a6446714",
-            strip_prefix = "boringssl-9b7498d5aba71e545747d65dc65a4d4424477ff0",
+            sha256 = "bacdc92ab6ee2e1b1047638ca0c830247bdf6f62be55081be0e319cfa3478719",
+            strip_prefix = "boringssl-2b44a3701a4788e1ef866ddc7f143060a3d196c9",
             urls = [
-                "https://github.com/google/boringssl/archive/9b7498d5aba71e545747d65dc65a4d4424477ff0.tar.gz",
+                "https://github.com/google/boringssl/archive/2b44a3701a4788e1ef866ddc7f143060a3d196c9.tar.gz",
             ],
         )
 
