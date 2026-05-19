@@ -36,7 +36,7 @@ namespace ecclesia {
 namespace {
 // gRPC API requires we pass a parsable root cert even if we do not verify the
 // cert signature.
-const char *kUnusedFakeRootCert =
+const char* kUnusedFakeRootCert =
     R"(-----BEGIN CERTIFICATE-----
 MIIDiDCCAnCgAwIBAgIIdwMbYuGm3akwDQYJKoZIhvcNAQELBQAwRTEXMBUGA1UE
 ChMOR29vZ2xlIFRFU1RJTkcxKjAoBgNVBAMMIUdvb2dsZSBCTUNXZWIgKipUZXN0
@@ -130,23 +130,23 @@ StaticBufferBasedTlsOptions::GetChannelCredentials() const {
   switch (auth_type_) {
     case AuthType::kTlsVerifyServer: {
       grpc::experimental::TlsChannelCredentialsOptions tls_options;
-      tls_options.watch_identity_key_cert_pairs();
-      tls_options.watch_root_certs();
       if (crl_directory_.has_value()) {
         tls_options.set_crl_directory(*crl_directory_);
       }
-      tls_options.set_certificate_provider(GetCertificateProvider());
+      auto cert_provider = GetCertificateProvider();
+      tls_options.set_identity_certificate_provider(cert_provider);
+      tls_options.set_root_certificate_provider(cert_provider);
       tls_options.set_verify_server_certs(true);
       return grpc::experimental::TlsCredentials(tls_options);
     }
     case AuthType::kTlsVerifyServerSkipHostname: {
       grpc::experimental::TlsChannelCredentialsOptions tls_options;
-      tls_options.watch_identity_key_cert_pairs();
-      tls_options.watch_root_certs();
       if (crl_directory_.has_value()) {
         tls_options.set_crl_directory(*crl_directory_);
       }
-      tls_options.set_certificate_provider(GetCertificateProvider());
+      auto cert_provider = GetCertificateProvider();
+      tls_options.set_identity_certificate_provider(cert_provider);
+      tls_options.set_root_certificate_provider(cert_provider);
       tls_options.set_certificate_verifier(cert_verifier_);
       tls_options.set_verify_server_certs(true);
       tls_options.set_check_call_host(false);
@@ -154,12 +154,12 @@ StaticBufferBasedTlsOptions::GetChannelCredentials() const {
     }
     case AuthType::kTlsNotVerifyServer: {
       grpc::experimental::TlsChannelCredentialsOptions tls_options;
-      tls_options.watch_identity_key_cert_pairs();
-      tls_options.watch_root_certs();
       if (crl_directory_.has_value()) {
         tls_options.set_crl_directory(*crl_directory_);
       }
-      tls_options.set_certificate_provider(GetCertificateProvider());
+      auto cert_provider = GetCertificateProvider();
+      tls_options.set_identity_certificate_provider(cert_provider);
+      tls_options.set_root_certificate_provider(cert_provider);
       tls_options.set_certificate_verifier(cert_verifier_);
       tls_options.set_verify_server_certs(false);
       tls_options.set_check_call_host(false);
