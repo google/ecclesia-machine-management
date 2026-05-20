@@ -32,16 +32,18 @@ namespace ecclesia {
 
 // Matcher that compares a Node against a name, devpath and type.
 MATCHER_P3(RedfishNodeIdIs, name, devpath, type, "") {
-  return std::tie(arg.name, arg.local_devpath, arg.type) ==
-         std::tie(name, devpath, type);
+  return testing::ExplainMatchResult(name, arg.name, result_listener) &&
+         testing::ExplainMatchResult(devpath, arg.local_devpath,
+                                     result_listener) &&
+         testing::ExplainMatchResult(type, arg.type, result_listener);
 }
 
 // Matcher that compares a tuple of two nodes using only the node name, devpath
 // and type (i.e. ignoring associated URIs). Intended for use in combination
 // with Pointwise or UnorderedPointwise to compare containers of nodes.
 MATCHER(RedfishNodeEqId, "") {
-  const Node &lhs = std::get<0>(arg);
-  const Node &rhs = std::get<1>(arg);
+  const Node& lhs = std::get<0>(arg);
+  const Node& rhs = std::get<1>(arg);
   return std::tie(lhs.name, lhs.model, lhs.local_devpath, lhs.type,
                   lhs.replaceable, lhs.supplemental_location_info) ==
          std::tie(rhs.name, rhs.model, rhs.local_devpath, rhs.type,
@@ -51,9 +53,9 @@ MATCHER(RedfishNodeEqId, "") {
 // Some print functions defined to simplify debugging with GMock output.
 std::string ToString(NodeType type);
 
-void PrintTo(const Node &node, std::ostream *os);
+void PrintTo(const Node& node, std::ostream* os);
 
-void PrintTo(const std::unique_ptr<Node> &node, std::ostream *os);
+void PrintTo(const std::unique_ptr<Node>& node, std::ostream* os);
 
 }  // namespace ecclesia
 
