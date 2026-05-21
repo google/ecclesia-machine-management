@@ -32,19 +32,19 @@
 
 namespace ecclesia {
 
-PciLocationProtobuf PciLocationToProto(const PciDbdfLocation &location);
+PciLocationProtobuf PciLocationToProto(const PciDbdfLocation& location);
 std::optional<PciDbdfLocation> PciLocationFromProto(
-    const PciLocationProtobuf &location);
+    const PciLocationProtobuf& location);
 
 PciBaseSignatureProtobuf PciBaseSignatureToProto(
-    const PciBaseSignature &signature);
+    const PciBaseSignature& signature);
 std::optional<PciBaseSignature> PciBaseSignatureFromProto(
-    const PciBaseSignatureProtobuf &signature);
+    const PciBaseSignatureProtobuf& signature);
 
 PciSubsystemSignatureProtobuf PciSubsystemSignatureToProto(
-    const PciSubsystemSignature &signature);
+    const PciSubsystemSignature& signature);
 std::optional<PciSubsystemSignature> PciSubsystemSignatureFromProto(
-    const PciSubsystemSignatureProtobuf &signature);
+    const PciSubsystemSignatureProtobuf& signature);
 
 }  // namespace ecclesia
 

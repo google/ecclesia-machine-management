@@ -26,13 +26,13 @@ namespace ecclesia {
 
 // Functions for converting ecclesia::UsbLocation to and from
 // ecclesia::UsbLocationProtobuf
-UsbLocationProtobuf UsbLocationToProto(const UsbLocation &location);
+UsbLocationProtobuf UsbLocationToProto(const UsbLocation& location);
 std::optional<UsbLocation> UsbLocationFromProto(
-    const UsbLocationProtobuf &location);
+    const UsbLocationProtobuf& location);
 
 // Function for converting ecclesia::UsbSignature to
 // ecclesia::UsbSignatureProtobuf
-UsbSignatureProtobuf UsbSignatureToProto(const UsbSignature &signature);
+UsbSignatureProtobuf UsbSignatureToProto(const UsbSignature& signature);
 
 }  // namespace ecclesia
 

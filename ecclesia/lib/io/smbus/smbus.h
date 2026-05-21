@@ -54,8 +54,8 @@ class SmbusLocation {
   constexpr SmbusLocation(SmbusBus bus, SmbusAddress address)
       : bus_(bus), address_(address) {}
 
-  SmbusLocation(const SmbusLocation &) = default;
-  SmbusLocation &operator=(const SmbusLocation &) = default;
+  SmbusLocation(const SmbusLocation&) = default;
+  SmbusLocation& operator=(const SmbusLocation&) = default;
 
   // Create an SmbusLocation whose range is statically checked at compile time.
   template <int bus, int address>
@@ -82,35 +82,35 @@ class SmbusLocation {
   SmbusAddress address() const { return address_; }
 
   // Relational operators. Order is equivalent to <bus, address> tuple.
-  friend bool operator==(const SmbusLocation &lhs, const SmbusLocation &rhs) {
+  friend bool operator==(const SmbusLocation& lhs, const SmbusLocation& rhs) {
     return std::tie(lhs.bus_, lhs.address_) == std::tie(rhs.bus_, rhs.address_);
   }
-  friend bool operator!=(const SmbusLocation &lhs, const SmbusLocation &rhs) {
+  friend bool operator!=(const SmbusLocation& lhs, const SmbusLocation& rhs) {
     return !(lhs == rhs);
   }
-  friend bool operator<(const SmbusLocation &lhs, const SmbusLocation &rhs) {
+  friend bool operator<(const SmbusLocation& lhs, const SmbusLocation& rhs) {
     return std::tie(lhs.bus_, lhs.address_) < std::tie(rhs.bus_, rhs.address_);
   }
-  friend bool operator>(const SmbusLocation &lhs, const SmbusLocation &rhs) {
+  friend bool operator>(const SmbusLocation& lhs, const SmbusLocation& rhs) {
     return rhs < lhs;
   }
-  friend bool operator<=(const SmbusLocation &lhs, const SmbusLocation &rhs) {
+  friend bool operator<=(const SmbusLocation& lhs, const SmbusLocation& rhs) {
     return !(rhs < lhs);
   }
-  friend bool operator>=(const SmbusLocation &lhs, const SmbusLocation &rhs) {
+  friend bool operator>=(const SmbusLocation& lhs, const SmbusLocation& rhs) {
     return !(lhs < rhs);
   }
 
   // Support hashing of locations.
   template <typename H>
-  friend H AbslHashValue(H h, const SmbusLocation &loc) {
+  friend H AbslHashValue(H h, const SmbusLocation& loc) {
     return H::combine(std::move(h), loc.bus_, loc.address_);
   }
 
   // String conversion. This deliberately follows the bus+address format that
   // the kernel uses in sysfs.
-  friend std::ostream &operator<<(std::ostream &os,
-                                  const SmbusLocation &location) {
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const SmbusLocation& location) {
     return os << absl::StreamFormat("%d-%04x", location.bus_.value(),
                                     location.address_.value());
   }
@@ -128,26 +128,26 @@ class SmbusAccessInterface {
 
   // Probe for presence of a device at the requested location.
   // NOTE: This is *NOT* guaranteed to detect all types of devices.
-  virtual absl::Status ProbeDevice(const SmbusLocation &loc) const = 0;
+  virtual absl::Status ProbeDevice(const SmbusLocation& loc) const = 0;
 
   // Sends/Receives a byte of data to/from a SMBus device.
-  virtual absl::Status WriteQuick(const SmbusLocation &loc,
+  virtual absl::Status WriteQuick(const SmbusLocation& loc,
                                   uint8_t data) const = 0;
-  virtual absl::Status SendByte(const SmbusLocation &loc,
+  virtual absl::Status SendByte(const SmbusLocation& loc,
                                 uint8_t data) const = 0;
-  virtual absl::Status ReceiveByte(const SmbusLocation &loc,
-                                   uint8_t *data) const = 0;
+  virtual absl::Status ReceiveByte(const SmbusLocation& loc,
+                                   uint8_t* data) const = 0;
 
   // Reads/Writes data to a SMBus device specifying the command code
   // (or register location).
-  virtual absl::Status Write8(const SmbusLocation &loc, int command,
+  virtual absl::Status Write8(const SmbusLocation& loc, int command,
                               uint8_t data) const = 0;
-  virtual absl::Status Read8(const SmbusLocation &loc, int command,
-                             uint8_t *data) const = 0;
-  virtual absl::Status Write16(const SmbusLocation &loc, int command,
+  virtual absl::Status Read8(const SmbusLocation& loc, int command,
+                             uint8_t* data) const = 0;
+  virtual absl::Status Write16(const SmbusLocation& loc, int command,
                                uint16_t data) const = 0;
-  virtual absl::Status Read16(const SmbusLocation &loc, int command,
-                              uint16_t *data) const = 0;
+  virtual absl::Status Read16(const SmbusLocation& loc, int command,
+                              uint16_t* data) const = 0;
 
   // Reads/Writes a block of data to a SMBus device specifying the
   // command code (or register location).
@@ -156,15 +156,15 @@ class SmbusAccessInterface {
   //   data: buffer to put/receive data
   //   len: output parameter for number of bytes read
   virtual absl::Status WriteBlockI2C(
-      const SmbusLocation &loc, int command,
+      const SmbusLocation& loc, int command,
       absl::Span<const unsigned char> data) const = 0;
-  virtual absl::Status ReadBlockI2C(const SmbusLocation &loc, int command,
+  virtual absl::Status ReadBlockI2C(const SmbusLocation& loc, int command,
                                     absl::Span<unsigned char> data,
-                                    size_t *len) const = 0;
+                                    size_t* len) const = 0;
   virtual absl::Status ReadBlock16BitAddr(const SmbusLocation& loc, int command,
                                           absl::Span<unsigned char> data,
                                           size_t* len) const = 0;
-  virtual bool SupportBlockRead(const SmbusLocation &loc) const = 0;
+  virtual bool SupportBlockRead(const SmbusLocation& loc) const = 0;
 };
 
 // A class to encapsulate a single Smbus device at a specified location.
@@ -172,14 +172,14 @@ class SmbusDevice {
  public:
   // Create an SMBus device using the provided AccessInterface for all device
   // accesses.  The AccessInterface must not be NULL.
-  SmbusDevice(SmbusLocation location, const SmbusAccessInterface *access)
+  SmbusDevice(SmbusLocation location, const SmbusAccessInterface* access)
       : location_(std::move(location)), access_(access) {}
 
   // Get a pointer to this Device's AccessInterface.
-  const SmbusAccessInterface *access() const { return access_; }
+  const SmbusAccessInterface* access() const { return access_; }
 
   // Get this Device's address. Subclasses might generate this dynamically.
-  const SmbusLocation &location() const { return location_; }
+  const SmbusLocation& location() const { return location_; }
 
   // Using SmbusAccessInterface to access a SMBus device
   // specifying the command code (or register location).
@@ -189,19 +189,19 @@ class SmbusDevice {
   absl::Status SendByte(uint8_t data) const {
     return access()->SendByte(location(), data);
   }
-  absl::Status ReceiveByte(uint8_t *data) const {
+  absl::Status ReceiveByte(uint8_t* data) const {
     return access()->ReceiveByte(location(), data);
   }
   absl::Status Write8(int command, uint8_t data) const {
     return access()->Write8(location(), command, data);
   }
-  absl::Status Read8(int command, uint8_t *data) const {
+  absl::Status Read8(int command, uint8_t* data) const {
     return access()->Read8(location(), command, data);
   }
   absl::Status Write16(int command, uint16_t data) const {
     return access()->Write16(location(), command, data);
   }
-  absl::Status Read16(int command, uint16_t *data) const {
+  absl::Status Read16(int command, uint16_t* data) const {
     return access()->Read16(location(), command, data);
   }
   bool SupportBlockRead() const {
@@ -212,7 +212,7 @@ class SmbusDevice {
     return access()->WriteBlockI2C(location(), command, data);
   }
   absl::Status ReadBlockI2C(int command, absl::Span<unsigned char> data,
-                            size_t *len) const {
+                            size_t* len) const {
     return access()->ReadBlockI2C(location(), command, data, len);
   }
   absl::Status ReadBlock16BitAddr(int command, absl::Span<unsigned char> data,
@@ -222,7 +222,7 @@ class SmbusDevice {
 
  private:
   SmbusLocation location_;
-  const SmbusAccessInterface *access_;
+  const SmbusAccessInterface* access_;
 };
 
 }  // namespace ecclesia

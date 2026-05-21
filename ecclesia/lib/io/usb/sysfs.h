@@ -29,22 +29,22 @@ namespace ecclesia {
 
 // Convert a usb device location to the sysfs directory name used for that
 // device.
-std::string UsbLocationToDirectory(const UsbLocation &loc);
+std::string UsbLocationToDirectory(const UsbLocation& loc);
 
 class SysfsUsbDiscovery : public UsbDiscoveryInterface {
  public:
   SysfsUsbDiscovery();
   // This constructor is for testing purpose.
-  explicit SysfsUsbDiscovery(const ApifsDirectory &api_fs) : api_fs_(api_fs) {}
+  explicit SysfsUsbDiscovery(const ApifsDirectory& api_fs) : api_fs_(api_fs) {}
 
-  SysfsUsbDiscovery(const SysfsUsbDiscovery &other) = delete;
-  SysfsUsbDiscovery &operator=(const SysfsUsbDiscovery &other) = delete;
+  SysfsUsbDiscovery(const SysfsUsbDiscovery& other) = delete;
+  SysfsUsbDiscovery& operator=(const SysfsUsbDiscovery& other) = delete;
 
   absl::StatusOr<std::vector<UsbLocation>> EnumerateAllUsbDevices()
       const override;
 
   std::unique_ptr<UsbDevice> CreateDevice(
-      const UsbLocation &location) const override;
+      const UsbLocation& location) const override;
 
  private:
   ApifsDirectory api_fs_;
@@ -52,16 +52,16 @@ class SysfsUsbDiscovery : public UsbDiscoveryInterface {
 
 class SysfsUsbDevice : public UsbDevice {
  public:
-  SysfsUsbDevice(const UsbLocation &usb_location);
+  SysfsUsbDevice(const UsbLocation& usb_location);
 
   // This constructor is for testing purpose.
-  SysfsUsbDevice(const UsbLocation &usb_location, const ApifsDirectory &api_fs)
+  SysfsUsbDevice(const UsbLocation& usb_location, const ApifsDirectory& api_fs)
       : usb_location_(usb_location), api_fs_(api_fs) {}
 
-  SysfsUsbDevice(const SysfsUsbDevice &other) = delete;
-  SysfsUsbDevice &operator=(const SysfsUsbDevice &other) = delete;
+  SysfsUsbDevice(const SysfsUsbDevice& other) = delete;
+  SysfsUsbDevice& operator=(const SysfsUsbDevice& other) = delete;
 
-  const UsbLocation &Location() const override { return usb_location_; }
+  const UsbLocation& Location() const override { return usb_location_; }
 
   absl::StatusOr<UsbSignature> GetSignature() const override;
 

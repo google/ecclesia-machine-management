@@ -82,7 +82,7 @@ class PciResources {
 class PciDevice {
  public:
   // Create a PCI device using the provided region for all config space access.
-  PciDevice(const PciDbdfLocation &location,
+  PciDevice(const PciDbdfLocation& location,
             std::unique_ptr<PciRegion> config_region,
             std::unique_ptr<PciResources> resources_intf)
       : location_(location),
@@ -92,22 +92,22 @@ class PciDevice {
 
   virtual ~PciDevice() = default;
 
-  PciDevice(const PciDevice &) = delete;
-  PciDevice &operator=(const PciDevice &) = delete;
+  PciDevice(const PciDevice&) = delete;
+  PciDevice& operator=(const PciDevice&) = delete;
 
-  PciDevice(PciDevice &&) = default;
-  PciDevice &operator=(PciDevice &&) = default;
+  PciDevice(PciDevice&&) = default;
+  PciDevice& operator=(PciDevice&&) = default;
 
   // Get this device address.
-  const PciDbdfLocation &Location() const { return location_; }
+  const PciDbdfLocation& Location() const { return location_; }
 
   // Get the device config space. The virtual declaration is to facilitate mock
   // up for testing.
-  virtual PciConfigSpace *ConfigSpace() const { return config_space_.get(); }
+  virtual PciConfigSpace* ConfigSpace() const { return config_space_.get(); }
 
   // Get the device resource information.
-  PciResources &Resources() { return *resources_intf_; }
-  const PciResources &Resources() const { return *resources_intf_; }
+  PciResources& Resources() { return *resources_intf_; }
+  const PciResources& Resources() const { return *resources_intf_; }
 
   // These methods are commonly used for checking the PCIe link status.
   virtual absl::StatusOr<PcieLinkCapabilities> PcieLinkMaxCapabilities()

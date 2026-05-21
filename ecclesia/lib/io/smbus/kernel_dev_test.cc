@@ -45,52 +45,56 @@ namespace {
 // This allows us to mock calls to ioctl().
 class MockIoctl : public IoctlInterface {
  public:
+  // NOLINTNEXTLINE: ioctl request is a legacy API that uses unsigned long.
   int Call(int fd, unsigned long request, intptr_t argi) override {
     if (request == I2C_SLAVE) {
-      return Slave(fd, argi);
-    } else {
-      LOG(FATAL) << "unsupported ioctl() call";
+      return Slave(fd, static_cast<int>(argi));
     }
+
+    LOG(FATAL) << "unsupported ioctl() call";
   }
 
-  int Call(int fd, unsigned long request, void *argp) override {
+  // NOLINTNEXTLINE: ioctl request is a legacy API that uses unsigned long.
+  int Call(int fd, unsigned long request, void* argp) override {
     if (request == I2C_SMBUS) {
-      auto *arg = static_cast<struct i2c_smbus_ioctl_data *>(argp);
-      return Smbus(fd, arg->read_write, arg->command, arg->size, arg->data);
-    } else if (request == I2C_RDWR) {
-      auto *arg = static_cast<struct i2c_rdwr_ioctl_data *>(argp);
-      return I2cReadWrite(fd, arg->msgs, arg->nmsgs);
-    } else if (request == I2C_FUNCS) {
-      auto *funcs = static_cast<uint32_t *>(argp);
+      auto* arg = static_cast<struct i2c_smbus_ioctl_data*>(argp);
+      return Smbus(fd, arg->read_write, arg->command,
+                   static_cast<int>(arg->size), arg->data);
+    }
+    if (request == I2C_RDWR) {
+      auto* arg = static_cast<struct i2c_rdwr_ioctl_data*>(argp);
+      return I2cReadWrite(fd, arg->msgs, static_cast<int>(arg->nmsgs));
+    }
+    if (request == I2C_FUNCS) {
+      auto* funcs = static_cast<uint32_t*>(argp);
       int ret = I2cFuncs(fd, funcs);
       // We need to fake the funcs, let it support
       // I2C_FUNC_SMBUS_READ_I2C_BLOCK.
       *funcs |= I2C_FUNC_SMBUS_READ_I2C_BLOCK;
       return ret;
-    } else {
-      LOG(FATAL) << "unsupported ioctl() call";
     }
+    LOG(FATAL) << "unsupported ioctl() call";
   }
 
   // ioctl(fd, I2C_SMBUS, struct i2c_smbus_ioctl_data *);
   MOCK_METHOD(int, Smbus,
               (int fd, char read_write, uint8_t command, int size,
-               union i2c_smbus_data *data));
+               union i2c_smbus_data* data));
 
   // ioctl(fd, I2C_SLAVE, int);
   MOCK_METHOD(int, Slave, (int fd, int));
 
   // ioctl(fd, I2C_RDWR, i2c_rdwr_ioctl_data)
-  MOCK_METHOD(int, I2cReadWrite, (int fd, struct i2c_msg *msgs, int nmsgs));
+  MOCK_METHOD(int, I2cReadWrite, (int fd, struct i2c_msg* msgs, int nmsgs));
 
   // ioctl(fd, I2C_FUNCS, uint32_t *);
-  MOCK_METHOD(int, I2cFuncs, (int fd, uint32_t *));
+  MOCK_METHOD(int, I2cFuncs, (int fd, uint32_t*));
 };
 
 // I2C_SMBUS: Respond to I2C_SMBUS_READ with a fixed value.  Return 0.
 ACTION_P(ReadSmbusData, value) {
   int size = arg3;
-  union i2c_smbus_data *sm_data = arg4;
+  union i2c_smbus_data* sm_data = arg4;
   if (sm_data) {
     if (size == I2C_SMBUS_BYTE_DATA || size == I2C_SMBUS_BYTE) {
       sm_data->byte = value;
@@ -105,7 +109,7 @@ ACTION_P(ReadSmbusData, value) {
 // I2C_SMBUS: Verify an I2C_SMBUS_WRITE against a fixed value.  Return 0.
 ACTION_P(WriteSmbusData, value) {
   int size = arg3;
-  union i2c_smbus_data *sm_data = arg4;
+  union i2c_smbus_data* sm_data = arg4;
   if (sm_data) {
     if (size == I2C_SMBUS_BYTE_DATA || size == I2C_SMBUS_BYTE ||
         size == I2C_SMBUS_QUICK) {
@@ -121,7 +125,7 @@ ACTION_P(WriteSmbusData, value) {
 // Respond to a block read request with the given buffer and size.
 // Also verifies that the requested size was populated in block[0].
 ACTION_P2(ReadBlockI2CData, value, size) {
-  union i2c_smbus_data *sm_data = arg4;
+  union i2c_smbus_data* sm_data = arg4;
   if (sm_data) {
     EXPECT_EQ(sm_data->block[0], size);
     EXPECT_LE(size, 32);
@@ -134,7 +138,7 @@ ACTION_P2(ReadBlockI2CData, value, size) {
 
 // Verify the data of a block write request.
 ACTION_P(WriteBlockI2CData, value) {
-  union i2c_smbus_data *sm_data = arg4;
+  union i2c_smbus_data* sm_data = arg4;
   if (sm_data) {
     EXPECT_LE(sm_data->block[0], 32);
     for (int i = 1; i <= sm_data->block[0]; ++i)

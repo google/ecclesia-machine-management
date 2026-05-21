@@ -43,7 +43,7 @@ class PciMmioRegion : public PciRegion {
   //       space.:
   //   location: D:B:D:F format location of PCI device.
   PciMmioRegion(absl::string_view physical_mem_device,
-                uint64_t pci_mmconfig_base, const PciDbdfLocation &location);
+                uint64_t pci_mmconfig_base, const PciDbdfLocation& location);
 
   absl::StatusOr<uint8_t> Read8(OffsetType offset) const override;
   absl::Status Write8(OffsetType offset, uint8_t value) override;
@@ -55,7 +55,7 @@ class PciMmioRegion : public PciRegion {
   absl::Status Write32(OffsetType offset, uint32_t value) override;
 
   // Helper function that is shared with the test.
-  static uint64_t LocationToOffset(const PciDbdfLocation &location) {
+  static uint64_t LocationToOffset(const PciDbdfLocation& location) {
     // In MMIO space the PCI configuration space layout is 4096 (12 bits) bytes
     // for each function, 8 functions (3 bits), 32 devices (5 bits), and
     // 256 buses (8 bits).
@@ -85,7 +85,7 @@ class PciMmioRegion : public PciRegion {
     // This is the critical part that forces an aligned, specific-size data copy
     // from mmap'd PCI config space.
     const T typed_value =
-        *reinterpret_cast<const volatile T *>(mem.begin() + offset);
+        *reinterpret_cast<const volatile T*>(mem.begin() + offset);
     std::memcpy(span.data(), &typed_value, sizeof(typed_value));
     return absl::OkStatus();
   }
@@ -109,9 +109,8 @@ class PciMmioRegion : public PciRegion {
     }
     // This is the critical part that forces an aligned, specific-size data copy
     // to mmap'd PCI config space.
-    volatile T *typed_dest =
-        reinterpret_cast<volatile T *>(mem.data() + offset);
-    *typed_dest = *reinterpret_cast<const T *>(span.data());
+    volatile T* typed_dest = reinterpret_cast<volatile T*>(mem.data() + offset);
+    *typed_dest = *reinterpret_cast<const T*>(span.data());
     return absl::OkStatus();
   }
 

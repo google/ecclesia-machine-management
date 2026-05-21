@@ -47,8 +47,8 @@ namespace {
 // The default root hierarchy to look for i2c-* files.
 constexpr char kDevRoot[] = "/dev";
 
-int SmbusIoctl(IoctlInterface *ioctl_intf, int fd, uint8_t read_write,
-               uint8_t command, int size, union i2c_smbus_data *data) {
+int SmbusIoctl(IoctlInterface* ioctl_intf, int fd, uint8_t read_write,
+               uint8_t command, int size, union i2c_smbus_data* data) {
   struct i2c_smbus_ioctl_data args;
 
   args.read_write = read_write;
@@ -61,7 +61,7 @@ int SmbusIoctl(IoctlInterface *ioctl_intf, int fd, uint8_t read_write,
 }  // namespace
 
 KernelSmbusAccess::KernelSmbusAccess(std::string dev_dir,
-                                     IoctlInterface *ioctl_intf)
+                                     IoctlInterface* ioctl_intf)
     : dev_dir_(std::move(dev_dir)), ioctl_(ioctl_intf) {
   if (dev_dir_.empty()) {
     dev_dir_ = kDevRoot;
@@ -71,7 +71,7 @@ KernelSmbusAccess::KernelSmbusAccess(std::string dev_dir,
 // Format the correct string and open the bus master device file for specified
 // bus location.
 // Returns file descriptor on success and -errno on error.
-int KernelSmbusAccess::OpenI2CMasterFile(const SmbusBus &bus) const {
+int KernelSmbusAccess::OpenI2CMasterFile(const SmbusBus& bus) const {
   std::string dev_filename =
       absl::StrFormat("%s/i2c-%d", dev_dir_, bus.value());
 
@@ -86,7 +86,7 @@ int KernelSmbusAccess::OpenI2CMasterFile(const SmbusBus &bus) const {
 // Open the device file for the device at 'loc' and set the requested
 // slave address.
 // Returns file descriptor on success and -errno on error.
-int KernelSmbusAccess::OpenI2CSlaveFile(const SmbusLocation &loc) const {
+int KernelSmbusAccess::OpenI2CSlaveFile(const SmbusLocation& loc) const {
   int ret = OpenI2CMasterFile(loc.bus());
   if (ret < 0) {
     return ret;
@@ -121,7 +121,7 @@ int KernelSmbusAccess::CheckFunctionality(int fd, uint64_t flags) const {
   return ret;
 }
 
-absl::Status KernelSmbusAccess::ProbeDevice(const SmbusLocation &loc) const {
+absl::Status KernelSmbusAccess::ProbeDevice(const SmbusLocation& loc) const {
   // This is the same device probing logic used in i2cdetect.
   absl::Status status;
   if ((loc.address().value() >= 0x30 && loc.address().value() <= 0x37) ||
@@ -144,7 +144,7 @@ absl::Status KernelSmbusAccess::ProbeDevice(const SmbusLocation &loc) const {
   return status;
 }
 
-absl::Status KernelSmbusAccess::WriteQuick(const SmbusLocation &loc,
+absl::Status KernelSmbusAccess::WriteQuick(const SmbusLocation& loc,
                                            uint8_t data) const {
   // Open connection to i2c slave.
   int fd = OpenI2CSlaveFile(loc);
@@ -167,7 +167,7 @@ absl::Status KernelSmbusAccess::WriteQuick(const SmbusLocation &loc,
   return status;
 }
 
-absl::Status KernelSmbusAccess::SendByte(const SmbusLocation &loc,
+absl::Status KernelSmbusAccess::SendByte(const SmbusLocation& loc,
                                          uint8_t data) const {
   // Open connection to i2c slave.
   int fd = OpenI2CSlaveFile(loc);
@@ -190,8 +190,8 @@ absl::Status KernelSmbusAccess::SendByte(const SmbusLocation &loc,
   return status;
 }
 
-absl::Status KernelSmbusAccess::ReceiveByte(const SmbusLocation &loc,
-                                            uint8_t *data) const {
+absl::Status KernelSmbusAccess::ReceiveByte(const SmbusLocation& loc,
+                                            uint8_t* data) const {
   // Open connection to i2c slave.
   int fd = OpenI2CSlaveFile(loc);
   if (fd < 0) {
@@ -202,9 +202,7 @@ absl::Status KernelSmbusAccess::ReceiveByte(const SmbusLocation &loc,
   absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
-  union i2c_smbus_data i2c_data {
-    0
-  };
+  union i2c_smbus_data i2c_data{0};
   if (SmbusIoctl(ioctl_, fd, I2C_SMBUS_READ, 0, I2C_SMBUS_BYTE, &i2c_data) <
       0) {
     status = absl::InternalError(absl::StrFormat(
@@ -216,7 +214,7 @@ absl::Status KernelSmbusAccess::ReceiveByte(const SmbusLocation &loc,
   return status;
 }
 
-absl::Status KernelSmbusAccess::Write8(const SmbusLocation &loc, int command,
+absl::Status KernelSmbusAccess::Write8(const SmbusLocation& loc, int command,
                                        uint8_t data) const {
   // Open connection to i2c slave.
   int fd = OpenI2CSlaveFile(loc);
@@ -228,7 +226,7 @@ absl::Status KernelSmbusAccess::Write8(const SmbusLocation &loc, int command,
   absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
-  union i2c_smbus_data i2c_data {};
+  union i2c_smbus_data i2c_data{};
   i2c_data.byte = data;
   if (SmbusIoctl(ioctl_, fd, I2C_SMBUS_WRITE, command, I2C_SMBUS_BYTE_DATA,
                  &i2c_data) < 0) {
@@ -239,8 +237,8 @@ absl::Status KernelSmbusAccess::Write8(const SmbusLocation &loc, int command,
   return status;
 }
 
-absl::Status KernelSmbusAccess::Read8(const SmbusLocation &loc, int command,
-                                      uint8_t *data) const {
+absl::Status KernelSmbusAccess::Read8(const SmbusLocation& loc, int command,
+                                      uint8_t* data) const {
   // Open connection to i2c slave.
   int fd = OpenI2CSlaveFile(loc);
   if (fd < 0) {
@@ -251,7 +249,7 @@ absl::Status KernelSmbusAccess::Read8(const SmbusLocation &loc, int command,
   absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
-  union i2c_smbus_data i2c_data {};
+  union i2c_smbus_data i2c_data{};
   if (SmbusIoctl(ioctl_, fd, I2C_SMBUS_READ, command, I2C_SMBUS_BYTE_DATA,
                  &i2c_data) < 0) {
     status = absl::InternalError(absl::StrFormat("Read8 from device %s failed.",
@@ -263,7 +261,7 @@ absl::Status KernelSmbusAccess::Read8(const SmbusLocation &loc, int command,
   return status;
 }
 
-absl::Status KernelSmbusAccess::Write16(const SmbusLocation &loc, int command,
+absl::Status KernelSmbusAccess::Write16(const SmbusLocation& loc, int command,
                                         uint16_t data) const {
   // Open connection to i2c slave.
   int fd = OpenI2CSlaveFile(loc);
@@ -275,7 +273,7 @@ absl::Status KernelSmbusAccess::Write16(const SmbusLocation &loc, int command,
   absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
-  union i2c_smbus_data i2c_data {};
+  union i2c_smbus_data i2c_data{};
   i2c_data.word = data;
   if (SmbusIoctl(ioctl_, fd, I2C_SMBUS_WRITE, command, I2C_SMBUS_WORD_DATA,
                  &i2c_data) < 0) {
@@ -286,8 +284,8 @@ absl::Status KernelSmbusAccess::Write16(const SmbusLocation &loc, int command,
   return status;
 }
 
-absl::Status KernelSmbusAccess::Read16(const SmbusLocation &loc, int command,
-                                       uint16_t *data) const {
+absl::Status KernelSmbusAccess::Read16(const SmbusLocation& loc, int command,
+                                       uint16_t* data) const {
   // Open connection to i2c slave.
   int fd = OpenI2CSlaveFile(loc);
   if (fd < 0) {
@@ -298,7 +296,7 @@ absl::Status KernelSmbusAccess::Read16(const SmbusLocation &loc, int command,
   absl::Cleanup fd_closer = [fd]() { close(fd); };
 
   absl::Status status;
-  union i2c_smbus_data i2c_data {};
+  union i2c_smbus_data i2c_data{};
   if (SmbusIoctl(ioctl_, fd, I2C_SMBUS_READ, command, I2C_SMBUS_WORD_DATA,
                  &i2c_data) < 0) {
     status = absl::InternalError(absl::StrFormat(
@@ -311,7 +309,7 @@ absl::Status KernelSmbusAccess::Read16(const SmbusLocation &loc, int command,
 }
 
 absl::Status KernelSmbusAccess::WriteBlockI2C(
-    const SmbusLocation &loc, int command,
+    const SmbusLocation& loc, int command,
     absl::Span<const unsigned char> data) const {
   // Linux interface only supports up to 32 bytes.
   if (data.size() > I2C_SMBUS_BLOCK_MAX) {
@@ -332,7 +330,7 @@ absl::Status KernelSmbusAccess::WriteBlockI2C(
 
   absl::Status status;
 
-  union i2c_smbus_data i2c_data {};
+  union i2c_smbus_data i2c_data{};
   memcpy(&i2c_data.block[1], data.data(), data.size());
   i2c_data.block[0] = data.size();
 
@@ -346,10 +344,10 @@ absl::Status KernelSmbusAccess::WriteBlockI2C(
   return status;
 }
 
-absl::Status KernelSmbusAccess::ReadBlockI2C(const SmbusLocation &loc,
+absl::Status KernelSmbusAccess::ReadBlockI2C(const SmbusLocation& loc,
                                              int command,
                                              absl::Span<unsigned char> data,
-                                             size_t *len) const {
+                                             size_t* len) const {
   // Linux interface only supports up to 32 bytes.
   if (data.size() > I2C_SMBUS_BLOCK_MAX) {
     return absl::InternalError(
@@ -376,7 +374,7 @@ absl::Status KernelSmbusAccess::ReadBlockI2C(const SmbusLocation &loc,
   }
 
   absl::Status status;
-  union i2c_smbus_data i2c_data {};
+  union i2c_smbus_data i2c_data{};
   i2c_data.block[0] = data.size();
   if (SmbusIoctl(ioctl_, fd, I2C_SMBUS_READ, command, I2C_SMBUS_I2C_BLOCK_DATA,
                  &i2c_data) < 0) {
@@ -439,7 +437,7 @@ absl::Status KernelSmbusAccess::ReadBlock16BitAddr(
   return absl::OkStatus();
 }
 
-bool KernelSmbusAccess::SupportBlockRead(const SmbusLocation &loc) const {
+bool KernelSmbusAccess::SupportBlockRead(const SmbusLocation& loc) const {
   int fd = OpenI2CSlaveFile(loc);
   if (fd < 0) return false;
 

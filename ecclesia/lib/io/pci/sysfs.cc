@@ -256,8 +256,7 @@ SysfsPciTopology::EnumeratePciAcpiPaths() const {
               auto pci_domain = PciDomain::TryMake(domain);
               auto pci_bus = PciBusNum::TryMake(bus);
               if (pci_domain.has_value() && pci_bus.has_value()) {
-                acpi_nodes.push_back({*pci_domain,
-                                      *pci_bus, fw_path});
+                acpi_nodes.push_back({*pci_domain, *pci_bus, fw_path});
               }
             }
           }

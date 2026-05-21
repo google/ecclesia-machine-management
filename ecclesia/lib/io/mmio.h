@@ -76,13 +76,13 @@ class MmioRangeFromFile : public MmioRange {
   // object so it is not copyable. It can be moved.
   //
   // The moved-from object will be left with an empty range.
-  MmioRangeFromFile(const MmioRangeFromFile &) = delete;
-  MmioRangeFromFile &operator=(const MmioRangeFromFile &) = delete;
-  MmioRangeFromFile(MmioRangeFromFile &&other) noexcept
+  MmioRangeFromFile(const MmioRangeFromFile&) = delete;
+  MmioRangeFromFile& operator=(const MmioRangeFromFile&) = delete;
+  MmioRangeFromFile(MmioRangeFromFile&& other) noexcept
       : size_(other.size_), mmap_(std::move(other.mmap_)) {
     other.size_ = 0;
   }
-  MmioRangeFromFile &operator=(MmioRangeFromFile &&other) noexcept {
+  MmioRangeFromFile& operator=(MmioRangeFromFile&& other) noexcept {
     size_ = other.size_;
     other.size_ = 0;
     mmap_ = std::move(other.mmap_);
@@ -126,7 +126,7 @@ class MmioRangeFromFile : public MmioRange {
     // This is the critical part that forces an aligned, specific-size data copy
     // from mmap'd PCI config space.
     const T typed_value =
-        *reinterpret_cast<const volatile T *>(mem.begin() + offset);
+        *reinterpret_cast<const volatile T*>(mem.begin() + offset);
     std::memcpy(span.data(), &typed_value, sizeof(typed_value));
     return absl::OkStatus();
   }
@@ -149,9 +149,8 @@ class MmioRangeFromFile : public MmioRange {
     }
     // This is the critical part that forces an aligned, specific-size data copy
     // to mmap'd PCI config space.
-    volatile T *typed_dest =
-        reinterpret_cast<volatile T *>(mem.data() + offset);
-    *typed_dest = *reinterpret_cast<const T *>(span.data());
+    volatile T* typed_dest = reinterpret_cast<volatile T*>(mem.data() + offset);
+    *typed_dest = *reinterpret_cast<const T*>(span.data());
     return absl::OkStatus();
   }
 

@@ -47,8 +47,8 @@ class FakePciRegion : public PciRegion {
   // Do not allow them to be copied, as writes into a copy will not be
   // reflected into the other instances which isn't what people would normally
   // expect from a normal region.
-  FakePciRegion(const FakePciRegion &) = delete;
-  FakePciRegion &operator=(const FakePciRegion &) = delete;
+  FakePciRegion(const FakePciRegion&) = delete;
+  FakePciRegion& operator=(const FakePciRegion&) = delete;
 
   // Create a region that looks like config space for a PCI endpoint.
   struct EndpointConfigParams {
@@ -133,19 +133,19 @@ class MockPciRegion : public PciRegion {
 
 class MockPciDevice : public PciDevice {
  public:
-  MockPciDevice(const PciDbdfLocation &location,
+  MockPciDevice(const PciDbdfLocation& location,
                 std::unique_ptr<PciRegion> config_region,
                 std::unique_ptr<PciResources> resources_intf)
       : PciDevice(location, std::move(config_region),
                   std::move(resources_intf)) {}
 
-  MockPciDevice(const PciDbdfLocation &location)
+  explicit MockPciDevice(const PciDbdfLocation& location)
       : PciDevice(location, nullptr, nullptr) {}
 
   MockPciDevice()
       : PciDevice(PciDbdfLocation::Make<0, 0, 0, 0>(), nullptr, nullptr) {}
 
-  MOCK_METHOD(PciConfigSpace *, ConfigSpace, (), (const, override));
+  MOCK_METHOD(PciConfigSpace*, ConfigSpace, (), (const, override));
 
   MOCK_METHOD(absl::StatusOr<PcieLinkCapabilities>, PcieLinkMaxCapabilities, (),
               (const, override));

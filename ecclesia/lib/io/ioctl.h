@@ -36,15 +36,19 @@ class IoctlInterface {
   // a variadic function, you can only actually provide a single variadic
   // parameter and so we support only void* (for pointer valued arguments) and
   // intptr_t (for scalar integer arguments).
+  // NOLINTBEGIN: ioctl request is a legacy API that uses unsigned long.
   virtual int Call(int fd, unsigned long request, intptr_t argi) = 0;
-  virtual int Call(int fd, unsigned long request, void *argp) = 0;
+  virtual int Call(int fd, unsigned long request, void* argp) = 0;
+  // NOLINTEND
 };
 
 // Implementation of the interface that uses the system call.
 class SysIoctl final : public IoctlInterface {
  public:
+  // NOLINTBEGIN: ioctl request is a legacy API that uses unsigned long.
   int Call(int fd, unsigned long request, intptr_t argi) override;
-  int Call(int fd, unsigned long request, void *argp) override;
+  int Call(int fd, unsigned long request, void* argp) override;
+  // NOLINTEND
 };
 
 }  // namespace ecclesia

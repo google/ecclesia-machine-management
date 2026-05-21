@@ -68,8 +68,8 @@ class PciDbdfLocation {
                             PciDeviceNum device, PciFunctionNum function)
       : domain_(domain), bus_(bus), device_(device), function_(function) {}
 
-  PciDbdfLocation(const PciDbdfLocation &) = default;
-  PciDbdfLocation &operator=(const PciDbdfLocation &) = default;
+  PciDbdfLocation(const PciDbdfLocation&) = default;
+  PciDbdfLocation& operator=(const PciDbdfLocation&) = default;
 
   // Create a PciLocation whose range is statically checked at compile time.
   template <int domain, int bus, int device, int function>
@@ -108,36 +108,36 @@ class PciDbdfLocation {
 
   // PciLocation relational operators.
   // Order is equivalent to that of a <domain, bus, device, function> tuple.
-  friend bool operator==(const PciDbdfLocation &lhs,
-                         const PciDbdfLocation &rhs) {
+  friend bool operator==(const PciDbdfLocation& lhs,
+                         const PciDbdfLocation& rhs) {
     return std::tie(lhs.domain_, lhs.bus_, lhs.device_, lhs.function_) ==
            std::tie(rhs.domain_, rhs.bus_, rhs.device_, rhs.function_);
   }
-  friend bool operator!=(const PciDbdfLocation &lhs,
-                         const PciDbdfLocation &rhs) {
+  friend bool operator!=(const PciDbdfLocation& lhs,
+                         const PciDbdfLocation& rhs) {
     return !(lhs == rhs);
   }
-  friend bool operator<(const PciDbdfLocation &lhs,
-                        const PciDbdfLocation &rhs) {
+  friend bool operator<(const PciDbdfLocation& lhs,
+                        const PciDbdfLocation& rhs) {
     return std::tie(lhs.domain_, lhs.bus_, lhs.device_, lhs.function_) <
            std::tie(rhs.domain_, rhs.bus_, rhs.device_, rhs.function_);
   }
-  friend bool operator>(const PciDbdfLocation &lhs,
-                        const PciDbdfLocation &rhs) {
+  friend bool operator>(const PciDbdfLocation& lhs,
+                        const PciDbdfLocation& rhs) {
     return (rhs < lhs);
   }
-  friend bool operator<=(const PciDbdfLocation &lhs,
-                         const PciDbdfLocation &rhs) {
+  friend bool operator<=(const PciDbdfLocation& lhs,
+                         const PciDbdfLocation& rhs) {
     return !(rhs < lhs);
   }
-  friend bool operator>=(const PciDbdfLocation &lhs,
-                         const PciDbdfLocation &rhs) {
+  friend bool operator>=(const PciDbdfLocation& lhs,
+                         const PciDbdfLocation& rhs) {
     return !(lhs < rhs);
   }
 
   // Support hashing of locations for use as a key in hash maps.
   template <typename H>
-  friend H AbslHashValue(H h, const PciDbdfLocation &loc) {
+  friend H AbslHashValue(H h, const PciDbdfLocation& loc) {
     return H::combine(std::move(h), loc.domain_, loc.bus_, loc.device_,
                       loc.function_);
   }
@@ -148,8 +148,8 @@ class PciDbdfLocation {
     return absl::StrFormat("%04x:%02x:%02x.%x", domain_.value(), bus_.value(),
                            device_.value(), function_.value());
   }
-  friend std::ostream &operator<<(std::ostream &os,
-                                  const PciDbdfLocation &location) {
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const PciDbdfLocation& location) {
     return os << absl::StreamFormat(
                "%04x:%02x:%02x.%x", location.domain_.value(),
                location.bus_.value(), location.device_.value(),
@@ -175,13 +175,13 @@ class PciDbdLocation {
   // (domain, bus, device) or from an existing PciLocation.
   constexpr PciDbdLocation(PciDomain domain, PciBusNum bus, PciDeviceNum device)
       : domain_(domain), bus_(bus), device_(device) {}
-  explicit constexpr PciDbdLocation(const PciDbdfLocation &location)
+  explicit constexpr PciDbdLocation(const PciDbdfLocation& location)
       : domain_(location.domain()),
         bus_(location.bus()),
         device_(location.device()) {}
 
-  PciDbdLocation(const PciDbdLocation &) = default;
-  PciDbdLocation &operator=(const PciDbdLocation &) = default;
+  PciDbdLocation(const PciDbdLocation&) = default;
+  PciDbdLocation& operator=(const PciDbdLocation&) = default;
 
   // Create an instance whose range is statically checked at compile time.
   template <int domain, int bus, int device>
@@ -217,30 +217,30 @@ class PciDbdLocation {
 
   // PciDeviceLocation relational operators.
   // Order is equivalent to that of a <domain, bus, device> tuple.
-  friend bool operator==(const PciDbdLocation &lhs, const PciDbdLocation &rhs) {
+  friend bool operator==(const PciDbdLocation& lhs, const PciDbdLocation& rhs) {
     return std::tie(lhs.domain_, lhs.bus_, lhs.device_) ==
            std::tie(rhs.domain_, rhs.bus_, rhs.device_);
   }
-  friend bool operator!=(const PciDbdLocation &lhs, const PciDbdLocation &rhs) {
+  friend bool operator!=(const PciDbdLocation& lhs, const PciDbdLocation& rhs) {
     return !(lhs == rhs);
   }
-  friend bool operator<(const PciDbdLocation &lhs, const PciDbdLocation &rhs) {
+  friend bool operator<(const PciDbdLocation& lhs, const PciDbdLocation& rhs) {
     return std::tie(lhs.domain_, lhs.bus_, lhs.device_) <
            std::tie(rhs.domain_, rhs.bus_, rhs.device_);
   }
-  friend bool operator>(const PciDbdLocation &lhs, const PciDbdLocation &rhs) {
+  friend bool operator>(const PciDbdLocation& lhs, const PciDbdLocation& rhs) {
     return (rhs < lhs);
   }
-  friend bool operator<=(const PciDbdLocation &lhs, const PciDbdLocation &rhs) {
+  friend bool operator<=(const PciDbdLocation& lhs, const PciDbdLocation& rhs) {
     return !(rhs < lhs);
   }
-  friend bool operator>=(const PciDbdLocation &lhs, const PciDbdLocation &rhs) {
+  friend bool operator>=(const PciDbdLocation& lhs, const PciDbdLocation& rhs) {
     return !(lhs < rhs);
   }
 
   // Support hashing of <domain>:<bus>:<device> for use as a key in hash maps.
   template <typename H>
-  friend H AbslHashValue(H h, const PciDbdLocation &dev_id) {
+  friend H AbslHashValue(H h, const PciDbdLocation& dev_id) {
     return H::combine(std::move(h), dev_id.domain_, dev_id.bus_,
                       dev_id.device_);
   }
@@ -251,8 +251,8 @@ class PciDbdLocation {
     return absl::StrFormat("%04x:%02x:%02x", domain_.value(), bus_.value(),
                            device_.value());
   }
-  friend std::ostream &operator<<(std::ostream &os,
-                                  const PciDbdLocation &location) {
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const PciDbdLocation& location) {
     return os << absl::StreamFormat("%04x:%02x:%02x", location.domain_.value(),
                                     location.bus_.value(),
                                     location.device_.value());

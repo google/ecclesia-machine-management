@@ -22,11 +22,13 @@
 
 namespace ecclesia {
 
+// NOLINTNEXTLINE: ioctl request is a legacy API that uses unsigned long.
 int SysIoctl::Call(int fd, unsigned long request, intptr_t argi) {
   return ioctl(fd, request, argi);
 }
 
-int SysIoctl::Call(int fd, unsigned long request, void *argp) {
+// NOLINTNEXTLINE: ioctl request is a legacy API that uses unsigned long.
+int SysIoctl::Call(int fd, unsigned long request, void* argp) {
   return ioctl(fd, request, argp);
 }
 

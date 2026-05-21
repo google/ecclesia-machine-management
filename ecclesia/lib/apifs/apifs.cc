@@ -45,14 +45,14 @@ namespace ecclesia {
 namespace {
 
 // Returns if the given path (diretory or a file) exists.
-bool PathExists(const std::string &path) {
+bool PathExists(const std::string& path) {
   return access(path.c_str(), F_OK) == 0;
 }
 
 // List all the entries in a given directory and apply the given functor to get
 // the return value for each entry.
 absl::StatusOr<std::vector<std::string>> ListEntriesInDir(
-    const std::string &dir_path,
+    const std::string& dir_path,
     std::function<std::string(absl::string_view)> per_entry_func) {
   if (!PathExists(dir_path)) {
     return absl::NotFoundError(
@@ -72,7 +72,7 @@ ApifsDirectory::ApifsDirectory() = default;
 
 ApifsDirectory::ApifsDirectory(std::string path) : dir_path_(std::move(path)) {}
 
-ApifsDirectory::ApifsDirectory(const ApifsDirectory &directory,
+ApifsDirectory::ApifsDirectory(const ApifsDirectory& directory,
                                std::string path)
     : dir_path_(JoinFilePaths(directory.dir_path_, std::move(path))) {}
 
@@ -135,7 +135,7 @@ ApifsFile::ApifsFile() = default;
 
 ApifsFile::ApifsFile(std::string path) : path_(std::move(path)) {}
 
-ApifsFile::ApifsFile(const ApifsDirectory &directory,
+ApifsFile::ApifsFile(const ApifsDirectory& directory,
                      absl::string_view entry_relative_path)
     : path_(JoinFilePaths(directory.dir_path_, entry_relative_path)) {}
 
@@ -195,7 +195,7 @@ absl::Status ApifsFile::Write(absl::string_view value) const {
         absl::StrFormat("unable to open the file at path: %s", path_));
   }
   absl::Cleanup fd_closer = [fd]() { close(fd); };
-  const char *data = value.data();
+  const char* data = value.data();
   size_t size = value.size();
   while (size > 0) {
     ssize_t result = write(fd, data, size);
@@ -229,7 +229,7 @@ absl::Status ApifsFile::ReadRange(uint64_t offset,
   absl::Cleanup fd_closer = [fd]() { close(fd); };
   // Read data.
   size_t remaining_length = value.size();
-  char *data = value.data();
+  char* data = value.data();
   off_t read_offset = static_cast<off_t>(offset);
   while (remaining_length > 0) {
     ssize_t result = pread(fd, data, remaining_length, read_offset);
@@ -252,9 +252,11 @@ absl::Status ApifsFile::ReadRange(uint64_t offset,
     read_offset += result;
   }
   if (remaining_length != 0) {
-    return absl::InternalError(absl::StrFormat(
-      "Specified data length is larger than actual readback length, file path:"
-      " %s, delta: %d", path_, remaining_length));
+    return absl::InternalError(
+        absl::StrFormat("Specified data length is larger than actual readback "
+                        "length, file path:"
+                        " %s, delta: %d",
+                        path_, remaining_length));
   }
   return absl::OkStatus();
 }
@@ -273,7 +275,7 @@ absl::Status ApifsFile::WriteRange(uint64_t offset,
   absl::Cleanup fd_closer = [fd]() { close(fd); };
   // Write data.
   size_t remaining_length = value.size();
-  const char *data = value.data();
+  const char* data = value.data();
   off_t write_offset = static_cast<off_t>(offset);
   while (remaining_length > 0) {
     ssize_t result = pwrite(fd, data, remaining_length, write_offset);
@@ -282,9 +284,9 @@ absl::Status ApifsFile::WriteRange(uint64_t offset,
       if (write_errno == EINTR) {
         continue;  // Retry on EINTR.
       }
-      return absl::InternalError(absl::StrFormat(
-          "Failure while writing file at path: %s, errno: %d", path_,
-          write_errno));
+      return absl::InternalError(
+          absl::StrFormat("Failure while writing file at path: %s, errno: %d",
+                          path_, write_errno));
       break;
     }
     if (result == 0) {
@@ -297,8 +299,9 @@ absl::Status ApifsFile::WriteRange(uint64_t offset,
   }
   if (remaining_length != 0) {
     return absl::InternalError(absl::StrFormat(
-      "Specified data length is larger than actual write length, file path:"
-      " %s, delta: %d", path_, remaining_length));
+        "Specified data length is larger than actual write length, file path:"
+        " %s, delta: %d",
+        path_, remaining_length));
   }
 
   return absl::OkStatus();

@@ -40,11 +40,11 @@ struct UsbSignature {
   // Product identifier as allocated by the manufacturer.
   uint16_t product_id;
 
-  bool operator==(const UsbSignature &other) const {
+  bool operator==(const UsbSignature& other) const {
     return std::tie(vendor_id, product_id) ==
            std::tie(other.vendor_id, other.product_id);
   }
-  bool operator!=(const UsbSignature &other) const { return !(*this == other); }
+  bool operator!=(const UsbSignature& other) const { return !(*this == other); }
 };
 
 // The port number a USB device is connected to.
@@ -111,8 +111,8 @@ class UsbPortSequence {
   // range, either due to out of range values or too many ports.
   static std::optional<UsbPortSequence> TryMake(absl::Span<const int> ports);
 
-  UsbPortSequence(const UsbPortSequence &other) = default;
-  UsbPortSequence &operator=(const UsbPortSequence &other) = default;
+  UsbPortSequence(const UsbPortSequence& other) = default;
+  UsbPortSequence& operator=(const UsbPortSequence& other) = default;
 
   // Determine the size of the entire sequence;
   size_t Size() const;
@@ -125,14 +125,14 @@ class UsbPortSequence {
   // sequence. Returns nullopt if the sequence is already at the maximum length.
   std::optional<UsbPortSequence> Downstream(UsbPort port) const;
 
-  friend bool operator==(const UsbPortSequence &lhs,
-                         const UsbPortSequence &rhs);
-  friend bool operator!=(const UsbPortSequence &lhs,
-                         const UsbPortSequence &rhs);
+  friend bool operator==(const UsbPortSequence& lhs,
+                         const UsbPortSequence& rhs);
+  friend bool operator!=(const UsbPortSequence& lhs,
+                         const UsbPortSequence& rhs);
 
  private:
   // Unchecked constructor.
-  constexpr UsbPortSequence(const StoredArray &ports, size_t size)
+  constexpr UsbPortSequence(const StoredArray& ports, size_t size)
       : ports_(ports), size_(size) {}
 
   // The underlying ports array, and how many of the entries in the array are
@@ -155,7 +155,7 @@ class UsbBusLocation : public FixedRangeInteger<UsbBusLocation, int, 1, 255> {
 // the root controller.
 class UsbLocation {
  public:
-  constexpr UsbLocation(UsbBusLocation bus, const UsbPortSequence &ports)
+  constexpr UsbLocation(UsbBusLocation bus, const UsbPortSequence& ports)
       : bus_(bus), ports_(ports) {}
 
   // Construt a USB location that is statically constructed a compile time. The
@@ -172,8 +172,8 @@ class UsbLocation {
   size_t NumPorts() const { return ports_.Size(); }
   std::optional<UsbPort> Port(size_t index) const { return ports_.Port(index); }
 
-  friend bool operator==(const UsbLocation &lhs, const UsbLocation &rhs);
-  friend bool operator!=(const UsbLocation &lhs, const UsbLocation &rhs);
+  friend bool operator==(const UsbLocation& lhs, const UsbLocation& rhs);
+  friend bool operator!=(const UsbLocation& lhs, const UsbLocation& rhs);
 
  private:
   // The number of the bus behind a single controller. 1-255.
@@ -187,7 +187,7 @@ class UsbDevice {
  public:
   virtual ~UsbDevice() = default;
 
-  virtual const UsbLocation &Location() const = 0;
+  virtual const UsbLocation& Location() const = 0;
 
   virtual absl::StatusOr<UsbSignature> GetSignature() const = 0;
 };
@@ -205,13 +205,13 @@ class UsbDiscoveryInterface {
   // useage is enumerating USB locations and then use this method to create a
   // USB device for accessing its functionalities.
   virtual std::unique_ptr<UsbDevice> CreateDevice(
-      const UsbLocation &location) const = 0;
+      const UsbLocation& location) const = 0;
 };
 
 // A helper function for getting the USB device location with the given
 // signature, or status if not found.
 absl::StatusOr<UsbLocation> FindUsbDeviceWithSignature(
-    const UsbDiscoveryInterface *usb_intf, const UsbSignature &usb_signature);
+    const UsbDiscoveryInterface* usb_intf, const UsbSignature& usb_signature);
 
 }  // namespace ecclesia
 

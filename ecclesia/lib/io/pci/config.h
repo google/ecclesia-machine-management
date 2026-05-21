@@ -115,7 +115,7 @@ class PciCapability {
   static constexpr uint8_t kCapIdOffset = 0x00;
   static constexpr uint8_t kNextCapPtrOffset = 0x01;
 
-  PciCapability(PciRegion *region, uint16_t offset)
+  PciCapability(PciRegion* region, uint16_t offset)
       : region_(region), offset_(offset) {}
 
   // Read the raw capability ID and next pointer.
@@ -162,7 +162,7 @@ class PciCapability {
   }
 
  private:
-  PciRegion *region_;
+  PciRegion* region_;
   uint8_t offset_;
 };
 static_assert(std::is_trivially_destructible_v<PciCapability>);
@@ -175,7 +175,7 @@ class PciSubsystemCapability : public PciCapability {
   static constexpr uint8_t kSsvidOffset = 0x04;
   static constexpr uint8_t kSsidOffset = 0x06;
 
-  explicit PciSubsystemCapability(const PciCapability &base)
+  explicit PciSubsystemCapability(const PciCapability& base)
       : PciCapability(base) {}
 
   // Read the subsystem signature.
@@ -211,7 +211,7 @@ class PciExpressCapability : public PciCapability {
   static constexpr uint8_t kSlotCtrl2Offset = 0x38;
   static constexpr uint8_t kSlotStatus2Offset = 0x3a;
 
-  explicit PciExpressCapability(const PciCapability &base)
+  explicit PciExpressCapability(const PciCapability& base)
       : PciCapability(base) {}
 
   // Link Capabilities Register info.
@@ -264,9 +264,9 @@ class PciConfigSpace {
   static constexpr uint8_t kMaxPciCapabilities = 48;
 
   // Construct a config space provided by the underlying memory region.
-  explicit PciConfigSpace(PciRegion *region) : region_(region) {}
+  explicit PciConfigSpace(PciRegion* region) : region_(region) {}
 
-  PciRegion *Region() { return region_; }
+  PciRegion* Region() { return region_; }
 
   // Functions to look up the base and subsystem signatures.
   absl::StatusOr<PciBaseSignature> BaseSignature() const;
@@ -282,7 +282,7 @@ class PciConfigSpace {
 
   // Perform callback on each defined device capability.
   absl::Status ForEachCapability(
-      absl::FunctionRef<absl::Status(const PciCapability &)> callback) const;
+      absl::FunctionRef<absl::Status(const PciCapability&)> callback) const;
 
   // Check if this config space matches the given header type, and construct and
   // return an instance if it does. Otherwise returns a not-OK status.
@@ -316,7 +316,7 @@ class PciConfigSpace {
   absl::StatusOr<T> WithSpecificType(T0Func t0_func, T1Func t1_func) const;
 
  protected:
-  PciRegion *region_;
+  PciRegion* region_;
 };
 static_assert(std::is_trivially_destructible_v<PciConfigSpace>);
 
@@ -341,7 +341,7 @@ class PciType0ConfigSpace : public PciConfigSpace {
 
  private:
   friend class PciConfigSpace;
-  explicit PciType0ConfigSpace(const PciConfigSpace &base)
+  explicit PciType0ConfigSpace(const PciConfigSpace& base)
       : PciConfigSpace(base) {}
 
   // Type-specific implementations of generic functions.
@@ -384,7 +384,7 @@ class PciType1ConfigSpace : public PciConfigSpace {
   absl::StatusOr<PciBusNum> SecondaryBusNum() const;
   absl::StatusOr<PciBusNum> SubordinateBusNum() const;
 
-  explicit PciType1ConfigSpace(const PciConfigSpace &base)
+  explicit PciType1ConfigSpace(const PciConfigSpace& base)
       : PciConfigSpace(base) {}
 
  private:

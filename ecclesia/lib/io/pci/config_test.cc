@@ -398,7 +398,7 @@ TEST_F(PciConfigTest, PciConfigSpaceForEachCapabilityNoCapabilities) {
 
   std::vector<PciCapability> capabilities;
   absl::Status status = config_space.ForEachCapability(
-      [&capabilities](const PciCapability &cap) -> absl::Status {
+      [&capabilities](const PciCapability& cap) -> absl::Status {
         capabilities.push_back(cap);
         return absl::OkStatus();
       });
@@ -429,7 +429,7 @@ TEST_F(PciConfigTest, PciConfigSpaceForEachCapabilitySuccess) {
 
   std::vector<PciCapability> capabilities;
   absl::Status status = config_space.ForEachCapability(
-      [&capabilities](const PciCapability &cap) -> absl::Status {
+      [&capabilities](const PciCapability& cap) -> absl::Status {
         capabilities.push_back(cap);
         return absl::OkStatus();
       });
@@ -467,7 +467,7 @@ TEST_F(PciConfigTest, PciConfigSpaceForEachCapabilityExceedsMaxCapabilities) {
 
   std::vector<PciCapability> capabilities;
   absl::Status status = config_space.ForEachCapability(
-      [&capabilities](const PciCapability &cap) -> absl::Status {
+      [&capabilities](const PciCapability& cap) -> absl::Status {
         capabilities.push_back(cap);
         return absl::OkStatus();
       });
@@ -488,7 +488,7 @@ TEST_F(PciConfigTest,
 
   std::vector<PciCapability> capabilities;
   absl::Status status = config_space.ForEachCapability(
-      [&capabilities](const PciCapability &cap) -> absl::Status {
+      [&capabilities](const PciCapability& cap) -> absl::Status {
         capabilities.push_back(cap);
         // Return an error after our first capability is read.
         return absl::UnknownError("error");
@@ -515,7 +515,7 @@ TEST_F(PciConfigTest,
 
   std::vector<PciCapability> capabilities;
   absl::Status status = config_space.ForEachCapability(
-      [&capabilities](const PciCapability &cap) -> absl::Status {
+      [&capabilities](const PciCapability& cap) -> absl::Status {
         capabilities.push_back(cap);
         return absl::OkStatus();
       });

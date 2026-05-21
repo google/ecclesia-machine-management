@@ -287,7 +287,7 @@ TEST_F(PciTopologyTest, EnumeratePciAcpiPaths) {
   SysfsPciTopology pci_topology(fs_.GetTruePath("/sys/devices/"));
   auto maybe_pci_acpi_paths = pci_topology.EnumeratePciAcpiPaths();
   ASSERT_TRUE(maybe_pci_acpi_paths.ok());
-  auto &pci_acpi_paths = maybe_pci_acpi_paths.value();
+  auto& pci_acpi_paths = maybe_pci_acpi_paths.value();
   ASSERT_EQ(pci_acpi_paths.size(), 2);
 
   EXPECT_THAT(pci_acpi_paths,
@@ -311,16 +311,15 @@ TEST(SysfsPciTopologyTest, EnumeratePciPlatformPaths) {
   SysfsPciTopology pci_topology(fs.GetTruePath("/sys/devices/"));
   auto maybe_pci_platform_paths = pci_topology.EnumeratePciPlatformPaths();
   ASSERT_TRUE(maybe_pci_platform_paths.ok());
-  auto &pci_platform_paths = maybe_pci_platform_paths.value();
+  auto& pci_platform_paths = maybe_pci_platform_paths.value();
   ASSERT_EQ(pci_platform_paths.size(), 2);
 
-  EXPECT_THAT(
-      pci_platform_paths,
-      UnorderedElementsAre(
-          PciPlatformPath{PciDomain::Make<0>(), PciBusNum::Make<00>(),
-                          "2041800000.pcie"},
-          PciPlatformPath{PciDomain::Make<1>(), PciBusNum::Make<00>(),
-                          "204e400000.pcie"}));
+  EXPECT_THAT(pci_platform_paths,
+              UnorderedElementsAre(
+                  PciPlatformPath{PciDomain::Make<0>(), PciBusNum::Make<00>(),
+                                  "2041800000.pcie"},
+                  PciPlatformPath{PciDomain::Make<1>(), PciBusNum::Make<00>(),
+                                  "204e400000.pcie"}));
 }
 
 TEST(SysfsPciTopologyTest, EnumeratePciPlatformPathsHexParsing) {
@@ -330,14 +329,13 @@ TEST(SysfsPciTopologyTest, EnumeratePciPlatformPathsHexParsing) {
   SysfsPciTopology pci_topology(fs.GetTruePath("/sys/devices/"));
   auto maybe_pci_platform_paths = pci_topology.EnumeratePciPlatformPaths();
   ASSERT_TRUE(maybe_pci_platform_paths.ok());
-  auto &pci_platform_paths = maybe_pci_platform_paths.value();
+  auto& pci_platform_paths = maybe_pci_platform_paths.value();
   ASSERT_EQ(pci_platform_paths.size(), 1);
 
   EXPECT_THAT(
       pci_platform_paths,
-      UnorderedElementsAre(
-          PciPlatformPath{PciDomain::Make<0xa>(), PciBusNum::Make<0xbc>(),
-                          "123456789.pcie"}));
+      UnorderedElementsAre(PciPlatformPath{
+          PciDomain::Make<0xa>(), PciBusNum::Make<0xbc>(), "123456789.pcie"}));
 }
 
 TEST(SysfsPciTopologyTest, EnumeratePciPlatformPathsNoPlatformDir) {
@@ -346,7 +344,7 @@ TEST(SysfsPciTopologyTest, EnumeratePciPlatformPathsNoPlatformDir) {
   SysfsPciTopology pci_topology(fs.GetTruePath("/sys/devices/"));
   auto maybe_pci_platform_paths = pci_topology.EnumeratePciPlatformPaths();
   ASSERT_TRUE(maybe_pci_platform_paths.ok());
-  auto &pci_platform_paths = maybe_pci_platform_paths.value();
+  auto& pci_platform_paths = maybe_pci_platform_paths.value();
   ASSERT_EQ(pci_platform_paths.size(), 0);
 }
 
@@ -357,7 +355,7 @@ TEST(SysfsPciTopologyTest, EnumeratePciPlatformPathsEmptyPlatformDir) {
   SysfsPciTopology pci_topology(fs.GetTruePath("/sys/devices/"));
   auto maybe_pci_platform_paths = pci_topology.EnumeratePciPlatformPaths();
   ASSERT_TRUE(maybe_pci_platform_paths.ok());
-  auto &pci_platform_paths = maybe_pci_platform_paths.value();
+  auto& pci_platform_paths = maybe_pci_platform_paths.value();
   ASSERT_EQ(pci_platform_paths.size(), 0);
 }
 

@@ -33,7 +33,7 @@ namespace ecclesia {
 
 PciMmioRegion::PciMmioRegion(absl::string_view physical_mem_device,
                              uint64_t pci_mmconfig_base,
-                             const PciDbdfLocation &location)
+                             const PciDbdfLocation& location)
     : PciRegion(kPciConfigSpaceSize),
       mmio_(MappedMemory::Create(std::string(physical_mem_device),
                                  pci_mmconfig_base + LocationToOffset(location),

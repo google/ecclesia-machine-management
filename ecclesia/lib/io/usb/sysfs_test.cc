@@ -58,8 +58,8 @@ class SysfsUsbTest : public testing::Test {
     CreateDevice("2-2.5.10", 0x18d1, 0x0002, "0000:00:1a.2/usb2/2-2");
   }
 
-  void CreateDevice(const std::string &devname, uint16_t vendor,
-                    uint16_t product, const std::string &pci) {
+  void CreateDevice(const std::string& devname, uint16_t vendor,
+                    uint16_t product, const std::string& pci) {
     std::string real_devname =
         absl::StrCat("/sys/devices/pciXXXX:XX/", pci, "/", devname);
     fs_.CreateDir(real_devname);
@@ -77,8 +77,8 @@ class SysfsUsbTest : public testing::Test {
 
 // Helper that return true if a matching DeviceLocation in a vector, or
 // returns false if the location isn't found.
-bool FindUsbLocation(const std::vector<UsbLocation> &locations,
-                     const UsbLocation &loc) {
+bool FindUsbLocation(const std::vector<UsbLocation>& locations,
+                     const UsbLocation& loc) {
   for (size_t i = 0; i < locations.size(); ++i) {
     if (loc == locations[i]) {
       return true;
@@ -90,7 +90,7 @@ bool FindUsbLocation(const std::vector<UsbLocation> &locations,
 TEST_F(SysfsUsbTest, TestDeviceEnumeration) {
   auto maybe_usb_locations = usb_discover_.EnumerateAllUsbDevices();
   ASSERT_TRUE(maybe_usb_locations.ok());
-  auto &usb_locations = maybe_usb_locations.value();
+  auto& usb_locations = maybe_usb_locations.value();
   EXPECT_EQ(usb_locations.size(), 11);
   auto usb_1 = UsbLocation(UsbBusLocation::Make<1>(), UsbPortSequence());
   EXPECT_TRUE(FindUsbLocation(usb_locations, usb_1));

@@ -227,7 +227,7 @@ absl::StatusOr<uint8_t> PciConfigSpace::HeaderType() const {
 }
 
 absl::Status PciConfigSpace::ForEachCapability(
-    absl::FunctionRef<absl::Status(const PciCapability &)> callback) const {
+    absl::FunctionRef<absl::Status(const PciCapability&)> callback) const {
   ECCLESIA_ASSIGN_OR_RETURN(uint8_t next_ptr,
                             region_->Read8(kCapPointerOffset));
 
@@ -304,7 +304,7 @@ PciType1ConfigSpace::SubsystemSignatureImpl() const {
   absl::StatusOr<PciSubsystemSignature> subsys_sig =
       absl::UnimplementedError("no subsystem capability found on bridge");
   ECCLESIA_RETURN_IF_ERROR(ForEachCapability(
-      [&subsys_sig](const PciCapability &cap) -> absl::Status {
+      [&subsys_sig](const PciCapability& cap) -> absl::Status {
         ECCLESIA_ASSIGN_OR_RETURN(PciSubsystemCapability subsys_cap,
                                   cap.GetIf<PciSubsystemCapability>());
         subsys_sig = subsys_cap.SubsystemSignature();

@@ -24,7 +24,7 @@
 
 namespace ecclesia {
 
-PciLocationProtobuf PciLocationToProto(const PciDbdfLocation &location) {
+PciLocationProtobuf PciLocationToProto(const PciDbdfLocation& location) {
   PciLocationProtobuf protobuf;
   protobuf.set_domain(location.domain().value());
   protobuf.set_bus(location.bus().value());
@@ -34,13 +34,13 @@ PciLocationProtobuf PciLocationToProto(const PciDbdfLocation &location) {
 }
 
 std::optional<PciDbdfLocation> PciLocationFromProto(
-    const PciLocationProtobuf &location) {
+    const PciLocationProtobuf& location) {
   return PciDbdfLocation::TryMake(location.domain(), location.bus(),
                                   location.device(), location.function());
 }
 
 PciBaseSignatureProtobuf PciBaseSignatureToProto(
-    const PciBaseSignature &signature) {
+    const PciBaseSignature& signature) {
   PciBaseSignatureProtobuf protobuf;
   protobuf.set_vendor_id(signature.vendor_id().value());
   protobuf.set_device_id(signature.device_id().value());
@@ -48,13 +48,13 @@ PciBaseSignatureProtobuf PciBaseSignatureToProto(
 }
 
 std::optional<PciBaseSignature> PciBaseSignatureFromProto(
-    const PciBaseSignatureProtobuf &signature) {
+    const PciBaseSignatureProtobuf& signature) {
   return PciBaseSignature::TryMake(signature.vendor_id(),
                                    signature.device_id());
 }
 
 PciSubsystemSignatureProtobuf PciSubsystemSignatureToProto(
-    const PciSubsystemSignature &signature) {
+    const PciSubsystemSignature& signature) {
   PciSubsystemSignatureProtobuf protobuf;
   protobuf.set_vendor_id(signature.vendor_id().value());
   protobuf.set_id(signature.id().value());
@@ -62,7 +62,7 @@ PciSubsystemSignatureProtobuf PciSubsystemSignatureToProto(
 }
 
 std::optional<PciSubsystemSignature> PciSubsystemSignatureFromProto(
-    const PciSubsystemSignatureProtobuf &signature) {
+    const PciSubsystemSignatureProtobuf& signature) {
   return PciSubsystemSignature::TryMake(signature.vendor_id(), signature.id());
 }
 

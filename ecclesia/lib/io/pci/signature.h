@@ -50,8 +50,8 @@ class PciBaseSignature {
   constexpr PciBaseSignature(PciIdNum vendor_id, PciIdNum device_id)
       : vendor_id_(vendor_id), device_id_(device_id) {}
 
-  PciBaseSignature(const PciBaseSignature &) = default;
-  PciBaseSignature &operator=(const PciBaseSignature &) = default;
+  PciBaseSignature(const PciBaseSignature&) = default;
+  PciBaseSignature& operator=(const PciBaseSignature&) = default;
 
   template <int vid, int did>
   static constexpr PciBaseSignature Make() {
@@ -72,13 +72,13 @@ class PciBaseSignature {
   const PciIdNum vendor_id() const { return vendor_id_; }
   const PciIdNum device_id() const { return device_id_; }
 
-  friend bool operator==(const PciBaseSignature &lhs,
-                         const PciBaseSignature &rhs) {
+  friend bool operator==(const PciBaseSignature& lhs,
+                         const PciBaseSignature& rhs) {
     return std::tie(lhs.vendor_id_, lhs.device_id_) ==
            std::tie(rhs.vendor_id_, rhs.device_id_);
   }
-  friend bool operator!=(const PciBaseSignature &lhs,
-                         const PciBaseSignature &rhs) {
+  friend bool operator!=(const PciBaseSignature& lhs,
+                         const PciBaseSignature& rhs) {
     return !(lhs == rhs);
   }
 
@@ -94,8 +94,8 @@ class PciSubsystemSignature {
   constexpr PciSubsystemSignature(PciIdNum vendor_id, PciIdNum id)
       : vendor_id_(vendor_id), id_(id) {}
 
-  PciSubsystemSignature(const PciSubsystemSignature &) = default;
-  PciSubsystemSignature &operator=(const PciSubsystemSignature &) = default;
+  PciSubsystemSignature(const PciSubsystemSignature&) = default;
+  PciSubsystemSignature& operator=(const PciSubsystemSignature&) = default;
 
   template <int ssvid, int ssid>
   static constexpr PciSubsystemSignature Make() {
@@ -117,13 +117,13 @@ class PciSubsystemSignature {
   const PciIdNum vendor_id() const { return vendor_id_; }
   const PciIdNum id() const { return id_; }
 
-  friend bool operator==(const PciSubsystemSignature &lhs,
-                         const PciSubsystemSignature &rhs) {
+  friend bool operator==(const PciSubsystemSignature& lhs,
+                         const PciSubsystemSignature& rhs) {
     return std::tie(lhs.vendor_id_, lhs.id_) ==
            std::tie(rhs.vendor_id_, rhs.id_);
   }
-  friend bool operator!=(const PciSubsystemSignature &lhs,
-                         const PciSubsystemSignature &rhs) {
+  friend bool operator!=(const PciSubsystemSignature& lhs,
+                         const PciSubsystemSignature& rhs) {
     return !(lhs == rhs);
   }
 
@@ -140,8 +140,8 @@ class PciFullSignature {
                              PciSubsystemSignature subsystem)
       : base_(base), subsystem_(subsystem) {}
 
-  PciFullSignature(const PciFullSignature &) = default;
-  PciFullSignature &operator=(const PciFullSignature &) = default;
+  PciFullSignature(const PciFullSignature&) = default;
+  PciFullSignature& operator=(const PciFullSignature&) = default;
 
   template <int vid, int did, int ssvid, int ssid>
   static constexpr PciFullSignature Make() {
@@ -164,13 +164,13 @@ class PciFullSignature {
   const PciBaseSignature base() const { return base_; }
   const PciSubsystemSignature subsystem() const { return subsystem_; }
 
-  friend bool operator==(const PciFullSignature &lhs,
-                         const PciFullSignature &rhs) {
+  friend bool operator==(const PciFullSignature& lhs,
+                         const PciFullSignature& rhs) {
     return std::tie(lhs.base_, lhs.subsystem_) ==
            std::tie(rhs.base_, rhs.subsystem_);
   }
-  friend bool operator!=(const PciFullSignature &lhs,
-                         const PciFullSignature &rhs) {
+  friend bool operator!=(const PciFullSignature& lhs,
+                         const PciFullSignature& rhs) {
     return !(lhs == rhs);
   }
 

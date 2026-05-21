@@ -48,13 +48,13 @@ class ApifsDirectory {
   // with either an absolute path, or by using a path relative to an
   // ApifsDirectory.
   explicit ApifsDirectory(std::string path);
-  ApifsDirectory(const ApifsDirectory &directory, std::string path);
+  ApifsDirectory(const ApifsDirectory& directory, std::string path);
 
   // Apifs access objects can be copied or moved.
-  ApifsDirectory(ApifsDirectory &&other) = default;
-  ApifsDirectory(const ApifsDirectory &other) = default;
-  ApifsDirectory &operator=(ApifsDirectory &&other) = default;
-  ApifsDirectory &operator=(const ApifsDirectory &other) = default;
+  ApifsDirectory(ApifsDirectory&& other) = default;
+  ApifsDirectory(const ApifsDirectory& other) = default;
+  ApifsDirectory& operator=(ApifsDirectory&& other) = default;
+  ApifsDirectory& operator=(const ApifsDirectory& other) = default;
 
   // Return a boolean indicating if the object is "null", not set to any path.
   bool IsNull() const { return dir_path_.empty(); }
@@ -107,14 +107,14 @@ class ApifsFile {
   // can be specified by either using an absolute path, or by using a path
   // relative to an ApifsDirectory.
   explicit ApifsFile(std::string path);
-  ApifsFile(const ApifsDirectory &directory,
+  ApifsFile(const ApifsDirectory& directory,
             absl::string_view entry_relative_path);
 
   // Apifs access objects can be copied or moved.
-  ApifsFile(ApifsFile &&other) = default;
-  ApifsFile(const ApifsFile &other) = default;
-  ApifsFile &operator=(ApifsFile &&other) = default;
-  ApifsFile &operator=(const ApifsFile &other) = default;
+  ApifsFile(ApifsFile&& other) = default;
+  ApifsFile(const ApifsFile& other) = default;
+  ApifsFile& operator=(ApifsFile&& other) = default;
+  ApifsFile& operator=(const ApifsFile& other) = default;
 
   // Return a boolean indicating if the object is "null", not set to any path.
   bool IsNull() const { return path_.empty(); }

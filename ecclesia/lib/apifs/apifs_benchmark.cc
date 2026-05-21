@@ -34,7 +34,7 @@ ABSL_FLAG(std::string, sysfs_file_for_benchmark, "",
 namespace ecclesia {
 namespace {
 
-void BM_CreateApifsFileAndRead(benchmark::State &state) {
+void BM_CreateApifsFileAndRead(benchmark::State& state) {
   std::string path = absl::GetFlag(FLAGS_sysfs_file_for_benchmark);
   CHECK(!path.empty()) << "--sysfs_file_for_benchmark has been set";
 
@@ -44,7 +44,7 @@ void BM_CreateApifsFileAndRead(benchmark::State &state) {
   }
 }
 
-void BM_ReuseApifsFileAndRead(benchmark::State &state) {
+void BM_ReuseApifsFileAndRead(benchmark::State& state) {
   std::string path = absl::GetFlag(FLAGS_sysfs_file_for_benchmark);
   CHECK(!path.empty()) << "--sysfs_file_for_benchmark has been set";
   ApifsFile pci_state(path);

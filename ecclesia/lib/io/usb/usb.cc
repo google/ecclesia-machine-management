@@ -69,33 +69,33 @@ std::optional<UsbPortSequence> UsbPortSequence::Downstream(UsbPort port) const {
   return UsbPortSequence(child_ports, size_ + 1);
 }
 
-bool operator==(const UsbPortSequence &lhs, const UsbPortSequence &rhs) {
+bool operator==(const UsbPortSequence& lhs, const UsbPortSequence& rhs) {
   if (lhs.size_ != rhs.size_) return false;
   return std::equal(
       lhs.ports_.begin(), lhs.ports_.begin() + lhs.size_, rhs.ports_.begin(),
-      [](const auto &lhs, const auto &rhs) { return lhs.value == rhs.value; });
+      [](const auto& lhs, const auto& rhs) { return lhs.value == rhs.value; });
 }
 
-bool operator!=(const UsbPortSequence &lhs, const UsbPortSequence &rhs) {
+bool operator!=(const UsbPortSequence& lhs, const UsbPortSequence& rhs) {
   return !(lhs == rhs);
 }
 
-bool operator==(const UsbLocation &lhs, const UsbLocation &rhs) {
+bool operator==(const UsbLocation& lhs, const UsbLocation& rhs) {
   return std::tie(lhs.bus_, lhs.ports_) == std::tie(rhs.bus_, rhs.ports_);
 }
 
-bool operator!=(const UsbLocation &lhs, const UsbLocation &rhs) {
+bool operator!=(const UsbLocation& lhs, const UsbLocation& rhs) {
   return !(lhs == rhs);
 }
 
 absl::StatusOr<UsbLocation> FindUsbDeviceWithSignature(
-    const UsbDiscoveryInterface *usb_intf, const UsbSignature &usb_signature) {
+    const UsbDiscoveryInterface* usb_intf, const UsbSignature& usb_signature) {
   if (usb_intf == nullptr) {
     return absl::InvalidArgumentError("nullptr UsbDiscoveryInterface");
   }
   ECCLESIA_ASSIGN_OR_RETURN(std::vector<UsbLocation> usb_locations,
                             usb_intf->EnumerateAllUsbDevices());
-  for (const UsbLocation &usb_location : usb_locations) {
+  for (const UsbLocation& usb_location : usb_locations) {
     auto usb_device = usb_intf->CreateDevice(usb_location);
     if (usb_device == nullptr) {
       continue;

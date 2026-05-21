@@ -79,7 +79,7 @@ class PciMmioRegionTest : public testing::Test {
     lseek(fd, size_, SEEK_SET);
     write(fd, "\x00", 1);
 
-    mmconfig_ = reinterpret_cast<uint8_t *>(
+    mmconfig_ = reinterpret_cast<uint8_t*>(
         mmap(nullptr, size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
 
     close(fd);
@@ -95,7 +95,7 @@ class PciMmioRegionTest : public testing::Test {
   static constexpr int kBaseAddr = 0x80000;
 
   std::string mmconfig_filename_;
-  uint8_t *mmconfig_;
+  uint8_t* mmconfig_;
   int size_;
 };
 

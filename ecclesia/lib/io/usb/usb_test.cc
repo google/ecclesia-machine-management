@@ -50,7 +50,7 @@ TEST(UsbPortSequenceTest, ValidateStaticFunctions) {
 
   auto maybe_long_to_max = kLongSequence.Downstream(UsbPort::Make<6>());
   ASSERT_TRUE(maybe_long_to_max.has_value());
-  auto &long_to_max = maybe_long_to_max.value();
+  auto& long_to_max = maybe_long_to_max.value();
   EXPECT_EQ(kMaxSequence, long_to_max);
 }
 
@@ -60,12 +60,12 @@ TEST(UsbPortSequenceTest, ValidateDynamicFunctions) {
 
   maybe_seq = UsbPortSequence::TryMake({1, 2, 3, 4, 5});
   ASSERT_TRUE(maybe_seq.has_value());
-  auto &seq_0 = maybe_seq.value();
+  auto& seq_0 = maybe_seq.value();
   EXPECT_EQ(seq_0.Size(), 5);
 
   auto maybe_seq_1 = UsbPortSequence::TryMake({1, 2, 3, 4, 5, 6});
   ASSERT_TRUE(maybe_seq_1.has_value());
-  auto &seq_1 = maybe_seq_1.value();
+  auto& seq_1 = maybe_seq_1.value();
   auto seq_0_child = seq_0.Downstream(UsbPort::Make<6>());
   ASSERT_TRUE(seq_0_child.has_value());
   EXPECT_EQ(seq_0_child.value(), seq_1);

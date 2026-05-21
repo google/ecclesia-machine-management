@@ -50,8 +50,8 @@ constexpr LazyRE2 kUsbBusPortRegex = {"(\\d+)-(\\d+(?:\\.\\d+)*)"};
 // out when success. If is_hex is true then the file must contain a base-16
 // integer and on false it must contain a base-10 number.
 template <typename IntType>
-absl::Status ReadUintFromSysfs(const ApifsFile &api_fs, bool is_hex,
-                               IntType *out) {
+absl::Status ReadUintFromSysfs(const ApifsFile& api_fs, bool is_hex,
+                               IntType* out) {
   // Read in the contents of the file. This function only supports files
   // containing a single integer.
   ECCLESIA_ASSIGN_OR_RETURN(std::string contents, api_fs.Read());
@@ -109,7 +109,7 @@ std::optional<UsbLocation> DirectoryToUsbLocation(absl::string_view dirname) {
     std::vector<absl::string_view> ports_str =
         absl::StrSplit(port_substr, '.', absl::SkipEmpty());
     UsbPortSequence seq;
-    for (const auto &port_str : ports_str) {
+    for (const auto& port_str : ports_str) {
       int port;
       if (absl::SimpleAtoi(port_str, &port)) {
         if (auto maybe_usb_port = UsbPort::TryMake(port);
@@ -129,7 +129,7 @@ std::optional<UsbLocation> DirectoryToUsbLocation(absl::string_view dirname) {
 }
 }  // namespace
 
-std::string UsbLocationToDirectory(const UsbLocation &loc) {
+std::string UsbLocationToDirectory(const UsbLocation& loc) {
   if (loc.NumPorts() == 0) {
     return absl::StrFormat("usb%d", loc.Bus().value());
   }
@@ -162,11 +162,11 @@ SysfsUsbDiscovery::EnumerateAllUsbDevices() const {
 }
 
 std::unique_ptr<UsbDevice> SysfsUsbDiscovery::CreateDevice(
-    const UsbLocation &location) const {
+    const UsbLocation& location) const {
   return std::make_unique<SysfsUsbDevice>(location);
 }
 
-SysfsUsbDevice::SysfsUsbDevice(const UsbLocation &usb_location)
+SysfsUsbDevice::SysfsUsbDevice(const UsbLocation& usb_location)
     : SysfsUsbDevice(usb_location, ApifsDirectory(absl::StrCat(
                                        kUsbDevicesDir, "/",
                                        UsbLocationToDirectory(usb_location)))) {

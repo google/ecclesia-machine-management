@@ -74,14 +74,14 @@ class MmioAccessTest : public testing::Test {
     lseek(fd, size_, SEEK_SET);
     write(fd, "\x00", 1);
 
-    mmconfig_ = reinterpret_cast<uint8_t *>(
+    mmconfig_ = reinterpret_cast<uint8_t*>(
         mmap(nullptr, size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
     EXPECT_TRUE(mmconfig_);
   }
 
   int size_;
   std::string mmconfig_filename_;
-  uint8_t *mmconfig_;
+  uint8_t* mmconfig_;
 };
 
 TEST_F(MmioAccessTest, ReadSuccess) {

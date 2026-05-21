@@ -34,10 +34,10 @@ class Msr {
   explicit Msr(std::string path);
 
   // Msr access objects cannot be copied or moved.
-  Msr(Msr &&other) = delete;
-  Msr(const Msr &other) = delete;
-  Msr &operator=(Msr &&other) = delete;
-  Msr &operator=(const Msr &other) = delete;
+  Msr(Msr&& other) = delete;
+  Msr(const Msr& other) = delete;
+  Msr& operator=(Msr&& other) = delete;
+  Msr& operator=(const Msr& other) = delete;
 
   // Read the value from a specific MSR.
   absl::StatusOr<uint64_t> Read(uint64_t reg) const;

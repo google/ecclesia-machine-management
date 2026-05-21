@@ -30,7 +30,7 @@
 
 namespace ecclesia {
 
-UsbLocationProtobuf UsbLocationToProto(const UsbLocation &location) {
+UsbLocationProtobuf UsbLocationToProto(const UsbLocation& location) {
   UsbLocationProtobuf proto_location;
   proto_location.set_bus(location.Bus().value());
   std::vector<int> ports;
@@ -47,7 +47,7 @@ UsbLocationProtobuf UsbLocationToProto(const UsbLocation &location) {
 }
 
 std::optional<UsbLocation> UsbLocationFromProto(
-    const UsbLocationProtobuf &location) {
+    const UsbLocationProtobuf& location) {
   auto maybe_bus = UsbBusLocation::TryMake(location.bus());
   std::optional<UsbPortSequence> maybe_port_sequence;
   // Check if root device aka ports = "0"
@@ -71,7 +71,7 @@ std::optional<UsbLocation> UsbLocationFromProto(
   return std::nullopt;
 }
 
-UsbSignatureProtobuf UsbSignatureToProto(const UsbSignature &signature) {
+UsbSignatureProtobuf UsbSignatureToProto(const UsbSignature& signature) {
   UsbSignatureProtobuf protobuf;
   protobuf.set_product_id(signature.product_id);
   protobuf.set_vendor_id(signature.vendor_id);
