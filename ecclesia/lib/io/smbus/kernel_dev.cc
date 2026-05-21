@@ -353,7 +353,7 @@ absl::Status KernelSmbusAccess::ReadBlockI2C(const SmbusLocation &loc,
   // Linux interface only supports up to 32 bytes.
   if (data.size() > I2C_SMBUS_BLOCK_MAX) {
     return absl::InternalError(
-        absl::StrFormat("Can not write %d to device %s, "
+        absl::StrFormat("Can not read %d from device %s, "
                         "Linux interface only supports up to 32 bytes.",
                         data.size(), absl::FormatStreamed(loc)));
   }
@@ -377,6 +377,7 @@ absl::Status KernelSmbusAccess::ReadBlockI2C(const SmbusLocation &loc,
 
   absl::Status status;
   union i2c_smbus_data i2c_data {};
+  i2c_data.block[0] = data.size();
   if (SmbusIoctl(ioctl_, fd, I2C_SMBUS_READ, command, I2C_SMBUS_I2C_BLOCK_DATA,
                  &i2c_data) < 0) {
     status = absl::InternalError(

@@ -119,9 +119,11 @@ ACTION_P(WriteSmbusData, value) {
 }
 
 // Respond to a block read request with the given buffer and size.
+// Also verifies that the requested size was populated in block[0].
 ACTION_P2(ReadBlockI2CData, value, size) {
   union i2c_smbus_data *sm_data = arg4;
   if (sm_data) {
+    EXPECT_EQ(sm_data->block[0], size);
     EXPECT_LE(size, 32);
     sm_data->block[0] = size;
     for (int i = 1; i < size + 1; ++i) sm_data->block[i] = value[i - 1];
@@ -135,7 +137,7 @@ ACTION_P(WriteBlockI2CData, value) {
   union i2c_smbus_data *sm_data = arg4;
   if (sm_data) {
     EXPECT_LE(sm_data->block[0], 32);
-    for (int i = 1; i < sm_data->block[0]; ++i)
+    for (int i = 1; i <= sm_data->block[0]; ++i)
       EXPECT_EQ(sm_data->block[i], value[i - 1]);
   }
 
