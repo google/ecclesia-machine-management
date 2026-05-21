@@ -63,7 +63,7 @@ absl::Status WithEachFileInDirectory(absl::string_view dirname, F output_func) {
 
   class ScandirCloser {
    public:
-    ScandirCloser(struct dirent **namelist, int n)
+    ScandirCloser(struct dirent** namelist, int n)
         : namelist_(namelist), n_(n) {}
     ~ScandirCloser() {
       int i = n_;
@@ -72,11 +72,11 @@ absl::Status WithEachFileInDirectory(absl::string_view dirname, F output_func) {
     }
 
    private:
-    struct dirent **namelist_;
+    struct dirent** namelist_;
     int n_;
   };
 
-  struct dirent **namelist;
+  struct dirent** namelist;
   std::string c_dirname(dirname);  // Needed to get a NUL terminator.
   if (int n = scandir(c_dirname.c_str(), &namelist, nullptr, nullptr); n >= 0) {
     ScandirCloser closer(namelist, n);
@@ -119,8 +119,8 @@ class DataStoreDirectory {
   // attempt to create it or initialize it in any way.
   explicit DataStoreDirectory(std::string path);
 
-  DataStoreDirectory(const DataStoreDirectory &other) = delete;
-  DataStoreDirectory &operator=(const DataStoreDirectory &other) = delete;
+  DataStoreDirectory(const DataStoreDirectory& other) = delete;
+  DataStoreDirectory& operator=(const DataStoreDirectory& other) = delete;
 
   // Allocate a filename for use. By default this does not do anything with the
   // actual file (e.g. create it, or delete it if it already exists). If the
@@ -128,7 +128,7 @@ class DataStoreDirectory {
   // success it returns the full path to the file.
   struct UseFileOptions {};
   absl::StatusOr<std::string> UseFile(absl::string_view filename,
-                                      const UseFileOptions &options);
+                                      const UseFileOptions& options);
 
   // Collect usage stats on either a single file, or all files.
   //
@@ -143,10 +143,10 @@ class DataStoreDirectory {
     size_t size = 0;
 
     // Equality comparisons to make it easy to compare stats.
-    bool operator==(const Stats &other) const {
+    bool operator==(const Stats& other) const {
       return std::tie(exists, size) == std::tie(other.exists, other.size);
     }
-    bool operator!=(const Stats &other) const { return !(*this == other); }
+    bool operator!=(const Stats& other) const { return !(*this == other); }
   };
   absl::StatusOr<Stats> GetFileStats(absl::string_view filename) const;
   absl::flat_hash_map<std::string, Stats> GetAllFileStats() const;

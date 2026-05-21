@@ -44,7 +44,7 @@ struct FileOwnership {
   uid_t uid;
   gid_t gid;
 };
-absl::StatusOr<FileOwnership> GetOwnership(const std::string &path) {
+absl::StatusOr<FileOwnership> GetOwnership(const std::string& path) {
   struct stat st;
   if (lstat(path.c_str(), &st) != 0) {
     return absl::InternalError("lstat() failed");
@@ -77,14 +77,14 @@ class SetUpUnixDomainSocketTest : public ::testing::Test {
   ~SetUpUnixDomainSocketTest() { fs::remove_all(test_var_run_); }
 
  protected:
-  static void CreateFile(const fs::path &path) {
+  static void CreateFile(const fs::path& path) {
     std::ofstream touch(path);
     EXPECT_TRUE(fs::exists(path));
   }
 
   // Makes a "is_root_safe" function that compares against test_var_run_.
-  std::function<bool(const std::string &)> MakeIsRootSafe() {
-    return [this](const std::string &path) {
+  std::function<bool(const std::string&)> MakeIsRootSafe() {
+    return [this](const std::string& path) {
       return test_var_run_.string() == path;
     };
   }

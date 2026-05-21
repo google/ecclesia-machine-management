@@ -40,8 +40,8 @@ using ::testing::Not;
 // and then waits to be signaled to release it.
 class LockThread {
  public:
-  LockThread(LockFile *lock, absl::Notification *lock_held,
-             absl::Notification *done)
+  LockThread(LockFile* lock, absl::Notification* lock_held,
+             absl::Notification* done)
       : lock_(lock), lock_held_(lock_held), done_(done) {}
 
   void Start() {
@@ -57,9 +57,9 @@ class LockThread {
   void Join() { thread_.join(); }
 
  private:
-  LockFile *lock_;
-  absl::Notification *lock_held_;
-  absl::Notification *done_;
+  LockFile* lock_;
+  absl::Notification* lock_held_;
+  absl::Notification* done_;
   std::thread thread_;
 };
 

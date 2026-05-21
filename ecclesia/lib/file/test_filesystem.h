@@ -77,8 +77,8 @@ class TestFilesystem {
 
   // You cannot share ownership of this sub-filesystem, so don't allow copying
   // of these objects.
-  TestFilesystem(const TestFilesystem &) = delete;
-  TestFilesystem &operator=(const TestFilesystem &) = delete;
+  TestFilesystem(const TestFilesystem&) = delete;
+  TestFilesystem& operator=(const TestFilesystem&) = delete;
 
   // On destruction the entire contents of the filesystem will be removed.
   ~TestFilesystem();

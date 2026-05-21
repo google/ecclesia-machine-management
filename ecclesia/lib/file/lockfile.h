@@ -36,12 +36,12 @@ class LockFile;
 // file. This class delegates the operation to the actual LockFile object.
 class LockedLockFile {
  public:
-  LockedLockFile(LockFile *lock_file);
+  LockedLockFile(LockFile* lock_file);
 
-  LockedLockFile(const LockedLockFile &) = delete;
-  LockedLockFile &operator=(const LockedLockFile &) = delete;
-  LockedLockFile(LockedLockFile &&other) noexcept;
-  LockedLockFile &operator=(LockedLockFile &&other) noexcept;
+  LockedLockFile(const LockedLockFile&) = delete;
+  LockedLockFile& operator=(const LockedLockFile&) = delete;
+  LockedLockFile(LockedLockFile&& other) noexcept;
+  LockedLockFile& operator=(LockedLockFile&& other) noexcept;
   ~LockedLockFile();
 
   // Functions to read, store and clear contents of the lock file.  Note that if
@@ -51,7 +51,7 @@ class LockedLockFile {
   absl::Status Clear();
 
  private:
-  LockFile *lock_file_;
+  LockFile* lock_file_;
 };
 
 // This class provides a LockFile object backed by a file and provides access
@@ -61,8 +61,8 @@ class LockFile {
   // Factory method to creating new instances of lock file.
   static absl::StatusOr<std::unique_ptr<LockFile>> Create(std::string path);
 
-  LockFile(LockFile &) = delete;
-  LockFile &operator=(LockFile &) = delete;
+  LockFile(LockFile&) = delete;
+  LockFile& operator=(LockFile&) = delete;
   ~LockFile();
   // Attempt to acquire an exclusive lock on the lockfile without blocking.
   // Returns a locked file object on success. Operations on the file are

@@ -36,13 +36,13 @@ using ::testing::Eq;
 using ::testing::Optional;
 
 // Simple check if a path exists using access().
-bool PathExists(const std::string &path) {
+bool PathExists(const std::string& path) {
   return access(path.c_str(), F_OK) == 0;
 }
 
 // Returns the link pointed to by a given path. Returns nullopt if reading the
 // link target fails.
-std::optional<std::string> PathLinkTarget(const std::string &path) {
+std::optional<std::string> PathLinkTarget(const std::string& path) {
   // Buffer for holding the link. In theory links could be larger, in practice
   // in all these tests you shouldn't have link paths that take >4KiB.
   char buffer[4096];

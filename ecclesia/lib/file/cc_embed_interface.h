@@ -64,8 +64,8 @@ using EmbeddedFileArray = const std::array<EmbeddedFile, N>;
 // that supports more efficient lookups.
 template <size_t N>
 std::optional<absl::string_view> GetEmbeddedFileWithName(
-    absl::string_view name, const std::array<EmbeddedFile, N> &array) {
-  for (const auto &entry : array) {
+    absl::string_view name, const std::array<EmbeddedFile, N>& array) {
+  for (const auto& entry : array) {
     if (entry.name == name) {
       return entry.data;
     }
@@ -74,8 +74,8 @@ std::optional<absl::string_view> GetEmbeddedFileWithName(
 }
 template <size_t N>
 absl::string_view GetEmbeddedFileWithNameOrDie(
-    absl::string_view name, const std::array<EmbeddedFile, N> &array) {
-  for (const auto &entry : array) {
+    absl::string_view name, const std::array<EmbeddedFile, N>& array) {
+  for (const auto& entry : array) {
     if (entry.name == name) {
       return entry.data;
     }

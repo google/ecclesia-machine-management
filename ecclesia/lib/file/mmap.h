@@ -51,7 +51,7 @@ class MappedMemory {
   // version will create a shared mapping and support the full set of accessors.
   // There is no mechanism to create a private mapping which is writable.
   enum class Type { kReadOnly, kReadWrite };
-  static absl::StatusOr<MappedMemory> Create(const std::string &path,
+  static absl::StatusOr<MappedMemory> Create(const std::string& path,
                                              size_t offset, size_t size,
                                              Type type);
 
@@ -59,12 +59,12 @@ class MappedMemory {
   // with ownership of the underlying mapping moving along with the file.
   //
   // Using a moved-from mapping will return empty spans and views.
-  MappedMemory(const MappedMemory &) = delete;
-  MappedMemory &operator=(const MappedMemory &) = delete;
-  MappedMemory(MappedMemory &&other) noexcept : mapping_(other.mapping_) {
+  MappedMemory(const MappedMemory&) = delete;
+  MappedMemory& operator=(const MappedMemory&) = delete;
+  MappedMemory(MappedMemory&& other) noexcept : mapping_(other.mapping_) {
     other.mapping_ = {nullptr, 0, 0, 0, false};
   }
-  MappedMemory &operator=(MappedMemory &&other) noexcept {
+  MappedMemory& operator=(MappedMemory&& other) noexcept {
     mapping_ = other.mapping_;
     other.mapping_ = {nullptr, 0, 0, 0, false};
     return *this;
@@ -88,7 +88,7 @@ class MappedMemory {
   absl::Span<const CharType> MemoryAsReadOnlySpan() const {
     static_assert(IsAllowedSpanType<CharType>);
     return absl::MakeConstSpan(
-        static_cast<CharType *>(mapping_.addr) + mapping_.user_offset,
+        static_cast<CharType*>(mapping_.addr) + mapping_.user_offset,
         mapping_.user_size);
   }
   template <typename CharType = char>
@@ -96,7 +96,7 @@ class MappedMemory {
     static_assert(IsAllowedSpanType<CharType>);
     if (mapping_.writable) {
       return absl::MakeSpan(
-          static_cast<CharType *>(mapping_.addr) + mapping_.user_offset,
+          static_cast<CharType*>(mapping_.addr) + mapping_.user_offset,
           mapping_.user_size);
     } else {
       return absl::Span<CharType>();
@@ -108,7 +108,7 @@ class MappedMemory {
   // functions for this object, which do all the validation of parameters.
   struct MmapInfo {
     // The address and size of the mapping. Set to null in moved-from mappings.
-    void *addr;
+    void* addr;
     size_t size;
     // The offset and size of the subset of the mapping exposed to the user. The
     // actually underlying mapping will generally be larger (due to page

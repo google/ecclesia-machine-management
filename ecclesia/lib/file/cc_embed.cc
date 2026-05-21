@@ -119,7 +119,7 @@ absl::string_view NameFromPath(absl::string_view path) {
   // Otherwise we need to pull off all of the prefixes, one-by-one. We append a
   // slash to each prefix to ensure that we're only stripping off a directory
   // prefix and not an arbitrary string.
-  for (const std::string &prefix : absl::GetFlag(FLAGS_strip_prefixes)) {
+  for (const std::string& prefix : absl::GetFlag(FLAGS_strip_prefixes)) {
     absl::ConsumePrefix(&path, prefix + "/");
   }
   return path;
@@ -127,8 +127,8 @@ absl::string_view NameFromPath(absl::string_view path) {
 
 }  // namespace
 
-int RealMain(int argc, char *argv[]) {
-  std::vector<char *> args = absl::ParseCommandLine(argc, argv);
+int RealMain(int argc, char* argv[]) {
+  std::vector<char*> args = absl::ParseCommandLine(argc, argv);
 
   // Make sure all of the required flags were specified.
   if (absl::GetFlag(FLAGS_output_name).empty()) {
@@ -181,7 +181,7 @@ int RealMain(int argc, char *argv[]) {
     absl::flat_hash_set<absl::string_view> input_names;
     // Write out an entry for each file in args.
     std::string buffer(1024, '\0');
-    for (const char *input_path : args) {
+    for (const char* input_path : args) {
       // Open up the input file.
       std::fstream in_f(input_path, in_f.binary | in_f.in);
       if (!in_f.is_open()) LOG(FATAL) << "unable to open " << input_path;
@@ -218,4 +218,4 @@ int RealMain(int argc, char *argv[]) {
 
 }  // namespace ecclesia
 
-int main(int argc, char *argv[]) { ecclesia::RealMain(argc, argv); }
+int main(int argc, char* argv[]) { ecclesia::RealMain(argc, argv); }

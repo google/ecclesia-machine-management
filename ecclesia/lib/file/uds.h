@@ -60,7 +60,7 @@ struct DomainSocketOwners {
 
 // Given a path to a socket root, return a bool indicating if this path is
 // considered to be a safe one for creating socket directories.
-bool IsSafeUnixDomainSocketRoot(const std::string &root_path);
+bool IsSafeUnixDomainSocketRoot(const std::string& root_path);
 
 // Given a path to a domain socket:
 //   - verify that the socket root is a safe directory
@@ -74,9 +74,9 @@ bool IsSafeUnixDomainSocketRoot(const std::string &root_path);
 // function. In general this should just be IsSafeUnixDomainSocketRoot but it
 // can be useful to replace it in testing.
 bool SetUpUnixDomainSocket(
-    const std::string &socket_path, DomainSocketPermissions permissions,
-    const DomainSocketOwners &owners,
-    const std::function<bool(const std::string &)> &is_root_safe);
+    const std::string& socket_path, DomainSocketPermissions permissions,
+    const DomainSocketOwners& owners,
+    const std::function<bool(const std::string&)>& is_root_safe);
 
 // Given a path to a domain socket, delete it.
 // Assumes that the socket is no longer in use. This function should only
@@ -84,7 +84,7 @@ bool SetUpUnixDomainSocket(
 // prior in the process and that all services serving on the socket are shut
 // down.
 // Returns true if the socket was deleted successfully, false otherwise.
-bool CleanUpUnixDomainSocket(const std::string &socket_path);
+bool CleanUpUnixDomainSocket(const std::string& socket_path);
 
 }  // namespace ecclesia
 

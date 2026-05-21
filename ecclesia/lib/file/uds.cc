@@ -29,7 +29,7 @@
 
 namespace ecclesia {
 
-bool IsSafeUnixDomainSocketRoot(const std::string &root_path) {
+bool IsSafeUnixDomainSocketRoot(const std::string& root_path) {
   // The only place we consider it to be safe to put socket directories is
   // in /var/run. This directory should always exist and be always be writable
   // only by root.
@@ -37,9 +37,9 @@ bool IsSafeUnixDomainSocketRoot(const std::string &root_path) {
 }
 
 bool SetUpUnixDomainSocket(
-    const std::string &socket_path, DomainSocketPermissions permissions,
-    const DomainSocketOwners &owners,
-    const std::function<bool(const std::string &)> &is_root_safe) {
+    const std::string& socket_path, DomainSocketPermissions permissions,
+    const DomainSocketOwners& owners,
+    const std::function<bool(const std::string&)>& is_root_safe) {
   // Construct the directory and root paths from the socket path. We store these
   // in a string instead of a string_view because we need to be able to convert
   // them into NULL-terminated strings to pass them into C APIs.
@@ -132,7 +132,7 @@ bool SetUpUnixDomainSocket(
   return CleanUpUnixDomainSocket(socket_path);
 }
 
-bool CleanUpUnixDomainSocket(const std::string &socket_path) {
+bool CleanUpUnixDomainSocket(const std::string& socket_path) {
   if (unlink(socket_path.c_str()) != 0) {
     // Since the goal of this function is to remove existing sockets, we can
     // ignore errors that indicate the socket doesn't exist. Other errors should

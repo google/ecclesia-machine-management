@@ -106,7 +106,7 @@ TEST_F(CurlHttpClientTest, GetInvalidJson) {
   bool called = false;
   server_.AddHttpGetHandler(
       "/redfish/v1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -136,7 +136,7 @@ TEST_F(CurlHttpClientTest, GetError) {
   bool called = false;
   server_.AddHttpGetHandler(
       "/redfish/v1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
@@ -177,7 +177,7 @@ TEST_F(CurlHttpClientTest, CanPost) {
   bool called = false;
   server_.AddHttpPostHandler(
       "/redfish/v1/Chassis/1/Actions/Chassis.Reset",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -212,7 +212,7 @@ TEST_F(CurlHttpClientTest, PostInvalidJson) {
   bool called = false;
   server_.AddHttpPostHandler(
       "/redfish/v1/Chassis/1/Actions/Chassis.Reset",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -247,7 +247,7 @@ TEST_F(CurlHttpClientTest, PostError) {
   bool called = false;
   server_.AddHttpPostHandler(
       "/redfish/v1/Chassis/1/Actions/Chassis.Reset",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
@@ -285,7 +285,7 @@ TEST_F(CurlHttpClientTest, CanPatch) {
   bool called = false;
   server_.AddHttpPatchHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -319,7 +319,7 @@ TEST_F(CurlHttpClientTest, PatchInvalidJson) {
   bool called = false;
   server_.AddHttpPatchHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -353,7 +353,7 @@ TEST_F(CurlHttpClientTest, PatchError) {
   bool called = false;
   server_.AddHttpPatchHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
@@ -387,7 +387,7 @@ TEST_F(CurlHttpClientTest, CanDelete) {
   bool called = false;
   server_.AddHttpDeleteHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -416,7 +416,7 @@ TEST_F(CurlHttpClientTest, DeleteError) {
   bool called = false;
   server_.AddHttpDeleteHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
@@ -449,7 +449,7 @@ TEST_F(CurlHttpClientTest, CanPut) {
   bool called = false;
   server_.AddHttpPutHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -478,7 +478,7 @@ TEST_F(CurlHttpClientTest, PutError) {
   bool called = false;
   server_.AddHttpPutHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
@@ -500,7 +500,7 @@ class MockIncrementalResponseHandler
     : public HttpClient::IncrementalResponseHandler {
  public:
   MOCK_METHOD(absl::Status, OnResponseHeaders,
-              (const HttpClient::HttpResponse &), (override));
+              (const HttpClient::HttpResponse&), (override));
   MOCK_METHOD(absl::Status, OnBodyData, (absl::string_view), (override));
   MOCK_METHOD(bool, IsCancelled, (), (const, override));
 };
@@ -598,7 +598,7 @@ TEST_F(CurlHttpClientTest, CanPostIncremental) {
   bool called = false;
   server_.AddHttpPostHandler(
       "/redfish/v1/Chassis/1/Actions/Chassis.Reset",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -657,7 +657,7 @@ TEST_F(CurlHttpClientTest, CanPatchIncremental) {
   bool called = false;
   server_.AddHttpPatchHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -712,7 +712,7 @@ TEST_F(CurlHttpClientTest, CanDeleteIncremental) {
   bool called = false;
   server_.AddHttpDeleteHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,

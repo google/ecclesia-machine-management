@@ -46,7 +46,7 @@ constexpr absl::string_view kEcclesiaRoot = "com_google_ecclesia/ecclesia";
 
 // Make a directory exist. This will create the directory if it does not exist
 // and do nothing if it already does.
-void MakeDirectoryExist(const std::string &path) {
+void MakeDirectoryExist(const std::string& path) {
   int rc = mkdir(path.c_str(), 0755);
   if (rc < 0 && errno != EEXIST) {
     PLOG(FATAL) << "mkdir() failed for dir " << path;
@@ -55,7 +55,7 @@ void MakeDirectoryExist(const std::string &path) {
 
 // Opens and writes 'data' to a given file. The file will be opened using the
 // open() call using the provided flags. Any error will be treated as fatal.
-void OpenAndWriteFile(const std::string &path, int flags,
+void OpenAndWriteFile(const std::string& path, int flags,
                       absl::string_view data) {
   // Open the file.
   int fd = open(path.c_str(), flags, S_IRWXU);
@@ -74,7 +74,7 @@ void OpenAndWriteFile(const std::string &path, int flags,
 }
 
 // Read in the contents of a path. Crashes and logs if the read fails.
-std::string PathContents(const std::string &path) {
+std::string PathContents(const std::string& path) {
   // Open the file.
   int fd = open(path.c_str(), O_RDONLY);
   if (fd == -1) {
@@ -93,7 +93,7 @@ std::string PathContents(const std::string &path) {
 }
 
 // Recursively remove everything in the given directory.
-void RemoveDirectoryTree(const std::string &path) {
+void RemoveDirectoryTree(const std::string& path) {
   WithEachFileInDirectory(path, [&path](absl::string_view entry) {
     std::string full_path = JoinFilePaths(path, entry);
     // Try to remove the entry.
@@ -114,7 +114,7 @@ void RemoveDirectoryTree(const std::string &path) {
 }  // namespace
 
 std::string GetTestDataDependencyPath(absl::string_view path) {
-  char *srcdir = std::getenv("TEST_SRCDIR");
+  char* srcdir = std::getenv("TEST_SRCDIR");
   if (srcdir) {
     return JoinFilePaths(srcdir, kEcclesiaRoot, path);
   }
@@ -138,7 +138,7 @@ std::string GetTestDataDependencyPath(absl::string_view path) {
 }
 
 std::string GetTestTempdirPath() {
-  char *tmpdir = std::getenv("TEST_TMPDIR");
+  char* tmpdir = std::getenv("TEST_TMPDIR");
   CHECK(tmpdir) << "TEST_TMPDIR environment variable is defined";
   return tmpdir;
 }

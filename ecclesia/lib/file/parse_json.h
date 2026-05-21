@@ -37,7 +37,7 @@ namespace ecclesia {
 // returning a failing status if errors are encountered.
 template <size_t N>
 absl::StatusOr<nlohmann::json> ParseJsonValueFromEmbeddedFile(
-    absl::string_view file_path, const std::array<EmbeddedFile, N> &array) {
+    absl::string_view file_path, const std::array<EmbeddedFile, N>& array) {
   std::optional<absl::string_view> embedded_file_contents(
       GetEmbeddedFileWithName(file_path, array));
 

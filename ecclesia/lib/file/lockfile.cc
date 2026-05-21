@@ -38,14 +38,14 @@
 
 namespace ecclesia {
 
-LockedLockFile::LockedLockFile(LockFile *lock_file) : lock_file_(lock_file) {}
+LockedLockFile::LockedLockFile(LockFile* lock_file) : lock_file_(lock_file) {}
 
-LockedLockFile::LockedLockFile(LockedLockFile &&other) noexcept
+LockedLockFile::LockedLockFile(LockedLockFile&& other) noexcept
     : lock_file_(other.lock_file_) {
   other.lock_file_ = nullptr;
 }
 
-LockedLockFile &LockedLockFile::operator=(LockedLockFile &&other) noexcept {
+LockedLockFile& LockedLockFile::operator=(LockedLockFile&& other) noexcept {
   if (this != &other) {
     lock_file_ = other.lock_file_;
     other.lock_file_ = nullptr;
@@ -138,7 +138,7 @@ absl::StatusOr<std::string> LockFile::Read() {
 
 absl::Status LockFile::Write(absl::string_view value) {
   if (ftruncate(fd_, 0) == 0 && lseek(fd_, 0, SEEK_SET) == 0) {
-    const char *data = value.data();
+    const char* data = value.data();
     size_t size = value.size();
     while (size > 0) {
       ssize_t write_size = write(fd_, data, size);

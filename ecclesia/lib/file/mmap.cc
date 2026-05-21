@@ -33,7 +33,7 @@
 
 namespace ecclesia {
 
-absl::StatusOr<MappedMemory> MappedMemory::Create(const std::string &path,
+absl::StatusOr<MappedMemory> MappedMemory::Create(const std::string& path,
                                                   size_t offset, size_t size,
                                                   Type type) {
   // Parameters for the open() and mmap() calls.
@@ -67,7 +67,8 @@ absl::StatusOr<MappedMemory> MappedMemory::Create(const std::string &path,
   size_t user_offset = offset - true_offset;
   size_t true_size = size + user_offset;
   // Create the memory mapping.
-  void *addr = mmap(nullptr, true_size, mmap_prot, mmap_flags, fd, true_offset);
+  void* addr = mmap(nullptr, true_size, mmap_prot, mmap_flags, fd,
+                    static_cast<off_t>(true_offset));
   if (addr == MAP_FAILED) {
     return absl::InternalError(
         absl::StrFormat("unable to mmap the file: %s", path));
@@ -87,7 +88,7 @@ MappedMemory::~MappedMemory() {
 
 absl::string_view MappedMemory::MemoryAsStringView() const {
   return absl::string_view(
-      static_cast<char *>(mapping_.addr) + mapping_.user_offset,
+      static_cast<char*>(mapping_.addr) + mapping_.user_offset,
       mapping_.user_size);
 }
 

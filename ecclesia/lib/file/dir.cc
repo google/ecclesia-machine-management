@@ -39,7 +39,7 @@ namespace {
 // Implement DataStoreDirectory::GetFileStats for a single file, but unlike the
 // actual method this operates on a full path and it does not do any kind of "is
 // this a registered filename" check.
-DataStoreDirectory::Stats GetSingleFileStats(const std::string &path) {
+DataStoreDirectory::Stats GetSingleFileStats(const std::string& path) {
   DataStoreDirectory::Stats stats;
   struct stat st;
   if (stat(path.c_str(), &st) == 0) {
@@ -56,7 +56,7 @@ DataStoreDirectory::Stats GetSingleFileStats(const std::string &path) {
 
 std::string GetSystemTempdirPath() {
   // If we're in a test environment, use the test temporary directory.
-  char *test_tmpdir = std::getenv("TEST_TMPDIR");
+  char* test_tmpdir = std::getenv("TEST_TMPDIR");
   if (test_tmpdir) {
     return test_tmpdir;
   }
@@ -97,7 +97,7 @@ DataStoreDirectory::DataStoreDirectory(std::string path)
     : path_(std::move(path)) {}
 
 absl::StatusOr<std::string> DataStoreDirectory::UseFile(
-    absl::string_view filename, const UseFileOptions &options) {
+    absl::string_view filename, const UseFileOptions& options) {
   // Make sure the filename is actually a filename, not empty or a directory.
   if (filename.empty()) {
     return absl::InvalidArgumentError("filename must not be empty");
@@ -129,7 +129,7 @@ absl::StatusOr<DataStoreDirectory::Stats> DataStoreDirectory::GetFileStats(
 absl::flat_hash_map<std::string, DataStoreDirectory::Stats>
 DataStoreDirectory::GetAllFileStats() const {
   absl::flat_hash_map<std::string, Stats> stats_map;
-  for (const std::string &filename : used_files_) {
+  for (const std::string& filename : used_files_) {
     stats_map[filename] = GetSingleFileStats(JoinFilePaths(path_, filename));
   }
   return stats_map;

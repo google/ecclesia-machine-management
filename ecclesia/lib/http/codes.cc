@@ -35,7 +35,7 @@ constexpr int kResponseCodes[] = {
 };
 // Helper template to ensure kResponseCodes is sorted at compile-time.
 template <typename T>
-constexpr bool array_is_sorted(const T &array) {
+constexpr bool array_is_sorted(const T& array) {
   static_assert(sizeof(array) > 0, "array must not be empty");
   size_t array_len = sizeof(array) / sizeof(array[0]);
   for (size_t i = 1; i < array_len; ++i) {
