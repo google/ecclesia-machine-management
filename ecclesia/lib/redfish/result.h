@@ -17,7 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_RESULT_H_
 #define ECCLESIA_LIB_REDFISH_RESULT_H_
 
-#include <iosfwd>
+#include <ostream>
 #include <string>
 #include <tuple>
 
@@ -33,7 +33,10 @@ struct Result {
   bool operator==(const Result& other) const {
     return std::tie(devpath, value) == std::tie(other.devpath, other.value);
   }
-  bool operator!=(const Result& other) const { return *this != other; }
+  // Not equal operator, by negating the equality operator. We cannot simply
+  // use `!= other` because that would cause infinite recursion, resulting in a
+  // stack overflow.
+  bool operator!=(const Result& other) const { return !(*this == other); }
 };
 
 // Output stream operator.

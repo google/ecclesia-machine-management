@@ -350,6 +350,15 @@ cc_library(
     deps = ["@com_google_absl//absl/strings"],
 )
 
+cc_test(
+    name = "result_test",
+    srcs = ["result_test.cc"],
+    deps = [
+        ":result",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "test_mockup",
     testonly = True,
