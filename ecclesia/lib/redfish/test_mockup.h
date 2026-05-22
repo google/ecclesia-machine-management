@@ -78,7 +78,7 @@ class TestingMockupServer {
   // Then this MockupFilePreparer should return "<path>/foo/" if it successfully
   // prepares the mockup files.
   using MockupFilePreparer = std::function<absl::StatusOr<std::string>()>;
-  TestingMockupServer(const MockupFilePreparer &mockup_file_preparer,
+  TestingMockupServer(const MockupFilePreparer& mockup_file_preparer,
                       absl::string_view mockup_path);
 
   TestingMockupServer(absl::string_view mockup_shar,
@@ -86,8 +86,8 @@ class TestingMockupServer {
 
   // Creates an mTLS enabled mockup server
   TestingMockupServer(absl::string_view mockup_shar,
-                      const ServerTlsConfig &server_config,
-                      const ClientTlsConfig &client_config);
+                      const ServerTlsConfig& server_config,
+                      const ClientTlsConfig& client_config);
   ~TestingMockupServer();
 
   // Returns a new RedfishInterface connected to the mockup server.
@@ -116,8 +116,8 @@ class TestingMockupServer {
 
  private:
   void SetUpMockupServer(
-      std::vector<std::string> &string_argv,
-      const std::function<std::unique_ptr<RedfishInterface>()> &factory,
+      std::vector<std::string>& string_argv,
+      const std::function<std::unique_ptr<RedfishInterface>()>& factory,
       std::optional<absl::Duration> start_estimation);
 
   // The connection configuration of this mockup.

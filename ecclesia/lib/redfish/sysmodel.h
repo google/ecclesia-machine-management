@@ -32,9 +32,9 @@ class Sysmodel {
   using ResultCallback =
       absl::FunctionRef<RedfishIterReturnValue(std::unique_ptr<RedfishObject>)>;
 
-  Sysmodel(RedfishInterface *redfish_intf) : redfish_intf_(redfish_intf) {}
-  Sysmodel(const Sysmodel &) = delete;
-  Sysmodel &operator=(const Sysmodel &) = delete;
+  Sysmodel(RedfishInterface* redfish_intf) : redfish_intf_(redfish_intf) {}
+  Sysmodel(const Sysmodel&) = delete;
+  Sysmodel& operator=(const Sysmodel&) = delete;
 
   // A struct parameter for Querying resources. This parameter only applies to
   // the last Get call on each QueryAllResourceInternal, excluding all
@@ -66,7 +66,7 @@ class Sysmodel {
   // Redfish Schema Supplement.
   template <typename ResourceT>
   void QueryAllResources(ResultCallback result_callback,
-                         const QueryParams &query_params) {
+                         const QueryParams& query_params) {
     // Invoke the overload using a Token of the appropriate type.
     QueryAllResourceInternal(Token<ResourceT>(), result_callback, query_params);
   }
@@ -83,86 +83,86 @@ class Sysmodel {
   // using a Token struct.
   void QueryAllResourceInternal(Token<ResourceChassis>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceSystem>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceEthernetInterface>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceMemory>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceStorage>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceLegacyStorageController>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceStorageController>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceDrive>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceProcessor>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<AbstractionPhysicalLpu>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceThermal>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceTemperature>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceVoltage>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceFan>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceSensor>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceSensorCollection>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourcePcieFunction>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceComputerSystem>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceManager>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceLogService>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceLogEntry>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceSoftwareInventory>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<OemResourceRootOfTrust>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<OemResourceRootOfTrustCollection>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceComponentIntegrity>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourcePcieSlots>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
+                                const QueryParams& query_params);
   void QueryAllResourceInternal(Token<ResourceSwitch>,
                                 ResultCallback result_callback,
-                                const QueryParams &query_params);
-  RedfishInterface *redfish_intf_;
+                                const QueryParams& query_params);
+  RedfishInterface* redfish_intf_;
 };
 
 }  // namespace ecclesia

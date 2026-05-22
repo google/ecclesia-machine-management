@@ -134,8 +134,7 @@ TEST(TruncateLastUnderScoreAndNumericSuffix, Works) {
             "resource_1a");
   EXPECT_EQ(TruncateLastUnderScoreAndNumericSuffix("resource_1_2"),
             "resource_1");
-  EXPECT_EQ(TruncateLastUnderScoreAndNumericSuffix("resource_"),
-            "resource_");
+  EXPECT_EQ(TruncateLastUnderScoreAndNumericSuffix("resource_"), "resource_");
 }
 
 TEST(GetObjectUri, CanParseUri) {
@@ -182,7 +181,7 @@ TEST(GetUriWithQueryParameters, CanGetUriWithParams) {
     std::string uri = GetUriWithQueryParameters(
         "/redfish/v1/Systems/system/Memory/dimm0", params);
     EXPECT_EQ(uri,
-      "/redfish/v1/Systems/system/Memory/dimm0?$expand=*($levels=3)");
+              "/redfish/v1/Systems/system/Memory/dimm0?$expand=*($levels=3)");
   }
   {
     auto params =
@@ -197,16 +196,17 @@ TEST(GetUriWithQueryParameters, CanGetUriWithParams) {
 }
 
 TEST(GetUriWithQueryParameters, CanGetUriWithMultiParams) {
-    {
-    auto params = GetParams{
-        .top = RedfishQueryParamTop(/*numMembers*/ 100),
-        .expand = RedfishQueryParamExpand(
+  {
+    auto params =
+        GetParams{.top = RedfishQueryParamTop(/*numMembers*/ 100),
+                  .expand = RedfishQueryParamExpand(
                       {.type = RedfishQueryParamExpand::ExpandType::kNotLinks,
                        .levels = 3})};
     std::string uri = GetUriWithQueryParameters(
         "/redfish/v1/Systems/system/Memory/dimm0", params);
     EXPECT_EQ(uri,
-      "/redfish/v1/Systems/system/Memory/dimm0?$top=100&$expand=.($levels=3)");
+              "/redfish/v1/Systems/system/Memory/"
+              "dimm0?$top=100&$expand=.($levels=3)");
   }
   {
     auto params = GetParams{
@@ -216,7 +216,8 @@ TEST(GetUriWithQueryParameters, CanGetUriWithMultiParams) {
     std::string uri = GetUriWithQueryParameters(
         "/redfish/v1/Systems/system/Memory/dimm0", params);
     EXPECT_EQ(uri,
-      "/redfish/v1/Systems/system/Memory/dimm0?$top=100&$expand=*($levels=3)");
+              "/redfish/v1/Systems/system/Memory/"
+              "dimm0?$top=100&$expand=*($levels=3)");
   }
 }
 

@@ -41,20 +41,20 @@ class RedfishObjectHostFilter {
   // Constructor for multi host Redfish backend.
   RedfishObjectHostFilter(
       absl::flat_hash_map<std::string, std::string> system_to_host_domain_map,
-      Sysmodel &sysmodel);
+      Sysmodel& sysmodel);
 
-  void UpdateUriHostDomainMap(Sysmodel &sysmodel);
+  void UpdateUriHostDomainMap(Sysmodel& sysmodel);
 
   absl::StatusOr<absl::string_view> GetHostDomainForObj(
-      const RedfishObject &obj);
+      const RedfishObject& obj);
   // Returns a map with computer system name as keys and the host domain name as
   // values.
-  const absl::flat_hash_map<std::string, std::string> &
+  const absl::flat_hash_map<std::string, std::string>&
   GetSystemHostDomainNameMap() {
     return system_name_host_domain_map_;
   }
   // Returns a set with all host domain.
-  const absl::flat_hash_set<std::string> &GetMultiHostOsDomainSet() {
+  const absl::flat_hash_set<std::string>& GetMultiHostOsDomainSet() {
     return host_domain_set_;
   }
   // Given a Redfish URI, returns the associated host domain if available.

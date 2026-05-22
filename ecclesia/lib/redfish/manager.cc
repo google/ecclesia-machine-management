@@ -56,7 +56,7 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> GetManagerForRoot(
   }
 
   std::unique_ptr<RedfishObject> manager_obj;
-  root[kRfPropertyManagers].Each().Do([&](std::unique_ptr<RedfishObject> &obj) {
+  root[kRfPropertyManagers].Each().Do([&](std::unique_ptr<RedfishObject>& obj) {
     std::optional<std::string> entry_point_uuid =
         obj->GetNodeValue<PropertyServiceEntryPointUuid>();
     if (entry_point_uuid.has_value() && *entry_point_uuid == *root_uuid) {
@@ -73,7 +73,7 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> GetManagerForRoot(
 }
 
 absl::StatusOr<google::protobuf::Duration> GetUptimeForManager(
-    const RedfishObject &mgr_obj) {
+    const RedfishObject& mgr_obj) {
   std::optional<absl::Time> dt = mgr_obj.GetNodeValue<PropertyDateTime>();
   if (!dt.has_value()) {
     return absl::InternalError(UnableToGetPropertyMessage<PropertyDateTime>());
@@ -96,7 +96,7 @@ absl::StatusOr<google::protobuf::Duration> GetUptimeForManager(
 }
 
 absl::StatusOr<google::protobuf::Duration> GetServiceRootUptimeForManager(
-    const RedfishObject &mgr_diagnostic_obj) {
+    const RedfishObject& mgr_diagnostic_obj) {
   std::optional<double> uptime_s =
       mgr_diagnostic_obj.GetNodeValue<PropertyServiceRootUptimeSeconds>();
   if (!uptime_s.has_value()) {

@@ -54,7 +54,7 @@ struct MessageRegistryAndType {
 };
 
 std::optional<MessageRegistryAndType> GetMessageRegistryAndTypeForCondition(
-    const RedfishObject &condition_obj) {
+    const RedfishObject& condition_obj) {
   std::optional<std::string> message_id =
       condition_obj.GetNodeValue<PropertyMessageId>();
   if (!message_id.has_value()) return std::nullopt;
@@ -70,7 +70,7 @@ std::optional<MessageRegistryAndType> GetMessageRegistryAndTypeForCondition(
 }
 
 absl::StatusOr<std::string> GetSeverityForCondition(
-    const RedfishObject &condition_obj) {
+    const RedfishObject& condition_obj) {
   std::optional<std::string> severity =
       condition_obj.GetNodeValue<PropertySeverity>();
   if (severity.has_value()) {
@@ -80,7 +80,7 @@ absl::StatusOr<std::string> GetSeverityForCondition(
 }
 
 absl::StatusOr<google::protobuf::Timestamp> GetProtoTimeForCondition(
-    const RedfishObject &condition_obj) {
+    const RedfishObject& condition_obj) {
   std::optional<absl::Time> timestamp_property =
       condition_obj.GetNodeValue<PropertyTimestamp>();
   if (timestamp_property.has_value()) {
@@ -95,8 +95,8 @@ absl::StatusOr<google::protobuf::Timestamp> GetProtoTimeForCondition(
 }
 
 absl::StatusOr<HealthRollup::ResourceEvent> ExtractResourceEventFromMessageArgs(
-    const RedfishVariant &message_args,
-    const MessageRegistryAndType &message_registry_and_type) {
+    const RedfishVariant& message_args,
+    const MessageRegistryAndType& message_registry_and_type) {
   HealthRollup::ResourceEvent resource_event;
   if (message_registry_and_type.message_registry != kResourceEventRegistry) {
     return absl::FailedPreconditionError(
@@ -160,8 +160,8 @@ absl::StatusOr<HealthRollup::ResourceEvent> ExtractResourceEventFromMessageArgs(
 }  // namespace
 
 absl::StatusOr<HealthRollup> ExtractHealthRollup(
-    const RedfishObject &obj,
-    absl::AnyInvocable<std::optional<std::string>(const RedfishObject &)>
+    const RedfishObject& obj,
+    absl::AnyInvocable<std::optional<std::string>(const RedfishObject&)>
         devpath_resolver,
     bool parse_with_ok_health) {
   std::optional<std::string> resource_uri = obj.GetUriString();
@@ -248,9 +248,9 @@ absl::StatusOr<HealthRollup> ExtractHealthRollup(
   return health_rollup;
 }
 
-absl::StatusOr<HealthRollup> ExtractHealthRollup(const RedfishObject &obj) {
+absl::StatusOr<HealthRollup> ExtractHealthRollup(const RedfishObject& obj) {
   return ExtractHealthRollup(
-      obj, [](const RedfishObject &unused) { return std::nullopt; },
+      obj, [](const RedfishObject& unused) { return std::nullopt; },
       /*parse_with_ok_health=*/false);
 }
 

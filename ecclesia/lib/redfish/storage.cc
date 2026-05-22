@@ -25,7 +25,7 @@
 
 namespace ecclesia {
 
-std::vector<SmartReading> ReadSmartData(const RedfishObject &obj) {
+std::vector<SmartReading> ReadSmartData(const RedfishObject& obj) {
   std::vector<SmartReading> readings = {
       {"critical_warning",
        obj.GetNodeValue<OemGooglePropertyCriticalWarning>()},
@@ -40,7 +40,7 @@ std::vector<SmartReading> ReadSmartData(const RedfishObject &obj) {
 }
 
 std::optional<std::vector<SmartReading>> ReadSmartDataFromStorageController(
-    const RedfishObject &obj) {
+    const RedfishObject& obj) {
   auto smart_attributes_obj =
       obj[kRfPropertyOem][kRfOemPropertyGoogle][kRfOemPropertySmartAttributes]
           .AsObject();

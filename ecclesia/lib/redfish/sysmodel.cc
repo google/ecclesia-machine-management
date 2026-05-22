@@ -38,14 +38,14 @@ using ResultCallback = Sysmodel::ResultCallback;
 // "/redfish/v1/Chassis/{id}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceChassis> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertyChassis,
            {.freshness = query_params.freshness,
             .expand = RedfishQueryParamExpand({.levels = 0})})
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &chassis_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& chassis_obj) {
         return result_callback(std::move(chassis_obj));
       });
 }
@@ -54,14 +54,14 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceChassis> /*unused*/,
 // "/redfish/v1/System/{id}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceSystem> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertySystems,
            {.freshness = query_params.freshness,
             .expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &sys_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& sys_obj) {
         return result_callback(std::move(sys_obj));
       });
 }
@@ -71,7 +71,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceSystem> /*unused*/,
 // Expanding memory is time consuming
 void Sysmodel::QueryAllResourceInternal(Token<ResourceMemory> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertySystems,
@@ -81,7 +81,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceMemory> /*unused*/,
                                .expand = RedfishQueryParamExpand(
                                    {.levels = query_params.expand_levels})})
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &memory_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& memory_obj) {
         return result_callback(std::move(memory_obj));
       });
 }
@@ -90,7 +90,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceMemory> /*unused*/,
 // "/redfish/v1/Systems/{id}/Storage/{id}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceStorage> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertySystems,
@@ -101,7 +101,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceStorage> /*unused*/,
             .auto_adjust_levels = false,
             .expand = RedfishQueryParamExpand({.levels = 0})})
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &storage_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& storage_obj) {
         return result_callback(std::move(storage_obj));
       });
 }
@@ -111,7 +111,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceStorage> /*unused*/,
 // "/redfish/v1/Chassis/{ChassisId}/Drives/{DriveId}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceDrive> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   // A given Drive resource may be referenced multiple times under one or more
   // Chassis and/or ComputerSystem resources, so we use a hash set of visited
   // URIs to avoid duplicate executions of the provided callback function for
@@ -146,7 +146,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceDrive> /*unused*/,
             .expand = RedfishQueryParamExpand({.levels = 0})})
       .Each()[kRfPropertyDrives]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &drive_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& drive_obj) {
         return callback_once_per_uri(std::move(drive_obj));
       });
 
@@ -159,7 +159,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceDrive> /*unused*/,
             .auto_adjust_levels = false,
             .expand = RedfishQueryParamExpand({.levels = 0})})
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &drive_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& drive_obj) {
         return callback_once_per_uri(std::move(drive_obj));
       });
 }
@@ -168,7 +168,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceDrive> /*unused*/,
 // "/redfish/v1/Systems/{id}/Storage/{id}#/StorageControllers/{id}"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceLegacyStorageController> /*unused*/,
-    ResultCallback result_callback, const QueryParams &query_params) {
+    ResultCallback result_callback, const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertySystems,
@@ -180,7 +180,7 @@ void Sysmodel::QueryAllResourceInternal(
             .expand = RedfishQueryParamExpand({.levels = 0})})
       .Each()[kRfPropertyStorageControllers]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &ctrl_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& ctrl_obj) {
         return result_callback(std::move(ctrl_obj));
       });
 }
@@ -190,7 +190,7 @@ void Sysmodel::QueryAllResourceInternal(
 // "/​redfish/​v1/​Storage/​{id}/​Controllers/​{id}"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceStorageController> /*unused*/, ResultCallback result_callback,
-    const QueryParams &query_params) {
+    const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertySystems,
@@ -202,7 +202,7 @@ void Sysmodel::QueryAllResourceInternal(
             .expand = RedfishQueryParamExpand({.levels = 0})})
       .Each()[kRfPropertyControllers]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &ctrl_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& ctrl_obj) {
         return result_callback(std::move(ctrl_obj));
       });
 
@@ -213,7 +213,7 @@ void Sysmodel::QueryAllResourceInternal(
             .expand = RedfishQueryParamExpand({.levels = 0})})
       .Each()[kRfPropertyControllers]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &ctrl_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& ctrl_obj) {
         return result_callback(std::move(ctrl_obj));
       });
 }
@@ -222,7 +222,7 @@ void Sysmodel::QueryAllResourceInternal(
 // "/redfish/v1/Systems/{id}/Processors/{id}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceProcessor> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertySystems,
@@ -233,7 +233,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceProcessor> /*unused*/,
                                    .expand = RedfishQueryParamExpand(
                                        {.levels = query_params.expand_levels})})
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &processor_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& processor_obj) {
         return result_callback(std::move(processor_obj));
       });
 }
@@ -242,7 +242,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceProcessor> /*unused*/,
 // "/redfish/v1/Systems/{id}/Processors/{id}/SubProcessors/{id}/SubProcessors/{id}"
 void Sysmodel::QueryAllResourceInternal(
     Token<AbstractionPhysicalLpu> /*unused*/, ResultCallback result_callback,
-    const QueryParams &query_params) {
+    const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertySystems,
@@ -255,7 +255,7 @@ void Sysmodel::QueryAllResourceInternal(
       .Each()[kRfPropertySubProcessors]  // core subprocessors collection
       .Each()[kRfPropertySubProcessors]  // thread subprocessors collection
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &phs_lpu_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& phs_lpu_obj) {
         return result_callback(std::move(phs_lpu_obj));
       });
 }
@@ -265,7 +265,7 @@ void Sysmodel::QueryAllResourceInternal(
 // "/redfish/v1/Managers/{id}/EthernetInterfaces/{id}"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceEthernetInterface> /*unused*/, ResultCallback result_callback,
-    const QueryParams &query_params) {
+    const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertySystems,
@@ -273,7 +273,7 @@ void Sysmodel::QueryAllResourceInternal(
             .expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()[kRfPropertyEthernetInterfaces]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &eth_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& eth_obj) {
         return result_callback(std::move(eth_obj));
       });
 
@@ -281,7 +281,7 @@ void Sysmodel::QueryAllResourceInternal(
       .Get(kRfPropertyManagers)
       .Each()[kRfPropertyEthernetInterfaces]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &eth_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& eth_obj) {
         return result_callback(std::move(eth_obj));
       });
 }
@@ -290,14 +290,14 @@ void Sysmodel::QueryAllResourceInternal(
 // "/redfish/v1/Chassis/{id}/Thermal"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceThermal> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertyChassis,
            {.freshness = query_params.freshness,
             .expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()[kRfPropertyThermal]
-      .Do([&](std::unique_ptr<RedfishObject> &thermal_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& thermal_obj) {
         return result_callback(std::move(thermal_obj));
       });
 }
@@ -306,7 +306,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceThermal> /*unused*/,
 // "/redfish/v1/Chassis/{id}/Thermal/Temperatures"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceTemperature> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertyChassis,
@@ -314,7 +314,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceTemperature> /*unused*/,
             .expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()[kRfPropertyThermal][kRfPropertyTemperatures]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &temp_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& temp_obj) {
         return result_callback(std::move(temp_obj));
       });
 }
@@ -323,7 +323,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceTemperature> /*unused*/,
 // "/redfish/v1/Chassis/{id}/Power#/Voltages/{sensor}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceVoltage> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertyChassis,
@@ -331,7 +331,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceVoltage> /*unused*/,
             .expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()[kRfPropertyPower][kRfPropertyVoltages]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &volt_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& volt_obj) {
         return result_callback(std::move(volt_obj));
       });
 }
@@ -340,7 +340,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceVoltage> /*unused*/,
 // "/redfish/v1/Chassis/{id}/Thermal/Fans"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceFan> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertyChassis,
@@ -350,7 +350,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceFan> /*unused*/,
       .Get(kRfPropertyThermal,
            {.freshness = query_params.freshness})[kRfPropertyFans]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &temp_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& temp_obj) {
         return result_callback(std::move(temp_obj));
       });
 }
@@ -359,7 +359,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceFan> /*unused*/,
 // "/redfish/v1/Chassis/{id}/Sensors/{sensor}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceSensor> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertyChassis,
@@ -369,7 +369,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceSensor> /*unused*/,
            {.freshness = query_params.freshness,
             .expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &sensor_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& sensor_obj) {
         return result_callback(std::move(sensor_obj));
       });
 }
@@ -378,7 +378,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceSensor> /*unused*/,
 // "/redfish/v1/Chassis/{id}/Sensors"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceSensorCollection> /*unused*/, ResultCallback result_callback,
-    const QueryParams &query_params) {
+    const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertyChassis,
@@ -387,7 +387,7 @@ void Sysmodel::QueryAllResourceInternal(
       .Get(kRfPropertySensors,
            {.freshness = query_params.freshness,
             .expand = RedfishQueryParamExpand({.levels = 1})})
-      .Do([&](std::unique_ptr<RedfishObject> &sensor_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& sensor_obj) {
         return result_callback(std::move(sensor_obj));
       });
 }
@@ -396,7 +396,7 @@ void Sysmodel::QueryAllResourceInternal(
 // "/redfish/v1/Systems/{id}/PCIeDevices/{id}/PCIeFunctions/{id}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourcePcieFunction> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertySystems,
@@ -409,7 +409,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourcePcieFunction> /*unused*/,
                 {.levels = query_params.expand_levels})})
       .Each()[kRfPropertyLinks][kRfPropertyPcieFunctions]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &pcie_function_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& pcie_function_obj) {
         return result_callback(std::move(pcie_function_obj));
       });
 }
@@ -418,14 +418,14 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourcePcieFunction> /*unused*/,
 // "/redfish/v1/Systems/{id}"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceComputerSystem> /*unused*/, ResultCallback result_callback,
-    const QueryParams &query_params) {
+    const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertySystems,
            {.freshness = query_params.freshness,
             .expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &sys_obj) {
+      .Do([&](std::unique_ptr<RedfishObject>& sys_obj) {
         return result_callback(std::move(sys_obj));
       });
 }
@@ -434,10 +434,10 @@ void Sysmodel::QueryAllResourceInternal(
 // "/redfish/v1/Managers/{id}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceManager> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root[kRfPropertyManagers].Each().Do(
-      [&](std::unique_ptr<RedfishObject> &sys_obj) {
+      [&](std::unique_ptr<RedfishObject>& sys_obj) {
         return result_callback(std::move(sys_obj));
       });
 }
@@ -446,7 +446,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceManager> /*unused*/,
 // "/redfish/v1/Systems/{id}/LogServices/{id}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceLogService> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   RedfishIterReturnValue return_val = RedfishIterReturnValue::kContinue;
 
@@ -456,7 +456,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceLogService> /*unused*/,
             .expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()[kRfPropertyLogServices]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &service) {
+      .Do([&](std::unique_ptr<RedfishObject>& service) {
         return return_val = result_callback(std::move(service));
       });
   if (return_val == RedfishIterReturnValue::kStop) return;
@@ -466,7 +466,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceLogService> /*unused*/,
             .expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()[kRfPropertyLogServices]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &service) {
+      .Do([&](std::unique_ptr<RedfishObject>& service) {
         return result_callback(std::move(service));
       });
 }
@@ -475,7 +475,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceLogService> /*unused*/,
 // "/redfish/v1/Chassis/{id}/LogServices/{id}/Entries/{id}"
 void Sysmodel::QueryAllResourceInternal(Token<ResourceLogEntry> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertyChassis,
@@ -484,7 +484,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceLogEntry> /*unused*/,
       .Each()[kRfPropertyLogServices]
       .Each()[kRfPropertyEntries]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &entry) {
+      .Do([&](std::unique_ptr<RedfishObject>& entry) {
         return result_callback(std::move(entry));
       });
 }
@@ -494,16 +494,16 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourceLogEntry> /*unused*/,
 // "/redfish/v1/UpdateService/SoftwareInventory/{id}"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceSoftwareInventory> /*unused*/, ResultCallback result_callback,
-    const QueryParams &query_params) {
+    const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   RedfishIterReturnValue return_val = RedfishIterReturnValue::kContinue;
   root[kRfPropertyUpdateService][kRfPropertyFirmwareInventory].Each().Do(
-      [&](std::unique_ptr<RedfishObject> &software) {
+      [&](std::unique_ptr<RedfishObject>& software) {
         return return_val = result_callback(std::move(software));
       });
   if (return_val == RedfishIterReturnValue::kStop) return;
   root[kRfPropertyUpdateService][ResourceSoftwareInventory::Name].Each().Do(
-      [&](std::unique_ptr<RedfishObject> &software) {
+      [&](std::unique_ptr<RedfishObject>& software) {
         return result_callback(std::move(software));
       });
 }
@@ -512,10 +512,10 @@ void Sysmodel::QueryAllResourceInternal(
 // "/google/v1/RootOfTrustCollection/{id}/"
 void Sysmodel::QueryAllResourceInternal(
     Token<OemResourceRootOfTrust> /*unused*/, ResultCallback result_callback,
-    const QueryParams &query_params) {
+    const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot({}, ServiceRootUri::kGoogle);
   root[kRfPropertyRootOfTrustCollection].Each().Do(
-      [&](std::unique_ptr<RedfishObject> &rot) {
+      [&](std::unique_ptr<RedfishObject>& rot) {
         return result_callback(std::move(rot));
       });
 }
@@ -523,24 +523,24 @@ void Sysmodel::QueryAllResourceInternal(
 // "/redfish/v1/ComponentIntegrity/{id}"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceComponentIntegrity> /*unused*/,
-    ResultCallback result_callback, const QueryParams &query_params) {
+    ResultCallback result_callback, const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root[kRfPropertyComponentIntegrity].Each().Do(
-      [&](auto &obj) { return result_callback(std::move(obj)); });
+      [&](auto& obj) { return result_callback(std::move(obj)); });
 }
 
 // PCIeSlots:
 // "/redfish/v1/Chassis/{id}/PCIeSlots"
 void Sysmodel::QueryAllResourceInternal(Token<ResourcePcieSlots> /*unused*/,
                                         ResultCallback result_callback,
-                                        const QueryParams &query_params) {
+                                        const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertyChassis,
            {.freshness = query_params.freshness,
             .expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()[kRfPropertyPcieSlots]
-      .Do([&](std::unique_ptr<RedfishObject> &entry) {
+      .Do([&](std::unique_ptr<RedfishObject>& entry) {
         return result_callback(std::move(entry));
       });
 }
@@ -549,7 +549,7 @@ void Sysmodel::QueryAllResourceInternal(Token<ResourcePcieSlots> /*unused*/,
 // "/redfish/v1/Fabrics/{id}/Switches/{id}"
 void Sysmodel::QueryAllResourceInternal(
     Token<ResourceSwitch> resource_switch /*unused*/,
-    ResultCallback result_callback, const QueryParams &query_params) {
+    ResultCallback result_callback, const QueryParams& query_params) {
   RedfishVariant root = redfish_intf_->GetRoot();
   root.AsIndexHelper()
       .Get(kRfPropertyFabrics,
@@ -557,7 +557,7 @@ void Sysmodel::QueryAllResourceInternal(
             .expand = RedfishQueryParamExpand({.levels = 1})})
       .Each()[kRfPropertySwitches]
       .Each()
-      .Do([&](std::unique_ptr<RedfishObject> &entry) {
+      .Do([&](std::unique_ptr<RedfishObject>& entry) {
         return result_callback(std::move(entry));
       });
 }

@@ -34,7 +34,7 @@ namespace ecclesia {
 //   "Function": "0x0"
 // }
 std::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
-    const RedfishObject &pci_location_obj);
+    const RedfishObject& pci_location_obj);
 
 // Given a pcie function redfish object, read the vendor id, device id,
 // subsystem id, subsystem vendor id and return these values as PciFullSignature
@@ -46,7 +46,7 @@ std::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
 //   "SubsystemVendorId": "0xABCD",
 // }
 std::optional<ecclesia::PciFullSignature> ReadPciFullSignature(
-    const RedfishObject &pcie_function_obj);
+    const RedfishObject& pcie_function_obj);
 
 }  // namespace ecclesia
 

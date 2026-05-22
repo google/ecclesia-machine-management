@@ -68,14 +68,14 @@ constexpr absl::string_view kMockupServerPath =
 
 std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
     std::unique_ptr<ecclesia::HttpClient> client, absl::string_view scheme,
-    const TestingMockupServer::ConfigNetwork &conn) {
+    const TestingMockupServer::ConfigNetwork& conn) {
   return ecclesia::HttpRedfishTransport::MakeNetwork(
       std::move(client),
       absl::StrCat(scheme, "://", conn.hostname, ":", conn.port));
 }
 std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
     std::unique_ptr<ecclesia::HttpClient> client, absl::string_view /*unused*/,
-    const TestingMockupServer::ConfigUnix &conn) {
+    const TestingMockupServer::ConfigUnix& conn) {
   return ecclesia::HttpRedfishTransport::MakeUds(std::move(client),
                                                  conn.socket_path);
 }
@@ -113,7 +113,7 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar)
 }
 
 TestingMockupServer::TestingMockupServer(
-    const MockupFilePreparer &mockup_file_preparer,
+    const MockupFilePreparer& mockup_file_preparer,
     absl::string_view mockup_path)
     : connection_config_(ConfigNetwork{
           .hostname = "localhost", .port = ecclesia::FindUnusedPortOrDie()}) {
@@ -122,7 +122,7 @@ TestingMockupServer::TestingMockupServer(
 
   std::string server_path = std::string(mockup_path);
   if (server_path.empty()) {
-    char *srcdir = std::getenv("TEST_SRCDIR");
+    char* srcdir = std::getenv("TEST_SRCDIR");
     if (srcdir != nullptr) {
       server_path = ecclesia::JoinFilePaths(srcdir, kMockupServerPath);
     }
@@ -151,8 +151,8 @@ TestingMockupServer::TestingMockupServer(
 }
 
 TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
-                                         const ServerTlsConfig &server_config,
-                                         const ClientTlsConfig &client_config)
+                                         const ServerTlsConfig& server_config,
+                                         const ClientTlsConfig& client_config)
     : connection_config_(ConfigNetwork{
           .hostname = "localhost", .port = ecclesia::FindUnusedPortOrDie()}),
       client_tls_config_(client_config) {
@@ -181,10 +181,10 @@ TestingMockupServer::TestingMockupServer(absl::string_view mockup_shar,
 }
 
 void TestingMockupServer::SetUpMockupServer(
-    std::vector<std::string> &string_argv,
-    const std::function<std::unique_ptr<RedfishInterface>()> &factory,
+    std::vector<std::string>& string_argv,
+    const std::function<std::unique_ptr<RedfishInterface>()>& factory,
     std::optional<absl::Duration> start_estimation) {
-  std::vector<char *> server_argv(string_argv.size() + 1);
+  std::vector<char*> server_argv(string_argv.size() + 1);
   for (size_t i = 0; i < string_argv.size(); ++i) {
     server_argv[i] = &string_argv[i][0];
   }
@@ -265,7 +265,7 @@ std::unique_ptr<RedfishInterface> TestingMockupServer::RedfishClientInterface(
   }
 
   std::unique_ptr<ecclesia::RedfishTransport> transport = std::visit(
-      [&client](auto &conn) {
+      [&client](auto& conn) {
         return ConfigToTransport(std::move(client), "http", conn);
       },
       connection_config_);
@@ -286,7 +286,7 @@ TestingMockupServer::RedfishClientSessionAuthInterface(
   }
 
   std::unique_ptr<ecclesia::HttpRedfishTransport> transport = std::visit(
-      [&client](auto &conn) {
+      [&client](auto& conn) {
         return ConfigToTransport(std::move(client), "http", conn);
       },
       connection_config_);
@@ -319,7 +319,7 @@ TestingMockupServer::RedfishClientTlsAuthInterface() {
       ecclesia::LibCurlProxy::CreateInstance(), std::move(creds));
 
   std::unique_ptr<ecclesia::RedfishTransport> transport = std::visit(
-      [&client](auto &conn) {
+      [&client](auto& conn) {
         return ConfigToTransport(std::move(client), "https", conn);
       },
       connection_config_);

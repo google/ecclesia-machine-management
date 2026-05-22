@@ -37,12 +37,12 @@ namespace ecclesia {
 
 RedfishObjectHostFilter::RedfishObjectHostFilter(
     absl::flat_hash_map<std::string, std::string> system_to_host_domain_map,
-    Sysmodel &sysmodel)
+    Sysmodel& sysmodel)
     : system_name_host_domain_map_(std::move(system_to_host_domain_map)) {
   UpdateUriHostDomainMap(sysmodel);
 }
 
-void RedfishObjectHostFilter::UpdateUriHostDomainMap(Sysmodel &sysmodel) {
+void RedfishObjectHostFilter::UpdateUriHostDomainMap(Sysmodel& sysmodel) {
   // Only update the map if there are multiple host domains. For single host
   // domain the host domain is already set in ctor and it should not be
   // dynamically updated.
@@ -70,14 +70,14 @@ void RedfishObjectHostFilter::UpdateUriHostDomainMap(Sysmodel &sysmodel) {
                 {uri_string.value(), os_domain_iter->second});
             !inserted) {
           LOG(WARNING) << "Failed to insert [uri, host domain] set: "
-                        << uri_string.value() << ", " << os_domain_iter->second;
+                       << uri_string.value() << ", " << os_domain_iter->second;
         }
       }
     }
     return RedfishIterReturnValue::kContinue;
   };
   sysmodel.QueryAllResources<ResourceComputerSystem>(computer_system_func);
-  for (const auto &[system_name, host_domain] : system_name_host_domain_map_) {
+  for (const auto& [system_name, host_domain] : system_name_host_domain_map_) {
     LOG(INFO) << "Adding host domain: " << host_domain;
     if (auto [it, inserted] = host_domain_set_.insert(host_domain); !inserted) {
       LOG(WARNING) << "Failed to insert host domain set: " << host_domain;
@@ -111,8 +111,8 @@ void RedfishObjectHostFilter::UpdateUriHostDomainMap(Sysmodel &sysmodel) {
                    uri_host_domain_map_.at(system_uri_string.value())});
               !inserted) {
             LOG(WARNING) << "Failed to insert [uri, host domain] set: "
-                          << chassis_uri_string.value() << ", "
-                          << uri_host_domain_map_.at(system_uri_string.value());
+                         << chassis_uri_string.value() << ", "
+                         << uri_host_domain_map_.at(system_uri_string.value());
           }
         }
       } else {
@@ -127,7 +127,7 @@ void RedfishObjectHostFilter::UpdateUriHostDomainMap(Sysmodel &sysmodel) {
   sysmodel.QueryAllResources<ResourceChassis>(chassis_func);
 }
 absl::StatusOr<absl::string_view> RedfishObjectHostFilter::GetHostDomainForObj(
-    const RedfishObject &obj) {
+    const RedfishObject& obj) {
   if (host_domain_set_.size() == 1) {
     return *host_domain_set_.begin();
   }

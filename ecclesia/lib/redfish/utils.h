@@ -48,7 +48,7 @@ namespace ecclesia {
 //     "ReadingCelsius": 40,
 //     "UpperThresholdCritical": 85
 // }
-inline bool ObjectIsEnabled(const RedfishObject &node_obj) {
+inline bool ObjectIsEnabled(const RedfishObject& node_obj) {
   std::unique_ptr<RedfishObject> status =
       node_obj[kRfPropertyStatus].AsObject();
   if (!status) return false;
@@ -57,7 +57,7 @@ inline bool ObjectIsEnabled(const RedfishObject &node_obj) {
   return *state == "Enabled";
 }
 
-inline bool AssemblyIsEnabled(const RedfishObject &assembly_obj) {
+inline bool AssemblyIsEnabled(const RedfishObject& assembly_obj) {
   auto status = assembly_obj[kRfPropertyStatus].AsObject();
   // If assembly doesn't report status, treat it as enabled.
   if (!status) return true;
@@ -70,29 +70,29 @@ inline bool AssemblyIsEnabled(const RedfishObject &assembly_obj) {
 
 // This helper function returns the resource type as a string by parsing the
 // "@odata.type" field.
-std::optional<std::string> GetResourceType(const RedfishObject *node);
+std::optional<std::string> GetResourceType(const RedfishObject* node);
 
 // A helper function to get "converted" resource name. The name is generally
 // converted from the "Name" property like " ABc XYz "->"abc_xyz". For certain
 // types of resources the name is obtained from other context of the resource.
-std::optional<std::string> GetConvertedResourceName(const RedfishObject &node);
+std::optional<std::string> GetConvertedResourceName(const RedfishObject& node);
 
 // A helper function to get "converted" resource model. The model will have the
 // same modification as property name.
-std::optional<std::string> GetConvertedResourceModel(const RedfishObject &node);
+std::optional<std::string> GetConvertedResourceModel(const RedfishObject& node);
 
 std::string TruncateLastUnderScoreAndNumericSuffix(absl::string_view str);
 
-std::string RedfishTransportBytesToString(const RedfishTransport::bytes &bytes);
+std::string RedfishTransportBytesToString(const RedfishTransport::bytes& bytes);
 
 RedfishTransport::bytes GetBytesFromString(absl::string_view str);
 
 // Returns the URI from Json object or NotFound error
-absl::StatusOr<std::string> GetObjectUri(const nlohmann::json &json);
+absl::StatusOr<std::string> GetObjectUri(const nlohmann::json& json);
 
 // extends uri with query parameters if needed
 std::string GetUriWithQueryParameters(absl::string_view uri,
-                                      const GetParams &params);
+                                      const GetParams& params);
 
 // Parses a string as JSON and returns a nlohmann::json object. This
 // provides a good set of arguments to nlohmann::json::parse(). Note
@@ -106,7 +106,7 @@ inline nlohmann::json ParseJson(absl::string_view json_str) {
 // Serializes a JSON object into a string. This provides a good set of arguments
 // to nlohmann::json::dump(), which can throw or abort() by default. Invalid
 // UTF-8 bytes are dropped.
-inline std::string JsonToString(const nlohmann::json &data,
+inline std::string JsonToString(const nlohmann::json& data,
                                 const int indent = -1) {
   return data.dump(indent,
                    /*indent_char=*/' ',

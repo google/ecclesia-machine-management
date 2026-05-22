@@ -26,7 +26,7 @@
 namespace ecclesia {
 
 std::optional<SupplementalLocationInfo> GetSupplementalLocationInfo(
-    const RedfishObject &obj) {
+    const RedfishObject& obj) {
   std::unique_ptr<RedfishObject> location_obj =
       obj[kRfPropertyLocation].AsObject();
   // If no Location info is present, try populating via PhysicalLocation

@@ -49,16 +49,16 @@ struct Node {
   // Whether the Node represents a part can be replaced.
   bool replaceable;
 
-  bool operator==(const Node &o) const {
+  bool operator==(const Node& o) const {
     return std::tie(name, model, local_devpath, type, associated_uris,
                     supplemental_location_info, replaceable) ==
            std::tie(o.name, o.model, o.local_devpath, o.type, o.associated_uris,
                     o.supplemental_location_info, o.replaceable);
   }
-  bool operator!=(const Node &o) const { return !(*this == o); }
+  bool operator!=(const Node& o) const { return !(*this == o); }
   // Support for absl::Hash.
   template <typename H>
-  friend H AbslHashValue(H h, const Node &n) {
+  friend H AbslHashValue(H h, const Node& n) {
     return H::combine(std::move(h), n.name, n.model, n.local_devpath, n.type,
                       n.associated_uris, n.replaceable);
   }
@@ -73,15 +73,15 @@ struct NodeTopology {
 
   // Map of a URI to all associated Nodes. If the URI is fetched, these Nodes
   // can have their properties updated from that information.
-  absl::flat_hash_map<std::string, std::vector<Node *>>
+  absl::flat_hash_map<std::string, std::vector<Node*>>
       uri_to_associated_node_map;
   // Map of a domain devpath to a Node.
-  absl::flat_hash_map<std::string, Node *> devpath_to_node_map;
+  absl::flat_hash_map<std::string, Node*> devpath_to_node_map;
 
   // Map of a Node to the list of Nodes it is attached to.
-  absl::flat_hash_map<Node *, std::vector<Node *>> node_to_parents;
+  absl::flat_hash_map<Node*, std::vector<Node*>> node_to_parents;
   // Map of a Node to its child nodes. This is just the inverse of the above.
-  absl::flat_hash_map<Node *, std::vector<Node *>> node_to_children;
+  absl::flat_hash_map<Node*, std::vector<Node*>> node_to_children;
 };
 
 }  // namespace ecclesia

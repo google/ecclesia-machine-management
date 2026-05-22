@@ -30,14 +30,14 @@ struct SupplementalLocationInfo {
   std::string service_label;
   // Location.PartLocationContext from DMTF Redfish schema.
   std::string part_location_context;
-  bool operator==(const SupplementalLocationInfo &other) const {
+  bool operator==(const SupplementalLocationInfo& other) const {
     return service_label == other.service_label &&
            part_location_context == other.part_location_context;
   }
 };
 
 std::optional<SupplementalLocationInfo> GetSupplementalLocationInfo(
-    const RedfishObject &obj);
+    const RedfishObject& obj);
 
 }  // namespace ecclesia
 

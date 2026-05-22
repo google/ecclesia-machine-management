@@ -33,7 +33,7 @@ namespace {
 // Examples of these members are SetInt32, AddFloat, etc.
 template <typename ProtoValueType>
 using MutateFieldFuncType = void (google::protobuf::Reflection::*)(
-    google::protobuf::Message *, const google::protobuf::FieldDescriptor *, ProtoValueType) const;
+    google::protobuf::Message*, const google::protobuf::FieldDescriptor*, ProtoValueType) const;
 
 // Copies the value of one Redfish property from RedfishObject “obj” into a
 // proto field in a Message “msg”. The Redfish property to copy is determined by
@@ -48,10 +48,10 @@ using MutateFieldFuncType = void (google::protobuf::Reflection::*)(
 template <typename JsonType, typename ProtoType,
           MutateFieldFuncType<ProtoType> AddField,
           MutateFieldFuncType<ProtoType> SetField>
-void RedfishPropertyToProto(const RedfishObject &obj,
-                            const google::protobuf::Reflection &ref,
-                            const google::protobuf::FieldDescriptor &field,
-                            google::protobuf::Message *msg) {
+void RedfishPropertyToProto(const RedfishObject& obj,
+                            const google::protobuf::Reflection& ref,
+                            const google::protobuf::FieldDescriptor& field,
+                            google::protobuf::Message* msg) {
   if (field.is_repeated()) {
     std::unique_ptr<RedfishIterable> iter = obj[field.name()].AsIterable();
     if (!iter) return;
@@ -69,19 +69,19 @@ void RedfishPropertyToProto(const RedfishObject &obj,
 
 }  // namespace
 
-absl::Status RedfishObjToProto(const RedfishObject &obj, google::protobuf::Message *msg) {
+absl::Status RedfishObjToProto(const RedfishObject& obj, google::protobuf::Message* msg) {
   if (msg == nullptr) {
     return absl::InternalError(
         "Converting Redfish object into null proto message");
   }
 
-  const google::protobuf::Descriptor *desc = msg->GetDescriptor();
-  const google::protobuf::Reflection *ref = msg->GetReflection();
+  const google::protobuf::Descriptor* desc = msg->GetDescriptor();
+  const google::protobuf::Reflection* ref = msg->GetReflection();
 
   // For each field, try to find a JSON property in “obj” with the same name,
   // and copy the value.
   for (int i = 0; i < desc->field_count(); i++) {
-    const google::protobuf::FieldDescriptor *field = desc->field(i);
+    const google::protobuf::FieldDescriptor* field = desc->field(i);
     switch (field->type()) {
       case google::protobuf::FieldDescriptor::TYPE_FLOAT:
         RedfishPropertyToProto<double, float, &google::protobuf::Reflection::AddFloat,
@@ -128,7 +128,7 @@ absl::Status RedfishObjToProto(const RedfishObject &obj, google::protobuf::Messa
         break;
       case google::protobuf::FieldDescriptor::TYPE_ENUM: {
         // Enum values are string in JSON.
-        const google::protobuf::EnumDescriptor *enum_desc = field->enum_type();
+        const google::protobuf::EnumDescriptor* enum_desc = field->enum_type();
         if (field->is_repeated()) {
           std::unique_ptr<RedfishIterable> iter =
               obj[field->name()].AsIterable();
@@ -136,7 +136,7 @@ absl::Status RedfishObjToProto(const RedfishObject &obj, google::protobuf::Messa
           for (size_t repeat_idx = 0; repeat_idx < iter->Size(); repeat_idx++) {
             std::string value;
             if (!(*iter)[repeat_idx].GetValue(&value)) break;
-            const google::protobuf::EnumValueDescriptor *enum_value =
+            const google::protobuf::EnumValueDescriptor* enum_value =
                 enum_desc->FindValueByName(std::move(value));
             ref->AddEnum(msg, field, enum_value);
           }
@@ -144,7 +144,7 @@ absl::Status RedfishObjToProto(const RedfishObject &obj, google::protobuf::Messa
           std::optional<std::string> value =
               obj.GetNodeValue<std::string>(field->name());
           if (!value.has_value()) break;
-          const google::protobuf::EnumValueDescriptor *enum_value =
+          const google::protobuf::EnumValueDescriptor* enum_value =
               enum_desc->FindValueByName(*value);
           ref->SetEnum(msg, field, enum_value);
         }
@@ -155,7 +155,7 @@ absl::Status RedfishObjToProto(const RedfishObject &obj, google::protobuf::Messa
         if (field->is_repeated()) {
           absl::Status status = absl::OkStatus();
           obj[field->name()].Each().Do(
-              [&](std::unique_ptr<RedfishObject> &sub_obj) {
+              [&](std::unique_ptr<RedfishObject>& sub_obj) {
                 if (!status.ok()) {
                   // Conversion failed before. Move onto the next obj.
                   return RedfishIterReturnValue::kContinue;

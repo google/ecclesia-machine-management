@@ -47,7 +47,7 @@ class SysmodelTest : public testing::Test {
     mockup_server_->EnableExpandGetHandler();
   }
 
-  static void SendJsonHttpResponse(ServerRequestInterface *req,
+  static void SendJsonHttpResponse(ServerRequestInterface* req,
                                    absl::string_view json) {
     ::tensorflow::serving::net_http::SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -69,7 +69,7 @@ TEST_F(SysmodelTest, GetResourceSystemExpands) {
   auto systems_json =
       intf_->CachedGetUri("/redfish/v1/Systems").AsObject()->DebugString();
   mockup_server_->AddHttpGetHandler("/redfish/v1/Systems?$expand=.($levels=1)",
-                                    [&](ServerRequestInterface *req) {
+                                    [&](ServerRequestInterface* req) {
                                       expanded_request_count++;
                                       SendJsonHttpResponse(req, systems_json);
                                     });
@@ -121,7 +121,7 @@ TEST_F(SysmodelTest, GetResourceProcessorExpands) {
           ->DebugString();
   mockup_server_->AddHttpGetHandler(
       "/redfish/v1/Systems/system/Processors?$expand=.($levels=1)",
-      [&](ServerRequestInterface *req) {
+      [&](ServerRequestInterface* req) {
         expand_processor_count++;
         SendJsonHttpResponse(req, processor_json);
       });
@@ -142,7 +142,7 @@ TEST_F(SysmodelTest, GetResourcePhysicalLpuExpands) {
           ->DebugString();
   mockup_server_->AddHttpGetHandler(
       "/redfish/v1/Systems/system/Processors?$expand=.($levels=3)",
-      [&](ServerRequestInterface *req) {
+      [&](ServerRequestInterface* req) {
         expand_processor_count++;
         SendJsonHttpResponse(req, processor_json);
       });

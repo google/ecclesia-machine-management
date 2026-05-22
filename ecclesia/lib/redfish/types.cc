@@ -45,7 +45,7 @@ std::optional<ResourceTypeAndVersion> GetResourceTypeAndVersionFromOdataType(
 
 // Helper function to get version, type information from `const RedfishObject &`
 std::optional<ResourceTypeAndVersion> GetResourceTypeAndVersionForObject(
-    const RedfishObject &obj) {
+    const RedfishObject& obj) {
   if (std::optional<std::string> type_and_version_node_val =
           obj.GetNodeValue<PropertyOdataType>();
       type_and_version_node_val.has_value()) {

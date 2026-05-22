@@ -30,15 +30,15 @@ template <typename T>
 struct Result {
   std::string devpath;
   T value;
-  bool operator==(const Result &other) const {
+  bool operator==(const Result& other) const {
     return std::tie(devpath, value) == std::tie(other.devpath, other.value);
   }
-  bool operator!=(const Result &other) const { return *this != other; }
+  bool operator!=(const Result& other) const { return *this != other; }
 };
 
 // Output stream operator.
 template <typename T>
-inline std::ostream &operator<<(std::ostream &os, const Result<T> &result) {
+inline std::ostream& operator<<(std::ostream& os, const Result<T>& result) {
   static constexpr absl::string_view dp_prefix = "{ devpath: \"";
   static constexpr absl::string_view value_prefix = "\" value: ";
   static constexpr absl::string_view suffix = " }";

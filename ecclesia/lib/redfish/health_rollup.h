@@ -30,7 +30,7 @@ namespace ecclesia {
 // Extracts health rollup information (e.g. MessageArgs, Severity, and
 // Timestamp) for each Condition in the Status payload of the provided
 // RedfishObject.
-absl::StatusOr<HealthRollup> ExtractHealthRollup(const RedfishObject &obj);
+absl::StatusOr<HealthRollup> ExtractHealthRollup(const RedfishObject& obj);
 
 // An overloaded version of `ExtractHealthRollup` for which the caller may
 // provide a devpath resolver callback, to be called either on the
@@ -39,8 +39,8 @@ absl::StatusOr<HealthRollup> ExtractHealthRollup(const RedfishObject &obj);
 // By default, parse only if the overall resource health is Warning or Critical,
 // but users may use `parse_with_ok_health` to parse even if the health is OK.
 absl::StatusOr<HealthRollup> ExtractHealthRollup(
-    const RedfishObject &obj,
-    absl::AnyInvocable<std::optional<std::string>(const RedfishObject &)>
+    const RedfishObject& obj,
+    absl::AnyInvocable<std::optional<std::string>(const RedfishObject&)>
         devpath_resolver,
     bool parse_with_ok_health);
 

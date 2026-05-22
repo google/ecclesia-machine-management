@@ -369,7 +369,7 @@ TEST(RawInterfaceTestWithMockup, IndusHmbCnMockupNodesArePopulated) {
 
   std::vector<Node> actual_nodes;
   actual_nodes.reserve(topology.nodes.size());
-  for (const auto &node : topology.nodes) {
+  for (const auto& node : topology.nodes) {
     actual_nodes.push_back(*node);
   }
 
@@ -381,7 +381,7 @@ TEST(RawInterfaceTestWithMockup, IndusHmbCnMockupDevpathToNodeMapMatches) {
   auto raw_intf = mockup.RedfishClientInterface();
   NodeTopology topology = CreateTopologyFromRedfish(raw_intf.get());
 
-  for (const auto &pair : topology.devpath_to_node_map) {
+  for (const auto& pair : topology.devpath_to_node_map) {
     absl::string_view devpath = pair.first;
     ASSERT_THAT(pair.second, Not(IsNull()));
     EXPECT_THAT(devpath, Eq(pair.second->local_devpath));
@@ -602,7 +602,7 @@ TEST(RawInterfaceTestWithMockup, HandleAssemblyStateCorrectlly) {
 
   std::vector<std::string> actual_devpaths;
   actual_devpaths.reserve(topology.nodes.size());
-  for (const auto &node : topology.nodes) {
+  for (const auto& node : topology.nodes) {
     actual_devpaths.push_back(node->local_devpath);
   }
   // Assembly koolaid doesn't report Status
@@ -647,7 +647,7 @@ TEST(RawInterfaceTestWithMockup, TestingConfigsOptionV1Unspecific) {
   NodeTopology topology = CreateTopologyFromRedfish(
       raw_intf.get(), "not_exist.textpb", REDFISH_TOPOLOGY_V1);
 
-  for (const auto &pair : topology.devpath_to_node_map) {
+  for (const auto& pair : topology.devpath_to_node_map) {
     const absl::string_view devpath = pair.first;
     ASSERT_THAT(pair.second, Not(IsNull()));
     EXPECT_THAT(devpath, Eq(pair.second->local_devpath));
@@ -659,7 +659,7 @@ TEST(RawInterfaceTestWithMockup, TestingConfigsOptionV1) {
   auto raw_intf = mockup.RedfishClientInterface();
   NodeTopology topology = CreateTopologyFromRedfish(
       raw_intf.get(), "not_exist.textpb", REDFISH_TOPOLOGY_V2);
-  for (const auto &pair : topology.devpath_to_node_map) {
+  for (const auto& pair : topology.devpath_to_node_map) {
     const absl::string_view devpath = pair.first;
     ASSERT_THAT(pair.second, Not(IsNull()));
     EXPECT_THAT(devpath, Eq(pair.second->local_devpath));
@@ -688,7 +688,7 @@ TEST(TopologyTestRunner, TestingConfigsOptionV2) {
 
   std::vector<Node> actual_nodes;
   actual_nodes.reserve(topology.nodes.size());
-  for (const auto &node : topology.nodes) {
+  for (const auto& node : topology.nodes) {
     actual_nodes.push_back(*node);
   }
   EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));

@@ -39,12 +39,12 @@ struct SmartReading {
 //   "CriticalTemperatureTimeMinute" : 0,
 //   "CriticalWarning" : 0
 // }
-std::vector<SmartReading> ReadSmartData(const RedfishObject &obj);
+std::vector<SmartReading> ReadSmartData(const RedfishObject& obj);
 
 // Parse Nvme smart data from redfish storage object, the smart data is stored
 // under StorageControllers.NVMeControllerProperties.Oem.Google.SMARTAttributes
 std::optional<std::vector<SmartReading>> ReadSmartDataFromStorageController(
-    const RedfishObject &obj);
+    const RedfishObject& obj);
 
 }  // namespace ecclesia
 

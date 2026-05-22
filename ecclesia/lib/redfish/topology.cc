@@ -93,8 +93,8 @@ struct Assembly {
 
 // If this Redfish object has a "Assembly" property, retrieve it and append it
 // to assembly_out.
-void ExtractAssemblyProperties(const RedfishObject &obj,
-                               std::vector<RedfishVariant> *assembly_out) {
+void ExtractAssemblyProperties(const RedfishObject& obj,
+                               std::vector<RedfishVariant>* assembly_out) {
   auto assembly_node = obj[kRfPropertyAssembly].AsObject();
   if (!assembly_node) return;
 
@@ -117,8 +117,8 @@ void ExtractAssemblyProperties(const RedfishObject &obj,
 // * /redfish/v1/Systems/{id}/Processors/{id}/Assembly
 // * /redfish/v1/Systems/{id}/EthernetInterfaces/{id}/Assembly
 // * /redfish/v1/Systems/{id}/Storage/{id}Drives/{id}/Assembly
-void ExtractAssemblyFromSystemUri(const RedfishObject &root_obj,
-                                  std::vector<RedfishVariant> *assembly_out) {
+void ExtractAssemblyFromSystemUri(const RedfishObject& root_obj,
+                                  std::vector<RedfishVariant>* assembly_out) {
   auto system_collection = root_obj[kRfPropertySystems].AsIterable();
   if (!system_collection) return;
 
@@ -176,8 +176,8 @@ void ExtractAssemblyFromSystemUri(const RedfishObject &root_obj,
 
 // Finds Assembly resources under the Chassis URI by searching hardcoded URIs:
 // * /redfish/v1/chassis/{chassis_id}/Assembly
-void ExtractAssemblyFromChassisUri(const RedfishObject &root_obj,
-                                   std::vector<RedfishVariant> *assembly_out) {
+void ExtractAssemblyFromChassisUri(const RedfishObject& root_obj,
+                                   std::vector<RedfishVariant>* assembly_out) {
   auto chassis_collection = root_obj[kRfPropertyChassis].AsIterable();
   if (!chassis_collection) return;
 
@@ -189,7 +189,7 @@ void ExtractAssemblyFromChassisUri(const RedfishObject &root_obj,
 }
 
 std::vector<RedfishVariant> FindAssemblyPayloads(
-    RedfishInterface *redfish_intf) {
+    RedfishInterface* redfish_intf) {
   std::vector<RedfishVariant> assemblies;
   auto root = redfish_intf->GetRoot().AsObject();
   if (!root) return assemblies;
@@ -204,9 +204,9 @@ std::vector<RedfishVariant> FindAssemblyPayloads(
 // Devpaths are generated from the provided upstream_connector_sequence and
 // appending a suffix depending on the Component type.
 void GenerateDevpathsForComponents(
-    std::vector<std::unique_ptr<Component>> *components,
+    std::vector<std::unique_ptr<Component>>* components,
     absl::string_view upstream_connector_sequence) {
-  for (auto &component : *components) {
+  for (auto& component : *components) {
     component->upstream_connector_sequence =
         std::string(upstream_connector_sequence);
     switch (component->type) {
@@ -231,15 +231,15 @@ void GenerateDevpathsForComponents(
 // Assigns devpaths to all Components in the provided list of Assemblies.
 // The input parameter assemblies will have its members modified with devpath
 // information.
-void GenerateDevpaths(std::vector<Assembly> *assemblies) {
+void GenerateDevpaths(std::vector<Assembly>* assemblies) {
   // Map @odata.id identifier to a Component. The Component pointers in this
   // map must have a local_devpath and upstream_connector_sequence assigned.
   // This map is used for downstream components to get their upstream connector
   // paths.
-  absl::flat_hash_map<absl::string_view, const Component *>
+  absl::flat_hash_map<absl::string_view, const Component*>
       odata_id_to_component;
   // This set stores the Assembly structures which have already been processed.
-  absl::flat_hash_set<Assembly *> processed;
+  absl::flat_hash_set<Assembly*> processed;
   // last_processed_count will let us know if we are unable to process some
   // assemblies and we are stuck in the loop without making progress.
   size_t last_processed_count;
@@ -249,7 +249,7 @@ void GenerateDevpaths(std::vector<Assembly> *assemblies) {
     // devpaths to components in a topological order, with the root Assemblies
     // first. Downstream assemblies cannot determine their devpaths without
     // their upstream connectors having a devpath.
-    for (auto &assembly : *assemblies) {
+    for (auto& assembly : *assemblies) {
       if (processed.count(&assembly) != 0u) continue;
       // If there are no upstream_odata_ids values, this Assembly is the root.
       std::string upstream_connector_sequence = kDevpathRoot;
@@ -268,7 +268,7 @@ void GenerateDevpaths(std::vector<Assembly> *assemblies) {
       // mappings for odata.id to Component.
       GenerateDevpathsForComponents(&assembly.components,
                                     upstream_connector_sequence);
-      for (const auto &component : assembly.components) {
+      for (const auto& component : assembly.components) {
         odata_id_to_component[component->odata_id] = component.get();
       }
       processed.insert(&assembly);
@@ -277,7 +277,7 @@ void GenerateDevpaths(std::vector<Assembly> *assemblies) {
 }
 
 // Parses a raw Redfish Assembly payload into an Assembly data structure.
-std::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
+std::optional<Assembly> ProcessAssembly(RedfishObject* assembly_payload) {
   Assembly assembly;
 
   auto fru_name = assembly_payload->GetNodeValue<PropertyName>();
@@ -372,9 +372,9 @@ std::optional<Assembly> ProcessAssembly(RedfishObject *assembly_payload) {
 // Run during initialization. Fetches all Assemblies from a Redfish server
 // and parses them into data structs.
 std::vector<Assembly> CreateAssembliesFromRedfish(
-    RedfishInterface *redfish_intf) {
+    RedfishInterface* redfish_intf) {
   std::vector<Assembly> assemblies;
-  for (auto &assembly : FindAssemblyPayloads(redfish_intf)) {
+  for (auto& assembly : FindAssemblyPayloads(redfish_intf)) {
     auto view = assembly.AsObject();
     if (!view) continue;
     auto processed_info = ProcessAssembly(view.get());
@@ -388,23 +388,23 @@ std::vector<Assembly> CreateAssembliesFromRedfish(
 }
 
 NodeTopology CreateNodeTopologyFromAssemblies(
-    const std::vector<Assembly> &assemblies) {
+    const std::vector<Assembly>& assemblies) {
   NodeTopology node_topology;
 
   // A map of odata IDs to the Node* created for them.
-  absl::flat_hash_map<absl::string_view, Node *> odata_id_to_node;
+  absl::flat_hash_map<absl::string_view, Node*> odata_id_to_node;
   // A map of nodes to the odata IDs of their attached-to components.
-  absl::flat_hash_map<Node *, std::vector<absl::string_view>>
+  absl::flat_hash_map<Node*, std::vector<absl::string_view>>
       node_to_attachedto_odata_ids;
 
   // Create a Node for each Component.
-  for (const Assembly &assembly : assemblies) {
+  for (const Assembly& assembly : assemblies) {
     if (assembly.components.empty()) continue;
 
     // Find the "board" component of the assembly and grab its odata ID. This
     // will be needed to populate the attached to map for the other components.
     absl::string_view board_odata_id;
-    for (const auto &component : assembly.components) {
+    for (const auto& component : assembly.components) {
       if (component->type == kBoard) {
         board_odata_id = component->odata_id;
         break;
@@ -414,7 +414,7 @@ NodeTopology CreateNodeTopologyFromAssemblies(
     // Construct all the node objects, and fill in the relevant odata ID maps
     // as we go.
     std::vector<std::unique_ptr<Node>> current_nodes;
-    for (const auto &component : assembly.components) {
+    for (const auto& component : assembly.components) {
       auto node = std::make_unique<Node>();
 
       node->name = component->name;
@@ -424,7 +424,7 @@ NodeTopology CreateNodeTopologyFromAssemblies(
       node_topology.devpath_to_node_map[node->local_devpath] = node.get();
 
       node->associated_uris = std::move(component->associated_uris);
-      for (const auto &uri : node->associated_uris) {
+      for (const auto& uri : node->associated_uris) {
         node_topology.uri_to_associated_node_map[uri].push_back(node.get());
       }
 
@@ -435,8 +435,8 @@ NodeTopology CreateNodeTopologyFromAssemblies(
       // the attached-to information for the assembly. For everything else it is
       // considered "attached to" the board.
       if (component->type == kBoard) {
-        auto &attached_to = node_to_attachedto_odata_ids[node.get()];
-        for (const auto &odata_id : assembly.upstream_odata_ids) {
+        auto& attached_to = node_to_attachedto_odata_ids[node.get()];
+        for (const auto& odata_id : assembly.upstream_odata_ids) {
           attached_to.push_back(odata_id);
         }
       } else {
@@ -458,30 +458,30 @@ NodeTopology CreateNodeTopologyFromAssemblies(
     // representing the cable plugin and one downstream connector named
     // "DOWNLINK". The "board" representing the cable plugin will have the same
     // name as the Assembly representing the cable plugin.
-    Node *assembly_primary_node;
-    for (const auto &nodes : current_nodes) {
+    Node* assembly_primary_node;
+    for (const auto& nodes : current_nodes) {
       if (nodes->name == assembly.name) {
         assembly_primary_node = nodes.get();
       }
     }
     if (!assembly_primary_node) continue;
     if (assembly_primary_node->type == kBoard && current_nodes.size() == 2) {
-      for (const auto &nodes : current_nodes) {
+      for (const auto& nodes : current_nodes) {
         if (nodes->name == "DOWNLINK") {
           assembly_primary_node->type = kCable;
         }
       }
     }
 
-    for (auto &node : current_nodes) {
+    for (auto& node : current_nodes) {
       node_topology.nodes.push_back(std::move(node));
     }
   }
 
   // Now that we have all the nodes we can use the odata maps we constructed to
   // populate the attached-to and attached-from maps.
-  for (const auto &[node, attached_to] : node_to_attachedto_odata_ids) {
-    auto &attached_to_nodes = node_topology.node_to_parents[node];
+  for (const auto& [node, attached_to] : node_to_attachedto_odata_ids) {
+    auto& attached_to_nodes = node_topology.node_to_parents[node];
     for (absl::string_view odata_id : attached_to) {
       auto attached_to_node = odata_id_to_node.find(odata_id);
       if (attached_to_node != odata_id_to_node.end()) {
@@ -496,7 +496,7 @@ NodeTopology CreateNodeTopologyFromAssemblies(
 }
 
 RedfishNodeTopologyRepresentation GetNodeTopologyReprensentation(
-    RedfishInterface *redfish_intf) {
+    RedfishInterface* redfish_intf) {
   auto service_root = redfish_intf->GetRoot().AsObject();
   if (service_root) {
     if (auto oem =
@@ -518,8 +518,8 @@ RedfishNodeTopologyRepresentation GetNodeTopologyReprensentation(
 }
 
 NodeTopology CreateTopologyFromRedfishHelper(
-    RedfishInterface *redfish_intf,
-    RedfishNodeTopologyRepresentation &default_redfish_topology_reprensentation,
+    RedfishInterface* redfish_intf,
+    RedfishNodeTopologyRepresentation& default_redfish_topology_reprensentation,
     std::optional<absl::string_view> topology_config_name) {
   auto redfish_topology_version = GetNodeTopologyReprensentation(redfish_intf);
   // If the Redfish Agent specifies it's using REDFISH_TOPOLOGY_V1, or if it's
@@ -541,7 +541,7 @@ NodeTopology CreateTopologyFromRedfishHelper(
 }  // namespace
 
 NodeTopology CreateTopologyFromRedfish(
-    RedfishInterface *redfish_intf,
+    RedfishInterface* redfish_intf,
     RedfishNodeTopologyRepresentation
         default_redfish_topology_reprensentation) {
   return CreateTopologyFromRedfishHelper(
@@ -549,7 +549,7 @@ NodeTopology CreateTopologyFromRedfish(
 }
 
 NodeTopology CreateTopologyFromRedfish(
-    RedfishInterface *redfish_intf, absl::string_view topology_config_name,
+    RedfishInterface* redfish_intf, absl::string_view topology_config_name,
     RedfishNodeTopologyRepresentation
         default_redfish_topology_reprensentation) {
   return CreateTopologyFromRedfishHelper(
@@ -561,21 +561,21 @@ NodeTopology CreateTopologyFromRedfish(
 // pointers in hash sets and maps so we can avoid having to copy the Node object
 // itself into the data structure.
 struct NodePtrHashFunc {
-  size_t operator()(Node *a) const {
+  size_t operator()(Node* a) const {
     if (a == nullptr) return absl::HashOf(a);
     return absl::HashOf(*a);
   }
 };
 struct NodePtrEquals {
-  bool operator()(Node *a, Node *b) const {
+  bool operator()(Node* a, Node* b) const {
     if (a == nullptr && b == nullptr) return true;
     if (a == nullptr || b == nullptr) return false;
     return *a == *b;
   }
 };
 
-bool NodeTopologiesHaveTheSameNodes(const NodeTopology &n1,
-                                    const NodeTopology &n2) {
+bool NodeTopologiesHaveTheSameNodes(const NodeTopology& n1,
+                                    const NodeTopology& n2) {
   // Short circuit: if the container sizes are mismatched then infer a delta.
   if (n1.nodes.size() != n2.nodes.size()) return false;
 
@@ -583,12 +583,12 @@ bool NodeTopologiesHaveTheSameNodes(const NodeTopology &n1,
   // no duplicate nodes that exist in either set of nodes.
   // This would be a failed precondition and imply that something is wrong with
   // the Redfish Assemblies.
-  absl::flat_hash_set<Node *, NodePtrHashFunc, NodePtrEquals> n1_nodes;
-  for (const std::unique_ptr<Node> &node : n1.nodes) {
+  absl::flat_hash_set<Node*, NodePtrHashFunc, NodePtrEquals> n1_nodes;
+  for (const std::unique_ptr<Node>& node : n1.nodes) {
     n1_nodes.insert(node.get());
   }
   // NOLINTNEXTLINE(readability-use-anyofallof)
-  for (const std::unique_ptr<Node> &node : n2.nodes) {
+  for (const std::unique_ptr<Node>& node : n2.nodes) {
     auto itr = n1_nodes.find(node.get());
     if (itr == n1_nodes.end()) return false;
   }

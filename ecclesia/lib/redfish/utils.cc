@@ -20,7 +20,9 @@
 #include <string>
 #include <vector>
 
+#include "absl/status/statusor.h"
 #include "absl/strings/ascii.h"
+#include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
@@ -33,7 +35,7 @@
 namespace ecclesia {
 namespace {
 template <typename P>
-std::optional<std::string> GetConvertedResourceType(const RedfishObject &node) {
+std::optional<std::string> GetConvertedResourceType(const RedfishObject& node) {
   const std::optional<ResourceTypeAndVersion> resource_type_and_version =
       GetResourceTypeAndVersionForObject(node);
   // Specially get the resource name for certain resource types.
@@ -64,12 +66,12 @@ std::optional<std::string> GetConvertedResourceType(const RedfishObject &node) {
 }
 }  // namespace
 
-std::optional<std::string> GetConvertedResourceName(const RedfishObject &node) {
+std::optional<std::string> GetConvertedResourceName(const RedfishObject& node) {
   return GetConvertedResourceType<PropertyName>(node);
 }
 
 std::optional<std::string> GetConvertedResourceModel(
-    const RedfishObject &node) {
+    const RedfishObject& node) {
   return GetConvertedResourceType<PropertyModel>(node);
 }
 
@@ -81,9 +83,8 @@ std::string TruncateLastUnderScoreAndNumericSuffix(absl::string_view str) {
   std::string modified_str;
   if ((last_underscore_index != std::string::npos) &&
       (last_underscore_index < (str.length() - 1)) &&
-      absl::SimpleAtoi(
-          str.substr(last_underscore_index + 1, str.length() - 1),
-                      &numeric_value)) {
+      absl::SimpleAtoi(str.substr(last_underscore_index + 1, str.length() - 1),
+                       &numeric_value)) {
     modified_str = std::string(str.substr(0, last_underscore_index));
   } else {
     modified_str = std::string(str);
@@ -92,7 +93,7 @@ std::string TruncateLastUnderScoreAndNumericSuffix(absl::string_view str) {
 }
 
 std::string RedfishTransportBytesToString(
-    const RedfishTransport::bytes &bytes) {
+    const RedfishTransport::bytes& bytes) {
   return std::string(bytes.begin(), bytes.end());
 }
 
@@ -101,7 +102,7 @@ RedfishTransport::bytes GetBytesFromString(absl::string_view str) {
 }
 
 // Returns the URI from Json object or NotFound error
-absl::StatusOr<std::string> GetObjectUri(const nlohmann::json &json) {
+absl::StatusOr<std::string> GetObjectUri(const nlohmann::json& json) {
   std::string reference;
   if (json.is_object()) {
     if (auto odata = json.find(PropertyOdataId::Name);
@@ -115,7 +116,7 @@ absl::StatusOr<std::string> GetObjectUri(const nlohmann::json &json) {
 
 // Extends uri with query parameters if needed
 std::string GetUriWithQueryParameters(absl::string_view uri,
-                                      const GetParams &params) {
+                                      const GetParams& params) {
   auto query_params = params.GetQueryParams();
   std::string new_uri(uri);
   if (!params.uri_prefix.empty()) {
@@ -127,7 +128,7 @@ std::string GetUriWithQueryParameters(absl::string_view uri,
   }
   std::string query_str = absl::StrJoin(
       query_params.begin(), query_params.end(), "&",
-      [](std::string *output, const GetParamQueryInterface *param) {
+      [](std::string* output, const GetParamQueryInterface* param) {
         output->append(param->ToString());
       });
   return absl::StrCat(new_uri, "?", query_str);

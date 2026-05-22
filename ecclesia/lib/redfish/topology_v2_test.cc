@@ -24,12 +24,14 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/functional/function_ref.h"
+#include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/redfish/location.h"
 #include "ecclesia/lib/redfish/node_topology.h"
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/testing/node_topology_testing.h"
 #include "ecclesia/lib/redfish/types.h"
+#include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
 namespace {
@@ -39,9 +41,9 @@ using ::testing::Not;
 using ::testing::Pointwise;
 
 using NodeTopologyBuilderType =
-    absl::FunctionRef<NodeTopology(RedfishInterface *)>;
+    absl::FunctionRef<NodeTopology(RedfishInterface*)>;
 
-void CheckAgainstTestingMockupFullDevpaths(const NodeTopology &topology) {
+void CheckAgainstTestingMockupFullDevpaths(const NodeTopology& topology) {
   const std::vector<Node> expected_nodes = {
       Node{.name = "root",
            .model = "root",
@@ -149,14 +151,14 @@ void CheckAgainstTestingMockupFullDevpaths(const NodeTopology &topology) {
 
   std::vector<Node> actual_nodes;
   actual_nodes.reserve(topology.nodes.size());
-  for (const auto &node : topology.nodes) {
+  for (const auto& node : topology.nodes) {
     actual_nodes.push_back(*node);
   }
 
   EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
 }
 
-void CheckAgainstTestingMultiHostFullDevpaths(const NodeTopology &topology) {
+void CheckAgainstTestingMultiHostFullDevpaths(const NodeTopology& topology) {
   const std::vector<Node> expected_nodes = {
       Node{.name = "multi1",
            .model = "multi1",
@@ -208,7 +210,7 @@ void CheckAgainstTestingMultiHostFullDevpaths(const NodeTopology &topology) {
 
   std::vector<Node> actual_nodes;
   actual_nodes.reserve(topology.nodes.size());
-  for (const auto &node : topology.nodes) {
+  for (const auto& node : topology.nodes) {
     actual_nodes.push_back(*node);
   }
 
@@ -433,7 +435,7 @@ TEST(TopologyTestRunner, TestingNodeName) {
 
   std::vector<std::string> node_names;
   node_names.reserve(constructed_topology.nodes.size());
-  for (const auto &node : constructed_topology.nodes) {
+  for (const auto& node : constructed_topology.nodes) {
     node_names.push_back(node->name);
   }
 
@@ -516,7 +518,7 @@ TEST(TopologyTestRunner, GoogleRootCoexistsWithRedfishRoot) {
 
   std::vector<Node> actual_nodes;
   actual_nodes.reserve(topology.nodes.size());
-  for (const auto &node : topology.nodes) {
+  for (const auto& node : topology.nodes) {
     actual_nodes.push_back(*node);
   }
 
@@ -529,7 +531,7 @@ TEST(TopologyTestRunner, UriUnqueryableFirstChassisBad) {
   // If the first Chassis is unqueryable.
   mockup.AddHttpGetHandler(
       "/redfish/v1/Chassis/child1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
       });
@@ -617,7 +619,7 @@ TEST(TopologyTestRunner, UriUnqueryableFirstChassisBad) {
 
   std::vector<Node> actual_nodes;
   actual_nodes.reserve(topology.nodes.size());
-  for (const auto &node : topology.nodes) {
+  for (const auto& node : topology.nodes) {
     actual_nodes.push_back(*node);
   }
   EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
@@ -629,7 +631,7 @@ TEST(TopologyTestRunner, UriUnqueryableRootChassisBad) {
   // If the root Chassis is unqueryable.
   mockup.AddHttpGetHandler(
       "/redfish/v1/Chassis/root",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
       });
@@ -684,7 +686,7 @@ TEST(TopologyTestRunner, UriUnqueryableRootChassisBad) {
            .replaceable = true}};
   std::vector<Node> actual_nodes;
   actual_nodes.reserve(topology.nodes.size());
-  for (const auto &node : topology.nodes) {
+  for (const auto& node : topology.nodes) {
     actual_nodes.push_back(*node);
   }
   EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));
@@ -707,31 +709,31 @@ TEST(TopologyTestRunner, UriUnqueryableAllChassisBad) {
   )json");
   mockup.AddHttpGetHandler(
       "/redfish/v1/Chassis/root",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
       });
   mockup.AddHttpGetHandler(
       "/redfish/v1/Chassis/child1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
       });
   mockup.AddHttpGetHandler(
       "/redfish/v1/Chassis/child2",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
       });
   mockup.AddHttpGetHandler(
       "/redfish/v1/Chassis/expansion_tray",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
       });
   mockup.AddHttpGetHandler(
       "/redfish/v1/Chassis/expansion_child",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req->ReplyWithStatus(
             ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
       });
@@ -805,7 +807,7 @@ TEST(TopologyTestRunner, TestingConfigsOption) {
 
   std::vector<Node> actual_nodes;
   actual_nodes.reserve(topology.nodes.size());
-  for (const auto &node : topology.nodes) {
+  for (const auto& node : topology.nodes) {
     actual_nodes.push_back(*node);
   }
   EXPECT_THAT(actual_nodes, Pointwise(RedfishNodeEqId(), expected_nodes));

@@ -25,19 +25,19 @@
 namespace ecclesia {
 
 NodeTopology CreateTopologyFromRedfish(
-    RedfishInterface *redfish_intf,
+    RedfishInterface* redfish_intf,
     RedfishNodeTopologyRepresentation default_redfish_topology_reprensentation =
         REDFISH_TOPOLOGY_UNSPECIFIED);
 
 NodeTopology CreateTopologyFromRedfish(
-    RedfishInterface *redfish_intf, absl::string_view topology_config_name,
+    RedfishInterface* redfish_intf, absl::string_view topology_config_name,
     RedfishNodeTopologyRepresentation default_redfish_topology_reprensentation =
         REDFISH_TOPOLOGY_UNSPECIFIED);
 // Returns true if both provided NodeTopologies have the same nodes. Nodes are
 // matched by their name, local_devpath, and type fields only. This does not
 // detect changes in the internal maps to nodes.
-bool NodeTopologiesHaveTheSameNodes(const NodeTopology &n1,
-                                    const NodeTopology &n2);
+bool NodeTopologiesHaveTheSameNodes(const NodeTopology& n1,
+                                    const NodeTopology& n2);
 
 }  // namespace ecclesia
 

@@ -37,7 +37,7 @@ nlohmann::json HandleJsonPtr(nlohmann::json json,
   // All tokens must be prefixed with "/", so element 0 will always be empty.
   if (tokens.size() < 2) return nlohmann::json::value_t::discarded;
 
-  nlohmann::json &json_curr = json;
+  nlohmann::json& json_curr = json;
   // Skip the first element (the empty element 0). Use remaining tokens to
   // iterate over all elements.
   for (int i = 1; i < tokens.size(); ++i) {

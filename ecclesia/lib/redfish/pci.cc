@@ -27,7 +27,7 @@
 namespace ecclesia {
 
 std::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
-    const RedfishObject &pci_location_obj) {
+    const RedfishObject& pci_location_obj) {
   auto maybe_domain =
       RedfishStrTo32Base<OemGooglePropertyDomain>(pci_location_obj);
   if (!maybe_domain.has_value()) return std::nullopt;
@@ -48,7 +48,7 @@ std::optional<ecclesia::PciDbdfLocation> ReadPciLocation(
 }
 
 std::optional<ecclesia::PciFullSignature> ReadPciFullSignature(
-    const RedfishObject &pcie_function_obj) {
+    const RedfishObject& pcie_function_obj) {
   auto maybe_vendor_id =
       RedfishStrTo32Base<PropertyVendorId>(pcie_function_obj);
   if (!maybe_vendor_id.has_value()) return std::nullopt;

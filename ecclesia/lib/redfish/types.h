@@ -40,7 +40,7 @@ std::optional<ResourceTypeAndVersion> GetResourceTypeAndVersionFromOdataType(
 
 // Helper function to work with RedfishObject directly.
 std::optional<ResourceTypeAndVersion> GetResourceTypeAndVersionForObject(
-    const RedfishObject &);
+    const RedfishObject&);
 
 }  // namespace ecclesia
 

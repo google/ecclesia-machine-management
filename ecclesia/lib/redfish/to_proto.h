@@ -41,7 +41,7 @@ namespace ecclesia {
 // Functionally this is similar to google::protobuf::util::JsonFormat::Parse(), but this
 // works on RedfishObjects, which is a higher level abstraction of the
 // underlying format (mostly but not necessarily JSON).
-absl::Status RedfishObjToProto(const RedfishObject &obj, google::protobuf::Message *msg);
+absl::Status RedfishObjToProto(const RedfishObject& obj, google::protobuf::Message* msg);
 }  // namespace ecclesia
 
 #endif  // ECCLESIA_LIB_REDFISH_TO_PROTO_H_

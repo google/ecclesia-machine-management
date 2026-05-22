@@ -92,7 +92,7 @@ TEST(HealthRollup, HealthRollupNotCriticalOrWarningAcceptOKStatus) {
   ASSERT_NE(obj, nullptr);
 
   absl::StatusOr<HealthRollup> health_rollup = ExtractHealthRollup(
-      *obj, [](const RedfishObject &) { return std::nullopt; },
+      *obj, [](const RedfishObject&) { return std::nullopt; },
       /*parse_with_ok_health=*/true);
   ASSERT_TRUE(health_rollup.status().ok());
   EXPECT_THAT(*health_rollup,

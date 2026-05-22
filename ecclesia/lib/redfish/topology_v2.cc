@@ -64,14 +64,14 @@ std::optional<TopologyConfig> LoadTopologyConfigFromConfigName(
 
 // Function to iterate through all cables with valid Location tags and call
 // callback_function on each
-void FindAllCablesHelper(RedfishInterface *redfish_intf,
-                         const TopologyConfig::CableLinkages &cable_linkages,
+void FindAllCablesHelper(RedfishInterface* redfish_intf,
+                         const TopologyConfig::CableLinkages& cable_linkages,
                          absl::FunctionRef<RedfishIterReturnValue(
                              std::unique_ptr<RedfishObject> cable_json,
-                             const std::string &upstream_uri)>
+                             const std::string& upstream_uri)>
                              callback_function) {
   redfish_intf->GetRoot()[kRfPropertyCables].Each().Do(
-      [&](std::unique_ptr<RedfishObject> &cable_json) {
+      [&](std::unique_ptr<RedfishObject>& cable_json) {
         DLOG(INFO) << "Handling cable "
                    << cable_json->GetUriString().value_or("<unknown URI>");
         const auto cable_links = (*cable_json)[kRfPropertyLinks].AsObject();
@@ -79,7 +79,7 @@ void FindAllCablesHelper(RedfishInterface *redfish_intf,
 
         DLOG(INFO) << "Looking for upstream connections";
         std::optional<std::string> upstream_uri;
-        for (const auto &upstream_link : cable_linkages.upstream_links()) {
+        for (const auto& upstream_link : cable_linkages.upstream_links()) {
           // Assuming there is only one upstream resource
           if (auto upstream_obj = (*cable_links)[upstream_link][0].AsObject()) {
             // Collection of Resources
@@ -116,8 +116,8 @@ void FindAllCablesHelper(RedfishInterface *redfish_intf,
 }
 
 ResourceConfig GetResourceConfigFromResourceTypeAndVersion(
-    const ResourceTypeAndVersion &resource_type_version,
-    const TopologyConfig &config) {
+    const ResourceTypeAndVersion& resource_type_version,
+    const TopologyConfig& config) {
   const auto it =
       config.resource_to_config().find(resource_type_version.resource_type);
   if (it != config.resource_to_config().end()) {
@@ -129,8 +129,8 @@ ResourceConfig GetResourceConfigFromResourceTypeAndVersion(
 // Helper function for finding downstream URIs via Links or first class
 // attributes for a given RedfishObject
 std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
-    const RedfishObject &obj, const TopologyConfig &config,
-    absl::flat_hash_set<std::string> &visited_uri) {
+    const RedfishObject& obj, const TopologyConfig& config,
+    absl::flat_hash_set<std::string>& visited_uri) {
   std::vector<std::unique_ptr<RedfishObject>> downstream_objs;
 
   ResourceConfig resource_config;
@@ -143,26 +143,26 @@ std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
     return downstream_objs;
   }
 
-  for (const auto &array_attribute :
+  for (const auto& array_attribute :
        resource_config.first_class_attributes().array_attributes()) {
-    obj[array_attribute].Each().Do([&](std::unique_ptr<RedfishObject> &json) {
+    obj[array_attribute].Each().Do([&](std::unique_ptr<RedfishObject>& json) {
       DLOG(INFO) << "Found downstream obj at " << array_attribute;
       downstream_objs.push_back(std::move(json));
       return RedfishIterReturnValue::kContinue;
     });
   }
 
-  for (const auto &collection_attribute :
+  for (const auto& collection_attribute :
        resource_config.first_class_attributes().collection_attributes()) {
     obj[collection_attribute][kRfPropertyMembers].Each().Do(
-        [&](std::unique_ptr<RedfishObject> &json) {
+        [&](std::unique_ptr<RedfishObject>& json) {
           DLOG(INFO) << "Found downstream obj at " << collection_attribute;
           downstream_objs.push_back(std::move(json));
           return RedfishIterReturnValue::kContinue;
         });
   }
 
-  for (const auto &singular_attribute :
+  for (const auto& singular_attribute :
        resource_config.first_class_attributes().singular_attributes()) {
     if (std::unique_ptr<RedfishObject> singular_obj =
             obj[singular_attribute].AsObject();
@@ -172,7 +172,7 @@ std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
     }
   }
 
-  for (const auto &single_link :
+  for (const auto& single_link :
        resource_config.usable_links().singular_links()) {
     if (std::unique_ptr<RedfishObject> json =
             obj[kRfPropertyLinks][single_link].AsObject();
@@ -182,19 +182,19 @@ std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
     }
   }
 
-  for (const auto &array_link : resource_config.usable_links().array_links()) {
+  for (const auto& array_link : resource_config.usable_links().array_links()) {
     obj[kRfPropertyLinks][array_link].Each().Do(
-        [&](std::unique_ptr<RedfishObject> &json) {
+        [&](std::unique_ptr<RedfishObject>& json) {
           DLOG(INFO) << "Found downstream obj at Links." << array_link;
           downstream_objs.push_back(std::move(json));
           return RedfishIterReturnValue::kContinue;
         });
   }
 
-  for (const auto &array_link_skip :
+  for (const auto& array_link_skip :
        resource_config.usable_links_skip().array_links()) {
     obj[kRfPropertyLinks][array_link_skip].Each().Do(
-        [&](std::unique_ptr<RedfishObject> &json) {
+        [&](std::unique_ptr<RedfishObject>& json) {
           DLOG(INFO) << "Found skipped downstream obj at Links."
                      << array_link_skip;
           std::optional<std::string> skip_uri = json->GetUriString();
@@ -204,7 +204,7 @@ std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
           visited_uri.insert(*skip_uri);
           std::vector<std::unique_ptr<RedfishObject>> tmp_next_level_obj =
               FindAllDownstreamsUris(*json, config, visited_uri);
-          for (std::unique_ptr<RedfishObject> &next_obj : tmp_next_level_obj) {
+          for (std::unique_ptr<RedfishObject>& next_obj : tmp_next_level_obj) {
             downstream_objs.push_back(std::move(next_obj));
           }
           return RedfishIterReturnValue::kContinue;
@@ -215,7 +215,7 @@ std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
 
 // Helper function to find root chassis from service root
 absl::StatusOr<std::unique_ptr<RedfishObject>> FindRootChassisUri(
-    RedfishInterface *redfish_intf, const TopologyConfig &config) {
+    RedfishInterface* redfish_intf, const TopologyConfig& config) {
   auto chassis =
       redfish_intf->CachedGetUri("/redfish/v1/Chassis?$expand=.($levels=1)");
   if (!chassis.status().ok()) {
@@ -251,9 +251,9 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> FindRootChassisUri(
   FindAllCablesHelper(
       redfish_intf, config.cable_linkages(),
       [&](std::unique_ptr<RedfishObject> cable_json,
-          const std::string &upstream_uri) {
+          const std::string& upstream_uri) {
         absl::flat_hash_set<std::string> visited_uri;
-        for (std::unique_ptr<RedfishObject> &downstream_obj :
+        for (std::unique_ptr<RedfishObject>& downstream_obj :
              FindAllDownstreamsUris(*cable_json, config, visited_uri)) {
           if (!downstream_obj) continue;
           if (std::optional<std::string> downstream_uri =
@@ -308,8 +308,8 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> FindRootChassisUri(
 }
 
 absl::StatusOr<std::unique_ptr<RedfishObject>> FindRootNode(
-    RedfishInterface *redfish_intf, const TopologyConfig &config) {
-  const auto &finding_root = config.find_root_node();
+    RedfishInterface* redfish_intf, const TopologyConfig& config) {
+  const auto& finding_root = config.find_root_node();
   if (finding_root.has_chassis_link()) {
     DLOG(INFO) << "Finding root chassis";
     return FindRootChassisUri(redfish_intf, config);
@@ -321,13 +321,13 @@ using UriToAttachedCableUris =
     absl::flat_hash_map<std::string, std::vector<std::string>>;
 
 UriToAttachedCableUris GetUpstreamUriToAttachedCableMap(
-    RedfishInterface *redfish_intf,
-    const TopologyConfig::CableLinkages &cable_linkages) {
+    RedfishInterface* redfish_intf,
+    const TopologyConfig::CableLinkages& cable_linkages) {
   UriToAttachedCableUris uri_to_cable_uri;
   FindAllCablesHelper(
       redfish_intf, cable_linkages,
       [&](std::unique_ptr<RedfishObject> cable_json,
-          const std::string &upstream_uri) {
+          const std::string& upstream_uri) {
         if (auto uri = cable_json->GetUriString(); uri.has_value()) {
           DLOG(INFO) << "Mapping " << upstream_uri << " to cable " << *uri;
           uri_to_cable_uri[upstream_uri].push_back(*std::move(uri));
@@ -338,7 +338,7 @@ UriToAttachedCableUris GetUpstreamUriToAttachedCableMap(
 }
 
 struct AttachingNodes {
-  Node *parent;
+  Node* parent;
   std::unique_ptr<RedfishObject> obj;
 };
 
@@ -351,10 +351,10 @@ constexpr absl::string_view kLocationTypeBay = "Bay";
 constexpr absl::string_view kLocationTypeSocket = "Socket";
 
 }  // namespace
-NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf) {
+NodeTopology CreateTopologyFromRedfishV2(RedfishInterface* redfish_intf) {
   return CreateTopologyFromRedfishV2(redfish_intf, kDefaultTopologyConfigName);
 }
-NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
+NodeTopology CreateTopologyFromRedfishV2(RedfishInterface* redfish_intf,
                                          absl::string_view config_name) {
   NodeTopology topology;
 
@@ -437,7 +437,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
         GetSupplementalLocationInfo(*node_to_attach.obj);
 
     // Handle Location
-    Node *current_node_ptr = nullptr;
+    Node* current_node_ptr = nullptr;
     if (!node_to_attach.parent) {
       // If no parent: make root
       DLOG(INFO) << "Creating root node";
@@ -496,8 +496,9 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
         // Unpopulated memory slots are among those that trigger this log, so
         // limit the count to avoid log spam. Uses a power of two to align with
         // memory slot counts.
-        LOG_FIRST_N(INFO, 64) << *current_uri
-                  << " is absent; not including in topology generation";
+        LOG_FIRST_N(INFO, 64)
+            << *current_uri
+            << " is absent; not including in topology generation";
         continue;
       }
 
@@ -600,7 +601,7 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface *redfish_intf,
     // Adding any downstream cables
     if (const auto it = cable_map.find(*current_uri); it != cable_map.end()) {
       DLOG(INFO) << "Found downstream cables";
-      for (const auto &cable_uri : it->second) {
+      for (const auto& cable_uri : it->second) {
         DLOG(INFO) << "Cable URI: " << cable_uri;
         std::unique_ptr<RedfishObject> cable_obj =
             redfish_intf->CachedGetUri(cable_uri).AsObject();

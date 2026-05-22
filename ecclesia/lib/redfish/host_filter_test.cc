@@ -363,8 +363,7 @@ TEST_F(RedfishMultiHostFilterTest, ChassisNoUriTest) {
   })json";
   multi_host_server_->AddHttpGetHandlerWithData("/redfish/v1/Chassis/multi1",
                                                 fake_chassis_str);
-  RedfishVariant var =
-      fake_intf_->UncachedGetUri("/redfish/v1/Chassis/multi1");
+  RedfishVariant var = fake_intf_->UncachedGetUri("/redfish/v1/Chassis/multi1");
   std::unique_ptr<RedfishObject> obj = var.AsObject();
   ASSERT_TRUE(obj != nullptr);
   absl::StatusOr<absl::string_view> os_domain =

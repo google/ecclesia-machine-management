@@ -32,7 +32,7 @@ namespace ecclesia {
 template <typename ResourceT,
           std::enable_if_t<
               std::is_same_v<typename ResourceT::type, std::string>, int> = 0>
-inline std::optional<int32_t> RedfishStrTo32Base(const RedfishObject &obj) {
+inline std::optional<int32_t> RedfishStrTo32Base(const RedfishObject& obj) {
   auto maybe_value = obj.GetNodeValue<ResourceT>();
   int32_t number;
   if (!maybe_value.has_value() ||
@@ -48,7 +48,7 @@ template <typename PropertyT, typename IntType,
           std::enable_if_t<
               std::is_same_v<typename PropertyT::type, std::string>, int> = 0>
 inline std::optional<IntType> RedfishHexStrPropertyToInt(
-    const RedfishObject &obj) {
+    const RedfishObject& obj) {
   auto maybe_value = obj.GetNodeValue<PropertyT>();
   IntType number;
   if (!maybe_value.has_value() ||

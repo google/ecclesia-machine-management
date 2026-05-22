@@ -144,7 +144,7 @@ TEST(GetDevpathForUri, GetDevpathUsingAlternateResolverSuccess) {
   topology.nodes.push_back(std::move(child_node));
 
   auto alternate_resolver =
-      [&](const NodeTopology &topo,
+      [&](const NodeTopology& topo,
           absl::string_view id) -> std::optional<std::string> {
     auto it = topo.uri_to_associated_node_map.find(id);
     if (it != topo.uri_to_associated_node_map.end() && !it->second.empty()) {
@@ -223,7 +223,7 @@ TEST(GetSensorDevpathFromNodeTopology, RelatedItemDevpathAlternateResolver) {
   }
 
   auto alternate_resolver =
-      [&](const NodeTopology &topo,
+      [&](const NodeTopology& topo,
           absl::string_view id) -> std::optional<std::string> {
     auto it = topo.uri_to_associated_node_map.find(id);
     if (it != topo.uri_to_associated_node_map.end() && !it->second.empty()) {
@@ -312,7 +312,7 @@ TEST(GetSensorDevpathFromNodeTopology, NoRelatedItemUsingSensor) {
   EXPECT_EQ(*obj_devpath, *sensor_devpath);
 
   auto alternate_resolver =
-      [&](const NodeTopology &topo,
+      [&](const NodeTopology& topo,
           absl::string_view id) -> std::optional<std::string> {
     auto it = topo.uri_to_associated_node_map.find(id);
     if (it != topo.uri_to_associated_node_map.end() && !it->second.empty()) {
@@ -359,7 +359,7 @@ TEST(GetSensorDevpathFromNodeTopology,
   }
 
   auto alternate_resolver =
-      [&](const NodeTopology &topo,
+      [&](const NodeTopology& topo,
           absl::string_view id) -> std::optional<std::string> {
     auto it = topo.uri_to_associated_node_map.find(id);
     if (it != topo.uri_to_associated_node_map.end() && !it->second.empty()) {
@@ -515,7 +515,7 @@ TEST(GetManagerDevpathFromNodeTopology, DevpathByManagerInChassisLink) {
   EXPECT_EQ(*manager_chassis_devpath, "/phys/test:device:openbmc_manager");
 
   auto alternate_resolver =
-      [&](const NodeTopology &topo,
+      [&](const NodeTopology& topo,
           absl::string_view id) -> std::optional<std::string> {
     auto it = topo.uri_to_associated_node_map.find(id);
     if (it != topo.uri_to_associated_node_map.end() && !it->second.empty()) {
@@ -739,9 +739,9 @@ TEST(GetDevpathForUri, ReplaceableDevpathSuccess) {
   topology.nodes.push_back(std::move(node));
   topology.nodes.push_back(std::move(child_node));
   // Ensure child node points to test node as parent.
-  std::vector<Node *> parents;
+  std::vector<Node*> parents;
   topology.node_to_parents[topology.nodes.back().get()] =
-      std::vector<Node *>{topology.nodes.front().get()};
+      std::vector<Node*>{topology.nodes.front().get()};
 
   absl::StatusOr<std::string> replaceable_devpath =
       GetReplaceableDevpathForDevpathAndNodeTopology(child_devpath, topology);
@@ -803,11 +803,11 @@ TEST(GetDevpathForUri, ReplaceableDevpathAlternateResolver) {
   topology.nodes.push_back(std::move(node));
   topology.nodes.push_back(std::move(child_node));
   // Ensure child node points to test node as parent.
-  std::vector<Node *> parents;
+  std::vector<Node*> parents;
   topology.node_to_parents[topology.nodes.back().get()] =
-      std::vector<Node *>{topology.nodes.front().get()};
+      std::vector<Node*>{topology.nodes.front().get()};
   auto alternate_resolver =
-      [&](const NodeTopology &topo,
+      [&](const NodeTopology& topo,
           absl::string_view path) -> std::optional<std::string> {
     auto it = topo.uri_to_associated_node_map.find(path);
     if (it != topo.uri_to_associated_node_map.end() && !it->second.empty()) {
