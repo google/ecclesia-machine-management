@@ -71,11 +71,11 @@ constexpr absl::Time clock_time = absl::FromUnixSeconds(10);
 
 using PriorityLabel = StubArbiterInfo::PriorityLabel;
 
-void RemoveTimestamps(QueryIdToResult &entries) {
-  for (auto &[query_id, entry] : *entries.mutable_results()) {
+void RemoveTimestamps(QueryIdToResult& entries) {
+  for (auto& [query_id, entry] : *entries.mutable_results()) {
     entry.mutable_stats()->clear_start_time();
     entry.mutable_stats()->clear_end_time();
-    for (auto &[uri, metadata] : *entry.mutable_stats()
+    for (auto& [uri, metadata] : *entry.mutable_stats()
                                       ->mutable_redfish_metrics()
                                       ->mutable_uri_to_metrics_map()) {
       metadata.mutable_request_type_to_metadata()->clear();
@@ -83,8 +83,8 @@ void RemoveTimestamps(QueryIdToResult &entries) {
   }
 }
 
-void RemoveStats(QueryIdToResult &entries) {
-  for (auto &[query_id, entry] : *entries.mutable_results()) {
+void RemoveStats(QueryIdToResult& entries) {
+  for (auto& [query_id, entry] : *entries.mutable_results()) {
     entry.clear_stats();
   }
 }
@@ -102,10 +102,10 @@ void VerifyQueryResults(QueryIdToResult actual_entries,
 
 absl::StatusOr<std::unique_ptr<QueryEngineIntf>>
 GetQueryEngineWithTransportArbiter(
-    FakeRedfishServer &server,
+    FakeRedfishServer& server,
     absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
     absl::Span<const EmbeddedFile> query_rules = kQueryRules,
-    const Clock *clock = Clock::RealClock(),
+    const Clock* clock = Clock::RealClock(),
     QueryEngineWithTransportArbiter::Params query_engine_params =
         {
             .features = StandardQueryEngineFeatures(),
@@ -513,8 +513,8 @@ TEST(QueryEngineTest, ExecuteSubscriptionQueryWithTransportArbiter) {
   // test we expect these callbacks to be invoked along with the desired
   // parameters.
   auto client_on_event_callback =
-      [&](const QueryResult &, const RedPathSubscription::EventContext &) {};
-  auto client_on_stop_callback = [&](const absl::Status &) {};
+      [&](const QueryResult&, const RedPathSubscription::EventContext&) {};
+  auto client_on_stop_callback = [&](const absl::Status&) {};
 
   // Execute Subscription Query.
   // 1. Setup streaming options
@@ -546,7 +546,7 @@ TEST(QueryEngineTest, ExecuteOnRedfishInterfaceWithTransportArbiter) {
   EXPECT_THAT(query_engine->ExecuteOnRedfishInterface(
                   RedfishInterfacePasskeyFactory::GetPassKey(),
                   {.callback =
-                       [](const RedfishInterface &redfish_interface) {
+                       [](const RedfishInterface& redfish_interface) {
                          return absl::OkStatus();
                        }}),
               IsOk());

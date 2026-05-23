@@ -40,7 +40,7 @@ struct QueryContext {
   // Rules used to configure Redfish query parameter - $expand for
   // specific RedPath prefixes in given queries.
   absl::Span<const EmbeddedFile> query_rules;
-  const Clock *clock = Clock::RealClock();
+  const Clock* clock = Clock::RealClock();
 };
 
 // Encapsulates the queries and rules needed to execute Redpath Query.
@@ -55,18 +55,18 @@ struct QuerySpec {
 
   // Map of query id to query info.
   absl::flat_hash_map<std::string, QueryInfo> query_id_to_info;
-  const Clock *clock = Clock::RealClock();
+  const Clock* clock = Clock::RealClock();
 
   // Utility function to convert query context to resolved QuerySpec.
   static absl::StatusOr<QuerySpec> FromQueryContext(
-      const QueryContext &query_context);
+      const QueryContext& query_context);
 
   // Utility function to read query and rule files and convert them to a
   // resolved QuerySpec.
   static absl::StatusOr<QuerySpec> FromQueryFiles(
       absl::Span<const std::string> query_files,
       absl::Span<const std::string> query_rules,
-      const Clock *clock = Clock::RealClock());
+      const Clock* clock = Clock::RealClock());
 
   // Adds a query spec to the QuerySpec.
   // Returns an error if the query spec already exists or if the query spec is

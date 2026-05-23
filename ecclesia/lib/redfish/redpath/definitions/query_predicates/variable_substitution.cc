@@ -35,9 +35,9 @@ namespace {
 constexpr std::string_view kPredicateSelectAll = "*";
 
 std::string ReplaceMultiValueVariables(
-    std::string &new_predicate, std::string_view variable_name,
+    std::string& new_predicate, std::string_view variable_name,
     const size_t var_pos, const int values_count,
-    const std::vector<std::string> &var_values) {
+    const std::vector<std::string>& var_values) {
   // For variables with multiple values, we expand the expression with the
   // variable into an expression surrounded by parenthesis, with ORs.
   // example: A and B=$VAR -> A and (B=var_val0 or B=var_val1)
@@ -68,7 +68,7 @@ std::string ReplaceMultiValueVariables(
       {{absl::StrCat(property_with_op, variable_name), new_expression}});
 }
 
-void RemoveUnpopulatedExpressions(PredicateObject &predicate_object) {
+void RemoveUnpopulatedExpressions(PredicateObject& predicate_object) {
   bool first = true;
   int logical_operators_index = 0;
   std::vector<std::string> new_logical_operators;
@@ -77,7 +77,7 @@ void RemoveUnpopulatedExpressions(PredicateObject &predicate_object) {
     if (!child.relational_expression.rel_operator.empty()) {
       if (absl::StrContains(child.relational_expression.rhs, "$")) {
         LOG(WARNING) << "Unpopulated query variable found: "
-                  << child.relational_expression.rhs;
+                     << child.relational_expression.rhs;
         // If an unpopulated variable is found do not add it or the accompanying
         // logical operator.
         logical_operators_index++;
@@ -134,7 +134,7 @@ absl::StatusOr<std::string> InvalidateUnpopulatedVariables(
   // simply return the select-all symbol '*'.
   if (!predicate_object.relational_expression.rel_operator.empty()) {
     LOG(WARNING) << "Unpopulated query variable found: "
-              << predicate_object.relational_expression.rhs;
+                 << predicate_object.relational_expression.rhs;
     return std::string(kPredicateSelectAll);
   }
   // Call a recursive function to remove the relational expressions with an
@@ -146,15 +146,15 @@ absl::StatusOr<std::string> InvalidateUnpopulatedVariables(
 }  // namespace
 
 absl::StatusOr<std::string> SubstituteVariables(
-    std::string_view predicate, const QueryVariables &variables) {
+    std::string_view predicate, const QueryVariables& variables) {
   std::string new_predicate = std::string(predicate);
-  for (const auto &value : variables.variable_values()) {
+  for (const auto& value : variables.variable_values()) {
     if (value.name().empty()) continue;
     std::string variable_name = absl::StrCat("$", value.name());
     const size_t var_pos = new_predicate.find(variable_name);
     if (var_pos == std::string_view::npos) continue;
     int values_count = value.values_size();
-    const auto &var_values = value.values();
+    const auto& var_values = value.values();
     std::vector<std::string> var_values_vector(var_values.begin(),
                                                var_values.end());
     if (values_count == 1) {

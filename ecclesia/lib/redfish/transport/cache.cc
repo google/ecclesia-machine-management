@@ -41,7 +41,7 @@ static bool IsPathBlocklisted(absl::string_view path) {
 
 RedfishCachedGetterInterface::OperationResult NullCache::CachedGetInternal(
     absl::string_view path,
-    std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr) {
+    std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) {
   // Report uncached call as this is null cache
   return {.result =
               timeout_mgr.has_value()
@@ -53,7 +53,7 @@ RedfishCachedGetterInterface::OperationResult NullCache::CachedGetInternal(
 RedfishCachedGetterInterface::OperationResult NullCache::UncachedGetInternal(
     absl::string_view path,
     RedfishCachedGetterInterface::Relevance /* relevance */,
-    std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr) {
+    std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) {
   return {
       .result =
           timeout_mgr.has_value()
@@ -70,7 +70,7 @@ RedfishCachedGetterInterface::OperationResult NullCache::CachedPostInternal(
 }
 
 void TimeBasedCache::CacheNestedObjects(
-    const RedfishTransport::Result &result) {
+    const RedfishTransport::Result& result) {
   std::queue<nlohmann::json> unprocessed_objects;
   if (!std::holds_alternative<nlohmann::json>(result.body)) {
     return;
@@ -81,7 +81,7 @@ void TimeBasedCache::CacheNestedObjects(
     nlohmann::json current_obj = std::move(unprocessed_objects.front());
     unprocessed_objects.pop();
 
-    for (const auto &[key, value] : current_obj.items()) {
+    for (const auto& [key, value] : current_obj.items()) {
       if (value.is_object() || value.is_array()) {
         unprocessed_objects.push(value);
       }
@@ -119,7 +119,7 @@ void TimeBasedCache::CacheNestedObjects(
   }
 }
 
-TimeBasedCache::CacheNode &TimeBasedCache::RetrieveCacheNode(
+TimeBasedCache::CacheNode& TimeBasedCache::RetrieveCacheNode(
     absl::string_view path) {
   absl::MutexLock mu(&get_cache_lock_);
   // As per the Redfish spec -
@@ -142,7 +142,7 @@ TimeBasedCache::CacheNode &TimeBasedCache::RetrieveCacheNode(
   return *map_return.first->second;
 }
 
-TimeBasedCache::CacheNode &TimeBasedCache::RetrieveCacheNode(
+TimeBasedCache::CacheNode& TimeBasedCache::RetrieveCacheNode(
     absl::string_view path, absl::string_view post_payload,
     absl::Duration duration) {
   absl::MutexLock mu(&post_cache_lock_);
@@ -160,13 +160,13 @@ TimeBasedCache::CacheNode &TimeBasedCache::RetrieveCacheNode(
 
 RedfishCachedGetterInterface::OperationResult TimeBasedCache::CachedGetInternal(
     absl::string_view path,
-    std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr) {
+    std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) {
   // Check if the path is in the blocklist for caching.
   if (enable_blocklist_ && IsPathBlocklisted(path)) {
     DLOG(INFO) << "Skipping cache for blocklisted path: " << path;
     return UncachedGetInternal(path, Relevance::kNotRelevant, timeout_mgr);
   }
-  TimeBasedCache::CacheNode &store = RetrieveCacheNode(path);
+  TimeBasedCache::CacheNode& store = RetrieveCacheNode(path);
   auto result = store.CachedRead(timeout_mgr);
   if (deep_cache_ && result.is_fresh && result.result.ok()) {
     CacheNestedObjects(result.result.value());
@@ -177,7 +177,7 @@ RedfishCachedGetterInterface::OperationResult TimeBasedCache::CachedGetInternal(
 RedfishCachedGetterInterface::OperationResult
 TimeBasedCache::UncachedGetInternal(
     absl::string_view path, RedfishCachedGetterInterface::Relevance relevance,
-    std::optional<ecclesia::QueryTimeoutManager *> timeout_mgr) {
+    std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) {
   // Bypass cache node retrieval if caller has indicated cache irrelevance.
   if (relevance == RedfishCachedGetterInterface::Relevance::kNotRelevant) {
     return {.result = timeout_mgr.has_value()
@@ -186,7 +186,7 @@ TimeBasedCache::UncachedGetInternal(
                           : transport_->Get(path),
             .is_fresh = true};
   }
-  TimeBasedCache::CacheNode &store = RetrieveCacheNode(path);
+  TimeBasedCache::CacheNode& store = RetrieveCacheNode(path);
   auto result = store.UncachedRead(timeout_mgr);
   return {.result = std::move(result.result), .is_fresh = result.is_fresh};
 }
@@ -195,7 +195,7 @@ RedfishCachedGetterInterface::OperationResult
 TimeBasedCache::CachedPostInternal(absl::string_view path,
                                    absl::string_view post_payload,
                                    absl::Duration duration) {
-  TimeBasedCache::CacheNode &store =
+  TimeBasedCache::CacheNode& store =
       RetrieveCacheNode(path, post_payload, duration);
   auto result = store.CachedRead();
   return {.result = std::move(result.result), .is_fresh = result.is_fresh};

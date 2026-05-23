@@ -18,23 +18,18 @@
 
 #include <memory>
 #include <string>
-#include <variant>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "absl/status/statusor.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/redfish/interface.h"
-#include "ecclesia/lib/redfish/property.h"
 #include "ecclesia/lib/redfish/property_definitions.h"
 #include "ecclesia/lib/redfish/transport/interface.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
 namespace {
-
-// Only a single handler thread is needed.
-constexpr int kNumWorkerThreads = 1;
 
 using ::testing::Eq;
 
@@ -77,8 +72,7 @@ TEST(PatchableMockupServer, CanGetExpand) {
 
 TEST(PatchableMockupServer, CanAddHandlerOwningData) {
   FakeRedfishServer server("indus_hmb_cn/mockup.shar");
-  server.AddHttpGetHandlerWithOwnedData(
-      "/redfish/v1", std::string("\"abc\""));
+  server.AddHttpGetHandlerWithOwnedData("/redfish/v1", "\"abc\"");
   auto transport = server.RedfishClientTransport();
   auto value = transport->Get("/redfish/v1");
   ASSERT_TRUE(value.ok());

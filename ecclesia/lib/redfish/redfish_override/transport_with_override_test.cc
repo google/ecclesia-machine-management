@@ -1050,10 +1050,12 @@ TEST_F(RedfishOverrideTest, InvalidRegexInPolicy) {
     override_content_map_regex: {
       key: "/expected/(.*)/1"
       value: {
-        override_field: [ {
+        override_field:
+        [ {
           action_replace: {
             object_identifier: {
-              individual_object_identifier: [ { field_name: "TestString" }]
+              individual_object_identifier:
+              [ { field_name: "TestString" }]
             }
             override_value: { value: { string_value: "ValidOverride" } }
           }
@@ -1063,10 +1065,12 @@ TEST_F(RedfishOverrideTest, InvalidRegexInPolicy) {
     override_content_map_regex: {
       key: "["  # Invalid regex: unbalanced bracket
       value: {
-        override_field: [ {
+        override_field:
+        [ {
           action_replace: {
             object_identifier: {
-              individual_object_identifier: [ { field_name: "TestString" }]
+              individual_object_identifier:
+              [ { field_name: "TestString" }]
             }
             override_value: { value: { string_value: "InvalidOverride" } }
           }

@@ -38,19 +38,18 @@ class QueryRouterMock : public QueryRouterIntf {
     return std::make_unique<QueryRouterMock>();
   }
 
-  MOCK_METHOD(void, ExecuteQuery,
-              (const QueryRouterIntf::RedpathQueryOptions &),
+  MOCK_METHOD(void, ExecuteQuery, (const QueryRouterIntf::RedpathQueryOptions&),
               (const, override));
 
-  MOCK_METHOD(absl::StatusOr<RedfishInterface *>, GetRedfishInterface,
-              (const ServerInfo &, RedfishInterfacePasskey), (const, override));
+  MOCK_METHOD(absl::StatusOr<RedfishInterface*>, GetRedfishInterface,
+              (const ServerInfo&, RedfishInterfacePasskey), (const, override));
 
   MOCK_METHOD(absl::Status, ExecuteOnRedfishInterface,
-              (const ServerInfo &, RedfishInterfacePasskey,
-               const QueryEngineIntf::RedfishInterfaceOptions &),
+              (const ServerInfo&, RedfishInterfacePasskey,
+               const QueryEngineIntf::RedfishInterfaceOptions&),
               (const, override));
 
-  MOCK_METHOD(void, CancelQueryExecution, (absl::Notification *), (override));
+  MOCK_METHOD(void, CancelQueryExecution, (absl::Notification*), (override));
 };
 
 }  // namespace ecclesia

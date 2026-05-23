@@ -539,14 +539,13 @@ TEST(QueryResultDataConverterTest, ConvertLegacyResultWithErrors) {
            status { code: 4 message: "Deadline Exceeded" })pb");
 
   QueryResult result = ToQueryResult(legacy_result);
-  ASSERT_THAT(result, EqualsProto(
-                          R"pb(query_id: "PCIErrorLogSingleEntry"
-                               status {
-                                 errors: "Deadline Exceeded"
-                                 error_code: ERROR_NETWORK
-                               }
-                               data {}
-                          )pb"));
+  ASSERT_THAT(
+      result,
+      EqualsProto(
+          R"pb(query_id: "PCIErrorLogSingleEntry"
+               status { errors: "Deadline Exceeded" error_code: ERROR_NETWORK }
+               data {}
+          )pb"));
 }
 
 TEST(QueryResultDataConverterTest, DataVerificationWithMetrics) {
@@ -763,7 +762,7 @@ TEST(ConvertToJsonTest, TimestampTest) {
   absl::ParseTime("%Y-%m-%dT%H:%M:%S%Ez", formatted_time, &expected_time,
                   nullptr);
   absl::StatusOr<google::protobuf::Timestamp> expected_timestamp =
-                       EncodeGoogleApiProto(expected_time);
+      EncodeGoogleApiProto(expected_time);
   if (!expected_timestamp.ok()) {
     ADD_FAILURE() << expected_timestamp.status();
   }
@@ -848,12 +847,14 @@ TEST(JsonToValueTest, IntegerTest) {
 
 TEST(JsonToValueTest, DoubleTest) {
   nlohmann::json json = nlohmann::json::parse(R"json(4.3543)json");
-  ASSERT_THAT(JsonToQueryValue(json), EqualsProto(R"pb(double_value: 4.3543)pb"));
+  ASSERT_THAT(JsonToQueryValue(json),
+              EqualsProto(R"pb(double_value: 4.3543)pb"));
 }
 
 TEST(JsonToValueTest, StringTest) {
   nlohmann::json json = nlohmann::json::parse(R"json("testing")json");
-  ASSERT_THAT(JsonToQueryValue(json), EqualsProto(R"pb(string_value: "testing")pb"));
+  ASSERT_THAT(JsonToQueryValue(json),
+              EqualsProto(R"pb(string_value: "testing")pb"));
 }
 
 TEST(JsonToValueTest, BooleanTest) {
@@ -886,10 +887,11 @@ TEST(JsonToValueTest, IdentifierTest) {
     "_local_devpath_": "/phys/",
     "_machine_devpath_": "/phys/PE0"
   })json");
-  ASSERT_THAT(JsonToQueryValue(json), EqualsProto(R"pb(identifier {
-                                                    local_devpath: "/phys/"
-                                                    machine_devpath: "/phys/PE0"
-                                                  })pb"));
+  ASSERT_THAT(JsonToQueryValue(json),
+              EqualsProto(R"pb(identifier {
+                                 local_devpath: "/phys/"
+                                 machine_devpath: "/phys/PE0"
+                               })pb"));
 
   ASSERT_THAT(JsonToIdentifierValue(json).value(), EqualsProto(R"pb(
                 local_devpath: "/phys/"

@@ -90,7 +90,6 @@ cc_test(
     deps = [
         ":fake_redfish_server",
         "//ecclesia/lib/redfish:interface",
-        "//ecclesia/lib/redfish:property",
         "//ecclesia/lib/redfish:property_definitions",
         "//ecclesia/lib/redfish/transport:interface",
         "@com_google_absl//absl/status:statusor",

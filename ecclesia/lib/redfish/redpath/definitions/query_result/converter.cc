@@ -294,8 +294,7 @@ nlohmann::json ValueToJson(const QueryValue& value) {
       json = value.bool_value();
       break;
     case QueryValue::kTimestampValue:
-      if (auto ts = DecodeGoogleApiProto(value.timestamp_value());
-          ts.ok()) {
+      if (auto ts = DecodeGoogleApiProto(value.timestamp_value()); ts.ok()) {
         json = absl::FormatTime(*ts);
       } else {
         json = nullptr;

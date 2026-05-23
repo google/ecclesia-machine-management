@@ -57,26 +57,26 @@ struct RedPathExpression {
   std::string expression;
 
   // Trie node associated with the expression.
-  RedPathTrieNode *trie_node = nullptr;
+  RedPathTrieNode* trie_node = nullptr;
 
   RedPathExpression(Type type, absl::string_view expression)
       : type(type), expression(expression) {}
 
-  bool operator==(const RedPathExpression &other) const {
+  bool operator==(const RedPathExpression& other) const {
     return type == other.type && expression == other.expression;
   }
 
-  bool operator!=(const RedPathExpression &other) const {
+  bool operator!=(const RedPathExpression& other) const {
     return !(*this == other);
   }
 
   template <typename H>
-  friend H AbslHashValue(H h, const RedPathExpression &n) {
+  friend H AbslHashValue(H h, const RedPathExpression& n) {
     return H::combine(std::move(h), n.type, n.expression);
   }
 
   template <typename Sink>
-  friend void AbslStringify(Sink &sink, const RedPathExpression &expr) {
+  friend void AbslStringify(Sink& sink, const RedPathExpression& expr) {
     std::string type_str;
     switch (expr.type) {
       case RedPathExpression::Type::kNodeName:
@@ -142,9 +142,9 @@ struct RedPathTrieNode {
 // Builds RedPath trie.
 class RedPathTrieBuilder {
  public:
-  explicit RedPathTrieBuilder(const DelliciusQuery *query)
+  explicit RedPathTrieBuilder(const DelliciusQuery* query)
       : query_(ABSL_DIE_IF_NULL(query)) {
-    for (const auto &subquery : query_->subquery()) {
+    for (const auto& subquery : query_->subquery()) {
       subquery_id_to_subquery_[subquery.subquery_id()] = &subquery;
     }
   }
@@ -154,15 +154,15 @@ class RedPathTrieBuilder {
   // Returns the subquery execution sequences that are derived from RedPath
   // query after resolving all `root_subquery_ids` associations between
   // subqueries.
-  const absl::flat_hash_set<std::vector<std::string>> &GetSubquerySequences();
+  const absl::flat_hash_set<std::vector<std::string>>& GetSubquerySequences();
 
  private:
   absl::Status ProcessSubquerySequence(
-      RedPathTrieNode *root_node,
-      const std::vector<std::string> &subquery_sequence);
+      RedPathTrieNode* root_node,
+      const std::vector<std::string>& subquery_sequence);
 
-  const DelliciusQuery *query_;
-  absl::flat_hash_map<std::string, const DelliciusQuery::Subquery *>
+  const DelliciusQuery* query_;
+  absl::flat_hash_map<std::string, const DelliciusQuery::Subquery*>
       subquery_id_to_subquery_;
   absl::flat_hash_set<std::vector<std::string>> subquery_sequences_;
 };

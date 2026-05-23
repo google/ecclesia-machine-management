@@ -115,7 +115,7 @@ std::vector<std::string> SplitNodeNameForNestedNodes(
 }
 
 absl::StatusOr<nlohmann::json> ResolveRedPathNodeToJson(
-    const nlohmann::json &json_object, absl::string_view node_name) {
+    const nlohmann::json& json_object, absl::string_view node_name) {
   std::vector<std::string> node_names = SplitNodeNameForNestedNodes(node_name);
   if (node_names.empty()) {
     return absl::InternalError("Given NodeName is empty or invalid.");
@@ -124,7 +124,7 @@ absl::StatusOr<nlohmann::json> ResolveRedPathNodeToJson(
   nlohmann::json json_object_out;
 
   auto process_node_name = [&json_object_out](absl::string_view name,
-                                              const nlohmann::json &obj) {
+                                              const nlohmann::json& obj) {
     int index = -1;
     std::string node_name = std::string(name);
     if (absl::EndsWith(name, "]")) {

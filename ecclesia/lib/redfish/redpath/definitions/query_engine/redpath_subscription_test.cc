@@ -53,8 +53,8 @@ class MockRedfishClientInterface : public NullRedfish {
  public:
   MOCK_METHOD(absl::StatusOr<std::unique_ptr<RedfishEventStream>>, Subscribe,
               (absl::string_view data,
-               std::function<void(const RedfishVariant &event)> &&on_event,
-               std::function<void(const absl::Status &end_status)> &&on_stop),
+               std::function<void(const RedfishVariant& event)>&& on_event,
+               std::function<void(const absl::Status& end_status)>&& on_stop),
               (override));
 };
 
@@ -69,16 +69,16 @@ TEST(RedPathSubscriptionImplTest, SubscriptionIsCreated) {
 
   EXPECT_CALL(redfish_interface, Subscribe)
       .WillOnce([&](absl::string_view,
-                    absl::FunctionRef<void(const RedfishVariant &event)>,
-                    absl::FunctionRef<void(const absl::Status &end_status)>) {
+                    absl::FunctionRef<void(const RedfishVariant& event)>,
+                    absl::FunctionRef<void(const absl::Status& end_status)>) {
         return std::make_unique<MockRedfishEventStream>();
       });
 
   absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
       redpath_subscription = RedPathSubscriptionImpl::Create(
           {config}, redfish_interface,
-          [](const RedfishVariant &variant, const EventContext &context) {},
-          [](const absl::Status &status) {});
+          [](const RedfishVariant& variant, const EventContext& context) {},
+          [](const absl::Status& status) {});
   EXPECT_THAT(redpath_subscription, IsOk());
 }
 
@@ -90,20 +90,20 @@ TEST(RedPathSubscriptionImplTest, CancelSubscriptionReturnsOk) {
   config.query_id = "id";
 
   auto mock_event_stream = std::make_unique<MockRedfishEventStream>();
-  MockRedfishEventStream *mock_event_stream_raw = mock_event_stream.get();
+  MockRedfishEventStream* mock_event_stream_raw = mock_event_stream.get();
 
   EXPECT_CALL(*mock_event_stream_raw, CancelStreaming()).WillOnce(Return());
   EXPECT_CALL(redfish_interface, Subscribe)
       .WillOnce([&](absl::string_view,
-                    absl::FunctionRef<void(const RedfishVariant &event)>,
-                    absl::FunctionRef<void(const absl::Status &end_status)>) {
+                    absl::FunctionRef<void(const RedfishVariant& event)>,
+                    absl::FunctionRef<void(const absl::Status& end_status)>) {
         return std::move(mock_event_stream);
       });
   absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
       redpath_subscription = RedPathSubscriptionImpl::Create(
           {config}, redfish_interface,
-          [](const RedfishVariant &variant, const EventContext &context) {},
-          [](const absl::Status &status) {});
+          [](const RedfishVariant& variant, const EventContext& context) {},
+          [](const absl::Status& status) {});
   ASSERT_THAT(redpath_subscription, IsOk());
   EXPECT_THAT((*redpath_subscription)->CancelSubscription(), IsOk());
 }
@@ -119,15 +119,15 @@ TEST(RedPathSubscriptionImplTest, SubscriptionIsNotCreated) {
     config.query_id = "id";
     EXPECT_CALL(redfish_interface, Subscribe)
         .WillOnce([&](absl::string_view,
-                      absl::FunctionRef<void(const RedfishVariant &event)>,
-                      absl::FunctionRef<void(const absl::Status &end_status)>) {
+                      absl::FunctionRef<void(const RedfishVariant& event)>,
+                      absl::FunctionRef<void(const absl::Status& end_status)>) {
           return absl::InternalError("");
         });
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
         redpath_subscription = RedPathSubscriptionImpl::Create(
             {config}, redfish_interface,
-            [](const RedfishVariant &variant, const EventContext &context) {},
-            [](const absl::Status &status) {});
+            [](const RedfishVariant& variant, const EventContext& context) {},
+            [](const absl::Status& status) {});
     EXPECT_THAT(redpath_subscription, IsStatusInternal());
   }
 
@@ -139,8 +139,8 @@ TEST(RedPathSubscriptionImplTest, SubscriptionIsNotCreated) {
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
         redpath_subscription = RedPathSubscriptionImpl::Create(
             {config}, redfish_interface,
-            [](const RedfishVariant &variant, const EventContext &context) {},
-            [](const absl::Status &status) {});
+            [](const RedfishVariant& variant, const EventContext& context) {},
+            [](const absl::Status& status) {});
     EXPECT_THAT(redpath_subscription, IsStatusInvalidArgument());
   }
 
@@ -152,8 +152,8 @@ TEST(RedPathSubscriptionImplTest, SubscriptionIsNotCreated) {
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
         redpath_subscription = RedPathSubscriptionImpl::Create(
             {config}, redfish_interface,
-            [](const RedfishVariant &variant, const EventContext &context) {},
-            [](const absl::Status &status) {});
+            [](const RedfishVariant& variant, const EventContext& context) {},
+            [](const absl::Status& status) {});
     EXPECT_THAT(redpath_subscription, IsStatusInvalidArgument());
   }
 
@@ -165,8 +165,8 @@ TEST(RedPathSubscriptionImplTest, SubscriptionIsNotCreated) {
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
         redpath_subscription = RedPathSubscriptionImpl::Create(
             {config}, redfish_interface,
-            [](const RedfishVariant &variant, const EventContext &context) {},
-            [](const absl::Status &status) {});
+            [](const RedfishVariant& variant, const EventContext& context) {},
+            [](const absl::Status& status) {});
     EXPECT_THAT(redpath_subscription, IsStatusInvalidArgument());
   }
 }
@@ -227,8 +227,8 @@ TEST(RedPathSubscriptionImplTest, SubscriptionRequestFormattedCorrectly) {
   EXPECT_CALL(redfish_interface, Subscribe)
       .WillOnce(
           [&](absl::string_view data,
-              absl::FunctionRef<void(const RedfishVariant &event)> on_event,
-              absl::FunctionRef<void(const absl::Status &end_status)> on_stop) {
+              absl::FunctionRef<void(const RedfishVariant& event)> on_event,
+              absl::FunctionRef<void(const absl::Status& end_status)> on_stop) {
             nlohmann::json actual_json = nlohmann::json::parse(data);
             EXPECT_EQ(actual_json, expected_json);
             return std::make_unique<MockRedfishEventStream>();
@@ -236,8 +236,8 @@ TEST(RedPathSubscriptionImplTest, SubscriptionRequestFormattedCorrectly) {
   absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
       redpath_subscription = RedPathSubscriptionImpl::Create(
           {config, config2}, redfish_interface,
-          [](const RedfishVariant &variant, const EventContext &context) {},
-          [](const absl::Status &status) {});
+          [](const RedfishVariant& variant, const EventContext& context) {},
+          [](const absl::Status& status) {});
   EXPECT_THAT(redpath_subscription, IsOk());
 }
 
@@ -276,8 +276,8 @@ TEST(RedPathSubscriptionImplTest, CallbackIsInvokedForEachOriginOfCondition) {
   EXPECT_CALL(redfish_interface, Subscribe)
       .WillOnce(
           [&](absl::string_view data,
-              absl::FunctionRef<void(const RedfishVariant &event)> on_event,
-              absl::FunctionRef<void(const absl::Status &end_status)> on_stop) {
+              absl::FunctionRef<void(const RedfishVariant& event)> on_event,
+              absl::FunctionRef<void(const absl::Status& end_status)> on_stop) {
             on_event(event);
             return std::make_unique<MockRedfishEventStream>();
           });
@@ -285,11 +285,11 @@ TEST(RedPathSubscriptionImplTest, CallbackIsInvokedForEachOriginOfCondition) {
   absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
       redpath_subscription = RedPathSubscriptionImpl::Create(
           {config}, redfish_interface,
-          [&](const RedfishVariant &variant, const EventContext &context) {
+          [&](const RedfishVariant& variant, const EventContext& context) {
             ++callback_invoked;
             EXPECT_THAT(variant.status(), IsOk());
           },
-          [](const absl::Status &status) {});
+          [](const absl::Status& status) {});
   ASSERT_THAT(redpath_subscription, IsOk());
   EXPECT_EQ(callback_invoked, 2);
 }
@@ -321,8 +321,8 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
     EXPECT_CALL(redfish_interface, Subscribe)
         .WillOnce(
             [&](absl::string_view data,
-                absl::FunctionRef<void(const RedfishVariant &event)> on_event,
-                absl::FunctionRef<void(const absl::Status &end_status)>
+                absl::FunctionRef<void(const RedfishVariant& event)> on_event,
+                absl::FunctionRef<void(const absl::Status& end_status)>
                     on_stop) {
               on_event(event);
               return std::make_unique<MockRedfishEventStream>();
@@ -331,10 +331,10 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
         redpath_subscription = RedPathSubscriptionImpl::Create(
             {config}, redfish_interface,
-            [&](const RedfishVariant &variant, const EventContext &context) {
+            [&](const RedfishVariant& variant, const EventContext& context) {
               ++callback_invoked;
             },
-            [](const absl::Status &status) {});
+            [](const absl::Status& status) {});
     ASSERT_THAT(redpath_subscription, IsOk());
     EXPECT_EQ(callback_invoked, 0);
   }
@@ -359,8 +359,8 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
     EXPECT_CALL(redfish_interface, Subscribe)
         .WillOnce(
             [&](absl::string_view data,
-                absl::FunctionRef<void(const RedfishVariant &event)> on_event,
-                absl::FunctionRef<void(const absl::Status &end_status)>
+                absl::FunctionRef<void(const RedfishVariant& event)> on_event,
+                absl::FunctionRef<void(const absl::Status& end_status)>
                     on_stop) {
               on_event(event);
               return std::make_unique<MockRedfishEventStream>();
@@ -369,10 +369,10 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
         redpath_subscription = RedPathSubscriptionImpl::Create(
             {config}, redfish_interface,
-            [&](const RedfishVariant &variant, const EventContext &context) {
+            [&](const RedfishVariant& variant, const EventContext& context) {
               ++callback_invoked;
             },
-            [](const absl::Status &status) {});
+            [](const absl::Status& status) {});
     ASSERT_THAT(redpath_subscription, IsOk());
     EXPECT_EQ(callback_invoked, 0);
   }
@@ -398,8 +398,8 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
     EXPECT_CALL(redfish_interface, Subscribe)
         .WillOnce(
             [&](absl::string_view data,
-                absl::FunctionRef<void(const RedfishVariant &event)> on_event,
-                absl::FunctionRef<void(const absl::Status &end_status)>
+                absl::FunctionRef<void(const RedfishVariant& event)> on_event,
+                absl::FunctionRef<void(const absl::Status& end_status)>
                     on_stop) {
               on_event(event);
               return std::make_unique<MockRedfishEventStream>();
@@ -408,10 +408,10 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
         redpath_subscription = RedPathSubscriptionImpl::Create(
             {config}, redfish_interface,
-            [&](const RedfishVariant &variant, const EventContext &context) {
+            [&](const RedfishVariant& variant, const EventContext& context) {
               ++callback_invoked;
             },
-            [](const absl::Status &status) {});
+            [](const absl::Status& status) {});
     ASSERT_THAT(redpath_subscription, IsOk());
     EXPECT_EQ(callback_invoked, 0);
   }
@@ -433,8 +433,8 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
     EXPECT_CALL(redfish_interface, Subscribe)
         .WillOnce(
             [&](absl::string_view data,
-                absl::FunctionRef<void(const RedfishVariant &event)> on_event,
-                absl::FunctionRef<void(const absl::Status &end_status)>
+                absl::FunctionRef<void(const RedfishVariant& event)> on_event,
+                absl::FunctionRef<void(const absl::Status& end_status)>
                     on_stop) {
               on_event(event);
               return std::make_unique<MockRedfishEventStream>();
@@ -443,10 +443,10 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
         redpath_subscription = RedPathSubscriptionImpl::Create(
             {config}, redfish_interface,
-            [&](const RedfishVariant &variant, const EventContext &context) {
+            [&](const RedfishVariant& variant, const EventContext& context) {
               ++callback_invoked;
             },
-            [](const absl::Status &status) {});
+            [](const absl::Status& status) {});
     ASSERT_THAT(redpath_subscription, IsOk());
     EXPECT_EQ(callback_invoked, 0);
   }
@@ -470,8 +470,8 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
     EXPECT_CALL(redfish_interface, Subscribe)
         .WillOnce(
             [&](absl::string_view data,
-                absl::FunctionRef<void(const RedfishVariant &event)> on_event,
-                absl::FunctionRef<void(const absl::Status &end_status)>
+                absl::FunctionRef<void(const RedfishVariant& event)> on_event,
+                absl::FunctionRef<void(const absl::Status& end_status)>
                     on_stop) {
               on_event(event);
               return std::make_unique<MockRedfishEventStream>();
@@ -480,10 +480,10 @@ TEST(RedPathSubscriptionImplTest, CallbackIsNotInvokedOnInvalidEvent) {
     absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
         redpath_subscription = RedPathSubscriptionImpl::Create(
             {config}, redfish_interface,
-            [&](const RedfishVariant &variant, const EventContext &context) {
+            [&](const RedfishVariant& variant, const EventContext& context) {
               ++callback_invoked;
             },
-            [](const absl::Status &status) {});
+            [](const absl::Status& status) {});
     ASSERT_THAT(redpath_subscription, IsOk());
     EXPECT_EQ(callback_invoked, 0);
   }
@@ -500,8 +500,8 @@ TEST(RedPathSubscriptionImplTest, CallbackIsInvokedOnStop) {
   EXPECT_CALL(redfish_interface, Subscribe)
       .WillOnce(
           [&](absl::string_view,
-              absl::FunctionRef<void(const RedfishVariant &event)>,
-              absl::FunctionRef<void(const absl::Status &end_status)> on_stop) {
+              absl::FunctionRef<void(const RedfishVariant& event)>,
+              absl::FunctionRef<void(const absl::Status& end_status)> on_stop) {
             on_stop(absl::OkStatus());
             return std::make_unique<MockRedfishEventStream>();
           });
@@ -509,8 +509,8 @@ TEST(RedPathSubscriptionImplTest, CallbackIsInvokedOnStop) {
   absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
       redpath_subscription = RedPathSubscriptionImpl::Create(
           {config}, redfish_interface,
-          [&](const RedfishVariant &variant, const EventContext &context) {},
-          [&](const absl::Status &status) {
+          [&](const RedfishVariant& variant, const EventContext& context) {},
+          [&](const absl::Status& status) {
             callback_invoked = true;
             EXPECT_THAT(status, IsOk());
           });

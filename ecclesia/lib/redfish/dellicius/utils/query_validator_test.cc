@@ -493,8 +493,7 @@ TEST(RedPathQueryValidationTest, InvalidQueryWithInvalidPredicate) {
       ElementsAre(
           AllOf(Field(&Issue::type, Eq(Issue::Type::kDisallowedPredicate)),
                 Field(&Issue::message,
-                      StartsWith(
-                          "Disallowed predicate: $another_predicate")),
+                      StartsWith("Disallowed predicate: $another_predicate")),
                 Field(&Issue::path, Eq(kPathToInvalidQueryInvalidPredicate))),
           AllOf(Field(&Issue::type, Eq(Issue::Type::kDisallowedPredicate)),
                 Field(&Issue::message,

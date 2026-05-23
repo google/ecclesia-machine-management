@@ -67,7 +67,7 @@ class FileBackedQueryEngineTest : public testing::Test {
   }
 
   void CreateQueryResultFile(absl::string_view filename,
-                             const QueryResult &result) {
+                             const QueryResult& result) {
     std::string contents;
     google::protobuf::TextFormat::PrintToString(result, &contents);
     fs_.WriteFile(absl::StrCat(kRootDir, filename), contents);

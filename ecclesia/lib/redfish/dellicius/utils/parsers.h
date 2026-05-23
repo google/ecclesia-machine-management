@@ -31,7 +31,7 @@ namespace ecclesia {
 
 absl::StatusOr<absl::flat_hash_map<std::string, RedPathRedfishQueryParams>>
 ParseQueryRulesFromEmbeddedFiles(
-    const std::vector<EmbeddedFile> &embedded_query_rules);
+    const std::vector<EmbeddedFile>& embedded_query_rules);
 
 RedPathRedfishQueryParams ParseQueryRuleParams(
     QueryRules::RedPathPrefixSetWithQueryParams rule);

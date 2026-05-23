@@ -65,17 +65,17 @@ class FileBackedQueryEngine : public QueryEngineIntf {
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
-      const RedpathQueryOptions &options) override;
+      const RedpathQueryOptions& options) override;
 
   absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(
       absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments,
+      const QueryVariableSet& query_arguments,
       StreamingOptions streaming_options) override {
     return absl::UnimplementedError(
         "ExecuteSubscriptionQuery() method is not supported");
   }
 
-  absl::StatusOr<RedfishInterface *> GetRedfishInterface(
+  absl::StatusOr<RedfishInterface*> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) override {
     return absl::UnimplementedError(
         "No redfish interface in FileBakedQueryEngine");
@@ -83,12 +83,12 @@ class FileBackedQueryEngine : public QueryEngineIntf {
 
   absl::Status ExecuteOnRedfishInterface(
       RedfishInterfacePasskey unused_passkey,
-      const RedfishInterfaceOptions &options) override {
+      const RedfishInterfaceOptions& options) override {
     return absl::UnimplementedError(
         "No redfish interface in FileBakedQueryEngine");
   }
 
-  void CancelQueryExecution(absl::Notification *notification) override {}
+  void CancelQueryExecution(absl::Notification* notification) override {}
 
  private:
   using QueryIdToFilenameMap = absl::flat_hash_map<std::string, std::string>;

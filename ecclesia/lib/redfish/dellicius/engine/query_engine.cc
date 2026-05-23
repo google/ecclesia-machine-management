@@ -197,7 +197,7 @@ void QueryEngine::HandleRedfishEvent(
         find_context->second->redpath_to_trie_node.find(event_context.redpath);
     if (find_trie_node == find_context->second->redpath_to_trie_node.end()) {
       LOG(WARNING) << "Cannot resume query. RedpathTrieNode not found for "
-                 << event_context.query_id;
+                   << event_context.query_id;
       return;
     }
 

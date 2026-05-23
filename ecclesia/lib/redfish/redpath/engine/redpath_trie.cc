@@ -45,14 +45,14 @@ constexpr LazyRE2 kLocationStepRegex = {
     "^([a-zA-Z#@][0-9a-zA-Z._]+|)(?:\\[(.*?)\\]|)$"};
 
 // Inserts RedPath expression into RedPath trie.
-RedPathTrieNode *InsertRedPathExpressions(
-    RedPathTrieNode *current_node,
-    const std::vector<RedPathExpression> &redpath_expressions) {
-  for (const RedPathExpression &expression : redpath_expressions) {
+RedPathTrieNode* InsertRedPathExpressions(
+    RedPathTrieNode* current_node,
+    const std::vector<RedPathExpression>& redpath_expressions) {
+  for (const RedPathExpression& expression : redpath_expressions) {
     if (auto it = current_node->child_expressions.find(expression);
         it == current_node->child_expressions.end()) {
       // End of prefix. Insert the expression here.
-      RedPathTrieNode *prev_node = current_node;
+      RedPathTrieNode* prev_node = current_node;
       auto new_node = std::make_unique<RedPathTrieNode>();
       current_node = new_node.get();
       RedPathExpression expression_with_trie_node = expression;
@@ -69,7 +69,7 @@ RedPathTrieNode *InsertRedPathExpressions(
 
 // Splits RedPath into individual expressions.
 absl::StatusOr<std::vector<RedPathExpression>> SplitRedPath(
-    const std::string &redpath, RedPathExpression::Type type) {
+    const std::string& redpath, RedPathExpression::Type type) {
   std::vector<RedPathExpression> redpath_expressions;
   std::vector<absl::string_view> redpath_steps;
   int bracket_depth = 0;
@@ -133,7 +133,7 @@ std::string RedPathTrieNode::ToString(absl::string_view prefix) const {
   }
   result += "\n";
 
-  for (const RedPathExpression &expression : child_expressions) {
+  for (const RedPathExpression& expression : child_expressions) {
     std::string new_prefix(prefix);
     if (expression.type == RedPathExpression::Type::kPredicate) {
       new_prefix += "[" + expression.expression + "]";
@@ -146,15 +146,15 @@ std::string RedPathTrieNode::ToString(absl::string_view prefix) const {
 }
 
 absl::Status RedPathTrieBuilder::ProcessSubquerySequence(
-    RedPathTrieNode *root_node,
-    const std::vector<std::string> &subquery_sequence) {
-  RedPathTrieNode *current_node = root_node;
-  for (const auto &subquery_id : subquery_sequence) {
-    const DelliciusQuery::Subquery *subquery =
+    RedPathTrieNode* root_node,
+    const std::vector<std::string>& subquery_sequence) {
+  RedPathTrieNode* current_node = root_node;
+  for (const auto& subquery_id : subquery_sequence) {
+    const DelliciusQuery::Subquery* subquery =
         subquery_id_to_subquery_[subquery_id];
     std::vector<RedPathExpression> redpath_expressions;
     if (subquery->has_redpath()) {
-      const std::string &redpath = subquery->redpath();
+      const std::string& redpath = subquery->redpath();
       ECCLESIA_ASSIGN_OR_RETURN(
           redpath_expressions,
           SplitRedPath(redpath, RedPathExpression::Type::kNodeName));
@@ -182,7 +182,7 @@ absl::Status RedPathTrieBuilder::ProcessSubquerySequence(
   return absl::OkStatus();
 }
 
-const absl::flat_hash_set<std::vector<std::string>> &
+const absl::flat_hash_set<std::vector<std::string>>&
 RedPathTrieBuilder::GetSubquerySequences() {
   return subquery_sequences_;
 }
@@ -196,11 +196,11 @@ RedPathTrieBuilder::CreateRedPathTrie() {
 
   // Build RedPath prefix tree.
   auto root_node = std::make_unique<RedPathTrieNode>();
-  RedPathTrieNode *root_node_raw = root_node.get();
+  RedPathTrieNode* root_node_raw = root_node.get();
 
   // Insert RedPath expressions in RedPath trie from each Subquery in each
   // subquery sequence in the sequence collection provided.
-  for (const auto &subquery_sequence : subquery_sequences_) {
+  for (const auto& subquery_sequence : subquery_sequences_) {
     ECCLESIA_RETURN_IF_ERROR(
         ProcessSubquerySequence(root_node_raw, subquery_sequence));
   }

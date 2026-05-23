@@ -13,7 +13,6 @@ cc_test(
     ],
     deps = [
         "//base",
-        "//base:logging",
         "//devtools/api:finding_cc_proto",
         "//devtools/api/source:changelist_presubmit_cc_proto",
         "//devtools/api/source:presubmit_stubby_service_cc_proto",

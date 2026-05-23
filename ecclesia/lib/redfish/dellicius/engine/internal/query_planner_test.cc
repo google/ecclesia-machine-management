@@ -65,9 +65,9 @@ namespace ecclesia {
 namespace {
 
 using ::testing::_;
-using ::testing::Return;
-using ::testing::Eq;
 using ::testing::ByMove;
+using ::testing::Eq;
+using ::testing::Return;
 
 constexpr absl::string_view kQuerySamplesLocation =
     "lib/redfish/dellicius/query/samples";
@@ -86,7 +86,7 @@ constexpr absl::string_view kMockObject = R"json(
 class MockableGetRedfishObject : public RedfishObject {
  public:
   MockableGetRedfishObject() = default;
-  MockableGetRedfishObject(const MockableGetRedfishObject &) = delete;
+  MockableGetRedfishObject(const MockableGetRedfishObject&) = delete;
   RedfishVariant operator[](absl::string_view node_name) const override {
     return RedfishVariant(
         absl::UnimplementedError("TestRedfishObject [] unsupported"));
@@ -110,7 +110,7 @@ class MockableGetRedfishObject : public RedfishObject {
 class MockableIndexRedfishIterable : public RedfishIterable {
  public:
   MockableIndexRedfishIterable() = default;
-  MockableIndexRedfishIterable(const MockableIndexRedfishIterable &) = delete;
+  MockableIndexRedfishIterable(const MockableIndexRedfishIterable&) = delete;
   RedfishVariant operator[](int index) const override { return Get(index); }
   MOCK_METHOD(RedfishVariant, Get, (int index), (const));
   MOCK_METHOD(size_t, Size, (), (override));
@@ -122,7 +122,7 @@ class MockableObjectRedfishVariantImpl : public RedfishVariant::ImplIntf {
  public:
   explicit MockableObjectRedfishVariantImpl(absl::string_view val)
       : str_value_(val) {}
-  MockableObjectRedfishVariantImpl(const MockableObjectRedfishVariantImpl &) =
+  MockableObjectRedfishVariantImpl(const MockableObjectRedfishVariantImpl&) =
       delete;
 
   MOCK_METHOD(std::unique_ptr<RedfishObject>, AsObject, (), (const, override));
@@ -133,12 +133,12 @@ class MockableObjectRedfishVariantImpl : public RedfishVariant::ImplIntf {
   std::optional<ecclesia::RedfishTransport::bytes> AsRaw() const override {
     return std::nullopt;
   }
-  bool GetValue(std::string *val) const override { return false; }
-  bool GetValue(int32_t *val) const override { return false; }
-  bool GetValue(int64_t *val) const override { return false; }
-  bool GetValue(double *val) const override { return false; }
-  bool GetValue(bool *val) const override { return false; }
-  bool GetValue(absl::Time *val) const override { return false; }
+  bool GetValue(std::string* val) const override { return false; }
+  bool GetValue(int32_t* val) const override { return false; }
+  bool GetValue(int64_t* val) const override { return false; }
+  bool GetValue(double* val) const override { return false; }
+  bool GetValue(bool* val) const override { return false; }
+  bool GetValue(absl::Time* val) const override { return false; }
   std::string DebugString() const override { return str_value_; }
   CacheState IsFresh() const override { return CacheState::kUnknown; }
 
@@ -160,8 +160,8 @@ class QueryPlannerTestRunner : public ::testing::Test {
   }
 
   void TestQuery(
-      const std::string &query_in_path, const std::string &query_out_path,
-      Normalizer *normalizer, bool check_timestamp = false,
+      const std::string& query_in_path, const std::string& query_out_path,
+      Normalizer* normalizer, bool check_timestamp = false,
       ExecutionFlags execution_flags = {
           .execution_mode = ExecutionFlags::ExecutionMode::kFailOnFirstError,
           .log_redfish_traces = false,
@@ -171,8 +171,8 @@ class QueryPlannerTestRunner : public ::testing::Test {
     DelliciusQuery query =
         ParseTextFileAsProtoOrDie<DelliciusQuery>(query_in_path);
     absl::StatusOr<std::unique_ptr<QueryPlannerInterface>> qp =
-        BuildDefaultQueryPlanner(query, RedPathRedfishQueryParams{},
-                                 normalizer, nullptr);
+        BuildDefaultQueryPlanner(query, RedPathRedfishQueryParams{}, normalizer,
+                                 nullptr);
     ASSERT_TRUE(qp.ok());
     absl::StatusOr<DelliciusQueryResult> query_result =
         (*qp)->Run(intf_->GetRoot(), *clock_, /*tracker=*/nullptr,
@@ -187,7 +187,7 @@ class QueryPlannerTestRunner : public ::testing::Test {
       query_result.value().clear_end_timestamp();
     }
     EXPECT_THAT(*query_result, ecclesia::IgnoringRepeatedFieldOrdering(
-                    ecclesia::EqualsProto(intent_output)));
+                                   ecclesia::EqualsProto(intent_output)));
   }
 
   std::unique_ptr<FakeRedfishServer> server_;
@@ -350,7 +350,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
       std::move(base_transport), Clock::RealClock());
   // This metrics object is owned and populated by the metrical transport. Use
   // it to populate metrics in the QueryPlanner result.
-  const RedfishMetrics *metrics = transport->GetConstMetrics();
+  const RedfishMetrics* metrics = MetricalRedfishTransport::GetConstMetrics();
   ASSERT_NE(metrics, nullptr);
   auto cache = std::make_unique<NullCache>(transport.get());
   auto intf = NewHttpInterface(std::move(transport), std::move(cache),
@@ -369,9 +369,9 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
   ASSERT_TRUE(result_sensor.has_redfish_metrics());
   // For each type of redfish request for each URI, validate that the
   // QueryPlanner sends only 1 request.
-  for (const auto &uri_x_metric :
+  for (const auto& uri_x_metric :
        *result_sensor.mutable_redfish_metrics()->mutable_uri_to_metrics_map()) {
-    for (const auto &metadata :
+    for (const auto& metadata :
          uri_x_metric.second.request_type_to_metadata()) {
       EXPECT_EQ(metadata.second.request_count(), 1);
     }
@@ -398,7 +398,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
 
   // This metrics object is owned and populated by the metrical transport. Use
   // it to populate metrics in the QueryPlanner result.
-  const RedfishMetrics *metrics = transport->GetConstMetrics();
+  const RedfishMetrics* metrics = MetricalRedfishTransport::GetConstMetrics();
   ASSERT_NE(metrics, nullptr);
 
   auto cache = std::make_unique<NullCache>(transport.get());
@@ -473,7 +473,7 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulated) {
   absl::StatusOr<DelliciusQueryResult> query_result =
       (*qp)->Run(mock_context_node, *clock_, nullptr, {});
   ASSERT_TRUE(query_result.ok());
-  for (const auto &[id, subquery_output] :
+  for (const auto& [id, subquery_output] :
        query_result.value().subquery_output_by_id()) {
     EXPECT_THAT(subquery_output.status().code(),
                 Eq(::google::rpc::Code::DEADLINE_EXCEEDED));
@@ -481,7 +481,7 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulated) {
   // Validate Error Summary in DelliciusQueryResult
   EXPECT_THAT(query_result->query_errors().subquery_id_to_error_summary(),
               testing::SizeIs(1));
-  for (const auto &[subquery_id, subquery_error] :
+  for (const auto& [subquery_id, subquery_error] :
        query_result->query_errors().subquery_id_to_error_summary()) {
     EXPECT_THAT(subquery_error.node_name(), Eq("Chassis"));
     EXPECT_TRUE(
@@ -545,7 +545,7 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulatedCollectionResource) {
   absl::StatusOr<DelliciusQueryResult> query_result =
       (*qp)->Run(mock_context_node, *clock_, nullptr, {});
   ASSERT_TRUE(query_result.ok());
-  for (const auto &[id, subquery_output] :
+  for (const auto& [id, subquery_output] :
        query_result.value().subquery_output_by_id()) {
     EXPECT_THAT(subquery_output.status().code(),
                 Eq(::google::rpc::Code::UNAUTHENTICATED));
@@ -660,8 +660,8 @@ TEST_F(QueryPlannerTestRunner, CheckUnresolvedNodeIsNotAnError) {
   std::unique_ptr<MockableGetRedfishObject> mock_rf_obj =
       std::make_unique<MockableGetRedfishObject>();
   EXPECT_CALL(*mock_rf_obj, Get(AnyGetParams(_), AnyGetParams(_)))
-      .WillOnce(Return(ByMove(
-          RedfishVariant(absl::NotFoundError("node not found")))));
+      .WillOnce(Return(
+          ByMove(RedfishVariant(absl::NotFoundError("node not found")))));
   // Create context node that will return the mocked Redfish Object.
   std::unique_ptr<MockableObjectRedfishVariantImpl> mock_context_node_variant =
       std::make_unique<MockableObjectRedfishVariantImpl>("test");
@@ -677,7 +677,6 @@ TEST_F(QueryPlannerTestRunner, CheckUnresolvedNodeIsNotAnError) {
   ASSERT_THAT(query_result->query_errors().subquery_id_to_error_summary(),
               testing::SizeIs(0));
 }
-
 
 TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorDoesntHaltExecutionIfDesired) {
   std::string query_in_path = GetTestDataDependencyPath(
@@ -761,7 +760,7 @@ TEST_F(QueryPlannerTestRunner,
   ASSERT_TRUE(query_result.ok());
   const auto it = query_result->subquery_output_by_id().find("Processors");
   ASSERT_TRUE(it != query_result->subquery_output_by_id().end());
-  for (const SubqueryDataSet &data_set : it->second.data_sets()) {
+  for (const SubqueryDataSet& data_set : it->second.data_sets()) {
     actual_machine_devpaths.insert(data_set.decorators().machine_devpath());
   }
   ASSERT_THAT(actual_machine_devpaths,

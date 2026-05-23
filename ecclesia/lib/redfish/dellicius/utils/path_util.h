@@ -47,7 +47,7 @@ std::vector<std::string> SplitNodeNameForNestedNodes(
 //  ResolveRedPathNodeToJson(some_json_object, Threshold.UpperCritial.Reading)
 //  would return JSON object {"Reading": 23} nested in some_json_object.
 absl::StatusOr<nlohmann::json> ResolveRedPathNodeToJson(
-    const nlohmann::json &json_object, absl::string_view node_name);
+    const nlohmann::json& json_object, absl::string_view node_name);
 
 }  // namespace ecclesia
 

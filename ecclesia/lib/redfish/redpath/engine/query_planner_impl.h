@@ -58,17 +58,17 @@ struct SubqueryAssociations {
   absl::flat_hash_map<std::string, DelliciusQuery::Subquery>
       subquery_id_to_subquery;
 
-  explicit SubqueryAssociations(const DelliciusQuery &query) {
-    for (const auto &subquery : query.subquery()) {
+  explicit SubqueryAssociations(const DelliciusQuery& query) {
+    for (const auto& subquery : query.subquery()) {
       subquery_id_to_subquery[subquery.subquery_id()] = subquery;
       std::vector<std::string> root_ids;
-      for (const auto &root_id : subquery.root_subquery_ids()) {
+      for (const auto& root_id : subquery.root_subquery_ids()) {
         root_ids.push_back(root_id);
       }
       if (root_ids.empty()) {
         continue;
       }
-      for (const auto &root_id : root_ids) {
+      for (const auto& root_id : root_ids) {
         root_id_to_subquery_ids[root_id].push_back(subquery.subquery_id());
       }
       subquery_id_to_root_ids[subquery.subquery_id()] = std::move(root_ids);
@@ -99,17 +99,17 @@ struct RedPathPrefixTracker {
 // a RedPath expression needs to execute relative that Redfish resource.
 struct QueryExecutionContext {
   // QueryResult obtained to store the result of the execution.
-  QueryResult &result;
-  absl::flat_hash_map<std::string, QueryValue *> subquery_id_to_subquery_result;
+  QueryResult& result;
+  absl::flat_hash_map<std::string, QueryValue*> subquery_id_to_subquery_result;
   // RedPath Trie Node that containing next set of RedPath expressions to
   // execute.
-  const RedPathTrieNode *redpath_trie_node = nullptr;
+  const RedPathTrieNode* redpath_trie_node = nullptr;
   // QueryVariables used to execute a RedPath expression.
-  const QueryVariables &query_variables;
+  const QueryVariables& query_variables;
   // Tracks RedPath prefixes executed.
   RedPathPrefixTracker redpath_prefix_tracker;
   // Tracks RedPath prefixes and the Params
-  QueryPlannerIntf::RedpathQueryTracker *redpath_query_tracker = nullptr;
+  QueryPlannerIntf::RedpathQueryTracker* redpath_query_tracker = nullptr;
   // Redfish resource relative to which RedPath expressions execute.
   RedfishResponse redfish_response;
 
@@ -117,18 +117,18 @@ struct QueryExecutionContext {
   // Always empty unless subscription is requested.
   std::vector<std::string> uris_to_subscribe;
 
-  QueryExecutionContext FromExisting(const std::string &new_redpath_prefix,
-                                     const GetParams &get_params_for_redpath,
+  QueryExecutionContext FromExisting(const std::string& new_redpath_prefix,
+                                     const GetParams& get_params_for_redpath,
                                      RedfishResponse redfish_response,
                                      bool is_query_cancelled = false);
 
   QueryExecutionContext(
-      QueryResult *result_in,
-      const absl::flat_hash_map<std::string, QueryValue *>
-          &subquery_id_to_subquery_result_in,
-      const QueryVariables *query_variables_in,
+      QueryResult* result_in,
+      const absl::flat_hash_map<std::string, QueryValue*>&
+          subquery_id_to_subquery_result_in,
+      const QueryVariables* query_variables_in,
       RedPathPrefixTracker redpath_prefix_tracker_in,
-      QueryPlannerIntf::RedpathQueryTracker *redpath_query_tracker_in,
+      QueryPlannerIntf::RedpathQueryTracker* redpath_query_tracker_in,
       RedfishResponse redfish_object_and_iterable_in = {
           /*redfish_object=*/nullptr, /*redfish_iterable=*/nullptr})
       : result(*ABSL_DIE_IF_NULL(result_in)),
@@ -142,13 +142,13 @@ struct QueryExecutionContext {
 // Helper function to get the URI of a child resource from the parent resource's
 // Redfish response if the child resource is inaccessible.
 absl::StatusOr<std::string> GetChildUriFromNode(
-  const QueryExecutionContext &execution_context,
-  const std::string &node_name);
+    const QueryExecutionContext& execution_context,
+    const std::string& node_name);
 
 // Helper function to get the URI of a child resource from the Members list of
 // the parent's Redfish response if the child resource is inaccessible.
 absl::StatusOr<std::string> GetChildUriFromIterable(
-  const QueryExecutionContext &execution_context, int index);
+    const QueryExecutionContext& execution_context, int index);
 
 // Encapsulates information relevant per redfish object that is queried during
 // the overall query execution process; used to tag redfish jsons when logging.
@@ -173,14 +173,14 @@ struct CacheStats {
 // RAII style wrapper to timestamp query.
 class RedpathQueryTimestamp {
  public:
-  RedpathQueryTimestamp(QueryPlannerIntf::QueryExecutionResult *result,
-                        const Clock *clock)
+  RedpathQueryTimestamp(QueryPlannerIntf::QueryExecutionResult* result,
+                        const Clock* clock)
       : result_(*ABSL_DIE_IF_NULL(result)),
         clock_(*ABSL_DIE_IF_NULL(clock)),
         start_time_(clock_.Now()) {}
 
   ~RedpathQueryTimestamp() {
-    auto set_time = [](absl::Time time, google::protobuf::Timestamp &field) {
+    auto set_time = [](absl::Time time, google::protobuf::Timestamp& field) {
       if (auto timestamp = AbslTimeToProtoTime(time); timestamp.ok()) {
         field = *std::move(timestamp);
       }
@@ -192,8 +192,8 @@ class RedpathQueryTimestamp {
   }
 
  private:
-  QueryPlannerIntf::QueryExecutionResult &result_;
-  const Clock &clock_;
+  QueryPlannerIntf::QueryExecutionResult& result_;
+  const Clock& clock_;
   absl::Time start_time_;
 };
 
@@ -210,13 +210,13 @@ class QueryPlanner final : public QueryPlannerIntf {
   };
 
   struct ImplOptions {
-    const DelliciusQuery *query = nullptr;
-    RedpathNormalizer *normalizer = nullptr;
-    std::vector<RedpathNormalizer *> additional_normalizers;
-    RedfishInterface *redfish_interface = nullptr;
+    const DelliciusQuery* query = nullptr;
+    RedpathNormalizer* normalizer = nullptr;
+    std::vector<RedpathNormalizer*> additional_normalizers;
+    RedfishInterface* redfish_interface = nullptr;
     std::unique_ptr<RedPathTrieNode> redpath_trie_node = nullptr;
     RedPathRules redpath_rules;
-    const Clock *clock = nullptr;
+    const Clock* clock = nullptr;
     const std::optional<absl::Duration> query_timeout = std::nullopt;
     ExecutionMode execution_mode = ExecutionMode::kFailOnFirstError;
   };
@@ -239,23 +239,23 @@ class QueryPlanner final : public QueryPlannerIntf {
   // normalizers fail and this should be last step in the query execution, so we
   // don't need to check the status after this function call.
   void TryNormalizeOnFinalQueryResult(
-      ecclesia::QueryResult &query_result,
-      const RedpathNormalizerOptions &normalizer_options);
+      ecclesia::QueryResult& query_result,
+      const RedpathNormalizerOptions& normalizer_options);
 
   // Executes a single RedPath expression.
   absl::StatusOr<std::vector<QueryExecutionContext>> ExecuteQueryExpression(
-      QueryType query_type, const RedPathExpression &expression,
-      QueryExecutionContext &current_execution_context,
-      std::optional<TraceInfo> &trace_info,
-      RedfishInterface *redfish_interface = nullptr);
+      QueryType query_type, const RedPathExpression& expression,
+      QueryExecutionContext& current_execution_context,
+      std::optional<TraceInfo>& trace_info,
+      RedfishInterface* redfish_interface = nullptr);
 
   void PopulateSubscriptionContext(
-      const std::vector<QueryExecutionContext> &execution_contexts,
-      QueryExecutionContext &current_execution_context,
-      const RedPathExpression &expression,
-      const QueryPlannerIntf::QueryExecutionOptions &query_execution_options,
-      std::unique_ptr<QueryPlannerIntf::SubscriptionContext>
-          &subscription_context);
+      const std::vector<QueryExecutionContext>& execution_contexts,
+      QueryExecutionContext& current_execution_context,
+      const RedPathExpression& expression,
+      const QueryPlannerIntf::QueryExecutionOptions& query_execution_options,
+      std::unique_ptr<QueryPlannerIntf::SubscriptionContext>&
+          subscription_context);
 
   // Executes Query Plan per given `query_execution_options`.
   QueryExecutionResult Run(
@@ -278,15 +278,15 @@ class QueryPlanner final : public QueryPlannerIntf {
   const DelliciusQuery query_;
   const std::string plan_id_;
   // RedpathNormalizer is thread safe.
-  RedpathNormalizer &normalizer_;
-  const std::vector<RedpathNormalizer *> additional_normalizers_;
+  RedpathNormalizer& normalizer_;
+  const std::vector<RedpathNormalizer*> additional_normalizers_;
   const std::unique_ptr<RedPathTrieNode> redpath_trie_root_;
   const RedPathRules redpath_rules_;
   // Redfish interface is thread safe.
-  RedfishInterface *redfish_interface_ = nullptr;
+  RedfishInterface* redfish_interface_ = nullptr;
   const std::string service_root_;
   const SubqueryAssociations subquery_associations_;
-  const Clock *clock_ = nullptr;
+  const Clock* clock_ = nullptr;
   CacheStats cache_stats_;
   std::unique_ptr<QueryTimeoutManager> timeout_manager_ = nullptr;
   const ExecutionMode execution_mode_;

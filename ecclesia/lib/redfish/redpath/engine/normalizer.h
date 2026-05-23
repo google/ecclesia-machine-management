@@ -70,10 +70,10 @@ class RedpathNormalizer {
    public:
     virtual ~ImplInterface() = default;
 
-    virtual absl::Status Normalize(const RedfishObject &redfish_object,
-                                   const DelliciusQuery::Subquery &query,
-                                   ecclesia::QueryResultData &data_set,
-                                   const RedpathNormalizerOptions &options) = 0;
+    virtual absl::Status Normalize(const RedfishObject& redfish_object,
+                                   const DelliciusQuery::Subquery& query,
+                                   ecclesia::QueryResultData& data_set,
+                                   const RedpathNormalizerOptions& options) = 0;
 
     virtual absl::Status Normalize(const DelliciusQuery& query,
                                    ecclesia::QueryResult& query_result,
@@ -84,9 +84,9 @@ class RedpathNormalizer {
   // nested and empty dataset on one level can be extended in outer normalizers.
   // This normalization would start from an empty dataset.
   absl::StatusOr<ecclesia::QueryResultData> Normalize(
-      const RedfishObject &redfish_object,
-      const DelliciusQuery::Subquery &query,
-      const RedpathNormalizerOptions &options) {
+      const RedfishObject& redfish_object,
+      const DelliciusQuery::Subquery& query,
+      const RedpathNormalizerOptions& options) {
     ecclesia::QueryResultData data_set;
     ECCLESIA_RETURN_IF_ERROR(
         Normalize(redfish_object, query, data_set, options));
@@ -106,7 +106,7 @@ class RedpathNormalizer {
     absl::MutexLock l(&impl_chain_mu_);
     if (impl_chain_.empty()) return absl::NotFoundError("No normalizers added");
 
-    for (const auto &impl : impl_chain_) {
+    for (const auto& impl : impl_chain_) {
       ECCLESIA_RETURN_IF_ERROR(
           impl->Normalize(redfish_object, query, data_set, options));
     }
@@ -120,8 +120,8 @@ class RedpathNormalizer {
   }
 
   // Similar to above method but does not require a RedfishObject or Subquery.
-  absl::Status Normalize(ecclesia::QueryResultData &data_set,
-                         const RedpathNormalizerOptions &options) {
+  absl::Status Normalize(ecclesia::QueryResultData& data_set,
+                         const RedpathNormalizerOptions& options) {
     DummyRedfishObject dummy_redfish_object;
     // As this normalization starts from dummy redfish object, we only return
     // empty dataset on error if the original dataset is not empty.
@@ -159,10 +159,10 @@ class RedpathNormalizerImplDefault final
   RedpathNormalizerImplDefault();
 
  protected:
-  absl::Status Normalize(const RedfishObject &redfish_object,
-                         const DelliciusQuery::Subquery &subquery,
-                         ecclesia::QueryResultData &data_set,
-                         const RedpathNormalizerOptions &options) override;
+  absl::Status Normalize(const RedfishObject& redfish_object,
+                         const DelliciusQuery::Subquery& subquery,
+                         ecclesia::QueryResultData& data_set,
+                         const RedpathNormalizerOptions& options) override;
 
   absl::Status Normalize(const DelliciusQuery& query,
                          ecclesia::QueryResult& query_result,
@@ -188,10 +188,10 @@ class RedpathNormalizerImplAddDevpath final
             std::string(redfish_topology_config_name)) {}
 
  protected:
-  absl::Status Normalize(const RedfishObject &redfish_object,
-                         const DelliciusQuery::Subquery &subquery,
-                         ecclesia::QueryResultData &data_set,
-                         const RedpathNormalizerOptions &options) override;
+  absl::Status Normalize(const RedfishObject& redfish_object,
+                         const DelliciusQuery::Subquery& subquery,
+                         ecclesia::QueryResultData& data_set,
+                         const RedpathNormalizerOptions& options) override;
 
   absl::Status Normalize(const DelliciusQuery& query,
                          ecclesia::QueryResult& query_result,
@@ -214,13 +214,13 @@ class RedpathNormalizerImplAddMachineBarepath final
       std::unique_ptr<IdAssigner> id_assigner,
       bool use_redfish_location_as_fallback)
       : id_assigner_(std::move(id_assigner)),
-      use_redfish_location_as_fallback_(use_redfish_location_as_fallback) {}
+        use_redfish_location_as_fallback_(use_redfish_location_as_fallback) {}
 
  protected:
-  absl::Status Normalize(const RedfishObject &redfish_object,
-                         const DelliciusQuery::Subquery &subquery,
-                         ecclesia::QueryResultData &data_set,
-                         const RedpathNormalizerOptions &options) override;
+  absl::Status Normalize(const RedfishObject& redfish_object,
+                         const DelliciusQuery::Subquery& subquery,
+                         ecclesia::QueryResultData& data_set,
+                         const RedpathNormalizerOptions& options) override;
 
   absl::Status Normalize(const DelliciusQuery& query,
                          ecclesia::QueryResult& query_result,

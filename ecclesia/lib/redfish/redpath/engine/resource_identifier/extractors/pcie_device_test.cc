@@ -53,8 +53,8 @@ TEST(PcieDeviceIdentifierExtractorTest, ExtractIdentifierSuccess) {
   FakeRedfishServer server("indus_hmb_shim/mockup.shar");
 
   server.AddHttpGetHandlerWithOwnedData(
-    "/redfish/v1/Systems/system/PCIeDevices/0000_3f_00",
-        R"json({
+      "/redfish/v1/Systems/system/PCIeDevices/0000_3f_00",
+      R"json({
       "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/$0",
       "@odata.type": "#PCIeDevice.v1_9_0.PCIeDevice",
       "Id": "0000_3f_00",

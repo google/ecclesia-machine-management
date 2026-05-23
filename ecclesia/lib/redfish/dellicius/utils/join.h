@@ -39,8 +39,8 @@ namespace ecclesia {
 //          SQ4  SQ5
 // Output: {{SQ1, SQ2, SQ4}, {SQ1, SQ3, SQ4}, {SQ1, SQ3, SQ5}}
 absl::Status JoinSubqueries(
-    const DelliciusQuery &query,
-    absl::flat_hash_set<std::vector<std::string>> &all_joined_subqueries);
+    const DelliciusQuery& query,
+    absl::flat_hash_set<std::vector<std::string>>& all_joined_subqueries);
 
 }  // namespace ecclesia
 

@@ -137,8 +137,7 @@ absl::StatusOr<SubjectAltName> GetSubjectAltName(absl::string_view pem) {
       case GEN_DNS: {
         ECCLESIA_ASSIGN_OR_RETURN(std::string dns, Asn1ToUtf8(name->d.dNSName));
         if (!absl::EndsWith(dns, ".prod.google.com")) {
-          LOG(WARNING) << absl::StrFormat(
-              "FQDN %s is not a prod FQDN", dns);
+          LOG(WARNING) << absl::StrFormat("FQDN %s is not a prod FQDN", dns);
         }
         fqdns.push_back(std::move(dns));
         break;

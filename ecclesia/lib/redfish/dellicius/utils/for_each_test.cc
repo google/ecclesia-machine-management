@@ -62,7 +62,7 @@ TEST(ForEachDataSetTest, SmokeTest) {
   absl::flat_hash_set<std::string> not_visited = {"/phys/dimm0", "/phys/dimm1",
                                                   "/phys/dimm2"};
 
-  ForEachDataSet(test_result, [&](const ecclesia::SubqueryDataSet &data) {
+  ForEachDataSet(test_result, [&](const ecclesia::SubqueryDataSet& data) {
     not_visited.erase(data.devpath());
   });
 

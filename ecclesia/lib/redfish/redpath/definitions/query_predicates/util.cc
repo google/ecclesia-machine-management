@@ -28,8 +28,8 @@ namespace ecclesia {
 
 absl::StatusOr<int> FuzzyStringComparison(absl::string_view lhs,
                                           absl::string_view rhs) {
-  const auto *lhs_iter = lhs.cbegin();
-  const auto *rhs_iter = rhs.cbegin();
+  const auto* lhs_iter = lhs.cbegin();
+  const auto* rhs_iter = rhs.cbegin();
   // Toggles between string and numeric comparison mode.
   bool string_mode = true;
   while (lhs_iter != lhs.end() && rhs_iter != rhs.end()) {

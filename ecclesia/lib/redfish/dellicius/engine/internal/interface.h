@@ -67,11 +67,11 @@ class Normalizer {
     virtual ~ImplInterface() = default;
 
     virtual absl::Status Normalize(
-        const RedfishObject &redfish_object,
-        const DelliciusQuery::Subquery &query, SubqueryDataSet &data_set,
-        const NormalizerOptions &normalizer_options) = 0;
+        const RedfishObject& redfish_object,
+        const DelliciusQuery::Subquery& query, SubqueryDataSet& data_set,
+        const NormalizerOptions& normalizer_options) = 0;
 
-    virtual absl::StatusOr<const NodeTopology *> GetNodeTopology() {
+    virtual absl::StatusOr<const NodeTopology*> GetNodeTopology() {
       return absl::UnimplementedError("");
     }
   };
@@ -79,9 +79,9 @@ class Normalizer {
   // Returns normalized dataset, possibly empty. Normalizers can be nested
   // and empty dataset on one level can be extended in outer normalizers.
   absl::StatusOr<SubqueryDataSet> Normalize(
-      const RedfishObject &redfish_object,
-      const DelliciusQuery::Subquery &query,
-      const NormalizerOptions &normalizer_options) {
+      const RedfishObject& redfish_object,
+      const DelliciusQuery::Subquery& query,
+      const NormalizerOptions& normalizer_options) {
     // It's ok to use a simple mutex here. If we ever detect lock contention
     // and we know that the writes are less frequent, we can convert this mutex
     // to Reader-writer lock.
@@ -89,7 +89,7 @@ class Normalizer {
     if (impl_chain_.empty()) return absl::NotFoundError("No normalizers added");
     SubqueryDataSet data_set;
 
-    for (const auto &impl : impl_chain_) {
+    for (const auto& impl : impl_chain_) {
       ECCLESIA_RETURN_IF_ERROR(
           impl->Normalize(redfish_object, query, data_set, normalizer_options));
     }
@@ -106,9 +106,9 @@ class Normalizer {
     impl_chain_.push_back(std::move(impl));
   }
 
-  absl::StatusOr<const NodeTopology *> GetNodeTopology() {
+  absl::StatusOr<const NodeTopology*> GetNodeTopology() {
     absl::MutexLock l(&impl_chain_mu_);
-    for (auto &impl : impl_chain_) {
+    for (auto& impl : impl_chain_) {
       if (auto topology = impl->GetNodeTopology(); topology.ok()) {
         return *topology;
       }
@@ -140,8 +140,8 @@ class QueryPlannerInterface {
   // Only populates RedfishMetrics if provided. Accepts flags that toggle
   // continuing execution on subquery errors and logging redfish traces.
   virtual DelliciusQueryResult Run(
-      const Clock &clock, QueryTracker *tracker,
-      const QueryVariables &variables, const RedfishMetrics *metrics = nullptr,
+      const Clock& clock, QueryTracker* tracker,
+      const QueryVariables& variables, const RedfishMetrics* metrics = nullptr,
       ExecutionFlags execution_flags = {
           .execution_mode = ExecutionFlags::ExecutionMode::kFailOnFirstError,
           .log_redfish_traces = false,
@@ -152,8 +152,8 @@ class QueryPlannerInterface {
   // Only populates RedfishMetrics if provided. Accepts flags that toggle
   // continuing execution on subquery errors and logging redfish traces.
   virtual DelliciusQueryResult Run(
-      const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
-      const QueryVariables &variables, const RedfishMetrics *metrics = nullptr,
+      const RedfishVariant& variant, const Clock& clock, QueryTracker* tracker,
+      const QueryVariables& variables, const RedfishMetrics* metrics = nullptr,
       ExecutionFlags execution_flags = {
           .execution_mode = ExecutionFlags::ExecutionMode::kFailOnFirstError,
           .log_redfish_traces = false,
@@ -164,10 +164,10 @@ class QueryPlannerInterface {
   // resource acting as local root for redfish subtree.
   // Only populates RedfishMetrics if provided.
   virtual void Run(
-      const RedfishVariant &variant, const Clock &clock, QueryTracker *tracker,
-      const QueryVariables &variables,
-      absl::FunctionRef<bool(const DelliciusQueryResult &result)> callback,
-      const RedfishMetrics *metrics = nullptr) = 0;
+      const RedfishVariant& variant, const Clock& clock, QueryTracker* tracker,
+      const QueryVariables& variables,
+      absl::FunctionRef<bool(const DelliciusQueryResult& result)> callback,
+      const RedfishMetrics* metrics = nullptr) = 0;
 };
 
 }  // namespace ecclesia

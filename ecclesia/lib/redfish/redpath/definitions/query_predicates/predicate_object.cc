@@ -66,7 +66,7 @@ absl::StatusOr<RelationalExpression> EncodeRelationalExpression(
       absl::StrCat("Invalid relational expression: ", expression));
 }
 
-std::string RelationalExpressionToString(const RelationalExpression &relexp) {
+std::string RelationalExpressionToString(const RelationalExpression& relexp) {
   if (!relexp.property_name.empty()) {
     return relexp.property_name;
   }
@@ -193,7 +193,7 @@ absl::StatusOr<PredicateObject> CreatePredicateObject(
   return predicate_object;
 }
 
-std::string PredicateObjectToString(const PredicateObject &predicate_object) {
+std::string PredicateObjectToString(const PredicateObject& predicate_object) {
   // This is the "base case", as in there are no children so we just construct
   // the relational expression and return.
   if (predicate_object.child_predicates.empty()) {
@@ -208,7 +208,7 @@ std::string PredicateObjectToString(const PredicateObject &predicate_object) {
   std::string predicate_string;
   int logical_index = 0;
   // If the predicate object has children recurse over them.
-  for (const PredicateObject &child_predicate :
+  for (const PredicateObject& child_predicate :
        predicate_object.child_predicates) {
     // Don't recurse if a "leaf" is found as it will add extraneous parenthesis.
     if (child_predicate.child_predicates.empty()) {

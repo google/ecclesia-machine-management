@@ -145,7 +145,7 @@ class GetQuerySpecTest : public testing::Test {
   }
 
   template <typename T>
-  void CreateFile(absl::string_view filename, const T &item) {
+  void CreateFile(absl::string_view filename, const T& item) {
     std::string contents;
     google::protobuf::TextFormat::PrintToString(item, &contents);
     fs_.WriteFile(absl::StrCat(kRootDir, filename), contents);

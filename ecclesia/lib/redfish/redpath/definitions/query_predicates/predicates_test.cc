@@ -280,16 +280,14 @@ TEST(ApplyPredicateRuleTest, ShouldWorkWithParenthesis) {
   // tests with last()
   options.node_index = 2;
   options.node_set_size = 3;
-  options.predicate =
-      "(ComponentTemp<15 and MemorySize>10) or last()";
+  options.predicate = "(ComponentTemp<15 and MemorySize>10) or last()";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
   options.node_index = 2;
   options.node_set_size = 3;
   options.predicate = "ComponentTemp<16 and (MemorySize>100 or last())";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
   options.node_set_size = 6;
-  options.predicate =
-      "(ComponentTemp<15 and MemorySize>10) or last()";
+  options.predicate = "(ComponentTemp<15 and MemorySize>10) or last()";
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
 
   // Invalid Parenthesis Cases

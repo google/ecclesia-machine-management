@@ -53,7 +53,7 @@ class QueryPlannerIntf {
     // RedPath expression and corresponding query planner trie node.
     // This mapping is used by query planner to resume query execution on an
     // event.
-    absl::flat_hash_map<std::string, RedPathTrieNode *> redpath_to_trie_node;
+    absl::flat_hash_map<std::string, RedPathTrieNode*> redpath_to_trie_node;
     // Subscription configuration for each RedPath expression.
     std::vector<RedPathSubscription::Configuration> subscription_configs;
     // Copy of query variables to be used for templated queries.
@@ -69,24 +69,24 @@ class QueryPlannerIntf {
 
   // Configures a query execution.
   struct QueryExecutionOptions {
-    QueryVariables &variables;
+    QueryVariables& variables;
     bool enable_url_annotation = false;
     bool log_redfish_traces = false;
-    RedpathQueryTracker *redpath_query_tracker = nullptr;
+    RedpathQueryTracker* redpath_query_tracker = nullptr;
     QueryType query_type = QueryType::kPolling;
     std::string custom_service_root;
-    RedfishInterface *redfish_interface = nullptr;
+    RedfishInterface* redfish_interface = nullptr;
   };
 
   // Configures a query resume operation.
   struct QueryResumeOptions {
-    const RedPathTrieNode *trie_node;
-    const RedfishVariant &redfish_variant;
-    const QueryVariables &variables;
+    const RedPathTrieNode* trie_node;
+    const RedfishVariant& redfish_variant;
+    const QueryVariables& variables;
     bool enable_url_annotation = false;
     bool log_redfish_traces = false;
-    RedpathQueryTracker *redpath_query_tracker = nullptr;
-    RedfishInterface *redfish_interface = nullptr;
+    RedpathQueryTracker* redpath_query_tracker = nullptr;
+    RedfishInterface* redfish_interface = nullptr;
   };
 
   // QueryPlan execution output.

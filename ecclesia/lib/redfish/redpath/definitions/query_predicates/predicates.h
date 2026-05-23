@@ -37,8 +37,8 @@ struct PredicateOptions {
 // Qualifies given `RedfishObject` using the filter criteria in
 // `PredicateOptions`.
 // Returns true if predicate can be applied successfully else returns false.
-absl::StatusOr<bool> ApplyPredicateRule(const nlohmann::json &json_object,
-                                        const PredicateOptions &options);
+absl::StatusOr<bool> ApplyPredicateRule(const nlohmann::json& json_object,
+                                        const PredicateOptions& options);
 
 }  // namespace ecclesia
 

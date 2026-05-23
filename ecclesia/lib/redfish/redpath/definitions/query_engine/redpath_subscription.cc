@@ -43,10 +43,10 @@ namespace ecclesia {
 namespace {
 
 absl::StatusOr<nlohmann::json> CreateTriggers(
-    const std::vector<RedPathSubscription::Configuration> &configurations) {
+    const std::vector<RedPathSubscription::Configuration>& configurations) {
   nlohmann::json triggers = nlohmann::json::array();
   absl::flat_hash_map<std::string, size_t> unique_triggers;
-  for (const auto &config : configurations) {
+  for (const auto& config : configurations) {
     nlohmann::json origin_resources;
     if (config.uris.empty()) {
       return absl::InvalidArgumentError("No uris provided");
@@ -57,13 +57,13 @@ absl::StatusOr<nlohmann::json> CreateTriggers(
     if (config.redpath.empty()) {
       return absl::InvalidArgumentError("No redpath provided");
     }
-    for (const auto &uri : config.uris) {
+    for (const auto& uri : config.uris) {
       origin_resources.push_back({{"@odata.id", uri}});
     }
 
     // Create trigger id.
     std::string trigger_id = absl::StrCat(config.query_id, "-", config.redpath);
-    auto &trigger_occurences = unique_triggers[trigger_id];
+    auto& trigger_occurences = unique_triggers[trigger_id];
 
     // Suffix is used to differentiate triggers with same query id and redpath.
     std::string suffix = absl::StrCat(trigger_occurences);
@@ -79,7 +79,7 @@ absl::StatusOr<nlohmann::json> CreateTriggers(
 }
 
 absl::StatusOr<nlohmann::json> CreateSubscriptionRequest(
-    const std::vector<RedPathSubscription::Configuration> &configurations) {
+    const std::vector<RedPathSubscription::Configuration>& configurations) {
   if (configurations.empty()) {
     return absl::InvalidArgumentError("No configurations provided");
   }
@@ -96,7 +96,7 @@ absl::StatusOr<nlohmann::json> CreateSubscriptionRequest(
 
   // Add `Triggers` to `Google` object.
   nlohmann::json google_object;
-  nlohmann::json &triggers = google_object["Triggers"];
+  nlohmann::json& triggers = google_object["Triggers"];
   ECCLESIA_ASSIGN_OR_RETURN(triggers, CreateTriggers(configurations));
 
   // Add `Google` to `Oem` object.
@@ -114,9 +114,9 @@ absl::StatusOr<nlohmann::json> CreateSubscriptionRequest(
 // Invokes `on_event_callback` on valid events and `on_stop_callback` when
 // streaming stops.
 void HandleEvent(
-    const RedfishVariant &event,
-    absl::FunctionRef<void(const RedfishVariant &,
-                           const RedPathSubscription::EventContext &)>
+    const RedfishVariant& event,
+    absl::FunctionRef<void(const RedfishVariant&,
+                           const RedPathSubscription::EventContext&)>
         on_event_callback) {
   if (!event.status().ok()) {
     LOG(ERROR) << "Event Redfish Variant error: " << event.status();
@@ -192,8 +192,8 @@ void HandleEvent(
 
 absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>>
 RedPathSubscriptionImpl::Create(
-    const std::vector<Configuration> &configurations,
-    RedfishInterface &redfish_interface, OnEventCallback on_event_callback,
+    const std::vector<Configuration>& configurations,
+    RedfishInterface& redfish_interface, OnEventCallback on_event_callback,
     OnStopCallback on_stop_callback) {
   // Create Subscription request json.
   ECCLESIA_ASSIGN_OR_RETURN(nlohmann::json subscription_request,
@@ -205,12 +205,12 @@ RedPathSubscriptionImpl::Create(
       redfish_interface.Subscribe(
           subscription_request.dump(),
           [on_event_callback =
-               std::move(on_event_callback)](const RedfishVariant &event) {
+               std::move(on_event_callback)](const RedfishVariant& event) {
             DLOG(INFO) << "Handle event called";
             HandleEvent(event, on_event_callback);
           },
           [on_stop_callback(std::move(on_stop_callback))](
-              const absl::Status &end_status) {
+              const absl::Status& end_status) {
             DLOG(INFO) << "Handle stop called";
             on_stop_callback(end_status);
           }));

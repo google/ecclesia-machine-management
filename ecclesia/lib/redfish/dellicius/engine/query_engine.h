@@ -144,19 +144,19 @@ class QueryEngineIntf {
   struct StreamingOptions {
     // Callback to stream query result on event.
     using OnEventCallback = std::function<void(
-        const QueryResult & /*result*/,
-        const RedPathSubscription::EventContext & /*context*/)>;
+        const QueryResult& /*result*/,
+        const RedPathSubscription::EventContext& /*context*/)>;
     // Callback invoked when event stream closes.
-    using OnStopCallback = std::function<void(const absl::Status &)>;
+    using OnStopCallback = std::function<void(const absl::Status&)>;
     // Facilitates event subscription.
     // It is responsible creating a RedfishEvent stream for given
     // RedPathSubscription configuration object. It registers the given
     // on_event and on_stop callbacks and invokes them asynchronously.
     using SubscriptionBroker =
         std::function<absl::StatusOr<std::unique_ptr<RedPathSubscription>>(
-            const std::vector<RedPathSubscription::Configuration>
-                &configurations,
-            RedfishInterface &, RedPathSubscription::OnEventCallback,
+            const std::vector<RedPathSubscription::Configuration>&
+                configurations,
+            RedfishInterface&, RedPathSubscription::OnEventCallback,
             RedPathSubscription::OnStopCallback)>;
 
     OnEventCallback on_event_callback;
@@ -172,7 +172,7 @@ class QueryEngineIntf {
   };
 
   struct RedfishInterfaceOptions {
-    std::function<absl::Status(const RedfishInterface &)> callback;
+    std::function<absl::Status(const RedfishInterface&)> callback;
     StubArbiterInfo::PriorityLabel priority_label =
         StubArbiterInfo::PriorityLabel::kUnknown;
   };
@@ -191,7 +191,7 @@ class QueryEngineIntf {
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
       ServiceRootType service_root_uri,
-      const QueryVariableSet &query_arguments) {
+      const QueryVariableSet& query_arguments) {
     RedpathQueryOptions options = {.service_root_uri = service_root_uri,
                                    .query_arguments = query_arguments};
     return ExecuteRedpathQuery(query_ids, options);
@@ -212,14 +212,14 @@ class QueryEngineIntf {
 
   virtual QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
-      const RedpathQueryOptions &options) = 0;
+      const RedpathQueryOptions& options) = 0;
 
   // Executes a subscription query.
   // Overloads ExecuteSubscriptionQuery to allow specifying `query_arguments`
   // for templated queries in addition to `query_ids` and `streaming_options`.
   virtual absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(
       absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments,
+      const QueryVariableSet& query_arguments,
       StreamingOptions streaming_options) = 0;
 
   // QueryEngineRawInterfacePasskey is just an empty strongly-typed object
@@ -227,12 +227,12 @@ class QueryEngineIntf {
   // We restrict the visibility of QueryEngineRawInterfacePasskey so that
   // we can understand which users are using raw-interface features which
   // are not yet available in the query engine.
-  virtual absl::StatusOr<RedfishInterface *> GetRedfishInterface(
+  virtual absl::StatusOr<RedfishInterface*> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) = 0;
 
   virtual absl::Status ExecuteOnRedfishInterface(
       RedfishInterfacePasskey unused_passkey,
-      const RedfishInterfaceOptions &options) = 0;
+      const RedfishInterfaceOptions& options) = 0;
 
   // Returns the server tag, if available
   virtual absl::string_view GetAgentIdentifier() const { return ""; }
@@ -245,7 +245,7 @@ class QueryEngineIntf {
   // within QueryEngine.
   // `CancelQueryExecution()`: A parameterless overload that performs the
   // cancellation.
-  virtual void CancelQueryExecution(absl::Notification *notification) = 0;
+  virtual void CancelQueryExecution(absl::Notification* notification) = 0;
   void CancelQueryExecution() { CancelQueryExecution(nullptr); }
 };
 
@@ -267,28 +267,28 @@ class QueryEngine : public QueryEngineIntf {
       RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizer =
           DefaultRedpathNormalizerMap());
 
-  QueryEngine(const QueryEngine &) = delete;
-  QueryEngine &operator=(const QueryEngine &) = delete;
-  QueryEngine(QueryEngine &&other) = default;
-  QueryEngine &operator=(QueryEngine &&other) = default;
+  QueryEngine(const QueryEngine&) = delete;
+  QueryEngine& operator=(const QueryEngine&) = delete;
+  QueryEngine(QueryEngine&& other) = default;
+  QueryEngine& operator=(QueryEngine&& other) = default;
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
-      const RedpathQueryOptions &options) override;
+      const RedpathQueryOptions& options) override;
 
   absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(
       absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments,
+      const QueryVariableSet& query_arguments,
       StreamingOptions streaming_options) override;
 
-  absl::StatusOr<RedfishInterface *> GetRedfishInterface(
+  absl::StatusOr<RedfishInterface*> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) override;
 
   absl::Status ExecuteOnRedfishInterface(
       RedfishInterfacePasskey unused_passkey,
-      const RedfishInterfaceOptions &options) override;
+      const RedfishInterfaceOptions& options) override;
 
-  void CancelQueryExecution(absl::Notification *notification) override;
+  void CancelQueryExecution(absl::Notification* notification) override;
 
   absl::string_view GetAgentIdentifier() const override { return entity_tag_; }
 
@@ -297,11 +297,11 @@ class QueryEngine : public QueryEngineIntf {
       std::string entity_tag,
       absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
           id_to_query_plans,
-      const Clock *clock, std::unique_ptr<Normalizer> legacy_normalizer,
+      const Clock* clock, std::unique_ptr<Normalizer> legacy_normalizer,
       std::unique_ptr<RedpathNormalizer> normalizer,
       std::unique_ptr<RedfishInterface> redfish_interface,
       QueryEngineFeatures features,
-      MetricalRedfishTransport *metrical_transport = nullptr,
+      MetricalRedfishTransport* metrical_transport = nullptr,
       RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers =
           DefaultRedpathNormalizerMap())
       : id_to_redpath_query_plans_(std::move(id_to_query_plans)),
@@ -317,16 +317,16 @@ class QueryEngine : public QueryEngineIntf {
   // Maps query id to query planner.
   absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
       id_to_redpath_query_plans_;
-  const Clock *clock_;
+  const Clock* clock_;
   // Collection of flags dictating query engine execution.
   QueryEngineFeatures features_;
 
   void HandleRedfishEvent(
-      const RedfishVariant &variant,
-      const RedPathSubscription::EventContext &event_context,
+      const RedfishVariant& variant,
+      const RedPathSubscription::EventContext& event_context,
       absl::FunctionRef<
-          void(const QueryResult &result,
-               const RedPathSubscription::EventContext &event_context)>
+          void(const QueryResult& result,
+               const RedPathSubscription::EventContext& event_context)>
           on_event_callback);
 
   int GetExecuteRefCount() {
@@ -351,7 +351,7 @@ class QueryEngine : public QueryEngineIntf {
   std::unique_ptr<RedpathNormalizer> normalizer_;
   std::unique_ptr<RedfishInterface> redfish_interface_;
   // Used during query metrics collection.
-  MetricalRedfishTransport *metrical_transport_ = nullptr;
+  MetricalRedfishTransport* metrical_transport_ = nullptr;
   // Maps query id to additional normalizers, these normalizers are used to
   // decorate the query result with additional information right after the
   // regular normalizer above, which are optional based on the query id.

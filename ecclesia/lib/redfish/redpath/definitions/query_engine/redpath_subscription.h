@@ -54,9 +54,9 @@ class RedPathSubscription {
   };
 
   using OnEventCallback =
-      std::function<void(const RedfishVariant & /*origin_of_condition*/,
-                         const EventContext & /*context*/)>;
-  using OnStopCallback = std::function<void(const absl::Status &)>;
+      std::function<void(const RedfishVariant& /*origin_of_condition*/,
+                         const EventContext& /*context*/)>;
+  using OnStopCallback = std::function<void(const absl::Status&)>;
 
   virtual ~RedPathSubscription() = default;
   virtual absl::Status CancelSubscription() = 0;
@@ -74,8 +74,8 @@ class RedPathSubscriptionImpl : public RedPathSubscription {
   // OriginOfCondition into RedfishVariant.
   // The callback `on_stop_callback` is invoked when streaming stops.
   static absl::StatusOr<std::unique_ptr<RedPathSubscriptionImpl>> Create(
-      const std::vector<Configuration> &configurations,
-      RedfishInterface &redfish_interface, OnEventCallback on_event_callback,
+      const std::vector<Configuration>& configurations,
+      RedfishInterface& redfish_interface, OnEventCallback on_event_callback,
       OnStopCallback on_stop_callback);
 
   absl::Status CancelSubscription() override {

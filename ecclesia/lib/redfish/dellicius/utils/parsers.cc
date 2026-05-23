@@ -40,7 +40,7 @@ namespace {
 using ExpandConfiguration = RedPathPrefixWithQueryParams::ExpandConfiguration;
 
 absl::StatusOr<GetParams> GetQueryParams(
-    const RedPathPrefixWithQueryParams &redpath_prefix_with_query_params) {
+    const RedPathPrefixWithQueryParams& redpath_prefix_with_query_params) {
   GetParams params;
   if (redpath_prefix_with_query_params.has_top_configuration()) {
     if (redpath_prefix_with_query_params.top_configuration().num_members() <
@@ -83,11 +83,11 @@ absl::StatusOr<GetParams> GetQueryParams(
 
 absl::StatusOr<absl::flat_hash_map<std::string, RedPathRedfishQueryParams>>
 ParseQueryRulesFromEmbeddedFiles(
-    const std::vector<EmbeddedFile> &embedded_query_rules) {
+    const std::vector<EmbeddedFile>& embedded_query_rules) {
   absl::flat_hash_map<std::string, RedPathRedfishQueryParams>
       parsed_query_rules;
   // Extract query rules from embedded query files.
-  for (const EmbeddedFile &embedded_rule : embedded_query_rules) {
+  for (const EmbeddedFile& embedded_rule : embedded_query_rules) {
     QueryRules query_rules;
     // Parse query rules into embedded file object.
 
@@ -97,7 +97,7 @@ ParseQueryRulesFromEmbeddedFiles(
           absl::StrFormat("Invalid query rule:\n%s", embedded_rule.data));
     }
     // Extract RedPath prefix to query params map for each query id.
-    for (auto &[query_id, prefix_set_with_query_params] :
+    for (auto& [query_id, prefix_set_with_query_params] :
          *query_rules.mutable_query_id_to_params_rule()) {
       parsed_query_rules[query_id] =
           ParseQueryRuleParams(std::move(prefix_set_with_query_params));
@@ -109,7 +109,7 @@ ParseQueryRulesFromEmbeddedFiles(
 RedPathRules CreateRedPathRules(
     QueryRules::RedPathPrefixSetWithQueryParams rule) {
   RedPathRules redpath_rules;
-  for (auto &redpath_prefix_with_query_params :
+  for (auto& redpath_prefix_with_query_params :
        *rule.mutable_redpath_prefix_with_params()) {
     if (redpath_prefix_with_query_params.subscribe()) {
       redpath_rules.redpaths_to_subscribe.insert(
@@ -132,7 +132,7 @@ RedPathRedfishQueryParams ParseQueryRuleParams(
   RedPathRedfishQueryParams redpath_prefix_to_params;
   // Iterate over each pair of RedPath prefix and Redfish query parameter
   // configuration and build the prefix to param mapping in memory.
-  for (auto &redpath_prefix_with_query_params :
+  for (auto& redpath_prefix_with_query_params :
        *rule.mutable_redpath_prefix_with_params()) {
     absl::StatusOr<GetParams> params =
         GetQueryParams(redpath_prefix_with_query_params);

@@ -68,7 +68,7 @@ constexpr absl::string_view kDisableValidatorTag =
 
 static bool IsEditedOrAddedFile(const SourceFilePresubmit& file) {
   return file.operation() == SourceFilePresubmit::OPERATION_ADD ||
-          file.operation() == SourceFilePresubmit::OPERATION_EDIT;
+         file.operation() == SourceFilePresubmit::OPERATION_EDIT;
 }
 
 static std::vector<std::string> GetPathsToCheck(const PresubmitRequest& req) {

@@ -76,7 +76,7 @@ class QueryEngineWithTransportArbiter : public QueryEngine {
     // PriorityLabel as input, so the configuration must be defined within
     // the factory.
     std::function<absl::StatusOr<std::unique_ptr<RedfishTransport>>(
-        StubArbiterInfo::PriorityLabel &)>
+        StubArbiterInfo::PriorityLabel&)>
         transport_factory;
 
     // Type of StubArbiter to use: failover or manual.
@@ -95,13 +95,13 @@ class QueryEngineWithTransportArbiter : public QueryEngine {
 
   absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(
       absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments,
+      const QueryVariableSet& query_arguments,
       StreamingOptions streaming_options) override {
     return absl::UnimplementedError(
         "Subscription query is not supported with TransportArbiter.");
   }
 
-  absl::StatusOr<RedfishInterface *> GetRedfishInterface(
+  absl::StatusOr<RedfishInterface*> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) override {
     return absl::InternalError(
         "QueryEngine contains TransportArbiter, which is not supported for "
@@ -110,11 +110,11 @@ class QueryEngineWithTransportArbiter : public QueryEngine {
 
   absl::Status ExecuteOnRedfishInterface(
       RedfishInterfacePasskey unused_passkey,
-      const RedfishInterfaceOptions &options) override;
+      const RedfishInterfaceOptions& options) override;
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
-      const RedpathQueryOptions &options) override;
+      const RedpathQueryOptions& options) override;
 
  private:
   // Constructor for QueryEngine with transport arbiter. Note we explicitly set
@@ -124,7 +124,7 @@ class QueryEngineWithTransportArbiter : public QueryEngine {
       std::string entity_tag,
       absl::flat_hash_map<std::string, std::unique_ptr<QueryPlannerIntf>>
           id_to_query_plans,
-      const Clock *clock, std::unique_ptr<RedpathNormalizer> normalizer,
+      const Clock* clock, std::unique_ptr<RedpathNormalizer> normalizer,
       std::unique_ptr<TransportArbiter> transport_arbiter,
       QueryEngineFeatures features,
       RedpathNormalizer::QueryIdToNormalizerMap id_to_normalizers =

@@ -51,12 +51,12 @@
 
 namespace ecclesia {
 namespace {
-void ProcessMetrics(const StubArbiterInfo::Metrics &metrics,
+void ProcessMetrics(const StubArbiterInfo::Metrics& metrics,
                     const absl::flat_hash_map<StubArbiterInfo::PriorityLabel,
-                                              ErrorCode> &transport_status,
-                    QueryResult &result_single) {
+                                              ErrorCode>& transport_status,
+                    QueryResult& result_single) {
   auto set_timestamp = [](const absl::Time source,
-                          google::protobuf::Timestamp *target) {
+                          google::protobuf::Timestamp* target) {
     if (absl::StatusOr<google::protobuf::Timestamp> proto_time =
             ecclesia::AbslTimeToProtoTime(source);
         proto_time.ok()) {
@@ -66,10 +66,10 @@ void ProcessMetrics(const StubArbiterInfo::Metrics &metrics,
 
   auto set_status = [&transport_status](StubArbiterInfo::PriorityLabel label,
                                         ecclesia::TransportPriority priority,
-                                        Status *status) {
+                                        Status* status) {
     if (auto status_it = transport_status.find(label);
         status_it != transport_status.end()) {
-      TransportErrorCode *transport_code = status->add_transport_code();
+      TransportErrorCode* transport_code = status->add_transport_code();
       transport_code->set_transport_priority(priority);
       transport_code->set_error_code(status_it->second);
     }
@@ -78,8 +78,8 @@ void ProcessMetrics(const StubArbiterInfo::Metrics &metrics,
   auto process_endpoint_metrics =
       [&set_timestamp, &set_status](
           StubArbiterInfo::PriorityLabel label,
-          const StubArbiterInfo::EndpointMetrics &endpoint_metrics,
-          TransportMetrics *query_result_metrics, Status *status) {
+          const StubArbiterInfo::EndpointMetrics& endpoint_metrics,
+          TransportMetrics* query_result_metrics, Status* status) {
         ecclesia::TransportPriority priority;
         switch (label) {
           case StubArbiterInfo::PriorityLabel::kPrimary:
@@ -161,7 +161,7 @@ QueryEngineWithTransportArbiter::CreateTransportArbiterQueryEngine(
 
   std::unique_ptr<ecclesia::RedpathNormalizer> redpath_normalizer;
   StubArbiterInfo::Metrics metrics = arbiter->Execute(
-      [&](ecclesia::RedfishInterface *redfish_interface,
+      [&](ecclesia::RedfishInterface* redfish_interface,
           StubArbiterInfo::PriorityLabel label) -> absl::Status {
         if (id_assigner == nullptr) {
           redpath_normalizer = BuildLocalDevpathRedpathNormalizer(
@@ -184,7 +184,7 @@ QueryEngineWithTransportArbiter::CreateTransportArbiterQueryEngine(
   if (!metrics.overall_status.ok()) {
     LOG(ERROR) << "Redpath normalizer creation failed with status: "
                << metrics.overall_status;
-    for (const auto &[label, endpoint_metrics] : metrics.endpoint_metrics) {
+    for (const auto& [label, endpoint_metrics] : metrics.endpoint_metrics) {
       LOG(ERROR) << "Redpath normalizer created for label: "
                  << PriorityLabelToString(label)
                  << " with status: " << endpoint_metrics.status;
@@ -198,8 +198,8 @@ QueryEngineWithTransportArbiter::CreateTransportArbiterQueryEngine(
   // Build RedPath trie based query planner.
   absl::flat_hash_map<std::string, std::unique_ptr<ecclesia::QueryPlannerIntf>>
       id_to_redpath_trie_plans;
-  for (auto &[query_id, query_info] : query_spec.query_id_to_info) {
-    std::vector<ecclesia::RedpathNormalizer *> additional_normalizers;
+  for (auto& [query_id, query_info] : query_spec.query_id_to_info) {
+    std::vector<ecclesia::RedpathNormalizer*> additional_normalizers;
     if (auto it = id_to_normalizers.find(query_id);
         it != id_to_normalizers.end() && it->second != nullptr) {
       additional_normalizers.push_back(it->second.get());
@@ -231,7 +231,7 @@ QueryEngineWithTransportArbiter::CreateTransportArbiterQueryEngine(
 
 absl::Status QueryEngineWithTransportArbiter::ExecuteOnRedfishInterface(
     ecclesia::RedfishInterfacePasskey unused_passkey,
-    const RedfishInterfaceOptions &options) {
+    const RedfishInterfaceOptions& options) {
   StubArbiterInfo::PriorityLabel priority_label =
       StubArbiterInfo::PriorityLabel::kPrimary;
   if (options.priority_label != StubArbiterInfo::PriorityLabel::kUnknown) {
@@ -240,7 +240,7 @@ absl::Status QueryEngineWithTransportArbiter::ExecuteOnRedfishInterface(
 
   StubArbiterInfo::Metrics metrics = transport_arbiter_->Execute(
       [&callback = options.callback](
-          ecclesia::RedfishInterface *redfish_interface,
+          ecclesia::RedfishInterface* redfish_interface,
           StubArbiterInfo::PriorityLabel label) -> absl::Status {
         return callback(*redfish_interface);
       },
@@ -250,7 +250,7 @@ absl::Status QueryEngineWithTransportArbiter::ExecuteOnRedfishInterface(
 
 ecclesia::QueryIdToResult QueryEngineWithTransportArbiter::ExecuteRedpathQuery(
     absl::Span<const absl::string_view> query_ids,
-    const RedpathQueryOptions &options) {
+    const RedpathQueryOptions& options) {
   ecclesia::QueryIdToResult query_id_to_result;
   for (const absl::string_view query_id : query_ids) {
     auto it = id_to_redpath_query_plans_.find(query_id);
@@ -285,7 +285,7 @@ ecclesia::QueryIdToResult QueryEngineWithTransportArbiter::ExecuteRedpathQuery(
       absl::flat_hash_map<StubArbiterInfo::PriorityLabel, ecclesia::ErrorCode>
           transport_status;
       StubArbiterInfo::Metrics metrics = transport_arbiter_->Execute(
-          [&](ecclesia::RedfishInterface *redfish_interface,
+          [&](ecclesia::RedfishInterface* redfish_interface,
               StubArbiterInfo::PriorityLabel label) -> absl::Status {
             ecclesia::QueryPlannerIntf::QueryExecutionResult local_result =
                 it->second->Run(

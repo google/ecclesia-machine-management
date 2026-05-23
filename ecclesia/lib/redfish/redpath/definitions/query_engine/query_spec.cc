@@ -37,9 +37,9 @@
 namespace ecclesia {
 
 absl::StatusOr<QuerySpec> QuerySpec::FromQueryContext(
-    const QueryContext &query_context) {
+    const QueryContext& query_context) {
   QuerySpec query_spec;
-  for (const EmbeddedFile &query_file : query_context.query_files) {
+  for (const EmbeddedFile& query_file : query_context.query_files) {
     DelliciusQuery query;
 
       if (!google::protobuf::TextFormat::ParseFromString(std::string(query_file.data),
@@ -55,7 +55,7 @@ absl::StatusOr<QuerySpec> QuerySpec::FromQueryContext(
           absl::StrCat("Duplicate query for: ", query_id));
     }
   }
-  for (const EmbeddedFile &query_rule : query_context.query_rules) {
+  for (const EmbeddedFile& query_rule : query_context.query_rules) {
     QueryRules rules;
     if (!google::protobuf::TextFormat::ParseFromString(std::string(query_rule.data),
         &rules)) {
@@ -63,7 +63,7 @@ absl::StatusOr<QuerySpec> QuerySpec::FromQueryContext(
           absl::StrCat("Cannot get RedPath query rules from embedded file ",
                        query_rule.name));
     }
-    for (auto &[query_id, rule] : *rules.mutable_query_id_to_params_rule()) {
+    for (auto& [query_id, rule] : *rules.mutable_query_id_to_params_rule()) {
       if (auto it = query_spec.query_id_to_info.find(query_id);
           it != query_spec.query_id_to_info.end()) {
         it->second.rule = std::move(rule);
@@ -76,13 +76,13 @@ absl::StatusOr<QuerySpec> QuerySpec::FromQueryContext(
 
 absl::StatusOr<QuerySpec> QuerySpec::FromQueryFiles(
     absl::Span<const std::string> query_files,
-    absl::Span<const std::string> query_rules, const Clock *clock) {
+    absl::Span<const std::string> query_rules, const Clock* clock) {
   std::vector<EmbeddedFile> query_files_embedded;
   std::vector<EmbeddedFile> query_rules_embedded;
 
   std::vector<std::string> query_files_data;
   query_files_data.reserve(query_files.size());
-  for (const std::string &query_file : query_files) {
+  for (const std::string& query_file : query_files) {
     ApifsFile query_data_file(query_file);
     ECCLESIA_ASSIGN_OR_RETURN(std::string query_data, query_data_file.Read());
     query_files_data.push_back(std::move(query_data));
@@ -92,7 +92,7 @@ absl::StatusOr<QuerySpec> QuerySpec::FromQueryFiles(
 
   std::vector<std::string> query_rules_data;
   query_rules_data.reserve(query_rules.size());
-  for (const std::string &query_rule : query_rules) {
+  for (const std::string& query_rule : query_rules) {
     ApifsFile query_rule_file(query_rule);
     ECCLESIA_ASSIGN_OR_RETURN(std::string rule_data, query_rule_file.Read());
     query_rules_data.push_back(std::move(rule_data));

@@ -62,7 +62,6 @@ namespace ecclesia {
 namespace {
 
 using ::testing::_;
-using ::testing::Invoke;
 using ::testing::IsEmpty;
 using ::testing::NotNull;
 using ::testing::Return;
@@ -72,10 +71,10 @@ constexpr absl::string_view kRootDir = "/test/";
 constexpr absl::string_view kQueryResultDir = "/test/query_result/";
 
 MATCHER_P(ContainsSystemIdAsQueryVariable, expected_id, "") {
-  for (const auto &[query_id, query_vars] : arg.query_arguments) {
-    for (const auto &var_value : query_vars.variable_values()) {
+  for (const auto& [query_id, query_vars] : arg.query_arguments) {
+    for (const auto& var_value : query_vars.variable_values()) {
       if (var_value.name() == kNodeLocalSystemIdVariableName) {
-        const auto &values = var_value.values();
+        const auto& values = var_value.values();
         return std::find(values.begin(), values.end(), expected_id) !=
                values.end();
       }
@@ -90,11 +89,11 @@ struct QueryRouterCallbacks {
   QueryRouterIntf::ServerInfo server_info;
 
   template <typename H>
-  friend H AbslHashValue(H h, const QueryRouterCallbacks &e) {
+  friend H AbslHashValue(H h, const QueryRouterCallbacks& e) {
     return H::combine(std::move(h), e.query_id, e.server_info);
   }
 
-  bool operator==(const QueryRouterCallbacks &other) const {
+  bool operator==(const QueryRouterCallbacks& other) const {
     return std::tie(query_id, server_info) ==
            std::tie(other.query_id, other.server_info);
   }
@@ -204,7 +203,7 @@ class QueryRouterTest : public testing::Test {
 
   template <typename T>
   void CreateFile(absl::string_view dir, absl::string_view filename,
-                  const T &item) {
+                  const T& item) {
     std::string contents;
     google::protobuf::TextFormat::PrintToString(item, &contents);
     fs_.WriteFile(absl::StrCat(dir, filename), contents);
@@ -282,9 +281,9 @@ TEST_P(QueryRouterSuccessTest, CreateSuccess) {
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &params,
+          [&](const QuerySpec&, const QueryEngineParams& params,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
@@ -304,8 +303,8 @@ TEST_P(QueryRouterSuccessTest, CreateSuccess) {
 
     query_router->ExecuteQuery(
         {"query_a"},
-        [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                              const QueryResult &result) {
+        [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                              const QueryResult& result) {
           auto it = expected_callbacks.find(
               QueryRouterCallbacks{result.query_id(), server_info});
           ASSERT_NE(it, expected_callbacks.end());
@@ -323,8 +322,8 @@ TEST_P(QueryRouterSuccessTest, CreateSuccess) {
 
     query_router->ExecuteQuery(
         {"query_b"},
-        [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                              const QueryResult &result) {
+        [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                              const QueryResult& result) {
           auto it = expected_callbacks.find(
               QueryRouterCallbacks{result.query_id(), server_info});
           ASSERT_NE(it, expected_callbacks.end());
@@ -348,8 +347,8 @@ TEST_P(QueryRouterSuccessTest, CreateSuccess) {
 
     query_router->ExecuteQuery(
         {"query_c"},
-        [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                              const QueryResult &result) {
+        [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                              const QueryResult& result) {
           auto it = expected_callbacks.find(
               QueryRouterCallbacks{result.query_id(), server_info});
           ASSERT_NE(it, expected_callbacks.end());
@@ -382,8 +381,8 @@ TEST_P(QueryRouterSuccessTest, CreateSuccess) {
 
     query_router->ExecuteQuery(
         {"query_a", "query_b", "query_c"},
-        [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                              const QueryResult &result) {
+        [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                              const QueryResult& result) {
           auto it = expected_callbacks.find(
               QueryRouterCallbacks{result.query_id(), server_info});
           ASSERT_NE(it, expected_callbacks.end());
@@ -456,9 +455,9 @@ TEST_F(QueryRouterTest, CreateSuccessWithSystemIdQueryRouterTest) {
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &params,
+          [&](const QuerySpec&, const QueryEngineParams& params,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
@@ -501,9 +500,9 @@ TEST_F(QueryRouterTest, DisjointServerAndQuerySpec) {
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -514,8 +513,8 @@ TEST_F(QueryRouterTest, DisjointServerAndQuerySpec) {
     absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {};
     query_router->ExecuteQuery(
         {"query_a"},
-        [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                              const QueryResult &result) {
+        [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                              const QueryResult& result) {
           auto it = expected_callbacks.find(
               QueryRouterCallbacks{result.query_id(), server_info});
           ASSERT_NE(it, expected_callbacks.end());
@@ -558,9 +557,9 @@ TEST_F(QueryRouterTest, QueryAndServerSpecPartialIntersect) {
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -575,8 +574,8 @@ TEST_F(QueryRouterTest, QueryAndServerSpecPartialIntersect) {
 
     query_router->ExecuteQuery(
         {"query_a"},
-        [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                              const QueryResult &result) {
+        [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                              const QueryResult& result) {
           auto it = expected_callbacks.find(
               QueryRouterCallbacks{result.query_id(), server_info});
           ASSERT_NE(it, expected_callbacks.end());
@@ -608,9 +607,9 @@ TEST_F(QueryRouterTest, InvalidQuerySpec) {
 
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
-                  [&](const QuerySpec &, const QueryEngineParams &,
+                  [&](const QuerySpec&, const QueryEngineParams&,
                       std::unique_ptr<IdAssigner>,
-                      const RedpathNormalizer::QueryIdToNormalizerMap &)
+                      const RedpathNormalizer::QueryIdToNormalizerMap&)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
@@ -639,9 +638,9 @@ TEST_F(QueryRouterTest, UnsupportedQueryPattern) {
 
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
-                  [&](const QuerySpec &, const QueryEngineParams &,
+                  [&](const QuerySpec&, const QueryEngineParams&,
                       std::unique_ptr<IdAssigner>,
-                      const RedpathNormalizer::QueryIdToNormalizerMap &)
+                      const RedpathNormalizer::QueryIdToNormalizerMap&)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
@@ -674,9 +673,9 @@ TEST_P(QueryRouterFailureTest, WithoutMaxThreadValue) {
   server_specs.push_back(GetServerSpec("server_1"));
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
-                  [&](const QuerySpec &, const QueryEngineParams &,
+                  [&](const QuerySpec&, const QueryEngineParams&,
                       std::unique_ptr<IdAssigner>,
-                      const RedpathNormalizer::QueryIdToNormalizerMap &)
+                      const RedpathNormalizer::QueryIdToNormalizerMap&)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     return FileBackedQueryEngine::Create(
                         fs_.GetTruePath(kQueryResultDir));
@@ -710,9 +709,9 @@ TEST_F(QueryRouterTest, QueryEngineCreateFailure) {
 
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
-                  [&](const QuerySpec &, const QueryEngineParams &,
+                  [&](const QuerySpec&, const QueryEngineParams&,
                       std::unique_ptr<IdAssigner>,
-                      const RedpathNormalizer::QueryIdToNormalizerMap &)
+                      const RedpathNormalizer::QueryIdToNormalizerMap&)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     return absl::InternalError("Failed to create QueryEngine");
                   },
@@ -746,9 +745,9 @@ TEST_F(QueryRouterTest, CheckFeatureFlags) {
 
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
-                  [&](const QuerySpec &, const QueryEngineParams &params,
+                  [&](const QuerySpec&, const QueryEngineParams& params,
                       std::unique_ptr<IdAssigner>,
-                      const RedpathNormalizer::QueryIdToNormalizerMap &)
+                      const RedpathNormalizer::QueryIdToNormalizerMap&)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     EXPECT_TRUE(params.features.enable_redfish_metrics());
                     EXPECT_TRUE(params.features.fail_on_first_error());
@@ -787,9 +786,9 @@ TEST_F(QueryRouterTest, CheckLocationStableIdConfiguration) {
 
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
-                  [&](const QuerySpec &, const QueryEngineParams &params,
+                  [&](const QuerySpec&, const QueryEngineParams& params,
                       std::unique_ptr<IdAssigner>,
-                      const RedpathNormalizer::QueryIdToNormalizerMap &)
+                      const RedpathNormalizer::QueryIdToNormalizerMap&)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     EXPECT_EQ(params.stable_id_type,
                               ecclesia::QueryEngineParams::RedfishStableIdType::
@@ -834,9 +833,9 @@ TEST_F(QueryRouterTest, CheckLocationDerivedStableIdConfiguration) {
 
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
-                  [&](const QuerySpec &, const QueryEngineParams &params,
+                  [&](const QuerySpec&, const QueryEngineParams& params,
                       std::unique_ptr<IdAssigner>,
-                      const RedpathNormalizer::QueryIdToNormalizerMap &)
+                      const RedpathNormalizer::QueryIdToNormalizerMap&)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     EXPECT_EQ(params.stable_id_type,
                               ecclesia::QueryEngineParams::RedfishStableIdType::
@@ -914,9 +913,9 @@ TEST_F(QueryRouterTest, CheckStableIdConfigurationInheritsFromServerSpec) {
 
   EXPECT_THAT(QueryRouter::Create(
                   router_spec, std::move(server_specs),
-                  [&](const QuerySpec &, const QueryEngineParams &params,
+                  [&](const QuerySpec&, const QueryEngineParams& params,
                       std::unique_ptr<IdAssigner>,
-                      const RedpathNormalizer::QueryIdToNormalizerMap &)
+                      const RedpathNormalizer::QueryIdToNormalizerMap&)
                       -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
                     EXPECT_EQ(params.stable_id_type,
                               ecclesia::QueryEngineParams::RedfishStableIdType::
@@ -955,9 +954,9 @@ TEST_F(QueryRouterTest, GetRedfishInterfaceSuccess) {
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &params,
+          [&](const QuerySpec&, const QueryEngineParams& params,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
@@ -1003,9 +1002,9 @@ TEST_F(QueryRouterTest, GetRedfishInterfaceFailure) {
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &params,
+          [&](const QuerySpec&, const QueryEngineParams& params,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
@@ -1061,9 +1060,9 @@ TEST_F(QueryRouterTest, ExecuteOnRedfishInterfaceSuccess) {
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &params,
+          [&](const QuerySpec&, const QueryEngineParams& params,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
@@ -1108,9 +1107,9 @@ TEST_F(QueryRouterTest, ExecuteOnRedfishInterfaceFailure) {
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &params,
+          [&](const QuerySpec&, const QueryEngineParams& params,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             EXPECT_FALSE(params.features.enable_redfish_metrics());
             EXPECT_TRUE(params.features.fail_on_first_error());
@@ -1210,9 +1209,9 @@ TEST_F(QueryRouterTest, QueryRouterQueryEngineCancellationTest) {
       query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &params,
+          [&](const QuerySpec&, const QueryEngineParams& params,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return std::move(mock_qe);
           },
@@ -1223,8 +1222,8 @@ TEST_F(QueryRouterTest, QueryRouterQueryEngineCancellationTest) {
 
   query_router->ExecuteQuery(
       {"query_a"},
-      [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                            const QueryResult &result) {
+      [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                            const QueryResult& result) {
         auto it = expected_callbacks.find(result.query_id());
         ASSERT_NE(it, expected_callbacks.end());
         ASSERT_EQ(it->second, result.status().error_code());
@@ -1274,35 +1273,33 @@ TEST_F(QueryRouterTest, QueryRouterCancellationReturnsCancelledError) {
   QueryIdToResult query_result;
   query_result.mutable_results()->insert(
       {std::string(query_id), QueryResult()});
-  query_result.mutable_results()->at(query_id).set_query_id(
-      std::string(query_id));
+  query_result.mutable_results()->at(query_id).set_query_id(query_id);
   query_result.mutable_results()->at(query_id).mutable_status()->set_error_code(
       ecclesia::ERROR_NONE);
-  EXPECT_CALL(*mock_qe, ExecuteRedpathQuery)
-      .WillOnce(Invoke([&](auto, const auto &) {
-        if (!enable_query_cancellation_notification.HasBeenNotified()) {
-          enable_query_cancellation_notification.Notify();
-        }
-        disable_query_cancellation_notification.WaitForNotification();
-        return query_result;
-      }));
+  EXPECT_CALL(*mock_qe, ExecuteRedpathQuery).WillOnce([&](auto, const auto&) {
+    if (!enable_query_cancellation_notification.HasBeenNotified()) {
+      enable_query_cancellation_notification.Notify();
+    }
+    disable_query_cancellation_notification.WaitForNotification();
+    return query_result;
+  });
 
   EXPECT_CALL(*mock_qe, CancelQueryExecution(_))
-      .WillOnce(Invoke([&](absl::Notification *notification) {
+      .WillOnce([&](absl::Notification* notification) {
         // Notifies the main thread that query cancellation has been initiated.
         if (!query_cancellation_notification.HasBeenNotified()) {
           query_cancellation_notification.Notify();
         }
-      }));
+      });
 
   std::unique_ptr<QueryRouterIntf> query_router;
   ECCLESIA_ASSIGN_OR_FAIL(
       query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &params,
+          [&](const QuerySpec&, const QueryEngineParams& params,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return std::move(mock_qe);
           },
@@ -1315,8 +1312,8 @@ TEST_F(QueryRouterTest, QueryRouterCancellationReturnsCancelledError) {
   std::thread successful_query_thread([&]() {
     query_router->ExecuteQuery(
         {"query_a"}, [&expected_callbacks_success](
-                         const QueryRouter::ServerInfo &server_info,
-                         const QueryResult &result) {
+                         const QueryRouter::ServerInfo& server_info,
+                         const QueryResult& result) {
           auto it = expected_callbacks_success.find(result.query_id());
           ASSERT_NE(it, expected_callbacks_success.end());
           ASSERT_EQ(it->second, result.status().error_code());
@@ -1343,8 +1340,8 @@ TEST_F(QueryRouterTest, QueryRouterCancellationReturnsCancelledError) {
   // This "Execution" should return cancelled error.
   query_router->ExecuteQuery(
       {"query_a"},
-      [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                            const QueryResult &result) {
+      [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                            const QueryResult& result) {
         auto it = expected_callbacks.find(result.query_id());
         ASSERT_NE(it, expected_callbacks.end());
         ASSERT_EQ(it->second, result.status().error_code());
@@ -1452,9 +1449,9 @@ TEST_F(QueryRouterTest,
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -1472,8 +1469,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -1503,8 +1500,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -1535,8 +1532,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -1567,8 +1564,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -1599,8 +1596,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -1631,8 +1628,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -1663,8 +1660,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -1695,8 +1692,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -1727,8 +1724,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -1773,9 +1770,9 @@ TEST_F(QueryRouterTest,
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -1792,8 +1789,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -1823,8 +1820,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -1854,8 +1851,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -1909,9 +1906,9 @@ TEST_F(QueryRouterTest,
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -1929,8 +1926,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -1961,8 +1958,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -1993,8 +1990,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2048,9 +2045,9 @@ TEST_F(QueryRouterTest,
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -2068,8 +2065,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -2100,8 +2097,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2131,8 +2128,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2190,9 +2187,9 @@ TEST_F(QueryRouterTest,
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -2210,8 +2207,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -2242,8 +2239,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -2274,8 +2271,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2306,8 +2303,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2338,8 +2335,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2386,9 +2383,9 @@ TEST_F(
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -2405,8 +2402,8 @@ TEST_F(
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2436,8 +2433,8 @@ TEST_F(
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2467,8 +2464,8 @@ TEST_F(
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2523,9 +2520,9 @@ TEST_F(QueryRouterTest,
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -2543,8 +2540,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2575,8 +2572,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -2607,8 +2604,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2663,9 +2660,9 @@ TEST_F(QueryRouterTest,
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -2683,8 +2680,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -2715,8 +2712,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2746,8 +2743,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2805,9 +2802,9 @@ TEST_F(QueryRouterTest,
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -2825,8 +2822,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -2857,8 +2854,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -2889,8 +2886,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2921,8 +2918,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -2953,8 +2950,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -3001,9 +2998,9 @@ TEST_F(
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -3020,8 +3017,8 @@ TEST_F(
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -3051,8 +3048,8 @@ TEST_F(
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -3082,8 +3079,8 @@ TEST_F(
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -3138,9 +3135,9 @@ TEST_F(QueryRouterTest,
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -3158,8 +3155,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -3190,8 +3187,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -3222,8 +3219,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -3278,9 +3275,9 @@ TEST_F(QueryRouterTest,
       auto query_router,
       QueryRouter::Create(
           router_spec, std::move(server_specs),
-          [&](const QuerySpec &, const QueryEngineParams &,
+          [&](const QuerySpec&, const QueryEngineParams&,
               std::unique_ptr<IdAssigner>,
-              const RedpathNormalizer::QueryIdToNormalizerMap &)
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
               -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
             return FileBackedQueryEngine::Create(
                 fs_.GetTruePath(kQueryResultDir));
@@ -3298,8 +3295,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_EQ(it, expected_callbacks.end());
@@ -3330,8 +3327,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());
@@ -3361,8 +3358,8 @@ TEST_F(QueryRouterTest,
     QueryRouterIntf::RedpathQueryOptions options = {
         .query_ids = query_ids,
         .callback =
-            [&expected_callbacks](const QueryRouter::ServerInfo &server_info,
-                                  const QueryResult &result) {
+            [&expected_callbacks](const QueryRouter::ServerInfo& server_info,
+                                  const QueryResult& result) {
               auto it = expected_callbacks.find(
                   QueryRouterCallbacks{result.query_id(), server_info});
               ASSERT_NE(it, expected_callbacks.end());

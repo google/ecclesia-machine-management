@@ -68,7 +68,7 @@ GetAdditionalProperties() {
   auto add_property = [&](absl::string_view name,
                           std::vector<std::string> properties,
                           bool is_collection = false) {
-    for (std::string &property : properties) {
+    for (std::string& property : properties) {
       DelliciusQuery::Subquery::RedfishProperty new_prop;
       new_prop.set_name(std::string(name));
       new_prop.set_property(std::move(property));
@@ -108,8 +108,8 @@ GetAdditionalProperties() {
 }
 
 absl::Status GetCollectionPropertyFromRedfishObject(
-    const DelliciusQuery::Subquery::RedfishProperty &property,
-    const nlohmann::json &json_obj, QueryValue &query_value) {
+    const DelliciusQuery::Subquery::RedfishProperty& property,
+    const nlohmann::json& json_obj, QueryValue& query_value) {
   if (!json_obj.is_array()) {
     return absl::InvalidArgumentError(
         absl::StrCat("Tried to get array property from non array json object: ",
@@ -119,12 +119,12 @@ absl::Status GetCollectionPropertyFromRedfishObject(
     case DelliciusQuery::Subquery::RedfishProperty::STRING: {
       if (!std::all_of(
               json_obj.begin(), json_obj.end(),
-              [](const nlohmann::json &el) { return el.is_string(); })) {
+              [](const nlohmann::json& el) { return el.is_string(); })) {
         return absl::InvalidArgumentError(
             absl::StrCat("Error querying property ", property.property(),
                          " as string array from object: ", json_obj.dump()));
       }
-      for (const std::string &value :
+      for (const std::string& value :
            json_obj.get<std::vector<std::string>>()) {
         query_value.mutable_list_value()->add_values()->set_string_value(value);
       }
@@ -133,7 +133,7 @@ absl::Status GetCollectionPropertyFromRedfishObject(
     case DelliciusQuery::Subquery::RedfishProperty::BOOLEAN: {
       if (!std::all_of(
               json_obj.begin(), json_obj.end(),
-              [](const nlohmann::json &el) { return el.is_boolean(); })) {
+              [](const nlohmann::json& el) { return el.is_boolean(); })) {
         return absl::InvalidArgumentError(
             absl::StrCat("Error querying property ", property.property(),
                          " as boolean array from object: ", json_obj.dump()));
@@ -146,7 +146,7 @@ absl::Status GetCollectionPropertyFromRedfishObject(
     case DelliciusQuery::Subquery::RedfishProperty::DOUBLE: {
       if (!std::all_of(
               json_obj.begin(), json_obj.end(),
-              [](const nlohmann::json &el) { return el.is_number(); })) {
+              [](const nlohmann::json& el) { return el.is_number(); })) {
         return absl::InvalidArgumentError(
             absl::StrCat("Error querying property ", property.property(),
                          " as number array from object: ", json_obj.dump()));
@@ -159,7 +159,7 @@ absl::Status GetCollectionPropertyFromRedfishObject(
     case DelliciusQuery::Subquery::RedfishProperty::INT64: {
       if (!std::all_of(
               json_obj.begin(), json_obj.end(),
-              [](const nlohmann::json &el) { return el.is_number(); })) {
+              [](const nlohmann::json& el) { return el.is_number(); })) {
         return absl::InvalidArgumentError(
             absl::StrCat("Error querying property ", property.property(),
                          " as number array from object: ", json_obj.dump()));
@@ -170,7 +170,7 @@ absl::Status GetCollectionPropertyFromRedfishObject(
       break;
     }
     case DelliciusQuery::Subquery::RedfishProperty::DATE_TIME_OFFSET: {
-      for (const auto &json_value : json_obj) {
+      for (const auto& json_value : json_obj) {
         if (!json_value.is_string()) {
           return absl::InvalidArgumentError(
               absl::StrCat("Error querying property ", property.property(),
@@ -178,9 +178,8 @@ absl::Status GetCollectionPropertyFromRedfishObject(
                            json_obj.dump()));
         }
         absl::Time timevalue;
-        if (absl::ParseTime(kRFC3339DateTime,
-                            json_value.get<std::string>(), &timevalue,
-                            nullptr)) {
+        if (absl::ParseTime(kRFC3339DateTime, json_value.get<std::string>(),
+                            &timevalue, nullptr)) {
           absl::StatusOr<google::protobuf::Timestamp> timestamp =
               AbslTimeToProtoTime(timevalue);
           if (timestamp.ok()) {
@@ -199,8 +198,8 @@ absl::Status GetCollectionPropertyFromRedfishObject(
   return absl::OkStatus();
 }
 absl::StatusOr<QueryValue> GetPropertyFromRedfishObject(
-    const nlohmann::json &redfish_content,
-    const DelliciusQuery::Subquery::RedfishProperty &property) {
+    const nlohmann::json& redfish_content,
+    const DelliciusQuery::Subquery::RedfishProperty& property) {
   // A property requirement can specify nested nodes like
   // 'Thresholds.UpperCritical.Reading' or a simple property like 'Name'.
   // We will split the property name to ensure we process all node names in
@@ -339,12 +338,12 @@ RedpathNormalizerImplDefault::RedpathNormalizerImplDefault()
     : additional_properties_(GetAdditionalProperties()) {}
 
 absl::Status RedpathNormalizerImplDefault::Normalize(
-    const ecclesia::RedfishObject &redfish_object,
-    const DelliciusQuery::Subquery &subquery,
-    ecclesia::QueryResultData &data_set_local,
-    const RedpathNormalizerOptions &options) {
+    const ecclesia::RedfishObject& redfish_object,
+    const DelliciusQuery::Subquery& subquery,
+    ecclesia::QueryResultData& data_set_local,
+    const RedpathNormalizerOptions& options) {
   const nlohmann::json json_content = redfish_object.GetContentAsJson();
-  for (const DelliciusQuery::Subquery::RedfishProperty &property :
+  for (const DelliciusQuery::Subquery::RedfishProperty& property :
        subquery.properties()) {
     absl::StatusOr<QueryValue> property_out =
         GetPropertyFromRedfishObject(json_content, property);
@@ -382,7 +381,7 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
 
   // We add additional properties to populate stable id based on Redfish
   // Location.
-  for (const DelliciusQuery::Subquery::RedfishProperty &property :
+  for (const DelliciusQuery::Subquery::RedfishProperty& property :
        additional_properties_) {
     auto property_out = GetPropertyFromRedfishObject(json_content, property);
     if (!property_out.ok()) {
@@ -425,10 +424,10 @@ absl::Status RedpathNormalizerImplDefault::Normalize(
 }
 
 absl::Status RedpathNormalizerImplAddDevpath::Normalize(
-    const RedfishObject &redfish_object,
-    const DelliciusQuery::Subquery &subquery,
-    ecclesia::QueryResultData &data_set_local,
-    const RedpathNormalizerOptions &options) {
+    const RedfishObject& redfish_object,
+    const DelliciusQuery::Subquery& subquery,
+    ecclesia::QueryResultData& data_set_local,
+    const RedpathNormalizerOptions& options) {
   absl::MutexLock l(&topology_mu_);
   QueryResultDataReader reader(&data_set_local);
   absl::StatusOr<QueryValueReader> query_value_reader =
@@ -457,10 +456,10 @@ absl::Status RedpathNormalizerImplAddDevpath::Normalize(
 }
 
 absl::Status RedpathNormalizerImplAddMachineBarepath::Normalize(
-    const RedfishObject &redfish_object,
-    const DelliciusQuery::Subquery &subquery,
-    ecclesia::QueryResultData &data_set_local,
-    const RedpathNormalizerOptions &options) {
+    const RedfishObject& redfish_object,
+    const DelliciusQuery::Subquery& subquery,
+    ecclesia::QueryResultData& data_set_local,
+    const RedpathNormalizerOptions& options) {
   QueryResultDataReader reader(&data_set_local);
   absl::StatusOr<QueryValueReader> identifier_reader =
       reader.Get(kIdentifierTag);

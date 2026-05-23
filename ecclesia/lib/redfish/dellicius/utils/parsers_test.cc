@@ -93,9 +93,8 @@ TEST(ParserTest, ValidQueryRulesParseCorrectly) {
   EXPECT_THAT(
       query_to_params,
       IsOkAndHolds(UnorderedElementsAre(Pair(
-          "Assembly",
-          UnorderedElementsAre(Pair(
-              "/Systems", GetParamsEq(test_params.ToString())))))));
+          "Assembly", UnorderedElementsAre(Pair(
+                          "/Systems", GetParamsEq(test_params.ToString())))))));
 }
 
 TEST(ParserTest, InvalidTopConfigurationParseFail) {

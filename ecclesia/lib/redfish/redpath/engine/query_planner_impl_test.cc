@@ -138,7 +138,7 @@ class QueryPlannerTestRunner : public ::testing::Test {
   }
 
   absl::StatusOr<QueryExecutionResult> PlanAndExecuteQuery(
-      const DelliciusQuery &query,
+      const DelliciusQuery& query,
       QueryPlanner::ExecutionMode execution_mode =
           QueryPlanner::ExecutionMode::kFailOnFirstError) {
     CHECK(server_ != nullptr && intf_ != nullptr) << "Test parameters not set!";
@@ -174,7 +174,7 @@ class QueryPlannerGrpcTestRunner : public ::testing::Test {
                                    {.clock = &clock_},
                                    options.GetChannelCredentials());
     CHECK_OK(transport.status());
-    auto cache_factory = [this](RedfishTransport *transport) {
+    auto cache_factory = [this](RedfishTransport* transport) {
       return std::make_unique<ecclesia::TimeBasedCache>(transport, &clock_,
                                                         cache_duration_);
     };
@@ -199,11 +199,10 @@ class MockRedfishObject : public RedfishObject {
   MOCK_METHOD(nlohmann::json, GetContentAsJson, (), (const, override));
   MOCK_METHOD(std::string, DebugString, (), (const, override));
   MOCK_METHOD(void, PrintDebugString, (), (const, override));
-  MOCK_METHOD(
-      void, ForEachProperty,
-      (absl::FunctionRef<RedfishIterReturnValue(absl::string_view key,
-                                                RedfishVariant value)>),
-      (override));
+  MOCK_METHOD(void, ForEachProperty,
+              (absl::FunctionRef<RedfishIterReturnValue(absl::string_view key,
+                                                        RedfishVariant value)>),
+              (override));
   // Gmock does not support operator[] overloading, so we proxy with at().
   MOCK_METHOD(RedfishVariant, at, (absl::string_view), (const));
   RedfishVariant operator[](absl::string_view node_name) const override {
@@ -217,9 +216,7 @@ class MockRedfishIterable : public RedfishIterable {
   MOCK_METHOD(bool, Empty, (), (override));
   // Gmock does not support operator[] overloading, so we proxy with at().
   MOCK_METHOD(RedfishVariant, at, (int), (const));
-  RedfishVariant operator[](int index) const override {
-    return at(index);
-  }
+  RedfishVariant operator[](int index) const override { return at(index); }
 };
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerExecutesQueryCorrectly) {
@@ -919,7 +916,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFreshnessFromQuery) {
   SetTestParams("indus_hmb_shim/mockup.shar");
   size_t chassis_query_count = 0;
   server_->AddHttpGetHandler(
-      "/redfish/v1/Chassis/chassis", [&](ServerRequestInterface *req) {
+      "/redfish/v1/Chassis/chassis", [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(R"json({
@@ -935,7 +932,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFreshnessFromQuery) {
 
   size_t assembly_query_count = 0;
   server_->AddHttpGetHandler(
-      "/redfish/v1/Chassis/chassis/Assembly", [&](ServerRequestInterface *req) {
+      "/redfish/v1/Chassis/chassis/Assembly", [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         assembly_query_count++;
@@ -1000,7 +997,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesExpandFromRules) {
   bool expand_requested = false;
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis?$expand=.($levels=1)",
-      [&](ServerRequestInterface *req) {
+      [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         expand_requested = true;
@@ -1051,7 +1048,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterFromRules) {
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/"
       "Sensors?$filter=Reading%20gt%2040%20or%20Reading%20lt%205",
-      [&](ServerRequestInterface *req) {
+      [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         filter_requested1 = true;
@@ -1061,7 +1058,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterFromRules) {
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/"
       "Sensors?$filter=Reading%20lt%205%20or%20Reading%20gt%2040",
-      [&](ServerRequestInterface *req) {
+      [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         filter_requested2 = true;
@@ -1116,7 +1113,7 @@ TEST_F(QueryPlannerTestRunner,
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/"
       "Sensors?$filter=Id%20ge%2040%20or%20Id%20lt%205",
-      [&](ServerRequestInterface *req) {
+      [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         filter_requested1 = true;
@@ -1126,7 +1123,7 @@ TEST_F(QueryPlannerTestRunner,
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/"
       "Sensors?$filter=Id%20lt%205%20or%20Id%20ge%2040",
-      [&](ServerRequestInterface *req) {
+      [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         filter_requested2 = true;
@@ -1874,10 +1871,9 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerRunWithoutRedfishInterface) {
   EXPECT_TRUE(result.query_result.has_status());
   EXPECT_THAT(result.query_result.status().error_code(),
               ecclesia::ErrorCode::ERROR_INTERNAL);
-  EXPECT_THAT(
-      result.query_result.status().errors(),
-      UnorderedElementsAre("Redfish interface is not set before query "
-                           "execution"));
+  EXPECT_THAT(result.query_result.status().errors(),
+              UnorderedElementsAre("Redfish interface is not set before query "
+                                   "execution"));
 }
 
 DelliciusQuery GetSubscriptionQuery() {
@@ -1966,7 +1962,7 @@ TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
                   ecclesia::EqualsProto(expect_query_result)));
 
   // Verify Subscription context is valid.
-  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
+  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext>& context =
       result.subscription_context;
   EXPECT_THAT(context, NotNull());
 
@@ -1984,7 +1980,7 @@ TEST_F(QueryPlannerTestRunner, ReturnsCorrectSubscriptionContext) {
 
   bool has_sensor_config = false;
   bool has_assembly_config = false;
-  for (const auto &config : context->subscription_configs) {
+  for (const auto& config : context->subscription_configs) {
     // Check if context contains config for `Sensors` subquery.
     if (config.redpath == kSensorRedPath) {
       has_sensor_config = true;
@@ -2137,7 +2133,7 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryAfterEvent) {
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result =
       qp->Run({.variables = args1, .query_type = QueryType::kSubscription});
-  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
+  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext>& context =
       result.subscription_context;
   ASSERT_THAT(context, NotNull());
 
@@ -2317,7 +2313,7 @@ TEST_F(QueryPlannerTestRunner,
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result =
       qp->Run({.variables = args1, .query_type = QueryType::kSubscription});
-  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
+  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext>& context =
       result.subscription_context;
   ASSERT_THAT(context, NotNull());
 
@@ -2434,7 +2430,7 @@ TEST_F(QueryPlannerTestRunner,
       .variables = args1,
       .query_type = QueryType::kSubscription,
   });
-  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
+  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext>& context =
       result.subscription_context;
   ASSERT_THAT(context, NotNull());
 
@@ -2487,7 +2483,7 @@ TEST_F(QueryPlannerTestRunner, CannotNormalizeInvalidEvent) {
       .variables = args1,
       .query_type = QueryType::kSubscription,
   });
-  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
+  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext>& context =
       result.subscription_context;
   ASSERT_THAT(context, NotNull());
 
@@ -2549,7 +2545,7 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryWithInjectedRedfishInterface) {
   QueryExecutionResult result = qp->Run({.variables = args1,
                                          .query_type = QueryType::kSubscription,
                                          .redfish_interface = intf_.get()});
-  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
+  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext>& context =
       result.subscription_context;
   ASSERT_THAT(context, NotNull());
 
@@ -2651,7 +2647,7 @@ TEST_F(QueryPlannerTestRunner, ResumesQueryWithoutRedfishInterfaceError) {
   QueryExecutionResult result = qp->Run({.variables = args1,
                                          .query_type = QueryType::kSubscription,
                                          .redfish_interface = intf_.get()});
-  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext> &context =
+  const std::unique_ptr<QueryPlannerIntf::SubscriptionContext>& context =
       result.subscription_context;
   ASSERT_THAT(context, NotNull());
 
@@ -2778,7 +2774,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFilterForUriFromRules) {
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/Sensors/"
       "indus_cpu1_pwmon?$filter=ReadingType%20eq%20Power",
-      [&](ServerRequestInterface *req) {
+      [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         filter_requested1 = true;
@@ -2856,7 +2852,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
 
   SetTestParams("indus_hmb_shim/mockup.shar");
   server_->AddHttpGetHandler("/redfish/v1/embedded/logical/resource1",
-                             [&](ServerRequestInterface *req) {
+                             [&](ServerRequestInterface* req) {
                                SetContentType(req, "application/json");
                                req->OverwriteResponseHeader("OData-Version",
                                                             "4.0");
@@ -2878,7 +2874,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerGeneratesStableId) {
                              });
 
   server_->AddHttpGetHandler("/redfish/v1/embedded/logical/resource2",
-                             [&](ServerRequestInterface *req) {
+                             [&](ServerRequestInterface* req) {
                                SetContentType(req, "application/json");
                                req->OverwriteResponseHeader("OData-Version",
                                                             "4.0");
@@ -4581,37 +4577,37 @@ struct GetChildUriTestCase {
 };
 
 class GetChildUriTest : public QueryPlannerTestRunner,
-    public WithParamInterface<GetChildUriTestCase> {
+                        public WithParamInterface<GetChildUriTestCase> {
  public:
   static std::string GetTestName(
-      const TestParamInfo<GetChildUriTestCase> &info) {
+      const TestParamInfo<GetChildUriTestCase>& info) {
     return info.param.test_name;
   }
 };
 
 TEST_P(GetChildUriTest, GetChildUriReturnsCorrectErrorMessage) {
-  const GetChildUriTestCase &test_case = GetParam();
+  const GetChildUriTestCase& test_case = GetParam();
 
   DelliciusQuery query = ParseTextProtoOrDie(
-    R"pb(
-      query_id: "ChassisTest"
-      subquery {
-        subquery_id: "Chassis"
-        properties { property: "Id" type: STRING }
-        properties { property: "Name" type: STRING }
-      }
-    )pb");
+      R"pb(
+        query_id: "ChassisTest"
+        subquery {
+          subquery_id: "Chassis"
+          properties { property: "Id" type: STRING }
+          properties { property: "Name" type: STRING }
+        }
+      )pb");
   query.mutable_subquery(0)->set_redpath(test_case.redpath_query);
   SetTestParams("indus_hmb_shim/mockup.shar");
-  server_->AddHttpGetHandler(test_case.parent_resource_uri,
-    [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler(
+      test_case.parent_resource_uri, [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(test_case.parent_json_response);
         req->Reply();
       });
-  server_->AddHttpGetHandler(test_case.child_resource_uri,
-    [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler(
+      test_case.child_resource_uri, [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(R"json({})json");
@@ -4621,31 +4617,29 @@ TEST_P(GetChildUriTest, GetChildUriReturnsCorrectErrorMessage) {
       BuildDefaultRedpathNormalizer();
   std::unique_ptr<QueryPlannerIntf> qp;
   ECCLESIA_ASSIGN_OR_FAIL(qp,
-                          BuildQueryPlanner({
-                            .query = &query,
-                            .normalizer = normalizer.get(),
-                            .redfish_interface = intf_.get(),
-                            .redpath_rules = {}
-                          }));
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
   ASSERT_THAT(qp, NotNull());
 
   ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
   QueryExecutionResult result = qp->Run({.variables = args1});
 
   ASSERT_THAT(result.query_result.status().errors().size(), Eq(1));
-  EXPECT_THAT(
-      result.query_result.status().errors().at(0),
-      HasSubstr(test_case.expected_error_message));
+  EXPECT_THAT(result.query_result.status().errors().at(0),
+              HasSubstr(test_case.expected_error_message));
 }
 
-INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, GetChildUriTest,
-  Values(
-    GetChildUriTestCase{
-      .test_name = "PredicateShowsParentUri",
-      .redpath_query = "/Chassis[*]",
-      .parent_resource_uri = "/redfish/v1/Chassis",
-      .child_resource_uri = "/redfish/v1/Chassis/IronFist_1",
-      .parent_json_response = R"json({
+INSTANTIATE_TEST_SUITE_P(
+    TestGetChildUriErrorMessages, GetChildUriTest,
+    Values(
+        GetChildUriTestCase{
+            .test_name = "PredicateShowsParentUri",
+            .redpath_query = "/Chassis[*]",
+            .parent_resource_uri = "/redfish/v1/Chassis",
+            .child_resource_uri = "/redfish/v1/Chassis/IronFist_1",
+            .parent_json_response = R"json({
         "@odata.id": "/redfish/v1/Chassis",
         "Members": [
           {
@@ -4656,67 +4650,67 @@ INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, GetChildUriTest,
           }
         ]
       })json",
-      .expected_error_message = "Querying predicate [*] from Redpath: "
-        "/Chassis[*] resulted in error: At resource URI: "
-        "/redfish/v1/Chassis/IronFist_1: Service Unavailable",
-      .child_response_status_code = HTTPStatusCode::SERVICE_UNAV
-    },
-    GetChildUriTestCase{
-      .test_name = "NodenameShowsParentUri",
-      .redpath_query = "/Chassis/Node1",
-      .parent_resource_uri = "/redfish/v1/Chassis",
-      .child_resource_uri = "/redfish/v1/Chassis/Node1",
-      .parent_json_response = R"json({
+            .expected_error_message =
+                "Querying predicate [*] from Redpath: "
+                "/Chassis[*] resulted in error: At resource URI: "
+                "/redfish/v1/Chassis/IronFist_1: Service Unavailable",
+            .child_response_status_code = HTTPStatusCode::SERVICE_UNAV},
+        GetChildUriTestCase{
+            .test_name = "NodenameShowsParentUri",
+            .redpath_query = "/Chassis/Node1",
+            .parent_resource_uri = "/redfish/v1/Chassis",
+            .child_resource_uri = "/redfish/v1/Chassis/Node1",
+            .parent_json_response = R"json({
         "@odata.id": "/redfish/v1/Chassis",
         "Node1": {
           "@odata.id": "/redfish/v1/Chassis/Node1"
         }
       })json",
-      .expected_error_message = "Querying node name Node1 from Redpath: "
-        "/Chassis/Node1 resulted in error: At resource URI: "
-        "/redfish/v1/Chassis/Node1: Service Unavailable",
-      .child_response_status_code = HTTPStatusCode::SERVICE_UNAV
-    },
-    GetChildUriTestCase{
-      .test_name = "PredicateParentUriNotAvailable",
-      .redpath_query = "/Chassis[*]",
-      .parent_resource_uri = "/redfish/v1/Chassis",
-      .child_resource_uri = "/redfish/v1/Chassis/IronFist_1",
-      .parent_json_response = R"json({
+            .expected_error_message =
+                "Querying node name Node1 from Redpath: "
+                "/Chassis/Node1 resulted in error: At resource URI: "
+                "/redfish/v1/Chassis/Node1: Service Unavailable",
+            .child_response_status_code = HTTPStatusCode::SERVICE_UNAV},
+        GetChildUriTestCase{
+            .test_name = "PredicateParentUriNotAvailable",
+            .redpath_query = "/Chassis[*]",
+            .parent_resource_uri = "/redfish/v1/Chassis",
+            .child_resource_uri = "/redfish/v1/Chassis/IronFist_1",
+            .parent_json_response = R"json({
         "Members": [
           {
             "@odata.id": "/redfish/v1/Chassis/IronFist_1"
           }
         ]
       })json",
-      .expected_error_message = "Querying predicate [*] from Redpath: "
-        "/Chassis[*] resulted in error: At resource URI: "
-        "(Parent URI Not Available from RedfishObject: No @odata.id): "
-        "Service Unavailable",
-      .child_response_status_code = HTTPStatusCode::SERVICE_UNAV
-    },
-    GetChildUriTestCase{
-      .test_name = "NodenameParentUriNotAvailable",
-      .redpath_query = "/Chassis/Node1",
-      .parent_resource_uri = "/redfish/v1/Chassis",
-      .child_resource_uri = "/redfish/v1/Chassis/Node1",
-      .parent_json_response = R"json({
+            .expected_error_message =
+                "Querying predicate [*] from Redpath: "
+                "/Chassis[*] resulted in error: At resource URI: "
+                "(Parent URI Not Available from RedfishObject: No @odata.id): "
+                "Service Unavailable",
+            .child_response_status_code = HTTPStatusCode::SERVICE_UNAV},
+        GetChildUriTestCase{
+            .test_name = "NodenameParentUriNotAvailable",
+            .redpath_query = "/Chassis/Node1",
+            .parent_resource_uri = "/redfish/v1/Chassis",
+            .child_resource_uri = "/redfish/v1/Chassis/Node1",
+            .parent_json_response = R"json({
         "Node1": {
           "@odata.id": "/redfish/v1/Chassis/Node1"
         }
       })json",
-      .expected_error_message = "Querying node name Node1 from Redpath: "
-        "/Chassis/Node1 resulted in error: At resource URI: "
-        "(Parent URI Not Available from RedfishObject: No @odata.id): "
-        "Service Unavailable",
-      .child_response_status_code = HTTPStatusCode::SERVICE_UNAV
-    },
-    GetChildUriTestCase{
-      .test_name = "MalformedPredicateExpression",
-      .redpath_query = "/Chassis[(!]",
-      .parent_resource_uri = "/redfish/v1/Chassis",
-      .child_resource_uri = "/redfish/v1/Chassis/IronFist_1",
-      .parent_json_response = R"json({
+            .expected_error_message =
+                "Querying node name Node1 from Redpath: "
+                "/Chassis/Node1 resulted in error: At resource URI: "
+                "(Parent URI Not Available from RedfishObject: No @odata.id): "
+                "Service Unavailable",
+            .child_response_status_code = HTTPStatusCode::SERVICE_UNAV},
+        GetChildUriTestCase{
+            .test_name = "MalformedPredicateExpression",
+            .redpath_query = "/Chassis[(!]",
+            .parent_resource_uri = "/redfish/v1/Chassis",
+            .child_resource_uri = "/redfish/v1/Chassis/IronFist_1",
+            .parent_json_response = R"json({
         "@odata.id": "/redfish/v1/Chassis",
         "Members": [
           {
@@ -4724,18 +4718,19 @@ INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, GetChildUriTest,
           }
         ]
       })json",
-      .expected_error_message = "Querying predicate [(!] from Redpath: "
-        "/Chassis[*] resulted in error: At resource URI: "
-        "/redfish/v1/Chassis/IronFist_1: Invalid predicate with mismatched "
-        "parenthesis: (!",
-      .child_response_status_code = HTTPStatusCode::OK
-    }
-  ), GetChildUriTest::GetTestName
-);
+            .expected_error_message =
+                "Querying predicate [(!] from Redpath: "
+                "/Chassis[*] resulted in error: At resource URI: "
+                "/redfish/v1/Chassis/IronFist_1: Invalid predicate with "
+                "mismatched "
+                "parenthesis: (!",
+            .child_response_status_code = HTTPStatusCode::OK}),
+    GetChildUriTest::GetTestName);
 
 TEST(UriTestErrorMessages, CorrectUris) {
   auto mock_redfish_object = std::make_unique<MockRedfishObject>();
-  EXPECT_CALL(*mock_redfish_object, GetContentAsJson()).Times(2)
+  EXPECT_CALL(*mock_redfish_object, GetContentAsJson())
+      .Times(2)
       .WillRepeatedly(Return(nlohmann::json::parse(R"json({
         "@odata.id": "/redfish/v1/",
         "Foo": {
@@ -4756,9 +4751,9 @@ TEST(UriTestErrorMessages, CorrectUris) {
   QueryResult result;
   QueryVariables query_variables;
 
-  QueryExecutionContext execution_context(
-      &result, {}, &query_variables, RedPathPrefixTracker(), nullptr,
-      std::move(redfish_response));
+  QueryExecutionContext execution_context(&result, {}, &query_variables,
+                                          RedPathPrefixTracker(), nullptr,
+                                          std::move(redfish_response));
 
   absl::StatusOr<std::string> node_uri =
       GetChildUriFromNode(execution_context, "Foo");
@@ -4774,8 +4769,8 @@ TEST(UriTestErrorMessages, CorrectUris) {
 TEST(UriTestErrorMessages, NullRedfishObject) {
   QueryResult result;
   QueryVariables query_variables;
-  QueryExecutionContext execution_context(
-      &result, {}, &query_variables, RedPathPrefixTracker(), nullptr);
+  QueryExecutionContext execution_context(&result, {}, &query_variables,
+                                          RedPathPrefixTracker(), nullptr);
 
   absl::StatusOr<std::string> node_uri =
       GetChildUriFromNode(execution_context, "foo");
@@ -4794,9 +4789,9 @@ TEST(UriTestErrorMessages, ComplexTypeResource) {
   QueryResult result;
   QueryVariables query_variables;
 
-  QueryExecutionContext execution_context(
-      &result, {}, &query_variables, RedPathPrefixTracker(), nullptr,
-      std::move(redfish_response));
+  QueryExecutionContext execution_context(&result, {}, &query_variables,
+                                          RedPathPrefixTracker(), nullptr,
+                                          std::move(redfish_response));
   absl::StatusOr<std::string> iterable_uri =
       GetChildUriFromIterable(execution_context, 0xf00);
 
@@ -4832,9 +4827,9 @@ TEST_P(ChildUriFromNodeTest, GetChildUriFromNode) {
   QueryResult result;
   QueryVariables query_variables;
 
-  QueryExecutionContext execution_context(
-      &result, {}, &query_variables, RedPathPrefixTracker(), nullptr,
-      std::move(redfish_response));
+  QueryExecutionContext execution_context(&result, {}, &query_variables,
+                                          RedPathPrefixTracker(), nullptr,
+                                          std::move(redfish_response));
   absl::StatusOr<std::string> node_uri =
       GetChildUriFromNode(execution_context, "foo");
 
@@ -4842,55 +4837,52 @@ TEST_P(ChildUriFromNodeTest, GetChildUriFromNode) {
   EXPECT_THAT(node_uri.status().message(), param.expected_error_message);
 }
 
-INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, ChildUriFromNodeTest,
-  Values(
-    GetChildUriFromNodeTestCase{
-      .test_name = "DiscardedResponse",
-      .json_response = nlohmann::json::value_t::discarded,
-      .status_poly_matcher = IsStatusInternal(),
-      .expected_error_message = "(Cannot get content as Json from Parent "
-        "RedfishObject)"
-    },
-    GetChildUriFromNodeTestCase{
-      .test_name = "MissingNavigationalProperty",
-      .json_response = nlohmann::json::parse(R"json({
+INSTANTIATE_TEST_SUITE_P(
+    TestGetChildUriErrorMessages, ChildUriFromNodeTest,
+    Values(
+        GetChildUriFromNodeTestCase{
+            .test_name = "DiscardedResponse",
+            .json_response = nlohmann::json::value_t::discarded,
+            .status_poly_matcher = IsStatusInternal(),
+            .expected_error_message = "(Cannot get content as Json from Parent "
+                                      "RedfishObject)"},
+        GetChildUriFromNodeTestCase{
+            .test_name = "MissingNavigationalProperty",
+            .json_response = nlohmann::json::parse(R"json({
       })json"),
-      .status_poly_matcher = IsStatusInternal(),
-      .expected_error_message = "(Parent URI Not Available from RedfishObject: "
-        "No @odata.id)"
-    },
-    GetChildUriFromNodeTestCase{
-      .test_name = "MissingNodeName",
-      .json_response = nlohmann::json::parse(R"json({
+            .status_poly_matcher = IsStatusInternal(),
+            .expected_error_message =
+                "(Parent URI Not Available from RedfishObject: "
+                "No @odata.id)"},
+        GetChildUriFromNodeTestCase{
+            .test_name = "MissingNodeName",
+            .json_response = nlohmann::json::parse(R"json({
         "@odata.id": "/redfish/v1/"
       })json"),
-      .status_poly_matcher = IsStatusInternal(),
-      .expected_error_message = "(RedfishObject does not contain: foo at URI: "
-        "/redfish/v1/)"
-    },
-    GetChildUriFromNodeTestCase{
-      .test_name = "MissingNavigationPropertyInNode",
-      .json_response = nlohmann::json::parse(R"json({
+            .status_poly_matcher = IsStatusInternal(),
+            .expected_error_message =
+                "(RedfishObject does not contain: foo at URI: "
+                "/redfish/v1/)"},
+        GetChildUriFromNodeTestCase{
+            .test_name = "MissingNavigationPropertyInNode",
+            .json_response = nlohmann::json::parse(R"json({
         "@odata.id": "/redfish/v1/",
         "foo": {}
       })json"),
-      .status_poly_matcher = IsStatusInternal(),
-      .expected_error_message = "(@odata.id missing from: foo at URI: "
-        "/redfish/v1/)"
-    },
-    GetChildUriFromNodeTestCase{
-      .test_name = "NoErrors",
-      .json_response = nlohmann::json::parse(R"json({
+            .status_poly_matcher = IsStatusInternal(),
+            .expected_error_message = "(@odata.id missing from: foo at URI: "
+                                      "/redfish/v1/)"},
+        GetChildUriFromNodeTestCase{
+            .test_name = "NoErrors",
+            .json_response = nlohmann::json::parse(R"json({
         "@odata.id": "/redfish/v1/",
         "foo": {
           "@odata.id": "/redfish/v1/foo"
         }
       })json"),
-      .status_poly_matcher = IsOk(),
-      .expected_error_message = ""
-    }
-  ), ChildUriFromNodeTest::GetTestName
-);
+            .status_poly_matcher = IsOk(),
+            .expected_error_message = ""}),
+    ChildUriFromNodeTest::GetTestName);
 
 struct GetChildUriFromIterableTestCase {
   std::string test_name;
@@ -4916,7 +4908,8 @@ TEST_P(ChildUriFromIterableTest, GetChildUriFromIterable) {
   EXPECT_CALL(*mock_redfish_object, GetContentAsJson())
       .WillOnce(Return(param.json_response));
   auto mock_redfish_iterable = std::make_unique<MockRedfishIterable>();
-  EXPECT_CALL(*mock_redfish_iterable, Size()).Times(AnyNumber())
+  EXPECT_CALL(*mock_redfish_iterable, Size())
+      .Times(AnyNumber())
       .WillOnce(Return(1));
 
   RedfishResponse redfish_response;
@@ -4925,9 +4918,9 @@ TEST_P(ChildUriFromIterableTest, GetChildUriFromIterable) {
   QueryResult result;
   QueryVariables query_variables;
 
-  QueryExecutionContext execution_context(
-      &result, {}, &query_variables, RedPathPrefixTracker(), nullptr,
-      std::move(redfish_response));
+  QueryExecutionContext execution_context(&result, {}, &query_variables,
+                                          RedPathPrefixTracker(), nullptr,
+                                          std::move(redfish_response));
   absl::StatusOr<std::string> iterable_uri =
       GetChildUriFromIterable(execution_context, param.index);
 
@@ -4935,38 +4928,37 @@ TEST_P(ChildUriFromIterableTest, GetChildUriFromIterable) {
   EXPECT_THAT(iterable_uri.status().message(), param.expected_error_message);
 }
 
-INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, ChildUriFromIterableTest,
-  Values(
-    GetChildUriFromIterableTestCase{
-      .test_name = "DiscardedResponse",
-      .json_response = nlohmann::json::value_t::discarded,
-      .index = 0,
-      .status_poly_matcher = IsStatusInternal(),
-      .expected_error_message = "(Cannot get content as Json from Parent "
-        "RedfishObject)"
-    },
-    GetChildUriFromIterableTestCase{
-      .test_name = "MissingNavigationalProperty",
-      .json_response = nlohmann::json::parse(R"json({
+INSTANTIATE_TEST_SUITE_P(
+    TestGetChildUriErrorMessages, ChildUriFromIterableTest,
+    Values(
+        GetChildUriFromIterableTestCase{
+            .test_name = "DiscardedResponse",
+            .json_response = nlohmann::json::value_t::discarded,
+            .index = 0,
+            .status_poly_matcher = IsStatusInternal(),
+            .expected_error_message = "(Cannot get content as Json from Parent "
+                                      "RedfishObject)"},
+        GetChildUriFromIterableTestCase{
+            .test_name = "MissingNavigationalProperty",
+            .json_response = nlohmann::json::parse(R"json({
       })json"),
-      .index = 0,
-      .status_poly_matcher = IsStatusInternal(),
-      .expected_error_message = "(Parent URI Not Available from RedfishObject: "
-        "No @odata.id)"
-    },
-    GetChildUriFromIterableTestCase{
-      .test_name = "MissingMembersProperty",
-      .json_response = nlohmann::json::parse(R"json({
+            .index = 0,
+            .status_poly_matcher = IsStatusInternal(),
+            .expected_error_message =
+                "(Parent URI Not Available from RedfishObject: "
+                "No @odata.id)"},
+        GetChildUriFromIterableTestCase{
+            .test_name = "MissingMembersProperty",
+            .json_response = nlohmann::json::parse(R"json({
         "@odata.id": "/redfish/v1/"
       })json"),
-      .index = 0,
-      .status_poly_matcher = IsStatusInternal(),
-      .expected_error_message = "(RedfishObject is not an iterable: "
-        "/redfish/v1/ does not have Members[])"
-    },
-    GetChildUriFromIterableTestCase{
-      .test_name = "IndexOutOfRangeUnderflow",
-      .json_response = nlohmann::json::parse(R"json({
+            .index = 0,
+            .status_poly_matcher = IsStatusInternal(),
+            .expected_error_message = "(RedfishObject is not an iterable: "
+                                      "/redfish/v1/ does not have Members[])"},
+        GetChildUriFromIterableTestCase{
+            .test_name = "IndexOutOfRangeUnderflow",
+            .json_response = nlohmann::json::parse(R"json({
         "@odata.id": "/redfish/v1/",
         "Members": [
           {
@@ -4974,14 +4966,14 @@ INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, ChildUriFromIterableTest,
           }
         ]
       })json"),
-      .index = -1,
-      .status_poly_matcher = IsStatusInternal(),
-      .expected_error_message = "(Index -1 out of bounds for RedfishIterable "
-        "at URI: /redfish/v1/)"
-    },
-    GetChildUriFromIterableTestCase{
-      .test_name = "IndexOutOfRangeOverflow",
-      .json_response = nlohmann::json::parse(R"json({
+            .index = -1,
+            .status_poly_matcher = IsStatusInternal(),
+            .expected_error_message =
+                "(Index -1 out of bounds for RedfishIterable "
+                "at URI: /redfish/v1/)"},
+        GetChildUriFromIterableTestCase{
+            .test_name = "IndexOutOfRangeOverflow",
+            .json_response = nlohmann::json::parse(R"json({
         "@odata.id": "/redfish/v1/",
         "Members": [
           {
@@ -4989,27 +4981,27 @@ INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, ChildUriFromIterableTest,
           }
         ]
       })json"),
-      .index = 1,
-      .status_poly_matcher = IsStatusInternal(),
-      .expected_error_message = "(Index 1 out of bounds for RedfishIterable "
-        "at URI: /redfish/v1/)"
-    },
-    GetChildUriFromIterableTestCase{
-      .test_name = "MembersElementMissingNavigationalProperty",
-      .json_response = nlohmann::json::parse(R"json({
+            .index = 1,
+            .status_poly_matcher = IsStatusInternal(),
+            .expected_error_message =
+                "(Index 1 out of bounds for RedfishIterable "
+                "at URI: /redfish/v1/)"},
+        GetChildUriFromIterableTestCase{
+            .test_name = "MembersElementMissingNavigationalProperty",
+            .json_response = nlohmann::json::parse(R"json({
         "@odata.id": "/redfish/v1/",
         "Members": [
           {}
         ]
       })json"),
-      .index = 0,
-      .status_poly_matcher = IsStatusInternal(),
-      .expected_error_message = "(@odata.id Not Available in Members[] at "
-        "index 0 at URI: /redfish/v1/)"
-    },
-    GetChildUriFromIterableTestCase{
-      .test_name = "NoErrors",
-      .json_response = nlohmann::json::parse(R"json({
+            .index = 0,
+            .status_poly_matcher = IsStatusInternal(),
+            .expected_error_message =
+                "(@odata.id Not Available in Members[] at "
+                "index 0 at URI: /redfish/v1/)"},
+        GetChildUriFromIterableTestCase{
+            .test_name = "NoErrors",
+            .json_response = nlohmann::json::parse(R"json({
         "@odata.id": "/redfish/v1/",
         "Members": [
           {
@@ -5017,12 +5009,10 @@ INSTANTIATE_TEST_SUITE_P(TestGetChildUriErrorMessages, ChildUriFromIterableTest,
           }
         ]
       })json"),
-      .index = 0,
-      .status_poly_matcher = IsOk(),
-      .expected_error_message = ""
-    }
-  ), ChildUriFromIterableTest::GetTestName
-);
+            .index = 0,
+            .status_poly_matcher = IsOk(),
+            .expected_error_message = ""}),
+    ChildUriFromIterableTest::GetTestName);
 
 TEST_F(QueryPlannerTestRunner, CheckQueryPlannerPopulatesStatus) {
   DelliciusQuery query = ParseTextProtoOrDie(
@@ -5232,7 +5222,7 @@ TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
           "RedfishVariant object has status: NullTransport"));
 
   // Redfish Metrics should indicate 1 failed GET request to service root.
-  const RedfishMetrics &metrics = result.query_result.stats().redfish_metrics();
+  const RedfishMetrics& metrics = result.query_result.stats().redfish_metrics();
   EXPECT_EQ(metrics.uri_to_metrics_map_size(), 1);
   EXPECT_TRUE(metrics.uri_to_metrics_map().contains("/redfish/v1"));
   EXPECT_EQ(metrics.uri_to_metrics_map()
@@ -5272,7 +5262,7 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulatedCollectionResource) {
 
   bool called = false;
   server_->AddHttpGetHandler(
-      "/redfish/v1/Managers/ecclesia_agent", [&](ServerRequestInterface *req) {
+      "/redfish/v1/Managers/ecclesia_agent", [&](ServerRequestInterface* req) {
         called = true;
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -5289,10 +5279,9 @@ TEST_F(QueryPlannerTestRunner, CheckSubqueryErrorsPopulatedCollectionResource) {
             ErrorCode::ERROR_UNAUTHENTICATED);
   EXPECT_THAT(
       result->query_result.status().errors().at(0),
-      HasSubstr(
-          "Querying predicate [*] from Redpath: /Managers[*] resulted in "
-          "error: At resource URI: /redfish/v1/Managers/ecclesia_agent: "
-          "Unauthorized"));
+      HasSubstr("Querying predicate [*] from Redpath: /Managers[*] resulted in "
+                "error: At resource URI: /redfish/v1/Managers/ecclesia_agent: "
+                "Unauthorized"));
 }
 
 TEST_F(QueryPlannerTestRunner, CheckUnresolvedNodeIsNotAnError) {
@@ -5318,7 +5307,7 @@ TEST_F(QueryPlannerTestRunner, CheckUnresolvedNodeIsNotAnError) {
 
   bool called = false;
   server_->AddHttpGetHandler(
-      "/redfish/v1/Managers", [&](ServerRequestInterface *req) {
+      "/redfish/v1/Managers", [&](ServerRequestInterface* req) {
         called = true;
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
@@ -5463,10 +5452,10 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
   ASSERT_TRUE(result.query_result.stats().has_redfish_metrics());
   // For each type of redfish request for each URI, validate that the
   // QueryPlanner sends only 1 request.
-  for (const auto &uri_x_metric : *result.query_result.mutable_stats()
+  for (const auto& uri_x_metric : *result.query_result.mutable_stats()
                                        ->mutable_redfish_metrics()
                                        ->mutable_uri_to_metrics_map()) {
-    for (const auto &metadata :
+    for (const auto& metadata :
          uri_x_metric.second.request_type_to_metadata()) {
       EXPECT_EQ(metadata.second.request_count(), 1);
     }
@@ -5542,8 +5531,8 @@ TEST_F(QueryPlannerGrpcTestRunner,
   // Make just one of the sensor requests hang so we timeout.
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          redfish::v1::Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          redfish::v1::Response* response) {
         response->set_code(200);
         notification_.WaitForNotification();
         return grpc::Status::OK;
@@ -5593,9 +5582,9 @@ TEST_F(QueryPlannerGrpcTestRunner,
        {"/redfish/v1/Chassis/chassis/Sensors/indus_fan2_rpm",
         "/redfish/v1/Chassis/chassis/Sensors/indus_fan3_rpm",
         "/redfish/v1/Chassis/chassis/Sensors/indus_fan4_rpm"}) {
-    server_->AddHttpGetHandler(uri, [&](grpc::ServerContext *context,
-                                        const ::redfish::v1::Request *request,
-                                        redfish::v1::Response *response) {
+    server_->AddHttpGetHandler(uri, [&](grpc::ServerContext* context,
+                                        const ::redfish::v1::Request* request,
+                                        redfish::v1::Response* response) {
       clock_.AdvanceTime(absl::Seconds(1));
       response->set_json_str(R"json({
         "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/fan_x",
@@ -5663,9 +5652,9 @@ TEST_F(QueryPlannerGrpcTestRunner, CheckEachQueryPlannerRunRespectsTimeout) {
        {"/redfish/v1/Chassis/chassis/Sensors/indus_fan2_rpm",
         "/redfish/v1/Chassis/chassis/Sensors/indus_fan3_rpm",
         "/redfish/v1/Chassis/chassis/Sensors/indus_fan4_rpm"}) {
-    server_->AddHttpGetHandler(uri, [&](grpc::ServerContext *context,
-                                        const ::redfish::v1::Request *request,
-                                        redfish::v1::Response *response) {
+    server_->AddHttpGetHandler(uri, [&](grpc::ServerContext* context,
+                                        const ::redfish::v1::Request* request,
+                                        redfish::v1::Response* response) {
       clock_.AdvanceTime(absl::Seconds(1));
       response->set_json_str(R"json({
         "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/fan_x",
@@ -5846,7 +5835,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerQueriesRawDataStringSuccessfully) {
       )pb");
 
   SetTestParams("indus_hmb_shim/mockup.shar");
-  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface* req) {
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(R"json({
@@ -5858,7 +5847,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerQueriesRawDataStringSuccessfully) {
   });
 
   server_->AddHttpGetHandler(
-      "/redfish/v1/additional", [](ServerRequestInterface *req) {
+      "/redfish/v1/additional", [](ServerRequestInterface* req) {
         SetContentTypeTEXT(req);
         req->WriteResponseString("adfasdfasfasdfasdfasdfxzcfaskdfaksdfn");
         req->Reply();
@@ -5934,7 +5923,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerQueriesRawDataBytesSuccessfully) {
       )pb");
 
   SetTestParams("indus_hmb_shim/mockup.shar");
-  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface *req) {
+  server_->AddHttpGetHandler("/redfish/v1", [&](ServerRequestInterface* req) {
     SetContentType(req, "application/json");
     req->OverwriteResponseHeader("OData-Version", "4.0");
     req->WriteResponseString(R"json({
@@ -5946,7 +5935,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerQueriesRawDataBytesSuccessfully) {
   });
 
   server_->AddHttpGetHandler(
-      "/redfish/v1/additional", [](ServerRequestInterface *req) {
+      "/redfish/v1/additional", [](ServerRequestInterface* req) {
         SetContentTypeTEXT(req);
         req->WriteResponseString("adfasdfasfasdfasdfasdfxzcfaskdfaksdfn");
         req->Reply();
@@ -6074,7 +6063,7 @@ TEST_F(QueryPlannerTestRunner,
   SetTestParams("indus_hmb_shim/mockup.shar");
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm",
-      [](ServerRequestInterface *req) {
+      [](ServerRequestInterface* req) {
         req->ReplyWithStatus(HTTPStatusCode::UNAUTHORIZED);
       });
 
@@ -6380,7 +6369,7 @@ TEST_F(QueryPlannerTestRunner,
   SetTestParams("indus_hmb_shim/mockup.shar");
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/Sensors/indus_fan7_rpm",
-      [](ServerRequestInterface *req) {
+      [](ServerRequestInterface* req) {
         req->ReplyWithStatus(HTTPStatusCode::UNAUTHORIZED);
       });
 
@@ -6423,7 +6412,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerStopsQueryOnErrorSingletonResource) {
   std::atomic<bool> called = false;
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/Sensors",
-      [&called](ServerRequestInterface *req) {
+      [&called](ServerRequestInterface* req) {
         if (called) {
           req->ReplyWithStatus(HTTPStatusCode::OK);
           return;
@@ -6434,7 +6423,7 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerStopsQueryOnErrorSingletonResource) {
 
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/Assembly",
-      [&called](ServerRequestInterface *req) {
+      [&called](ServerRequestInterface* req) {
         if (called) {
           req->ReplyWithStatus(HTTPStatusCode::OK);
           return;
@@ -6468,7 +6457,7 @@ TEST_F(QueryPlannerTestRunner,
   std::atomic<bool> called = false;
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/Sensors",
-      [&called](ServerRequestInterface *req) {
+      [&called](ServerRequestInterface* req) {
         if (!called) {
           called = true;
           req->ReplyWithStatus(HTTPStatusCode::UNAUTHORIZED);
@@ -6495,7 +6484,7 @@ TEST_F(QueryPlannerTestRunner,
 
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/Assembly",
-      [&called](ServerRequestInterface *req) {
+      [&called](ServerRequestInterface* req) {
         if (!called) {
           called = true;
           req->ReplyWithStatus(HTTPStatusCode::UNAUTHORIZED);

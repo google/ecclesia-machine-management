@@ -65,7 +65,7 @@ absl::StatusOr<PredicateObject> CreatePredicateObject(
 
 // Constructs a redpath predicate string from a predicate object. Does not check
 // if the object has valid data for construction.
-std::string PredicateObjectToString(const PredicateObject &predicate_object);
+std::string PredicateObjectToString(const PredicateObject& predicate_object);
 
 }  // namespace ecclesia
 

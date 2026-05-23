@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include "ecclesia/lib/redfish/redpath/engine/resource_identifier/extractors/related_item.h"
 
 #include <memory>

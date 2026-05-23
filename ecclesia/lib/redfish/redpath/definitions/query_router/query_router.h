@@ -67,7 +67,7 @@ class QueryRouterIntf {
     SelectionSpec::SelectionClass::ServerType server_type;
     SelectionSpec::SelectionClass::ServerClass server_class;
 
-    static ServerInfo FromProto(const ecclesia::ServerInfo &proto) {
+    static ServerInfo FromProto(const ecclesia::ServerInfo& proto) {
       return ServerInfo{
           .server_tag = proto.server_tag(),
           .server_type = proto.server_type(),
@@ -75,7 +75,7 @@ class QueryRouterIntf {
       };
     }
 
-    static ecclesia::ServerInfo ToProto(const ServerInfo &info) {
+    static ecclesia::ServerInfo ToProto(const ServerInfo& info) {
       ecclesia::ServerInfo proto;
       proto.set_server_tag(info.server_tag);
       proto.set_server_type(info.server_type);
@@ -83,18 +83,18 @@ class QueryRouterIntf {
       return proto;
     }
 
-    static std::string ToString(const ecclesia::ServerInfo &proto,
+    static std::string ToString(const ecclesia::ServerInfo& proto,
                                 bool include_label = true) {
       return FromProto(proto).ToString(include_label);
     }
 
     template <typename H>
-    friend H AbslHashValue(H h, const ServerInfo &s) {
+    friend H AbslHashValue(H h, const ServerInfo& s) {
       return H::combine(std::move(h), s.server_tag, s.server_type,
                         s.server_class);
     }
 
-    bool operator==(const ServerInfo &other) const {
+    bool operator==(const ServerInfo& other) const {
       return std::tie(server_tag, server_type, server_class) ==
              std::tie(other.server_tag, other.server_type, other.server_class);
     }
@@ -117,8 +117,8 @@ class QueryRouterIntf {
     }
   };
 
-  using ResultCallback = std::function<void(
-      const ServerInfo & /* server_info */, QueryResult /* result */)>;
+  using ResultCallback = std::function<void(const ServerInfo& /* server_info */,
+                                            QueryResult /* result */)>;
 
   virtual ~QueryRouterIntf() = default;
 
@@ -127,7 +127,7 @@ class QueryRouterIntf {
     QueryEngineIntf::QueryVariableSet query_arguments;
     StubArbiterInfo::PriorityLabel priority_label =
         StubArbiterInfo::PriorityLabel::kUnknown;
-    const ResultCallback &callback;
+    const ResultCallback& callback;
     absl::flat_hash_map<QueryRouterIntf::ServerInfo, std::string>
         server_info_to_bmc_version;
   };
@@ -136,7 +136,7 @@ class QueryRouterIntf {
   // the new function.
   ABSL_DEPRECATED("Use ExecuteQuery with RedpathQueryOptions instead.")
   void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
-                    const ResultCallback &callback) const {
+                    const ResultCallback& callback) const {
     RedpathQueryOptions options{
         .query_ids = query_ids,
         .callback = callback,
@@ -146,8 +146,8 @@ class QueryRouterIntf {
 
   ABSL_DEPRECATED("Use ExecuteQuery with RedpathQueryOptions instead.")
   void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
-                    const QueryEngineIntf::QueryVariableSet &query_arguments,
-                    const ResultCallback &callback) const {
+                    const QueryEngineIntf::QueryVariableSet& query_arguments,
+                    const ResultCallback& callback) const {
     RedpathQueryOptions options{
         .query_ids = query_ids,
         .query_arguments = query_arguments,
@@ -157,15 +157,15 @@ class QueryRouterIntf {
   }
 
   // Pure-virtual functions that must be overridden by concrete implementations.
-  virtual void ExecuteQuery(const RedpathQueryOptions &options) const = 0;
+  virtual void ExecuteQuery(const RedpathQueryOptions& options) const = 0;
 
-  virtual absl::StatusOr<RedfishInterface *> GetRedfishInterface(
-      const ServerInfo &server_info,
+  virtual absl::StatusOr<RedfishInterface*> GetRedfishInterface(
+      const ServerInfo& server_info,
       RedfishInterfacePasskey unused_passkey) const = 0;
 
   virtual absl::Status ExecuteOnRedfishInterface(
-      const ServerInfo &server_info, RedfishInterfacePasskey unused_passkey,
-      const QueryEngineIntf::RedfishInterfaceOptions &options) const = 0;
+      const ServerInfo& server_info, RedfishInterfacePasskey unused_passkey,
+      const QueryEngineIntf::RedfishInterfaceOptions& options) const = 0;
 
   // Cancels query execution.
   // This function is overloaded:
@@ -175,7 +175,7 @@ class QueryRouterIntf {
   // within QueryEngine.
   // `CancelQueryExecution()`: A parameterless overload that performs the
   // cancellation.
-  virtual void CancelQueryExecution(absl::Notification *notification) = 0;
+  virtual void CancelQueryExecution(absl::Notification* notification) = 0;
   void CancelQueryExecution() { return CancelQueryExecution(nullptr); }
 };
 
@@ -185,7 +185,7 @@ class QueryRouter : public QueryRouterIntf {
  public:
   using RedfishTransportFactory =
       std::function<absl::StatusOr<std::unique_ptr<RedfishTransport>>(
-          StubArbiterInfo::PriorityLabel &)>;
+          StubArbiterInfo::PriorityLabel&)>;
 
   // Defines the specification of a server that will be supplied by the users of
   // this class. This defines all the servers that the QueryRouter can
@@ -212,17 +212,17 @@ class QueryRouter : public QueryRouterIntf {
         std::nullopt;
 
     ServerSpec() = default;
-    ServerSpec(const ServerSpec &) = delete;
-    ServerSpec &operator=(const ServerSpec &) = delete;
-    ServerSpec(ServerSpec &&) = default;
-    ServerSpec &operator=(ServerSpec &&) = default;
+    ServerSpec(const ServerSpec&) = delete;
+    ServerSpec& operator=(const ServerSpec&) = delete;
+    ServerSpec(ServerSpec&&) = default;
+    ServerSpec& operator=(ServerSpec&&) = default;
   };
 
   // Factory method to create a QueryRouter instance. The servers involved in
   // the instance will be an intersection of the Servers specified in the
   // QueryRouterSpec and the list of ServerSpecs specified.
   static absl::StatusOr<std::unique_ptr<QueryRouterIntf>> Create(
-      const QueryRouterSpec &router_spec, std::vector<ServerSpec> server_specs,
+      const QueryRouterSpec& router_spec, std::vector<ServerSpec> server_specs,
       QueryEngineFactory query_engine_factory = QueryEngine::Create,
       RedpathNormalizer::RedpathNormalizersFactory redpath_normalizers_factory =
           DefaultRedpathNormalizerMap,
@@ -230,7 +230,7 @@ class QueryRouter : public QueryRouterIntf {
           transport_arbiter_query_engine_factory =
               QueryEngineWithTransportArbiter::
                   CreateTransportArbiterQueryEngine,
-      const Clock *clock = Clock::RealClock());
+      const Clock* clock = Clock::RealClock());
 
   ~QueryRouter() override = default;
 
@@ -240,23 +240,23 @@ class QueryRouter : public QueryRouterIntf {
   // `callback` is guaranteed to be executed non-concurrently and clients don't
   // need to independently guard against concurrent access to any of their data
   // structures that are accessed by the callback.
-  void ExecuteQuery(const RedpathQueryOptions &options) const override;
+  void ExecuteQuery(const RedpathQueryOptions& options) const override;
 
   // Returns the RedfishInterface for the given ServerInfo.
   // QueryEngineRawInterfacePasskey is just an empty strongly-typed object that
   // one needs to provide in order to get access to the underlying
   // RedfishInterface.
-  absl::StatusOr<RedfishInterface *> GetRedfishInterface(
-      const ServerInfo &server_info,
+  absl::StatusOr<RedfishInterface*> GetRedfishInterface(
+      const ServerInfo& server_info,
       RedfishInterfacePasskey unused_passkey) const override;
 
   absl::Status ExecuteOnRedfishInterface(
-      const ServerInfo &server_info, RedfishInterfacePasskey unused_passkey,
-      const QueryEngineIntf::RedfishInterfaceOptions &options) const override;
+      const ServerInfo& server_info, RedfishInterfacePasskey unused_passkey,
+      const QueryEngineIntf::RedfishInterfaceOptions& options) const override;
 
   // This function will gracefully terminate all active QueryEngine threads
   // associated with the target query.
-  void CancelQueryExecution(absl::Notification *notification) override;
+  void CancelQueryExecution(absl::Notification* notification) override;
 
  private:
   // Defines the core elements of the routing table - server info, query engine
@@ -275,34 +275,34 @@ class QueryRouter : public QueryRouterIntf {
   // Defines the elements to be sent as a batch to the query engine for parallel
   // execution.
   struct QueryBatch {
-    explicit QueryBatch(const QueryRoutingInfo *routing_info)
+    explicit QueryBatch(const QueryRoutingInfo* routing_info)
         : routing_info(*ABSL_DIE_IF_NULL(routing_info)) {}
 
     std::vector<absl::string_view> queries;
-    const QueryRoutingInfo &routing_info;
+    const QueryRoutingInfo& routing_info;
   };
 
   using RoutingTable = std::vector<QueryRoutingInfo>;
 
-  using ExecuteFunction = std::function<void(const RedpathQueryOptions &)>;
+  using ExecuteFunction = std::function<void(const RedpathQueryOptions&)>;
 
   QueryRouter(RoutingTable routing_table, QueryPattern query_pattern,
               int max_concurrent_threads);
 
   // All queries will be executed in series across all agents.
-  void ExecuteQuerySerialAll(const RedpathQueryOptions &options) const;
+  void ExecuteQuerySerialAll(const RedpathQueryOptions& options) const;
 
   // All queries will be execute in series for an agent, but queries across
   // agents are executed in parallel
-  void ExecuteQuerySerialAgent(const RedpathQueryOptions &options) const;
+  void ExecuteQuerySerialAgent(const RedpathQueryOptions& options) const;
 
   // All queries will be executed in parallel across all agents.
-  void ExecuteQueryParallelAll(const RedpathQueryOptions &options) const;
+  void ExecuteQueryParallelAll(const RedpathQueryOptions& options) const;
 
   // Each query set in the query_batches list is executed in its own individual
   // thread.
   void ExecuteQueryBatches(absl::Span<const QueryBatch> query_batches,
-                           const RedpathQueryOptions &options) const;
+                           const RedpathQueryOptions& options) const;
 
   // Returns true if the query can be included in the query batch.
   // The query can be included in the query batch if the bmc version of the
@@ -310,8 +310,8 @@ class QueryRouter : public QueryRouterIntf {
   // If the bmc version of the query is not set in the query router spec,
   // the query is always included in the query batch.
   bool CanIncludeQuery(absl::string_view query_id,
-                       const RedpathQueryOptions &options,
-                       const QueryRoutingInfo &routing_info) const;
+                       const RedpathQueryOptions& options,
+                       const QueryRoutingInfo& routing_info) const;
 
   // Returns the latest query cancellation state.
   bool IsQueryExecutionCancelled() const {
@@ -347,11 +347,11 @@ class QueryRouter : public QueryRouterIntf {
 // Ideally used in tests to inject different variants of query router
 using QueryRouterFactory = absl::AnyInvocable<
     absl::StatusOr<std::unique_ptr<ecclesia::QueryRouterIntf>>(
-        const ecclesia::QueryRouterSpec &,
+        const ecclesia::QueryRouterSpec&,
         std::vector<ecclesia::QueryRouter::ServerSpec>,
         ecclesia::QueryEngineFactory,
         ecclesia::RedpathNormalizer::RedpathNormalizersFactory,
-        ecclesia::TransportArbiterQueryEngineFactory, const ecclesia::Clock *)>;
+        ecclesia::TransportArbiterQueryEngineFactory, const ecclesia::Clock*)>;
 
 }  // namespace ecclesia
 

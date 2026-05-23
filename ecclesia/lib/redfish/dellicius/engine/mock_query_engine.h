@@ -35,25 +35,24 @@ class MockQueryEngine : public QueryEngineIntf {
   virtual ~MockQueryEngine() = default;
 
   MOCK_METHOD(absl::StatusOr<SubscriptionQueryResult>, ExecuteSubscriptionQuery,
-              (absl::Span<const absl::string_view>, const QueryVariableSet &,
+              (absl::Span<const absl::string_view>, const QueryVariableSet&,
                StreamingOptions),
               (override));
 
   MOCK_METHOD(QueryIdToResult, ExecuteRedpathQuery,
-              (absl::Span<const absl::string_view>,
-               const RedpathQueryOptions &),
+              (absl::Span<const absl::string_view>, const RedpathQueryOptions&),
               (override));
 
-  MOCK_METHOD(absl::StatusOr<RedfishInterface *>, GetRedfishInterface,
+  MOCK_METHOD(absl::StatusOr<RedfishInterface*>, GetRedfishInterface,
               (RedfishInterfacePasskey), (override));
 
   MOCK_METHOD(absl::Status, ExecuteOnRedfishInterface,
-              (RedfishInterfacePasskey, const RedfishInterfaceOptions &),
+              (RedfishInterfacePasskey, const RedfishInterfaceOptions&),
               (override));
 
   MOCK_METHOD(absl::string_view, GetAgentIdentifier, (), (const, override));
 
-  MOCK_METHOD(void, CancelQueryExecution, (absl::Notification *), (override));
+  MOCK_METHOD(void, CancelQueryExecution, (absl::Notification*), (override));
 };
 
 }  // namespace ecclesia

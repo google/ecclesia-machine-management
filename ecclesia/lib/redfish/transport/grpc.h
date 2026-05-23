@@ -31,7 +31,7 @@ namespace ecclesia {
 
 struct GrpcTransportParams {
   // Clock used for all operations.
-  const Clock *clock = Clock::RealClock();
+  const Clock* clock = Clock::RealClock();
   // Timeout used for all operations.
   absl::Duration timeout = absl::Seconds(40);
   // Timeout used to wait for channel to be connected.
@@ -41,8 +41,8 @@ struct GrpcTransportParams {
 };
 
 absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
-    absl::string_view endpoint, const GrpcTransportParams &params,
-    const std::shared_ptr<grpc::ChannelCredentials> &creds);
+    absl::string_view endpoint, const GrpcTransportParams& params,
+    const std::shared_ptr<grpc::ChannelCredentials>& creds);
 
 }  // namespace ecclesia
 

@@ -1929,8 +1929,7 @@ TEST_F(HttpRedfishInterfaceTest, PutUriWorks) {
       });
 
   EXPECT_THAT(intf_->PutUri("/my/uri/object", "test").status(), IsOk());
-  EXPECT_THAT(intf_->PutUri("/my/uri/object", {{"", ""}}).status(),
-             IsOk());
+  EXPECT_THAT(intf_->PutUri("/my/uri/object", {{"", ""}}).status(), IsOk());
 }
 
 TEST_F(HttpRedfishInterfaceTest, GetUnresolvedNavigationProperty) {

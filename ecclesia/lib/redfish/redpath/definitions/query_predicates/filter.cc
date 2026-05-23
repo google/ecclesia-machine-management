@@ -35,7 +35,7 @@ namespace ecclesia {
 namespace {
 
 absl::StatusOr<std::string> RelationalExpressionToString(
-    const RelationalExpression &relexp) {
+    const RelationalExpression& relexp) {
   if (!relexp.property_name.empty()) {
     return absl::InvalidArgumentError(
         "Property existence is not supported by $filter");
@@ -98,7 +98,7 @@ RelationalExpression ApplyTransformsToExpression(
 // Takes a PredicateObject in redpath form and returns a $filter string that
 // abides by the Redfish Specification 7.3.4
 absl::StatusOr<std::string> GenerateFilterString(
-    const PredicateObject &predicate_object) {
+    const PredicateObject& predicate_object) {
   std::vector<RelationalExpression> expressions;
   std::string filter_string;
   if (predicate_object.child_predicates.empty()) {
@@ -109,7 +109,7 @@ absl::StatusOr<std::string> GenerateFilterString(
   } else {
     int logical_index = 0;
     // If the predicate object has children recurse over them.
-    for (const PredicateObject &child_predicate :
+    for (const PredicateObject& child_predicate :
          predicate_object.child_predicates) {
       // Don't recurse if a "leaf" is found as it will add extraneous
       // parenthesis.
@@ -146,7 +146,7 @@ absl::StatusOr<std::string> BuildFilterFromRedpathPredicate(
 }
 
 absl::StatusOr<std::string> BuildFilterFromRedpathPredicateList(
-    const std::vector<std::string> &predicates) {
+    const std::vector<std::string>& predicates) {
   std::vector<std::string> filter_strings;
   filter_strings.reserve(predicates.size());
   for (absl::string_view predicate : predicates) {

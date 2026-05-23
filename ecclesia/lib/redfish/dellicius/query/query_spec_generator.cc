@@ -140,16 +140,16 @@ absl::StatusOr<FilenameContentMap> ReadFileContents(
 }
 
 absl::Status CheckForDuplicateQueryRules(
-    const FilenameContentMap &filename_contents) {
+    const FilenameContentMap& filename_contents) {
   // maps a query rule's key to the filename that contains it.
   absl::flat_hash_map<std::string, std::string> query_rule_key_to_filename;
-  for (const auto &[filename, contents] : filename_contents) {
+  for (const auto& [filename, contents] : filename_contents) {
     ecclesia::QueryRules query_rules;
     if (!google::protobuf::TextFormat::ParseFromString(contents, &query_rules)) {
       return absl::InternalError(
           absl::StrCat("Unable to parse query rules file: ", filename));
     }
-    for (const auto &[rule_key, rule_configs] :
+    for (const auto& [rule_key, rule_configs] :
          query_rules.query_id_to_params_rule()) {
       // Look up if the current rule key has been found before in another file.
       const auto it = query_rule_key_to_filename.find(rule_key);
@@ -166,11 +166,11 @@ absl::Status CheckForDuplicateQueryRules(
 
 // Uses the ecclesia::RedpathQueryValidator to perform query validation, returns
 // an error status if any error level issues are detected by the validator.
-absl::Status ValidateQueries(const FilenameContentMap &filename_contents) {
+absl::Status ValidateQueries(const FilenameContentMap& filename_contents) {
   ecclesia::RedPathQueryValidator query_validator;
   std::vector<std::string> error_msgs;
   // Run Redpath Query Validator on all queries.
-  for (const auto &[filename, contents] : filename_contents) {
+  for (const auto& [filename, contents] : filename_contents) {
     ecclesia::DelliciusQuery query;
     if (!google::protobuf::TextFormat::ParseFromString(contents, &query)) {
       return absl::InternalError(
@@ -182,7 +182,7 @@ absl::Status ValidateQueries(const FilenameContentMap &filename_contents) {
   const auto errors = query_validator.GetErrors();
   if (errors.empty()) return absl::OkStatus();
   std::transform(errors.begin(), errors.end(), std::back_inserter(error_msgs),
-                 [](const auto &issue) {
+                 [](const auto& issue) {
                    return absl::StrCat("Query file: ", issue.path,
                                        " has error:\n", issue.message);
                  });
@@ -190,9 +190,9 @@ absl::Status ValidateQueries(const FilenameContentMap &filename_contents) {
 }
 
 absl::StatusOr<absl::btree_set<std::string>> GetQueryIds(
-    const FilenameContentMap &filename_contents) {
+    const FilenameContentMap& filename_contents) {
   absl::btree_set<std::string> query_ids;
-  for (const auto &[filename, contents] : filename_contents) {
+  for (const auto& [filename, contents] : filename_contents) {
     ecclesia::DelliciusQuery query;
     if (!google::protobuf::TextFormat::ParseFromString(contents, &query)) {
       return absl::InternalError(
@@ -211,11 +211,11 @@ absl::StatusOr<absl::btree_set<std::string>> GetQueryIds(
 }
 
 std::string GetFileContentsStr(absl::string_view name, absl::string_view suffix,
-                               const FilenameContentMap &filename_contents) {
+                               const FilenameContentMap& filename_contents) {
   std::string content =
       absl::StrFormat("ecclesia::EmbeddedFileArray<%d> k%s%s = {{",
                       filename_contents.size(), name, suffix);
-  for (const auto &[filename, contents] : filename_contents) {
+  for (const auto& [filename, contents] : filename_contents) {
     absl::StrAppend(&content, "{\"", absl::CEscape(filename),
                     "\", absl::string_view(\"", absl::CEscape(contents), "\", ",
                     contents.size(), ")},\n");
@@ -307,7 +307,7 @@ static absl::Status GenerateQuerySpec() {
 
 }  // namespace platforms_redfish
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   absl::ParseCommandLine(argc, argv);
   absl::InitializeLog();
   absl::Status status = platforms_redfish::GenerateQuerySpec();

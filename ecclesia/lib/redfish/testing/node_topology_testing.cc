@@ -39,7 +39,7 @@ std::string ToString(NodeType type) {
   }
 }
 
-void PrintTo(const Node &node, std::ostream *os) {
+void PrintTo(const Node& node, std::ostream* os) {
   std::string part_location_context;
   std::string service_label;
   if (node.supplemental_location_info.has_value()) {
@@ -54,7 +54,7 @@ void PrintTo(const Node &node, std::ostream *os) {
       node.replaceable, part_location_context, service_label);
 }
 
-void PrintTo(const std::unique_ptr<Node> &node, std::ostream *os) {
+void PrintTo(const std::unique_ptr<Node>& node, std::ostream* os) {
   if (node) {
     PrintTo(*node, os);
   } else {

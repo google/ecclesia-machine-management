@@ -685,7 +685,8 @@ QueryValueVerification GetComparison(const QueryResultData* value_a,
   return verification;
 }
 
-absl::Status VerifyStableId(const Identifier& stable_id,
+absl::Status VerifyStableId(
+    const Identifier& stable_id,
     const Verification::StableIdRequirement requirement) {
   if (requirement == Verification::STABLE_ID_PRESENCE_UNKNOWN ||
       requirement == Verification::STABLE_ID_PRESENCE_NONE) {
@@ -815,20 +816,19 @@ absl::Status CompareListValues(const ListValue& value_a,
   absl::Status list_compare_status = absl::OkStatus();
   for (const auto& [id, values] : data_map) {
     const auto& [list_item_a, list_item_b] = values;
-    auto check_list_item =
-        [&identifier = id, &errors = result, &error_messages = error_messages,
-         &ctx = context,
-         use_index](const QueryValue* list_item, absl::string_view label) {
-          if (list_item == nullptr) {
-            std::string identifier_str =
-                use_index ? absl::StrCat("index=", identifier) : identifier;
-            std::string error_message =
-                absl::StrCat("Missing value in '", label, "' with identifier ",
-                             identifier_str);
-            AddError(errors, error_message, ctx);
-            error_messages.push_back(std::move(error_message));
-          }
-        };
+    auto check_list_item = [&identifier = id, &errors = result,
+                            &error_messages = error_messages, &ctx = context,
+                            use_index](const QueryValue* list_item,
+                                       absl::string_view label) {
+      if (list_item == nullptr) {
+        std::string identifier_str =
+            use_index ? absl::StrCat("index=", identifier) : identifier;
+        std::string error_message = absl::StrCat(
+            "Missing value in '", label, "' with identifier ", identifier_str);
+        AddError(errors, error_message, ctx);
+        error_messages.push_back(std::move(error_message));
+      }
+    };
     check_list_item(list_item_a, options.label_a);
     check_list_item(list_item_b, options.label_b);
     if (!error_messages.empty()) {
@@ -1092,8 +1092,8 @@ absl::Status VerifyQueryResult(const QueryResult& query_result,
   VerificationContext context(query_result.query_id());
 
   ECCLESIA_RETURN_IF_ERROR(VerifySubqueryValue(query_result.data(),
-                                      verification.data_verify(), result,
-                                      context, options));
+                                               verification.data_verify(),
+                                               result, context, options));
   return ProcessResult(result);
 }
 

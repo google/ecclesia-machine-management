@@ -75,49 +75,49 @@ class FakeServerWriteReactor
 // The class is thread compatible.
 class FakeRedfishV1Impl : public GrpcRedfishV1::CallbackService {
  public:
-  using Callback = std::function<grpc::Status(grpc::CallbackServerContext *,
-                                              const ::redfish::v1::Request *,
-                                              redfish::v1::Response *)>;
+  using Callback = std::function<grpc::Status(grpc::CallbackServerContext*,
+                                              const ::redfish::v1::Request*,
+                                              redfish::v1::Response*)>;
 
   FakeRedfishV1Impl()
       : callback_(
-            [](grpc::CallbackServerContext *, const ::redfish::v1::Request *,
-               redfish::v1::Response *) { return grpc::Status::CANCELLED; }),
+            [](grpc::CallbackServerContext*, const ::redfish::v1::Request*,
+               redfish::v1::Response*) { return grpc::Status::CANCELLED; }),
         reactor_(FakeServerStreamConfig()) {}
 
-  grpc::ServerUnaryReactor *Get(grpc::CallbackServerContext *context,
-                                const ::redfish::v1::Request *request,
-                                redfish::v1::Response *response) override {
+  grpc::ServerUnaryReactor* Get(grpc::CallbackServerContext* context,
+                                const ::redfish::v1::Request* request,
+                                redfish::v1::Response* response) override {
     return RequestUri(context, request, response);
   }
 
-  grpc::ServerUnaryReactor *Post(grpc::CallbackServerContext *context,
-                                 const ::redfish::v1::Request *request,
-                                 redfish::v1::Response *response) override {
+  grpc::ServerUnaryReactor* Post(grpc::CallbackServerContext* context,
+                                 const ::redfish::v1::Request* request,
+                                 redfish::v1::Response* response) override {
     return RequestUri(context, request, response);
   }
 
-  grpc::ServerUnaryReactor *Patch(grpc::CallbackServerContext *context,
-                                  const ::redfish::v1::Request *request,
-                                  redfish::v1::Response *response) override {
+  grpc::ServerUnaryReactor* Patch(grpc::CallbackServerContext* context,
+                                  const ::redfish::v1::Request* request,
+                                  redfish::v1::Response* response) override {
     return RequestUri(context, request, response);
   }
 
-  grpc::ServerUnaryReactor *Put(grpc::CallbackServerContext *context,
-                                const ::redfish::v1::Request *request,
-                                redfish::v1::Response *response) override {
+  grpc::ServerUnaryReactor* Put(grpc::CallbackServerContext* context,
+                                const ::redfish::v1::Request* request,
+                                redfish::v1::Response* response) override {
     return RequestUri(context, request, response);
   }
 
-  grpc::ServerUnaryReactor *Delete(grpc::CallbackServerContext *context,
-                                   const ::redfish::v1::Request *request,
-                                   redfish::v1::Response *response) override {
+  grpc::ServerUnaryReactor* Delete(grpc::CallbackServerContext* context,
+                                   const ::redfish::v1::Request* request,
+                                   redfish::v1::Response* response) override {
     return RequestUri(context, request, response);
   }
 
-  grpc::ServerWriteReactor<::redfish::v1::Response> *Subscribe(
-      ::grpc::CallbackServerContext *context,
-      const ::redfish::v1::Request *request) override {
+  grpc::ServerWriteReactor<::redfish::v1::Response>* Subscribe(
+      ::grpc::CallbackServerContext* context,
+      const ::redfish::v1::Request* request) override {
     return &reactor_;
   }
 
@@ -130,17 +130,17 @@ class FakeRedfishV1Impl : public GrpcRedfishV1::CallbackService {
   void StartStreaming() { reactor_.MaybeStartWrite(); }
 
  private:
-  ::grpc::ServerUnaryReactor *RequestUri(grpc::CallbackServerContext *context,
-                                         const ::redfish::v1::Request *request,
-                                         redfish::v1::Response *response) {
-    grpc::ServerUnaryReactor *reactor = context->DefaultReactor();
+  ::grpc::ServerUnaryReactor* RequestUri(grpc::CallbackServerContext* context,
+                                         const ::redfish::v1::Request* request,
+                                         redfish::v1::Response* response) {
+    grpc::ServerUnaryReactor* reactor = context->DefaultReactor();
     reactor->Finish(callback_(context, request, response));
     return reactor;
   }
 
-  std::function<grpc::Status(grpc::CallbackServerContext *,
-                             const ::redfish::v1::Request *,
-                             redfish::v1::Response *)>
+  std::function<grpc::Status(grpc::CallbackServerContext*,
+                             const ::redfish::v1::Request*,
+                             redfish::v1::Response*)>
       callback_;
   FakeServerWriteReactor reactor_;
 };
@@ -164,9 +164,9 @@ class GrpcDynamicFakeServer {
 
   std::string GetHostPort() const { return absl::StrCat("localhost:", port_); }
   int GetPort() const { return port_; }
-  void SetCallback(std::function<grpc::Status(grpc::CallbackServerContext *,
-                                              const ::redfish::v1::Request *,
-                                              redfish::v1::Response *)>
+  void SetCallback(std::function<grpc::Status(grpc::CallbackServerContext*,
+                                              const ::redfish::v1::Request*,
+                                              redfish::v1::Response*)>
                        callback);
   void SetStreamConfig(FakeServerStreamConfig stream_config);
   // Lets the server start to stream on incoming subscriptions.

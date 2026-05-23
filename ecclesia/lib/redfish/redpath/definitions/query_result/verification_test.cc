@@ -4317,9 +4317,7 @@ INSTANTIATE_TEST_SUITE_P(
                             key: "_id_"
                             value {
                               identifier {
-                                redfish_location {
-                                  service_label: "DIMM0"
-                                }
+                                redfish_location { service_label: "DIMM0" }
                               }
                             }
                           }
@@ -4349,9 +4347,7 @@ INSTANTIATE_TEST_SUITE_P(
                               identifier {
                                 local_devpath: "/phys/DIMM0"
                                 machine_devpath: "/phys/DIMM0"
-                                redfish_location {
-                                  service_label: "DIMM0"
-                                }
+                                redfish_location { service_label: "DIMM0" }
                               }
                             }
                           }
@@ -4381,9 +4377,7 @@ INSTANTIATE_TEST_SUITE_P(
                                 local_devpath: "/phys/CPU0"
                                 machine_devpath: "/phys/CPU0"
                                 embedded_location_context: "die0_core0:thread0"
-                                redfish_location {
-                                  service_label: "CPU0"
-                                }
+                                redfish_location { service_label: "CPU0" }
                               }
                             }
                           }
@@ -4394,9 +4388,7 @@ INSTANTIATE_TEST_SUITE_P(
                 }
               })pb"),
             .status_matchers = {IsOk(), IsOk(), IsOk(), IsOk()},
-        }
-      )
-);
+        }));
 
 TEST(VerifyQueryResultTest, SuccessConditionalStableIdQueryResult) {
   QueryResult qr = ParseTextProtoOrDie(R"pb(
@@ -4414,17 +4406,13 @@ TEST(VerifyQueryResultTest, SuccessConditionalStableIdQueryResult) {
                     identifier {
                       local_devpath: "/phys/DIMM0"
                       machine_devpath: "/phys/DIMM0"
-                      redfish_location {
-                        service_label: "DIMM0"
-                      }
+                      redfish_location { service_label: "DIMM0" }
                     }
                   }
                 }
                 fields {
                   key: "present_in_firmware"
-                  value {
-                    string_value: "Enabled"
-                  }
+                  value { string_value: "Enabled" }
                 }
               }
             }
@@ -4433,18 +4421,12 @@ TEST(VerifyQueryResultTest, SuccessConditionalStableIdQueryResult) {
                 fields {
                   key: "_id_"
                   value {
-                    identifier {
-                      redfish_location {
-                        service_label: "DIMM1"
-                      }
-                    }
+                    identifier { redfish_location { service_label: "DIMM1" } }
                   }
                 }
                 fields {
                   key: "present_in_firmware"
-                  value {
-                    string_value: "Absent"
-                  }
+                  value { string_value: "Absent" }
                 }
               }
             }

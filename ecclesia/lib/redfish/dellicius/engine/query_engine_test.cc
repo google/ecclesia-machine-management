@@ -110,27 +110,27 @@ struct RedPathToQueryParams {
 };
 
 MATCHER(RedPathExpandConfigsEq, "") {
-  const RedPathToQueryParams &lhs = std::get<0>(arg);
-  const RedPathToQueryParams &rhs = std::get<1>(arg);
+  const RedPathToQueryParams& lhs = std::get<0>(arg);
+  const RedPathToQueryParams& rhs = std::get<1>(arg);
   return std::tie(lhs.tracked_path, lhs.query_params) ==
          std::tie(rhs.tracked_path, rhs.query_params);
 }
 
-void RemoveRequestCounts(QueryIdToResult &entries) {
-  for (auto &[query_id, entry] : *entries.mutable_results()) {
+void RemoveRequestCounts(QueryIdToResult& entries) {
+  for (auto& [query_id, entry] : *entries.mutable_results()) {
     entry.mutable_stats()->clear_num_requests();
   }
 }
-void RemoveMetrics(QueryIdToResult &entries) {
-  for (auto &[query_id, entry] : *entries.mutable_results()) {
+void RemoveMetrics(QueryIdToResult& entries) {
+  for (auto& [query_id, entry] : *entries.mutable_results()) {
     entry.mutable_stats()->clear_redfish_metrics();
   }
 }
-void RemoveTimestamps(QueryIdToResult &entries) {
-  for (auto &[query_id, entry] : *entries.mutable_results()) {
+void RemoveTimestamps(QueryIdToResult& entries) {
+  for (auto& [query_id, entry] : *entries.mutable_results()) {
     entry.mutable_stats()->clear_start_time();
     entry.mutable_stats()->clear_end_time();
-    for (auto &[uri, metadata] : *entry.mutable_stats()
+    for (auto& [uri, metadata] : *entry.mutable_stats()
                                       ->mutable_redfish_metrics()
                                       ->mutable_uri_to_metrics_map()) {
       metadata.mutable_request_type_to_metadata()->clear();
@@ -138,8 +138,8 @@ void RemoveTimestamps(QueryIdToResult &entries) {
   }
 }
 
-void RemoveStats(QueryIdToResult &entries) {
-  for (auto &[query_id, entry] : *entries.mutable_results()) {
+void RemoveStats(QueryIdToResult& entries) {
+  for (auto& [query_id, entry] : *entries.mutable_results()) {
     entry.clear_stats();
   }
 }
@@ -172,11 +172,11 @@ void VerifyQueryResults(QueryIdToResult actual_entries,
 }
 
 absl::StatusOr<std::unique_ptr<QueryEngineIntf>> GetDefaultQueryEngine(
-    FakeRedfishServer &server,
+    FakeRedfishServer& server,
     absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
     absl::Span<const EmbeddedFile> query_rules = kQueryRules,
-    const Clock *clock = Clock::RealClock(),
-    const QueryEngineParams &query_engine_params = {
+    const Clock* clock = Clock::RealClock(),
+    const QueryEngineParams& query_engine_params = {
         .features = StandardQueryEngineFeatures()}) {
   FakeRedfishServer::Config config = server.GetConfig();
   auto http_client = std::make_unique<CurlHttpClient>(
@@ -204,11 +204,11 @@ absl::StatusOr<std::unique_ptr<QueryEngineIntf>> GetDefaultQueryEngine(
 }
 
 absl::StatusOr<std::unique_ptr<QueryEngineIntf>> GetQueryEngineWithNormalizers(
-    FakeRedfishServer &server,
+    FakeRedfishServer& server,
     absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
     absl::Span<const EmbeddedFile> query_rules = kQueryRules,
-    const Clock *clock = Clock::RealClock(),
-    const QueryEngineParams &query_engine_params = {
+    const Clock* clock = Clock::RealClock(),
+    const QueryEngineParams& query_engine_params = {
         .features = StandardQueryEngineFeatures()}) {
   FakeRedfishServer::Config config = server.GetConfig();
   auto http_client = std::make_unique<CurlHttpClient>(
@@ -240,9 +240,9 @@ absl::StatusOr<std::unique_ptr<QueryEngineIntf>> GetQueryEngineWithNormalizers(
 
 absl::StatusOr<std::unique_ptr<ecclesia::QueryEngineIntf>>
 GetQueryEngineWithIdAssigner(
-    FakeRedfishServer &server, std::unique_ptr<IdAssigner> id_assigner,
+    FakeRedfishServer& server, std::unique_ptr<IdAssigner> id_assigner,
     absl::Span<const EmbeddedFile> query_files = kDelliciusQueries,
-    const Clock *clock = Clock::RealClock()) {
+    const Clock* clock = Clock::RealClock()) {
   FakeRedfishServer::Config config = server.GetConfig();
   auto http_client = std::make_unique<CurlHttpClient>(
       LibCurlProxy::CreateInstance(), HttpCredential{});
@@ -320,7 +320,7 @@ TEST(QueryEngineTest, ExecuteOnRedfishIntface) {
   EXPECT_TRUE(query_engine
                   ->ExecuteOnRedfishInterface(
                       RedfishInterfacePasskeyFactory::GetPassKey(),
-                      {.callback = [](const RedfishInterface &redfish_interface)
+                      {.callback = [](const RedfishInterface& redfish_interface)
                            -> absl::Status { return absl::OkStatus(); }})
                   .ok());
 }
@@ -477,10 +477,10 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
 
     int systems_fetched_counter = 0;
     int processor_collection_fetched_counter = 0;
-    for (const QueryIdToResult &response_entries :
+    for (const QueryIdToResult& response_entries :
          {first_response, second_response, third_response}) {
       // Validate the stats are correct.
-      for (const auto &uri_x_metric :
+      for (const auto& uri_x_metric :
            response_entries.results()
                .at("AssemblyCollectorWithPropertyNameNormalization")
                .stats()
@@ -489,7 +489,7 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
         // Expected systems only fetched only once from the redfish server.
         if (uri_x_metric.first == "/redfish/v1/Systems?$expand=*($levels=1)") {
           systems_fetched_counter++;
-          for (const auto &metadata :
+          for (const auto& metadata :
                uri_x_metric.second.request_type_to_metadata()) {
             EXPECT_EQ(metadata.second.request_count(), 1);
           }
@@ -503,7 +503,7 @@ TEST(QueryEngineTest, QueryEngineWithCacheConfiguration) {
         if (uri_x_metric.first ==
             "/redfish/v1/Systems/system/Processors?$expand=~($levels=1)") {
           processor_collection_fetched_counter++;
-          for (const auto &metadata :
+          for (const auto& metadata :
                uri_x_metric.second.request_type_to_metadata()) {
             EXPECT_EQ(metadata.second.request_count(), 1);
           }
@@ -565,15 +565,15 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
     QueryIdToResult response_entries =
         query_engine->ExecuteRedpathQuery({"Thermal"});
     ASSERT_THAT(response_entries.results(), Not(IsEmpty()));
-    const RedfishMetrics &metrics =
+    const RedfishMetrics& metrics =
         response_entries.results().at("Thermal").stats().redfish_metrics();
     size_t traced_chassis_expand = 0;
     size_t traced_thermal = 0;
 
-    for (const auto &uri_x_metric : metrics.uri_to_metrics_map()) {
+    for (const auto& uri_x_metric : metrics.uri_to_metrics_map()) {
       if (uri_x_metric.first == "/redfish/v1/Chassis?$expand=.($levels=2)") {
         ++traced_chassis_expand;
-        for (const auto &metadata :
+        for (const auto& metadata :
              uri_x_metric.second.request_type_to_metadata()) {
           EXPECT_EQ(metadata.second.request_count(), 1);
         }
@@ -592,20 +592,20 @@ TEST(QueryEngineTest, QueryEngineWithTransportMetricsEnabled) {
     QueryIdToResult response_entries =
         query_engine->ExecuteRedpathQuery({"Thermal"});
     ASSERT_THAT(response_entries.results(), Not(IsEmpty()));
-    const RedfishMetrics &metrics =
+    const RedfishMetrics& metrics =
         response_entries.results().at("Thermal").stats().redfish_metrics();
 
     size_t traced_chassis_expand = 0;
     size_t traced_thermal = 0;
 
-    for (const auto &uri_x_metric : metrics.uri_to_metrics_map()) {
+    for (const auto& uri_x_metric : metrics.uri_to_metrics_map()) {
       if (uri_x_metric.first == "/redfish/v1/Chassis?$expand=.($levels=2)") {
         ++traced_chassis_expand;
       }
 
       if (uri_x_metric.first == "/redfish/v1/Chassis/chassis/Thermal/") {
         ++traced_thermal;
-        for (const auto &metadata :
+        for (const auto& metadata :
              uri_x_metric.second.request_type_to_metadata()) {
           EXPECT_EQ(metadata.second.request_count(), 24);
         }
@@ -1498,8 +1498,8 @@ TEST(QueryEngineTest, CanExecuteSubscriptionQuerySuccessfully) {
   // test we expect these callbacks to be invoked along with the desired
   // parameters.
   auto client_on_event_callback =
-      [&](const QueryResult &, const RedPathSubscription::EventContext &) {};
-  auto client_on_stop_callback = [&](const absl::Status &) {};
+      [&](const QueryResult&, const RedPathSubscription::EventContext&) {};
+  auto client_on_stop_callback = [&](const absl::Status&) {};
 
   // Set up a mock subscription broker.
   // In this test we use this mock to inject events and close the stream.
@@ -1508,12 +1508,12 @@ TEST(QueryEngineTest, CanExecuteSubscriptionQuerySuccessfully) {
   RedPathSubscription::OnEventCallback captured_event_callback;
   RedPathSubscription::OnStopCallback captured_stop_callback;
   auto subscription_broker =
-      [&](const std::vector<RedPathSubscription::Configuration> &configurations,
-          RedfishInterface &,
+      [&](const std::vector<RedPathSubscription::Configuration>& configurations,
+          RedfishInterface&,
           RedPathSubscription::OnEventCallback event_callback,
           RedPathSubscription::OnStopCallback stop_callback)
       -> absl::StatusOr<std::unique_ptr<RedPathSubscription>> {
-    for (const auto &configuration : configurations) {
+    for (const auto& configuration : configurations) {
       if (configuration.query_id ==
           "AssemblyCollectorWithPropertyNameNormalization") {
         found_assembly_collector_config = true;
@@ -1610,8 +1610,8 @@ TEST(QueryEngineTest, CanHandleEventsCorrectly) {
   // test we expect these callbacks to be invoked along with the desired
   // parameters.
   auto client_on_event_callback =
-      [&](const QueryResult &single_query_result,
-          const RedPathSubscription::EventContext &context) {
+      [&](const QueryResult& single_query_result,
+          const RedPathSubscription::EventContext& context) {
         if (single_query_result.query_id() ==
             "AssemblyCollectorWithPropertyNameNormalization") {
           found_assembly_query_result = true;
@@ -1619,7 +1619,7 @@ TEST(QueryEngineTest, CanHandleEventsCorrectly) {
           found_thermal_query_result = true;
         }
       };
-  auto client_on_stop_callback = [&](const absl::Status &status) {
+  auto client_on_stop_callback = [&](const absl::Status& status) {
     found_stream_close = true;
     EXPECT_THAT(status, IsOk());
   };
@@ -1631,8 +1631,8 @@ TEST(QueryEngineTest, CanHandleEventsCorrectly) {
   RedPathSubscription::OnEventCallback captured_event_callback;
   RedPathSubscription::OnStopCallback captured_stop_callback;
   auto subscription_broker =
-      [&](const std::vector<RedPathSubscription::Configuration> &configurations,
-          RedfishInterface &,
+      [&](const std::vector<RedPathSubscription::Configuration>& configurations,
+          RedfishInterface&,
           RedPathSubscription::OnEventCallback event_callback,
           RedPathSubscription::OnStopCallback stop_callback)
       -> absl::StatusOr<std::unique_ptr<RedPathSubscription>> {
@@ -1735,8 +1735,8 @@ TEST(QueryEngineTest, CanHandleInvalidEvents) {
   // test we expect these callbacks to be invoked along with the desired
   // parameters.
   auto client_on_event_callback =
-      [&](const QueryResult &single_query_result,
-          const RedPathSubscription::EventContext &context) {
+      [&](const QueryResult& single_query_result,
+          const RedPathSubscription::EventContext& context) {
         if (single_query_result.query_id() ==
             "AssemblyCollectorWithPropertyNameNormalization") {
           found_assembly_query_result = true;
@@ -1744,7 +1744,7 @@ TEST(QueryEngineTest, CanHandleInvalidEvents) {
           found_thermal_query_result = true;
         }
       };
-  auto client_on_stop_callback = [&](const absl::Status &) {};
+  auto client_on_stop_callback = [&](const absl::Status&) {};
 
   // Set up a mock subscription broker.
   // In this test we use this mock to inject events and close the stream.
@@ -1753,8 +1753,8 @@ TEST(QueryEngineTest, CanHandleInvalidEvents) {
   RedPathSubscription::OnEventCallback captured_event_callback;
   RedPathSubscription::OnStopCallback captured_stop_callback;
   auto subscription_broker =
-      [&](const std::vector<RedPathSubscription::Configuration> &configurations,
-          RedfishInterface &,
+      [&](const std::vector<RedPathSubscription::Configuration>& configurations,
+          RedfishInterface&,
           RedPathSubscription::OnEventCallback event_callback,
           RedPathSubscription::OnStopCallback stop_callback)
       -> absl::StatusOr<std::unique_ptr<RedPathSubscription>> {
@@ -1822,8 +1822,8 @@ TEST(QueryEngineTest, CanHandleInvalidSubscriptionRequest) {
 
   // Set up callbacks for subscription query.
   auto client_on_event_callback =
-      [&](const QueryResult &, const RedPathSubscription::EventContext &) {};
-  auto client_on_stop_callback = [&](const absl::Status &) {};
+      [&](const QueryResult&, const RedPathSubscription::EventContext&) {};
+  auto client_on_stop_callback = [&](const absl::Status&) {};
 
   // Execute Subscription Query.
   // 1. Setup streaming options
@@ -1891,7 +1891,7 @@ TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnce) {
       query_engine->ExecuteRedpathQuery({"AssemblyAutoExpand"});
 
   int assembly_fetched_counter = 0;
-  for (const auto &uri_x_metric : response_entries.results()
+  for (const auto& uri_x_metric : response_entries.results()
                                       .at("AssemblyAutoExpand")
                                       .stats()
                                       .redfish_metrics()
@@ -1899,7 +1899,7 @@ TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnce) {
     // We expect assembly resource to be fetched.
     if (uri_x_metric.first == "/redfish/v1/Chassis/chassis/Assembly") {
       assembly_fetched_counter++;
-      for (const auto &metadata :
+      for (const auto& metadata :
            uri_x_metric.second.request_type_to_metadata()) {
         EXPECT_EQ(metadata.second.request_count(), 1);
       }
@@ -1936,7 +1936,7 @@ TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnceMultithreaded) {
            .annotations = FakeQueryEngine::Annotations::kDisable,
            .cache = FakeQueryEngine::Cache::kDisable}));
 
-  ThreadFactoryInterface *thread_factory = GetDefaultThreadFactory();
+  ThreadFactoryInterface* thread_factory = GetDefaultThreadFactory();
   std::vector<std::unique_ptr<ThreadInterface>> threads(kNumThreads);
   absl::Notification notification;
   for (int i = 0; i < kNumThreads; ++i) {
@@ -1946,7 +1946,7 @@ TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnceMultithreaded) {
       QueryIdToResult response_entries =
           query_engine->ExecuteRedpathQuery({"AssemblyAutoExpand"});
       int assembly_fetched_counter = 0;
-      for (const auto &uri_x_metric : response_entries.results()
+      for (const auto& uri_x_metric : response_entries.results()
                                           .at("AssemblyAutoExpand")
                                           .stats()
                                           .redfish_metrics()
@@ -1954,7 +1954,7 @@ TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnceMultithreaded) {
         // We expect assembly resource to be fetched.
         if (uri_x_metric.first == "/redfish/v1/Chassis/chassis/Assembly") {
           assembly_fetched_counter++;
-          for (const auto &metadata :
+          for (const auto& metadata :
                uri_x_metric.second.request_type_to_metadata()) {
             EXPECT_EQ(metadata.second.request_count(), 1);
           }
@@ -1971,7 +1971,7 @@ TEST(QueryEngineTest, QueryEngineQueriesAutoExpandResourceOnceMultithreaded) {
     }));
   }
   notification.Notify();
-  for (std::unique_ptr<ThreadInterface> &thread : threads) {
+  for (std::unique_ptr<ThreadInterface>& thread : threads) {
     if (thread) {
       thread->Join();
     }
@@ -2004,7 +2004,7 @@ TEST(QueryEngineTest, QueryEngineExecutesQueryRuleWithUriPrefix) {
   QueryIdToResult response = query_engine->ExecuteRedpathQuery(
       {"AssemblyCollectorWithPropertyNameNormalization"});
   // Validate the stats are correct.
-  for (const auto &uri_x_metric :
+  for (const auto& uri_x_metric :
        response.results()
            .at("AssemblyCollectorWithPropertyNameNormalization")
            .stats()
@@ -2042,7 +2042,7 @@ TEST(QueryEngineTest, QueryEngineAppliesQueryRulesToServiceRoot) {
   QueryIdToResult response = query_engine->ExecuteRedpathQuery(
       {"AssemblyCollectorWithPropertyNameNormalization"});
   // Validate the stats are correct.
-  for (const auto &uri_x_metric :
+  for (const auto& uri_x_metric :
        response.results()
            .at("AssemblyCollectorWithPropertyNameNormalization")
            .stats()
@@ -2112,8 +2112,8 @@ TEST_F(QueryEngineGrpcTestRunner,
   // Make service root request wait past the timeout.
   server_->AddHttpGetHandler(
       "/redfish/v1",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          ::redfish::v1::Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          ::redfish::v1::Response* response) {
         response->set_json_str(std::string(expected_str));
         response->set_code(200);
         notification_.WaitForNotification();
@@ -2205,8 +2205,8 @@ TEST_F(QueryEngineGrpcTestRunner, QueryEngineQueryCancellationTest) {
   absl::Notification cancel_notification;
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/Sensors/indus_fan2_rpm",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          ::redfish::v1::Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          ::redfish::v1::Response* response) {
         response->set_code(200);
 
         // Notifies the main thread to start query cancellation.
@@ -2322,8 +2322,8 @@ TEST_F(QueryEngineGrpcTestRunner,
   absl::Notification cancel_notification;
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/chassis/Sensors/indus_fan0_rpm",
-      [&](grpc::ServerContext *context, const ::redfish::v1::Request *request,
-          ::redfish::v1::Response *response) {
+      [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
+          ::redfish::v1::Response* response) {
         response->set_code(200);
         if (notification_.HasBeenNotified()) {
           return grpc::Status::OK;

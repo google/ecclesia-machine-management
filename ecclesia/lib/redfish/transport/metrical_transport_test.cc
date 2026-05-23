@@ -40,8 +40,8 @@
 namespace ecclesia {
 namespace {
 
-using ::testing::Eq;
 using ::ecclesia::IsOk;
+using ::testing::Eq;
 
 TEST(MetricalRedfishTransportTest, GetWithTimeout) {
   // Initialize a GrpcRedfishTransport and wrap it in a MetricalRedfishTransport

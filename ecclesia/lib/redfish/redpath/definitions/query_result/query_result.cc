@@ -50,8 +50,7 @@ bool operator==(const Identifier& a, const Identifier& b) {
          a.redfish_location() == b.redfish_location();
 }
 
-bool RemoveDataForIdentifier(QueryValue& value,
-                                 const Identifier& identifier) {
+bool RemoveDataForIdentifier(QueryValue& value, const Identifier& identifier) {
   bool result = false;
   switch (value.kind_case()) {
     case QueryValue::kSubqueryValue: {
@@ -84,9 +83,8 @@ bool RemoveDataForIdentifier(QueryValue& value,
   return result;
 }
 
-void GetDataForIdentifier(const QueryValue& value,
-                              const Identifier& identifier,
-                              std::vector<QueryResultData>& result) {
+void GetDataForIdentifier(const QueryValue& value, const Identifier& identifier,
+                          std::vector<QueryResultData>& result) {
   switch (value.kind_case()) {
     case QueryValue::kSubqueryValue: {
       if (auto it = value.subquery_value().fields().find(kIdentifierTag);
@@ -260,7 +258,7 @@ absl::StatusOr<absl::Duration> GetQueryDuration(
 }
 
 bool RemoveDataForIdentifier(QueryResult& query_result,
-                                 const Identifier& identifier) {
+                             const Identifier& identifier) {
   bool result = false;
   for (auto& [key, value] : *query_result.mutable_data()->mutable_fields()) {
     result |= RemoveDataForIdentifier(value, identifier);

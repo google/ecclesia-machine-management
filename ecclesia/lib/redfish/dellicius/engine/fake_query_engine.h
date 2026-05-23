@@ -79,30 +79,30 @@ class FakeQueryEngine : public QueryEngineIntf {
     return std::move(query_engine);
   }
 
-  FakeRedfishServer *GetFakeRedfishServer() { return &redfish_server_; }
+  FakeRedfishServer* GetFakeRedfishServer() { return &redfish_server_; }
 
   QueryIdToResult ExecuteRedpathQuery(
       absl::Span<const absl::string_view> query_ids,
-      const RedpathQueryOptions &options) override {
+      const RedpathQueryOptions& options) override {
     return query_engine_->ExecuteRedpathQuery(query_ids, options);
   }
 
   absl::StatusOr<SubscriptionQueryResult> ExecuteSubscriptionQuery(
       absl::Span<const absl::string_view> query_ids,
-      const QueryVariableSet &query_arguments,
+      const QueryVariableSet& query_arguments,
       StreamingOptions streaming_options) override {
     return query_engine_->ExecuteSubscriptionQuery(query_ids, query_arguments,
                                                    streaming_options);
   }
 
-  absl::StatusOr<RedfishInterface *> GetRedfishInterface(
+  absl::StatusOr<RedfishInterface*> GetRedfishInterface(
       RedfishInterfacePasskey unused_passkey) override {
     return query_engine_->GetRedfishInterface(unused_passkey);
   }
 
   absl::Status ExecuteOnRedfishInterface(
       RedfishInterfacePasskey unused_passkey,
-      const RedfishInterfaceOptions &options) override {
+      const RedfishInterfaceOptions& options) override {
     return query_engine_->ExecuteOnRedfishInterface(unused_passkey, options);
   }
 
@@ -110,7 +110,7 @@ class FakeQueryEngine : public QueryEngineIntf {
     return query_engine_->GetAgentIdentifier();
   }
 
-  void CancelQueryExecution(absl::Notification *notification) override {
+  void CancelQueryExecution(absl::Notification* notification) override {
     query_engine_->CancelQueryExecution(notification);
   }
 
@@ -128,9 +128,9 @@ class FakeQueryEngine : public QueryEngineIntf {
             ? QueryEngineParams::RedfishStableIdType::kRedfishLocationDerived
             : QueryEngineParams::RedfishStableIdType::kRedfishLocation;
 
-    auto *cache_factory = (params.cache == Cache::kDisable)
+    auto* cache_factory = (params.cache == Cache::kDisable)
                               ? NullCache::Create
-                              : ([](RedfishTransport *transport) {
+                              : ([](RedfishTransport* transport) {
                                   return TimeBasedCache::CreateDeepCache(
                                       transport, absl::InfiniteDuration());
                                 });

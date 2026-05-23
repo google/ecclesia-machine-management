@@ -92,7 +92,7 @@ TEST_F(HttpRedfishTransportTest, CanGet) {
 })json",
                             nullptr, /*allow_exceptions=*/false);
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
-  const auto &json = std::get<nlohmann::json>(result->body);
+  const auto& json = std::get<nlohmann::json>(result->body);
   EXPECT_THAT(json, Eq(expected))
       << "Diff: " << nlohmann::json::diff(json, expected);
 }
@@ -101,7 +101,7 @@ TEST_F(HttpRedfishTransportTest, GetInvalidJson) {
   bool called = false;
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/1/Actions/Chassis.Reset",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -132,7 +132,7 @@ TEST_F(HttpRedfishTransportTest, GetError) {
   bool called = false;
   server_->AddHttpGetHandler(
       "/redfish/v1/Chassis/1/Actions/Chassis.Reset",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
@@ -174,7 +174,7 @@ TEST_F(HttpRedfishTransportTest, CanPost) {
   bool called = false;
   server_->AddHttpPostHandler(
       "/redfish/v1/Chassis/1/Actions/Chassis.Reset",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -199,7 +199,7 @@ TEST_F(HttpRedfishTransportTest, CanPost) {
   EXPECT_THAT(result->code, Eq(200));
   EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
-  const auto &json = std::get<nlohmann::json>(result->body);
+  const auto& json = std::get<nlohmann::json>(result->body);
   EXPECT_THAT(json, Eq(result_json))
       << "Diff: " << nlohmann::json::diff(json, result_json);
 }
@@ -211,7 +211,7 @@ TEST_F(HttpRedfishTransportTest, PostInvalidJson) {
   bool called = false;
   server_->AddHttpPostHandler(
       "/redfish/v1/Chassis/1/Actions/Chassis.Reset",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -246,7 +246,7 @@ TEST_F(HttpRedfishTransportTest, PostError) {
   bool called = false;
   server_->AddHttpPostHandler(
       "/redfish/v1/Chassis/1/Actions/Chassis.Reset",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
@@ -284,7 +284,7 @@ TEST_F(HttpRedfishTransportTest, CanPatch) {
   bool called = false;
   server_->AddHttpPatchHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -308,7 +308,7 @@ TEST_F(HttpRedfishTransportTest, CanPatch) {
   EXPECT_THAT(result->code, Eq(200));
   EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
-  const auto &json = std::get<nlohmann::json>(result->body);
+  const auto& json = std::get<nlohmann::json>(result->body);
   EXPECT_THAT(json, Eq(result_json))
       << "Diff: " << nlohmann::json::diff(json, result_json);
 }
@@ -320,7 +320,7 @@ TEST_F(HttpRedfishTransportTest, PatchInvalidJson) {
   bool called = false;
   server_->AddHttpPatchHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -354,7 +354,7 @@ TEST_F(HttpRedfishTransportTest, PatchError) {
   bool called = false;
   server_->AddHttpPatchHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
@@ -388,7 +388,7 @@ TEST_F(HttpRedfishTransportTest, CanDelete) {
   bool called = false;
   server_->AddHttpDeleteHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -404,7 +404,7 @@ TEST_F(HttpRedfishTransportTest, CanDelete) {
   EXPECT_THAT(result->code, Eq(200));
   EXPECT_THAT(result->headers, Contains(Pair("OData-Version", "4.0")));
   ASSERT_TRUE(std::holds_alternative<nlohmann::json>(result->body));
-  const auto &json = std::get<nlohmann::json>(result->body);
+  const auto& json = std::get<nlohmann::json>(result->body);
   EXPECT_THAT(json, Eq(result_json))
       << "Diff: " << nlohmann::json::diff(json, result_json);
 }
@@ -420,7 +420,7 @@ TEST_F(HttpRedfishTransportTest, DeleteError) {
   bool called = false;
   server_->AddHttpDeleteHandler(
       "/redfish/v1/Chassis/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         called = true;
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
@@ -462,7 +462,7 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionRootSessionCollection) {
 })json");
 
   auto get_handler =
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
                                                         "application/json");
@@ -477,7 +477,7 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionRootSessionCollection) {
   bool called = false;
   server_->AddHttpPostHandler(
       "/redfish/v1/SessionService/Sessions",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -504,7 +504,7 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionRootSessionCollection) {
   bool req_get_called = false;
   server_->AddHttpGetHandler(
       "/redfish/v1/test/uri",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req_get_called = true;
         EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("a1b2c3"));
         // Construct the success message.
@@ -521,7 +521,7 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionRootSessionCollection) {
   bool delete_called = false;
   server_->AddHttpDeleteHandler(
       "/redfish/v1/Session/Sessions/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         delete_called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -560,7 +560,7 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionServiceRootLinks) {
 
   bool root_called = false;
   auto get_handler =
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         root_called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -576,7 +576,7 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionServiceRootLinks) {
   bool called = false;
   server_->AddHttpPostHandler(
       "/redfish/v1/SessionService/Sessions",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -603,7 +603,7 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionServiceRootLinks) {
   bool req_get_called = false;
   server_->AddHttpGetHandler(
       "/redfish/v1/test/uri",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req_get_called = true;
         EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("a1b2c3"));
         // Construct the success message.
@@ -621,7 +621,7 @@ TEST_F(HttpRedfishTransportTest, CanEstablishSessionServiceRootLinks) {
   bool delete_called = false;
   server_->AddHttpDeleteHandler(
       "/redfish/v1/Session/Sessions/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         delete_called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -647,7 +647,7 @@ TEST_F(HttpRedfishTransportTest, PostOperationsAfterAuthIncludeHeader) {
   bool called = false;
   server_->AddHttpPostHandler(
       "/redfish/v1/SessionService/Sessions",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -673,7 +673,7 @@ TEST_F(HttpRedfishTransportTest, PostOperationsAfterAuthIncludeHeader) {
   bool req_get_called = false;
   server_->AddHttpPostHandler(
       "/redfish/v1/test/uri",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req_get_called = true;
         EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("a1b2c3"));
         // Construct the success message.
@@ -690,7 +690,7 @@ TEST_F(HttpRedfishTransportTest, PostOperationsAfterAuthIncludeHeader) {
   bool delete_called = false;
   server_->AddHttpDeleteHandler(
       "/redfish/v1/Session/Sessions/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         delete_called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -711,7 +711,7 @@ TEST_F(HttpRedfishTransportTest, FailEstablishSessionNoSessionSupported) {
 
   bool root_called = false;
   auto get_handler =
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         root_called = true;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -742,7 +742,7 @@ TEST_F(HttpRedfishTransportTest, FailEstablishSessionNoAuthToken) {
   bool called = false;
   server_->AddHttpPostHandler(
       "/redfish/v1/SessionService/Sessions",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -778,7 +778,7 @@ TEST_F(HttpRedfishTransportTest, FailEstablishSessionNoLocation) {
   bool called = false;
   server_->AddHttpPostHandler(
       "/redfish/v1/SessionService/Sessions",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -814,7 +814,7 @@ TEST_F(HttpRedfishTransportTest, FailEstablishSessionHttpError) {
   bool called = false;
   server_->AddHttpPostHandler(
       "/redfish/v1/SessionService/Sessions",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -857,7 +857,7 @@ TEST_F(HttpRedfishTransportTest, CanDoSessionAuthTwice) {
   bool called = false;
   server_->AddHttpPostHandler(
       "/redfish/v1/SessionService/Sessions",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -884,7 +884,7 @@ TEST_F(HttpRedfishTransportTest, CanDoSessionAuthTwice) {
   bool req_get_called = false;
   server_->AddHttpGetHandler(
       "/redfish/v1/test/uri",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req_get_called = true;
         EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("a1b2c3"));
         // Construct the success message.
@@ -901,7 +901,7 @@ TEST_F(HttpRedfishTransportTest, CanDoSessionAuthTwice) {
   int delete_count = 0;
   server_->AddHttpDeleteHandler(
       "/redfish/v1/Session/Sessions/1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         ++delete_count;
         // Construct the success message.
         ::tensorflow::serving::net_http::SetContentType(req,
@@ -912,7 +912,7 @@ TEST_F(HttpRedfishTransportTest, CanDoSessionAuthTwice) {
   called = false;
   server_->AddHttpPostHandler(
       "/redfish/v1/SessionService/Sessions",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         int64_t size;
         auto buf = req->ReadRequestBytes(&size);
         ASSERT_THAT(size, Gt(0));
@@ -938,7 +938,7 @@ TEST_F(HttpRedfishTransportTest, CanDoSessionAuthTwice) {
   req_get_called = false;
   server_->AddHttpGetHandler(
       "/redfish/v1/test/uri",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface *req) {
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
         req_get_called = true;
         EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("d4e5f6"));
         // Construct the success message.

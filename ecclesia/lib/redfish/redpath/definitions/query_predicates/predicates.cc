@@ -65,7 +65,7 @@ constexpr absl::string_view kLeftParen = "(";
 constexpr absl::string_view kRightParen = ")";
 
 // Supported relational operators
-constexpr std::array<const char *, 10> kRelationsOperators = {
+constexpr std::array<const char*, 10> kRelationsOperators = {
     "<", ">", "!=", ">=", "<=", "=", "~>", "<~", "~>=", "<~="};
 
 constexpr std::array<absl::string_view, 4> kFuzzyStringComparisonOperators = {
@@ -92,7 +92,7 @@ bool ApplyStringComparisonFilter(F filter_condition,
 }
 
 template <typename t>
-bool TestLogicalOp(const std::string &op, t lhs, t rhs) {
+bool TestLogicalOp(const std::string& op, t lhs, t rhs) {
   if (op == ">=") return lhs >= rhs;
   if (op == ">") return lhs > rhs;
   if (op == "<=") return lhs <= rhs;
@@ -103,9 +103,9 @@ bool TestLogicalOp(const std::string &op, t lhs, t rhs) {
 
 // Helper function used to apply a fuzzy string comparison filter. Only
 // applicable for string objects and the operators ~> and <~.
-absl::StatusOr<bool> ApplyFuzzyStringComparisonFilter(const std::string &op,
-                                                      const std::string &lhs,
-                                                      const std::string &rhs) {
+absl::StatusOr<bool> ApplyFuzzyStringComparisonFilter(const std::string& op,
+                                                      const std::string& lhs,
+                                                      const std::string& rhs) {
   ECCLESIA_ASSIGN_OR_RETURN(int comparison_result,
                             FuzzyStringComparison(lhs, rhs));
 
@@ -116,8 +116,8 @@ absl::StatusOr<bool> ApplyFuzzyStringComparisonFilter(const std::string &op,
                        : false;
 }
 
-absl::StatusOr<bool> ApplyNumberComparisonFilter(const std::string &op,
-                                                 const nlohmann::json &obj,
+absl::StatusOr<bool> ApplyNumberComparisonFilter(const std::string& op,
+                                                 const nlohmann::json& obj,
                                                  double rhs) {
   double number;
   if (obj.is_number()) {
@@ -133,22 +133,24 @@ absl::StatusOr<bool> ApplyNumberComparisonFilter(const std::string &op,
 // Helper function used to validate two timestamp strings are in line with the
 // expected redfish standard and applies a given comparator.
 absl::StatusOr<bool> ApplyDateTimeComparisonFilter(
-    const std::string &op, const std::string &lhs_time_str,
+    const std::string& op, const std::string& lhs_time_str,
     absl::string_view test_value) {
   absl::Time rhs_time;
   absl::Time lhs_time;
   // Parse the user supplied timestamp into the desired format.
   if (!absl::ParseTime(kRedfishDatetimeNoOffset, test_value, &rhs_time,
-        /*err=*/nullptr) && !absl::ParseTime(kRedfishDatetimePlusOffset,
-        test_value, &rhs_time, /*err=*/nullptr)) {
+                       /*err=*/nullptr) &&
+      !absl::ParseTime(kRedfishDatetimePlusOffset, test_value, &rhs_time,
+                       /*err=*/nullptr)) {
     return absl::InvalidArgumentError(
         absl::StrCat("Invalid datetime string in predicate: ", test_value));
   }
 
   // Parse the timestamp from the Redfish property into the desired format.
   if (!absl::ParseTime(kRedfishDatetimeZeroOffset, lhs_time_str, &lhs_time,
-        /*err=*/nullptr) && !absl::ParseTime(kRedfishDatetimePlusOffset,
-        lhs_time_str, &lhs_time, /*err=*/nullptr)) {
+                       /*err=*/nullptr) &&
+      !absl::ParseTime(kRedfishDatetimePlusOffset, lhs_time_str, &lhs_time,
+                       /*err=*/nullptr)) {
     return absl::InternalError(absl::StrCat(
         "Invalid datetime string in redfish property: ", lhs_time_str));
   }
@@ -161,7 +163,7 @@ bool IsDateTimeString(absl::string_view test_value) {
 
 // Handler for predicate expressions containing relational operators.
 absl::StatusOr<bool> PredicateFilterByNodeComparison(
-    const nlohmann::json &json_object, absl::string_view predicate) {
+    const nlohmann::json& json_object, absl::string_view predicate) {
   std::string node_name;
   std::string op;
   std::string test_value;
@@ -225,14 +227,14 @@ absl::StatusOr<bool> PredicateFilterByNodeComparison(
 
 // Handler for '[nodename]'
 // Checks if given Redfish Resource contains predicate string.
-bool PredicateFilterByNodeName(const nlohmann::json &json_object,
+bool PredicateFilterByNodeName(const nlohmann::json& json_object,
                                absl::string_view predicate) {
   std::vector<std::string> node_names = SplitNodeNameForNestedNodes(predicate);
   if (node_names.empty()) {
     return false;
   }
   nlohmann::json leaf = json_object;
-  for (auto const &name : node_names) {
+  for (auto const& name : node_names) {
     if (!leaf.contains(name)) {
       return false;
     }
@@ -242,8 +244,8 @@ bool PredicateFilterByNodeName(const nlohmann::json &json_object,
 }
 
 }  // namespace
-absl::StatusOr<bool> ApplyPredicateRule(const nlohmann::json &json_object,
-                                        const PredicateOptions &options) {
+absl::StatusOr<bool> ApplyPredicateRule(const nlohmann::json& json_object,
+                                        const PredicateOptions& options) {
   if (options.predicate.empty()) {
     return absl::InvalidArgumentError("Empty predicate");
   }
@@ -359,7 +361,7 @@ absl::StatusOr<bool> ApplyPredicateRule(const nlohmann::json &json_object,
         (expr == kPredicateSelectAll)) {
       single_predicate_result = true;
     } else if (std::any_of(kRelationsOperators.begin(),
-                           kRelationsOperators.end(), [&](const char *op) {
+                           kRelationsOperators.end(), [&](const char* op) {
                              return absl::StrContains(expr, op);
                            })) {
       // Look for predicate expression containing relational operators.
@@ -403,9 +405,8 @@ absl::StatusOr<bool> ApplyPredicateRule(const nlohmann::json &json_object,
     }
   }
   if (paren_depth != 0) {
-    return absl::InvalidArgumentError(
-        absl::StrCat("Invalid predicate with mismatched parenthesis: ",
-                      options.predicate));
+    return absl::InvalidArgumentError(absl::StrCat(
+        "Invalid predicate with mismatched parenthesis: ", options.predicate));
   }
   return is_filter_success;
 }

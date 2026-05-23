@@ -59,9 +59,8 @@ void AddTimeoutFromSelectionSpec(
     const SelectionSpec::QuerySelectionSpec& selection_spec,
     QuerySpec::QueryInfo& query_info) {
   if (selection_spec.has_timeout()) {
-    query_info.timeout =
-        absl::Seconds(selection_spec.timeout().seconds()) +
-        absl::Nanoseconds(selection_spec.timeout().nanos());
+    query_info.timeout = absl::Seconds(selection_spec.timeout().seconds()) +
+                         absl::Nanoseconds(selection_spec.timeout().nanos());
   }
 }
 

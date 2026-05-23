@@ -34,7 +34,7 @@ absl::StatusOr<std::string> BuildFilterFromRedpathPredicate(
 // operator. The output string is compliant with the Redfish Spec
 // (DSP0266_1.20.0) 7.3.4 The $filter query parameter.
 absl::StatusOr<std::string> BuildFilterFromRedpathPredicateList(
-    const std::vector<std::string> &predicates);
+    const std::vector<std::string>& predicates);
 
 }  // namespace ecclesia
 

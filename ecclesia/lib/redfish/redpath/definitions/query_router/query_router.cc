@@ -67,8 +67,8 @@ namespace {
 // Makes new QueryVariableSet from query_arguments with SYSTEM_ID variable set.
 QueryEngineIntf::QueryVariableSet CreateQueryArgumentsWithSystemId(
     absl::Span<const absl::string_view> query_ids,
-    const QueryEngineIntf::QueryVariableSet &query_arguments,
-    const std::string &node_local_system_id) {
+    const QueryEngineIntf::QueryVariableSet& query_arguments,
+    const std::string& node_local_system_id) {
   if (query_arguments.contains(kNodeLocalSystemIdVariableName)) {
     return query_arguments;
   }
@@ -86,10 +86,10 @@ QueryEngineIntf::QueryVariableSet CreateQueryArgumentsWithSystemId(
 
 void PopulateQueryWithCancelledErrorStatus(
     absl::Span<const absl::string_view> queries,
-    const QueryRouterIntf::ServerInfo &server_info,
-    const QueryRouterIntf::ResultCallback &callback,
-    absl::Mutex &callback_mutex) {
-  for (const absl::string_view &query_id : queries) {
+    const QueryRouterIntf::ServerInfo& server_info,
+    const QueryRouterIntf::ResultCallback& callback,
+    absl::Mutex& callback_mutex) {
+  for (const absl::string_view& query_id : queries) {
     QueryResult result;
     result.set_query_id(std::string(query_id));
     result.mutable_status()->add_errors("Query execution has been cancelled.");
@@ -100,12 +100,12 @@ void PopulateQueryWithCancelledErrorStatus(
   }
 }
 
-void ExecuteQueries(QueryEngineIntf &query_engine,
+void ExecuteQueries(QueryEngineIntf& query_engine,
                     absl::Span<const absl::string_view> queries,
-                    const QueryRouterIntf::RedpathQueryOptions &options,
-                    const QueryRouterIntf::ServerInfo &server_info,
-                    const std::optional<std::string> &node_local_system_id,
-                    absl::Mutex &callback_mutex, bool is_query_cancelled) {
+                    const QueryRouterIntf::RedpathQueryOptions& options,
+                    const QueryRouterIntf::ServerInfo& server_info,
+                    const std::optional<std::string>& node_local_system_id,
+                    absl::Mutex& callback_mutex, bool is_query_cancelled) {
   if (is_query_cancelled) {
     return PopulateQueryWithCancelledErrorStatus(
         queries, server_info, options.callback, callback_mutex);
@@ -122,14 +122,14 @@ void ExecuteQueries(QueryEngineIntf &query_engine,
     redpath_query_options.query_arguments = options.query_arguments;
     result = query_engine.ExecuteRedpathQuery(queries, redpath_query_options);
   }
-  for (auto &[query_id, query_result] : *result.mutable_results()) {
+  for (auto& [query_id, query_result] : *result.mutable_results()) {
     absl::MutexLock lock(&callback_mutex);
     options.callback(server_info, std::move(query_result));
   }
 }
 
 absl::StatusOr<std::tuple<int, int, int>> ParseVersion(
-    const std::string &bmc_version_string) {
+    const std::string& bmc_version_string) {
   constexpr absl::string_view kGbmcReleasePrefix = "gbmc-release-";
   if (!absl::StartsWith(bmc_version_string, kGbmcReleasePrefix)) {
     return absl::InvalidArgumentError("Invalid bmc version string");
@@ -157,8 +157,8 @@ absl::StatusOr<std::tuple<int, int, int>> ParseVersion(
 }
 
 bool IsBmcVersionCompatible(
-    const QueryRouterSpec::VersionConfig::Policy::BmcVersion &bmc_version,
-    const std::string &bmc_version_string) {
+    const QueryRouterSpec::VersionConfig::Policy::BmcVersion& bmc_version,
+    const std::string& bmc_version_string) {
   absl::StatusOr<std::tuple<int, int, int>> current_version_tuple =
       ParseVersion(bmc_version_string);
 
@@ -190,11 +190,11 @@ bool IsBmcVersionCompatible(
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
-    const QueryRouterSpec &router_spec, std::vector<ServerSpec> server_specs,
+    const QueryRouterSpec& router_spec, std::vector<ServerSpec> server_specs,
     QueryEngineFactory query_engine_factory,
     RedpathNormalizer::RedpathNormalizersFactory redpath_normalizers_factory,
     TransportArbiterQueryEngineFactory transport_arbiter_query_engine_factory,
-    const ecclesia::Clock *clock) {
+    const ecclesia::Clock* clock) {
   switch (router_spec.query_pattern()) {
     case QueryPattern::PATTERN_SERIAL_ALL:
       break;
@@ -215,8 +215,8 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
   RoutingTable routing_table;
   routing_table.reserve(server_specs.size());
 
-  for (ServerSpec &server_spec : server_specs) {
-    const ServerInfo &server_info = server_spec.server_info;
+  for (ServerSpec& server_spec : server_specs) {
+    const ServerInfo& server_info = server_spec.server_info;
 
     QueryEngineParams query_engine_params = {
         .transport = std::move(server_spec.transport),
@@ -283,7 +283,7 @@ absl::StatusOr<std::unique_ptr<QueryRouterIntf>> QueryRouter::Create(
 
     absl::flat_hash_set<std::string> query_ids;
     query_ids.reserve(query_spec.query_id_to_info.size());
-    for (const auto &[query_id, info] : query_spec.query_id_to_info) {
+    for (const auto& [query_id, info] : query_spec.query_id_to_info) {
       query_ids.insert(query_id);
     }
 
@@ -360,7 +360,7 @@ QueryRouter::QueryRouter(QueryRouter::RoutingTable routing_table,
   }
 }
 
-void QueryRouter::ExecuteQuery(const RedpathQueryOptions &options) const {
+void QueryRouter::ExecuteQuery(const RedpathQueryOptions& options) const {
   {
     absl::MutexLock lock(&execute_ref_count_mutex_);
     ++execute_ref_count_;
@@ -380,8 +380,8 @@ void QueryRouter::ExecuteQuery(const RedpathQueryOptions &options) const {
 }
 
 bool QueryRouter::CanIncludeQuery(absl::string_view query_id,
-                                  const RedpathQueryOptions &options,
-                                  const QueryRoutingInfo &routing_info) const {
+                                  const RedpathQueryOptions& options,
+                                  const QueryRoutingInfo& routing_info) const {
   if (options.server_info_to_bmc_version.contains(routing_info.server_info)) {
     // If the server info is not found in the server_info_to_bmc_version
     // map, it means that the query router spec does not have any
@@ -408,10 +408,10 @@ bool QueryRouter::CanIncludeQuery(absl::string_view query_id,
 }
 
 void QueryRouter::ExecuteQuerySerialAll(
-    const RedpathQueryOptions &options) const {
+    const RedpathQueryOptions& options) const {
   absl::Mutex callback_mutex;
   bool is_query_cancelled = IsQueryExecutionCancelled();
-  for (const QueryRoutingInfo &routing_info : routing_table_) {
+  for (const QueryRoutingInfo& routing_info : routing_table_) {
     std::vector<absl::string_view> queries;
     queries.reserve(options.query_ids.size());
     for (absl::string_view query_id : options.query_ids) {
@@ -441,10 +441,10 @@ void QueryRouter::ExecuteQuerySerialAll(
 }
 
 void QueryRouter::ExecuteQuerySerialAgent(
-    const RedpathQueryOptions &options) const {
+    const RedpathQueryOptions& options) const {
   std::vector<QueryBatch> query_batches;
   query_batches.reserve(routing_table_.size());
-  for (const QueryRoutingInfo &routing_info : routing_table_) {
+  for (const QueryRoutingInfo& routing_info : routing_table_) {
     // Combine all queries per agent into a single batch
     QueryBatch query_batch(&routing_info);
     for (absl::string_view query_id : options.query_ids) {
@@ -465,10 +465,10 @@ void QueryRouter::ExecuteQuerySerialAgent(
 }
 
 void QueryRouter::ExecuteQueryParallelAll(
-    const RedpathQueryOptions &options) const {
+    const RedpathQueryOptions& options) const {
   std::vector<QueryBatch> query_batches;
   // Group individual queries into their own batches
-  for (const QueryRoutingInfo &routing_info : routing_table_) {
+  for (const QueryRoutingInfo& routing_info : routing_table_) {
     for (absl::string_view query_id : options.query_ids) {
       if (routing_info.query_ids.contains(query_id)) {
         bool can_include_query =
@@ -486,16 +486,16 @@ void QueryRouter::ExecuteQueryParallelAll(
 
 void QueryRouter::ExecuteQueryBatches(
     absl::Span<const QueryBatch> query_batches,
-    const RedpathQueryOptions &options) const {
+    const RedpathQueryOptions& options) const {
   int num_threads =
       std::min(static_cast<int>(query_batches.size()), max_concurrent_threads_);
 
   absl::Mutex callback_mutex;
   ThreadPool thread_pool(num_threads);
   bool is_query_cancelled = IsQueryExecutionCancelled();
-  for (const QueryBatch &query_batch : query_batches) {
+  for (const QueryBatch& query_batch : query_batches) {
     thread_pool.Schedule([&, is_query_cancelled]() {
-      const QueryRoutingInfo &routing_info = query_batch.routing_info;
+      const QueryRoutingInfo& routing_info = query_batch.routing_info;
       ExecuteQueries(*routing_info.query_engine, query_batch.queries, options,
                      routing_info.server_info,
                      routing_info.node_local_system_id, callback_mutex,
@@ -511,10 +511,10 @@ void QueryRouter::ExecuteQueryBatches(
   }
 }
 
-absl::StatusOr<RedfishInterface *> QueryRouter::GetRedfishInterface(
-    const ServerInfo &server_info,
+absl::StatusOr<RedfishInterface*> QueryRouter::GetRedfishInterface(
+    const ServerInfo& server_info,
     RedfishInterfacePasskey unused_passkey) const {
-  for (const QueryRoutingInfo &routing_info : routing_table_) {
+  for (const QueryRoutingInfo& routing_info : routing_table_) {
     if (routing_info.server_info == server_info) {
       return routing_info.query_engine->GetRedfishInterface(unused_passkey);
     }
@@ -529,9 +529,9 @@ absl::StatusOr<RedfishInterface *> QueryRouter::GetRedfishInterface(
 }
 
 absl::Status QueryRouter::ExecuteOnRedfishInterface(
-    const ServerInfo &server_info, RedfishInterfacePasskey unused_passkey,
-    const QueryEngineIntf::RedfishInterfaceOptions &options) const {
-  for (const QueryRoutingInfo &routing_info : routing_table_) {
+    const ServerInfo& server_info, RedfishInterfacePasskey unused_passkey,
+    const QueryEngineIntf::RedfishInterfaceOptions& options) const {
+  for (const QueryRoutingInfo& routing_info : routing_table_) {
     if (routing_info.server_info == server_info) {
       return routing_info.query_engine->ExecuteOnRedfishInterface(
           unused_passkey, options);
@@ -546,7 +546,7 @@ absl::Status QueryRouter::ExecuteOnRedfishInterface(
           server_info.server_class)));
 }
 
-void QueryRouter::CancelQueryExecution(absl::Notification *notification) {
+void QueryRouter::CancelQueryExecution(absl::Notification* notification) {
   // If there are no active query executions, return early.
   if (GetExecuteRefCount() == 0) {
     return;
@@ -562,7 +562,7 @@ void QueryRouter::CancelQueryExecution(absl::Notification *notification) {
 
   int num_threads = static_cast<int>(routing_table_.size());
   ThreadPool thread_pool(num_threads);
-  for (const QueryRoutingInfo &routing_info : routing_table_) {
+  for (const QueryRoutingInfo& routing_info : routing_table_) {
     thread_pool.Schedule([&]() {
       routing_info.query_engine->CancelQueryExecution(notification);
     });

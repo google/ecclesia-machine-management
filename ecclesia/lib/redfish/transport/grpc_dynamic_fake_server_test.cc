@@ -82,8 +82,8 @@ TEST(FakeServerTest, InsecureChannelOk) {
   expected_response.mutable_fields()->insert({"hello", value});
   std::string expected_url = "/fake";
   fake_server.SetCallback([expected_response, expected_url](
-                              grpc::CallbackServerContext *context,
-                              const Request *request, Response *response) {
+                              grpc::CallbackServerContext* context,
+                              const Request* request, Response* response) {
     EXPECT_EQ(request->url(), expected_url);
     *response->mutable_json() = expected_response;
     return grpc::Status::OK;
@@ -104,8 +104,8 @@ TEST(FakeServerTest, InsecureChannelNotOk) {
   std::unique_ptr<GrpcRedfishV1::Stub> stub = GrpcRedfishV1::NewStub(channel);
 
   fake_server.SetCallback(
-      [](grpc::CallbackServerContext *context, const Request *request,
-         Response *response) { return grpc::Status::CANCELLED; });
+      [](grpc::CallbackServerContext* context, const Request* request,
+         Response* response) { return grpc::Status::CANCELLED; });
   Request request;
   {
     SCOPED_TRACE("Get returns CANCELLED status");
@@ -184,8 +184,8 @@ TEST(FakeServerTest, InsecureChannelStreamPredefinedEventsOk) {
       NewHttpInterface(std::move(transport.value()), std::move(cache),
                        RedfishInterface::TrustedEndpoint::kTrusted);
   int event_id = 0;
-  std::function<void(const RedfishVariant &)> on_event =
-      [&event_id](const RedfishVariant &result) {
+  std::function<void(const RedfishVariant&)> on_event =
+      [&event_id](const RedfishVariant& result) {
         if (event_id == 0) {
           ASSERT_TRUE(result.AsRaw());
           EXPECT_EQ(result.AsRaw(), GetBytesFromString("hello"));
@@ -199,8 +199,8 @@ TEST(FakeServerTest, InsecureChannelStreamPredefinedEventsOk) {
         EXPECT_LE(event_id, 3);
       };
 
-  std::function<void(const absl::Status &status)> on_stop =
-      [&server_stream_ended](const absl::Status &status) {
+  std::function<void(const absl::Status& status)> on_stop =
+      [&server_stream_ended](const absl::Status& status) {
         EXPECT_THAT(status, ecclesia::IsOk());
         server_stream_ended.Notify();
       };
@@ -232,8 +232,8 @@ TEST(FakeServerTest, InsecureChannelStreamRandomEventsOkUntilCancelled) {
                                  grpc::InsecureChannelCredentials());
   ASSERT_THAT(transport, ecclesia::IsOk());
 
-  std::function<void(const absl::Status &)> on_stop =
-      [&server_stream_ended](const absl::Status &status) {
+  std::function<void(const absl::Status&)> on_stop =
+      [&server_stream_ended](const absl::Status& status) {
         server_stream_ended.Notify();
         EXPECT_THAT(status, testing::Not(ecclesia::IsOk()));
       };
@@ -241,7 +241,7 @@ TEST(FakeServerTest, InsecureChannelStreamRandomEventsOkUntilCancelled) {
   // Notify the clients when 10 events are sent
   RedfishTransport::EventCallback on_event =
       [received_events = 0,
-       &notification](const RedfishTransport::Result &result) mutable {
+       &notification](const RedfishTransport::Result& result) mutable {
         EXPECT_EQ(std::get<RedfishTransport::bytes>(result.body),
                   GetBytesFromString("Random data"));
         received_events++;
