@@ -83,18 +83,18 @@ TEST_F(ApifsTest, TestExists) {
 }
 
 TEST_F(ApifsTest, TestStat) {
-  auto stat_empty = apifs_.Stat("");
+  absl::StatusOr<struct stat> stat_empty = apifs_.Stat("");
   EXPECT_TRUE(stat_empty.ok());
   EXPECT_TRUE(S_ISDIR(stat_empty->st_mode));
 
-  auto stat_a = apifs_.Stat("a");
+  absl::StatusOr<struct stat> stat_a = apifs_.Stat("a");
   EXPECT_FALSE(stat_a.ok());
 
-  auto stat_ab = apifs_.Stat("ab");
+  absl::StatusOr<struct stat> stat_ab = apifs_.Stat("ab");
   EXPECT_TRUE(stat_ab.ok());
   EXPECT_TRUE(S_ISDIR(stat_ab->st_mode));
 
-  auto stat_ab_file1 = apifs_.Stat("ab/file1");
+  absl::StatusOr<struct stat> stat_ab_file1 = apifs_.Stat("ab/file1");
   EXPECT_TRUE(stat_ab_file1.ok());
   EXPECT_TRUE(S_ISREG(stat_ab_file1->st_mode));
 
@@ -210,11 +210,29 @@ TEST_F(ApifsTest, TestOverwrite) {
   EXPECT_THAT(f3.Read(), IsOkAndHolds("tiny"));
 }
 
+TEST_F(ApifsTest, TestWriteSymlinkFail) {
+  // "ab/file4" is a symlink to "file1". Writing to it should fail because of
+  // `O_NOFOLLOW`.
+  EXPECT_THAT(apifs_.Write("ab/file4", "new contents"), Not(IsOk()));
+
+  // Verify that the target file (file1) was NOT modified.
+  EXPECT_THAT(apifs_.Read("ab/file1"), IsOkAndHolds("contents**\n"));
+}
+
+TEST_F(ApifsTest, TestWriteRangeSymlinkFail) {
+  ApifsFile f4(apifs_, "ab/file4");
+  std::vector<char> data = {'a', 'b'};
+  EXPECT_THAT(f4.WriteRange(0, absl::MakeConstSpan(data)), Not(IsOk()));
+
+  // Verify that the target file (file1) was NOT modified.
+  EXPECT_THAT(apifs_.Read("ab/file1"), IsOkAndHolds("contents**\n"));
+}
+
 TEST_F(ApifsTest, TestReadLink) {
   // Test reading the symlink from file4 -> file1.
   EXPECT_THAT(apifs_.ReadLink("ab/file4"), IsOkAndHolds("file1"));
 
-  // Reading a non-symlink should fail, or a non-existant file.
+  // Reading a non-symlink should fail, or a non-existent file.
   EXPECT_THAT(apifs_.ReadLink("ab/file1"), Not(IsOk()));
   EXPECT_THAT(apifs_.ReadLink("ab/file5"), Not(IsOk()));
 

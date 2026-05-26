@@ -22,8 +22,8 @@
 #include <sys/types.h>  // IWYU pragma: keep
 #include <unistd.h>     // IWYU pragma: keep
 
-#include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <utility>
@@ -32,8 +32,6 @@
 #include "absl/cleanup/cleanup.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/match.h"
-#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
@@ -60,7 +58,7 @@ absl::StatusOr<std::vector<std::string>> ListEntriesInDir(
   }
   std::vector<std::string> entries;
   ECCLESIA_RETURN_IF_ERROR(
-      WithEachFileInDirectory(dir_path, [&](absl::string_view entry) {
+      WithEachFileInDirectory(dir_path, [&](absl::string_view entry) -> void {
         entries.push_back(per_entry_func(entry));
       }));
   return entries;
@@ -89,15 +87,18 @@ absl::StatusOr<struct stat> ApifsDirectory::Stat(std::string path) const {
 
 absl::StatusOr<std::vector<std::string>> ApifsDirectory::ListEntryNames()
     const {
-  return ListEntriesInDir(
-      dir_path_, [](absl::string_view entry) { return std::string(entry); });
+  return ListEntriesInDir(dir_path_,
+                          [](absl::string_view entry) -> std::string {
+                            return std::string(entry);
+                          });
 }
 
 absl::StatusOr<std::vector<std::string>> ApifsDirectory::ListEntryNames(
     std::string path) const {
-  return ListEntriesInDir(
-      JoinFilePaths(dir_path_, std::move(path)),
-      [](absl::string_view entry) { return std::string(entry); });
+  return ListEntriesInDir(JoinFilePaths(dir_path_, std::move(path)),
+                          [](absl::string_view entry) -> std::string {
+                            return std::string(entry);
+                          });
 }
 
 absl::StatusOr<std::vector<std::string>> ApifsDirectory::ListEntryPaths()
@@ -110,9 +111,10 @@ absl::StatusOr<std::vector<std::string>> ApifsDirectory::ListEntryPaths()
 absl::StatusOr<std::vector<std::string>> ApifsDirectory::ListEntryPaths(
     std::string path) const {
   std::string full_path = JoinFilePaths(dir_path_, std::move(path));
-  return ListEntriesInDir(full_path, [&full_path](absl::string_view entry) {
-    return JoinFilePaths(full_path, entry);
-  });
+  return ListEntriesInDir(full_path,
+                          [&full_path](absl::string_view entry) -> std::string {
+                            return JoinFilePaths(full_path, entry);
+                          });
 }
 
 absl::StatusOr<std::string> ApifsDirectory::Read(std::string path) const {
@@ -160,14 +162,14 @@ absl::StatusOr<std::string> ApifsFile::Read() const {
     return absl::InternalError(absl::StrFormat(
         "unable to open the file at path: %s, errno: %d", path_, errno));
   }
-  absl::Cleanup fd_closer = [fd]() { close(fd); };
+  absl::Cleanup fd_closer = [fd]() -> void { close(fd); };
 
   std::string value;
   while (true) {
     char buffer[4096];
     const ssize_t n = read(fd, buffer, sizeof(buffer));
     if (n < 0) {
-      const auto read_errno = errno;
+      const int read_errno = errno;
       if (read_errno == EINTR) {
         continue;  // Retry on EINTR.
       }
@@ -175,24 +177,23 @@ absl::StatusOr<std::string> ApifsFile::Read() const {
           "failure while reading from file at path: %s, errno: %d", path_,
           read_errno));
       break;
-    } else if (n == 0) {
-      break;  // Nothing left to read.
-    } else {
-      value.append(buffer, n);
     }
+    if (n == 0) break;  // Nothing left to read.
+
+    value.append(buffer, n);
   }
   return value;
 }
 
 absl::Status ApifsFile::Write(absl::string_view value) const {
-  const int fd = open(path_.c_str(), O_WRONLY | O_TRUNC);
+  const int fd = open(path_.c_str(), O_WRONLY | O_TRUNC | O_NOFOLLOW);
   if (fd < 0) {
     if (errno == ENOENT) {
       return absl::NotFoundError(
           absl::StrFormat("File not found at path: %s", path_));
     }
-    return absl::InternalError(
-        absl::StrFormat("unable to open the file at path: %s", path_));
+    return absl::InternalError(absl::StrFormat(
+        "unable to open the file at path: %s, errno: %d", path_, errno));
   }
   absl::Cleanup fd_closer = [fd]() { close(fd); };
   const char* data = value.data();
@@ -200,12 +201,11 @@ absl::Status ApifsFile::Write(absl::string_view value) const {
   while (size > 0) {
     ssize_t result = write(fd, data, size);
     if (result <= 0) {
-      const auto write_errno = errno;
+      const int write_errno = errno;
       if (write_errno == EINTR) continue;  // Retry on EINTR.
       return absl::InternalError(absl::StrFormat(
           "failure while writing to file at path: %s, errno: %d", path_,
-          errno));
-      break;
+          write_errno));
     }
     // We successfully wrote out 'result' bytes, advance the data pointer.
     size -= result;
@@ -226,7 +226,7 @@ absl::Status ApifsFile::ReadRange(uint64_t offset,
     return absl::InternalError(absl::StrFormat(
         "Unable to open the file at path: %s, errno: %d", path_, errno));
   }
-  absl::Cleanup fd_closer = [fd]() { close(fd); };
+  absl::Cleanup fd_closer = [fd]() -> void { close(fd); };
   // Read data.
   size_t remaining_length = value.size();
   char* data = value.data();
@@ -234,7 +234,7 @@ absl::Status ApifsFile::ReadRange(uint64_t offset,
   while (remaining_length > 0) {
     ssize_t result = pread(fd, data, remaining_length, read_offset);
     if (result < 0) {
-      const auto read_errno = errno;
+      const int read_errno = errno;
       if (read_errno == EINTR) {
         continue;  // Retry on EINTR.
       }
@@ -263,16 +263,16 @@ absl::Status ApifsFile::ReadRange(uint64_t offset,
 
 absl::Status ApifsFile::WriteRange(uint64_t offset,
                                    absl::Span<const char> value) const {
-  const int fd = open(path_.c_str(), O_WRONLY);
+  const int fd = open(path_.c_str(), O_WRONLY | O_NOFOLLOW);
   if (fd < 0) {
     if (errno == ENOENT) {
       return absl::NotFoundError(
           absl::StrFormat("File not found at path: %s", path_));
     }
-    return absl::InternalError(
-        absl::StrFormat("Unable to open the file at path: %s", path_));
+    return absl::InternalError(absl::StrFormat(
+        "Unable to open the file at path: %s, errno: %d", path_, errno));
   }
-  absl::Cleanup fd_closer = [fd]() { close(fd); };
+  absl::Cleanup fd_closer = [fd]() -> void { close(fd); };
   // Write data.
   size_t remaining_length = value.size();
   const char* data = value.data();
@@ -280,7 +280,7 @@ absl::Status ApifsFile::WriteRange(uint64_t offset,
   while (remaining_length > 0) {
     ssize_t result = pwrite(fd, data, remaining_length, write_offset);
     if (result < 0) {
-      const auto write_errno = errno;
+      const int write_errno = errno;
       if (write_errno == EINTR) {
         continue;  // Retry on EINTR.
       }
@@ -315,10 +315,10 @@ absl::StatusOr<std::string> ApifsFile::ReadLink() const {
     if (errno == ENOENT) {
       return absl::NotFoundError(
           absl::StrFormat("file not found at path: %s", path_));
-    } else {
-      return absl::InternalError(absl::StrFormat(
-          "failure while lstat-ing file at path: %s, errno: %d", path_, errno));
     }
+
+    return absl::InternalError(absl::StrFormat(
+        "failure while lstat-ing file at path: %s, errno: %d", path_, errno));
   }
   if (!S_ISLNK(st.st_mode)) {
     return absl::InvalidArgumentError(
