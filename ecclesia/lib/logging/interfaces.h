@@ -69,7 +69,7 @@ class SourceLocation {
   // constructed with the default arguments.
   static constexpr SourceLocation current(
       PrivateTag = PrivateTag(), int line = __builtin_LINE(),
-      const char *file_name = __builtin_FILE()) {
+      const char* file_name = __builtin_FILE()) {
     return SourceLocation(line, file_name);
   }
 
@@ -77,15 +77,15 @@ class SourceLocation {
   constexpr int line() const { return line_; }
 
   // The file name of the captured source location.
-  constexpr const char *file_name() const { return file_name_; }
+  constexpr const char* file_name() const { return file_name_; }
 
  private:
   // The real constructor. Cannot be called directly.
-  constexpr SourceLocation(int line, const char *file_name)
+  constexpr SourceLocation(int line, const char* file_name)
       : line_(line), file_name_(file_name) {}
 
   int line_;
-  const char *file_name_;
+  const char* file_name_;
 };
 
 }  // namespace ecclesia

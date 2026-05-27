@@ -64,15 +64,15 @@ struct StubArbiterInfo {
   };
 
   struct MetricsWrapper {
-    MetricsWrapper(Metrics *metrics_ptr, const Clock *clock_ptr)
+    MetricsWrapper(Metrics* metrics_ptr, const Clock* clock_ptr)
         : metrics(*metrics_ptr), clock(*ABSL_DIE_IF_NULL(clock_ptr)) {
       metrics.arbiter_start_time = clock.Now();
     }
     ~MetricsWrapper() { metrics.arbiter_end_time = clock.Now(); }
 
    private:
-    Metrics &metrics;
-    const Clock &clock;
+    Metrics& metrics;
+    const Clock& clock;
   };
 
   using MetricsExporter = std::function<void(
@@ -90,11 +90,11 @@ template <typename T>
 class StubArbiter {
  public:
   static absl::StatusOr<std::unique_ptr<StubArbiter>> Create(
-      const StubArbiterInfo::Config &config,
+      const StubArbiterInfo::Config& config,
       absl::AnyInvocable<
           absl::StatusOr<std::unique_ptr<T>>(StubArbiterInfo::PriorityLabel)>
           stub_factory,
-      const Clock *clock = Clock::RealClock()) {
+      const Clock* clock = Clock::RealClock()) {
     switch (config.type) {
       case StubArbiterInfo::Type::kManual:
       case StubArbiterInfo::Type::kFailover:
@@ -119,8 +119,7 @@ class StubArbiter {
 
   // The Execute function runs the callback synchronously.
   StubArbiterInfo::Metrics Execute(
-      absl::AnyInvocable<absl::Status(T *, StubArbiterInfo::PriorityLabel)>
-          func,
+      absl::AnyInvocable<absl::Status(T*, StubArbiterInfo::PriorityLabel)> func,
       StubArbiterInfo::PriorityLabel initial_stub =
           StubArbiterInfo::PriorityLabel::kPrimary) {
     return policy_(std::move(func), initial_stub);
@@ -133,8 +132,8 @@ class StubArbiter {
           absl::StatusOr<std::unique_ptr<T>>(StubArbiterInfo::PriorityLabel)>
           stub_factory,
       absl::flat_hash_set<absl::StatusCode> failover_codes,
-      absl::Duration refresh, const Clock *clock,
-      const std::optional<StubArbiterInfo::MetricsExporter> &metrics_exporter)
+      absl::Duration refresh, const Clock* clock,
+      const std::optional<StubArbiterInfo::MetricsExporter>& metrics_exporter)
       : failover_codes_(std::move(failover_codes)),
         stub_factory_(std::move(stub_factory)),
         clock_(*ABSL_DIE_IF_NULL(clock)),
@@ -162,8 +161,7 @@ class StubArbiter {
   }
 
   StubArbiterInfo::Metrics Manual(
-      absl::AnyInvocable<absl::Status(T *, StubArbiterInfo::PriorityLabel)>
-          func,
+      absl::AnyInvocable<absl::Status(T*, StubArbiterInfo::PriorityLabel)> func,
       StubArbiterInfo::PriorityLabel label) {
     StubArbiterInfo::Metrics metrics;
     StubArbiterInfo::MetricsWrapper metrics_wrapper(&metrics, &clock_);
@@ -186,7 +184,7 @@ class StubArbiter {
       }
     }
 
-    StubArbiterInfo::EndpointMetrics &endpoint_metrics =
+    StubArbiterInfo::EndpointMetrics& endpoint_metrics =
         metrics.endpoint_metrics[label];
     endpoint_metrics.start_time = clock_.Now();
     endpoint_metrics.status = func(active_stub_.get(), label);
@@ -198,16 +196,15 @@ class StubArbiter {
   }
 
   StubArbiterInfo::Metrics Failover(
-      absl::AnyInvocable<absl::Status(T *, StubArbiterInfo::PriorityLabel)>
-          func,
+      absl::AnyInvocable<absl::Status(T*, StubArbiterInfo::PriorityLabel)> func,
       StubArbiterInfo::PriorityLabel initial_stub) {
     std::string stub_path;
     StubArbiterInfo::Metrics metrics;
     StubArbiterInfo::MetricsWrapper metrics_wrapper(&metrics, &clock_);
 
-    auto execute_func = [&](T *stub, StubArbiterInfo::PriorityLabel label,
+    auto execute_func = [&](T* stub, StubArbiterInfo::PriorityLabel label,
                             absl::string_view stub_path) -> absl::Status {
-      StubArbiterInfo::EndpointMetrics &endpoint_metrics =
+      StubArbiterInfo::EndpointMetrics& endpoint_metrics =
           metrics.endpoint_metrics[label];
       endpoint_metrics.start_time = clock_.Now();
       absl::Status status = func(stub, label);
@@ -299,14 +296,14 @@ class StubArbiter {
   }
 
   absl::AnyInvocable<StubArbiterInfo::Metrics(
-      absl::AnyInvocable<absl::Status(T *, StubArbiterInfo::PriorityLabel)>,
+      absl::AnyInvocable<absl::Status(T*, StubArbiterInfo::PriorityLabel)>,
       StubArbiterInfo::PriorityLabel)>
       policy_;
   absl::flat_hash_set<absl::StatusCode> failover_codes_;
   absl::AnyInvocable<absl::StatusOr<std::unique_ptr<T>>(
       StubArbiterInfo::PriorityLabel)>
       stub_factory_;
-  const Clock &clock_;
+  const Clock& clock_;
   absl::Mutex stub_mutex_;
   std::unique_ptr<T> active_stub_ ABSL_GUARDED_BY(stub_mutex_);
   StubArbiterInfo::PriorityLabel active_stub_label_

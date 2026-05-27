@@ -33,8 +33,8 @@ class RealClock : public Clock {
 
 }  // namespace
 
-Clock *Clock::RealClock() {
-  static Clock &real_clock = *(new class RealClock());
+Clock* Clock::RealClock() {
+  static Clock& real_clock = *(new class RealClock());
   return &real_clock;
 }
 

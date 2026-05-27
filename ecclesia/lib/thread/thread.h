@@ -41,7 +41,7 @@ class ThreadFactoryInterface {
       std::function<void()> runner) = 0;
 };
 
-ThreadFactoryInterface *GetDefaultThreadFactory();
+ThreadFactoryInterface* GetDefaultThreadFactory();
 
 }  // namespace ecclesia
 

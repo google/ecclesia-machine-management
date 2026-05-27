@@ -36,8 +36,8 @@ class SequenceNumberGenerator {
   // it can safely by used as a static lifetime object.
   constexpr SequenceNumberGenerator() : value_(0) {}
 
-  SequenceNumberGenerator(const SequenceNumberGenerator &) = delete;
-  SequenceNumberGenerator &operator=(const SequenceNumberGenerator &) = delete;
+  SequenceNumberGenerator(const SequenceNumberGenerator&) = delete;
+  SequenceNumberGenerator& operator=(const SequenceNumberGenerator&) = delete;
 
   // Pick as large of a type as possible that we can reasonably expect to be
   // implemented in a lock-free way. Also use an unsigned value so that in the

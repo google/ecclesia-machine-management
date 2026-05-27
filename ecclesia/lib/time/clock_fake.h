@@ -22,6 +22,7 @@
 #define ECCLESIA_LIB_TIME_CLOCK_FAKE_H_
 
 #include <atomic>
+
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/time/clock.h"
@@ -35,8 +36,8 @@ class FakeClock : public Clock {
   FakeClock() : FakeClock(absl::Now()) {}
   explicit FakeClock(absl::Time now) : time_(now) {}
 
-  FakeClock(const FakeClock &) = delete;
-  FakeClock &operator=(const FakeClock &) = delete;
+  FakeClock(const FakeClock&) = delete;
+  FakeClock& operator=(const FakeClock&) = delete;
 
   absl::Time Now() const override { return time_; }
 

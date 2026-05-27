@@ -46,25 +46,26 @@ class IsStatusMonoMatcher : public ::testing::MatcherInterface<StatusType> {
  public:
   explicit IsStatusMonoMatcher(absl::StatusCode code) : code_(code) {}
 
-  void DescribeTo(std::ostream *os) const override {
+  void DescribeTo(std::ostream* os) const override {
     *os << "is " << absl::StatusCodeToString(code_);
   }
-  void DescribeNegationTo(std::ostream *os) const override {
+  void DescribeNegationTo(std::ostream* os) const override {
     *os << "is not " << absl::StatusCodeToString(code_);
   }
-  bool MatchAndExplain(StatusType actual_value,
-                       ::testing::MatchResultListener *) const override {
+  bool MatchAndExplain(
+      StatusType actual_value,
+      ::testing::MatchResultListener* /*unused*/) const override {
     return GetStatus(actual_value).code() == code_;
   }
 
  private:
   // Overloads to extract the Status from the stored types, whether it is a
   // Status or a StatusOr.
-  static const absl::Status &GetStatus(const absl::Status &status) {
+  static const absl::Status& GetStatus(const absl::Status& status) {
     return status;
   }
   template <typename T>
-  static const absl::Status &GetStatus(const absl::StatusOr<T> &statusor) {
+  static const absl::Status& GetStatus(const absl::StatusOr<T>& statusor) {
     return statusor.status();
   }
 
@@ -97,23 +98,30 @@ class IsOkAndHoldsMonoMatcher
       typename std::remove_reference<StatusOrType>::type::value_type;
 
   template <typename InnerMatcher>
-  explicit IsOkAndHoldsMonoMatcher(InnerMatcher &&inner_matcher)
-      : inner_matcher_(::testing::SafeMatcherCast<const value_type &>(
+  explicit IsOkAndHoldsMonoMatcher(InnerMatcher&& inner_matcher)
+      : inner_matcher_(::testing::SafeMatcherCast<const value_type&>(
             std::forward<InnerMatcher>(inner_matcher))) {}
 
-  void DescribeTo(std::ostream *os) const override {
+  // Explicitly define copy and move operations to prevent the forwarding
+  // reference constructor from hiding them.
+  IsOkAndHoldsMonoMatcher(const IsOkAndHoldsMonoMatcher&) = default;
+  IsOkAndHoldsMonoMatcher& operator=(const IsOkAndHoldsMonoMatcher&) = default;
+  IsOkAndHoldsMonoMatcher(IsOkAndHoldsMonoMatcher&&) = default;
+  IsOkAndHoldsMonoMatcher& operator=(IsOkAndHoldsMonoMatcher&&) = default;
+
+  void DescribeTo(std::ostream* os) const override {
     *os << "is OK and has a value that ";
     inner_matcher_.DescribeTo(os);
   }
 
-  void DescribeNegationTo(std::ostream *os) const override {
+  void DescribeNegationTo(std::ostream* os) const override {
     *os << "isn't OK or has a value that ";
     inner_matcher_.DescribeNegationTo(os);
   }
 
   bool MatchAndExplain(
       StatusOrType actual_value,
-      ::testing::MatchResultListener *result_listener) const override {
+      ::testing::MatchResultListener* result_listener) const override {
     if (!actual_value.ok()) {
       *result_listener << "which has status " << actual_value.status();
       return false;
@@ -132,7 +140,7 @@ class IsOkAndHoldsMonoMatcher
   }
 
  private:
-  const ::testing::Matcher<const value_type &> inner_matcher_;
+  const ::testing::Matcher<const value_type&> inner_matcher_;
 };
 
 // Implements IsOkAndHolds(m) as a polymorphic matcher.
@@ -148,7 +156,7 @@ class IsOkAndHoldsPolyMatcher {
   template <typename StatusOrType>
   operator ::testing::Matcher<StatusOrType>() const {
     return ::testing::Matcher<StatusOrType>(
-        new IsOkAndHoldsMonoMatcher<const StatusOrType &>(inner_matcher_));
+        new IsOkAndHoldsMonoMatcher<const StatusOrType&>(inner_matcher_));
   }
 
  private:
@@ -166,7 +174,7 @@ inline internal_status::IsStatusPolyMatcher IsOk() {
 template <typename InnerMatcher>
 internal_status::IsOkAndHoldsPolyMatcher<
     typename std::decay<InnerMatcher>::type>
-IsOkAndHolds(InnerMatcher &&inner_matcher) {
+IsOkAndHolds(InnerMatcher&& inner_matcher) {
   return internal_status::IsOkAndHoldsPolyMatcher<
       typename std::decay<InnerMatcher>::type>(
       std::forward<InnerMatcher>(inner_matcher));

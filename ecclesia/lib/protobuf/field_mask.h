@@ -45,31 +45,31 @@ namespace ecclesia {
 namespace ecclesia_field_mask_util {
 
 // For documentation on these functions see FieldMaskUtil.
-void FromString(absl::string_view str, google::protobuf::FieldMask *out);
+void FromString(absl::string_view str, google::protobuf::FieldMask* out);
 bool GetFieldDescriptors(
-    const google::protobuf::Descriptor *descriptor, absl::string_view path,
-    std::vector<const google::protobuf::FieldDescriptor *> *field_descriptors);
+    const google::protobuf::Descriptor* descriptor, absl::string_view path,
+    std::vector<const google::protobuf::FieldDescriptor*>* field_descriptors);
 template <typename T>
 bool IsValidPath(absl::string_view path) {
   return GetFieldDescriptors(T::descriptor(), path, nullptr);
 }
-void ToCanonicalForm(const google::protobuf::FieldMask &mask,
-                     google::protobuf::FieldMask *out);
-void Intersect(const google::protobuf::FieldMask &mask1,
-               const google::protobuf::FieldMask &mask2,
-               google::protobuf::FieldMask *out);
-void Subtract(const google::protobuf::Descriptor *descriptor,
-              const google::protobuf::FieldMask &mask1,
-              const google::protobuf::FieldMask &mask2,
-              google::protobuf::FieldMask *out);
+void ToCanonicalForm(const google::protobuf::FieldMask& mask,
+                     google::protobuf::FieldMask* out);
+void Intersect(const google::protobuf::FieldMask& mask1,
+               const google::protobuf::FieldMask& mask2,
+               google::protobuf::FieldMask* out);
+void Subtract(const google::protobuf::Descriptor* descriptor,
+              const google::protobuf::FieldMask& mask1,
+              const google::protobuf::FieldMask& mask2,
+              google::protobuf::FieldMask* out);
 template <typename T>
-void Subtract(const google::protobuf::FieldMask &mask1,
-              const google::protobuf::FieldMask &mask2,
-              google::protobuf::FieldMask *out) {
+void Subtract(const google::protobuf::FieldMask& mask1,
+              const google::protobuf::FieldMask& mask2,
+              google::protobuf::FieldMask* out) {
   Subtract(T::descriptor(), mask1, mask2, out);
 }
-bool TrimMessage(const google::protobuf::FieldMask &mask,
-                 google::protobuf::Message *message);
+bool TrimMessage(const google::protobuf::FieldMask& mask,
+                 google::protobuf::Message* message);
 
 absl::StatusOr<std::string> SnakeCaseToCamelCase(std::string_view input,
                                                  bool to_lower_case);

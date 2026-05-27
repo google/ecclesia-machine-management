@@ -44,7 +44,7 @@ class ProcessorInformation {
   // The constructor takes in a pointer to a smbios structure of type 4
   // (Processor Information) and provides an emboss view to access the structure
   // fields. table_entry outlives this object
-  explicit ProcessorInformation(const TableEntry *table_entry)
+  explicit ProcessorInformation(const TableEntry* table_entry)
       : table_entry_(table_entry) {}
 
   // Given a string number found in the smbios structure, return the
@@ -109,7 +109,7 @@ class ProcessorInformation {
   CpuSignature GetSignaturex86() const;
   CpuSignature GetSignatureAmd() const;
 
-  const TableEntry *table_entry_;
+  const TableEntry* table_entry_;
 };
 
 }  // namespace ecclesia

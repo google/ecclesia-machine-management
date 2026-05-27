@@ -28,7 +28,7 @@ namespace {
 // getting all the address info for "localhost" and seeing if it supports the
 // address family in question.
 bool DoesLocalhostContainFamily(int addr_family) {
-  struct addrinfo *addr;
+  struct addrinfo* addr;
   if (getaddrinfo("localhost", nullptr, nullptr, &addr) != 0) {
     // If we can't get localhost info at all, return false.
     return false;

@@ -22,7 +22,7 @@
 
 namespace ecclesia {
 
-MaskedAddress::iterator &MaskedAddress::iterator::operator++() {
+MaskedAddress::iterator& MaskedAddress::iterator::operator++() {
   // cycle through matching addresses by forcing carries to propagate
   // through bits which have the corresponding bit in the mask set,
   // then restoring those bits.
@@ -40,7 +40,7 @@ MaskedAddress::iterator MaskedAddress::iterator::operator++(int) {
 }
 
 bool MaskedAddress::MaskedAddress::iterator::operator==(
-    const iterator &i) const {
+    const iterator& i) const {
   // All finished iterators compare equal.
   if (done_ && i.done_) {
     return true;
@@ -53,7 +53,7 @@ bool MaskedAddress::MaskedAddress::iterator::operator==(
   return addr_ == i.addr_ && mask_ == i.mask_;
 }
 
-std::ostream &operator<<(std::ostream &out, const MaskedAddress &ma) {
+std::ostream& operator<<(std::ostream& out, const MaskedAddress& ma) {
   out << ma.addr_ << "\\" << ma.mask_;
   return out;
 }
@@ -96,7 +96,7 @@ bool AddressRange::OverlapsMask(MaskedAddress address) const {
                      [this](uint64_t i) { return first_ <= i && i <= last_; });
 }
 
-std::ostream &operator<<(std::ostream &out, const AddressRange &addr) {
+std::ostream& operator<<(std::ostream& out, const AddressRange& addr) {
   out << "[" << addr.first_ << ":" << addr.last_ << "]";
   return out;
 }

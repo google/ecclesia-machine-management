@@ -69,8 +69,8 @@ std::string GetName(StubArbiterInfo::PriorityLabel label) {
 }
 
 absl::StatusOr<std::unique_ptr<StubArbiter<MockStub>>> CreateMockStubArbiter(
-    const StubArbiterInfo::Config &config = {},
-    const Clock *clock = Clock::RealClock()) {
+    const StubArbiterInfo::Config& config = {},
+    const Clock* clock = Clock::RealClock()) {
   return MockStubArbiter::Create(
       config,
       [](StubArbiterInfo::PriorityLabel label)
@@ -99,7 +99,7 @@ TEST(StubArbiterTest, ExecuteManual) {
 
   std::string name;
   arbiter->Execute(
-      [&name](MockStub *stub,
+      [&name](MockStub* stub,
               StubArbiterInfo::PriorityLabel label) -> absl::Status {
         name = stub->GetName();
         return absl::OkStatus();
@@ -107,7 +107,7 @@ TEST(StubArbiterTest, ExecuteManual) {
 
   EXPECT_EQ(name, kPrimary);
   arbiter->Execute(
-      [&name](MockStub *stub,
+      [&name](MockStub* stub,
               StubArbiterInfo::PriorityLabel label) -> absl::Status {
         name = stub->GetName();
         return absl::OkStatus();
@@ -123,7 +123,7 @@ TEST(StubArbiterTest, ExecuteFailover) {
 
   std::string name;
   StubArbiterInfo::Metrics metrics_primary = arbiter->Execute(
-      [&name](MockStub *stub,
+      [&name](MockStub* stub,
               StubArbiterInfo::PriorityLabel label) -> absl::Status {
         name = stub->GetName();
         return absl::OkStatus();
@@ -135,7 +135,7 @@ TEST(StubArbiterTest, ExecuteFailover) {
                   StubArbiterInfo::PriorityLabel::kPrimary,
                   Field(&StubArbiterInfo::EndpointMetrics::status, IsOk()))));
   StubArbiterInfo::Metrics metrics_secondary = arbiter->Execute(
-      [&name](MockStub *stub,
+      [&name](MockStub* stub,
               StubArbiterInfo::PriorityLabel label) -> absl::Status {
         name = stub->GetName();
         return absl::OkStatus();
@@ -149,7 +149,7 @@ TEST(StubArbiterTest, ExecuteFailover) {
                   Field(&StubArbiterInfo::EndpointMetrics::status, IsOk()))));
 
   StubArbiterInfo::Metrics metrics_failover = arbiter->Execute(
-      [&name](MockStub *stub,
+      [&name](MockStub* stub,
               StubArbiterInfo::PriorityLabel label) -> absl::Status {
         name = stub->GetName();
         if (name == kPrimary) {
@@ -174,7 +174,7 @@ TEST(StubArbiterTest, FailedExecuteFailover) {
                           CreateMockStubArbiter());
 
   StubArbiterInfo::Metrics metrics = arbiter->Execute(
-      [](MockStub *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+      [](MockStub* stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
         if (stub->GetName() == kPrimary) {
           return absl::DeadlineExceededError("Deadline exceeded");
         }
@@ -202,7 +202,7 @@ TEST(StubArbiterTest, FailedExecuteFailoverWithCustomFailoverCode) {
                           }));
 
   StubArbiterInfo::Metrics metrics_deadline_exceeded = arbiter->Execute(
-      [](MockStub *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+      [](MockStub* stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
         if (stub->GetName() == kPrimary) {
           return absl::DeadlineExceededError("Deadline exceeded");
         }
@@ -218,7 +218,7 @@ TEST(StubArbiterTest, FailedExecuteFailoverWithCustomFailoverCode) {
                                       IsStatusDeadlineExceeded()))));
 
   StubArbiterInfo::Metrics metrics_unavailable = arbiter->Execute(
-      [](MockStub *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+      [](MockStub* stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
         return absl::UnavailableError("Service secondary unavailable");
       });
   EXPECT_THAT(metrics_unavailable.overall_status, IsStatusUnavailable());
@@ -239,7 +239,7 @@ TEST(StubArbiterTest, CheckExecutionTime) {
                           CreateMockStubArbiter({}, &clock));
 
   StubArbiterInfo::Metrics metrics = arbiter->Execute(
-      [&clock](MockStub *stub,
+      [&clock](MockStub* stub,
                StubArbiterInfo::PriorityLabel label) -> absl::Status {
         clock.AdvanceTime(absl::Seconds(1));
         return absl::OkStatus();
@@ -263,7 +263,7 @@ TEST(StubArbiterTest, CheckExecutionTimeFailover) {
                           CreateMockStubArbiter({}, &clock));
 
   StubArbiterInfo::Metrics metrics = arbiter->Execute(
-      [&clock](MockStub *stub,
+      [&clock](MockStub* stub,
                StubArbiterInfo::PriorityLabel label) -> absl::Status {
         clock.AdvanceTime(absl::Seconds(1));
         if (stub->GetName() == kPrimary) {
@@ -307,7 +307,7 @@ TEST(StubArbiterTest, CheckPrimaryFreshness) {
                               &clock));
 
   arbiter->Execute(
-      [](MockStub *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+      [](MockStub* stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
         if (stub->GetName() == kPrimary) {
           return absl::OkStatus();
         }
@@ -316,7 +316,7 @@ TEST(StubArbiterTest, CheckPrimaryFreshness) {
 
   clock.AdvanceTime(absl::Seconds(10));
   StubArbiterInfo::Metrics metrics = arbiter->Execute(
-      [](MockStub *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+      [](MockStub* stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
         if (stub->GetName() == kPrimary) {
           return absl::OkStatus();
         }
@@ -349,7 +349,7 @@ TEST(StubArbiterTest, FailoverFailPrimaryStub) {
           &clock));
 
   StubArbiterInfo::Metrics metrics = arbiter->Execute(
-      [](MockStub *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+      [](MockStub* stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
         return absl::OkStatus();
       });
 
@@ -384,7 +384,7 @@ TEST(StubArbiterTest, FailoverFailSecondaryStub) {
                               &clock));
 
   StubArbiterInfo::Metrics metrics = arbiter->Execute(
-      [](MockStub *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+      [](MockStub* stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
         return absl::DeadlineExceededError("Deadline exceeded");
       });
 
@@ -416,7 +416,7 @@ TEST(StubArbiterTest, CheckPrimaryFreshnessFailover) {
                               &clock));
 
   arbiter->Execute(
-      [](MockStub *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+      [](MockStub* stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
         if (stub->GetName() == kPrimary) {
           return absl::OkStatus();
         }
@@ -425,7 +425,7 @@ TEST(StubArbiterTest, CheckPrimaryFreshnessFailover) {
 
   clock.AdvanceTime(absl::Seconds(10));
   StubArbiterInfo::Metrics metrics = arbiter->Execute(
-      [](MockStub *stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+      [](MockStub* stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
         if (stub->GetName() == kPrimary) {
           return absl::DeadlineExceededError("Deadline exceeded");
         }
@@ -455,7 +455,7 @@ TEST(StubArbiterTest, CheckSecondaryFreshness) {
                               &clock));
 
   StubArbiterInfo::Metrics metrics = arbiter->Execute(
-      [&clock](MockStub *stub,
+      [&clock](MockStub* stub,
                StubArbiterInfo::PriorityLabel label) -> absl::Status {
         clock.AdvanceTime(absl::Seconds(1));
         if (stub->GetName() == kPrimary) {
@@ -471,7 +471,7 @@ TEST(StubArbiterTest, CheckSecondaryFreshness) {
 
   clock.AdvanceTime(absl::Seconds(1));
   metrics = arbiter->Execute(
-      [&clock](MockStub *stub,
+      [&clock](MockStub* stub,
                StubArbiterInfo::PriorityLabel label) -> absl::Status {
         clock.AdvanceTime(absl::Seconds(1));
         if (stub->GetName() == kPrimary) {
@@ -488,7 +488,7 @@ TEST(StubArbiterTest, CheckSecondaryFreshness) {
 
   clock.AdvanceTime(absl::Seconds(10));
   metrics = arbiter->Execute(
-      [&clock](MockStub *stub,
+      [&clock](MockStub* stub,
                StubArbiterInfo::PriorityLabel label) -> absl::Status {
         clock.AdvanceTime(absl::Seconds(1));
         if (stub->GetName() == kPrimary) {
@@ -536,7 +536,7 @@ TEST(StubArbiterTest, ExecuteFailoverWithMetrics) {
           &clock));
 
   arbiter->Execute(
-      [&clock](MockStub *stub,
+      [&clock](MockStub* stub,
                StubArbiterInfo::PriorityLabel label) -> absl::Status {
         clock.AdvanceTime(absl::Seconds(1));
         return absl::OkStatus();
@@ -551,7 +551,7 @@ TEST(StubArbiterTest, ExecuteFailoverWithMetrics) {
   arbiter_metrics.clear();
 
   arbiter->Execute(
-      [&clock](MockStub *stub,
+      [&clock](MockStub* stub,
                StubArbiterInfo::PriorityLabel label) -> absl::Status {
         std::string name = stub->GetName();
         clock.AdvanceTime(absl::Seconds(1));
@@ -603,7 +603,7 @@ TEST(StubArbiterTest, ExecuteStickyFailoverWithArbiterMetrics) {
           &clock));
 
   arbiter->Execute(
-      [&clock](MockStub *stub,
+      [&clock](MockStub* stub,
                StubArbiterInfo::PriorityLabel label) -> absl::Status {
         clock.AdvanceTime(absl::Seconds(1));
         if (stub->GetName() == kPrimary) {
@@ -629,7 +629,7 @@ TEST(StubArbiterTest, ExecuteStickyFailoverWithArbiterMetrics) {
   // 1. Check that the sticky path is reported.
   arbiter_metrics.clear();
   arbiter->Execute(
-      [&clock](MockStub *stub,
+      [&clock](MockStub* stub,
                StubArbiterInfo::PriorityLabel label) -> absl::Status {
         clock.AdvanceTime(absl::Seconds(1));
         return absl::OkStatus();
@@ -646,7 +646,7 @@ TEST(StubArbiterTest, ExecuteStickyFailoverWithArbiterMetrics) {
   // 2. Check that the sticky and sticky-fallback path is reported.
   arbiter_metrics.clear();
   arbiter->Execute(
-      [&clock](MockStub *stub,
+      [&clock](MockStub* stub,
                StubArbiterInfo::PriorityLabel label) -> absl::Status {
         clock.AdvanceTime(absl::Seconds(1));
         if (stub->GetName() == kSecondary) {
@@ -673,7 +673,7 @@ TEST(StubArbiterTest, ExecuteStickyFailoverWithArbiterMetrics) {
   clock.AdvanceTime(absl::Seconds(10));
   arbiter_metrics.clear();
   arbiter->Execute(
-      [&clock](MockStub *stub,
+      [&clock](MockStub* stub,
                StubArbiterInfo::PriorityLabel label) -> absl::Status {
         clock.AdvanceTime(absl::Seconds(1));
         return absl::OkStatus();
@@ -687,9 +687,9 @@ TEST(StubArbiterTest, ExecuteStickyFailoverWithArbiterMetrics) {
 }
 
 void MultiThreadedStubArbiterQuery(
-    MockStubArbiter *arbiter, ThreadFactoryInterface *thread_factory,
+    MockStubArbiter* arbiter, ThreadFactoryInterface* thread_factory,
     absl::AnyInvocable<absl::Status(StubArbiterInfo::PriorityLabel)> func,
-    absl::AnyInvocable<void(StubArbiterInfo::Metrics &)> check_metrics) {
+    absl::AnyInvocable<void(StubArbiterInfo::Metrics&)> check_metrics) {
   constexpr int kNumThreads = 10;
   std::vector<std::unique_ptr<ThreadInterface>> threads(kNumThreads);
   absl::Notification notification;
@@ -699,7 +699,7 @@ void MultiThreadedStubArbiterQuery(
       // Wait for notification.
       notification.WaitForNotification();
       StubArbiterInfo::Metrics metrics = arbiter->Execute(
-          [&func](MockStub *stub,
+          [&func](MockStub* stub,
                   StubArbiterInfo::PriorityLabel label) -> absl::Status {
             return func(label);
           });
@@ -707,7 +707,7 @@ void MultiThreadedStubArbiterQuery(
     }));
   }
   notification.Notify();
-  for (std::unique_ptr<ThreadInterface> &thread : threads) {
+  for (std::unique_ptr<ThreadInterface>& thread : threads) {
     if (thread) {
       thread->Join();
     }
@@ -728,7 +728,7 @@ TEST(StubArbiterTest, MockStubArbiterQueryPrimaryMultithreaded) {
       [](StubArbiterInfo::PriorityLabel label) -> absl::Status {
         return absl::OkStatus();
       },
-      [](StubArbiterInfo::Metrics &metrics) -> void {
+      [](StubArbiterInfo::Metrics& metrics) -> void {
         EXPECT_THAT(metrics.overall_status, IsOk());
         EXPECT_THAT(
             metrics.endpoint_metrics,
@@ -743,7 +743,7 @@ TEST(StubArbiterTest, MockStubArbiterQueryFailoverMultithreaded) {
 
   ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<MockStubArbiter> arbiter,
                           CreateMockStubArbiter({}, &clock));
-  ThreadFactoryInterface *thread_factory = GetDefaultThreadFactory();
+  ThreadFactoryInterface* thread_factory = GetDefaultThreadFactory();
   clock.AdvanceTime(absl::Seconds(10));
   MultiThreadedStubArbiterQuery(
       arbiter.get(), thread_factory,
@@ -753,7 +753,7 @@ TEST(StubArbiterTest, MockStubArbiterQueryFailoverMultithreaded) {
         }
         return absl::OkStatus();
       },
-      [](StubArbiterInfo::Metrics &metrics) -> void {
+      [](StubArbiterInfo::Metrics& metrics) -> void {
         EXPECT_THAT(metrics.overall_status, IsOk());
         if (metrics.endpoint_metrics.contains(
                 StubArbiterInfo::PriorityLabel::kPrimary)) {
@@ -781,7 +781,7 @@ TEST(StubArbiterTest, MockStubArbiterQueryFailoverMultithreaded) {
       [](StubArbiterInfo::PriorityLabel label) -> absl::Status {
         return absl::OkStatus();
       },
-      [](StubArbiterInfo::Metrics &metrics) -> void {
+      [](StubArbiterInfo::Metrics& metrics) -> void {
         EXPECT_THAT(metrics.overall_status, IsOk());
         EXPECT_THAT(
             metrics.endpoint_metrics,

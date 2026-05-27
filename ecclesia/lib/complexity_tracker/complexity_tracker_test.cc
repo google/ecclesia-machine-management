@@ -17,10 +17,11 @@
 #include "ecclesia/lib/complexity_tracker/complexity_tracker.h"
 
 #include <memory>
+#include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "ecclesia/lib/testing/status.h"
 
 namespace ecclesia {
@@ -32,9 +33,9 @@ using ::testing::Return;
 class TestApiComplexityContextManagerImpl
     : public ApiComplexityContextManager::ImplInterface {
  public:
-  MOCK_METHOD(absl::StatusOr<ApiComplexityContext *>, GetContext, (),
+  MOCK_METHOD(absl::StatusOr<ApiComplexityContext*>, GetContext, (),
               (override));
-  MOCK_METHOD(void, ReportContextResult, (const ApiComplexityContext &context),
+  MOCK_METHOD(void, ReportContextResult, (const ApiComplexityContext& context),
               (override));
 };
 

@@ -30,10 +30,10 @@ namespace ecclesia {
 // return nullopt.
 template <typename... ArgTypes>
 std::optional<std::tuple<ArgTypes...>> RegexFullMatch(absl::string_view str,
-                                                      const RE2 &pattern) {
+                                                      const RE2& pattern) {
   std::tuple<ArgTypes...> values;
   if (std::apply(
-          [&](ArgTypes &&...params) {
+          [&](ArgTypes&&... params) {
             return RE2::FullMatch(str, pattern, &params...);
           },
           std::move(values))) {

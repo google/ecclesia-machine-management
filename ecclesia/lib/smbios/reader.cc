@@ -55,7 +55,7 @@ constexpr uint8_t ENTRY_POINT_MAX_SIZE = 0x1f;
 // Read the contents of a binary file into a vector of bytes
 // The SMBIOS table is on an order of a few KBs (< 10). Therefore it's safe to
 // return the entire contents of the file at once.
-std::vector<uint8_t> GetBinaryFileContents(const std::string &file_path,
+std::vector<uint8_t> GetBinaryFileContents(const std::string& file_path,
                                            std::size_t max_size) {
   std::ifstream file(file_path,
                      std::ios::in | std::ios::binary | std::ios::ate);
@@ -67,7 +67,7 @@ std::vector<uint8_t> GetBinaryFileContents(const std::string &file_path,
   if (size > max_size) return std::vector<uint8_t>();
   std::vector<uint8_t> contents(size);
   file.seekg(0, std::ios::beg);
-  file.read(reinterpret_cast<char *>(contents.data()), size);
+  file.read(reinterpret_cast<char*>(contents.data()), size);
   file.close();
   return contents;
 }
@@ -87,8 +87,8 @@ inline bool VerifyChecksum(View message_view) {
 }
 
 // Extract the information for a single SMBIOS structure into `info`
-bool ExtractSmbiosStructure(uint8_t *start_address, std::size_t max_length,
-                            SmbiosStructureInfo *info) {
+bool ExtractSmbiosStructure(uint8_t* start_address, std::size_t max_length,
+                            SmbiosStructureInfo* info) {
   auto smbios_structure_view =
       MakeSmbiosStructureView(start_address, max_length);
 
@@ -115,15 +115,15 @@ bool ExtractSmbiosStructure(uint8_t *start_address, std::size_t max_length,
   return false;
 }
 
-std::vector<TableEntry> BuildEntries(std::vector<uint8_t> &table_data) {
+std::vector<TableEntry> BuildEntries(std::vector<uint8_t>& table_data) {
   std::vector<TableEntry> entries;
   if (table_data.empty()) {
     return entries;  // Return empty vector if there's no data
   }
 
   // Start extracting the SMBIOS structures one by one
-  uint8_t *start_address = table_data.data();
-  const uint8_t *end_address = start_address + table_data.size() - 1;
+  uint8_t* start_address = table_data.data();
+  const uint8_t* end_address = start_address + table_data.size() - 1;
 
   while (start_address <= end_address) {
     std::size_t max_length = end_address - start_address + 1;
@@ -171,12 +171,12 @@ SmbiosReader::SmbiosReader(std::string entry_point_path,
   entries_ = BuildEntries(table_data);
 }
 
-SmbiosReader::SmbiosReader(std::vector<uint8_t> &table_data) {
+SmbiosReader::SmbiosReader(std::vector<uint8_t>& table_data) {
   entries_ = BuildEntries(table_data);
 }
 
 std::unique_ptr<BiosInformation> SmbiosReader::GetBiosInformation() const {
-  for (auto &entry : entries_) {
+  for (auto& entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::BIOS_INFORMATION) {
       return std::make_unique<BiosInformation>(&entry);
@@ -186,7 +186,7 @@ std::unique_ptr<BiosInformation> SmbiosReader::GetBiosInformation() const {
 }
 
 std::unique_ptr<SystemInformation> SmbiosReader::GetSystemInformation() const {
-  for (auto &entry : entries_) {
+  for (auto& entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::SYSTEM_INFORMATION) {
       return std::make_unique<SystemInformation>(&entry);
@@ -197,7 +197,7 @@ std::unique_ptr<SystemInformation> SmbiosReader::GetSystemInformation() const {
 
 std::unique_ptr<BaseboardInformation> SmbiosReader::GetBaseboardInformation()
     const {
-  for (auto &entry : entries_) {
+  for (auto& entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::BASEBOARD_INFORMATION) {
       return std::make_unique<BaseboardInformation>(&entry);
@@ -209,7 +209,7 @@ std::unique_ptr<BaseboardInformation> SmbiosReader::GetBaseboardInformation()
 std::vector<MemoryDevice> SmbiosReader::GetAllMemoryDevices() const {
   std::vector<MemoryDevice> memory_devices;
 
-  for (auto &entry : entries_) {
+  for (auto& entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::MEMORY_DEVICE) {
       memory_devices.emplace_back(&entry);
@@ -217,7 +217,7 @@ std::vector<MemoryDevice> SmbiosReader::GetAllMemoryDevices() const {
   }
   // Sort the memory devices based on the device locator string
   std::sort(memory_devices.begin(), memory_devices.end(),
-            [](const MemoryDevice &x, const MemoryDevice &y) {
+            [](const MemoryDevice& x, const MemoryDevice& y) {
               return NaturalSortLessThan(
                   x.GetString(x.GetMessageView().device_locator_snum().Read()),
                   y.GetString(y.GetMessageView().device_locator_snum().Read()));
@@ -229,7 +229,7 @@ std::vector<MemoryDeviceMappedAddress>
 SmbiosReader::GetAllMemoryDeviceMappedAddresses() const {
   std::vector<MemoryDeviceMappedAddress> memory_addresses;
 
-  for (const auto &entry : entries_) {
+  for (const auto& entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::MEMORY_DEVICE_MAPPED_ADDRESS) {
       memory_addresses.emplace_back(&entry);
@@ -239,7 +239,7 @@ SmbiosReader::GetAllMemoryDeviceMappedAddresses() const {
 }
 
 std::unique_ptr<SystemEventLog> SmbiosReader::GetSystemEventLog() const {
-  for (const auto &entry : entries_) {
+  for (const auto& entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::SYSTEM_EVENT_LOG) {
       return std::make_unique<SystemEventLog>(&entry);
@@ -251,7 +251,7 @@ std::unique_ptr<SystemEventLog> SmbiosReader::GetSystemEventLog() const {
 std::vector<ProcessorInformation> SmbiosReader::GetAllProcessors() const {
   std::vector<ProcessorInformation> processor_information;
 
-  for (const auto &entry : entries_) {
+  for (const auto& entry : entries_) {
     if (entry.GetSmbiosStructureView().structure_type().Read() ==
         StructureType::PROCESSOR_INFORMATION) {
       processor_information.emplace_back(&entry);
@@ -260,7 +260,7 @@ std::vector<ProcessorInformation> SmbiosReader::GetAllProcessors() const {
   // Sort the processors based on the socket designation
   std::sort(
       processor_information.begin(), processor_information.end(),
-      [](const ProcessorInformation &x, const ProcessorInformation &y) {
+      [](const ProcessorInformation& x, const ProcessorInformation& y) {
         return x.GetString(
                    x.GetMessageView().socket_designation_snum().Read()) <
                y.GetString(y.GetMessageView().socket_designation_snum().Read());
@@ -270,7 +270,7 @@ std::vector<ProcessorInformation> SmbiosReader::GetAllProcessors() const {
 
 absl::StatusOr<int32_t> SmbiosReader::GetBootNumberFromSystemBootInformation()
     const {
-  for (const auto &entry : entries_) {
+  for (const auto& entry : entries_) {
     const auto structure_view = entry.GetSmbiosStructureView();
     if (structure_view.structure_type().Read() ==
             StructureType::SYSTEM_BOOT_INFORMATION &&

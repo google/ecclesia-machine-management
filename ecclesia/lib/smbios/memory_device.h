@@ -31,7 +31,8 @@ class MemoryDevice {
   // The constructor takes in a pointer to a smbios structure of type 17 (Memory
   // Device) and provides an emboss view to access the structure fields.
   // table_entry outlives this object
-  MemoryDevice(const TableEntry *table_entry) : table_entry_(table_entry) {}
+  explicit MemoryDevice(const TableEntry* table_entry)
+      : table_entry_(table_entry) {}
 
   // Given a string number found in the smbios structure, return the
   // corresponding string
@@ -46,7 +47,7 @@ class MemoryDevice {
   }
 
  private:
-  const TableEntry *table_entry_;
+  const TableEntry* table_entry_;
 };
 
 }  // namespace ecclesia

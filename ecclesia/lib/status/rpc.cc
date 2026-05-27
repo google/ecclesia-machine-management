@@ -28,20 +28,20 @@
 
 namespace ecclesia {
 
-google::rpc::Status StatusToRpcStatus(const absl::Status &status) {
+google::rpc::Status StatusToRpcStatus(const absl::Status& status) {
   google::rpc::Status ret;
   ret.set_code(static_cast<int>(status.code()));
   ret.set_message(status.message().data(), status.message().size());
   status.ForEachPayload(
-      [&](absl::string_view type_url, const absl::Cord &payload) {
-        google::protobuf::Any *any = ret.add_details();
+      [&](absl::string_view type_url, const absl::Cord& payload) {
+        google::protobuf::Any* any = ret.add_details();
         any->set_type_url(std::string(type_url));
         *any->mutable_value() = std::string(payload);
       });
   return ret;
 }
 
-grpc::Status StatusToGrpcStatus(const absl::Status &status) {
+grpc::Status StatusToGrpcStatus(const absl::Status& status) {
   google::rpc::Status rpc_status = StatusToRpcStatus(status);
   std::string error_details;
   rpc_status.SerializeToString(&error_details);

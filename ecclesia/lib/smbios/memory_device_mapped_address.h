@@ -28,7 +28,7 @@ class MemoryDeviceMappedAddress {
   // The constructor takes in a pointer to a smbios structure of type 20 (Memory
   // Device Mapped Address) and provides an emboss view to access the structure
   // fields. table_entry outlives this object.
-  explicit MemoryDeviceMappedAddress(const TableEntry *table_entry)
+  explicit MemoryDeviceMappedAddress(const TableEntry* table_entry)
       : table_entry_(table_entry) {}
 
   // Get a message view that represents the MemoryDeviceMappedAddressStructure
@@ -39,7 +39,7 @@ class MemoryDeviceMappedAddress {
   }
 
  private:
-  const TableEntry *table_entry_;
+  const TableEntry* table_entry_;
 };
 
 }  // namespace ecclesia

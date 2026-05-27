@@ -173,7 +173,7 @@ absl::Status PosixErrorToStatus(absl::string_view message, int error_number) {
   // https://github.com/abseil/abseil-cpp/issues/942
   // Assume GNU semantics for strerror_r, which returns char*.
   char buf[1024] = {'\000'};
-  const char *ret = strerror_r(error_number, buf, sizeof(buf));
+  const char* ret = strerror_r(error_number, buf, sizeof(buf));
   std::string errno_msg;
   if (buf[0] != '\000') {
     errno_msg = "strerror failed";

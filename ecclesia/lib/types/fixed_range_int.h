@@ -135,28 +135,28 @@ class FixedRangeInteger {
   IntType value() const { return value_; }
 
   // Relational operators. Ordering uses the underlying integer order.
-  friend bool operator==(const T &lhs, const T &rhs) {
+  friend bool operator==(const T& lhs, const T& rhs) {
     return lhs.value_ == rhs.value_;
   }
-  friend bool operator!=(const T &lhs, const T &rhs) {
+  friend bool operator!=(const T& lhs, const T& rhs) {
     return lhs.value_ != rhs.value_;
   }
-  friend bool operator<(const T &lhs, const T &rhs) {
+  friend bool operator<(const T& lhs, const T& rhs) {
     return lhs.value_ < rhs.value_;
   }
-  friend bool operator>(const T &lhs, const T &rhs) {
+  friend bool operator>(const T& lhs, const T& rhs) {
     return lhs.value_ > rhs.value_;
   }
-  friend bool operator<=(const T &lhs, const T &rhs) {
+  friend bool operator<=(const T& lhs, const T& rhs) {
     return lhs.value_ <= rhs.value_;
   }
-  friend bool operator>=(const T &lhs, const T &rhs) {
+  friend bool operator>=(const T& lhs, const T& rhs) {
     return lhs.value_ >= rhs.value_;
   }
 
   // Support hashing of values. Just hashes the underlying integer.
   template <typename H>
-  friend H AbslHashValue(H h, const T &t) {
+  friend H AbslHashValue(H h, const T& t) {
     return H::combine(std::move(h), t.value_);
   }
 

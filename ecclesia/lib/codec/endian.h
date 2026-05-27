@@ -55,17 +55,17 @@ class LittleEndian {
   // Load integers from bytes. For an 8-bit value this is obviously a simple
   // copy. For larger sizes we split the value into two halves and delegate to
   // the next smallest function.
-  static uint8_t Load8(const unsigned char *bytes) { return *bytes; }
-  static uint16_t Load16(const unsigned char *bytes) {
+  static uint8_t Load8(const unsigned char* bytes) { return *bytes; }
+  static uint16_t Load16(const unsigned char* bytes) {
     return uint16_t{Load8(bytes)} | uint16_t{Load8(bytes + 1)} << 8;
   }
-  static uint32_t Load32(const unsigned char *bytes) {
+  static uint32_t Load32(const unsigned char* bytes) {
     return uint32_t{Load16(bytes)} | uint32_t{Load16(bytes + 2)} << 16;
   }
-  static uint64_t Load64(const unsigned char *bytes) {
+  static uint64_t Load64(const unsigned char* bytes) {
     return uint64_t{Load32(bytes)} | uint64_t{Load32(bytes + 4)} << 32;
   }
-  static absl::uint128 Load128(const unsigned char *bytes) {
+  static absl::uint128 Load128(const unsigned char* bytes) {
     return absl::MakeUint128(Load64(bytes + 8), Load64(bytes));
   }
 
@@ -74,58 +74,58 @@ class LittleEndian {
   // unsigned char* it is useful to support both. Since the underlying bytes are
   // the same either way these functions just delegate to the unsigned char*
   // versions.
-  static uint8_t Load8(const char *bytes) {
-    return Load8(reinterpret_cast<const unsigned char *>(bytes));
+  static uint8_t Load8(const char* bytes) {
+    return Load8(reinterpret_cast<const unsigned char*>(bytes));
   }
-  static uint16_t Load16(const char *bytes) {
-    return Load16(reinterpret_cast<const unsigned char *>(bytes));
+  static uint16_t Load16(const char* bytes) {
+    return Load16(reinterpret_cast<const unsigned char*>(bytes));
   }
-  static uint32_t Load32(const char *bytes) {
-    return Load32(reinterpret_cast<const unsigned char *>(bytes));
+  static uint32_t Load32(const char* bytes) {
+    return Load32(reinterpret_cast<const unsigned char*>(bytes));
   }
-  static uint64_t Load64(const char *bytes) {
-    return Load64(reinterpret_cast<const unsigned char *>(bytes));
+  static uint64_t Load64(const char* bytes) {
+    return Load64(reinterpret_cast<const unsigned char*>(bytes));
   }
-  static absl::uint128 Load128(const char *bytes) {
-    return Load128(reinterpret_cast<const unsigned char *>(bytes));
+  static absl::uint128 Load128(const char* bytes) {
+    return Load128(reinterpret_cast<const unsigned char*>(bytes));
   }
 
   // Store integers to bytes. Like with loading, we can implement the 8-bit
   // case trivially and then implement all of the larger sizes by doing two
   // stores of the next smallest size.
-  static void Store8(uint8_t value, unsigned char *bytes) { *bytes = value; }
-  static void Store16(uint16_t value, unsigned char *bytes) {
+  static void Store8(uint8_t value, unsigned char* bytes) { *bytes = value; }
+  static void Store16(uint16_t value, unsigned char* bytes) {
     Store8(value & 0xFF, bytes);
     Store8(value >> 8 & 0xFF, bytes + 1);
   }
-  static void Store32(uint32_t value, unsigned char *bytes) {
+  static void Store32(uint32_t value, unsigned char* bytes) {
     Store16(value & 0xFFFF, bytes);
     Store16(value >> 16 & 0xFFFF, bytes + 2);
   }
-  static void Store64(uint64_t value, unsigned char *bytes) {
+  static void Store64(uint64_t value, unsigned char* bytes) {
     Store32(value & 0xFFFFFFFF, bytes);
     Store32(value >> 32 & 0xFFFFFFFF, bytes + 4);
   }
-  static void Store128(absl::uint128 value, unsigned char *bytes) {
+  static void Store128(absl::uint128 value, unsigned char* bytes) {
     Store64(absl::Uint128Low64(value), bytes);
     Store64(absl::Uint128High64(value), bytes + 8);
   }
 
   // Like with the load functions, we provide char* overloads.
-  static void Store8(uint8_t value, char *bytes) {
-    Store8(value, reinterpret_cast<unsigned char *>(bytes));
+  static void Store8(uint8_t value, char* bytes) {
+    Store8(value, reinterpret_cast<unsigned char*>(bytes));
   }
-  static void Store16(uint16_t value, char *bytes) {
-    Store16(value, reinterpret_cast<unsigned char *>(bytes));
+  static void Store16(uint16_t value, char* bytes) {
+    Store16(value, reinterpret_cast<unsigned char*>(bytes));
   }
-  static void Store32(uint32_t value, char *bytes) {
-    Store32(value, reinterpret_cast<unsigned char *>(bytes));
+  static void Store32(uint32_t value, char* bytes) {
+    Store32(value, reinterpret_cast<unsigned char*>(bytes));
   }
-  static void Store64(uint64_t value, char *bytes) {
-    Store64(value, reinterpret_cast<unsigned char *>(bytes));
+  static void Store64(uint64_t value, char* bytes) {
+    Store64(value, reinterpret_cast<unsigned char*>(bytes));
   }
-  static void Store128(absl::uint128 value, char *bytes) {
-    Store128(value, reinterpret_cast<unsigned char *>(bytes));
+  static void Store128(absl::uint128 value, char* bytes) {
+    Store128(value, reinterpret_cast<unsigned char*>(bytes));
   }
 };
 
@@ -135,68 +135,68 @@ class LittleEndian {
 // comments in LittleEndian.
 class BigEndian {
  public:
-  static uint8_t Load8(const unsigned char *bytes) { return *bytes; }
-  static uint16_t Load16(const unsigned char *bytes) {
+  static uint8_t Load8(const unsigned char* bytes) { return *bytes; }
+  static uint16_t Load16(const unsigned char* bytes) {
     return uint16_t{Load8(bytes)} << 8 | uint16_t{Load8(bytes + 1)};
   }
-  static uint32_t Load32(const unsigned char *bytes) {
+  static uint32_t Load32(const unsigned char* bytes) {
     return uint32_t{Load16(bytes)} << 16 | uint32_t{Load16(bytes + 2)};
   }
-  static uint64_t Load64(const unsigned char *bytes) {
+  static uint64_t Load64(const unsigned char* bytes) {
     return uint64_t{Load32(bytes)} << 32 | uint64_t{Load32(bytes + 4)};
   }
-  static absl::uint128 Load128(const unsigned char *bytes) {
+  static absl::uint128 Load128(const unsigned char* bytes) {
     return absl::MakeUint128(Load64(bytes), Load64(bytes + 8));
   }
 
-  static uint8_t Load8(const char *bytes) {
-    return Load8(reinterpret_cast<const unsigned char *>(bytes));
+  static uint8_t Load8(const char* bytes) {
+    return Load8(reinterpret_cast<const unsigned char*>(bytes));
   }
-  static uint16_t Load16(const char *bytes) {
-    return Load16(reinterpret_cast<const unsigned char *>(bytes));
+  static uint16_t Load16(const char* bytes) {
+    return Load16(reinterpret_cast<const unsigned char*>(bytes));
   }
-  static uint32_t Load32(const char *bytes) {
-    return Load32(reinterpret_cast<const unsigned char *>(bytes));
+  static uint32_t Load32(const char* bytes) {
+    return Load32(reinterpret_cast<const unsigned char*>(bytes));
   }
-  static uint64_t Load64(const char *bytes) {
-    return Load64(reinterpret_cast<const unsigned char *>(bytes));
+  static uint64_t Load64(const char* bytes) {
+    return Load64(reinterpret_cast<const unsigned char*>(bytes));
   }
-  static absl::uint128 Load128(const char *bytes) {
-    return Load128(reinterpret_cast<const unsigned char *>(bytes));
+  static absl::uint128 Load128(const char* bytes) {
+    return Load128(reinterpret_cast<const unsigned char*>(bytes));
   }
 
-  static void Store8(uint8_t value, unsigned char *bytes) { *bytes = value; }
-  static void Store16(uint16_t value, unsigned char *bytes) {
+  static void Store8(uint8_t value, unsigned char* bytes) { *bytes = value; }
+  static void Store16(uint16_t value, unsigned char* bytes) {
     Store8(value >> 8 & 0xFF, bytes);
     Store8(value & 0xFF, bytes + 1);
   }
-  static void Store32(uint32_t value, unsigned char *bytes) {
+  static void Store32(uint32_t value, unsigned char* bytes) {
     Store16(value >> 16 & 0xFFFF, bytes);
     Store16(value & 0xFFFF, bytes + 2);
   }
-  static void Store64(uint64_t value, unsigned char *bytes) {
+  static void Store64(uint64_t value, unsigned char* bytes) {
     Store32(value >> 32 & 0xFFFFFFFF, bytes);
     Store32(value & 0xFFFFFFFF, bytes + 4);
   }
-  static void Store128(absl::uint128 value, unsigned char *bytes) {
+  static void Store128(absl::uint128 value, unsigned char* bytes) {
     Store64(absl::Uint128High64(value), bytes);
     Store64(absl::Uint128Low64(value), bytes + 8);
   }
 
-  static void Store8(uint8_t value, char *bytes) {
-    Store8(value, reinterpret_cast<unsigned char *>(bytes));
+  static void Store8(uint8_t value, char* bytes) {
+    Store8(value, reinterpret_cast<unsigned char*>(bytes));
   }
-  static void Store16(uint16_t value, char *bytes) {
-    Store16(value, reinterpret_cast<unsigned char *>(bytes));
+  static void Store16(uint16_t value, char* bytes) {
+    Store16(value, reinterpret_cast<unsigned char*>(bytes));
   }
-  static void Store32(uint32_t value, char *bytes) {
-    Store32(value, reinterpret_cast<unsigned char *>(bytes));
+  static void Store32(uint32_t value, char* bytes) {
+    Store32(value, reinterpret_cast<unsigned char*>(bytes));
   }
-  static void Store64(uint64_t value, char *bytes) {
-    Store64(value, reinterpret_cast<unsigned char *>(bytes));
+  static void Store64(uint64_t value, char* bytes) {
+    Store64(value, reinterpret_cast<unsigned char*>(bytes));
   }
-  static void Store128(absl::uint128 value, char *bytes) {
-    Store128(value, reinterpret_cast<unsigned char *>(bytes));
+  static void Store128(absl::uint128 value, char* bytes) {
+    Store128(value, reinterpret_cast<unsigned char*>(bytes));
   }
 };
 

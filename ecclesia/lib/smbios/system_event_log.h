@@ -32,7 +32,7 @@ class SystemEventLog {
   // The constructor takes in a pointer to a smbios structure of type 15 (System
   // Event Log) and provides an emboss view to access the structure fields.
   // table_entry outlives this object
-  explicit SystemEventLog(const TableEntry *table_entry)
+  explicit SystemEventLog(const TableEntry* table_entry)
       : table_entry_(table_entry) {}
 
   // Given a string number found in the smbios structure, return the
@@ -55,7 +55,7 @@ class SystemEventLog {
   }
 
  private:
-  const TableEntry *table_entry_;
+  const TableEntry* table_entry_;
 };
 
 }  // namespace ecclesia

@@ -59,11 +59,11 @@ namespace ecclesia {
 // with the code doing the parse.
 template <typename MessageType>
 MessageType ParseTextAsProtoOrDie(
-    const std::string &text, SourceLocation loc = SourceLocation::current()) {
+    const std::string& text, SourceLocation loc = SourceLocation::current()) {
   // Define a collector that just accumulates a list of error message strings.
   class TextErrorCollector : public google::protobuf::io::ErrorCollector {
    public:
-    const std::vector<std::string> &errors() const { return errors_; }
+    const std::vector<std::string>& errors() const { return errors_; }
 
    private:
     void RecordError(int line, int column, absl::string_view message) override {
@@ -109,27 +109,27 @@ class ParseTextProtoOrDieTemporary {
 
  private:
   // Only our parsing function should be able to construct these.
-  friend ParseTextProtoOrDieTemporary ParseTextProtoOrDie(const std::string &,
-                                                          SourceLocation);
+  friend ParseTextProtoOrDieTemporary ParseTextProtoOrDie(
+      const std::string& /*text*/, SourceLocation /*loc*/);
 
-  ParseTextProtoOrDieTemporary(const std::string &text, SourceLocation loc)
+  ParseTextProtoOrDieTemporary(const std::string& text, SourceLocation loc)
       : text_(text), loc_(loc) {}
 
   // We don't want anyone copying or passing these objects around.
-  ParseTextProtoOrDieTemporary(const ParseTextProtoOrDieTemporary &) = delete;
-  ParseTextProtoOrDieTemporary &operator=(
-      const ParseTextProtoOrDieTemporary &) = delete;
+  ParseTextProtoOrDieTemporary(const ParseTextProtoOrDieTemporary&) = delete;
+  ParseTextProtoOrDieTemporary& operator=(const ParseTextProtoOrDieTemporary&) =
+      delete;
 
   // Normally we don't want to capture references but since this type is only
   // ever supposed to be used as a temporary in an expression it should be safe.
-  const std::string &text_;
+  const std::string& text_;
   SourceLocation loc_;
 };
 
 // Untyped version of ParseTextAsProtoOrDie that uses the return type of the
 // function to determine the type to parse to.
 inline ParseTextProtoOrDieTemporary ParseTextProtoOrDie(
-    const std::string &text, SourceLocation loc = SourceLocation::current()) {
+    const std::string& text, SourceLocation loc = SourceLocation::current()) {
   return ParseTextProtoOrDieTemporary(text, loc);
 }
 
@@ -148,7 +148,7 @@ std::vector<MessageType> ParseTextAsProtoVectorOrDie(
 
 template <typename MessageType>
 MessageType ParseTextFileAsProtoOrDie(
-    const std::string &path, SourceLocation loc = SourceLocation::current()) {
+    const std::string& path, SourceLocation loc = SourceLocation::current()) {
   std::ifstream textfile(path);
   if (textfile.fail()) {
     LOG(FATAL).AtLocation(loc.file_name(), loc.line())

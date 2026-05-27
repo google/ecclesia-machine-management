@@ -31,7 +31,7 @@ class Clock {
  public:
   // Return a pointer to a global thread-safe singleton clock implemented using
   // the actual abseil time functions.
-  static Clock *RealClock();
+  static Clock* RealClock();
 
   virtual ~Clock() = default;
 

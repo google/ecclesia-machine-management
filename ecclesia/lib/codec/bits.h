@@ -68,7 +68,7 @@ struct BitRange {
 //     ExtractBits(0x12345678, BitRange(15, 8))  = 0x56
 //     ExtractBits(0x12345678, BitRange(8, 15))  = 0x0
 template <typename T>
-[[nodiscard]] T ExtractBits(const T &value, const BitRange &bits) {
+[[nodiscard]] T ExtractBits(const T& value, const BitRange& bits) {
   // Prevent right-shift of signed numbers.
   static_assert(std::is_integral<T>::value, "Integral required.");
   using unsignedT = std::make_unsigned_t<T>;
@@ -117,15 +117,15 @@ class MaskedAddress {
    public:
     // default-constructed "end" iterator
     iterator() : done_(true) {}
-    explicit iterator(const MaskedAddress &ma)
+    explicit iterator(const MaskedAddress& ma)
         : addr_(ma.first()), mask_(ma.mask_), done_(false) {}
-    iterator &operator++();
+    iterator& operator++();
 
     iterator operator++(int);
 
-    bool operator==(const iterator &i) const;
+    bool operator==(const iterator& i) const;
 
-    bool operator!=(const iterator &i) const { return !(*this == i); }
+    bool operator!=(const iterator& i) const { return !(*this == i); }
 
     uint64_t operator*() const { return addr_; }
 
@@ -149,7 +149,7 @@ class MaskedAddress {
   iterator end() const { return iterator(); }
 
  private:
-  friend std::ostream &operator<<(std::ostream &out, const MaskedAddress &ma);
+  friend std::ostream& operator<<(std::ostream& out, const MaskedAddress& ma);
   uint64_t addr_;
   uint64_t mask_;
 };
@@ -163,10 +163,10 @@ class AddressRange {
   // The empty range.
   AddressRange() : AddressRange(1, 0) {}
 
-  bool operator==(const AddressRange &range) const {
+  bool operator==(const AddressRange& range) const {
     return first_ == range.first_ && last_ == range.last_;
   }
-  bool operator!=(const AddressRange &range) const { return !(*this == range); }
+  bool operator!=(const AddressRange& range) const { return !(*this == range); }
 
   // The range is empty if last < first. Upon an First/Last address access
   // request to an empty range , return value of BeginAddress for both First and
@@ -187,7 +187,7 @@ class AddressRange {
   uint64_t LastAddress() const;
 
  private:
-  friend std::ostream &operator<<(std::ostream &out, const AddressRange &addr);
+  friend std::ostream& operator<<(std::ostream& out, const AddressRange& addr);
   uint64_t first_;
   uint64_t last_;
 };

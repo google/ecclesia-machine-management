@@ -28,7 +28,7 @@ class ThreadFactoryImpl : public ThreadFactoryInterface {
  public:
   class StdThread : public ThreadInterface {
    public:
-    explicit StdThread(const std::function<void()> &runner) : thread_(runner) {}
+    explicit StdThread(const std::function<void()>& runner) : thread_(runner) {}
 
     void Join() override { thread_.join(); }
     void Detach() override { thread_.detach(); }
@@ -48,8 +48,8 @@ class ThreadFactoryImpl : public ThreadFactoryInterface {
 
 }  // namespace
 
-ThreadFactoryInterface *GetDefaultThreadFactory() {
-  static ThreadFactoryInterface *factory = []() {
+ThreadFactoryInterface* GetDefaultThreadFactory() {
+  static ThreadFactoryInterface* factory = []() {
     return new ThreadFactoryImpl();
   }();
 

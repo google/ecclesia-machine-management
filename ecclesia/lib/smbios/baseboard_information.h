@@ -31,7 +31,7 @@ class BaseboardInformation {
   // The constructor takes in a pointer to a smbios structure of type 2 (Bios
   // Information) and provides an emboss view to access the structure fields.
   // table_entry outlives this object.
-  explicit BaseboardInformation(const TableEntry *table_entry)
+  explicit BaseboardInformation(const TableEntry* table_entry)
       : table_entry_(table_entry) {}
 
   // Given a string number found in the smbios structure, return the
@@ -47,7 +47,7 @@ class BaseboardInformation {
   }
 
  private:
-  const TableEntry *table_entry_;
+  const TableEntry* table_entry_;
 };
 
 }  // namespace ecclesia

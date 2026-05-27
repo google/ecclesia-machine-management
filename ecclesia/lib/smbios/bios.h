@@ -31,7 +31,7 @@ class BiosInformation {
   // The constructor takes in a pointer to a smbios structure of type 0 (Bios
   // Information) and provides an emboss view to access the structure fields.
   // table_entry outlives this object
-  explicit BiosInformation(const TableEntry *table_entry)
+  explicit BiosInformation(const TableEntry* table_entry)
       : table_entry_(table_entry) {}
 
   // Given a string number found in the smbios structure, return the
@@ -47,7 +47,7 @@ class BiosInformation {
   }
 
  private:
-  const TableEntry *table_entry_;
+  const TableEntry* table_entry_;
 };
 
 }  // namespace ecclesia

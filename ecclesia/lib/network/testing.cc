@@ -43,7 +43,7 @@ int FindUnusedPortOrDie() {
 
   // Use an IPv6 sockaddr structure.
   struct sockaddr_in6 addr = {};
-  auto *addr_ptr = reinterpret_cast<struct sockaddr *>(&addr);
+  auto* addr_ptr = reinterpret_cast<struct sockaddr*>(&addr);
   socklen_t addr_len = sizeof(addr);
 
   // Bind to port 0. This should randomly allocate an available port.
