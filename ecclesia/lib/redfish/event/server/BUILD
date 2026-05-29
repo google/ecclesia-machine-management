@@ -114,6 +114,7 @@ cc_test(
     srcs = ["subscription_test.cc"],
     deps = [
         ":subscription",
+        "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

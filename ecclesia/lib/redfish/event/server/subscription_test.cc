@@ -17,7 +17,6 @@
 #include "ecclesia/lib/redfish/event/server/subscription.h"
 
 #include <string>
-#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -28,6 +27,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
+#include "ecclesia/lib/testing/status.h"
 #include "single_include/nlohmann/json.hpp"
 
 namespace ecclesia {
@@ -120,9 +120,10 @@ TEST(EventIdTest, ToString) {
   std::string uuid_string = absl::StrCat(event_id.redfish_event_id);
 
   std::string expected_string =
-    "{\"source_id\":{\"key\":\"456\",\"type\":\"kDbusObjects\"},\"timestamp\":"
-    "\"" +
-    timestamp_string + "\",\"uuid\":" + uuid_string + "}";
+      "{\"source_id\":{\"key\":\"456\",\"type\":\"kDbusObjects\"},"
+      "\"timestamp\":"
+      "\"" +
+      timestamp_string + "\",\"uuid\":" + uuid_string + "}";
   EXPECT_EQ(output_str, expected_string);
 }
 
@@ -151,6 +152,70 @@ TEST(TriggerTest, CreateFromInvalidJson) {
       R"({"origin_resources":[{"@odata.id": "/redfish/v1/node1"},{"@odata.id": "/redfish/v1/node2"}], "predicate": "some predicate", "mask": false})";
   EXPECT_TRUE(absl::IsInvalidArgument(
       Trigger::Create(nlohmann::json::parse(invalid_json_3)).status()));
+}
+
+TEST(TriggerTest, CreateFromInvalidJsonTypeSafety) {
+  // Id is not a string.
+  const std::string invalid_id = R"({
+    "Id": 123,
+    "OriginResources": [
+      {
+        "@odata.id": "/redfish/v1/node1"
+      }
+    ]
+  })";
+  absl::StatusOr<Trigger> result =
+      Trigger::Create(nlohmann::json::parse(invalid_id));
+  EXPECT_THAT(result, IsStatusInvalidArgument());
+
+  // OriginResources is not an array.
+  const std::string invalid_resources_type = R"({
+    "Id": "123",
+    "OriginResources": "not an array"
+  })";
+  result = Trigger::Create(nlohmann::json::parse(invalid_resources_type));
+  EXPECT_THAT(result, IsStatusInvalidArgument());
+
+  // OriginResources array contains non-objects.
+  const std::string invalid_resources_elements = R"({
+    "Id": "123",
+    "OriginResources": ["not an object"]
+  })";
+  result = Trigger::Create(nlohmann::json::parse(invalid_resources_elements));
+  EXPECT_THAT(result, IsStatusInvalidArgument());
+
+  // OriginResources array contains objects missing `@odata.id`.
+  const std::string missing_odata_id = R"({
+    "Id": "123",
+    "OriginResources": [{
+      "not_odata_id": "/redfish/v1/node1"
+    }]
+  })";
+  result = Trigger::Create(nlohmann::json::parse(missing_odata_id));
+  EXPECT_THAT(result, IsStatusInvalidArgument());
+
+  // OriginResources array contains objects where @odata.id is not a string.
+  const std::string invalid_odata_id_type = R"({
+    "Id": "123",
+    "OriginResources": [
+      {
+        "@odata.id": 123
+      }
+    ]
+  })";
+  result = Trigger::Create(nlohmann::json::parse(invalid_odata_id_type));
+  EXPECT_THAT(result, IsStatusInvalidArgument());
+
+  // Predicate is not a string.
+  const std::string invalid_predicate_type = R"({
+    "Id": "123",
+    "OriginResources": [{
+      "@odata.id": "/redfish/v1/node1"
+    }],
+    "Predicate": 123
+  })";
+  result = Trigger::Create(nlohmann::json::parse(invalid_predicate_type));
+  EXPECT_THAT(result, IsStatusInvalidArgument());
 }
 
 TEST(SubscriptionServiceTriggerTest, Create_ValidTrigger) {

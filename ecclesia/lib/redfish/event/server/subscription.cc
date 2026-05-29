@@ -99,17 +99,35 @@ absl::StatusOr<Trigger> Trigger::Create(const nlohmann::json& trigger_json) {
   if (find_id == trigger_json.end()) {
     return absl::InvalidArgumentError("Trigger Id not populated");
   }
+  if (!find_id->is_string()) {
+    return absl::InvalidArgumentError("Trigger Id is not a string");
+  }
   // Extract trigger information from the JSON data
   const std::string id = find_id->get<std::string>();
 
   auto find_origin_resources = trigger_json.find("OriginResources");
   if (find_origin_resources == trigger_json.end()) {
-    return absl::InvalidArgumentError("Origin resources not populated");
+    return absl::InvalidArgumentError("OriginResources not populated");
+  }
+  if (!find_origin_resources->is_array()) {
+    return absl::InvalidArgumentError("OriginResources is not an array");
   }
 
   absl::flat_hash_set<std::string> origin_resources;
   for (const auto& origin_resource : *find_origin_resources) {
-    origin_resources.insert(origin_resource["@odata.id"].get<std::string>());
+    if (!origin_resource.is_object()) {
+      return absl::InvalidArgumentError(
+          "OriginResource entry is not an object");
+    }
+    auto find_odata_id = origin_resource.find("@odata.id");
+    if (find_odata_id == origin_resource.end()) {
+      return absl::InvalidArgumentError(
+          "@odata.id not populated in OriginResource");
+    }
+    if (!find_odata_id->is_string()) {
+      return absl::InvalidArgumentError("@odata.id is not a string");
+    }
+    origin_resources.insert(find_odata_id->get<std::string>());
   }
 
   std::string predicate;
@@ -117,7 +135,10 @@ absl::StatusOr<Trigger> Trigger::Create(const nlohmann::json& trigger_json) {
 
   auto find_predicate = trigger_json.find("Predicate");
   if (find_predicate != trigger_json.end()) {
-    predicate = *find_predicate;
+    if (!find_predicate->is_string()) {
+      return absl::InvalidArgumentError("Predicate is not a string");
+    }
+    predicate = find_predicate->get<std::string>();
   } else {
     // If predicate is not provided, this trigger will be used to poll data.
     event_mask = true;
