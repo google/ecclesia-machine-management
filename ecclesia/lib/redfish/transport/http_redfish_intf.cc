@@ -80,6 +80,40 @@ struct RedfishExtendedPath {
   }
 };
 
+// Helper function to validate and adjust the `GetParams` based on the supported
+// features of the `RedfishInterface`.
+void ValidateAndAdjustParams(GetParams& params, const RedfishInterface& intf) {
+  // Only fetch supported features if we actually need to validate something.
+  if (params.expand.has_value() || params.top.has_value() ||
+      params.filter.has_value()) {
+    std::optional<RedfishSupportedFeatures> features = intf.SupportedFeatures();
+
+    // If features are not populated yet (e.g. during service root query),
+    // we do not strip parameters to allow initial queries (like `GetRoot`) to
+    // use expand/filter if requested.
+    if (!features.has_value()) return;
+
+    // Reset `expand` if requested but not available.
+    if (params.expand.has_value()) {
+      if (!params.expand->ValidateRedfishSupport(*features).ok()) {
+        params.expand.reset();
+      }
+    }
+    // Reset `top` if requested but not available.
+    if (params.top.has_value()) {
+      if (!RedfishQueryParamTop::ValidateRedfishSupport(*features).ok()) {
+        params.top.reset();
+      }
+    }
+    // Reset `filter` if requested but not available.
+    if (params.filter.has_value()) {
+      if (!features->filter_enabled) {
+        params.filter.reset();
+      }
+    }
+  }
+}
+
 // Helper function to convert a key-value span to a JSON object that can be
 // used as a request body.
 
@@ -164,7 +198,7 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
               static_cast<double>(std::numeric_limits<int32_t>::min())) {
         return false;
       }
-      *val = trans_tmp;
+      *val = static_cast<int32_t>(trans_tmp);
       return true;
     }
     return false;
@@ -186,7 +220,7 @@ class HttpIntfVariantImpl : public RedfishVariant::ImplIntf {
               static_cast<double>(std::numeric_limits<int64_t>::min())) {
         return false;
       }
-      *val = trans_tmp;
+      *val = static_cast<int64_t>(trans_tmp);
       return true;
     }
     return false;
@@ -261,6 +295,7 @@ RedfishVariant ResolveReference(
     const absl::flat_hash_map<std::string, std::string>& headers,
     RedfishInterface* intf, RedfishExtendedPath path, CacheState cache_state,
     GetParams params = {}) {
+  ValidateAndAdjustParams(params, *intf);
   auto get_uri = [intf](const RedfishExtendedPath& path, GetParams params) {
     return params.freshness == GetParams::Freshness::kRequired
                ? intf->UncachedGetUri(path.GetFullPath(), std::move(params))
@@ -334,25 +369,6 @@ class HttpIntfObjectImpl : public RedfishObject {
                                 cache_state_),
                             ecclesia::HttpResponseCodeFromInt(result_.code),
                             result_.headers);
-    }
-    // Reset expands if requested but not available
-    if (params.expand.has_value() &&
-        !params.expand.value()
-             .ValidateRedfishSupport(intf_->SupportedFeatures())
-             .ok()) {
-      params.expand.reset();
-    }
-    // Reset top if requested but not available
-    if (params.top.has_value() && !RedfishQueryParamTop::ValidateRedfishSupport(
-                                       intf_->SupportedFeatures())
-                                       .ok()) {
-      params.top.reset();
-    }
-    // Reset filter if requested but not available
-    if (params.filter.has_value() &&
-        (!intf_->SupportedFeatures().has_value() ||
-         !intf_->SupportedFeatures()->filter_enabled)) {
-      params.filter.reset();
     }
     return ResolveReference(result_.code, itr.value(), result_.headers, intf_,
                             std::move(new_path), cache_state_,
@@ -697,6 +713,7 @@ class HttpRedfishInterface : public RedfishInterface {
   // service has a loop in its OData references.
   RedfishVariant CachedGetUri(absl::string_view uri,
                               GetParams params) override {
+    ValidateAndAdjustParams(params, *this);
     absl::ReaderMutexLock mu(&transport_mutex_);
     if (params.timeout_manager.has_value() &&
         *params.timeout_manager != nullptr) {
@@ -714,6 +731,7 @@ class HttpRedfishInterface : public RedfishInterface {
 
   RedfishVariant UncachedGetUri(absl::string_view uri,
                                 GetParams params) override {
+    ValidateAndAdjustParams(params, *this);
     absl::ReaderMutexLock mu(&transport_mutex_);
     if (params.timeout_manager.has_value() &&
         *params.timeout_manager != nullptr) {

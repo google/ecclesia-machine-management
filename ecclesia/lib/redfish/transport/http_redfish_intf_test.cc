@@ -330,7 +330,7 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest, GetRootWithTimeout) {
       "/redfish/v1",
       [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
           redfish::v1::Response* response) {
-        response->set_json_str(std::string(expected_str));
+        response->set_json_str(expected_str);
         response->set_code(200);
         // Wait to purposefully exceed the timeout.
         notification_.WaitForNotification();
@@ -472,7 +472,7 @@ TEST_F(HttpRedfishInterfaceWithGrpcTest, UncachedGetUriWithTimeout) {
       kChassisUri,
       [&](grpc::ServerContext* context, const ::redfish::v1::Request* request,
           redfish::v1::Response* response) {
-        response->set_json_str(std::string(expected_str));
+        response->set_json_str(expected_str);
         response->set_code(200);
         notification_.WaitForNotification();
         return grpc::Status::OK;
@@ -634,6 +634,88 @@ TEST_F(HttpRedfishInterfaceTest, CachedGet) {
     EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
                 Eq(result_json));
   }
+}
+
+TEST_F(HttpRedfishInterfaceTest, CachedGetWithUnsupportedParams) {
+  // First, call `GetRoot` to populate supported features.
+  // The default mockup root doesn't have `ProtocolFeaturesSupported`,
+  // so supported features will be populated with all-disabled.
+  RedfishVariant root = intf_->GetRoot();
+  ASSERT_TRUE(root.status().ok());
+
+  int called_count = 0;
+  auto result_json = nlohmann::json::parse(R"json({
+    "Id": "1",
+    "Name": "MyResource"
+  })json");
+
+  // Register a handler for "/my/uri".
+  // If params are stripped, the request should be exactly "/my/uri".
+  server_->AddHttpGetHandler(
+      "/my/uri", [&](ServerRequestInterface* req) -> void {
+        called_count++;
+        EXPECT_EQ(req->uri_path(), "/my/uri");
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(result_json.dump());
+        req->Reply();
+      });
+
+  // Prepare unsupported params
+  GetParams params;
+  params.expand = RedfishQueryParamExpand(
+      {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 1});
+  params.top = RedfishQueryParamTop(1);
+  params.filter = RedfishQueryParamFilter("Name eq 'MyResource'");
+
+  // Call `CachedGetUri`. It should strip the params because they are not
+  // supported.
+  auto result = intf_->CachedGetUri("/my/uri", params);
+  EXPECT_TRUE(result.status().ok());
+  EXPECT_THAT(called_count, Eq(1));
+  EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+              Eq(result_json));
+}
+
+TEST_F(HttpRedfishInterfaceTest, CachedGetWithSupportedParams) {
+  // Enable support for all params on the server
+  server_->EnableAllParamsGetHandler();
+
+  // Call `GetRoot` to populate supported features (which will now be "all
+  // supported").
+  RedfishVariant root = intf_->GetRoot();
+  ASSERT_TRUE(root.status().ok());
+
+  int called_count = 0;
+  auto result_json = nlohmann::json::parse(R"json({
+    "Id": "1",
+    "Name": "MyResource"
+  })json");
+
+  // Prepare params.
+  GetParams params;
+  params.expand = RedfishQueryParamExpand(
+      {.type = RedfishQueryParamExpand::ExpandType::kBoth, .levels = 1});
+  params.top = RedfishQueryParamTop(1);
+
+  std::string expected_uri = "/my/uri?$top=1&$expand=*($levels=1)";
+
+  server_->AddHttpGetHandler(
+      expected_uri, [&](ServerRequestInterface* req) -> void {
+        called_count++;
+        EXPECT_EQ(req->uri_path(), expected_uri);
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(result_json.dump());
+        req->Reply();
+      });
+
+  // Call `CachedGetUri`. It should NOT strip the params.
+  auto result = intf_->CachedGetUri("/my/uri", params);
+  EXPECT_TRUE(result.status().ok());
+  EXPECT_THAT(called_count, Eq(1));
+  EXPECT_THAT(nlohmann::json::parse(result.DebugString(), nullptr, false),
+              Eq(result_json));
 }
 
 // Test harness to start a FakeRedfishServer and create a RedfishInterface
@@ -1328,6 +1410,109 @@ TEST_F(HttpRedfishInterfaceTest, GetWithoutExpand) {
   ASSERT_NE(redfish_object, nullptr);
   redfish_object->Get("Chassis",
                       {.expand = RedfishQueryParamExpand({.levels = 1})});
+  EXPECT_EQ(called_expanded_count, 0);
+}
+
+TEST_F(HttpRedfishInterfaceTest, GetUriWithoutExpand) {
+  int called_expanded_count = 0;
+  server_->AddHttpGetHandler(
+      "/redfish/v1", [&](ServerRequestInterface* req) -> void {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        nlohmann::json reply = nlohmann::json::parse(R"json({
+          "@odata.id": "/redfish/v1",
+          "Chassis": {
+            "@odata.id": "/redfish/v1/Chassis"
+          }
+        })json");
+        req->WriteResponseString(reply.dump());
+        req->Reply();
+      });
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({})json");
+        req->Reply();
+      });
+  server_->AddHttpGetHandler("/redfish/v1/Chassis?$expand=.($levels=1)",
+                             [&](ServerRequestInterface* req) -> void {
+                               SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
+                               called_expanded_count++;
+                               req->WriteResponseString(R"json({})json");
+                               req->Reply();
+                             });
+
+  // Bootstrap the interface to populate features (which will say "no expand").
+  intf_->GetRoot();
+
+  // Call `GetUri` with expand. It should be stripped.
+  intf_->UncachedGetUri("/redfish/v1/Chassis",
+                        {.expand = RedfishQueryParamExpand({.levels = 1})});
+
+  EXPECT_EQ(called_expanded_count, 0);
+}
+
+TEST_F(HttpRedfishInterfaceTest, GetUriForcefullyWithoutExpand) {
+  int called_expanded_count = 0;
+
+  // Register /redfish/v1 that ADVERTISES expand support.
+  server_->AddHttpGetHandler(
+      "/redfish/v1", [&](ServerRequestInterface* req) -> void {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        nlohmann::json reply = nlohmann::json::parse(R"json({
+          "@odata.id": "/redfish/v1",
+          "ProtocolFeaturesSupported": {
+            "ExpandQuery": {
+              "ExpandAll": true,
+              "Levels": true,
+              "Links": true,
+              "MaxLevels": 6,
+              "NoLinks": true
+            }
+          },
+          "Chassis": {
+            "@odata.id": "/redfish/v1/Chassis"
+          }
+        })json");
+        req->WriteResponseString(reply.dump());
+        req->Reply();
+      });
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis", [&](ServerRequestInterface* req) -> void {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({})json");
+        req->Reply();
+      });
+  server_->AddHttpGetHandler("/redfish/v1/Chassis?$expand=.($levels=1)",
+                             [&](ServerRequestInterface* req) {
+                               SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
+                               called_expanded_count++;
+                               req->WriteResponseString(R"json({})json");
+                               req->Reply();
+                             });
+
+  // Construct a `RedfishInterface` with expand disabled forcefully.
+  std::unique_ptr<RedfishTransport> transport =
+      server_->RedfishClientTransport();
+  std::unique_ptr<RedfishInterface> intf = NewHttpInterfaceWithoutExpand(
+      std::move(transport), NullCache::Create, RedfishInterface::kTrusted);
+
+  // Bootstrap the interface. It will fetch /redfish/v1, see expand support,
+  // but clear it because it is a no-expand interface.
+  intf->GetRoot();
+
+  // Call `GetUri` with expand on the no-expand interface. It should be
+  // stripped.
+  intf->UncachedGetUri("/redfish/v1/Chassis",
+                       {.expand = RedfishQueryParamExpand({.levels = 1})});
+
   EXPECT_EQ(called_expanded_count, 0);
 }
 
