@@ -35,7 +35,6 @@
 #include <vector>
 
 #include "base/init_google.h"
-#include "base/logging.h"
 #include "devtools/api/finding.pb.h"
 #include "devtools/api/source/changelist_presubmit.pb.h"
 #include "devtools/api/source/piper/presubmit.pb.h"
@@ -45,6 +44,7 @@
 #include "devtools/staticanalysis/findings/api/findings_api.pb.h"
 #include "absl/flags/flag.h"
 #include "absl/log/globals.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
@@ -138,7 +138,7 @@ static void RunPresubmitGuardRails(absl::Span<const std::string> paths,
 // Flag that allows users to run the validator manually and pass in paths to
 // redpath queries, relative to google3.
 // Example run syntax:
-//   blaze-bin/ecclesia/lib/redfish/dellicius/presubmit/query_presubmit_validation
+//   blaze-bin/ecclesia/lib/redfish/dellicius/presubmit/query_validation_presubmit
 //    --extra_paths <path/to/first query>, <path/to/second/query>
 ABSL_FLAG(std::vector<std::string>, extra_paths, std::vector<std::string>{},
           "comma-separated list of paths to check.");

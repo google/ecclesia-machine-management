@@ -1,10 +1,10 @@
 # Presubmit check for validating modified and new redpath query files.
 
-# load("@rules_cc//cc:cc_test.bzl", "cc_test")
+# load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 
 licenses(["notice"])
 
-cc_test(
+cc_binary(
     name = "query_validation_presubmit",
     srcs = ["query_validation_presubmit_main.cc"],
     tags = [
