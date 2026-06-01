@@ -19,6 +19,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -30,14 +31,22 @@
 #include "ecclesia/lib/redfish/test_mockup.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "ecclesia/lib/redfish/testing/node_topology_testing.h"
+#include "ecclesia/lib/redfish/transport/cache.h"
+#include "ecclesia/lib/redfish/transport/http_redfish_intf.h"
+#include "ecclesia/lib/redfish/transport/interface.h"
 #include "ecclesia/lib/redfish/types.h"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
 namespace {
 
+using ::tensorflow::serving::net_http::HTTPStatusCode;
+using ::tensorflow::serving::net_http::ServerRequestInterface;
+using ::testing::_;
 using ::testing::Contains;
 using ::testing::Not;
+using ::testing::Pointee;
 using ::testing::Pointwise;
 
 using NodeTopologyBuilderType =
@@ -295,6 +304,14 @@ TEST(TopologyTestRunner, TestingMockupFindingRootChassis) {
 
     mockup.ClearHandlers();
   }
+}
+
+TEST(TopologyTestRunner, TestingMockupFindingRootChassisWithExpand) {
+  // Verifies that the crawler can use expand to find the root chassis.
+  FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  mockup.EnableExpandGetHandler();
+  auto raw_intf = mockup.RedfishClientInterface();
+
   {
     // Reorder chassis so that root chassis has to be found via Link traversal
     // and via existing Cabling (multi-level)
@@ -348,6 +365,127 @@ TEST(TopologyTestRunner, TestingMockupFindingRootChassis) {
 
     mockup.ClearHandlers();
   }
+}
+
+TEST(TopologyTestRunner, TestingMockupFindingRootChassisNoExpand) {
+  // Verifies that the crawler safely defaults to "no expand" and successfully
+  // builds the topology via manual traversal.
+  FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+
+  // Construct a RedfishInterface with expand disabled forcefully.
+  std::unique_ptr<RedfishTransport> transport = mockup.RedfishClientTransport();
+  std::unique_ptr<RedfishInterface> intf = NewHttpInterfaceWithoutExpand(
+      std::move(transport), NullCache::Create, RedfishInterface::kTrusted);
+
+  mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis", R"json(
+    {
+      "@odata.id": "/redfish/v1/Chassis",
+      "@odata.type": "#ChassisCollection.ChassisCollection",
+      "Members": [
+        {
+          "@odata.id": "/redfish/v1/Chassis/root"
+        }
+      ],
+      "Members@odata.count": 1,
+      "Name": "Chassis Collection"
+    }
+  )json");
+
+  // Register a handler for the expanded URI that returns an error. If the
+  // topology crawler tries to use expand, it will hit this handler and fail.
+  mockup.AddHttpGetHandler("/redfish/v1/Chassis?$expand=.($levels=1)",
+                           [&](ServerRequestInterface* req) -> void {
+                             req->ReplyWithStatus(HTTPStatusCode::BAD_REQUEST);
+                           });
+
+  NodeTopology topology = CreateTopologyFromRedfishV2(intf.get());
+
+  // Verify that we still managed to build a topology (meaning we successfully
+  // queried "/redfish/v1/Chassis" and did not hit the error handler for
+  // expanded URI).
+  EXPECT_FALSE(topology.nodes.empty());
+  EXPECT_THAT(topology.nodes, Contains(Pointee(RedfishNodeIdIs("root", _, _))));
+}
+
+TEST(TopologyTestRunner, TestingMockupFindingRootChassisFeaturesMissing) {
+  // Verifies that the crawler safely defaults to "no expand" and successfully
+  // builds the topology via manual traversal.
+  FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  std::unique_ptr<RedfishInterface> intf = mockup.RedfishClientInterface();
+
+  // Override /redfish/v1 to return a response WITHOUT
+  // ProtocolFeaturesSupported.
+  mockup.AddHttpGetHandlerWithData("/redfish/v1", R"json({
+      "@odata.id": "/redfish/v1",
+      "@odata.type": "#ServiceRoot.v1_5_0.ServiceRoot",
+      "Chassis": {
+        "@odata.id": "/redfish/v1/Chassis"
+      },
+      "Id": "RootService",
+      "Name": "Root Service",
+      "RedfishVersion": "1.6.1"
+  })json");
+
+  mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis", R"json({
+      "@odata.id": "/redfish/v1/Chassis",
+      "@odata.type": "#ChassisCollection.ChassisCollection",
+      "Members": [
+        {
+          "@odata.id": "/redfish/v1/Chassis/root"
+        }
+      ],
+      "Members@odata.count": 1,
+      "Name": "Chassis Collection"
+  })json");
+
+  // Register a handler for the expanded URI that returns an error.
+  // If the topology crawler tries to use expand (which it shouldn't because
+  // features are missing), it will hit this handler and fail.
+  mockup.AddHttpGetHandler("/redfish/v1/Chassis?$expand=.($levels=1)",
+                           [&](ServerRequestInterface* req) -> void {
+                             req->ReplyWithStatus(HTTPStatusCode::BAD_REQUEST);
+                           });
+
+  NodeTopology topology = CreateTopologyFromRedfishV2(intf.get());
+
+  // Verify that we still managed to build a topology.
+  EXPECT_FALSE(topology.nodes.empty());
+  EXPECT_THAT(topology.nodes, Contains(Pointee(RedfishNodeIdIs("root", _, _))));
+}
+
+TEST(TopologyTestRunner, TestingMockupFindingRootChassisGetRootFailure) {
+  // Verifies that the crawler doesn't abort immediately on `GetRoot()` failure
+  // and still attempts to build the topology.
+  FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  std::unique_ptr<RedfishInterface> intf = mockup.RedfishClientInterface();
+
+  // Override /redfish/v1 to return an error.
+  mockup.AddHttpGetHandler("/redfish/v1",
+                           [&](ServerRequestInterface* req) -> void {
+                             req->ReplyWithStatus(HTTPStatusCode::ERROR);
+                           });
+
+  // Since GetRoot failed, features are not populated, so we keep expand.
+  // We should request WITH expand.
+  mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis?$expand=.($levels=1)",
+                                   R"json({
+                                    "@odata.id": "/redfish/v1/Chassis",
+                                    "@odata.type": "#ChassisCollection.ChassisCollection",
+                                    "Members": [
+                                      {
+                                        "@odata.id": "/redfish/v1/Chassis/root"
+                                      }
+                                    ],
+                                    "Members@odata.count": 1,
+                                    "Name": "Chassis Collection"
+                                  })json");
+
+  NodeTopology topology = CreateTopologyFromRedfishV2(intf.get());
+
+  // Verify that we still managed to build a topology because we used expand
+  // which succeeded.
+  EXPECT_FALSE(topology.nodes.empty());
+  EXPECT_THAT(topology.nodes, Contains(Pointee(RedfishNodeIdIs("root", _, _))));
 }
 
 TEST(TopologyTestRunner, TestingMockupBrokenOrCircularLink) {
@@ -529,12 +667,10 @@ TEST(TopologyTestRunner, UriUnqueryableFirstChassisBad) {
   FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
   // If the first Chassis is unqueryable.
-  mockup.AddHttpGetHandler(
-      "/redfish/v1/Chassis/child1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
-        req->ReplyWithStatus(
-            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-      });
+  mockup.AddHttpGetHandler("/redfish/v1/Chassis/child1",
+                           [&](ServerRequestInterface* req) {
+                             req->ReplyWithStatus(HTTPStatusCode::REQUEST_TO);
+                           });
   NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
   const std::vector<Node> expected_nodes = {
       Node{.name = "root",
@@ -629,12 +765,10 @@ TEST(TopologyTestRunner, UriUnqueryableRootChassisBad) {
   FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
   auto raw_intf = mockup.RedfishClientInterface();
   // If the root Chassis is unqueryable.
-  mockup.AddHttpGetHandler(
-      "/redfish/v1/Chassis/root",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
-        req->ReplyWithStatus(
-            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-      });
+  mockup.AddHttpGetHandler("/redfish/v1/Chassis/root",
+                           [&](ServerRequestInterface* req) {
+                             req->ReplyWithStatus(HTTPStatusCode::REQUEST_TO);
+                           });
   mockup.AddHttpGetHandlerWithData("/redfish/v1/Chassis?$expand=.($levels=1)",
                                    R"json(
     {
@@ -707,50 +841,39 @@ TEST(TopologyTestRunner, UriUnqueryableAllChassisBad) {
       "Name": "Chassis Collection"
     }
   )json");
-  mockup.AddHttpGetHandler(
-      "/redfish/v1/Chassis/root",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
-        req->ReplyWithStatus(
-            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-      });
-  mockup.AddHttpGetHandler(
-      "/redfish/v1/Chassis/child1",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
-        req->ReplyWithStatus(
-            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-      });
-  mockup.AddHttpGetHandler(
-      "/redfish/v1/Chassis/child2",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
-        req->ReplyWithStatus(
-            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-      });
-  mockup.AddHttpGetHandler(
-      "/redfish/v1/Chassis/expansion_tray",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
-        req->ReplyWithStatus(
-            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-      });
-  mockup.AddHttpGetHandler(
-      "/redfish/v1/Chassis/expansion_child",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
-        req->ReplyWithStatus(
-            ::tensorflow::serving::net_http::HTTPStatusCode::REQUEST_TO);
-      });
+  mockup.AddHttpGetHandler("/redfish/v1/Chassis/root",
+                           [&](ServerRequestInterface* req) {
+                             req->ReplyWithStatus(HTTPStatusCode::REQUEST_TO);
+                           });
+  mockup.AddHttpGetHandler("/redfish/v1/Chassis/child1",
+                           [&](ServerRequestInterface* req) {
+                             req->ReplyWithStatus(HTTPStatusCode::REQUEST_TO);
+                           });
+  mockup.AddHttpGetHandler("/redfish/v1/Chassis/child2",
+                           [&](ServerRequestInterface* req) {
+                             req->ReplyWithStatus(HTTPStatusCode::REQUEST_TO);
+                           });
+  mockup.AddHttpGetHandler("/redfish/v1/Chassis/expansion_tray",
+                           [&](ServerRequestInterface* req) {
+                             req->ReplyWithStatus(HTTPStatusCode::REQUEST_TO);
+                           });
+  mockup.AddHttpGetHandler("/redfish/v1/Chassis/expansion_child",
+                           [&](ServerRequestInterface* req) {
+                             req->ReplyWithStatus(HTTPStatusCode::REQUEST_TO);
+                           });
   NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
   EXPECT_TRUE(topology.nodes.empty());
 }
 
 TEST(TopologyTestRunner, UriUnqueryableChassisCollectionBad) {
   FakeRedfishServer mockup("topology_v2_testing/mockup.shar");
+  mockup.EnableExpandGetHandler();
   auto raw_intf = mockup.RedfishClientInterface();
   // If Chassis Collection is unqueryable.
-  mockup.AddHttpGetHandler(
-      "/redfish/v1/Chassis?$expand=.($levels=1)",
-      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
-        req->ReplyWithStatus(
-            ::tensorflow::serving::net_http::HTTPStatusCode::UNAUTHORIZED);
-      });
+  mockup.AddHttpGetHandler("/redfish/v1/Chassis?$expand=.($levels=1)",
+                           [&](ServerRequestInterface* req) {
+                             req->ReplyWithStatus(HTTPStatusCode::UNAUTHORIZED);
+                           });
   NodeTopology topology = CreateTopologyFromRedfishV2(raw_intf.get());
   EXPECT_TRUE(topology.nodes.empty());
 }

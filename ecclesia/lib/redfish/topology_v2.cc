@@ -213,22 +213,28 @@ std::vector<std::unique_ptr<RedfishObject>> FindAllDownstreamsUris(
   return downstream_objs;
 }
 
-// Helper function to find root chassis from service root
+// Helper function to find root chassis from service root.
 absl::StatusOr<std::unique_ptr<RedfishObject>> FindRootChassisUri(
     RedfishInterface* redfish_intf, const TopologyConfig& config) {
-  auto chassis =
-      redfish_intf->CachedGetUri("/redfish/v1/Chassis?$expand=.($levels=1)");
+  GetParams get_params = {
+      .expand = RedfishQueryParamExpand({
+          .type = RedfishQueryParamExpand::ExpandType::kNotLinks,
+          .levels = 1,
+      })};
+
+  RedfishVariant chassis =
+      redfish_intf->CachedGetUri("/redfish/v1/Chassis", std::move(get_params));
   if (!chassis.status().ok()) {
     return chassis.status();
   }
-  auto chassis_iter = chassis.AsIterable();
+  std::unique_ptr<RedfishIterable> chassis_iter = chassis.AsIterable();
   if (chassis_iter == nullptr || chassis_iter->Size() == 0) {
     return absl::InternalError("No Chassis in Chassis collection");
   }
 
   // Pop the first available Chassis (guaranteed since iter has Size > 0)
   std::unique_ptr<RedfishObject> chassis_obj;
-  for (const auto chassis : *chassis_iter) {
+  for (const RedfishVariant chassis : *chassis_iter) {
     if (chassis.status().ok()) {
       chassis_obj = chassis.AsObject();
       break;
@@ -245,7 +251,7 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> FindRootChassisUri(
   const std::string chassis_link = config.find_root_node().chassis_link();
   DLOG(INFO) << "Using chassis link value: Links." << chassis_link;
 
-  // Iterate through cables to find upstream connections
+  // Iterate through cables to find upstream connections.
   absl::flat_hash_map<std::string, std::string>
       cable_downstream_to_upstream_map;
   FindAllCablesHelper(
@@ -281,7 +287,7 @@ absl::StatusOr<std::unique_ptr<RedfishObject>> FindRootChassisUri(
 
   while (upstream_chassis_obj != nullptr) {
     // If the upstream chassis exists, update current chassis and find
-    // next upstream chassis resource uri
+    // next upstream chassis resource uri.
     chassis_obj = std::move(upstream_chassis_obj);
     chassis_uri = chassis_obj->GetUriString();
     DLOG(INFO) << "Checking for upstream Chassis obj for "
@@ -357,6 +363,9 @@ NodeTopology CreateTopologyFromRedfishV2(RedfishInterface* redfish_intf) {
 NodeTopology CreateTopologyFromRedfishV2(RedfishInterface* redfish_intf,
                                          absl::string_view config_name) {
   NodeTopology topology;
+
+  // Bootstrap the interface to populate supported features.
+  redfish_intf->GetRoot();
 
   DLOG(INFO) << "Loading topology config: " << config_name;
   std::optional<TopologyConfig> config = LoadTopologyConfigFromConfigName(

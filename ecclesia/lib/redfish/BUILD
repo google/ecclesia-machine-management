@@ -262,8 +262,12 @@ cc_test(
         ":types",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",
         "//ecclesia/lib/redfish/testing:node_topology_testing",
+        "//ecclesia/lib/redfish/transport:cache",
+        "//ecclesia/lib/redfish/transport:http_redfish_intf",
+        "//ecclesia/lib/redfish/transport:interface",
         "@com_google_absl//absl/functional:function_ref",
         "@com_google_googletest//:gtest_main",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/public:shared_files",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
     ],
 )
