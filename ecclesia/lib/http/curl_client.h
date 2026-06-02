@@ -256,9 +256,9 @@ class CurlHttpClient : public HttpClient {
       Protocol cmd, std::unique_ptr<HttpRequest> request,
       IncrementalResponseHandler* handler = nullptr);
   void SetDefaultCurlOpts(CURL* curl) const;
-  static size_t HeaderCallback(const void* data, size_t size, size_t nmemb,
+  static size_t HeaderCallback(char* data, size_t size, size_t nmemb,
                                void* userp);
-  static size_t BodyCallback(const void* data, size_t size, size_t nmemb,
+  static size_t BodyCallback(char* data, size_t size, size_t nmemb,
                              void* userp);
   static int ProgressCallback(void* userp, curl_off_t dltotal, curl_off_t dlnow,
                               curl_off_t ultotal, curl_off_t ulnow);

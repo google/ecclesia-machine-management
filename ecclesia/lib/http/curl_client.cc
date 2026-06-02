@@ -449,7 +449,7 @@ absl::StatusOr<CurlHttpClient::HttpResponse> CurlHttpClient::HttpMethod(
 }
 
 // userp is set through framework over third_CURLOPT_WRITEDATA
-size_t CurlHttpClient::HeaderCallback(const void* data, size_t size,
+size_t CurlHttpClient::HeaderCallback(char* data, size_t size,
                                       size_t nmemb, void* userp) {
   auto* context = static_cast<ResponseContext*>(userp);
   const auto* str = static_cast<const char*>(data);
@@ -474,7 +474,7 @@ size_t CurlHttpClient::HeaderCallback(const void* data, size_t size,
 }
 
 // userp is set through framework over third_CURLOPT_WRITEHEADER
-size_t CurlHttpClient::BodyCallback(const void* data, size_t size, size_t nmemb,
+size_t CurlHttpClient::BodyCallback(char* data, size_t size, size_t nmemb,
                                     void* userp) {
   auto* context = static_cast<ResponseContext*>(userp);
   absl::string_view data_str(static_cast<const char*>(data), size * nmemb);
