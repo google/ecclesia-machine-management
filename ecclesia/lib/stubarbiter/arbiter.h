@@ -166,28 +166,32 @@ class StubArbiter {
     StubArbiterInfo::Metrics metrics;
     StubArbiterInfo::MetricsWrapper metrics_wrapper(&metrics, &clock_);
 
-    absl::MutexLock lock(&stub_mutex_);
-    if (active_stub_label_ != label) {
-      // Before attempting to create a new stub, we
-      // need to clean-up the active stub.
-      active_stub_ = nullptr;
-      active_stub_label_ = StubArbiterInfo::PriorityLabel::kUnknown;
+    std::shared_ptr<T> local_stub;
+    {
+      absl::MutexLock lock(&stub_mutex_);
+      if (active_stub_label_ != label) {
+        // Before attempting to create a new stub, we
+        // need to clean-up the active stub.
+        active_stub_ = nullptr;
+        active_stub_label_ = StubArbiterInfo::PriorityLabel::kUnknown;
 
-      absl::StatusOr<std::unique_ptr<T>> stub = stub_factory_(label);
-      if (stub.ok()) {
-        active_stub_ = std::move(*stub);
-        active_stub_label_ = label;
-        freshness_time_ = clock_.Now();
-      } else {
-        metrics.overall_status = stub.status();
-        return metrics;
+        absl::StatusOr<std::unique_ptr<T>> stub = stub_factory_(label);
+        if (stub.ok()) {
+          active_stub_ = std::move(*stub);
+          active_stub_label_ = label;
+          freshness_time_ = clock_.Now();
+        } else {
+          metrics.overall_status = stub.status();
+          return metrics;
+        }
       }
+      local_stub = active_stub_;
     }
 
     StubArbiterInfo::EndpointMetrics& endpoint_metrics =
         metrics.endpoint_metrics[label];
     endpoint_metrics.start_time = clock_.Now();
-    endpoint_metrics.status = func(active_stub_.get(), label);
+    endpoint_metrics.status = func(local_stub.get(), label);
     endpoint_metrics.end_time = clock_.Now();
 
     metrics.overall_status = endpoint_metrics.status;
@@ -222,20 +226,28 @@ class StubArbiter {
 
     StubArbiterInfo::PriorityLabel attempted_stub_label =
         StubArbiterInfo::PriorityLabel::kUnknown;
-    absl::MutexLock lock(&stub_mutex_);
-    // Check if active stub is empty and is the same as the initial stub.
-    // If so, then check if the active stub is the primary or the stub is fresh
-    // enough. If so, then execute the function on the active stub.
 
-    if (active_stub_ != nullptr &&
-        (clock_.Now() < (freshness_time_ + refresh_) ||
-         active_stub_label_ == StubArbiterInfo::PriorityLabel::kPrimary)) {
-      stub_path = active_stub_label_ == StubArbiterInfo::PriorityLabel::kPrimary
-                      ? "primary"
-                      : "sticky";
+    std::shared_ptr<T> local_stub;
+    StubArbiterInfo::PriorityLabel local_stub_label =
+        StubArbiterInfo::PriorityLabel::kUnknown;
 
+    {
+      absl::MutexLock lock(&stub_mutex_);
+      if (active_stub_ != nullptr &&
+          (clock_.Now() < (freshness_time_ + refresh_) ||
+           active_stub_label_ == StubArbiterInfo::PriorityLabel::kPrimary)) {
+        local_stub = active_stub_;
+        local_stub_label = active_stub_label_;
+        stub_path =
+            active_stub_label_ == StubArbiterInfo::PriorityLabel::kPrimary
+                ? "primary"
+                : "sticky";
+      }
+    }
+
+    if (local_stub != nullptr) {
       metrics.overall_status =
-          execute_func(active_stub_.get(), active_stub_label_, stub_path);
+          execute_func(local_stub.get(), local_stub_label, stub_path);
 
       if (metrics.overall_status.ok() ||
           !failover_codes_.contains(metrics.overall_status.code())) {
@@ -243,17 +255,20 @@ class StubArbiter {
       }
 
       stub_path = "";
-      if (active_stub_label_ == StubArbiterInfo::PriorityLabel::kSecondary) {
+      if (local_stub_label == StubArbiterInfo::PriorityLabel::kSecondary) {
         stub_path = "sticky-fallback";
       }
-      // Record the attempted stub label before we clean up the active stub.
-      attempted_stub_label = active_stub_label_;
+      attempted_stub_label = local_stub_label;
+      {
+        absl::MutexLock lock(&stub_mutex_);
+        // Only clear if the active stub hasn't changed since we started.
+        if (active_stub_ == local_stub) {
+          active_stub_ = nullptr;
+          active_stub_label_ = StubArbiterInfo::PriorityLabel::kUnknown;
+        }
+      }
     }
 
-    // Before attempting to create a new stub, we
-    // need to clean-up the active stub.
-    active_stub_ = nullptr;
-    active_stub_label_ = StubArbiterInfo::PriorityLabel::kUnknown;
     for (StubArbiterInfo::PriorityLabel label = initial_stub;
          label != StubArbiterInfo::PriorityLabel::kUnknown;
          label = static_cast<StubArbiterInfo::PriorityLabel>(
@@ -285,6 +300,7 @@ class StubArbiter {
       // codes, then we can break out of the loop.
       if (metrics.overall_status.ok() ||
           !failover_codes_.contains(metrics.overall_status.code())) {
+        absl::MutexLock lock(&stub_mutex_);
         active_stub_ = std::move(*stub);
         active_stub_label_ = label;
         freshness_time_ = clock_.Now();
@@ -305,7 +321,7 @@ class StubArbiter {
       stub_factory_;
   const Clock& clock_;
   absl::Mutex stub_mutex_;
-  std::unique_ptr<T> active_stub_ ABSL_GUARDED_BY(stub_mutex_);
+  std::shared_ptr<T> active_stub_ ABSL_GUARDED_BY(stub_mutex_);
   StubArbiterInfo::PriorityLabel active_stub_label_
       ABSL_GUARDED_BY(stub_mutex_);
   absl::Time freshness_time_ ABSL_GUARDED_BY(stub_mutex_);

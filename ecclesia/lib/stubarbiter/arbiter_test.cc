@@ -27,6 +27,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/barrier.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/status/test_macros.h"
@@ -789,6 +790,132 @@ TEST(StubArbiterTest, MockStubArbiterQueryFailoverMultithreaded) {
                 StubArbiterInfo::PriorityLabel::kPrimary,
                 Field(&StubArbiterInfo::EndpointMetrics::status, IsOk()))));
       });
+}
+
+TEST(StubArbiterTest, ManualPolicyAllowsConcurrentQueries) {
+  FakeClock clock(absl::FromUnixSeconds(1700000000));
+  StubArbiterInfo::Config manual_config;
+  manual_config.type = StubArbiterInfo::Type::kManual;
+  ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<MockStubArbiter> arbiter,
+                          CreateMockStubArbiter(manual_config, &clock));
+
+  constexpr int kNumThreads = 2;
+  absl::Barrier barrier(kNumThreads);
+  ThreadFactoryInterface* thread_factory = GetDefaultThreadFactory();
+  std::vector<std::unique_ptr<ThreadInterface>> threads;
+
+  for (int i = 0; i < kNumThreads; ++i) {
+    threads.push_back(thread_factory->New([&]() {
+      StubArbiterInfo::Metrics metrics = arbiter->Execute(
+          [&barrier](MockStub* stub,
+                     StubArbiterInfo::PriorityLabel label) -> absl::Status {
+            barrier.Block();
+            return absl::OkStatus();
+          },
+          StubArbiterInfo::PriorityLabel::kPrimary);
+      EXPECT_THAT(metrics.overall_status, IsOk());
+    }));
+  }
+
+  for (auto& thread : threads) {
+    thread->Join();
+  }
+}
+
+TEST(StubArbiterTest, FailoverPolicyAllowsConcurrentQueries) {
+  FakeClock clock(absl::FromUnixSeconds(1700000000));
+  ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<MockStubArbiter> arbiter,
+                          CreateMockStubArbiter({}, &clock));
+
+  constexpr int kNumThreads = 2;
+  absl::Barrier barrier(kNumThreads);
+  ThreadFactoryInterface* thread_factory = GetDefaultThreadFactory();
+  std::vector<std::unique_ptr<ThreadInterface>> threads;
+
+  for (int i = 0; i < kNumThreads; ++i) {
+    threads.push_back(thread_factory->New([&]() {
+      StubArbiterInfo::Metrics metrics = arbiter->Execute(
+          [&barrier](MockStub* stub,
+                     StubArbiterInfo::PriorityLabel label) -> absl::Status {
+            barrier.Block();
+            return absl::OkStatus();
+          });
+      EXPECT_THAT(metrics.overall_status, IsOk());
+    }));
+  }
+
+  for (auto& thread : threads) {
+    thread->Join();
+  }
+}
+
+TEST(StubArbiterTest, ManualPolicyFailedStubCreation) {
+  FakeClock clock(absl::FromUnixSeconds(1700000000));
+  StubArbiterInfo::Config manual_config;
+  manual_config.type = StubArbiterInfo::Type::kManual;
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::unique_ptr<MockStubArbiter> arbiter,
+      MockStubArbiter::Create(
+          manual_config,
+          [](StubArbiterInfo::PriorityLabel label)
+              -> absl::StatusOr<std::unique_ptr<MockStub>> {
+            if (label == StubArbiterInfo::PriorityLabel::kSecondary) {
+              return absl::InternalError("Failed to create secondary stub");
+            }
+            return std::make_unique<MockStub>(GetName(label));
+          }));
+
+  // Execute on secondary should fail immediately because the stub cannot be
+  // created
+  StubArbiterInfo::Metrics metrics = arbiter->Execute(
+      [](MockStub* stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+        return absl::OkStatus();
+      },
+      StubArbiterInfo::PriorityLabel::kSecondary);
+
+  EXPECT_THAT(metrics.overall_status, IsStatusInternal());
+}
+
+TEST(StubArbiterTest, FailoverPolicyFailedStubCreation) {
+  StubArbiterInfo::Config config;
+  config.type = StubArbiterInfo::Type::kFailover;
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::unique_ptr<MockStubArbiter> arbiter,
+      MockStubArbiter::Create(
+          config,
+          [](StubArbiterInfo::PriorityLabel label)
+              -> absl::StatusOr<std::unique_ptr<MockStub>> {
+            if (label == StubArbiterInfo::PriorityLabel::kPrimary) {
+              // Return a failover code (Unavailable) for primary creation
+              // failure
+              return absl::UnavailableError("Failed to create primary stub");
+            }
+            if (label == StubArbiterInfo::PriorityLabel::kSecondary) {
+              // Return a non-failover code (Internal) for secondary creation
+              // failure
+              return absl::InternalError("Failed to create secondary stub");
+            }
+            return std::make_unique<MockStub>(GetName(label));
+          }));
+
+  // Execute should try primary, fail to create it, see it is a failover code,
+  // then try secondary, fail to create it, see it is a non-failover code, and
+  // stop.
+  StubArbiterInfo::Metrics metrics = arbiter->Execute(
+      [](MockStub* stub, StubArbiterInfo::PriorityLabel label) -> absl::Status {
+        return absl::OkStatus();
+      });
+
+  EXPECT_THAT(metrics.overall_status, IsStatusInternal());
+  EXPECT_THAT(
+      metrics.endpoint_metrics[StubArbiterInfo::PriorityLabel::kPrimary].status,
+      IsStatusUnavailable());
+  EXPECT_THAT(
+      metrics.endpoint_metrics[StubArbiterInfo::PriorityLabel::kSecondary]
+          .status,
+      IsStatusInternal());
 }
 
 }  // namespace
