@@ -101,9 +101,9 @@ def ecclesia_deps_first(package_name = "com_google_ecclesia"):
         ]
         http_archive(
             name = "com_github_grpc_grpc",
-            sha256 = "38f58596277fa632064cc0719b9ece4381c8c77461cb51e9b66ca149574b7865",
-            strip_prefix = "grpc-1.80.0",
-            urls = ["https://github.com/grpc/grpc/archive/refs/tags/v1.80.0.tar.gz"],
+            sha256 = "41b695614b26652ff9e97ce50cfd4a6c7a3d45a9fe598d1454407746499bbf2c",
+            strip_prefix = "grpc-1.81.0",
+            urls = ["https://github.com/grpc/grpc/archive/refs/tags/v1.81.0.tar.gz"],
             repo_mapping = {"@abseil-cpp": "@com_google_absl"},
             patches = _make_patch_paths("grpc.patches", patch_files, package_name),
             patch_args = ["-p1"],
