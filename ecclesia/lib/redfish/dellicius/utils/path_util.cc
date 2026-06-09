@@ -103,15 +103,24 @@ std::vector<std::string> SplitNodeNameForNestedNodes(
     absl::string_view expression) {
   absl::string_view stripped = absl::StripAsciiWhitespace(expression);
   if (stripped.empty()) return {};
-  // Avoid creating locals. This is an equivalent of
-  //
-  // std::string step_1 = absl::StrReplaceAll(stripped, {{".", " "}});
-  // std::string step_2 = absl::StrReplaceAll(step_1, {{"\\", "."}});
-  // return absl::StrSplit(step_2, ' ');
-  return absl::StrSplit(
-      absl::StrReplaceAll(absl::StrReplaceAll(stripped, {{".", " "}}),
-                          {{"\\ ", "."}}),
-      ' ');
+
+  std::vector<std::string> result;
+  std::string current_segment;
+
+  for (size_t i = 0; i < stripped.size(); ++i) {
+    if (stripped[i] == '\\' && i + 1 < stripped.size() &&
+        stripped[i + 1] == '.') {
+      current_segment.push_back('.');
+      ++i;
+    } else if (stripped[i] == '.') {
+      result.push_back(std::move(current_segment));
+      current_segment.clear();
+    } else {
+      current_segment.push_back(stripped[i]);
+    }
+  }
+  result.push_back(std::move(current_segment));
+  return result;
 }
 
 absl::StatusOr<nlohmann::json> ResolveRedPathNodeToJson(

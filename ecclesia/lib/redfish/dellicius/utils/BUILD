@@ -28,6 +28,17 @@ cc_test(
     ],
 )
 
+cc_binary(
+    name = "path_util_benchmark",
+    srcs = ["path_util_benchmark.cc"],
+    tags = ["microbenchmark"],
+    deps = [
+        ":path_util",
+        "@com_github_google_benchmark//:benchmark_main",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
 cc_library(
     name = "id_assigner",
     hdrs = ["id_assigner.h"],

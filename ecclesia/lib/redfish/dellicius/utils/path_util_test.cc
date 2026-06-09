@@ -21,6 +21,9 @@
 
 #include "gtest/gtest.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/ascii.h"
+#include "absl/strings/str_replace.h"
+#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 #include "single_include/nlohmann/json.hpp"
 
@@ -47,6 +50,44 @@ TEST(PathUtilTest, CheckNodeNameSplitsAsExpected) {
   {
     std::vector<std::string> result = SplitNodeNameForNestedNodes(" ");
     EXPECT_TRUE(result.empty());
+  }
+}
+
+std::vector<std::string> LegacySplitNodeNameForNestedNodes(
+    absl::string_view expression) {
+  absl::string_view stripped = absl::StripAsciiWhitespace(expression);
+  if (stripped.empty()) return {};
+  return absl::StrSplit(
+      absl::StrReplaceAll(absl::StrReplaceAll(stripped, {{".", " "}}),
+                          {{"\\ ", "."}}),
+      ' ');
+}
+
+TEST(PathUtilTest, CompareOptimizedAgainstLegacySplitNodeName) {
+  std::vector<absl::string_view> test_cases = {
+      " Thresholds.UpperCritical.@odata\\.id ",
+      "Thresholds",
+      " ",
+      "",
+      "#LogService\\.ClearLog",
+      "Actions.#Chassis\\.Reset",
+      "Actions.#Chassis\\.Reset.@Redfish\\.ActionInfo",
+      "Actions.#Chassis\\.Reset.@Redfish\\.ActionInfo.@odata\\.id",
+      "$Actions.#Chassis\\.Reset.@Redfish\\.ActionInfo.@odata\\.id",
+      "Storage@odata\\.count",
+      "a.b.c",
+      "a\\.b.c\\.d",
+      "a\\\\.b",
+      "multiple..dots",
+      ".leading.dot",
+      "trailing.dot.",
+      "\\..escaped.leading",
+  };
+
+  for (absl::string_view expr : test_cases) {
+    EXPECT_EQ(SplitNodeNameForNestedNodes(expr),
+              LegacySplitNodeNameForNestedNodes(expr))
+        << "Mismatch for expression: '" << expr << "'";
   }
 }
 
