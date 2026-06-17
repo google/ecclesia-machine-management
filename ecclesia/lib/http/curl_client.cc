@@ -313,6 +313,8 @@ class ResponseContext {
     response_headers_.try_emplace(key, value);
   }
 
+  void ClearHeaders() { response_headers_.clear(); }
+
   bool IsIncremental() const { return handler_ != nullptr; }
 
   absl::Status HandleBodyData(absl::string_view data) {
@@ -456,6 +458,9 @@ size_t CurlHttpClient::HeaderCallback(char* data, size_t size,
 
   if (str[0] != '\r' && str[1] != '\n') {
     auto s = std::string(str, size * nmemb);
+    if (s.compare(0, 5, "HTTP/") == 0) {
+      context->ClearHeaders();
+    }
     std::vector<std::string> v = absl::StrSplit(s, absl::MaxSplits(':', 1));
     if (v.size() == 2) {
       absl::StripAsciiWhitespace(&v[0]);
