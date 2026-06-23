@@ -1,10 +1,13 @@
 # Presubmit check for validating modified and new redpath query files.
 
-# load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+# load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 licenses(["notice"])
 
-cc_binary(
+# This target MUST be a `cc_test`, despite having its own `main()` because it is used as a
+# `test_target` in `CheckPresubmitBuildTarget` (see
+# `google3/third_party/ecclesia/lib/redfish/METADATA`).
+cc_test(
     name = "query_validation_presubmit",
     srcs = ["query_validation_presubmit_main.cc"],
     tags = [
