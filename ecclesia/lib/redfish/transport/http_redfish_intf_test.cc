@@ -2302,5 +2302,53 @@ TEST_F(HttpRedfishInterfaceTest, LogServiceCacheBlocklist) {
   EXPECT_THAT(call_count, Eq(2));
 }
 
+TEST_F(HttpRedfishInterfaceTest, DeepCacheLogServiceCacheBlocklist) {
+  constexpr absl::string_view kSystemPath = "/redfish/v1/Systems/1";
+  constexpr absl::string_view kLogServicesPath =
+      "/redfish/v1/Systems/1/LogServices";
+
+  server_->AddHttpGetHandler(
+      std::string(kSystemPath), [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        nlohmann::json system = {{"@odata.id", kSystemPath},
+                                 {"LogServices",
+                                  {{"@odata.id", kLogServicesPath},
+                                   {"Description", "Logs"},
+                                   {"Status", {{"State", "Enabled"}}}}}};
+        req->WriteResponseString(system.dump());
+        req->Reply();
+      });
+
+  // Create a deep cache interface with blocklist enabled.
+  auto config = server_->GetConfig();
+  ecclesia::HttpCredential creds;
+  auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
+      ecclesia::LibCurlProxy::CreateInstance(), creds);
+  auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
+      std::move(curl_http_client),
+      absl::StrFormat("%s:%d", config.hostname, config.port));
+
+  TimeBasedCache* raw_cache = nullptr;
+  auto cache_factory = [&](RedfishTransport* transport) {
+    auto cache = std::make_unique<ecclesia::TimeBasedCache>(
+        transport, &clock_, absl::Minutes(1), std::nullopt,
+        /*deep_cache=*/true, /*enable_blocklist=*/true);
+    raw_cache = cache.get();
+    return cache;
+  };
+  auto intf_deep_cache = NewHttpInterface(std::move(transport), cache_factory,
+                                          RedfishInterface::kTrusted);
+
+  // Query the parent resource.
+  intf_deep_cache->CachedGetUri(kSystemPath);
+
+  // Verify cache size.
+  // /redfish/v1 and kSystemPath should be cached. kLogServicesPath should be
+  // skipped by blocklist.
+  ASSERT_NE(raw_cache, nullptr);
+  EXPECT_THAT(raw_cache->GetGetCacheSize(), Eq(2));
+}
+
 }  // namespace
 }  // namespace ecclesia

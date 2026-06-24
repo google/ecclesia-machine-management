@@ -106,6 +106,10 @@ void TimeBasedCache::CacheNestedObjects(
       if (pos != std::string::npos) {
         id = id.substr(0, pos);
       }
+      if (enable_blocklist_ && IsPathBlocklisted(id)) {
+        DLOG(INFO) << "Skipping deep cache for blocklisted path: " << id;
+        continue;
+      }
       absl::MutexLock mu(&get_cache_lock_);
       if (get_cache_.find(id) != get_cache_.end()) {
         continue;

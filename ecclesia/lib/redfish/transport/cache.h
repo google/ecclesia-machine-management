@@ -189,6 +189,11 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
         deep_cache_(deep_cache),
         enable_blocklist_(enable_blocklist) {}
 
+  size_t GetGetCacheSize() ABSL_LOCKS_EXCLUDED(get_cache_lock_) {
+    absl::MutexLock mu(&get_cache_lock_);
+    return get_cache_.size();
+  }
+
  protected:
   OperationResult CachedGetInternal(
       absl::string_view path,
