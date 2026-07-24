@@ -7,6 +7,9 @@ package ecclesia;
 message HttpCredential {
   string username = 1;
   string password = 2;
+  // If true, bypasses TLS certificate peer and hostname verification.
+  // See https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYPEER.html
+  bool insecure_skip_verify = 3;
 }
 
 // Use TLS credentials for auth.
