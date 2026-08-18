@@ -123,8 +123,11 @@ constexpr std::array<absl::string_view,
         "GoogleBootTime",
         "GoogleErrorCounter",
         "GoogleErrorCounterCollection",
+        "GoogleFruDevice",
         "GoogleHbmOnlineRepair",
         "GoogleHft",
+        "GoogleIpmiFrus",
+        "GoogleIpmiFrusCollection",
         "GoogleManagedObjectStoreMetrics",
         "GoogleMinValveConfig",
         "GoogleNvmeFeature",
@@ -141,6 +144,8 @@ constexpr std::array<absl::string_view,
         "GooglePsiMetrics",
         "GooglePsiMetricsCollection",
         "GoogleRasService",
+        "GoogleRawEeproms",
+        "GoogleRawEepromsCollection",
         "GooglegRPCStatistics",
         "GraphicsController",
         "GraphicsControllerCollection",
@@ -326,7 +331,7 @@ constexpr std::array<absl::string_view,
         "ZoneCollection",
         // go/keep-sorted end
         "Undefined",
-};
+    };
 
 constexpr std::array<absl::string_view, 7> kOperationNames = {
     "DELETE", "GET", "HEAD", "PATCH", "POST", "PUT", "Undefined"};
