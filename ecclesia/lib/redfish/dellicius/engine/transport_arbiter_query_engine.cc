@@ -273,44 +273,42 @@ ecclesia::QueryIdToResult QueryEngineWithTransportArbiter::ExecuteRedpathQuery(
                       kContinueOnSubqueryErrors,
         .log_redfish_traces = features_.log_redfish_traces(),
         .enable_url_annotation = features_.enable_url_annotation()};
-    {
-      auto query_timer =
-          ecclesia::RedpathQueryTimestamp(&result_single, clock_);
-
-      StubArbiterInfo::PriorityLabel priority_label =
-          StubArbiterInfo::PriorityLabel::kPrimary;
-      if (options.priority_label != StubArbiterInfo::PriorityLabel::kUnknown) {
-        priority_label = options.priority_label;
-      }
-      absl::flat_hash_map<StubArbiterInfo::PriorityLabel, ecclesia::ErrorCode>
-          transport_status;
-      StubArbiterInfo::Metrics metrics = transport_arbiter_->Execute(
-          [&](ecclesia::RedfishInterface* redfish_interface,
-              StubArbiterInfo::PriorityLabel label) -> absl::Status {
-            ecclesia::QueryPlannerIntf::QueryExecutionResult local_result =
-                it->second->Run(
-                    {.variables = vars,
-                     .enable_url_annotation =
-                         planner_execution_flags.enable_url_annotation,
-                     .log_redfish_traces =
-                         planner_execution_flags.log_redfish_traces,
-                     .custom_service_root =
-                         options.service_root_uri ==
-                                 ecclesia::QueryEngine::ServiceRootType::kGoogle
-                             ? "/google/v1"
-                             : "",
-                     .redfish_interface = redfish_interface});
-
-            result_single = std::move(local_result);
-            transport_status[label] =
-                result_single.query_result.status().error_code();
-            return StatusFromQueryResultStatus(
-                result_single.query_result.status());
-          },
-          priority_label);
-
-      ProcessMetrics(metrics, transport_status, result_single.query_result);
+    StubArbiterInfo::PriorityLabel priority_label =
+        StubArbiterInfo::PriorityLabel::kPrimary;
+    if (options.priority_label != StubArbiterInfo::PriorityLabel::kUnknown) {
+      priority_label = options.priority_label;
     }
+    absl::flat_hash_map<StubArbiterInfo::PriorityLabel, ecclesia::ErrorCode>
+        transport_status;
+    StubArbiterInfo::Metrics metrics = transport_arbiter_->Execute(
+        [&](ecclesia::RedfishInterface* redfish_interface,
+            StubArbiterInfo::PriorityLabel label) -> absl::Status {
+          ecclesia::QueryPlannerIntf::QueryExecutionResult local_result;
+          {
+            ecclesia::RedpathQueryTimestamp query_timer(&local_result, clock_);
+            local_result = it->second->Run(
+                {.variables = vars,
+                 .enable_url_annotation =
+                     planner_execution_flags.enable_url_annotation,
+                 .log_redfish_traces =
+                     planner_execution_flags.log_redfish_traces,
+                 .custom_service_root =
+                     options.service_root_uri ==
+                             ecclesia::QueryEngine::ServiceRootType::kGoogle
+                         ? "/google/v1"
+                         : "",
+                 .redfish_interface = redfish_interface});
+          }
+
+          result_single = std::move(local_result);
+          transport_status[label] =
+              result_single.query_result.status().error_code();
+          return StatusFromQueryResultStatus(
+              result_single.query_result.status());
+        },
+        priority_label);
+
+    ProcessMetrics(metrics, transport_status, result_single.query_result);
     query_id_to_result.mutable_results()->insert(
         {result_single.query_result.query_id(), result_single.query_result});
   }
