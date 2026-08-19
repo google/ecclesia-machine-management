@@ -2350,5 +2350,142 @@ TEST_F(HttpRedfishInterfaceTest, DeepCacheLogServiceCacheBlocklist) {
   EXPECT_THAT(raw_cache->GetGetCacheSize(), Eq(2));
 }
 
+TEST_F(HttpRedfishInterfaceTest,
+       NewHttpInterfaceWithNullCacheFallsBackToNullCache) {
+  auto config = server_->GetConfig();
+  ecclesia::HttpCredential creds;
+  auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
+      ecclesia::LibCurlProxy::CreateInstance(), creds);
+  auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
+      std::move(curl_http_client),
+      absl::StrFormat("%s:%d", config.hostname, config.port));
+
+  // Pass explicit nullptr for cache.
+  std::unique_ptr<ecclesia::RedfishCachedGetterInterface> cache = nullptr;
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+  ASSERT_NE(intf, nullptr);
+
+  auto result = intf->UncachedGetUri("/redfish/v1");
+  EXPECT_TRUE(result.status().ok());
+  EXPECT_THAT(result.httpcode(), Eq(200));
+
+  auto cached_result = intf->CachedGetUri("/redfish/v1");
+  EXPECT_TRUE(cached_result.status().ok());
+  EXPECT_THAT(cached_result.httpcode(), Eq(200));
+}
+
+TEST_F(HttpRedfishInterfaceTest,
+       NewHttpInterfaceWithNullCacheFactoryFallsBackToNullCache) {
+  auto config = server_->GetConfig();
+  ecclesia::HttpCredential creds;
+  auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
+      ecclesia::LibCurlProxy::CreateInstance(), creds);
+  auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
+      std::move(curl_http_client),
+      absl::StrFormat("%s:%d", config.hostname, config.port));
+
+  // Pass empty cache_factory.
+  RedfishTransportCacheFactory cache_factory = nullptr;
+  auto intf = NewHttpInterface(std::move(transport), std::move(cache_factory),
+                               RedfishInterface::kTrusted);
+  ASSERT_NE(intf, nullptr);
+
+  auto result = intf->UncachedGetUri("/redfish/v1");
+  EXPECT_TRUE(result.status().ok());
+  EXPECT_THAT(result.httpcode(), Eq(200));
+}
+
+TEST_F(HttpRedfishInterfaceTest, UpdateTransportToNullHandlesSafely) {
+  EXPECT_TRUE(intf_->IsTrusted());
+  auto res_initial = intf_->UncachedGetUri("/redfish/v1");
+  EXPECT_TRUE(res_initial.status().ok());
+
+  intf_->UpdateTransport(nullptr, RedfishInterface::kUntrusted);
+  EXPECT_FALSE(intf_->IsTrusted());
+
+  auto res_uncached = intf_->UncachedGetUri("/redfish/v1");
+  EXPECT_FALSE(res_uncached.status().ok());
+
+  auto res_cached = intf_->CachedGetUri("/redfish/v1");
+  EXPECT_FALSE(res_cached.status().ok());
+
+  auto res_post = intf_->PostUri("/redfish/v1", "{}");
+  EXPECT_FALSE(res_post.status().ok());
+
+  auto res_delete = intf_->DeleteUri("/redfish/v1", "{}");
+  EXPECT_FALSE(res_delete.status().ok());
+
+  auto res_patch = intf_->PatchUri("/redfish/v1", "{}");
+  EXPECT_FALSE(res_patch.status().ok());
+
+  auto res_put = intf_->PutUri("/redfish/v1", "{}");
+  EXPECT_FALSE(res_put.status().ok());
+
+  auto res_subscribe = intf_->Subscribe(
+      "{}", [](const RedfishVariant&) {}, [](const absl::Status&) {});
+  EXPECT_FALSE(res_subscribe.ok());
+}
+
+TEST(NullSafetyTest, NullCacheHandlesNullTransportSafely) {
+  NullCache cache(nullptr);
+  auto res_get = cache.UncachedGet("/redfish/v1");
+  EXPECT_FALSE(res_get.result.ok());
+  EXPECT_EQ(res_get.result.status().code(), absl::StatusCode::kInternal);
+
+  auto res_cached_get = cache.CachedGet("/redfish/v1");
+  EXPECT_FALSE(res_cached_get.result.ok());
+  EXPECT_EQ(res_cached_get.result.status().code(), absl::StatusCode::kInternal);
+
+  auto res_post = cache.CachedPost("/redfish/v1", "{}", absl::Minutes(1));
+  EXPECT_FALSE(res_post.result.ok());
+  EXPECT_EQ(res_post.result.status().code(), absl::StatusCode::kInternal);
+}
+
+TEST(NullSafetyTest, TimeBasedCacheHandlesNullTransportSafely) {
+  FakeClock clock;
+  TimeBasedCache cache(nullptr, &clock, absl::Minutes(1));
+  auto res_get = cache.UncachedGet("/redfish/v1");
+  EXPECT_FALSE(res_get.result.ok());
+  EXPECT_EQ(res_get.result.status().code(), absl::StatusCode::kInternal);
+
+  auto res_cached_get = cache.CachedGet("/redfish/v1");
+  EXPECT_FALSE(res_cached_get.result.ok());
+  EXPECT_EQ(res_cached_get.result.status().code(), absl::StatusCode::kInternal);
+
+  auto res_post = cache.CachedPost("/redfish/v1", "{}", absl::Minutes(1));
+  EXPECT_FALSE(res_post.result.ok());
+  EXPECT_EQ(res_post.result.status().code(), absl::StatusCode::kInternal);
+}
+
+TEST(NullSafetyTest, HttpInterfaceHandlesNullTransportSafely) {
+  std::unique_ptr<RedfishCachedGetterInterface> cache = nullptr;
+  auto intf =
+      NewHttpInterface(nullptr, std::move(cache), RedfishInterface::kTrusted);
+  ASSERT_NE(intf, nullptr);
+
+  auto res_uncached = intf->UncachedGetUri("/redfish/v1");
+  EXPECT_FALSE(res_uncached.status().ok());
+
+  auto res_cached = intf->CachedGetUri("/redfish/v1");
+  EXPECT_FALSE(res_cached.status().ok());
+
+  auto res_post = intf->PostUri("/redfish/v1", "{}");
+  EXPECT_FALSE(res_post.status().ok());
+
+  auto res_delete = intf->DeleteUri("/redfish/v1", "{}");
+  EXPECT_FALSE(res_delete.status().ok());
+
+  auto res_patch = intf->PatchUri("/redfish/v1", "{}");
+  EXPECT_FALSE(res_patch.status().ok());
+
+  auto res_put = intf->PutUri("/redfish/v1", "{}");
+  EXPECT_FALSE(res_put.status().ok());
+
+  auto res_subscribe = intf->Subscribe(
+      "{}", [](const RedfishVariant&) {}, [](const absl::Status&) {});
+  EXPECT_FALSE(res_subscribe.ok());
+}
+
 }  // namespace
 }  // namespace ecclesia

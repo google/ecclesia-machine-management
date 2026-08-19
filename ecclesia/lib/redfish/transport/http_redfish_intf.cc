@@ -661,15 +661,23 @@ class HttpRedfishInterface : public RedfishInterface {
       : transport_(std::move(transport)),
         trusted_(trusted),
         cache_(std::move(cache)),
-        cache_factory_(nullptr) {}
+        cache_factory_(nullptr) {
+    absl::WriterMutexLock mu(&transport_mutex_);
+    EnsureCacheInitialized();
+  }
 
   HttpRedfishInterface(std::unique_ptr<ecclesia::RedfishTransport> transport,
                        RedfishTransportCacheFactory cache_factory,
                        RedfishInterface::TrustedEndpoint trusted)
       : transport_(std::move(transport)),
         trusted_(trusted),
-        cache_(cache_factory(transport_.get())),
-        cache_factory_(std::move(cache_factory)) {}
+        cache_(cache_factory && transport_ != nullptr
+                   ? cache_factory(transport_.get())
+                   : nullptr),
+        cache_factory_(std::move(cache_factory)) {
+    absl::WriterMutexLock mu(&transport_mutex_);
+    EnsureCacheInitialized();
+  }
 
   bool IsTrusted() const override {
     absl::ReaderMutexLock mu(&transport_mutex_);
@@ -677,14 +685,18 @@ class HttpRedfishInterface : public RedfishInterface {
   }
 
   void UpdateTransport(std::unique_ptr<RedfishTransport> new_transport,
-                       TrustedEndpoint trusted) {
+                       TrustedEndpoint trusted) override {
     absl::WriterMutexLock mu(&transport_mutex_);
     if (cache_factory_ == nullptr) {
       LOG(FATAL) << "Tried to update the endpoint without CacheFactory set";
     }
     trusted_ = trusted;
+    cache_ = nullptr;
     transport_ = std::move(new_transport);
-    cache_ = cache_factory_(transport_.get());
+    if (transport_ != nullptr) {
+      cache_ = cache_factory_(transport_.get());
+    }
+    EnsureCacheInitialized();
   }
 
   RedfishVariant GetRoot(GetParams params,
@@ -723,6 +735,10 @@ class HttpRedfishInterface : public RedfishInterface {
             absl::StrCat("Deadline exceeded while getting uri:", uri)));
       }
     }
+    if (cache_ == nullptr) {
+      return RedfishVariant(
+          absl::InternalError("Redfish interface cache is not initialized"));
+    }
     return GetUriHelper(
         uri, params,
         cache_->CachedGet(GetUriWithQueryParameters(uri, params),
@@ -741,6 +757,10 @@ class HttpRedfishInterface : public RedfishInterface {
             absl::StrCat("Deadline exceeded while getting uri:", uri)));
       }
     }
+    if (cache_ == nullptr) {
+      return RedfishVariant(
+          absl::InternalError("Redfish interface cache is not initialized"));
+    }
     return GetUriHelper(
         uri, params,
         cache_->UncachedGet(GetUriWithQueryParameters(uri, params),
@@ -758,6 +778,10 @@ class HttpRedfishInterface : public RedfishInterface {
       absl::Span<const std::pair<std::string, ValueVariant>> kv_span,
       absl::Duration duration) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
+    if (cache_ == nullptr) {
+      return RedfishVariant(
+          absl::InternalError("Redfish interface cache is not initialized"));
+    }
     auto post_result =
         cache_->CachedPost(uri, KvSpanToJson(kv_span).dump(), duration);
     if (!post_result.result.ok())
@@ -776,6 +800,10 @@ class HttpRedfishInterface : public RedfishInterface {
   RedfishVariant PostUri(absl::string_view uri,
                          absl::string_view data) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
+    if (transport_ == nullptr) {
+      return RedfishVariant(
+          absl::InternalError("Redfish transport is not initialized"));
+    }
     absl::StatusOr<ecclesia::RedfishTransport::Result> result =
         transport_->Post(uri, data);
     if (!result.ok()) return RedfishVariant(result.status());
@@ -792,6 +820,10 @@ class HttpRedfishInterface : public RedfishInterface {
       absl::Duration timeout,
       absl::Span<const std::pair<std::string, std::string>> headers) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
+    if (transport_ == nullptr) {
+      return RedfishVariant(
+          absl::InternalError("Redfish transport is not initialized"));
+    }
     absl::StatusOr<ecclesia::RedfishTransport::Result> result =
         transport_->Post(uri, data, octet_stream, timeout, headers);
     if (!result.ok()) return RedfishVariant(result.status());
@@ -814,6 +846,10 @@ class HttpRedfishInterface : public RedfishInterface {
   RedfishVariant DeleteUri(absl::string_view uri,
                            absl::string_view data) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
+    if (transport_ == nullptr) {
+      return RedfishVariant(
+          absl::InternalError("Redfish transport is not initialized"));
+    }
     absl::StatusOr<ecclesia::RedfishTransport::Result> result =
         transport_->Delete(uri, data);
     if (!result.ok()) return RedfishVariant(result.status());
@@ -834,6 +870,10 @@ class HttpRedfishInterface : public RedfishInterface {
   RedfishVariant PatchUri(absl::string_view uri,
                           absl::string_view data) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
+    if (transport_ == nullptr) {
+      return RedfishVariant(
+          absl::InternalError("Redfish transport is not initialized"));
+    }
     absl::StatusOr<ecclesia::RedfishTransport::Result> result =
         transport_->Patch(uri, data);
     if (!result.ok()) return RedfishVariant(result.status());
@@ -848,6 +888,10 @@ class HttpRedfishInterface : public RedfishInterface {
   RedfishVariant PutUri(absl::string_view uri,
                         absl::string_view data) override {
     absl::ReaderMutexLock mu(&transport_mutex_);
+    if (transport_ == nullptr) {
+      return RedfishVariant(
+          absl::InternalError("Redfish transport is not initialized"));
+    }
     absl::StatusOr<ecclesia::RedfishTransport::Result> result =
         transport_->Put(uri, data);
     if (!result.ok()) return RedfishVariant(result.status());
@@ -890,6 +934,9 @@ class HttpRedfishInterface : public RedfishInterface {
       on_event(variant);
     };
     absl::ReaderMutexLock mu(&transport_mutex_);
+    if (transport_ == nullptr) {
+      return absl::InternalError("Redfish transport is not initialized");
+    }
     return transport_->Subscribe(data, std::move(new_callback),
                                  std::move(on_stop));
   }
@@ -988,6 +1035,13 @@ class HttpRedfishInterface : public RedfishInterface {
     supported_features_ = features;
     if (remove_expand_support_) {
       supported_features_->expand = {};
+    }
+  }
+
+  void EnsureCacheInitialized()
+      ABSL_EXCLUSIVE_LOCKS_REQUIRED(transport_mutex_) {
+    if (cache_ == nullptr && transport_ != nullptr) {
+      cache_ = NullCache::Create(transport_.get());
     }
   }
 

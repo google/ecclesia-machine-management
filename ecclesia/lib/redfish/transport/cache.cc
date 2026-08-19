@@ -25,6 +25,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/log.h"
+#include "absl/status/status.h"
 #include "absl/strings/match.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
@@ -42,9 +43,13 @@ static bool IsPathBlocklisted(absl::string_view path) {
 RedfishCachedGetterInterface::OperationResult NullCache::CachedGetInternal(
     absl::string_view path,
     std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) {
+  if (transport_ == nullptr) {
+    return {.result = absl::InternalError("Transport is null"),
+            .is_fresh = true};
+  }
   // Report uncached call as this is null cache
   return {.result =
-              timeout_mgr.has_value()
+              (timeout_mgr.has_value() && *timeout_mgr != nullptr)
                   ? transport_->Get(path, (*timeout_mgr)->GetRemainingTimeout())
                   : transport_->Get(path),
           .is_fresh = true};
@@ -54,9 +59,13 @@ RedfishCachedGetterInterface::OperationResult NullCache::UncachedGetInternal(
     absl::string_view path,
     RedfishCachedGetterInterface::Relevance /* relevance */,
     std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) {
+  if (transport_ == nullptr) {
+    return {.result = absl::InternalError("Transport is null"),
+            .is_fresh = true};
+  }
   return {
       .result =
-          timeout_mgr.has_value()
+          (timeout_mgr.has_value() && *timeout_mgr != nullptr)
               ? transport_->Get(path, (*timeout_mgr)->GetRemainingTimeout())
               : transport_->Get(path),
       .is_fresh = true,
@@ -66,6 +75,10 @@ RedfishCachedGetterInterface::OperationResult NullCache::UncachedGetInternal(
 RedfishCachedGetterInterface::OperationResult NullCache::CachedPostInternal(
     absl::string_view path, absl::string_view post_payload,
     absl::Duration duration) {
+  if (transport_ == nullptr) {
+    return {.result = absl::InternalError("Transport is null"),
+            .is_fresh = true};
+  }
   return {.result = transport_->Post(path, post_payload), .is_fresh = true};
 }
 
@@ -165,6 +178,10 @@ TimeBasedCache::CacheNode& TimeBasedCache::RetrieveCacheNode(
 RedfishCachedGetterInterface::OperationResult TimeBasedCache::CachedGetInternal(
     absl::string_view path,
     std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) {
+  if (transport_ == nullptr) {
+    return {.result = absl::InternalError("Transport is null"),
+            .is_fresh = true};
+  }
   // Check if the path is in the blocklist for caching.
   if (enable_blocklist_ && IsPathBlocklisted(path)) {
     DLOG(INFO) << "Skipping cache for blocklisted path: " << path;
@@ -182,9 +199,13 @@ RedfishCachedGetterInterface::OperationResult
 TimeBasedCache::UncachedGetInternal(
     absl::string_view path, RedfishCachedGetterInterface::Relevance relevance,
     std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) {
+  if (transport_ == nullptr) {
+    return {.result = absl::InternalError("Transport is null"),
+            .is_fresh = true};
+  }
   // Bypass cache node retrieval if caller has indicated cache irrelevance.
   if (relevance == RedfishCachedGetterInterface::Relevance::kNotRelevant) {
-    return {.result = timeout_mgr.has_value()
+    return {.result = (timeout_mgr.has_value() && *timeout_mgr != nullptr)
                           ? transport_->Get(
                                 path, (*timeout_mgr)->GetRemainingTimeout())
                           : transport_->Get(path),
@@ -199,6 +220,10 @@ RedfishCachedGetterInterface::OperationResult
 TimeBasedCache::CachedPostInternal(absl::string_view path,
                                    absl::string_view post_payload,
                                    absl::Duration duration) {
+  if (transport_ == nullptr) {
+    return {.result = absl::InternalError("Transport is null"),
+            .is_fresh = true};
+  }
   TimeBasedCache::CacheNode& store =
       RetrieveCacheNode(path, post_payload, duration);
   auto result = store.CachedRead();
