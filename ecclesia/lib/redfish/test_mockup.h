@@ -90,6 +90,15 @@ class TestingMockupServer {
                       const ClientTlsConfig& client_config);
   ~TestingMockupServer();
 
+  // Test-only API to override system calls.
+  static void SetSystemOpsForTesting(pid_t (*waitpid_fn)(pid_t, int*, int),
+                                     int (*kill_fn)(pid_t, int));
+
+  TestingMockupServer(const TestingMockupServer&) = delete;
+  TestingMockupServer& operator=(const TestingMockupServer&) = delete;
+  TestingMockupServer(TestingMockupServer&&) = delete;
+  TestingMockupServer& operator=(TestingMockupServer&&) = delete;
+
   // Returns a new RedfishInterface connected to the mockup server.
   std::unique_ptr<RedfishInterface> RedfishClientInterface(
       std::unique_ptr<ecclesia::HttpClient> client = nullptr);
@@ -123,7 +132,7 @@ class TestingMockupServer {
   // The connection configuration of this mockup.
   std::variant<ConfigNetwork, ConfigUnix> connection_config_;
   // The pid of the server subprocess.
-  pid_t server_pid_;
+  pid_t server_pid_ = -1;
   // Client side Tls configuration of this mockup.
   std::optional<ClientTlsConfig> client_tls_config_;
 };

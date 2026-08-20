@@ -16,6 +16,12 @@
 
 #include "ecclesia/lib/redfish/test_mockup.h"
 
+#include <errno.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include <memory>
 #include <string>
 
@@ -32,6 +38,39 @@
 
 namespace ecclesia {
 namespace {
+
+// Globals to control mocks
+pid_t g_mock_waitpid_return_val = 0;
+int g_mock_waitpid_errno = 0;
+int g_mock_waitpid_calls = 0;
+int g_mock_kill_calls_sigterm = 0;
+int g_mock_kill_calls_sigkill = 0;
+
+// Real functions
+pid_t (*g_real_waitpid)(pid_t, int*, int) = waitpid;
+int (*g_real_kill)(pid_t, int) = kill;
+
+pid_t MockWaitpid(pid_t pid, int* status, int options) {
+  if ((options & WNOHANG) != 0) {
+    g_mock_waitpid_calls++;
+    if (g_mock_waitpid_errno != 0) {
+      errno = g_mock_waitpid_errno;
+      return -1;
+    }
+    return g_mock_waitpid_return_val;
+  }
+  // Blocking waitpid (fallback path after SIGKILL)
+  return g_real_waitpid(pid, status, options);
+}
+
+int MockKill(pid_t pid, int sig) {
+  if (sig == SIGTERM) {
+    g_mock_kill_calls_sigterm++;
+  } else if (sig == SIGKILL) {
+    g_mock_kill_calls_sigkill++;
+  }
+  return g_real_kill(pid, sig);
+}
 
 using ::testing::Eq;
 
@@ -140,6 +179,169 @@ TEST(TestingMockupServerTest, GetRedfishResultsFromServer) {
 
   result = rf_intf->UncachedGetUri("/redfish/v1/UnknownResource");
   EXPECT_FALSE(result.status().ok());
+}
+
+TEST(TestingMockupServerTest, DestructorTimeoutFallbackToSigkill) {
+  TestFilesystem testfs(GetTestTempdirPath());
+  std::string local_file_dir =
+      ecclesia::JoinFilePaths(GetTestTempdirPath(), "mockup");
+
+  g_mock_waitpid_return_val = 0;
+  g_mock_waitpid_errno = 0;
+  g_mock_waitpid_calls = 0;
+  g_mock_kill_calls_sigterm = 0;
+  g_mock_kill_calls_sigkill = 0;
+
+  {
+    ecclesia::TestingMockupServer server(
+        [&]() { return CreateLocalMockupDirectory("/mockup", &testfs); }, "");
+
+    ecclesia::TestingMockupServer::SetSystemOpsForTesting(MockWaitpid,
+                                                          MockKill);
+  }
+
+  ecclesia::TestingMockupServer::SetSystemOpsForTesting(nullptr, nullptr);
+
+  EXPECT_EQ(g_mock_kill_calls_sigterm, 1);
+  EXPECT_EQ(g_mock_kill_calls_sigkill, 1);
+  EXPECT_EQ(g_mock_waitpid_calls, 50);
+}
+
+TEST(TestingMockupServerTest, DestructorCleanExitNoSigkill) {
+  TestFilesystem testfs(GetTestTempdirPath());
+  std::string local_file_dir =
+      ecclesia::JoinFilePaths(GetTestTempdirPath(), "mockup");
+
+  g_mock_kill_calls_sigterm = 0;
+  g_mock_kill_calls_sigkill = 0;
+  g_mock_waitpid_return_val = 0;
+  g_mock_waitpid_calls = 0;
+
+  auto local_kill = [](pid_t pid, int sig) -> int {
+    if (sig == SIGTERM) {
+      g_mock_kill_calls_sigterm++;
+      g_mock_waitpid_return_val = -pid;
+    } else if (sig == SIGKILL) {
+      g_mock_kill_calls_sigkill++;
+    }
+    return g_real_kill(pid, sig);
+  };
+
+  auto local_waitpid = [](pid_t pid, int* status, int options) -> pid_t {
+    if ((options & WNOHANG) != 0) {
+      g_mock_waitpid_calls++;
+      return g_mock_waitpid_return_val;
+    }
+    return g_real_waitpid(pid, status, options);
+  };
+
+  {
+    ecclesia::TestingMockupServer server(
+        [&]() { return CreateLocalMockupDirectory("/mockup", &testfs); }, "");
+
+    ecclesia::TestingMockupServer::SetSystemOpsForTesting(local_waitpid,
+                                                          local_kill);
+  }
+
+  ecclesia::TestingMockupServer::SetSystemOpsForTesting(nullptr, nullptr);
+
+  EXPECT_EQ(g_mock_kill_calls_sigterm, 1);
+  EXPECT_EQ(g_mock_kill_calls_sigkill, 0);
+  EXPECT_EQ(g_mock_waitpid_calls, 1);
+}
+
+TEST(TestingMockupServerTest, DestructorHandlesEINTR) {
+  TestFilesystem testfs(GetTestTempdirPath());
+  std::string local_file_dir =
+      ecclesia::JoinFilePaths(GetTestTempdirPath(), "mockup");
+
+  g_mock_kill_calls_sigterm = 0;
+  g_mock_kill_calls_sigkill = 0;
+  g_mock_waitpid_return_val = 0;
+  g_mock_waitpid_calls = 0;
+
+  static int eintr_count = 0;
+  eintr_count = 0;
+
+  auto local_kill = [](pid_t pid, int sig) -> int {
+    if (sig == SIGTERM) {
+      g_mock_kill_calls_sigterm++;
+      g_mock_waitpid_return_val = -pid;
+    } else if (sig == SIGKILL) {
+      g_mock_kill_calls_sigkill++;
+    }
+    return g_real_kill(pid, sig);
+  };
+
+  auto local_waitpid = [](pid_t pid, int* status, int options) -> pid_t {
+    if ((options & WNOHANG) != 0) {
+      g_mock_waitpid_calls++;
+      if (eintr_count < 3) {
+        eintr_count++;
+        errno = EINTR;
+        return -1;
+      }
+      return g_mock_waitpid_return_val;
+    }
+    return g_real_waitpid(pid, status, options);
+  };
+
+  {
+    ecclesia::TestingMockupServer server(
+        [&]() { return CreateLocalMockupDirectory("/mockup", &testfs); }, "");
+
+    ecclesia::TestingMockupServer::SetSystemOpsForTesting(local_waitpid,
+                                                          local_kill);
+  }
+
+  ecclesia::TestingMockupServer::SetSystemOpsForTesting(nullptr, nullptr);
+
+  EXPECT_EQ(g_mock_kill_calls_sigterm, 1);
+  EXPECT_EQ(g_mock_kill_calls_sigkill, 0);
+  EXPECT_EQ(eintr_count, 3);
+  EXPECT_EQ(g_mock_waitpid_calls, 4);
+}
+
+TEST(TestingMockupServerTest, DestructorHandlesECHILD) {
+  TestFilesystem testfs(GetTestTempdirPath());
+  std::string local_file_dir =
+      ecclesia::JoinFilePaths(GetTestTempdirPath(), "mockup");
+
+  g_mock_kill_calls_sigterm = 0;
+  g_mock_kill_calls_sigkill = 0;
+  g_mock_waitpid_calls = 0;
+
+  auto local_kill = [](pid_t pid, int sig) -> int {
+    if (sig == SIGTERM) {
+      g_mock_kill_calls_sigterm++;
+    } else if (sig == SIGKILL) {
+      g_mock_kill_calls_sigkill++;
+    }
+    return g_real_kill(pid, sig);
+  };
+
+  auto local_waitpid = [](pid_t pid, int* status, int options) -> pid_t {
+    if ((options & WNOHANG) != 0) {
+      g_mock_waitpid_calls++;
+      errno = ECHILD;
+      return -1;
+    }
+    return g_real_waitpid(pid, status, options);
+  };
+
+  {
+    ecclesia::TestingMockupServer server(
+        [&]() { return CreateLocalMockupDirectory("/mockup", &testfs); }, "");
+
+    ecclesia::TestingMockupServer::SetSystemOpsForTesting(local_waitpid,
+                                                          local_kill);
+  }
+
+  ecclesia::TestingMockupServer::SetSystemOpsForTesting(nullptr, nullptr);
+
+  EXPECT_EQ(g_mock_kill_calls_sigterm, 1);
+  EXPECT_EQ(g_mock_kill_calls_sigkill, 0);
+  EXPECT_EQ(g_mock_waitpid_calls, 1);
 }
 
 }  // namespace

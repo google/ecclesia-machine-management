@@ -21,6 +21,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <cerrno>
 #include <cstdlib>
 #include <functional>
 #include <memory>
@@ -65,6 +66,9 @@ constexpr absl::Duration kDaemonAuthStartEstimation = absl::Seconds(1);
 
 constexpr absl::string_view kMockupServerPath =
     "redfishMockupServer/redfishMockupServer.par";
+
+pid_t (*g_waitpid_override)(pid_t, int*, int) = waitpid;
+int (*g_kill_override)(pid_t, int) = kill;
 
 std::unique_ptr<ecclesia::HttpRedfishTransport> ConfigToTransport(
     std::unique_ptr<ecclesia::HttpClient> client, absl::string_view scheme,
@@ -227,7 +231,7 @@ void TestingMockupServer::SetUpMockupServer(
     // If fetching the URI failed, check to make sure the process is still
     // running. If it isn't then terminate with a fatal log.
     int status;
-    pid_t waited = waitpid(server_pid_, &status, WNOHANG);
+    pid_t waited = g_waitpid_override(server_pid_, &status, WNOHANG);
     if (waited == -1) {
       PLOG(FATAL) << "waitpid() failed";
     } else if (waited == 0) {
@@ -251,10 +255,57 @@ void TestingMockupServer::SetUpMockupServer(
   CHECK(server_ready) << "mockup server came up";
 }
 
+void TestingMockupServer::SetSystemOpsForTesting(pid_t (*waitpid_fn)(pid_t,
+                                                                     int*, int),
+                                                 int (*kill_fn)(pid_t, int)) {
+  g_waitpid_override = waitpid_fn != nullptr ? waitpid_fn : waitpid;
+  g_kill_override = kill_fn != nullptr ? kill_fn : kill;
+}
+
 TestingMockupServer::~TestingMockupServer() {
-  // Terminate the entire process group of the server.
-  kill(-server_pid_, SIGTERM);
-  waitpid(server_pid_, nullptr, 0);
+  if (server_pid_ <= 0) {
+    return;
+  }
+
+  // Terminate the entire process group of the server. Negating the PID signals
+  // the process group (since TestingMockupServer process was spawned with
+  // POSIX_SPAWN_SETPGROUP).
+  g_kill_override(-server_pid_, SIGTERM);
+
+  // Wait for the process to exit with a timeout of 5 seconds, polling every
+  // 100ms.
+  int status;
+  bool exited = false;
+  int attempts = 0;
+  while (attempts < 50) {
+    pid_t pid = g_waitpid_override(server_pid_, &status, WNOHANG);
+    if (pid == server_pid_) {
+      exited = true;
+      break;
+    }
+    if (pid == -1) {
+      if (errno == EINTR) {
+        continue;
+      }
+      if (errno == ECHILD) {
+        exited = true;
+        break;
+      }
+      PLOG(ERROR) << "waitpid failed";
+      break;
+    }
+    ++attempts;
+    absl::SleepFor(absl::Milliseconds(100));
+  }
+
+  if (!exited) {
+    LOG(WARNING) << "Mockup server did not exit after SIGTERM, sending SIGKILL";
+    g_kill_override(-server_pid_, SIGKILL);
+    int wait_result;
+    do {
+      wait_result = g_waitpid_override(server_pid_, nullptr, 0);
+    } while (wait_result == -1 && errno == EINTR);
+  }
 }
 
 std::unique_ptr<RedfishInterface> TestingMockupServer::RedfishClientInterface(
