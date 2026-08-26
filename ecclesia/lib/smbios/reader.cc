@@ -55,9 +55,9 @@ constexpr uint8_t ENTRY_POINT_MAX_SIZE = 0x1f;
 // Read the contents of a binary file into a vector of bytes
 // The SMBIOS table is on an order of a few KBs (< 10). Therefore it's safe to
 // return the entire contents of the file at once.
-std::vector<uint8_t> GetBinaryFileContents(const std::string& file_path,
+std::vector<uint8_t> GetBinaryFileContents(absl::string_view file_path,
                                            std::size_t max_size) {
-  std::ifstream file(file_path,
+  std::ifstream file(std::string(file_path),
                      std::ios::in | std::ios::binary | std::ios::ate);
   if (!file.is_open()) {
     LOG(ERROR) << "failed to open file " << file_path;
@@ -139,8 +139,8 @@ std::vector<TableEntry> BuildEntries(std::vector<uint8_t>& table_data) {
 }
 }  // namespace
 
-SmbiosReader::SmbiosReader(std::string entry_point_path,
-                           std::string tables_path) {
+SmbiosReader::SmbiosReader(absl::string_view entry_point_path,
+                           absl::string_view tables_path) {
   std::vector<uint8_t> entry_point_data =
       GetBinaryFileContents(entry_point_path, ENTRY_POINT_MAX_SIZE);
 

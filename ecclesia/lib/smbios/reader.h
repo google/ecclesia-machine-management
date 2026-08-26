@@ -19,10 +19,10 @@
 
 #include <cstdint>
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "ecclesia/lib/smbios/baseboard_information.h"
 #include "ecclesia/lib/smbios/bios.h"
 #include "ecclesia/lib/smbios/internal.h"
@@ -45,8 +45,9 @@ class SmbiosReader {
   // On a standard linux implementation these paths are
   // /sys/firmware/dmi/tables/smbios_entry_point
   // /sys/firmware/dmi/tables/DMI
-  SmbiosReader(std::string entry_point_path, std::string tables_path);
-  SmbiosReader(std::vector<uint8_t>& table_data);
+  SmbiosReader(absl::string_view entry_point_path,
+               absl::string_view tables_path);
+  explicit SmbiosReader(std::vector<uint8_t>& table_data);
 
   SmbiosReader(const SmbiosReader&) = delete;
   SmbiosReader& operator=(const SmbiosReader&) = delete;
