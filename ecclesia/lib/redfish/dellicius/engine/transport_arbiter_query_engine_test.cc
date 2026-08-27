@@ -69,6 +69,8 @@ constexpr absl::string_view kQuerySamplesLocation =
 constexpr absl::string_view kIndusMockup = "indus_hmb_shim/mockup.shar";
 constexpr absl::Time clock_time = absl::FromUnixSeconds(10);
 
+using ::testing::AllOf;
+using ::testing::HasSubstr;
 using PriorityLabel = StubArbiterInfo::PriorityLabel;
 
 void RemoveTimestamps(QueryIdToResult& entries) {
@@ -180,6 +182,31 @@ TEST(QueryEngineTest, FailToCreateQueryEngineWithNoStreamingFeature) {
               .features = std::move(features),
           }),
       IsStatusInvalidArgument());
+}
+
+TEST(QueryEngineTest, FailToCreateQueryEngineTransportError) {
+  FakeRedfishServer server(kIndusMockup);
+
+  ECCLESIA_ASSIGN_OR_FAIL(QuerySpec query_spec,
+                          QuerySpec::FromQueryContext({
+                              .query_files = kDelliciusQueries,
+                          }));
+
+  absl::StatusOr<std::unique_ptr<QueryEngineIntf>> query_engine =
+      QueryEngineWithTransportArbiter::CreateTransportArbiterQueryEngine(
+          query_spec,
+          {
+              .features = StandardQueryEngineFeatures(),
+              .transport_factory = [](PriorityLabel)
+                  -> absl::StatusOr<std::unique_ptr<RedfishTransport>> {
+                return absl::InternalError("Failed to create transport");
+              },
+          });
+  EXPECT_THAT(query_engine, IsStatusInternal());
+  EXPECT_THAT(
+      query_engine.status().message(),
+      AllOf(HasSubstr("Failed to create redpath normalizer"),
+            HasSubstr("Failed to create transport")));
 }
 
 TEST(QueryEngineTest, ExecuteQueryWithTransportArbiter) {

@@ -27,6 +27,7 @@
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
@@ -192,6 +193,13 @@ QueryEngineWithTransportArbiter::CreateTransportArbiterQueryEngine(
   }
 
   if (redpath_normalizer == nullptr) {
+    if (!metrics.overall_status.ok()) {
+      return absl::InternalError(absl::StrCat(
+          "Failed to create redpath normalizer: ",
+          metrics.overall_status.message().empty()
+              ? metrics.overall_status.ToString()
+              : metrics.overall_status.message()));
+    }
     return absl::InternalError("Failed to create redpath normalizer.");
   }
 
