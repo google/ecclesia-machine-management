@@ -38,6 +38,7 @@ struct GrpcTransportParams {
   std::optional<absl::Duration> wait_for_connected_timeout = std::nullopt;
   // bmcweb specific header to force a fresh payload, from the bmcweb cache
   absl::Duration max_age = absl::InfiniteDuration();
+  // If true, utilizes non-blocking asynchronous gRPC calls on Gloop fibers.
 };
 
 absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(

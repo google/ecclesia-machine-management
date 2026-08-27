@@ -20,6 +20,7 @@
 #include <chrono>  // NOLINT We have to chromo to make upstream code compile
 #include <climits>
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -82,12 +83,13 @@ struct RequestBody {
 
 constexpr RequestBody kNullRequestBody = RequestBody();
 
-template <typename RpcFunc>
+template <typename SyncRpcFunc, typename AsyncRpcFunc>
 absl::StatusOr<RedfishTransport::Result> DoRpc(absl::string_view path,
                                                const RequestBody& body,
                                                absl::string_view target_fqdn,
                                                GrpcTransportParams params,
-                                               RpcFunc rpc) {
+                                               SyncRpcFunc sync_rpc,
+                                               AsyncRpcFunc async_rpc) {
   redfish::v1::Request request;
   // This header is used when authorizing peers without trust bundle.
   request.mutable_headers()->insert(
@@ -125,9 +127,10 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(absl::string_view path,
       absl::ToChronoTime(params.clock->Now() + params.timeout));
 
   ::redfish::v1::Response response;
-  if (grpc::Status status = rpc(context, request, &response); !status.ok()) {
-    return AsAbslStatus(status);
-  }
+    if (grpc::Status status = sync_rpc(&context, request, &response);
+        !status.ok()) {
+      return AsAbslStatus(status);
+    }
 
   RedfishTransport::Result ret_result;
   if (response.has_json()) {
@@ -302,15 +305,27 @@ class GrpcRedfishTransport : public RedfishTransport {
   absl::StatusOr<Result> Get(absl::string_view path) override {
     return DoRpc(
         path, kNullRequestBody, fqdn_, params_,
-        [this, path](grpc::ClientContext& context,
+        [this, path](grpc::ClientContext* context,
                      const redfish::v1::Request& request,
                      ::redfish::v1::Response* response) -> grpc::Status {
-          context.set_credentials(
+          context->set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
                       std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
                   GRPC_SECURITY_NONE));
-          return client_->Get(&context, request, response);
+          return client_->Get(context, request, response);
+        },
+        [this, path](grpc::ClientContext* context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response,
+                     std::function<void(grpc::Status)> on_done) {
+          context->set_credentials(
+              grpc::experimental::MetadataCredentialsFromPlugin(
+                  std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                      std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
+                  GRPC_SECURITY_NONE));
+          client_->async()->Get(context, &request, response,
+                                std::move(on_done));
         });
   }
 
@@ -327,17 +342,30 @@ class GrpcRedfishTransport : public RedfishTransport {
     return DoRpc(
         path, kNullRequestBody, fqdn_, params_,
         [this, path, timeout](
-            grpc::ClientContext& context, const redfish::v1::Request& request,
+            grpc::ClientContext* context, const redfish::v1::Request& request,
             ::redfish::v1::Response* response) -> grpc::Status {
-          // Use timeout if set.
-          context.set_deadline(
+          context->set_deadline(
               absl::ToChronoTime(params_.clock->Now() + timeout));
-          context.set_credentials(
+          context->set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
                       std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
                   GRPC_SECURITY_NONE));
-          return client_->Get(&context, request, response);
+          return client_->Get(context, request, response);
+        },
+        [this, path, timeout](grpc::ClientContext* context,
+                              const redfish::v1::Request& request,
+                              ::redfish::v1::Response* response,
+                              std::function<void(grpc::Status)> on_done) {
+          context->set_deadline(
+              absl::ToChronoTime(params_.clock->Now() + timeout));
+          context->set_credentials(
+              grpc::experimental::MetadataCredentialsFromPlugin(
+                  std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                      std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
+                  GRPC_SECURITY_NONE));
+          client_->async()->Get(context, &request, response,
+                                std::move(on_done));
         });
   }
 
@@ -356,16 +384,30 @@ class GrpcRedfishTransport : public RedfishTransport {
             .json_str = data, .octet_stream = octet_stream, .headers = headers},
         fqdn_, params_,
         [this, path, timeout](
-            grpc::ClientContext& context, const redfish::v1::Request& request,
+            grpc::ClientContext* context, const redfish::v1::Request& request,
             ::redfish::v1::Response* response) -> grpc::Status {
-          context.set_deadline(
+          context->set_deadline(
               absl::ToChronoTime(params_.clock->Now() + timeout));
-          context.set_credentials(
+          context->set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
                       std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
                   GRPC_SECURITY_NONE));
-          return client_->Post(&context, request, response);
+          return client_->Post(context, request, response);
+        },
+        [this, path, timeout](grpc::ClientContext* context,
+                              const redfish::v1::Request& request,
+                              ::redfish::v1::Response* response,
+                              std::function<void(grpc::Status)> on_done) {
+          context->set_deadline(
+              absl::ToChronoTime(params_.clock->Now() + timeout));
+          context->set_credentials(
+              grpc::experimental::MetadataCredentialsFromPlugin(
+                  std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                      std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
+                  GRPC_SECURITY_NONE));
+          client_->async()->Post(context, &request, response,
+                                 std::move(on_done));
         });
   }
 
@@ -373,30 +415,54 @@ class GrpcRedfishTransport : public RedfishTransport {
                                absl::string_view data) override {
     return DoRpc(
         path, RequestBody{.json_str = data}, fqdn_, params_,
-        [this, path](grpc::ClientContext& context,
+        [this, path](grpc::ClientContext* context,
                      const redfish::v1::Request& request,
                      ::redfish::v1::Response* response) -> grpc::Status {
-          context.set_credentials(
+          context->set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
                       std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
                   GRPC_SECURITY_NONE));
-          return client_->Patch(&context, request, response);
+          return client_->Patch(context, request, response);
+        },
+        [this, path](grpc::ClientContext* context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response,
+                     std::function<void(grpc::Status)> on_done) {
+          context->set_credentials(
+              grpc::experimental::MetadataCredentialsFromPlugin(
+                  std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                      std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
+                  GRPC_SECURITY_NONE));
+          client_->async()->Patch(context, &request, response,
+                                  std::move(on_done));
         });
   }
   absl::StatusOr<Result> Delete(absl::string_view path,
                                 absl::string_view data) override {
     return DoRpc(
         path, RequestBody{.json_str = data}, fqdn_, params_,
-        [this, path](grpc::ClientContext& context,
+        [this, path](grpc::ClientContext* context,
                      const redfish::v1::Request& request,
                      ::redfish::v1::Response* response) -> grpc::Status {
-          context.set_credentials(
+          context->set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
                       std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
                   GRPC_SECURITY_NONE));
-          return client_->Delete(&context, request, response);
+          return client_->Delete(context, request, response);
+        },
+        [this, path](grpc::ClientContext* context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response,
+                     std::function<void(grpc::Status)> on_done) {
+          context->set_credentials(
+              grpc::experimental::MetadataCredentialsFromPlugin(
+                  std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                      std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
+                  GRPC_SECURITY_NONE));
+          client_->async()->Delete(context, &request, response,
+                                   std::move(on_done));
         });
   }
 
@@ -404,15 +470,27 @@ class GrpcRedfishTransport : public RedfishTransport {
                              absl::string_view data) override {
     return DoRpc(
         path, RequestBody{.json_str = data}, fqdn_, params_,
-        [this, path](grpc::ClientContext& context,
+        [this, path](grpc::ClientContext* context,
                      const redfish::v1::Request& request,
                      ::redfish::v1::Response* response) -> grpc::Status {
-          context.set_credentials(
+          context->set_credentials(
               grpc::experimental::MetadataCredentialsFromPlugin(
                   std::unique_ptr<grpc::MetadataCredentialsPlugin>(
                       std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
                   GRPC_SECURITY_NONE));
-          return client_->Put(&context, request, response);
+          return client_->Put(context, request, response);
+        },
+        [this, path](grpc::ClientContext* context,
+                     const redfish::v1::Request& request,
+                     ::redfish::v1::Response* response,
+                     std::function<void(grpc::Status)> on_done) {
+          context->set_credentials(
+              grpc::experimental::MetadataCredentialsFromPlugin(
+                  std::unique_ptr<grpc::MetadataCredentialsPlugin>(
+                      std::make_unique<GrpcRedfishCredentials>(fqdn_, path)),
+                  GRPC_SECURITY_NONE));
+          client_->async()->Put(context, &request, response,
+                                std::move(on_done));
         });
   }
 
