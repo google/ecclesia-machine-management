@@ -5,6 +5,15 @@
 #   * public (rarely)
 # If none of these are suitable for you then you may need a new group here.
 
+load("//tools/build_defs/license:license.bzl", "license")
+
+package(default_applicable_licenses = ["//ecclesia:license"])
+
+license(
+    name = "license",
+    package_name = "ecclesia",
+)
+
 licenses(["notice"])
 
 exports_files(["LICENSE"])
