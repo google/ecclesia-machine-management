@@ -53,4 +53,5 @@ bzl_library(
     name = "resources",
     srcs = ["resources.bzl"],
     visibility = ["//ecclesia:mmanager_users"],
+    deps = ["//devtools/build_cleaner/skylark:build_defs_lib"],
 )
