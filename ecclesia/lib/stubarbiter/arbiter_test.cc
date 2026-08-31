@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/stubarbiter/arbiter.h"
 
+#include <atomic>
 #include <memory>
 #include <string>
 #include <vector>
@@ -916,6 +917,97 @@ TEST(StubArbiterTest, FailoverPolicyFailedStubCreation) {
       metrics.endpoint_metrics[StubArbiterInfo::PriorityLabel::kSecondary]
           .status,
       IsStatusInternal());
+}
+
+TEST(StubArbiterTest, FailoverReleasesStubEarly) {
+  auto primary_destroyed_ptr = std::make_shared<bool>(false);
+  bool primary_destroyed = false;
+
+  struct DestructorTrackerStub {
+    explicit DestructorTrackerStub(std::shared_ptr<bool> destroyed)
+        : destroyed(std::move(destroyed)) {}
+    ~DestructorTrackerStub() { *destroyed = true; }
+    std::shared_ptr<bool> destroyed;
+  };
+
+  using TrackerArbiter = StubArbiter<DestructorTrackerStub>;
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      std::unique_ptr<TrackerArbiter> arbiter,
+      TrackerArbiter::Create(
+          {},
+          [&primary_destroyed_ptr,
+           &primary_destroyed](StubArbiterInfo::PriorityLabel label)
+              -> absl::StatusOr<std::unique_ptr<DestructorTrackerStub>> {
+            if (label == StubArbiterInfo::PriorityLabel::kPrimary) {
+              return std::make_unique<DestructorTrackerStub>(
+                  primary_destroyed_ptr);
+            }
+            primary_destroyed = *primary_destroyed_ptr;
+            return std::make_unique<DestructorTrackerStub>(
+                std::make_shared<bool>(false));
+          }));
+
+  arbiter->Execute([](DestructorTrackerStub* stub,
+                      StubArbiterInfo::PriorityLabel label) -> absl::Status {
+    if (label == StubArbiterInfo::PriorityLabel::kPrimary) {
+      return absl::DeadlineExceededError("Deadline exceeded");
+    }
+    return absl::OkStatus();
+  });
+
+  EXPECT_TRUE(primary_destroyed);
+}
+
+TEST(StubArbiterTest, FailoverSerializesRecreation) {
+  FakeClock clock(absl::FromUnixSeconds(1700000000));
+  std::atomic<int> secondary_factory_calls{0};
+  absl::Notification factory_entered;
+  absl::Notification can_proceed;
+
+  auto stub_factory = [&](StubArbiterInfo::PriorityLabel label)
+      -> absl::StatusOr<std::unique_ptr<MockStub>> {
+    if (label == StubArbiterInfo::PriorityLabel::kPrimary) {
+      return absl::UnavailableError("Primary failed");
+    }
+    if (label == StubArbiterInfo::PriorityLabel::kSecondary) {
+      secondary_factory_calls++;
+      factory_entered.Notify();
+      can_proceed.WaitForNotification();
+      return std::make_unique<MockStub>(GetName(label));
+    }
+    return absl::InvalidArgumentError("Unknown label");
+  };
+
+  using TrackerArbiter = StubArbiter<MockStub>;
+
+  ECCLESIA_ASSIGN_OR_FAIL(std::unique_ptr<TrackerArbiter> arbiter,
+                          TrackerArbiter::Create({}, stub_factory, &clock));
+
+  ThreadFactoryInterface* thread_factory = GetDefaultThreadFactory();
+
+  auto thread1 = thread_factory->New([&]() {
+    arbiter->Execute([](MockStub* stub, StubArbiterInfo::PriorityLabel label) {
+      return absl::OkStatus();
+    });
+  });
+
+  factory_entered.WaitForNotification();
+
+  auto thread2 = thread_factory->New([&]() {
+    arbiter->Execute([](MockStub* stub, StubArbiterInfo::PriorityLabel label) {
+      return absl::OkStatus();
+    });
+  });
+
+  absl::SleepFor(absl::Milliseconds(100));
+
+  can_proceed.Notify();
+
+  thread1->Join();
+  thread2->Join();
+
+  EXPECT_EQ(secondary_factory_calls.load(), 1);
 }
 
 }  // namespace
