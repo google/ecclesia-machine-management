@@ -140,6 +140,7 @@ enum class ResourceEntity : int {
   kGoogleRasService,
   kGoogleRawEeproms,
   kGoogleRawEepromsCollection,
+  kGoogleVoltageRegulator,
   kGooglegRPCStatistics,
   kGraphicsController,
   kGraphicsControllerCollection,
