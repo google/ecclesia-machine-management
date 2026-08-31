@@ -20,7 +20,10 @@ cc_library(
         "property.h",
         "property_definitions.h",
     ],
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//cloud/cluster/tenant_controller/bare_metal:__subpackages__",
+        "//visibility:public",
+    ],
     deps = [
         "//ecclesia/lib/http:codes",
         "//ecclesia/lib/redfish/timing:query_timeout_manager",
@@ -215,8 +218,6 @@ cc_test(
         ":interface",
         ":location",
         "//ecclesia/lib/redfish/testing:json_mockup",
-        "//ecclesia/lib/testing:proto",
-        "//ecclesia/lib/testing:status",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
