@@ -494,7 +494,8 @@ void QueryRouter::ExecuteQueryBatches(
   ThreadPool thread_pool(num_threads);
   bool is_query_cancelled = IsQueryExecutionCancelled();
   for (const QueryBatch& query_batch : query_batches) {
-    thread_pool.Schedule([&, is_query_cancelled]() {
+    thread_pool.ScheduleWork([&callback_mutex, &options, query_batch,
+                              is_query_cancelled]() {
       const QueryRoutingInfo& routing_info = query_batch.routing_info;
       ExecuteQueries(*routing_info.query_engine, query_batch.queries, options,
                      routing_info.server_info,
@@ -563,9 +564,10 @@ void QueryRouter::CancelQueryExecution(absl::Notification* notification) {
   int num_threads = static_cast<int>(routing_table_.size());
   ThreadPool thread_pool(num_threads);
   for (const QueryRoutingInfo& routing_info : routing_table_) {
-    thread_pool.Schedule([&]() {
-      routing_info.query_engine->CancelQueryExecution(notification);
-    });
+    thread_pool.ScheduleWork(
+        [routing_engine = routing_info.query_engine.get(), notification]() {
+          routing_engine->CancelQueryExecution(notification);
+        });
   }
 
   // The Wait() call atomically unlocks "query_cancellation_state_mutex_"

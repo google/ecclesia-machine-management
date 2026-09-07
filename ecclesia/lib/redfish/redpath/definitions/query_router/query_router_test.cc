@@ -33,6 +33,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "absl/synchronization/mutex.h"
 #include "absl/synchronization/notification.h"
 #include "absl/types/span.h"
 #include "ecclesia/lib/apifs/apifs.h"
@@ -3378,6 +3379,109 @@ TEST_F(QueryRouterTest,
     };
     query_router->ExecuteQuery(options);
   }
+}
+
+TEST_F(QueryRouterTest, ExecuteQueryParallelAllWithMultipleConcurrentThreads) {
+  QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
+      R"pb(
+        query_pattern: PATTERN_PARALLEL_ALL
+        max_concurrent_threads: 4
+        selection_specs {
+          key: "query_a"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_2" }
+              query_and_rule_path { query_path: "$0/query_a.textproto" }
+            }
+          }
+        }
+        selection_specs {
+          key: "query_b"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_b.textproto" }
+            }
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_2" }
+              query_and_rule_path { query_path: "$0/query_b.textproto" }
+            }
+          }
+        }
+        selection_specs {
+          key: "query_c"
+          value {
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_1" }
+              query_and_rule_path { query_path: "$0/query_c.textproto" }
+            }
+            query_selection_specs {
+              select { server_type: SERVER_TYPE_BMCWEB server_tag: "server_2" }
+              query_and_rule_path { query_path: "$0/query_c.textproto" }
+            }
+          }
+        }
+      )pb",
+      apifs_.GetPath()));
+
+  std::vector<QueryRouter::ServerSpec> server_specs;
+  server_specs.push_back(GetServerSpec("server_1"));
+  server_specs.push_back(GetServerSpec("server_2"));
+
+  ECCLESIA_ASSIGN_OR_FAIL(
+      auto query_router,
+      QueryRouter::Create(
+          router_spec, std::move(server_specs),
+          [&](const QuerySpec&, const QueryEngineParams&,
+              std::unique_ptr<IdAssigner>,
+              const RedpathNormalizer::QueryIdToNormalizerMap&)
+              -> absl::StatusOr<std::unique_ptr<QueryEngineIntf>> {
+            return FileBackedQueryEngine::Create(
+                fs_.GetTruePath(kQueryResultDir));
+          },
+          DefaultRedpathNormalizerMap));
+
+  absl::Mutex results_mutex;
+  absl::flat_hash_set<QueryRouterCallbacks> actual_callbacks;
+  std::vector<absl::string_view> query_ids = {"query_a", "query_b", "query_c"};
+  QueryRouterIntf::RedpathQueryOptions options = {
+      .query_ids = query_ids,
+      .callback =
+          [&](const QueryRouter::ServerInfo& server_info,
+              const QueryResult& result) {
+            absl::MutexLock lock(results_mutex);
+            actual_callbacks.insert(
+                QueryRouterCallbacks{result.query_id(), server_info});
+          },
+  };
+  query_router->ExecuteQuery(options);
+
+  absl::flat_hash_set<QueryRouterCallbacks> expected_callbacks = {
+      {"query_a",
+       {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+        SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
+      {"query_a",
+       {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+        SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
+      {"query_b",
+       {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+        SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
+      {"query_b",
+       {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+        SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
+      {"query_c",
+       {"server_1", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+        SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
+      {"query_c",
+       {"server_2", SelectionSpec::SelectionClass::SERVER_TYPE_BMCWEB,
+        SelectionSpec::SelectionClass::SERVER_CLASS_COMPUTE}},
+  };
+
+  EXPECT_EQ(actual_callbacks, expected_callbacks);
 }
 
 }  // namespace
