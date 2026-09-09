@@ -179,6 +179,40 @@ TEST(ApplyPredicateRuleTest, FuzzyStringComparisonPredicatesCorrectly) {
   EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
 }
 
+TEST(ApplyPredicateRuleTest, RegexPredicatesCorrectly) {
+  nlohmann::json obj = {{"Group",
+                         "chip_chiplet_icl_lst_top_0_lst_0_common_fleet_"
+                         "counters_8b_aggregated_counters"},
+                        {"Name", "serdes_lane_link_flaps_0"},
+                        {"OtherProp", "value"}};
+
+  PredicateOptions options;
+
+  options.predicate = "Group=~'.*icl_lst_top_0.*8b_aggregated_counters'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "Group=~'.*non_existent.*'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+
+  options.predicate = "Name=~'^serdes_lane_link_flaps_.*'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "Name=~'^link_flaps_.*'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+
+  options.predicate = "Name=~'link_flaps_'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "Group!~'.*non_existent.*'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(true));
+
+  options.predicate = "Group!~'.*icl_lst_top_0.*8b_aggregated_counters'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsOkAndHolds(false));
+
+  options.predicate = "Group=~'*bad_regex'";
+  EXPECT_THAT(ApplyPredicateRule(obj, options), IsStatusInvalidArgument());
+}
+
 TEST(ApplyPredicateRuleTest, ShouldApplyLogicalOperatorsCorrectly) {
   nlohmann::json obj = {{"MemorySize", 8},
                         {"Status", {{"State", "Warning"}}},

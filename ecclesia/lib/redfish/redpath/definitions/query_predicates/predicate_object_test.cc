@@ -78,6 +78,23 @@ TEST(PredicateObjectTest, PredicateWithFuzzyOps) {
   EXPECT_THAT(PredicateObjectToString(*object), Eq(predicate1));
 }
 
+TEST(PredicateObjectTest, PredicateWithRegexOps) {
+  std::string predicate1 = "Prop1=~'.*test.*' or Prop2!~'^starts_with.*'";
+  absl::StatusOr<PredicateObject> object = CreatePredicateObject(predicate1);
+  ASSERT_TRUE(object.ok()) << object.status();
+  EXPECT_THAT((*object).child_predicates, SizeIs(2));
+  EXPECT_THAT(object->child_predicates[0].relational_expression.rel_operator,
+              Eq("=~"));
+  EXPECT_THAT(object->child_predicates[0].relational_expression.rhs,
+              Eq("'.*test.*'"));
+  EXPECT_THAT(object->child_predicates[1].relational_expression.rel_operator,
+              Eq("!~"));
+  EXPECT_THAT(object->child_predicates[1].relational_expression.rhs,
+              Eq("'^starts_with.*'"));
+  EXPECT_THAT((*object).logical_operators, SizeIs(1));
+  EXPECT_THAT(PredicateObjectToString(*object), Eq(predicate1));
+}
+
 TEST(PredicateObjectTest, InvalidPredicate) {
   // Invalid operator (wrong equality)
   EXPECT_THAT(CreatePredicateObject("Prop1==42"), IsStatusInvalidArgument());
