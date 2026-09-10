@@ -122,11 +122,10 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(absl::string_view path,
       *request.mutable_json() = request_body;
     }
   }
-  grpc::ClientContext context;
-  context.set_deadline(
-      absl::ToChronoTime(params.clock->Now() + params.timeout));
-
   ::redfish::v1::Response response;
+    grpc::ClientContext context;
+    context.set_deadline(
+        absl::ToChronoTime(params.clock->Now() + params.timeout));
     if (grpc::Status status = sync_rpc(&context, request, &response);
         !status.ok()) {
       return AsAbslStatus(status);
