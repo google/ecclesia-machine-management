@@ -107,8 +107,8 @@ class PciTopologyTest : public testing::Test {
     fs_.CreateDir("/sys/devices/pci0000:d7/firmware_node");
     fs_.CreateFile("/sys/devices/pci0000:d7/firmware_node/path",
                    "\\_SB_.PC01\n");
-    fs_.CreateDir("/sys/devices/pci0000:d7/0000.d7:00.0");
-    fs_.CreateDir("/sys/devices/pci0000:ae/0000:d7:00.0/0000:d8:00.0");
+    fs_.CreateDir("/sys/devices/pci0000:d7/0000:d7:00.0");
+    fs_.CreateDir("/sys/devices/pci0000:d7/0000:d7:00.0/0000:d8:00.0");
   }
 
  protected:
