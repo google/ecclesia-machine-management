@@ -98,6 +98,12 @@ class QueryValueBuilder {
     return *this;
   }
 
+  // Sets `value` to a null value.
+  QueryValueBuilder& operator=(ecclesia::QueryValue::NullValue other) {
+    query_value_.set_null_value(other);
+    return *this;
+  }
+
   // Move content from other value.
   QueryValueBuilder& operator=(QueryValue other) {
     query_value_ = std::move(other);
