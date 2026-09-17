@@ -41,6 +41,10 @@ constexpr LazyRE2 kRelationalExpressionRegex = {
 // alpha-numeric with possible periods for sub-properties.
 constexpr LazyRE2 kPropertyExistenceRegex = {"^(![A-Z]|[A-Z])[a-zA-Z0-9.]*$"};
 
+// Pattern for regex expression [lhs][operator]'[rhs]'
+constexpr LazyRE2 kRegexExpressionRegex = {
+    R"(^(?P<left>[^\s~<=>!]+)(?:(=~|!~)('(?:[^'\\]|\\.)*'))$)"};
+
 absl::StatusOr<RelationalExpression> EncodeRelationalExpression(
     absl::string_view expression) {
   RelationalExpression relational_expression;
@@ -62,6 +66,12 @@ absl::StatusOr<RelationalExpression> EncodeRelationalExpression(
     relational_expression.rhs = rhs;
     return relational_expression;
   }
+  if (RE2::FullMatch(expression, *kRegexExpressionRegex, &lhs, &op, &rhs)) {
+    relational_expression.lhs = lhs;
+    relational_expression.rel_operator = op;
+    relational_expression.rhs = rhs;
+    return relational_expression;
+  }
   return absl::InvalidArgumentError(
       absl::StrCat("Invalid relational expression: ", expression));
 }
@@ -75,6 +85,7 @@ std::string RelationalExpressionToString(const RelationalExpression& relexp) {
 
 bool IsRelationalExpression(absl::string_view expression) {
   return RE2::FullMatch(expression, *kRelationalExpressionRegex) ||
+         RE2::FullMatch(expression, *kRegexExpressionRegex) ||
          RE2::FullMatch(expression, *kPropertyExistenceRegex);
 }
 
