@@ -160,13 +160,18 @@ QueryEngineWithTransportArbiter::CreateTransportArbiterQueryEngine(
           },
           query_spec.clock));
 
+  auto arbiter_ptr = arbiter.get();
+  auto interface_provider = [arbiter_ptr]() {
+    return arbiter_ptr->GetActiveStub();
+  };
+
   std::unique_ptr<ecclesia::RedpathNormalizer> redpath_normalizer;
   StubArbiterInfo::Metrics metrics = arbiter->Execute(
       [&](ecclesia::RedfishInterface* redfish_interface,
           StubArbiterInfo::PriorityLabel label) -> absl::Status {
         if (id_assigner == nullptr) {
           redpath_normalizer = BuildLocalDevpathRedpathNormalizer(
-              redfish_interface,
+              interface_provider,
               QueryEngineParams::GetRedpathNormalizerStableIdType(
                   engine_params.stable_id_type),
               engine_params.redfish_topology_config_name,
@@ -176,7 +181,7 @@ QueryEngineWithTransportArbiter::CreateTransportArbiterQueryEngine(
               QueryEngineParams::GetRedpathNormalizerStableIdType(
                   engine_params.stable_id_type),
               engine_params.redfish_topology_config_name,
-              std::move(id_assigner), redfish_interface,
+              std::move(id_assigner), interface_provider,
               engine_params.features.lazy_build_topology());
         }
         return absl::OkStatus();
