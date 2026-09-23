@@ -163,7 +163,17 @@ absl::Status JsonAdd(nlohmann::json& json,
 absl::Status JsonClear(nlohmann::json& json,
                        const IndividualObjectIdentifier& object_identifier) {
   if (object_identifier.has_field_name()) {
-    json.erase(json.find(object_identifier.field_name()));
+    // Both checks are load bearing. nlohmann::basic_json::erase only validates
+    // that the iterator belongs to this object, so an end() iterator is
+    // forwarded straight to std::map::erase, which is undefined behavior.
+    if (!json.is_object()) {
+      return absl::InvalidArgumentError("Json is not an object type");
+    }
+    auto field = json.find(object_identifier.field_name());
+    if (field == json.end()) {
+      return absl::NotFoundError("Cleared Json field not found.");
+    }
+    json.erase(field);
     return absl::OkStatus();
   }
   if (object_identifier.has_array_field()) {
@@ -293,10 +303,12 @@ absl::Status ResultUpdateHelper(const OverrideField& field,
       break;
     }
     case OverrideField::kActionClear: {
-      auto result_check =
-          FindObjectAndAct(json, field.action_clear().object_identifier(), 0,
-                           field.action_add().override_value(), transport,
-                           OverrideField::ActionCase::kActionClear);
+      // ActionClear carries no OverrideValue, and FindObjectAndAct ignores
+      // it for this action.
+      auto result_check = FindObjectAndAct(
+          json, field.action_clear().object_identifier(), 0,
+          OverrideValue::default_instance(), transport,
+          OverrideField::ActionCase::kActionClear);
       if (!result_check.ok()) {
         return result_check;
       }

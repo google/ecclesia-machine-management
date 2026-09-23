@@ -683,6 +683,82 @@ TEST_F(RedfishOverrideTest, GetClear) {
   EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_get));
   EXPECT_THAT(res_get->code, Eq(200));
 }
+
+TEST_F(RedfishOverrideTest, GetClearFieldMissingLeavesPayloadIntact) {
+  // Clearing a field that the payload does not contain used to hand an end()
+  // iterator to nlohmann::basic_json::erase, which forwarded it to
+  // std::map::erase and corrupted the heap. The override must be rejected and
+  // the payload returned untouched.
+  OverridePolicy policy = ParseTextProtoOrDie(R"pb(
+    override_content_map_uri: {
+      key: "/expected/result/1"
+      value: {
+        override_field:
+        [ {
+          action_clear: {
+            object_identifier: {
+              individual_object_identifier:
+              [ { field_name: "NoSuchField" }]
+            }
+          }
+        }
+          , {
+            action_clear: {
+              object_identifier: {
+                individual_object_identifier:
+                [ { field_name: "TestArray" }
+                  , { array_idx: 0 }
+                  , { field_name: "NoSuchNestedField" }]
+              }
+            }
+          }]
+      }
+    }
+  )pb");
+  auto rf_override = std::make_unique<RedfishTransportWithOverride>(
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
+
+  absl::StatusOr<RedfishTransport::Result> res_get =
+      rf_override->Get("/expected/result/1");
+  ASSERT_THAT(res_get, IsOk());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_result1_));
+  EXPECT_THAT(res_get->code, Eq(200));
+}
+
+TEST_F(RedfishOverrideTest, GetClearFieldOfNonObjectLeavesPayloadIntact) {
+  // "TestString" resolves to a JSON string, so clearing a field underneath it
+  // reaches nlohmann::basic_json::erase with a primitive value. nlohmann
+  // handles that by throwing.
+  OverridePolicy policy = ParseTextProtoOrDie(R"pb(
+    override_content_map_uri: {
+      key: "/expected/result/1"
+      value: {
+        override_field:
+        [ {
+          action_clear: {
+            object_identifier: {
+              individual_object_identifier:
+              [ { field_name: "TestString" }, { field_name: "NoSuchField" }]
+            }
+          }
+        }]
+      }
+    }
+  )pb");
+  auto rf_override = std::make_unique<RedfishTransportWithOverride>(
+      std::move(transport_),
+      [&policy]() -> absl::StatusOr<OverridePolicy> { return policy; });
+
+  absl::StatusOr<RedfishTransport::Result> res_get =
+      rf_override->Get("/expected/result/1");
+  ASSERT_THAT(res_get, IsOk());
+  ASSERT_TRUE(std::holds_alternative<nlohmann::json>(res_get->body));
+  EXPECT_THAT(std::get<nlohmann::json>(res_get->body), Eq(expected_result1_));
+  EXPECT_THAT(res_get->code, Eq(200));
+}
+
 TEST_F(RedfishOverrideTest, ReplaceTypeFail) {
   OverridePolicy replace_policy = ParseTextProtoOrDie(R"pb(
     override_content_map_uri: {
