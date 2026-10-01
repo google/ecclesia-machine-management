@@ -2,8 +2,12 @@
 
 load("//ecclesia/build_defs:embed.bzl", "shar_binary")
 
-def redfish_mockup(name, datafile_dir = "", visibility = None):
-    """Generate redfish mockup bash rules.
+def redfish_mockup(
+        name,
+        datafile_dir = "",
+        visibility = None,
+):
+    """Generate redfish mockup bash rules
 
     Note that the output of this rule is a shar_binary, so for consistency we require
     that the name end with .shar.
