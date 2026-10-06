@@ -123,6 +123,8 @@ enum class ResourceEntity : int {
   kGoogleIpmiFrus,
   kGoogleIpmiFrusCollection,
   kGoogleManagedObjectStoreMetrics,
+  kGoogleMetis,
+  kGoogleMetisCollection,
   kGoogleMinValveConfig,
   kGoogleNvmeFeature,
   kGoogleNvmeFeatureCollection,
