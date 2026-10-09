@@ -651,7 +651,7 @@ class RedfishObject {
   template <typename T>
   std::optional<T> GetNodeValue(absl::string_view node_name) const {
     T val;
-    auto node = (*this)[node_name.data()];
+    auto node = (*this)[node_name];
     if (!node.GetValue(&val)) return std::nullopt;
     return val;
   }
