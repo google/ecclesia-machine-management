@@ -47,7 +47,6 @@ namespace {
 using testing::Eq;
 using testing::Field;
 using testing::Gt;
-using testing::Invoke;
 using testing::IsEmpty;
 using testing::Not;
 using testing::Return;
@@ -539,10 +538,10 @@ TEST_F(CurlHttpClientTest, CanGetIncremental) {
               OnResponseHeaders(Field(&HttpClient::HttpResponse::code, 200)))
       .WillOnce(Return(absl::OkStatus()));
   EXPECT_CALL(mock_handler, OnBodyData(Not(IsEmpty())))
-      .WillRepeatedly(Invoke([&body](absl::string_view part) {
+      .WillRepeatedly([&body](absl::string_view part) {
         body.append(part);
         return absl::OkStatus();
-      }));
+      });
 
   auto result = curl_http_client_.GetIncremental(std::move(req), &mock_handler);
   EXPECT_TRUE(result.ok());
@@ -628,10 +627,10 @@ TEST_F(CurlHttpClientTest, CanPostIncremental) {
               OnResponseHeaders(Field(&HttpClient::HttpResponse::code, 200)))
       .WillOnce(Return(absl::OkStatus()));
   EXPECT_CALL(mock_handler, OnBodyData(Not(IsEmpty())))
-      .WillRepeatedly(Invoke([&body](absl::string_view part) {
+      .WillRepeatedly([&body](absl::string_view part) {
         body.append(part);
         return absl::OkStatus();
-      }));
+      });
 
   auto result =
       curl_http_client_.PostIncremental(std::move(req), &mock_handler);
@@ -686,10 +685,10 @@ TEST_F(CurlHttpClientTest, CanPatchIncremental) {
               OnResponseHeaders(Field(&HttpClient::HttpResponse::code, 200)))
       .WillOnce(Return(absl::OkStatus()));
   EXPECT_CALL(mock_handler, OnBodyData(Not(IsEmpty())))
-      .WillRepeatedly(Invoke([&body](absl::string_view part) {
+      .WillRepeatedly([&body](absl::string_view part) {
         body.append(part);
         return absl::OkStatus();
-      }));
+      });
 
   auto result =
       curl_http_client_.PatchIncremental(std::move(req), &mock_handler);
@@ -732,10 +731,10 @@ TEST_F(CurlHttpClientTest, CanDeleteIncremental) {
               OnResponseHeaders(Field(&HttpClient::HttpResponse::code, 200)))
       .WillOnce(Return(absl::OkStatus()));
   EXPECT_CALL(mock_handler, OnBodyData(Not(IsEmpty())))
-      .WillRepeatedly(Invoke([&body](absl::string_view part) {
+      .WillRepeatedly([&body](absl::string_view part) {
         body.append(part);
         return absl::OkStatus();
-      }));
+      });
 
   auto result =
       curl_http_client_.DeleteIncremental(std::move(req), &mock_handler);
