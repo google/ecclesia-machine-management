@@ -349,5 +349,50 @@ TEST(RedpathNormalizerTest, RedpathNormalizerImplDefaultSetsIsRootChassis) {
   EXPECT_TRUE(data_set.fields().at("_id_").identifier().is_root());
 }
 
+class TrackingRedfishInterface : public NullRedfish {
+ public:
+  explicit TrackingRedfishInterface(int* call_count)
+      : call_count_(call_count) {}
+  RedfishVariant GetRoot(GetParams params,
+                         ServiceRootUri service_root) override {
+    (*call_count_)++;
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
+  }
+  RedfishVariant GetRoot(GetParams params,
+                         absl::string_view service_root) override {
+    (*call_count_)++;
+    return RedfishVariant(absl::UnimplementedError("NullRedfish"));
+  }
+
+ private:
+  int* call_count_;
+};
+
+TEST(RedpathNormalizerTest, AddDevpathNormalizerUsesCallback) {
+  int calls_a = 0;
+  int calls_b = 0;
+  auto interface_a = std::make_shared<TrackingRedfishInterface>(&calls_a);
+  auto interface_b = std::make_shared<TrackingRedfishInterface>(&calls_b);
+
+  std::shared_ptr<RedfishInterface> active_interface = interface_a;
+  auto provider = [&]() { return active_interface; };
+
+  auto normalizer_impl = std::make_unique<RedpathNormalizerImplAddDevpath>(
+      std::nullopt, provider, "");
+
+  active_interface = interface_b;
+
+  RedpathNormalizer normalizer;
+  normalizer.AddRedpathNormalizer(std::move(normalizer_impl));
+
+  DummyRedfishObject dummy_redfish_object;
+  DelliciusQuery::Subquery subquery;
+  RedpathNormalizerOptions options;
+  auto status = normalizer.Normalize(dummy_redfish_object, subquery, options);
+
+  EXPECT_GT(calls_b, 0);
+  EXPECT_EQ(calls_a, 0);
+}
+
 }  // namespace
 }  // namespace ecclesia
