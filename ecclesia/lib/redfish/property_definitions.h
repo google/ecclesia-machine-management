@@ -571,6 +571,8 @@ DEFINE_REDFISH_PROPERTY(OemPropertyControllerType, std::string,
                         "ControllerType");
 
 // OEM Nvidia properties
+DEFINE_REDFISH_PROPERTY(OemPropertyGpuViewCpuLimitWatts, int,
+                        "GPUViewCPULimitWatts");
 DEFINE_REDFISH_PROPERTY(OemPropertyPowerLimitPersistency, bool,
                         "PowerLimitPersistency");
 DEFINE_REDFISH_PROPERTY(OemPropertyRequestedPersistentPowerLimitWatts, int,
