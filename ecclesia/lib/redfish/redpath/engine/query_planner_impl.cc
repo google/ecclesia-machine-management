@@ -228,12 +228,14 @@ RedPathRedfishQueryParams CombineQueryParams(
         continue;
       }
 
-      auto find_query_params = redpath_to_query_params.find(redpath_prefix);
+      const std::string& target_prefix =
+          iter->second.has_uri() ? iter->second.uri() : redpath_prefix;
+      auto find_query_params = redpath_to_query_params.find(target_prefix);
       if (find_query_params != redpath_to_query_params.end()) {
         find_query_params->second.freshness = GetParams::Freshness::kRequired;
       } else {
         redpath_to_query_params.insert(
-            {redpath_prefix,
+            {target_prefix,
              GetParams{.freshness = GetParams::Freshness::kRequired}});
       }
     }

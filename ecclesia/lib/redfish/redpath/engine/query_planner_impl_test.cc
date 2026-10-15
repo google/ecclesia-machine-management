@@ -6775,6 +6775,79 @@ TEST_F(QueryPlannerTestRunner,
                   ecclesia::EqualsProto(expected_query_result.data())));
 }
 
+TEST_F(QueryPlannerTestRunner, QueryPlannerAppliesFreshnessFromUriSubquery) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "UriSubqueryFreshnessTest"
+        subquery {
+          subquery_id: "Chassis"
+          uri: "/redfish/v1/Chassis/chassis"
+          properties { property: "Id" type: STRING }
+        }
+        subquery {
+          subquery_id: "PowerSensor"
+          root_subquery_ids: "Chassis"
+          uri: "/redfish/v1/Chassis/chassis/Sensors/power_sensor"
+          freshness: REQUIRED
+          properties { property: "Reading" type: DOUBLE }
+        }
+      )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  size_t chassis_query_count = 0;
+  server_->AddHttpGetHandler(
+      "/redfish/v1/Chassis/chassis", [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Chassis/chassis",
+          "Id": "chassis"
+        })json");
+        chassis_query_count++;
+        req->Reply();
+      });
+
+  size_t sensor_query_count = 0;
+  server_->AddHttpGetHandler("/redfish/v1/Chassis/chassis/Sensors/power_sensor",
+                             [&](ServerRequestInterface* req) {
+                               SetContentType(req, "application/json");
+                               req->OverwriteResponseHeader("OData-Version",
+                                                            "4.0");
+                               sensor_query_count++;
+                               req->WriteResponseString(R"json({
+          "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/power_sensor",
+          "Reading": 125.5
+        })json");
+                               req->Reply();
+                             });
+
+  std::unique_ptr<RedfishTransport> base_transport =
+      server_->RedfishClientTransport();
+  std::unique_ptr<RedfishCachedGetterInterface> cache =
+      TimeBasedCache::Create(base_transport.get(), absl::InfiniteDuration());
+  auto intf = NewHttpInterface(std::move(base_transport), std::move(cache),
+                               RedfishInterface::kTrusted);
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf.get(),
+                                             .redpath_rules = {}}));
+  ASSERT_THAT(qp, NotNull());
+  ecclesia::QueryVariables args1 = ecclesia::QueryVariables();
+  EXPECT_FALSE(qp->Run({.variables = args1}).query_result.has_status());
+  EXPECT_FALSE(qp->Run({.variables = args1}).query_result.has_status());
+
+  // Chassis has OPTIONAL freshness and should be served from cache on 2nd run.
+  EXPECT_EQ(chassis_query_count, 1);
+
+  // PowerSensor has REQUIRED freshness and must be queried on both runs.
+  EXPECT_EQ(sensor_query_count, 2);
+}
+
 }  // namespace
 
 }  // namespace ecclesia
