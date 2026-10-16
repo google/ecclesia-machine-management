@@ -17,6 +17,7 @@
 #ifndef ECCLESIA_LIB_REDFISH_TRANSPORT_CACHE_H_
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_CACHE_H_
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -158,36 +159,52 @@ class NullCache : public RedfishCachedGetterInterface {
   RedfishTransport* transport_;
 };
 
+// Controls which HTTP responses a TimeBasedCache stores.
+enum class HttpCodeCachePolicy : uint8_t {
+  // Store every response that the transport returns successfully, regardless
+  // of its HTTP status code.
+  kCacheAll,
+  // Store only responses whose HTTP status code is 0 (not set by the
+  // transport), 2xx or 404. Other responses, such as a transient 500 from the
+  // Redfish service, are still returned to the caller but are not stored, so
+  // the next read fetches the resource again.
+  kCacheSuccessAndNotFound,
+};
+
 // Time-based cache policy. A cached entry will be returned as long as it was
 // last fetched within a max_age_ window.
 class TimeBasedCache : public RedfishCachedGetterInterface {
  public:
   static std::unique_ptr<RedfishCachedGetterInterface> Create(
       RedfishTransport* transport, absl::Duration max_age,
-      const Clock* clock = Clock::RealClock(), bool enable_blocklist = true) {
+      const Clock* clock = Clock::RealClock(), bool enable_blocklist = true,
+      HttpCodeCachePolicy code_policy = HttpCodeCachePolicy::kCacheAll) {
     return std::make_unique<TimeBasedCache>(
         transport, clock, max_age, std::nullopt, false /*enable_blocklist=*/,
-        enable_blocklist);
+        enable_blocklist, code_policy);
   }
 
   static std::unique_ptr<RedfishCachedGetterInterface> CreateDeepCache(
       RedfishTransport* transport, absl::Duration max_age,
-      const Clock* clock = Clock::RealClock(), bool enable_blocklist = true) {
+      const Clock* clock = Clock::RealClock(), bool enable_blocklist = true,
+      HttpCodeCachePolicy code_policy = HttpCodeCachePolicy::kCacheAll) {
     return std::make_unique<TimeBasedCache>(transport, clock, max_age,
                                             std::nullopt, true /*deep_cache=*/,
-                                            enable_blocklist);
+                                            enable_blocklist, code_policy);
   }
 
   TimeBasedCache(
       RedfishTransport* transport, const Clock* clock, absl::Duration max_age,
       std::optional<const ApiComplexityContextManager*> manager = std::nullopt,
-      bool deep_cache = false, bool enable_blocklist = true)
+      bool deep_cache = false, bool enable_blocklist = true,
+      HttpCodeCachePolicy code_policy = HttpCodeCachePolicy::kCacheAll)
       : RedfishCachedGetterInterface(manager),
         transport_(transport),
         clock_(clock),
         get_max_age_(max_age),
         deep_cache_(deep_cache),
-        enable_blocklist_(enable_blocklist) {}
+        enable_blocklist_(enable_blocklist),
+        code_policy_(code_policy) {}
 
   size_t GetGetCacheSize() ABSL_LOCKS_EXCLUDED(get_cache_lock_) {
     absl::MutexLock mu(&get_cache_lock_);
@@ -214,30 +231,33 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
   class CacheNode {
    public:
     CacheNode(std::string path, RedfishTransport* transport, const Clock& clock,
-              const absl::Duration duration)
-        : CacheNode(std::move(path), std::nullopt, transport, clock, duration) {
-    }
+              const absl::Duration duration, HttpCodeCachePolicy code_policy)
+        : CacheNode(std::move(path), std::nullopt, transport, clock, duration,
+                    code_policy) {}
     CacheNode(std::string path, RedfishTransport::Result result,
               RedfishTransport* transport, const Clock& clock,
-              const absl::Duration duration)
+              const absl::Duration duration, HttpCodeCachePolicy code_policy)
         : CacheNode(std::move(path), std::nullopt, transport, clock, duration,
-                    std::move(result)) {}
+                    code_policy, std::move(result)) {}
     CacheNode(std::string path, std::optional<std::string> post_payload,
               RedfishTransport* transport, const Clock& clock,
-              const absl::Duration duration)
-        : path_(std::move(path)),
-          post_payload_(std::move(post_payload)),
-          transport_(transport),
-          clock_(&clock),
-          duration_(duration) {}
-    CacheNode(std::string path, std::optional<std::string> post_payload,
-              RedfishTransport* transport, const Clock& clock,
-              const absl::Duration duration, RedfishTransport::Result result)
+              const absl::Duration duration, HttpCodeCachePolicy code_policy)
         : path_(std::move(path)),
           post_payload_(std::move(post_payload)),
           transport_(transport),
           clock_(&clock),
           duration_(duration),
+          code_policy_(code_policy) {}
+    CacheNode(std::string path, std::optional<std::string> post_payload,
+              RedfishTransport* transport, const Clock& clock,
+              const absl::Duration duration, HttpCodeCachePolicy code_policy,
+              RedfishTransport::Result result)
+        : path_(std::move(path)),
+          post_payload_(std::move(post_payload)),
+          transport_(transport),
+          clock_(&clock),
+          duration_(duration),
+          code_policy_(code_policy),
           last_update_time_(clock_->Now()),
           result_(std::move(result)) {}
 
@@ -310,14 +330,16 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
 
       // For successful return, if this is Post operation, we cache the result
       // no matter what format the body is, otherwise we only cache it if it's
-      // JSON format.
+      // JSON format. In both cases the HTTP status code must also be
+      // cacheable under `code_policy_`.
       // However, we still update result_ so that we can batch colliding
       // uncached Gets in case the payload is polled frequently and has a long
       // latency.
       absl::Time update_time = absl::InfinitePast();
       if (result.ok() &&
           (post_payload_.has_value() ||
-           std::holds_alternative<nlohmann::json>(result->body))) {
+           std::holds_alternative<nlohmann::json>(result->body)) &&
+          IsCacheableHttpCode(code_policy_, result->code)) {
         update_time = clock_->Now();
       }
 
@@ -356,6 +378,8 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
     // be made.
     const Clock* clock_;
     absl::Duration duration_;
+    // Determines which HTTP status codes may be stored.
+    const HttpCodeCachePolicy code_policy_;
 
     // The cached result and read timestamp.
     absl::Mutex mutex_;
@@ -375,6 +399,9 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
                                absl::string_view post_payload,
                                absl::Duration duration)
       ABSL_LOCKS_EXCLUDED(post_cache_lock_);
+  // Returns true if a response with HTTP status `code` may be stored under
+  // `code_policy`.
+  static bool IsCacheableHttpCode(HttpCodeCachePolicy code_policy, int code);
 
   RedfishTransport* transport_;
   const Clock* clock_;
@@ -388,6 +415,7 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
       post_cache_ ABSL_GUARDED_BY(post_cache_lock_);
   bool deep_cache_;
   const bool enable_blocklist_;
+  const HttpCodeCachePolicy code_policy_;
 };
 
 }  // namespace ecclesia
