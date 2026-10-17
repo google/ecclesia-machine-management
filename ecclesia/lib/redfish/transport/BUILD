@@ -166,6 +166,25 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "cache_test",
+    srcs = ["cache_test.cc"],
+    deps = [
+        ":cache",
+        ":interface",
+        ":mocked_interface",
+        "//ecclesia/lib/testing:status",
+        "//ecclesia/lib/thread",
+        "//ecclesia/lib/time:clock_fake",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/time",
+        "@com_google_googletest//:gtest_main",
+        "@com_json//:json",
+    ],
+)
+
 cc_library(
     name = "logged_transport",
     srcs = ["logged_transport.cc"],
