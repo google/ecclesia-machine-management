@@ -72,7 +72,6 @@ RelationalExpression ApplyTransformsToExpression(
   // Replace periods with slashes in the left-hand-side
   new_expression.lhs = absl::StrReplaceAll(new_expression.lhs, {{".", "/"}});
   // Add quotes to string base types.
-  std::string rhs_string = new_expression.rhs;
   int num;
   float float_num;
   // Check to see if the token is a number, for this just check if its an

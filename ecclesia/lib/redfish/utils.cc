@@ -103,7 +103,6 @@ RedfishTransport::bytes GetBytesFromString(absl::string_view str) {
 
 // Returns the URI from Json object or NotFound error
 absl::StatusOr<std::string> GetObjectUri(const nlohmann::json& json) {
-  std::string reference;
   if (json.is_object()) {
     if (auto odata = json.find(PropertyOdataId::Name);
         // Object can be re-read by URI. Store it.

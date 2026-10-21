@@ -75,7 +75,6 @@ absl::Status RedfishQueryParamExpand::ValidateRedfishSupport(
   if (!features.has_value()) {
     return absl::InternalError("Expands are not supported.");
   }
-  std::string expand_type;
   switch (type_) {
     case ExpandType::kBoth:
       if (!features->expand.expand_all) {

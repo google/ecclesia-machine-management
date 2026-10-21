@@ -484,7 +484,6 @@ class SubqueryHandle final {
     // Build the list of replacements that will be passed into StrReplaceAll.
     for (const auto& value : variables->variable_values()) {
       if (value.name().empty()) continue;
-      std::string result;
       std::string variable_name = absl::StrCat("$", value.name());
       if (value.values_size() == 0) continue;
       // In legacy query planner, we don't support multiple query values,
