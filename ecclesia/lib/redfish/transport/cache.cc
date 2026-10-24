@@ -69,6 +69,13 @@ RedfishCachedGetterInterface::OperationResult NullCache::CachedPostInternal(
   return {.result = transport_->Post(path, post_payload), .is_fresh = true};
 }
 
+bool TimeBasedCache::IsCacheableHttpCode(HttpCodeCachePolicy code_policy,
+                                         int code) {
+  if (code_policy == HttpCodeCachePolicy::kCacheAll) return true;
+  // A code of 0 means the transport did not set one.
+  return code == 0 || (code >= 200 && code < 300) || code == 404;
+}
+
 void TimeBasedCache::CacheNestedObjects(
     const RedfishTransport::Result& result) {
   std::queue<nlohmann::json> unprocessed_objects;
@@ -117,8 +124,9 @@ void TimeBasedCache::CacheNestedObjects(
       RedfishTransport::Result new_result = {
           .code = result.code, .body = current_obj, .headers = result.headers};
       get_cache_.insert(std::make_pair(
-          id, std::make_unique<CacheNode>(id, std::move(new_result), transport_,
-                                          *clock_, get_max_age_)));
+          id,
+          std::make_unique<CacheNode>(id, std::move(new_result), transport_,
+                                      *clock_, get_max_age_, code_policy_)));
     }
   }
 }
@@ -139,10 +147,10 @@ TimeBasedCache::CacheNode& TimeBasedCache::RetrieveCacheNode(
   if (val != get_cache_.end()) {
     return *val->second;
   }
-  auto map_return = get_cache_.insert(
-      std::make_pair(std::string(path),
-                     std::make_unique<CacheNode>(std::string(path), transport_,
-                                                 *clock_, get_max_age_)));
+  auto map_return = get_cache_.insert(std::make_pair(
+      std::string(path),
+      std::make_unique<CacheNode>(std::string(path), transport_, *clock_,
+                                  get_max_age_, code_policy_)));
   return *map_return.first->second;
 }
 
@@ -156,9 +164,9 @@ TimeBasedCache::CacheNode& TimeBasedCache::RetrieveCacheNode(
     return *val->second;
   }
   auto map_return = post_cache_.insert(std::make_pair(
-      std::move(key),
-      std::make_unique<CacheNode>(std::string(path), std::string(post_payload),
-                                  transport_, *clock_, duration)));
+      std::move(key), std::make_unique<CacheNode>(
+                          std::string(path), std::string(post_payload),
+                          transport_, *clock_, duration, code_policy_)));
   return *map_return.first->second;
 }
 
@@ -172,7 +180,8 @@ RedfishCachedGetterInterface::OperationResult TimeBasedCache::CachedGetInternal(
   }
   TimeBasedCache::CacheNode& store = RetrieveCacheNode(path);
   auto result = store.CachedRead(timeout_mgr);
-  if (deep_cache_ && result.is_fresh && result.result.ok()) {
+  if (deep_cache_ && result.is_fresh && result.result.ok() &&
+      IsCacheableHttpCode(code_policy_, result.result->code)) {
     CacheNestedObjects(result.result.value());
   }
   return {.result = std::move(result.result), .is_fresh = result.is_fresh};

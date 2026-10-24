@@ -54,6 +54,7 @@
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
 #include "single_include/nlohmann/json.hpp"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -64,11 +65,14 @@ using ::testing::Eq;
 using ::testing::Gt;
 using ::testing::UnorderedElementsAre;
 
+using ::tensorflow::serving::net_http::HTTPStatusCode;
 using ::tensorflow::serving::net_http::ServerRequestInterface;
 using ::tensorflow::serving::net_http::SetContentType;
 
 constexpr absl::string_view kSystemUri = "/redfish/v1/Systems/system";
 constexpr char kChassisUri[] = "/redfish/v1/Chassis/chassis";
+constexpr absl::string_view kRedfishErrorBody =
+    R"json({"error": {"code": "Base.1.8.GeneralError"}})json";
 
 TEST(HttpRedfishInterfaceMultithreadedTest, NoMultithreadedIssuesOnGet) {
   // Number of threads to test with.
@@ -158,6 +162,25 @@ class HttpRedfishInterfaceTest : public ::testing::Test {
         transport.get(), &clock_, absl::Minutes(1));
     intf_ = NewHttpInterface(std::move(transport), cache_factory,
                              RedfishInterface::kTrusted);
+  }
+
+  // Creates a RedfishInterface to `server_` whose TimeBasedCache stores
+  // responses according to `code_policy`.
+  std::unique_ptr<RedfishInterface> CreateInterfaceWithCodePolicy(
+      HttpCodeCachePolicy code_policy) {
+    auto config = server_->GetConfig();
+    auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
+        ecclesia::LibCurlProxy::CreateInstance(), ecclesia::HttpCredential());
+    auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
+        std::move(curl_http_client),
+        absl::StrFormat("%s:%d", config.hostname, config.port));
+    auto cache_factory = [this, code_policy](RedfishTransport* transport) {
+      return std::make_unique<ecclesia::TimeBasedCache>(
+          transport, &clock_, absl::Minutes(1), std::nullopt,
+          /*deep_cache=*/false, /*enable_blocklist=*/true, code_policy);
+    };
+    return NewHttpInterface(std::move(transport), cache_factory,
+                            RedfishInterface::kTrusted);
   }
 
   ecclesia::FakeClock clock_;
@@ -1249,6 +1272,222 @@ TEST_F(HttpRedfishInterfaceTest, CachedGetNotWorkWithBytes) {
     EXPECT_THAT(called_count, Eq(2));
     EXPECT_THAT(result.DebugString(), Eq(test_bytes_str));
   }
+}
+
+TEST_F(HttpRedfishInterfaceTest, CachedGetWithCodePolicyRefetchesServerError) {
+  std::unique_ptr<RedfishInterface> intf = CreateInterfaceWithCodePolicy(
+      HttpCodeCachePolicy::kCacheSuccessAndNotFound);
+  int called_count = 0;
+  auto result_json = nlohmann::json::parse(R"json({
+    "Id": "1",
+    "Name": "MyResource"
+  })json");
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface* req) {
+    called_count++;
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    if (called_count == 1) {
+      req->WriteResponseString(kRedfishErrorBody);
+      req->ReplyWithStatus(HTTPStatusCode::ERROR);
+      return;
+    }
+    req->WriteResponseString(result_json.dump());
+    req->Reply();
+  });
+
+  RedfishVariant first = intf->CachedGetUri("/my/uri", GetParams{});
+  EXPECT_THAT(called_count, Eq(1));
+  EXPECT_THAT(first.httpcode(), Eq(500));
+
+  // The 500 response is not cached, so the next GET hits the server.
+  clock_.AdvanceTime(absl::Seconds(1));
+  RedfishVariant second = intf->CachedGetUri("/my/uri", GetParams{});
+  EXPECT_THAT(called_count, Eq(2));
+  EXPECT_THAT(second.httpcode(), Eq(200));
+  EXPECT_THAT(nlohmann::json::parse(second.DebugString(), nullptr, false),
+              Eq(result_json));
+
+  // The 200 response is cached.
+  clock_.AdvanceTime(absl::Seconds(1));
+  intf->CachedGetUri("/my/uri", GetParams{});
+  EXPECT_THAT(called_count, Eq(2));
+}
+
+TEST_F(HttpRedfishInterfaceTest, CachedGetWithCodePolicyRefetchesBadRequest) {
+  std::unique_ptr<RedfishInterface> intf = CreateInterfaceWithCodePolicy(
+      HttpCodeCachePolicy::kCacheSuccessAndNotFound);
+  int called_count = 0;
+  auto result_json = nlohmann::json::parse(R"json({
+    "Id": "1",
+    "Name": "MyResource"
+  })json");
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface* req) {
+    called_count++;
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    if (called_count == 1) {
+      req->WriteResponseString(kRedfishErrorBody);
+      req->ReplyWithStatus(HTTPStatusCode::BAD_REQUEST);
+      return;
+    }
+    req->WriteResponseString(result_json.dump());
+    req->Reply();
+  });
+
+  RedfishVariant first = intf->CachedGetUri("/my/uri", GetParams{});
+  EXPECT_THAT(called_count, Eq(1));
+  EXPECT_THAT(first.httpcode(), Eq(400));
+
+  // The 400 response is not cached, so the next GET hits the server.
+  clock_.AdvanceTime(absl::Seconds(1));
+  RedfishVariant second = intf->CachedGetUri("/my/uri", GetParams{});
+  EXPECT_THAT(called_count, Eq(2));
+  EXPECT_THAT(second.httpcode(), Eq(200));
+  EXPECT_THAT(nlohmann::json::parse(second.DebugString(), nullptr, false),
+              Eq(result_json));
+}
+
+TEST_F(HttpRedfishInterfaceTest, CachedPostWithCodePolicyRefetchesServerError) {
+  std::unique_ptr<RedfishInterface> intf = CreateInterfaceWithCodePolicy(
+      HttpCodeCachePolicy::kCacheSuccessAndNotFound);
+  int called_count = 0;
+  auto result_json = nlohmann::json::parse(R"json({
+    "Id": "1",
+    "Name": "MyResource"
+  })json");
+  server_->AddHttpPostHandler("/my/uri", [&](ServerRequestInterface* req) {
+    called_count++;
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    if (called_count == 1) {
+      req->WriteResponseString(kRedfishErrorBody);
+      req->ReplyWithStatus(HTTPStatusCode::ERROR);
+      return;
+    }
+    req->WriteResponseString(result_json.dump());
+    req->Reply();
+  });
+
+  RedfishVariant first =
+      intf->CachedPostUri("/my/uri", {{"key", 1}}, absl::Minutes(1));
+  EXPECT_THAT(called_count, Eq(1));
+  EXPECT_THAT(first.httpcode(), Eq(500));
+
+  // The 500 response is not cached, so the next POST hits the server.
+  clock_.AdvanceTime(absl::Seconds(1));
+  RedfishVariant second =
+      intf->CachedPostUri("/my/uri", {{"key", 1}}, absl::Minutes(1));
+  EXPECT_THAT(called_count, Eq(2));
+  EXPECT_THAT(second.httpcode(), Eq(200));
+
+  // The 200 response is cached.
+  clock_.AdvanceTime(absl::Seconds(1));
+  intf->CachedPostUri("/my/uri", {{"key", 1}}, absl::Minutes(1));
+  EXPECT_THAT(called_count, Eq(2));
+}
+
+TEST_F(HttpRedfishInterfaceTest, CachedGetWithCodePolicyCachesNotFound) {
+  std::unique_ptr<RedfishInterface> intf = CreateInterfaceWithCodePolicy(
+      HttpCodeCachePolicy::kCacheSuccessAndNotFound);
+  int called_count = 0;
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface* req) {
+    called_count++;
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    req->WriteResponseString(kRedfishErrorBody);
+    req->ReplyWithStatus(HTTPStatusCode::NOT_FOUND);
+  });
+
+  RedfishVariant first = intf->CachedGetUri("/my/uri", GetParams{});
+  EXPECT_THAT(called_count, Eq(1));
+  EXPECT_THAT(first.httpcode(), Eq(404));
+
+  // The 404 response is cached.
+  clock_.AdvanceTime(absl::Seconds(1));
+  RedfishVariant second = intf->CachedGetUri("/my/uri", GetParams{});
+  EXPECT_THAT(called_count, Eq(1));
+  EXPECT_THAT(second.httpcode(), Eq(404));
+}
+
+TEST_F(HttpRedfishInterfaceTest,
+       DeepCacheWithCodePolicySkipsNestedObjectsOfServerError) {
+  constexpr absl::string_view kParentUri = "/redfish/v1/Chassis";
+  constexpr absl::string_view kChildUri = "/redfish/v1/Chassis/child";
+  auto config = server_->GetConfig();
+  auto curl_http_client = std::make_unique<ecclesia::CurlHttpClient>(
+      ecclesia::LibCurlProxy::CreateInstance(), ecclesia::HttpCredential());
+  auto transport = ecclesia::HttpRedfishTransport::MakeNetwork(
+      std::move(curl_http_client),
+      absl::StrFormat("%s:%d", config.hostname, config.port));
+  auto cache_factory = [this](RedfishTransport* transport) {
+    return std::make_unique<ecclesia::TimeBasedCache>(
+        transport, &clock_, absl::Minutes(1), std::nullopt,
+        /*deep_cache=*/true, /*enable_blocklist=*/true,
+        HttpCodeCachePolicy::kCacheSuccessAndNotFound);
+  };
+  std::unique_ptr<RedfishInterface> intf = NewHttpInterface(
+      std::move(transport), cache_factory, RedfishInterface::kTrusted);
+
+  server_->AddHttpGetHandler(
+      std::string(kParentUri), [&](ServerRequestInterface* req) {
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        nlohmann::json child;
+        child["@odata.id"] = kChildUri;
+        child["Id"] = "child";
+        nlohmann::json parent;
+        parent["Members"] = nlohmann::json::array({child});
+        req->WriteResponseString(parent.dump());
+        req->ReplyWithStatus(HTTPStatusCode::ERROR);
+      });
+  int child_called_count = 0;
+  server_->AddHttpGetHandler(
+      std::string(kChildUri), [&](ServerRequestInterface* req) {
+        child_called_count++;
+        SetContentType(req, "application/json");
+        req->OverwriteResponseHeader("OData-Version", "4.0");
+        nlohmann::json child;
+        child["@odata.id"] = kChildUri;
+        child["Id"] = "child";
+        req->WriteResponseString(child.dump());
+        req->Reply();
+      });
+
+  RedfishVariant parent = intf->CachedGetUri(kParentUri, GetParams{});
+  EXPECT_THAT(parent.httpcode(), Eq(500));
+
+  // Nested objects of the 500 response are not deep cached, so the child GET
+  // hits the server.
+  RedfishVariant child = intf->CachedGetUri(kChildUri, GetParams{});
+  EXPECT_THAT(child_called_count, Eq(1));
+  EXPECT_THAT(child.httpcode(), Eq(200));
+}
+
+TEST_F(HttpRedfishInterfaceTest, CachedGetCachesServerErrorByDefault) {
+  int called_count = 0;
+  server_->AddHttpGetHandler("/my/uri", [&](ServerRequestInterface* req) {
+    called_count++;
+    SetContentType(req, "application/json");
+    req->OverwriteResponseHeader("OData-Version", "4.0");
+    if (called_count == 1) {
+      req->WriteResponseString(kRedfishErrorBody);
+      req->ReplyWithStatus(HTTPStatusCode::ERROR);
+      return;
+    }
+    req->WriteResponseString(R"json({"Id": "1"})json");
+    req->Reply();
+  });
+
+  RedfishVariant first = intf_->CachedGetUri("/my/uri", GetParams{});
+  EXPECT_THAT(called_count, Eq(1));
+  EXPECT_THAT(first.httpcode(), Eq(500));
+
+  // With the default HttpCodeCachePolicy::kCacheAll, the 500 response is
+  // served from the cache.
+  clock_.AdvanceTime(absl::Seconds(1));
+  RedfishVariant second = intf_->CachedGetUri("/my/uri", GetParams{});
+  EXPECT_THAT(called_count, Eq(1));
+  EXPECT_THAT(second.httpcode(), Eq(500));
 }
 
 TEST_F(HttpRedfishInterfaceTest, CachedPostOnlyFirstCallDurationIsValid) {
