@@ -339,9 +339,14 @@ absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
   std::unique_ptr<Normalizer> legacy_normalizer;
   std::unique_ptr<RedpathNormalizer> redpath_normalizer;
 
+  auto interface_provider = [raw_interface = redfish_interface.get()]() {
+    return std::shared_ptr<RedfishInterface>(raw_interface,
+                                             [](RedfishInterface*) {});
+  };
+
   if (id_assigner == nullptr) {
     redpath_normalizer = BuildLocalDevpathRedpathNormalizer(
-        redfish_interface.get(),
+        interface_provider,
         QueryEngineParams::GetRedpathNormalizerStableIdType(
             engine_params.stable_id_type),
         engine_params.redfish_topology_config_name,
@@ -351,7 +356,7 @@ absl::StatusOr<std::unique_ptr<QueryEngineIntf>> QueryEngine::Create(
         QueryEngineParams::GetRedpathNormalizerStableIdType(
             engine_params.stable_id_type),
         engine_params.redfish_topology_config_name, std::move(id_assigner),
-        redfish_interface.get(), engine_params.features.lazy_build_topology());
+        interface_provider, engine_params.features.lazy_build_topology());
   }
 
   // Build RedPath trie based query planner.
