@@ -707,6 +707,10 @@ absl::StatusOr<std::string> GetChildUriFromIterable(
         absl::StrCat("(RedfishObject is not an iterable: ", parent_uri,
                      " does not have Members[])"));
   }
+  if (rf_iterable == nullptr) {
+    return absl::InternalError(
+        absl::StrCat("(RedfishIterable is null for URI: ", parent_uri, ")"));
+  }
   if (index >= rf_iterable->Size() || index < 0) {
     return absl::InternalError(
         absl::StrCat("(Index ", index, " out of bounds ",
@@ -1140,12 +1144,14 @@ QueryPlanner::ExecuteQueryExpression(
     } else if (expression.type == RedPathExpression::Type::kPredicate) {
       // We allow executing predicate on single redfish object.
       ECCLESIA_ASSIGN_OR_RETURN(
+          std::string new_predicate,
+          SubstituteVariables(expression.expression,
+                              current_execution_context.query_variables));
+      ECCLESIA_ASSIGN_OR_RETURN(
           bool predicate_rule_result,
-          ExecutePredicateExpression({.predicate = expression.expression,
-                                      .node_index = 0,
-                                      .node_set_size = 1},
-                                     current_execution_context,
-                                     current_redfish_obj));
+          ExecutePredicateExpression(
+              {.predicate = new_predicate, .node_index = 0, .node_set_size = 1},
+              current_execution_context, current_redfish_obj));
       ECCLESIA_ASSIGN_OR_RETURN(
           std::unique_ptr<RedfishObject> redfish_object,
           current_redfish_obj->EnsureFreshPayload(get_params_for_redpath));
