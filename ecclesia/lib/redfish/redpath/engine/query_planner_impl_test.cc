@@ -4800,6 +4800,31 @@ TEST(UriTestErrorMessages, ComplexTypeResource) {
               "(Queried resource is a ComplexType; no URI)");
 }
 
+TEST(UriTestErrorMessages, NullRedfishIterable) {
+  auto mock_redfish_object = std::make_unique<MockRedfishObject>();
+  EXPECT_CALL(*mock_redfish_object, GetContentAsJson())
+      .WillOnce(Return(nlohmann::json::parse(R"json({
+        "@odata.id": "/redfish/v1/Systems",
+        "Members": []
+      })json")));
+
+  RedfishResponse redfish_response;
+  redfish_response.redfish_object = std::move(mock_redfish_object);
+  redfish_response.redfish_iterable = nullptr;
+  QueryResult result;
+  QueryVariables query_variables;
+
+  QueryExecutionContext execution_context(&result, {}, &query_variables,
+                                          RedPathPrefixTracker(), nullptr,
+                                          std::move(redfish_response));
+  absl::StatusOr<std::string> iterable_uri =
+      GetChildUriFromIterable(execution_context, 0);
+
+  ASSERT_THAT(iterable_uri, IsStatusInternal());
+  EXPECT_THAT(iterable_uri.status().message(),
+              "(RedfishIterable is null for URI: /redfish/v1/Systems)");
+}
+
 struct GetChildUriFromNodeTestCase {
   std::string test_name;
   nlohmann::json json_response;
@@ -5813,6 +5838,98 @@ TEST_F(QueryPlannerTestRunner,
   EXPECT_THAT(expected_query_result,
               ecclesia::IgnoringRepeatedFieldOrdering(
                   ecclesia::EqualsProto(result.query_result)));
+}
+
+TEST_F(QueryPlannerTestRunner,
+       QueryPlannerExecutesPredicatesWithVariablesOnSingleRedfishObject) {
+  DelliciusQuery query = ParseTextProtoOrDie(
+      R"pb(
+        query_id: "PredicateOnRedfishObjectWithVariables"
+        subquery {
+          subquery_id: "EnvironmentMetrics"
+          redpath: "/Systems[*]/Processors[*]/EnvironmentMetrics[Id=$EnvMetricsId]"
+          properties { property: "PowerWatts.DataSourceUri" type: STRING }
+          properties { property: "PowerWatts.Reading" type: DOUBLE }
+        }
+      )pb");
+
+  QueryResult expected_query_result = ParseTextProtoOrDie(R"pb(
+    query_id: "PredicateOnRedfishObjectWithVariables"
+    stats { payload_size: 315 num_cache_misses: 8 }
+    data {
+      fields {
+        key: "EnvironmentMetrics"
+        value {
+          list_value {
+            values {
+              subquery_value {
+                fields {
+                  key: "PowerWatts.DataSourceUri"
+                  value {
+                    string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu0_pwmon"
+                  }
+                }
+                fields {
+                  key: "PowerWatts.Reading"
+                  value { double_value: 30 }
+                }
+              }
+            }
+            values {
+              subquery_value {
+                fields {
+                  key: "PowerWatts.DataSourceUri"
+                  value {
+                    string_value: "/redfish/v1/Chassis/chassis/Sensors/indus_cpu1_pwmon"
+                  }
+                }
+                fields {
+                  key: "PowerWatts.Reading"
+                  value { double_value: 30 }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  )pb");
+
+  SetTestParams("indus_hmb_shim/mockup.shar");
+  std::unique_ptr<RedpathNormalizer> normalizer =
+      BuildDefaultRedpathNormalizer();
+
+  std::unique_ptr<QueryPlannerIntf> qp;
+  ECCLESIA_ASSIGN_OR_FAIL(qp,
+                          BuildQueryPlanner({.query = &query,
+                                             .normalizer = normalizer.get(),
+                                             .redfish_interface = intf_.get(),
+                                             .redpath_rules = {}}));
+
+  ASSERT_THAT(qp, NotNull());
+  ecclesia::QueryVariables matching_args;
+  ecclesia::QueryVariables::VariableValue val1;
+  val1.set_name("EnvMetricsId");
+  *val1.add_values() = "EnvironmentMetrics";
+  *matching_args.add_variable_values() = val1;
+
+  QueryExecutionResult result = qp->Run({.variables = matching_args});
+  ASSERT_FALSE(result.query_result.has_status());
+  EXPECT_THAT(expected_query_result,
+              ecclesia::IgnoringRepeatedFieldOrdering(
+                  ecclesia::EqualsProto(result.query_result)));
+
+  // Test with non-matching variable value
+  ecclesia::QueryVariables non_matching_args;
+  ecclesia::QueryVariables::VariableValue val2;
+  val2.set_name("EnvMetricsId");
+  *val2.add_values() = "NonExistent";
+  *non_matching_args.add_variable_values() = val2;
+
+  QueryExecutionResult non_matching_result =
+      qp->Run({.variables = non_matching_args});
+  ASSERT_FALSE(non_matching_result.query_result.has_status());
+  EXPECT_TRUE(non_matching_result.query_result.data().fields().empty());
 }
 
 TEST_F(QueryPlannerTestRunner, QueryPlannerQueriesRawDataStringSuccessfully) {
