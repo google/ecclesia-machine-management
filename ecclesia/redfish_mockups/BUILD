@@ -20,8 +20,5 @@ filegroup(
 # Package group for all redfish_mockups build rules that require common libs.
 package_group(
     name = "redfish_mockup_rules",
-    packages = [
-        "//ecclesia/redfish_mockups/...",
-        "//platforms/bloom/testing/redfish_mockups/...",
-    ],
+    packages = ["//ecclesia/redfish_mockups/..."],
 )

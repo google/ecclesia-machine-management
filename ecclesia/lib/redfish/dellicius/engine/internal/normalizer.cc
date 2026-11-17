@@ -189,7 +189,6 @@ absl::StatusOr<SubqueryDataSet::Property> GetPropertyFromRedfishObject(
     LOG_FIRST_N(INFO, 50)
         << "Encountered null property value during normalization";
   } else {
-    // clients to use new property value fields.
     switch (property.type()) {
       case RedfishProperty::STRING: {
         if (!json_obj.is_string()) {

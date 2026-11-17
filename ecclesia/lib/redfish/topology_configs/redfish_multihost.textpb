@@ -1,4 +1,4 @@
-# proto-file: third_party/ecclesia/lib/redfish/topology_config.proto
+# proto-file: ecclesia/lib/redfish/topology_config.proto
 # proto-message: TopologyConfig
 
 # This text proto represents the valid linkages for DMTF Redfish version 2022.3

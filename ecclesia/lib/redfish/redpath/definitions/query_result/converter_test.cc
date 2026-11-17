@@ -78,9 +78,9 @@ TEST(QueryResultDataConverterTest, ConvertLegacyToQueryResult) {
               data_sets {
                 properties {
                   name: "serial_number"
-                  string_value: "MBBQTW194106556"
+                  string_value: "000000000000000"
                 }
-                properties { name: "part_number" string_value: "1043652-02" }
+                properties { name: "part_number" string_value: "0000000-00" }
               }
             }
           }
@@ -91,8 +91,8 @@ TEST(QueryResultDataConverterTest, ConvertLegacyToQueryResult) {
       key: "ChassisNotLinked"
       value {
         data_sets {
-          properties { name: "serial_number" string_value: "MBBQTW194106556" }
-          properties { name: "part_number" string_value: "1043652-02" }
+          properties { name: "serial_number" string_value: "000000000000000" }
+          properties { name: "part_number" string_value: "0000000-00" }
         }
       }
     }
@@ -118,11 +118,11 @@ TEST(QueryResultDataConverterTest, ConvertLegacyToQueryResult) {
                          subquery_value {
                            fields {
                              key: "part_number"
-                             value { string_value: "1043652-02" }
+                             value { string_value: "0000000-00" }
                            }
                            fields {
                              key: "serial_number"
-                             value { string_value: "MBBQTW194106556" }
+                             value { string_value: "000000000000000" }
                            }
                          }
                        }
@@ -143,11 +143,11 @@ TEST(QueryResultDataConverterTest, ConvertLegacyToQueryResult) {
                                    subquery_value {
                                      fields {
                                        key: "part_number"
-                                       value { string_value: "1043652-02" }
+                                       value { string_value: "0000000-00" }
                                      }
                                      fields {
                                        key: "serial_number"
-                                       value { string_value: "MBBQTW194106556" }
+                                       value { string_value: "000000000000000" }
                                      }
                                    }
                                  }
@@ -174,16 +174,16 @@ TEST(QueryResultDataConverterTest, ConvertLegacyToQueryResult) {
   {
     "ChassisNotLinked": [
       {
-        "part_number": "1043652-02",
-        "serial_number": "MBBQTW194106556"
+        "part_number": "0000000-00",
+        "serial_number": "000000000000000"
       }
     ],
     "RedfishVersion": [
       {
         "ChassisLinked": [
           {
-            "part_number": "1043652-02",
-            "serial_number": "MBBQTW194106556"
+            "part_number": "0000000-00",
+            "serial_number": "000000000000000"
           }
         ],
         "RedfishSoftwareVersion": "1.6.1",
@@ -559,9 +559,9 @@ TEST(QueryResultDataConverterTest, DataVerificationWithMetrics) {
               devpath: "/phys"
               properties {
                 name: "serial_number"
-                string_value: "MBBQTW194106556"
+                string_value: "000000000000000"
               }
-              properties { name: "part_number" string_value: "1043652-02" }
+              properties { name: "part_number" string_value: "0000000-00" }
             }
           }
         }

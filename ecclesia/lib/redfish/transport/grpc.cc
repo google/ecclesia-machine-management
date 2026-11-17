@@ -108,7 +108,6 @@ absl::StatusOr<RedfishTransport::Result> DoRpc(absl::string_view path,
       *request.mutable_octet_stream() = *body.json_str;
     } else {
       *request.mutable_json_str() = *body.json_str;
-      // to JSON str.
       ::google::protobuf::Struct request_body;
       if (auto status = google::protobuf::util::JsonStringToMessage(
               std::string(*body.json_str), &request_body,
@@ -262,8 +261,6 @@ class GrpcRedfishEventStream : public RedfishEventStream {
     reactor_->StartCall();
   }
   void CancelStreaming() override {
-    // that a subscription is cancelled. A possible implementation is DELETE on
-    // corresponding EventDestination.
     context_.TryCancel();
   }
 
@@ -548,10 +545,6 @@ absl::StatusOr<std::unique_ptr<RedfishTransport>> CreateGrpcRedfishTransport(
   // Set keepalive parameters according to default values of the OSS version.
   // Reference:
   // 1. OSS https://grpc.github.io/grpc/core/md_doc_keepalive.html
-  // copybara:strip_begin(g3 only comments)
-  // 2. /net/grpc
-  // http://google3/net/grpc/public/src/core/surface/init.cc;l=121;rcl=625188626
-  // copybara:strip_end
   grpc::ChannelArguments args;
   args.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS, INT_MAX);
   args.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS, 20 * 1000 /*20 sec*/);

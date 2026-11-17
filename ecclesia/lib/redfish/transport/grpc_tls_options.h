@@ -50,7 +50,6 @@ class StaticBufferBasedTlsOptions {
   // Uses gRPC InsecureCredentials, via static credentials buffer.
   void SetToInsecure();
 
-  // clients have been updated to set the `crl_directory`.
 
   // Uses gRPC TlsCredentials, via static credentials buffer.
   virtual void SetToTls(absl::string_view root_certs_buffer,

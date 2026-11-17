@@ -160,7 +160,7 @@ class RedfishQueryParamExpand : public GetParamQueryInterface {
 
 // Defines Top parameter
 // Spec does not currently support $top in ProtocolSupportedFeatures,
-// but gbmcweb will (b/324127258).
+// but some Redfish servers do.
 class RedfishQueryParamTop : public GetParamQueryInterface {
  public:
   explicit RedfishQueryParamTop(size_t numMembers);
@@ -738,8 +738,8 @@ class RedfishInterface {
 
   // An endpoint is trusted if all of the information coming from the endpoint
   // can be reliably assumed to be from a Google-controlled source.
-  // Examples of trusted endpoints are attested BMCs and prodimage running in
-  // caretaker mode.
+  // Examples of trusted endpoints are attested BMCs and recovery images running
+  // in caretaker mode.
   enum TrustedEndpoint : uint8_t { kTrusted, kUntrusted };
 
   // Updates the transport for sending Redfish requests.

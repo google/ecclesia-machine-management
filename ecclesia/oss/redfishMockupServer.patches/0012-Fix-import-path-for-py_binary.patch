@@ -1,9 +1,9 @@
 From 2465ba458b0ebb665dd6b25757e975b69a9e7ea1 Mon Sep 17 00:00:00 2001
-From: Rony Weng <ronyweng@google.com>
+From: Ecclesia Team <no-reply@google.com>
 Date: Tue, 14 Mar 2023 23:20:53 +0800
 Subject: [PATCH] Fix import path for py_binary
 
-Signed-off-by: Rony Weng <ronyweng@google.com>
+Signed-off-by: Ecclesia Team <no-reply@google.com>
 ---
  redfishMockupServer.py | 3 +--
  1 file changed, 1 insertion(+), 2 deletions(-)

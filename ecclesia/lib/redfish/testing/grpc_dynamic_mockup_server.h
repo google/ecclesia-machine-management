@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef THIRD_PARTY_MILOTIC_CC_REDFISH_GRPC_DYNAMIC_MOCKUP_SERVER_H_
-#define THIRD_PARTY_MILOTIC_CC_REDFISH_GRPC_DYNAMIC_MOCKUP_SERVER_H_
+#ifndef ECCLESIA_LIB_REDFISH_TESTING_GRPC_DYNAMIC_MOCKUP_SERVER_H_
+#define ECCLESIA_LIB_REDFISH_TESTING_GRPC_DYNAMIC_MOCKUP_SERVER_H_
 
 #include <functional>
 #include <memory>
@@ -183,4 +183,4 @@ class GrpcDynamicMockupServer {
   std::unique_ptr<RedfishV1Impl> redfish_v1_impl_;
 };
 }  // namespace ecclesia
-#endif  // THIRD_PARTY_MILOTIC_CC_REDFISH_GRPC_DYNAMIC_MOCKUP_SERVER_H_
+#endif  // ECCLESIA_LIB_REDFISH_TESTING_GRPC_DYNAMIC_MOCKUP_SERVER_H_

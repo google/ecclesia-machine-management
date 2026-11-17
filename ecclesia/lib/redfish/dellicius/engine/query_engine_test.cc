@@ -1444,8 +1444,6 @@ TEST(QueryEngineTest, QueryEngineFilterConfiguration) {
   // Fake Redfish Server currently supports the $filter parameter, but does not
   // actually perform the filtering. Query Planner is still responsible for
   // filtering. At this point we just need to verify the query succeeded.
-  // used.
-  // based on $filter parameter.
   auto results =
       response_entries.results().at("FilteredSensorCollector").data();
   auto sensors_templated = results.fields().at("SensorsTemplated");
@@ -1574,11 +1572,11 @@ TEST(QueryEngineTest, CanExecuteSubscriptionQuerySuccessfully) {
                   }
                   fields {
                     key: "part_number"
-                    value { string_value: "1043652-02" }
+                    value { string_value: "0000000-00" }
                   }
                   fields {
                     key: "serial_number"
-                    value { string_value: "MBBQTW194106556" }
+                    value { string_value: "000000000000000" }
                   }
                 }
               }

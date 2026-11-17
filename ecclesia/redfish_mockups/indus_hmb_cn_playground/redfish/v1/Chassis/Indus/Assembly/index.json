@@ -685,7 +685,7 @@
        {
          "@odata.id": "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/16",
          "MemberId": "16",
-         "Name": "koolaid",
+         "Name": "addon_board",
          "Oem": {
            "Google": {
              "AttachedTo": [
@@ -695,7 +695,7 @@
                {
                  "@odata.id": "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/16/Oem/Google/Components/0",
                  "MemberId": "0",
-                 "Name": "koolaid"
+                 "Name": "addon_board"
                }
              ]
            }
@@ -704,7 +704,7 @@
        {
          "@odata.id": "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/17",
          "MemberId": "17",
-         "Name": "koolaid",
+         "Name": "addon_board",
          "Oem": {
            "Google": {
              "AttachedTo": [
@@ -714,7 +714,7 @@
                {
                  "@odata.id": "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/17/Oem/Google/Components/0",
                  "MemberId": "0",
-                 "Name": "koolaid"
+                 "Name": "addon_board"
                }
              ]
            }
@@ -726,7 +726,7 @@
         {
            "@odata.id" : "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/18",
            "MemberId" : "18",
-           "Name" : "spicy16_intp",
+           "Name" : "interposer_board",
            "Oem" : {
               "Google" : {
                  "AttachedTo" : [
@@ -738,7 +738,7 @@
                     {
                        "@odata.id" : "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/18/Oem/Google/Components/0",
                        "MemberId" : "0",
-                       "Name" : "spicy16_intp",
+                       "Name" : "interposer_board",
                        "AssociatedWith" : [
                           {
                              "@odata.id" : "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/18"
@@ -761,7 +761,7 @@
         {
            "@odata.id" : "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/19",
            "MemberId" : "19",
-           "Name" : "spicy16_intp",
+           "Name" : "interposer_board",
            "Oem" : {
               "Google" : {
                  "AttachedTo" : [
@@ -773,7 +773,7 @@
                     {
                        "@odata.id" : "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/19/Oem/Google/Components/0",
                        "MemberId" : "0",
-                       "Name" : "spicy16_intp",
+                       "Name" : "interposer_board",
                        "AssociatedWith" : [
                           {
                              "@odata.id" : "/redfish/v1/Chassis/Indus/Assembly#/Assemblies/19"

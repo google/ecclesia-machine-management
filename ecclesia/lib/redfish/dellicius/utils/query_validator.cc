@@ -331,7 +331,6 @@ absl::StatusOr<DelliciusQuery> RedPathQueryValidator::GetRedPathQuery(
 absl::Status RedPathQueryValidator::ValidateQueryFile(absl::string_view path) {
   ECCLESIA_ASSIGN_OR_RETURN(DelliciusQuery redpath_query,
                             get_redpath_query_(path));
-  // schemas b/279640460).
   TestForErrorLevelIssues(redpath_query, path, errors_);
   TestForWarningLevelIssues(redpath_query, path, warnings_);
   return absl::OkStatus();
@@ -340,7 +339,6 @@ absl::Status RedPathQueryValidator::ValidateQueryFile(absl::string_view path) {
 // Validates a DelliciusQuery object directly.
 absl::Status RedPathQueryValidator::ValidateQuery(
     const DelliciusQuery& redpath_query, absl::string_view path) {
-  // schemas b/279640460).
   TestForErrorLevelIssues(redpath_query, path, errors_);
   TestForWarningLevelIssues(redpath_query, path, warnings_);
   return absl::OkStatus();

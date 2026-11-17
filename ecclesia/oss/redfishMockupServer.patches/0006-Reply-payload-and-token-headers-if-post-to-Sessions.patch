@@ -1,9 +1,9 @@
 From d668a8aa4867bce840f2c3a0dc0a38f486741210 Mon Sep 17 00:00:00 2001
-From: nanzhou <nanzhou@google.com>
+From: Ecclesia Team <no-reply@google.com>
 Date: Fri, 25 Sep 2020 13:08:24 -0700
 Subject: [PATCH] Reply payload and token headers if post to Sessions
 
-Signed-off-by: nanzhou <nanzhou@google.com>
+Signed-off-by: Ecclesia Team <no-reply@google.com>
 ---
  redfishMockupServer.py | 25 +++++++++++++++++++++----
  1 file changed, 21 insertions(+), 4 deletions(-)

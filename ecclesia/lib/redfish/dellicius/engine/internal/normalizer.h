@@ -42,7 +42,6 @@ class NormalizerImplDefault final : public Normalizer::ImplInterface {
   NormalizerImplDefault();
 
  protected:
-  // with fallback to default CSDL bundle.
   absl::Status Normalize(const RedfishObject& redfish_object,
                          const DelliciusQuery::Subquery& subquery,
                          SubqueryDataSet& data_set,
@@ -112,7 +111,7 @@ class NormalizerImplAddMachineBarepath final
     }
 
     // Try to find and set a machine devpath, prioritizing local devpath to
-    // machine devpath mappings from UHMM when desired.
+    // machine devpath mappings when desired.
     absl::StatusOr<std::string> machine_devpath;
     if (use_local_devpath_for_machine_devpath_) {
       if (!data_set.has_devpath()) return absl::OkStatus();

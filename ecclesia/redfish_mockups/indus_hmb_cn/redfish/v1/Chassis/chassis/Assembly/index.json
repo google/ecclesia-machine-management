@@ -685,7 +685,7 @@
        {
          "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/16",
          "MemberId": "16",
-         "Name": "koolaid",
+         "Name": "addon_board",
          "Oem": {
            "Google": {
              "AttachedTo": [
@@ -695,7 +695,7 @@
                {
                  "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/16/Oem/Google/Components/0",
                  "MemberId": "0",
-                 "Name": "koolaid"
+                 "Name": "addon_board"
                }
              ]
            }
@@ -704,7 +704,7 @@
        {
          "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/17",
          "MemberId": "17",
-         "Name": "koolaid",
+         "Name": "addon_board",
          "Oem": {
            "Google": {
              "AttachedTo": [
@@ -714,7 +714,7 @@
                {
                  "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/17/Oem/Google/Components/0",
                  "MemberId": "0",
-                 "Name": "koolaid"
+                 "Name": "addon_board"
                }
              ]
            }

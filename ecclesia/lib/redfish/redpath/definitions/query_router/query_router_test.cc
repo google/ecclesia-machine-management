@@ -1139,7 +1139,7 @@ TEST_F(QueryRouterTest, ExecuteOnRedfishInterfaceFailure) {
       IsStatusNotFound());
 }
 
-TEST_F(QueryRouterTest, CreateQueryRouterWithBmcnetArbiter) {
+TEST_F(QueryRouterTest, CreateQueryRouterWithFailoverArbiter) {
   QueryRouterSpec router_spec = ParseTextProtoOrDie(absl::Substitute(
       R"pb(
         query_pattern: PATTERN_SERIAL_ALL

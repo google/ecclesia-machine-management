@@ -37,9 +37,6 @@ namespace ecclesia {
 
 absl::StatusOr<std::unique_ptr<RedfishObject>> GetManagerForRoot(
     RedfishVariant root) {
-  // corresponds to this Service Root, we iterate through the Managers to find
-  // a `ServiceEntryPointUUID` property that matches the Service Root `UUID`.
-  //
   // DMTF has proposed a new property to create a simpler link from the
   // Service Root to the servicing Manager resource:
   // https://github.com/DMTF/Redfish/issues/4546. Once DMTF has approved &

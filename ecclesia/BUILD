@@ -96,15 +96,3 @@ package_group(
         "//ecclesia/tools/changelog/...",
     ],
 )
-
-# Machine manager Grpc Authentication Policy Configuration
-#
-# A new configuration setting to allow GRPC connections to use Google internal LOAS2 authentication
-# credentials.
-config_setting(
-    name = "grpc_net_auth",
-    define_values = {
-        "grpc_creds_support": "loas2",
-    },
-    visibility = ["//visibility:private"],
-)

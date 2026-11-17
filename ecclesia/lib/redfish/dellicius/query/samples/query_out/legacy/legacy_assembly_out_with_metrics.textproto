@@ -8,11 +8,11 @@ subquery_output_by_id {
     data_sets {
       properties {
         name: "serial_number"
-        string_value: "MBBQTW194106556"
+        string_value: "000000000000000"
       }
       properties {
         name: "part_number"
-        string_value: "1043652-02"
+        string_value: "0000000-00"
       }
     }
   }

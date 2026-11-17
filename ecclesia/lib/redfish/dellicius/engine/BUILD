@@ -276,10 +276,7 @@ bzl_library(
 cc_library(
     name = "factory",
     hdrs = ["factory.h"],
-    visibility = [
-        "//ecclesia/lib/redfish:__subpackages__",
-        "//platforms/redfish/lib/query_engine:__subpackages__",
-    ],
+    visibility = ["//ecclesia/lib/redfish:__subpackages__"],
     deps = [
         "//ecclesia/lib/redfish:node_topology",
         "//ecclesia/lib/redfish/dellicius/engine/internal:interface",

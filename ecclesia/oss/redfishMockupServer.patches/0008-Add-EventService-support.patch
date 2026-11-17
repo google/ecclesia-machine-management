@@ -1,5 +1,5 @@
 From aeedb26839a80c0e548d92974a0a3f7670444e71 Mon Sep 17 00:00:00 2001
-From: Nan Zhou <nanzhou@google.com>
+From: Ecclesia Team <no-reply@google.com>
 Date: Wed, 28 Apr 2021 11:28:29 -0700
 Subject: [PATCH] Add EventService support
 
@@ -23,7 +23,7 @@ There are some limitations:
 4. Only MessageID based event filtering is supported;
 But these limitations are more regarding the Server. It should be good for client side unit tests purpose.
 
-Signed-off-by: Nan Zhou <nanzhou@google.com>
+Signed-off-by: Ecclesia Team <no-reply@google.com>
 ---
  redfishMockupServer.py | 101 +++++++++++++++++++++++++++++++++++++----
  1 file changed, 91 insertions(+), 10 deletions(-)

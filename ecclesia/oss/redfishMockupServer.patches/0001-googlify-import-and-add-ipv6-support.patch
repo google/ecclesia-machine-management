@@ -9,7 +9,7 @@ index 489dbb6..e670041 100644
 +import socket
 
 -import grequests
-+# GOOGLE: TODO(b/138945392): grequests depends on gevent, which doesn't work
++# NOTE: grequests depends on gevent, which doesn't work
 +# with Python 3. We will remove this dependency for now, meaning
 +# grequest-related features will be broken as intended until grequests is bumped
 +# to python3. The only features we lose are event subscriptions.

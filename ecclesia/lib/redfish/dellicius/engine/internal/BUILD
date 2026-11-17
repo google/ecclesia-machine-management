@@ -9,8 +9,6 @@ cc_library(
     visibility = [
         "//ecclesia/lib/redfish:__subpackages__",
         "//ecclesia/redfish/dellicius:__subpackages__",
-        "//platforms/gbmc/mtest:__subpackages__",
-        "//platforms/redfish/lib/query_engine:__subpackages__",
     ],
     deps = [
         "//ecclesia/lib/redfish:interface",
@@ -33,10 +31,7 @@ cc_library(
     name = "normalizer",
     srcs = ["normalizer.cc"],
     hdrs = ["normalizer.h"],
-    visibility = [
-        "//ecclesia/lib/redfish/dellicius:__subpackages__",
-        "//platforms/gsys/daemon/redfish_server:__subpackages__",
-    ],
+    visibility = ["//ecclesia/lib/redfish/dellicius:__subpackages__"],
     deps = [
         ":interface",
         "//ecclesia/lib/redfish:devpath",
@@ -64,10 +59,7 @@ cc_library(
     name = "query_planner",
     srcs = ["query_planner.cc"],
     hdrs = ["query_planner.h"],
-    visibility = [
-        "//ecclesia/lib/redfish/dellicius:__subpackages__",
-        "//platforms/redfish/lib/query_engine:__subpackages__",
-    ],
+    visibility = ["//ecclesia/lib/redfish/dellicius:__subpackages__"],
     deps = [
         ":interface",
         "//ecclesia/lib/redfish:interface",

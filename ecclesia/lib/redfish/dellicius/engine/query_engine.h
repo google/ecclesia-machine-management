@@ -92,7 +92,6 @@ struct QueryEngineParams {
   // subordinates to build physical topology.
   std::string redfish_topology_config_name;
 
-  // instead of QueryEngineParams::RedfishStableIdType.
   static RedpathNormalizer::RedfishStableIdType
   GetRedpathNormalizerStableIdType(
       QueryEngineParams::RedfishStableIdType stable_id_type) {

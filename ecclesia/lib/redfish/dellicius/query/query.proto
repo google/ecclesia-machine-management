@@ -94,8 +94,6 @@ message DelliciusQuery {
     }
 
     oneof verbs {
-      // TODO (Malini): Make properties mutually exclusive to fetch_raw_data
-      // GET raw data
       RawData fetch_raw_data = 13;
     }
 

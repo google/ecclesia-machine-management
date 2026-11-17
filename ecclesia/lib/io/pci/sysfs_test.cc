@@ -300,7 +300,7 @@ TEST_F(PciTopologyTest, EnumeratePciAcpiPaths) {
 
 TEST(SysfsPciTopologyTest, EnumeratePciPlatformPaths) {
   TestFilesystem fs(GetTestTempdirPath());
-  // This contents reflects the /sys/devices directory on a dioriteimc node.
+  // This contents reflects the /sys/devices directory on a platform node.
   fs.CreateDir("/sys/devices");
   fs.CreateDir("/sys/devices/platform/2041800000.pcie/pci0000:00");
   fs.CreateDir("/sys/devices/platform/204e400000.pcie/pci0001:00");

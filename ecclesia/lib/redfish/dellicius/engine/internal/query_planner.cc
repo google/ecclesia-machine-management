@@ -1086,7 +1086,6 @@ bool ExecuteRedPathStepFromEachSubquery(
         // map (plan scoped). This would require some refactoring, which would
         // be wasted effort due to the existing effort to refactor Query
         // Planner.
-        // Engine.
         absl::flat_hash_set<std::string> predicates;
         for (const auto& redpath_ctx : redpath_ctx_multiple) {
           predicates.insert(redpath_ctx.redpath_steps.GetPredicate());

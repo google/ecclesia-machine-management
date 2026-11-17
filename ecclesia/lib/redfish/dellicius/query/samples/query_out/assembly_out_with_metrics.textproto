@@ -71,13 +71,13 @@ results {
                 fields {
                   key: "part_number"
                   value {
-                    string_value: "1043652-02"
+                    string_value: "0000000-00"
                   }
                 }
                 fields {
                   key: "serial_number"
                   value {
-                    string_value: "MBBQTW194106556"
+                    string_value: "000000000000000"
                   }
                 }
               }

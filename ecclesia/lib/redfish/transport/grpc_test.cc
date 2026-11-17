@@ -441,11 +441,6 @@ TEST(GrpcRedfishTransport, EndpointFqdn) {
   transport = CreateGrpcRedfishTransport("dns:/:80", {},
                                          options.GetChannelCredentials());
   EXPECT_THAT(transport, IsOk());
-
-  transport =
-      CreateGrpcRedfishTransport("google:///test.blade.gslb.googleprod.com", {},
-                                 options.GetChannelCredentials());
-  EXPECT_THAT(transport, IsOk());
 }
 
 TEST(GrpcRedfishTransport, GetCorrectResultBodyAndRequestHeaders) {

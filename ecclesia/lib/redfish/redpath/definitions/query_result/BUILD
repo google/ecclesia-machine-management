@@ -22,10 +22,7 @@ py_proto_library(
 
 cc_proto_library(
     name = "query_result_cc_proto",
-    visibility = [
-        "//platforms/tools/reliability/cell_fault_analyzer:__subpackages__",
-        "//visibility:public",
-    ],
+    visibility = ["//visibility:public"],
     deps = [":query_result_proto"],
 )
 

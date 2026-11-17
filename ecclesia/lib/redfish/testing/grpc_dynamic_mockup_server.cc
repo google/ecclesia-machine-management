@@ -120,7 +120,6 @@ grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Put(
 grpc::Status GrpcDynamicMockupServer::RedfishV1Impl::Delete(
     grpc::ServerContext* context, const Request* request,
     redfish::v1::Response* response) {
-  // DELETE.
   return StatusToGrpcStatus(
       absl::UnimplementedError("Delete RPC is not implemented yet."));
 }

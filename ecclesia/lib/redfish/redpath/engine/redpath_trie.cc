@@ -114,7 +114,6 @@ absl::StatusOr<std::vector<RedPathExpression>> SplitRedPath(
     redpath_expressions.push_back({type, node_name});
 
     if (!predicate.empty()) {
-      // working with templated queries.
       redpath_expressions.push_back(
           {RedPathExpression::Type::kPredicate, predicate});
     }

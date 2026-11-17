@@ -337,8 +337,8 @@ TEST(RawInterfaceTestWithMockup, IndusHmbCnMockupNodesArePopulated) {
       Node{"hdmi_cable", "hdmi_cable", "/phys/NCSI", NodeType::kCable},
       Node{"DOWNLINK", "DOWNLINK", "/phys/NCSI:connector:DOWNLINK",
            NodeType::kConnector},
-      Node{"koolaid", "koolaid", "/phys/KA0", NodeType::kBoard},
-      Node{"koolaid", "koolaid", "/phys/KA2", NodeType::kBoard},
+      Node{"addon_board", "addon_board", "/phys/KA0", NodeType::kBoard},
+      Node{"addon_board", "addon_board", "/phys/KA2", NodeType::kBoard},
       Node{"ddr4", "ddr4", "/phys/DIMM0", NodeType::kBoard},
       Node{"ddr4", "ddr4", "/phys/DIMM1", NodeType::kBoard},
       Node{"ddr4", "ddr4", "/phys/DIMM2", NodeType::kBoard},
@@ -605,13 +605,13 @@ TEST(RawInterfaceTestWithMockup, HandleAssemblyStateCorrectlly) {
   for (const auto& node : topology.nodes) {
     actual_devpaths.push_back(node->local_devpath);
   }
-  // Assembly koolaid doesn't report Status
+  // Assembly addon_board doesn't report Status
   EXPECT_THAT(actual_devpaths, Contains("/phys/KA0"));
-  // Assembly koolaid reports Status.State as Enabled
+  // Assembly addon_board reports Status.State as Enabled
   EXPECT_THAT(actual_devpaths, Contains("/phys/KA2"));
-  // Assembly spicy16_inttp reports Status while there is no State
+  // Assembly interposer_board reports Status while there is no State
   EXPECT_THAT(actual_devpaths, Not(Contains("/phys/PE2")));
-  // Assembly spicy16_inttp reports Status.State as Absent
+  // Assembly interposer_board reports Status.State as Absent
   EXPECT_THAT(actual_devpaths, Not(Contains("/phys/PE3")));
 }
 

@@ -99,7 +99,6 @@ TEST_F(QueryValueBuilderTest, TimestampTest) {
   ASSERT_THAT(value_.timestamp_value(), EqualsProto("seconds: 10 nanos: 1000"));
 }
 
-// To test cl/625768839
 TEST_F(QueryValueBuilderTest, OldDateTimeOffsetTest) {
   std::string time_str("2024-04-16T05:31:39.068778+00:00");
   absl::Time time;
@@ -114,7 +113,6 @@ TEST_F(QueryValueBuilderTest, OldDateTimeOffsetTest) {
               EqualsProto("seconds: 1713245499 nanos: 0"));
 }
 
-// To test cl/625768839
 TEST_F(QueryValueBuilderTest, NewDateTimeOffsetTest) {
   std::string time_str("2024-04-16T05:31:39.068778+00:00");
   absl::Time time;

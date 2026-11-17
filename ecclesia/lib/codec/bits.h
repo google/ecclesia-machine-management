@@ -37,7 +37,7 @@ namespace ecclesia {
 //     Mask(64)  = 0xffffffffffffffff
 // We shift 1 by width/2 twice and do one more shift for odd number.
 // The double shift handles Mask(64), which becomes unsigned(-1)
-// Intel CPU masks the shift bits. Details at shortn/_gJcWwhuy5H
+// Intel CPU masks the shift bits.
 constexpr uint64_t Mask(int width) {
   return (((uint64_t{1} << (width >> 1)) << (width >> 1)) << (width & 0x01)) -
          1;

@@ -1,5 +1,5 @@
 From 8a0c44c5915883b906985a8f0f6d526a1ccd7758 Mon Sep 17 00:00:00 2001
-From: nanzhou <nanzhou@google.com>
+From: Ecclesia Team <no-reply@google.com>
 Date: Tue, 29 Sep 2020 12:11:43 -0700
 Subject: [PATCH] Add mTLS support
 
@@ -12,7 +12,7 @@ In real BmcWeb, Redfish root will be always available even if authentication
 failed; to simplify the patch, we return errors on every Redfish path when
 TlsAuth failed.
 
-Signed-off-by: nanzhou <nanzhou@google.com>
+Signed-off-by: Ecclesia Team <no-reply@google.com>
 ---
  redfishMockupServer.py | 38 +++++++++++++++++++++++++++++++-------
  1 file changed, 31 insertions(+), 7 deletions(-)

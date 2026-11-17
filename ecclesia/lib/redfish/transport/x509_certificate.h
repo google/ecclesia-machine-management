@@ -34,7 +34,7 @@ namespace ecclesia {
 // various values to be associated with a security certificate: Email addresses,
 // IP addresses, URIs, DNS names, etc.
 struct SubjectAltName {
-  // |spiffe_id| is a URI SAN, used in Google internal services.
+  // |spiffe_id| is a URI SAN.
   absl::optional<std::string> spiffe_id = absl::nullopt;
   // |fqdns| is a list of DNS SANs
   std::vector<std::string> fqdns;
@@ -52,7 +52,6 @@ struct SubjectAltName {
 // Parses the Subject Altenative Name (SAN) from the given PEM certificate
 // block. If there are multiple certificates in the block, it only parses the
 // first one.
-// TODO (b/416357292): Return multiple SANs when available.
 absl::StatusOr<SubjectAltName> GetSubjectAltName(absl::string_view pem);
 
 absl::StatusOr<std::string> GetPublicKey(absl::string_view pem);

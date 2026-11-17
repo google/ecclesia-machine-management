@@ -6,7 +6,7 @@ member.
 Also fixed a bug when the 1st member doesn't contain ending digits, it
 fails into a infinite loop.
 
-Signed-off-by: Nan Zhou <nanzhou@google.com>
+Signed-off-by: Ecclesia Team <no-reply@google.com>
 ---
  redfishMockupServer.py | 9 +++++++--
  1 file changed, 7 insertions(+), 2 deletions(-)

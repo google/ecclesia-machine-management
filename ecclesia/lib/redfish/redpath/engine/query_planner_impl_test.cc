@@ -3221,8 +3221,8 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollectionOfPCIeDevices) {
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(R"json({
           "@odata.id": "/redfish/v1/Chassis/chassis",
-          "Id": "Habanero16_1",
-          "Name": "Habanero16_1",
+          "Id": "PcieCard_1",
+          "Name": "PcieCard_1",
           "Type": "Server",
           "Location": {
             "PartLocation": {
@@ -3257,21 +3257,21 @@ TEST_F(QueryPlannerTestRunner, QueryPlannerPropertyCollectionOfPCIeDevices) {
           "@odata.id": "/redfish/v1/Systems/system/PCIeDevices",
           "Members": [
             {
-              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0"
+              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0"
             }
           ]
         })json");
                                req->Reply();
                              });
   server_->AddHttpGetHandler(
-      "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+      "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0",
       [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(R"json({
-          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0",
           "@odata.type": "#PCIeDevice.v1_4_0.PCIeDevice",
-          "Id": "Habanero16_1_Link_0",
+          "Id": "PcieCard_1_Link_0",
           "Links": {
             "Chassis": {
               "@odata.id": "/redfish/v1/Chassis/chassis"
@@ -3356,21 +3356,21 @@ TEST_F(QueryPlannerTestRunner,
           "@odata.id": "/redfish/v1/Systems/system/PCIeDevices",
           "Members": [
             {
-              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0"
+              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0"
             }
           ]
         })json");
                                req->Reply();
                              });
   server_->AddHttpGetHandler(
-      "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+      "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0",
       [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(R"json({
-          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0",
           "@odata.type": "#PCIeDevice.v1_4_0.PCIeDevice",
-          "Id": "Habanero16_1_Link_0",
+          "Id": "PcieCard_1_Link_0",
           "Name": "PCIe Device",
           "PCIeInterface": {
             "Oem": {
@@ -3444,21 +3444,21 @@ TEST_F(QueryPlannerTestRunner,
           "@odata.id": "/redfish/v1/Systems/system/PCIeDevices",
           "Members": [
             {
-              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0"
+              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0"
             }
           ]
         })json");
                                req->Reply();
                              });
   server_->AddHttpGetHandler(
-      "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+      "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0",
       [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(R"json({
-          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0",
           "@odata.type": "#PCIeDevice.v1_4_0.PCIeDevice",
-          "Id": "Habanero16_1_Link_0",
+          "Id": "PcieCard_1_Link_0",
           "Links": {
             "SomethingElse": {
               "@odata.id": "/redfish/v1/Chassis/chassis"
@@ -3538,21 +3538,21 @@ TEST_F(QueryPlannerTestRunner,
           "@odata.id": "/redfish/v1/Systems/system/PCIeDevices",
           "Members": [
             {
-              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0"
+              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0"
             }
           ]
         })json");
                                req->Reply();
                              });
   server_->AddHttpGetHandler(
-      "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+      "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0",
       [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(R"json({
-          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0",
           "@odata.type": "#PCIeDevice.v1_4_0.PCIeDevice",
-          "Id": "Habanero16_1_Link_0",
+          "Id": "PcieCard_1_Link_0",
           "Links": {
             "Chassis": {
               "SomethingElse": "/redfish/v1/Chassis/chassis"
@@ -3615,8 +3615,8 @@ TEST_F(QueryPlannerTestRunner,
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(R"json({
           "@odata.id": "/redfish/v1/Chassis/chassis",
-          "Id": "Habanero16_1",
-          "Name": "Habanero16_1",
+          "Id": "PcieCard_1",
+          "Name": "PcieCard_1",
           "Type": "Server",
         })json");
         req->Reply();
@@ -3644,21 +3644,21 @@ TEST_F(QueryPlannerTestRunner,
           "@odata.id": "/redfish/v1/Systems/system/PCIeDevices",
           "Members": [
             {
-              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0"
+              "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0"
             }
           ]
         })json");
                                req->Reply();
                              });
   server_->AddHttpGetHandler(
-      "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+      "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0",
       [&](ServerRequestInterface* req) {
         SetContentType(req, "application/json");
         req->OverwriteResponseHeader("OData-Version", "4.0");
         req->WriteResponseString(R"json({
-          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/Habanero16_1_Link_0",
+          "@odata.id": "/redfish/v1/Systems/system/PCIeDevices/PcieCard_1_Link_0",
           "@odata.type": "#PCIeDevice.v1_4_0.PCIeDevice",
-          "Id": "Habanero16_1_Link_0",
+          "Id": "PcieCard_1_Link_0",
           "Links": {
             "Chassis": {
               "@odata.id": "/redfish/v1/Chassis/chassis"
@@ -4638,22 +4638,22 @@ INSTANTIATE_TEST_SUITE_P(
             .test_name = "PredicateShowsParentUri",
             .redpath_query = "/Chassis[*]",
             .parent_resource_uri = "/redfish/v1/Chassis",
-            .child_resource_uri = "/redfish/v1/Chassis/IronFist_1",
+            .child_resource_uri = "/redfish/v1/Chassis/Chassis_1",
             .parent_json_response = R"json({
         "@odata.id": "/redfish/v1/Chassis",
         "Members": [
           {
-            "@odata.id": "/redfish/v1/Chassis/IronFist_1"
+            "@odata.id": "/redfish/v1/Chassis/Chassis_1"
           },
           {
-            "@odata.id": "/redfish/v1/Chassis/IronFist_2"
+            "@odata.id": "/redfish/v1/Chassis/Chassis_2"
           }
         ]
       })json",
             .expected_error_message =
                 "Querying predicate [*] from Redpath: "
                 "/Chassis[*] resulted in error: At resource URI: "
-                "/redfish/v1/Chassis/IronFist_1: Service Unavailable",
+                "/redfish/v1/Chassis/Chassis_1: Service Unavailable",
             .child_response_status_code = HTTPStatusCode::SERVICE_UNAV},
         GetChildUriTestCase{
             .test_name = "NodenameShowsParentUri",
@@ -4675,11 +4675,11 @@ INSTANTIATE_TEST_SUITE_P(
             .test_name = "PredicateParentUriNotAvailable",
             .redpath_query = "/Chassis[*]",
             .parent_resource_uri = "/redfish/v1/Chassis",
-            .child_resource_uri = "/redfish/v1/Chassis/IronFist_1",
+            .child_resource_uri = "/redfish/v1/Chassis/Chassis_1",
             .parent_json_response = R"json({
         "Members": [
           {
-            "@odata.id": "/redfish/v1/Chassis/IronFist_1"
+            "@odata.id": "/redfish/v1/Chassis/Chassis_1"
           }
         ]
       })json",
@@ -4709,19 +4709,19 @@ INSTANTIATE_TEST_SUITE_P(
             .test_name = "MalformedPredicateExpression",
             .redpath_query = "/Chassis[(!]",
             .parent_resource_uri = "/redfish/v1/Chassis",
-            .child_resource_uri = "/redfish/v1/Chassis/IronFist_1",
+            .child_resource_uri = "/redfish/v1/Chassis/Chassis_1",
             .parent_json_response = R"json({
         "@odata.id": "/redfish/v1/Chassis",
         "Members": [
           {
-            "@odata.id": "/redfish/v1/Chassis/IronFist_1"
+            "@odata.id": "/redfish/v1/Chassis/Chassis_1"
           }
         ]
       })json",
             .expected_error_message =
                 "Querying predicate [(!] from Redpath: "
                 "/Chassis[*] resulted in error: At resource URI: "
-                "/redfish/v1/Chassis/IronFist_1: Invalid predicate with "
+                "/redfish/v1/Chassis/Chassis_1: Invalid predicate with "
                 "mismatched "
                 "parenthesis: (!",
             .child_response_status_code = HTTPStatusCode::OK}),
@@ -5399,11 +5399,11 @@ TEST_F(QueryPlannerTestRunner, TestServiceRootQuery) {
                           }
                           fields {
                             key: "part_number"
-                            value { string_value: "1043652-02" }
+                            value { string_value: "0000000-00" }
                           }
                           fields {
                             key: "serial_number"
-                            value { string_value: "MBBQTW194106556" }
+                            value { string_value: "000000000000000" }
                           }
                         }
                       }
@@ -6743,11 +6743,11 @@ TEST_F(QueryPlannerTestRunner, TestEmptyRootSubQuerySuccess) {
                           }
                           fields {
                             key: "part_number"
-                            value { string_value: "1043652-02" }
+                            value { string_value: "0000000-00" }
                           }
                           fields {
                             key: "serial_number"
-                            value { string_value: "MBBQTW194106556" }
+                            value { string_value: "000000000000000" }
                           }
                         }
                       }

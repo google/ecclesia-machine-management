@@ -48,9 +48,3 @@ bzl_library(
     srcs = ["proto.bzl"],
     visibility = ["//visibility:public"],
 )
-
-bzl_library(
-    name = "resources",
-    srcs = ["resources.bzl"],
-    visibility = ["//ecclesia:mmanager_users"],
-)

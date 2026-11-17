@@ -133,7 +133,6 @@ class QueryRouterIntf {
   };
 
   // Overloaded function for executing non-templated queries
-  // the new function.
   ABSL_DEPRECATED("Use ExecuteQuery with RedpathQueryOptions instead.")
   void ExecuteQuery(absl::Span<const absl::string_view> query_ids,
                     const ResultCallback& callback) const {

@@ -106,8 +106,7 @@ class RedfishTransport {
   }
 
   // A Redfish eventing implemented by a server side stream RPC.
-  // 1. |data| represents the subscription configuration. TODO(nanzhou): link
-  // to schema
+  // 1. |data| represents the subscription configuration.
   // 2. |on_event| will be invoked every time an event (modelled as |Result|) is
   // sent from the server. A callback must never block.
   // 3. |on_stop| will be invoked when the stream stops.

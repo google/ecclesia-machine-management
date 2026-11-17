@@ -627,7 +627,7 @@
       {
          "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/10",
          "MemberId": "10",
-         "Name": "koolaid",
+         "Name": "addon_board",
          "Oem": {
            "Google": {
              "AttachedTo": [
@@ -637,7 +637,7 @@
                {
                  "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/10/Oem/Google/Components/0",
                  "MemberId": "0",
-                 "Name": "koolaid",
+                 "Name": "addon_board",
                  "AssociatedWith": [
                     {
                        "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/indus_eat_temp"
@@ -651,7 +651,7 @@
        {
          "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/11",
          "MemberId": "11",
-         "Name": "koolaid",
+         "Name": "addon_board",
          "Oem": {
            "Google": {
              "AttachedTo": [
@@ -661,7 +661,7 @@
                {
                  "@odata.id": "/redfish/v1/Chassis/chassis/Assembly#/Assemblies/11/Oem/Google/Components/0",
                  "MemberId": "0",
-                 "Name": "koolaid",
+                 "Name": "addon_board",
                  "AssociatedWith": [
                     {
                        "@odata.id": "/redfish/v1/Chassis/chassis/Sensors/indus_latm_temp"

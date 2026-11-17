@@ -131,7 +131,7 @@ absl::Status KernelSmbusAccess::ProbeDevice(const SmbusLocation& loc) const {
     status = Read8(loc, 0, &data);
   } else {
     // Read byte can lock the bus for write-only devices.
-    // Same with a write quick of '1', see http://b/2374009 for details.
+    // Same with a write quick of '1'.
     status = WriteQuick(loc, 0);
   }
 
