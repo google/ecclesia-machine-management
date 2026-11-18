@@ -118,6 +118,7 @@ enum class ResourceEntity : int {
   kGoogleErrorCounter,
   kGoogleErrorCounterCollection,
   kGoogleFruDevice,
+  kGoogleHbmBootStatus,
   kGoogleHbmOnlineRepair,
   kGoogleHft,
   kGoogleIpmiFrus,
