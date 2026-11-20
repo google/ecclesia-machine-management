@@ -544,6 +544,9 @@ void CurlHttpClient::SetDefaultCurlOpts(CURL* curl) const {
   }
   libcurl_->curl_easy_reset(curl);
   libcurl_->curl_easy_setopt(curl, CURLOPT_NOSIGNAL, (uint64_t)1L);
+  // Credentials are supplied via `cred_`; reject userinfo embedded in URLs.
+  libcurl_->curl_easy_setopt(curl, CURLOPT_DISALLOW_USERNAME_IN_URL,
+                             static_cast<uint64_t>(1L));
 
   libcurl_->curl_easy_setopt(curl, CURLOPT_HTTP_TRANSFER_DECODING,
                              !config_.raw);

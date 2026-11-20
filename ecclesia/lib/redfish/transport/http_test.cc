@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/redfish/transport/http.h"
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -26,9 +27,12 @@
 #include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "ecclesia/lib/file/test_filesystem.h"
+#include "ecclesia/lib/http/client.h"
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/http/curl_client.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
@@ -960,6 +964,440 @@ TEST_F(HttpRedfishTransportTest, CanDoSessionAuthTwice) {
 TEST_F(HttpRedfishTransportTest, GetWithTimeoutUnimplemented) {
   ASSERT_THAT(transport_->Get("test_uri", absl::Seconds(1)),
               IsStatusUnimplemented());
+}
+
+class MockHttpClient : public HttpClient {
+ public:
+  MOCK_METHOD(absl::StatusOr<HttpResponse>, Get, (std::unique_ptr<HttpRequest>),
+              (override));
+  MOCK_METHOD(absl::StatusOr<HttpResponse>, Post,
+              (std::unique_ptr<HttpRequest>), (override));
+  MOCK_METHOD(absl::StatusOr<HttpResponse>, Delete,
+              (std::unique_ptr<HttpRequest>), (override));
+  MOCK_METHOD(absl::StatusOr<HttpResponse>, Patch,
+              (std::unique_ptr<HttpRequest>), (override));
+  MOCK_METHOD(absl::StatusOr<HttpResponse>, Put, (std::unique_ptr<HttpRequest>),
+              (override));
+};
+
+constexpr absl::string_view kRejectedRequestTargets[] = {
+    "",
+    "#fragment",
+    "redfish/v1",
+    "@127.0.0.1:8080/unexpected",
+    "\\@127.0.0.1:8080/unexpected",
+    "7/redfish/v1",
+    ".other.example/redfish/v1",
+    ":8080/redfish/v1",
+    "http://127.0.0.1:8080/redfish/v1",
+    "https://127.0.0.1:8080/redfish/v1",
+    "//",
+    "//#fragment",
+    "//127.0.0.1:8080/redfish/v1",
+    "/\\127.0.0.1:8080/redfish/v1",
+    "/redfish/v1/\\sub",
+    "/redfish/v1/with space",
+    "/redfish/v1/with space#fragment",
+    "/redfish/v1/\t",
+    "/redfish/v1/\x1f",
+    "/redfish/v1\r\nX-Header: true",
+    "/redfish/v1\x7f",
+    "/.",
+    "/..",
+    "/redfish/v1/..#fragment",
+    "/redfish/v1/../Managers",
+    "/redfish/v1/./Systems",
+    "/redfish/v1/%2e/Systems",
+    "/redfish/v1/%2e%2e/Managers",
+    "/redfish/v1/%2E./Managers",
+    "/redfish/v1/.%2E/Managers",
+    "/redfish/v1/..?a=1",
+};
+
+void ExpectRejectedOnAllRestMethods(RedfishTransport& transport,
+                                    absl::string_view path) {
+  EXPECT_THAT(transport.Get(path), IsStatusInvalidArgument()) << path;
+  EXPECT_THAT(transport.Post(path, "{}"), IsStatusInvalidArgument()) << path;
+  EXPECT_THAT(transport.Patch(path, "{}"), IsStatusInvalidArgument()) << path;
+  EXPECT_THAT(transport.Delete(path, ""), IsStatusInvalidArgument()) << path;
+  EXPECT_THAT(transport.Put(path, "{}"), IsStatusInvalidArgument()) << path;
+}
+
+TEST_F(HttpRedfishTransportTest, RejectsNonOriginTargetsAcrossRestMethods) {
+  auto mock_client = std::make_unique<MockHttpClient>();
+  EXPECT_CALL(*mock_client, Get).Times(0);
+  EXPECT_CALL(*mock_client, Post).Times(0);
+  EXPECT_CALL(*mock_client, Delete).Times(0);
+  EXPECT_CALL(*mock_client, Patch).Times(0);
+  EXPECT_CALL(*mock_client, Put).Times(0);
+  std::unique_ptr<HttpRedfishTransport> mock_network_transport =
+      HttpRedfishTransport::MakeNetwork(std::move(mock_client),
+                                        "http://localhost:8000");
+
+  for (absl::string_view path : kRejectedRequestTargets) {
+    ExpectRejectedOnAllRestMethods(*transport_, path);
+    ExpectRejectedOnAllRestMethods(*mock_network_transport, path);
+  }
+
+  constexpr absl::string_view kEmbeddedNullPath("/redfish/v1\0/sub", 16);
+  ExpectRejectedOnAllRestMethods(*transport_, kEmbeddedNullPath);
+  ExpectRejectedOnAllRestMethods(*mock_network_transport, kEmbeddedNullPath);
+}
+
+TEST(HttpRedfishTransportUdsTest, ValidatesPathsOnUdsTransport) {
+  {
+    auto mock_client = std::make_unique<MockHttpClient>();
+    EXPECT_CALL(*mock_client, Get).Times(0);
+    EXPECT_CALL(*mock_client, Post).Times(0);
+    EXPECT_CALL(*mock_client, Delete).Times(0);
+    EXPECT_CALL(*mock_client, Patch).Times(0);
+    EXPECT_CALL(*mock_client, Put).Times(0);
+    std::unique_ptr<HttpRedfishTransport> uds_transport =
+        HttpRedfishTransport::MakeUds(std::move(mock_client),
+                                      "/tmp/test.socket");
+    for (absl::string_view path : kRejectedRequestTargets) {
+      ExpectRejectedOnAllRestMethods(*uds_transport, path);
+    }
+    constexpr absl::string_view kEmbeddedNullPath("/redfish/v1\0/sub", 16);
+    ExpectRejectedOnAllRestMethods(*uds_transport, kEmbeddedNullPath);
+  }
+
+  auto mock_client = std::make_unique<MockHttpClient>();
+  EXPECT_CALL(*mock_client, Get)
+      .WillOnce([](std::unique_ptr<HttpClient::HttpRequest> req)
+                    -> absl::StatusOr<HttpClient::HttpResponse> {
+        EXPECT_THAT(req->uri, Eq("dummy/redfish/v1"));
+        EXPECT_THAT(req->unix_socket_path, Eq("/tmp/test.socket"));
+        HttpClient::HttpResponse resp;
+        resp.code = 200;
+        resp.body = "{}";
+        resp.headers["Content-Type"] = "application/json";
+        return resp;
+      })
+      .WillOnce([](std::unique_ptr<HttpClient::HttpRequest> req)
+                    -> absl::StatusOr<HttpClient::HttpResponse> {
+        EXPECT_THAT(req->uri, Eq("dummy/redfish/v1/Chassis/1/Assembly"));
+        EXPECT_THAT(req->unix_socket_path, Eq("/tmp/test.socket"));
+        HttpClient::HttpResponse resp;
+        resp.code = 200;
+        resp.body = "{}";
+        resp.headers["Content-Type"] = "application/json";
+        return resp;
+      });
+
+  std::unique_ptr<HttpRedfishTransport> uds_transport =
+      HttpRedfishTransport::MakeUds(std::move(mock_client), "/tmp/test.socket");
+  absl::StatusOr<RedfishTransport::Result> root_result =
+      uds_transport->Get("/redfish/v1");
+  ASSERT_TRUE(root_result.ok()) << root_result.status().message();
+  EXPECT_THAT(root_result->code, Eq(200));
+
+  absl::StatusOr<RedfishTransport::Result> fragment_result = uds_transport->Get(
+      "/redfish/v1/Chassis/1/Assembly#/Members/PCIe Device rack1/0");
+  ASSERT_TRUE(fragment_result.ok()) << fragment_result.status().message();
+  EXPECT_THAT(fragment_result->code, Eq(200));
+}
+
+TEST_F(HttpRedfishTransportTest,
+       AllowsValidRelativePathsQueriesAndStripsFragments) {
+  struct ValidTargetCase {
+    absl::string_view input_path;
+    absl::string_view expected_wire_target;
+  };
+  static constexpr ValidTargetCase kValidCases[] = {
+      {"/", "/"},
+      {"/redfish/v1/AccountService/Accounts/user@example.com",
+       "/redfish/v1/AccountService/Accounts/user@example.com"},
+      {"/redfish/v1/Chassis/1/Assembly#/Members/PCIe Device rack1/0",
+       "/redfish/v1/Chassis/1/Assembly"},
+      {"/redfish/v1/Registries/%23SUTReg.v2_5_0.SUTReg",
+       "/redfish/v1/Registries/%23SUTReg.v2_5_0.SUTReg"},
+      {"/redfish/v1/Chassis/1/Sensors/DIMMA~CTemp",
+       "/redfish/v1/Chassis/1/Sensors/DIMMA~CTemp"},
+      {"/redfish/v1/$metadata", "/redfish/v1/$metadata"},
+      {"/redfish/v1//Systems", "/redfish/v1//Systems"},
+      {"/redfish/v1/Managers/iDRAC.Embedded.1",
+       "/redfish/v1/Managers/iDRAC.Embedded.1"},
+      {"/redfish/v1/.well-known", "/redfish/v1/.well-known"},
+      {"/redfish/v1/Systems/...", "/redfish/v1/Systems/..."},
+      {"/redfish/v1/Chassis?$expand=~($levels=1)",
+       "/redfish/v1/Chassis?$expand=~($levels=1)"},
+      {"/redfish/v1/Chassis/1/Sensors?$filter=Reading%20gt%2040",
+       "/redfish/v1/Chassis/1/Sensors?$filter=Reading%20gt%2040"},
+      {"/redfish/v1/Chassis/1/Sensors?$filter=Name%20eq%20'a..b'",
+       "/redfish/v1/Chassis/1/Sensors?$filter=Name%20eq%20'a..b'"},
+  };
+
+  bool called = false;
+  std::string observed_wire_uri;
+  for (const ValidTargetCase& test_case : kValidCases) {
+    called = false;
+    observed_wire_uri.clear();
+    server_->AddHttpGetHandler(
+        std::string(test_case.expected_wire_target),
+        [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+          called = true;
+          observed_wire_uri = std::string(req->uri_path());
+          ::tensorflow::serving::net_http::SetContentType(req,
+                                                          "application/json");
+          req->OverwriteResponseHeader("OData-Version", "4.0");
+          req->WriteResponseString("{}");
+          req->Reply();
+        });
+
+    absl::StatusOr<RedfishTransport::Result> result =
+        transport_->Get(test_case.input_path);
+    ASSERT_TRUE(result.ok())
+        << test_case.input_path << ": " << result.status().message();
+    EXPECT_TRUE(called) << test_case.input_path;
+    EXPECT_THAT(observed_wire_uri, Eq(test_case.expected_wire_target));
+    EXPECT_THAT(result->code, Eq(200));
+  }
+
+  // Non-ASCII bytes (>= 0x80) remain permitted in request targets.
+  auto mock_client = std::make_unique<MockHttpClient>();
+  EXPECT_CALL(*mock_client, Get)
+      .WillOnce([](std::unique_ptr<HttpClient::HttpRequest> req)
+                    -> absl::StatusOr<HttpClient::HttpResponse> {
+        EXPECT_THAT(req->uri,
+                    Eq("http://localhost:8000/redfish/v1/Systems/\xc3\xa9"));
+        HttpClient::HttpResponse resp;
+        resp.code = 200;
+        resp.body = "{}";
+        resp.headers["Content-Type"] = "application/json";
+        return resp;
+      });
+  std::unique_ptr<HttpRedfishTransport> mock_transport =
+      HttpRedfishTransport::MakeNetwork(std::move(mock_client),
+                                        "http://localhost:8000");
+  absl::StatusOr<RedfishTransport::Result> non_ascii_result =
+      mock_transport->Get("/redfish/v1/Systems/\xc3\xa9");
+  ASSERT_TRUE(non_ascii_result.ok()) << non_ascii_result.status().message();
+  EXPECT_THAT(non_ascii_result->code, Eq(200));
+}
+
+std::unique_ptr<HttpRedfishTransport> MakeSchemeNetworkTransport(
+    const FakeRedfishServer::Config& cfg) {
+  HttpCredential creds;
+  auto client =
+      std::make_unique<CurlHttpClient>(LibCurlProxy::CreateInstance(), creds);
+  return HttpRedfishTransport::MakeNetwork(
+      std::move(client),
+      absl::StrFormat("http://%s:%d", cfg.hostname, cfg.port));
+}
+
+TEST_F(HttpRedfishTransportTest, RejectsInvalidSessionDiscoveryTargets) {
+  FakeRedfishServer secondary_server(
+      "barebones_session_auth/mockup.shar",
+      absl::StrCat(GetTestTempUdsDirectory(), "/secondary_discovery.socket"));
+  const FakeRedfishServer::Config secondary_cfg = secondary_server.GetConfig();
+
+  std::atomic<int> secondary_hits{0};
+  auto record_secondary_hit =
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        ++secondary_hits;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::CREATED);
+      };
+  secondary_server.AddHttpPostHandler("/unexpected", record_secondary_hit);
+  secondary_server.AddHttpPostHandler("/unexpected/Sessions",
+                                      record_secondary_hit);
+
+  const FakeRedfishServer::Config primary_cfg = server_->GetConfig();
+
+  // Invalid Links.Sessions.@odata.id in service root fails closed even when
+  // SessionService.@odata.id is also present.
+  const std::string invalid_links_targets[] = {
+      absl::StrFormat("@%s:%d/unexpected", secondary_cfg.hostname,
+                      secondary_cfg.port),
+      absl::StrFormat("//%s:%d/unexpected", secondary_cfg.hostname,
+                      secondary_cfg.port),
+      "/redfish/v1/../unexpected",
+  };
+  for (const std::string& bad_target : invalid_links_targets) {
+    std::string invalid_links_root = absl::StrFormat(
+        R"({"@odata.id":"/redfish/v1","Links":{"Sessions":{"@odata.id":"%s"}},"SessionService":{"@odata.id":"/redfish/v1/SessionService"}})",
+        bad_target);
+    server_->AddHttpGetHandlerWithOwnedData("/redfish/v1", invalid_links_root);
+    std::unique_ptr<HttpRedfishTransport> transport =
+        MakeSchemeNetworkTransport(primary_cfg);
+    EXPECT_THAT(transport->DoSessionAuth("test_username", "test_password"),
+                IsStatusInvalidArgument())
+        << bad_target;
+    EXPECT_THAT(secondary_hits.load(), Eq(0));
+  }
+
+  // Invalid SessionService.@odata.id in service root (including '?query' and
+  // '#fragment') fails closed.
+  const std::string invalid_service_targets[] = {
+      absl::StrFormat("@%s:%d/unexpected", secondary_cfg.hostname,
+                      secondary_cfg.port),
+      "/redfish/v1/../SessionService",
+      "/redfish/v1/SessionService?filter=1",
+      "/redfish/v1/SessionService#fragment",
+  };
+  for (const std::string& bad_service : invalid_service_targets) {
+    std::string invalid_service_root = absl::StrFormat(
+        R"({"@odata.id":"/redfish/v1","SessionService":{"@odata.id":"%s"}})",
+        bad_service);
+    server_->AddHttpGetHandlerWithOwnedData("/redfish/v1",
+                                            invalid_service_root);
+    std::unique_ptr<HttpRedfishTransport> transport =
+        MakeSchemeNetworkTransport(primary_cfg);
+    EXPECT_THAT(transport->DoSessionAuth("test_username", "test_password"),
+                IsStatusInvalidArgument())
+        << bad_service;
+    EXPECT_THAT(secondary_hits.load(), Eq(0));
+  }
+}
+
+TEST_F(HttpRedfishTransportTest,
+       NormalizesTrailingSlashSessionServiceAndOriginLocation) {
+  std::atomic<int> primary_delete_hits{0};
+  server_->AddHttpGetHandlerWithOwnedData(
+      "/redfish/v1",
+      R"({"@odata.id":"/redfish/v1","SessionService":{"@odata.id":"/redfish/v1/SessionService/"}})");
+  server_->AddHttpPostHandler(
+      "/redfish/v1/SessionService/Sessions",
+      [](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->AppendResponseHeader("X-Auth-Token", "token123");
+        req->AppendResponseHeader(
+            "Location", "/redfish/v1/SessionService/Sessions/1#Session");
+        req->Reply();
+      });
+  server_->AddHttpDeleteHandler(
+      "/redfish/v1/SessionService/Sessions/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        ++primary_delete_hits;
+        EXPECT_THAT(req->GetRequestHeader("X-Auth-Token"), Eq("token123"));
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
+      });
+
+  std::unique_ptr<HttpRedfishTransport> transport =
+      MakeSchemeNetworkTransport(server_->GetConfig());
+  EXPECT_THAT(transport->DoSessionAuth("test_username", "test_password"),
+              IsOk());
+  transport.reset();
+  EXPECT_THAT(primary_delete_hits.load(), Eq(1));
+}
+
+TEST_F(HttpRedfishTransportTest, RejectsInvalidSessionLocationHeaders) {
+  FakeRedfishServer secondary_server(
+      "barebones_session_auth/mockup.shar",
+      absl::StrCat(GetTestTempUdsDirectory(), "/secondary_bad_loc.socket"));
+  const FakeRedfishServer::Config secondary_cfg = secondary_server.GetConfig();
+
+  std::atomic<int> secondary_hits{0};
+  auto record_secondary_delete =
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        ++secondary_hits;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
+      };
+  secondary_server.AddHttpDeleteHandler("/unexpected", record_secondary_delete);
+  secondary_server.AddHttpDeleteHandler("/redfish/v1/SessionService/Sessions/1",
+                                        record_secondary_delete);
+
+  std::atomic<int> primary_delete_hits{0};
+  server_->AddHttpDeleteHandler(
+      "/redfish/v1/SessionService/Sessions/1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        ++primary_delete_hits;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::NO_CONTENT);
+      });
+
+  const FakeRedfishServer::Config primary_cfg = server_->GetConfig();
+  const std::string invalid_locations[] = {
+      "",
+      "redfish/v1/SessionService/Sessions/1",
+      absl::StrFormat("http://%s:%d/redfish/v1/SessionService/Sessions/1",
+                      primary_cfg.hostname, primary_cfg.port),
+      absl::StrFormat("https://%s:%d/redfish/v1/SessionService/Sessions/1",
+                      primary_cfg.hostname, primary_cfg.port),
+      absl::StrFormat("http://%s:%d/redfish/v1/SessionService/Sessions/1",
+                      secondary_cfg.hostname, secondary_cfg.port),
+      absl::StrFormat("https://%s:%d/redfish/v1/SessionService/Sessions/1",
+                      secondary_cfg.hostname, secondary_cfg.port),
+      absl::StrFormat("@%s:%d/unexpected", secondary_cfg.hostname,
+                      secondary_cfg.port),
+      absl::StrFormat("//%s:%d/unexpected", secondary_cfg.hostname,
+                      secondary_cfg.port),
+      "/redfish/v1/../Sessions/1",
+  };
+  server_->AddHttpGetHandlerWithOwnedData(
+      "/redfish/v1",
+      R"({"@odata.id":"/redfish/v1","Links":{"Sessions":{"@odata.id":"/redfish/v1/SessionService/Sessions"}}})");
+  for (const std::string& bad_location : invalid_locations) {
+    server_->AddHttpPostHandler(
+        "/redfish/v1/SessionService/Sessions",
+        [bad_location](
+            ::tensorflow::serving::net_http::ServerRequestInterface* req) {
+          ::tensorflow::serving::net_http::SetContentType(req,
+                                                          "application/json");
+          req->WriteResponseString("{}");
+          req->AppendResponseHeader("X-Auth-Token", "token123");
+          req->AppendResponseHeader("Location", bad_location);
+          req->Reply();
+        });
+    std::unique_ptr<HttpRedfishTransport> transport =
+        MakeSchemeNetworkTransport(primary_cfg);
+    EXPECT_THAT(transport->DoSessionAuth("test_username", "test_password"),
+                IsStatusInternal())
+        << bad_location;
+    transport.reset();
+    EXPECT_THAT(primary_delete_hits.load(), Eq(0));
+    EXPECT_THAT(secondary_hits.load(), Eq(0));
+  }
+}
+
+TEST_F(HttpRedfishTransportTest, DoesNotFollowRedirectResponses) {
+  FakeRedfishServer secondary_server(
+      "barebones_session_auth/mockup.shar",
+      absl::StrCat(GetTestTempUdsDirectory(), "/secondary_redirect.socket"));
+  const FakeRedfishServer::Config secondary_cfg = secondary_server.GetConfig();
+
+  std::atomic<int> secondary_hits{0};
+  secondary_server.AddHttpGetHandler(
+      "/unexpected",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        ++secondary_hits;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+
+  const std::string redirect_location = absl::StrFormat(
+      "http://%s:%d/unexpected", secondary_cfg.hostname, secondary_cfg.port);
+  server_->AddHttpGetHandler(
+      "/redfish/v1/redirect",
+      [redirect_location](
+          ::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        req->AppendResponseHeader("Location", redirect_location);
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::MOVED_TEMP);
+      });
+  std::unique_ptr<HttpRedfishTransport> transport =
+      MakeSchemeNetworkTransport(server_->GetConfig());
+  absl::StatusOr<RedfishTransport::Result> redirect_result =
+      transport->Get("/redfish/v1/redirect");
+  ASSERT_TRUE(redirect_result.ok()) << redirect_result.status().message();
+  EXPECT_THAT(redirect_result->code, Eq(302));
+  EXPECT_THAT(secondary_hits.load(), Eq(0));
 }
 }  // namespace
 }  // namespace ecclesia

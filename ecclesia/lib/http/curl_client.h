@@ -206,8 +206,10 @@ class CurlHttpClient : public HttpClient {
     uint64_t connect_timeout_msec = 5000;
     // CURLOPT_DNS_CACHE_TIMEOUT, in sec.
     int dns_timeout = 60;
-    // CURLOPT_FOLLOWLOCATION
-    bool follow_redirect = true;
+    // CURLOPT_FOLLOWLOCATION. Disabled by default so HTTP 3xx responses cannot
+    // redirect requests or replay custom headers to unintended endpoints;
+    // enable only when communicating with trusted servers.
+    bool follow_redirect = false;
     // CURLOPT_MAX_RECV_SPEED_LARGE
     int max_recv_speed = -1;
     // CURLOPT_IPRESOLVE

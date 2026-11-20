@@ -49,6 +49,15 @@ inline HttpHeaderCondition DefaultHttpHeaderConditionForJson() {
 }
 
 // HttpRedfishTransport implements RedfishTransport with an HttpClient.
+//
+// Callers must pass an origin-relative Redfish URI `path` starting with a
+// single '/' (for example, "/redfish/v1/Systems"), optionally followed by a
+// "?query" string and/or "#fragment", with no ASCII control characters, spaces,
+// backslashes, or "."/".." path segments.
+//
+// Before issuing an HTTP request, HttpRedfishTransport strips any "#fragment"
+// suffix and validates the request target, returning INVALID_ARGUMENT without
+// contacting the endpoint if validation fails.
 class HttpRedfishTransport : public RedfishTransport {
  public:
   // Creates an HttpRedfishTransport using a network endpoint.
@@ -134,13 +143,11 @@ class HttpRedfishTransport : public RedfishTransport {
                        HttpHeaderCondition header_for_json);
 
   // Helper function for creating a HTTP request, overloaded on the target type.
-  std::unique_ptr<HttpClient::HttpRequest> MakeRequest(TcpTarget target,
-                                                       absl::string_view path,
-                                                       absl::string_view data)
+  absl::StatusOr<std::unique_ptr<HttpClient::HttpRequest>> MakeRequest(
+      const TcpTarget& target, absl::string_view path, absl::string_view data)
       ABSL_SHARED_LOCKS_REQUIRED(mutex_);
-  std::unique_ptr<HttpClient::HttpRequest> MakeRequest(UdsTarget target,
-                                                       absl::string_view path,
-                                                       absl::string_view data)
+  absl::StatusOr<std::unique_ptr<HttpClient::HttpRequest>> MakeRequest(
+      const UdsTarget& target, absl::string_view path, absl::string_view data)
       ABSL_SHARED_LOCKS_REQUIRED(mutex_);
 
   absl::Mutex mutex_;

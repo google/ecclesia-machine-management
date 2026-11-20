@@ -16,11 +16,14 @@
 
 #include "ecclesia/lib/redfish/transport/http.h"
 
+#include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
 #include <variant>
 
+#include "absl/base/attributes.h"
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/functional/bind_front.h"
@@ -28,8 +31,12 @@
 #include "absl/meta/type_traits.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/escaping.h"
+#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
+#include "absl/strings/strip.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "ecclesia/lib/http/client.h"
@@ -51,14 +58,96 @@ constexpr absl::string_view kUdsDummyEndpoint = "dummy";
 constexpr absl::string_view kXAuthToken = "X-Auth-Token";
 constexpr absl::string_view kLocation = "Location";
 
+constexpr size_t kMaxErrorTargetPreview = 128;
+
+// Consumes one dot token ("." or case-insensitive "%2e") from the front of
+// `segment`, matching libcurl's dot-segment parser in urlapi.c without
+// performing general percent-decoding.
+bool ConsumeDotToken(absl::string_view& segment) {
+  return absl::ConsumePrefix(&segment, ".") ||
+         absl::ConsumePrefix(&segment, "%2e") ||
+         absl::ConsumePrefix(&segment, "%2E");
+}
+
+// Returns true if `segment` is a "." or ".." path segment (including "%2e"
+// encodings). Segments with three or more dots (such as "...") or embedded
+// dots (such as "BMC.Embedded.1") return false.
+bool IsDotSegment(absl::string_view segment) {
+  if (!ConsumeDotToken(segment)) {
+    return false;
+  }
+  if (segment.empty()) {
+    return true;
+  }
+  return ConsumeDotToken(segment) && segment.empty();
+}
+
+// Returns true if `ch` is disallowed in an HTTP `origin-form` Redfish request
+// target:
+//   - RFC 9112 Section 3.2.1 (`origin-form = absolute-path [ "?" query ]`) and
+//     RFC 3986 Sections 2 and 3.3 forbid C0 control bytes (0x00-0x1F), ASCII
+//     space (0x20), DEL (0x7F), and '#' (fragments are excluded from
+//     `origin-form`).
+//   - DMTF Redfish Specification DSP0266 v1.25.0 Section 6.1 forbids '\\'.
+// This intentionally checks only the subset above: other bytes excluded by
+// those documents (such as '~', '%', or non-ASCII bytes) remain accepted
+// because deployed Redfish implementations emit them in resource URIs.
+bool IsDisallowedOriginTargetByte(unsigned char ch) {
+  return ch <= 0x20 || ch == 0x7f || ch == '\\' || ch == '#';
+}
+
+// Validates that `request_target` (after any `#fragment` has been removed) is a
+// safe HTTP `origin-form` target (`absolute-path [ "?" query ]`) for a
+// single-endpoint Redfish service per RFC 9112 Section 3.2.1 and DMTF Redfish
+// Specification DSP0266 v1.25.0 Section 6.1:
+//   - Starts with a single '/' (rejecting empty targets, rootless paths, and
+//     network-path "//authority/..." references).
+//   - Contains no disallowed bytes (`IsDisallowedOriginTargetByte`).
+//   - Contains no "." or ".." dot-segments (literal or "%2e"-encoded) in the
+//     path component before '?'.
+bool IsValidOriginRequestTarget(absl::string_view request_target) {
+  if (request_target.empty() || request_target[0] != '/') {
+    return false;
+  }
+  if (request_target.size() >= 2 && request_target[1] == '/') {
+    return false;
+  }
+  if (std::any_of(request_target.begin(), request_target.end(),
+                  IsDisallowedOriginTargetByte)) {
+    return false;
+  }
+  absl::string_view path_part =
+      request_target.substr(0, request_target.find('?'));
+  const auto segments = absl::StrSplit(path_part.substr(1), '/');
+  return !std::any_of(segments.begin(), segments.end(), IsDotSegment);
+}
+
+// Strips any `#fragment` from `path` (fragments are client-local sub-resource
+// pointers and are never transmitted in HTTP request-targets) and validates the
+// remaining origin-form request target. The returned view points into `path`.
+absl::StatusOr<absl::string_view> ExtractOriginRequestTarget(
+    absl::string_view path ABSL_ATTRIBUTE_LIFETIME_BOUND) {
+  absl::string_view request_target = path.substr(0, path.find('#'));
+  if (!IsValidOriginRequestTarget(request_target)) {
+    return absl::InvalidArgumentError(absl::StrCat(
+        "Redfish request target is not a valid origin-form path: \"",
+        absl::CHexEscape(path.substr(0, kMaxErrorTargetPreview)), "\""));
+  }
+  return request_target;
+}
+
 // Generic helper function for all REST operations.
-// RestOp is a functor which invokes the relevant REST operation.
+// If `request` failed validation, returns its error status without invoking
+// `rest_func`. Otherwise invokes `rest_func` and converts the response.
 template <typename RestOp>
 absl::StatusOr<RedfishTransport::Result> RestHelper(
-    std::unique_ptr<HttpClient::HttpRequest> request, RestOp rest_func,
-    const HttpHeaderCondition& header_for_json) {
+    absl::StatusOr<std::unique_ptr<HttpClient::HttpRequest>> request,
+    RestOp rest_func, const HttpHeaderCondition& header_for_json) {
+  ECCLESIA_ASSIGN_OR_RETURN(
+      std::unique_ptr<HttpClient::HttpRequest> http_request,
+      std::move(request));
   ECCLESIA_ASSIGN_OR_RETURN(HttpClient::HttpResponse resp,
-                            rest_func(std::move(request)));
+                            rest_func(std::move(http_request)));
   RedfishTransport::Result result;
   result.code = resp.code;
   result.headers = std::move(resp.headers);
@@ -80,7 +169,8 @@ absl::StatusOr<RedfishTransport::Result> RestHelper(
 // The Redfish Spec suggests 2 options:
 // 1. via the @odata.id reference in Links.Sessions
 // 2. via SessionService.Sessions
-absl::StatusOr<std::string> GetSessionServicePostTarget(nlohmann::json root) {
+absl::StatusOr<std::string> GetSessionServicePostTarget(
+    const nlohmann::json& root) {
   // Try reading Links.Session
   auto links_itr = root.find(kRfPropertyLinks);
   if (links_itr != root.end()) {
@@ -88,7 +178,13 @@ absl::StatusOr<std::string> GetSessionServicePostTarget(nlohmann::json root) {
     if (session_itr != links_itr->end()) {
       auto odata_id = session_itr->find(PropertyOdataId::Name);
       if (odata_id != session_itr->end() && odata_id->is_string()) {
-        return odata_id->get<std::string>();
+        std::string uri = odata_id->get<std::string>();
+        absl::StatusOr<absl::string_view> target =
+            ExtractOriginRequestTarget(uri);
+        if (!target.ok()) {
+          return absl::InvalidArgumentError("Invalid Session URI target.");
+        }
+        return std::string(*target);
       }
     }
   }
@@ -98,7 +194,12 @@ absl::StatusOr<std::string> GetSessionServicePostTarget(nlohmann::json root) {
   if (service_itr != root.end()) {
     auto odata_id = service_itr->find(PropertyOdataId::Name);
     if (odata_id != service_itr->end() && odata_id->is_string()) {
-      return absl::StrCat(odata_id->get<std::string>(), "/",
+      std::string service_uri = odata_id->get<std::string>();
+      if (absl::StrContains(service_uri, '?') ||
+          !IsValidOriginRequestTarget(service_uri)) {
+        return absl::InvalidArgumentError("Invalid SessionService URI target.");
+      }
+      return absl::StrCat(absl::StripSuffix(service_uri, "/"), "/",
                           kRfPropertySessions);
     }
   }
@@ -159,16 +260,26 @@ absl::Status HttpRedfishTransport::LockedDoSessionAuth() {
   if (session_uri == session_post->headers.end()) {
     return absl::InternalError("No session URI returned for POST.");
   }
-  session_auth_uri_ = std::move(session_uri->second);
+  absl::StatusOr<absl::string_view> target =
+      ExtractOriginRequestTarget(session_uri->second);
+  if (!target.ok()) {
+    return absl::InternalError(absl::StrCat(
+        "Invalid session URI returned for POST: ", target.status().message()));
+  }
+  session_auth_uri_ = std::string(*target);
   x_auth_token_ = std::move(token->second);
 
   return absl::OkStatus();
 }
 
-std::unique_ptr<HttpClient::HttpRequest> HttpRedfishTransport::MakeRequest(
-    TcpTarget target, absl::string_view path, absl::string_view data) {
+absl::StatusOr<std::unique_ptr<HttpClient::HttpRequest>>
+HttpRedfishTransport::MakeRequest(const TcpTarget& target,
+                                  absl::string_view path,
+                                  absl::string_view data) {
+  ECCLESIA_ASSIGN_OR_RETURN(absl::string_view request_target,
+                            ExtractOriginRequestTarget(path));
   auto request = std::make_unique<HttpClient::HttpRequest>();
-  request->uri = absl::StrCat(target.endpoint, path);
+  request->uri = absl::StrCat(target.endpoint, request_target);
   request->body = std::string(data);
   if (!x_auth_token_.empty()) {
     request->headers[kXAuthToken] = x_auth_token_;
@@ -176,10 +287,14 @@ std::unique_ptr<HttpClient::HttpRequest> HttpRedfishTransport::MakeRequest(
   return request;
 }
 
-std::unique_ptr<HttpClient::HttpRequest> HttpRedfishTransport::MakeRequest(
-    UdsTarget target, absl::string_view path, absl::string_view data) {
+absl::StatusOr<std::unique_ptr<HttpClient::HttpRequest>>
+HttpRedfishTransport::MakeRequest(const UdsTarget& target,
+                                  absl::string_view path,
+                                  absl::string_view data) {
+  ECCLESIA_ASSIGN_OR_RETURN(absl::string_view request_target,
+                            ExtractOriginRequestTarget(path));
   auto request = std::make_unique<HttpClient::HttpRequest>();
-  request->uri = absl::StrCat(kUdsDummyEndpoint, path);
+  request->uri = absl::StrCat(kUdsDummyEndpoint, request_target);
   request->body = std::string(data);
   request->unix_socket_path = target.path;
   if (!x_auth_token_.empty()) {

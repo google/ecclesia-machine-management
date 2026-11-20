@@ -221,6 +221,8 @@ cc_test(
     deps = [
         ":http",
         ":interface",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/http:client",
         "//ecclesia/lib/http:cred_cc_proto",
         "//ecclesia/lib/http:curl_client",
         "//ecclesia/lib/redfish/testing:fake_redfish_server",

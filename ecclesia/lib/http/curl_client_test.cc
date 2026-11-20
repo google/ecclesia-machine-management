@@ -16,6 +16,7 @@
 
 #include "ecclesia/lib/http/curl_client.h"
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -39,6 +40,7 @@
 #include "ecclesia/lib/http/cred.pb.h"
 #include "ecclesia/lib/redfish/testing/fake_redfish_server.h"
 #include "single_include/nlohmann/json.hpp"
+#include "tensorflow_serving/util/net_http/public/response_code_enum.h"
 #include "tensorflow_serving/util/net_http/server/public/server_request_interface.h"
 
 namespace ecclesia {
@@ -740,6 +742,133 @@ TEST_F(CurlHttpClientTest, CanDeleteIncremental) {
       curl_http_client_.DeleteIncremental(std::move(req), &mock_handler);
   EXPECT_TRUE(result.ok());
   EXPECT_EQ(nlohmann::json::parse(body, /*cb=*/nullptr, false), result_json);
+}
+
+TEST_F(CurlHttpClientTest, DoesNotFollowRedirectByDefault) {
+  FakeRedfishServer secondary_server(
+      "barebones_session_auth/mockup.shar",
+      absl::StrCat(GetTestTempUdsDirectory(), "/secondary.socket"));
+  std::atomic<int> secondary_hits{0};
+  secondary_server.AddHttpGetHandler(
+      "/redirected",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        ++secondary_hits;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+
+  const FakeRedfishServer::Config secondary_cfg = secondary_server.GetConfig();
+  const std::string redirect_target = absl::StrFormat(
+      "http://%s:%d/redirected", secondary_cfg.hostname, secondary_cfg.port);
+  server_.AddHttpGetHandler(
+      "/redfish/v1/redirect",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        req->AppendResponseHeader("Location", redirect_target);
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::MOVED_TEMP);
+      });
+
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1/redirect", endpoint_);
+  absl::StatusOr<HttpClient::HttpResponse> result =
+      curl_http_client_.Get(std::move(req));
+  ASSERT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(302));
+  EXPECT_THAT(secondary_hits.load(), Eq(0));
+}
+
+TEST_F(CurlHttpClientTest, FollowsRedirectWhenExplicitlyConfigured) {
+  bool target_called = false;
+  server_.AddHttpGetHandler(
+      "/redfish/v1/target",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        target_called = true;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString(R"json({"ok": true})json");
+        req->Reply();
+      });
+  server_.AddHttpGetHandler(
+      "/redfish/v1/redirect",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        req->AppendResponseHeader(
+            "Location",
+            absl::StrFormat("http://%s/redfish/v1/target", endpoint_));
+        req->ReplyWithStatus(
+            ::tensorflow::serving::net_http::HTTPStatusCode::MOVED_TEMP);
+      });
+
+  CurlHttpClient::Config config;
+  config.follow_redirect = true;
+  CurlHttpClient redirecting_client(LibCurlProxy::CreateInstance(),
+                                    HttpCredential(), std::move(config));
+
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("%s/redfish/v1/redirect", endpoint_);
+  absl::StatusOr<HttpClient::HttpResponse> result =
+      redirecting_client.Get(std::move(req));
+  ASSERT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(200));
+  EXPECT_TRUE(target_called);
+}
+
+TEST_F(CurlHttpClientTest, RejectsUsernameInUrl) {
+  FakeRedfishServer secondary_server(
+      "barebones_session_auth/mockup.shar",
+      absl::StrCat(GetTestTempUdsDirectory(), "/secondary_userinfo.socket"));
+  std::atomic<int> secondary_hits{0};
+  secondary_server.AddHttpGetHandler(
+      "/redfish/v1",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        ++secondary_hits;
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+
+  const FakeRedfishServer::Config secondary_cfg = secondary_server.GetConfig();
+  const std::vector<std::string> rejected_uris = {
+      absl::StrFormat("http://user:password@%s/redfish/v1", endpoint_),
+      absl::StrFormat("http://%s@%s:%d/redfish/v1", endpoint_,
+                      secondary_cfg.hostname, secondary_cfg.port),
+      absl::StrFormat("%s@%s:%d/redfish/v1", endpoint_, secondary_cfg.hostname,
+                      secondary_cfg.port),
+  };
+  for (const std::string& uri : rejected_uris) {
+    auto req = std::make_unique<HttpClient::HttpRequest>();
+    req->uri = uri;
+    absl::StatusOr<HttpClient::HttpResponse> result =
+        curl_http_client_.Get(std::move(req));
+    EXPECT_THAT(result.status().code(), Eq(absl::StatusCode::kInternal)) << uri;
+  }
+  EXPECT_THAT(secondary_hits.load(), Eq(0));
+}
+
+TEST_F(CurlHttpClientTest, SendsConfiguredBasicAuthHeader) {
+  std::string observed_authorization;
+  server_.AddHttpGetHandler(
+      "/redfish/v1/auth_check",
+      [&](::tensorflow::serving::net_http::ServerRequestInterface* req) {
+        observed_authorization =
+            std::string(req->GetRequestHeader("Authorization"));
+        ::tensorflow::serving::net_http::SetContentType(req,
+                                                        "application/json");
+        req->WriteResponseString("{}");
+        req->Reply();
+      });
+
+  CurlHttpClient authenticated_client(LibCurlProxy::CreateInstance(),
+                                      GetSimpleCredential());
+  auto req = std::make_unique<HttpClient::HttpRequest>();
+  req->uri = absl::StrFormat("http://%s/redfish/v1/auth_check", endpoint_);
+  absl::StatusOr<HttpClient::HttpResponse> result =
+      authenticated_client.Get(std::move(req));
+  ASSERT_TRUE(result.ok()) << result.status().message();
+  EXPECT_THAT(result->code, Eq(200));
+  EXPECT_THAT(observed_authorization, Eq("Basic dXNlcjpwYXNzd29yZA=="));
 }
 
 }  // namespace
