@@ -40,17 +40,27 @@ cc_test(
     ],
 )
 
+# :testing without testonly, approved for a select few users.
 cc_library(
-    name = "testing",
-    testonly = True,
+    name = "testing_internal",
     srcs = ["testing.cc"],
     hdrs = ["testing.h"],
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//ecclesia/lib/redfish:__pkg__",
+    ],
     deps = [
         "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/log:check",
     ],
+)
+
+cc_library(
+    name = "testing",
+    testonly = True,
+    hdrs = ["testing.h"],
+    visibility = ["//visibility:public"],
+    deps = [":testing_internal"],
 )
 
 cc_test(

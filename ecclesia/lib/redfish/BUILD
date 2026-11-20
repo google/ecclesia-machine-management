@@ -363,21 +363,23 @@ cc_test(
     ],
 )
 
+# :test_mockup without testonly, approved for a select few users.
 cc_library(
-    name = "test_mockup",
-    testonly = True,
+    name = "test_mockup_internal",
     srcs = ["test_mockup.cc"],
     hdrs = ["test_mockup.h"],
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//ecclesia/lib/redfish/testing:__pkg__",
+    ],
     deps = [
         ":interface",
         "//ecclesia/lib/file:path",
-        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/file:test_filesystem_internal",
         "//ecclesia/lib/http:client",
         "//ecclesia/lib/http:cred_cc_proto",
         "//ecclesia/lib/http:curl_client",
         "//ecclesia/lib/network:ip",
-        "//ecclesia/lib/network:testing",
+        "//ecclesia/lib/network:testing_internal",
         "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:http",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
@@ -387,6 +389,21 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+    ],
+)
+
+cc_library(
+    name = "test_mockup",
+    testonly = True,
+    hdrs = ["test_mockup.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":interface",
+        ":test_mockup_internal",
+        "//ecclesia/lib/http:client",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:string_view",
         "@com_google_absl//absl/time",
     ],
 )

@@ -225,12 +225,15 @@ cc_test(
     ],
 )
 
+# :test_filesystem without testonly, approved for a select few users.
 cc_library(
-    name = "test_filesystem",
-    testonly = True,
+    name = "test_filesystem_internal",
     srcs = ["test_filesystem.cc"],
     hdrs = ["test_filesystem.h"],
-    visibility = ["//visibility:public"],
+    visibility = [
+        "//ecclesia/lib/redfish:__pkg__",
+        "//ecclesia/lib/redfish/testing:__pkg__",
+    ],
     deps = [
         ":dir",
         ":path",
@@ -239,6 +242,17 @@ cc_library(
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "test_filesystem",
+    testonly = True,
+    hdrs = ["test_filesystem.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":test_filesystem_internal",
+        "@com_google_absl//absl/strings:string_view",
     ],
 )
 

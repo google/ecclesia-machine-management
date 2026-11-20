@@ -48,20 +48,19 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+# :fake_redfish_server without testonly, approved for a select few users.
 cc_library(
-    name = "fake_redfish_server",
-    testonly = True,
+    name = "fake_redfish_server_internal",
     srcs = ["fake_redfish_server.cc"],
     hdrs = ["fake_redfish_server.h"],
-    visibility = ["//visibility:public"],
     deps = [
-        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/file:test_filesystem_internal",
         "//ecclesia/lib/http:client",
         "//ecclesia/lib/http:cred_cc_proto",
         "//ecclesia/lib/http:curl_client",
         "//ecclesia/lib/http:server",
         "//ecclesia/lib/redfish:interface",
-        "//ecclesia/lib/redfish:test_mockup",
+        "//ecclesia/lib/redfish:test_mockup_internal",
         "//ecclesia/lib/redfish/transport:cache",
         "//ecclesia/lib/redfish/transport:http",
         "//ecclesia/lib/redfish/transport:http_redfish_intf",
@@ -78,6 +77,28 @@ cc_library(
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/public:shared_files",
         "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
         "@com_json//:json",
+    ],
+)
+
+cc_library(
+    name = "fake_redfish_server",
+    testonly = True,
+    hdrs = ["fake_redfish_server.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":fake_redfish_server_internal",
+        "//ecclesia/lib/file:test_filesystem",
+        "//ecclesia/lib/redfish:interface",
+        "//ecclesia/lib/redfish:test_mockup",
+        "//ecclesia/lib/redfish/transport:interface",
+        "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:string_view",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_absl//absl/types:span",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/public:shared_files",
+        "@com_google_tensorflow_serving//tensorflow_serving/util/net_http/server/public:http_server_api",
     ],
 )
 
