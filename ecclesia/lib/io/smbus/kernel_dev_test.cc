@@ -158,7 +158,6 @@ class KernelSmbusAccessTest : public testing::Test {
 };
 
 TEST_F(KernelSmbusAccessTest, TestDevFilesNotPresent) {
-  std::string test_data("test_data");
   fs_.CreateDir("/dev");
 
   auto loc = SmbusLocation::Make<1, 0>();

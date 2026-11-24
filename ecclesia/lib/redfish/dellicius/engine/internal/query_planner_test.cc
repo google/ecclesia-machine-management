@@ -334,9 +334,6 @@ TEST(QueryPlannerTest,
 TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
   std::string sensor_in_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_in/sensor_in.textproto"));
-  std::string sensor_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation,
-                    "query_out/legacy/legacy_devpath_sensor_out.textproto"));
   FakeClock clock(absl::FromUnixSeconds(10));
   // Set up context node for dellicius query.
   FakeRedfishServer server("indus_hmb_shim/mockup.shar");
@@ -381,9 +378,6 @@ TEST(QueryPlannerTest, CheckQueryPlannerSendsOneRequestForEachUri) {
 TEST(QueryPlannerTest, CheckQueryPlannerStopsQueryingOnTransportError) {
   std::string sensor_in_path = GetTestDataDependencyPath(
       JoinFilePaths(kQuerySamplesLocation, "query_in/sensor_in.textproto"));
-  std::string sensor_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation,
-                    "query_out/legacy/legacy_devpath_sensor_out.textproto"));
   FakeClock clock(absl::FromUnixSeconds(10));
   // Set up context node for dellicius query.
   FakeRedfishServer server("indus_hmb_shim/mockup.shar");
@@ -724,9 +718,6 @@ TEST_F(QueryPlannerTestRunner,
        NormalizerPrioritizesLocalDevpathForMachineDevpath) {
   std::string query_in_path = GetTestDataDependencyPath(JoinFilePaths(
       kQuerySamplesLocation, "query_in/all_processors_in.textproto"));
-  std::string query_out_path = GetTestDataDependencyPath(
-      JoinFilePaths(kQuerySamplesLocation,
-                    "query_out/legacy/legacy_sensor_out_links.textproto"));
   SetTestParams("indus_hmb_shim/mockup.shar", absl::FromUnixSeconds(10));
 
   absl::flat_hash_set<std::string> expected_machine_devpaths = {

@@ -31,7 +31,6 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
-#include "ecclesia/lib/file/path.h"
 #include "ecclesia/lib/file/test_filesystem.h"
 #include "ecclesia/lib/redfish/interface.h"
 #include "ecclesia/lib/status/macros.h"
@@ -159,8 +158,6 @@ absl::StatusOr<std::string> CreateLocalMockupDirectory(
 
 TEST(TestingMockupServerTest, GetRedfishResultsFromServer) {
   TestFilesystem testfs(GetTestTempdirPath());
-  std::string local_file_dir =
-      ecclesia::JoinFilePaths(GetTestTempdirPath(), "mockup");
   ecclesia::TestingMockupServer server(
       [&]() { return CreateLocalMockupDirectory("/mockup", &testfs); }, "");
 
@@ -183,8 +180,6 @@ TEST(TestingMockupServerTest, GetRedfishResultsFromServer) {
 
 TEST(TestingMockupServerTest, DestructorTimeoutFallbackToSigkill) {
   TestFilesystem testfs(GetTestTempdirPath());
-  std::string local_file_dir =
-      ecclesia::JoinFilePaths(GetTestTempdirPath(), "mockup");
 
   g_mock_waitpid_return_val = 0;
   g_mock_waitpid_errno = 0;
@@ -209,8 +204,6 @@ TEST(TestingMockupServerTest, DestructorTimeoutFallbackToSigkill) {
 
 TEST(TestingMockupServerTest, DestructorCleanExitNoSigkill) {
   TestFilesystem testfs(GetTestTempdirPath());
-  std::string local_file_dir =
-      ecclesia::JoinFilePaths(GetTestTempdirPath(), "mockup");
 
   g_mock_kill_calls_sigterm = 0;
   g_mock_kill_calls_sigkill = 0;
@@ -252,8 +245,6 @@ TEST(TestingMockupServerTest, DestructorCleanExitNoSigkill) {
 
 TEST(TestingMockupServerTest, DestructorHandlesEINTR) {
   TestFilesystem testfs(GetTestTempdirPath());
-  std::string local_file_dir =
-      ecclesia::JoinFilePaths(GetTestTempdirPath(), "mockup");
 
   g_mock_kill_calls_sigterm = 0;
   g_mock_kill_calls_sigkill = 0;
@@ -304,8 +295,6 @@ TEST(TestingMockupServerTest, DestructorHandlesEINTR) {
 
 TEST(TestingMockupServerTest, DestructorHandlesECHILD) {
   TestFilesystem testfs(GetTestTempdirPath());
-  std::string local_file_dir =
-      ecclesia::JoinFilePaths(GetTestTempdirPath(), "mockup");
 
   g_mock_kill_calls_sigterm = 0;
   g_mock_kill_calls_sigkill = 0;

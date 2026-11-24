@@ -417,7 +417,6 @@ cc_test(
     deps = [
         ":interface",
         ":test_mockup",
-        "//ecclesia/lib/file:path",
         "//ecclesia/lib/file:test_filesystem",
         "//ecclesia/lib/status:macros",
         "@com_google_absl//absl/log",
