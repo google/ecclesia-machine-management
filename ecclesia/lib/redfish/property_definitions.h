@@ -415,13 +415,13 @@ DEFINE_REDFISH_PROPERTY(PropertyVersion, std::string, "Version");
 DEFINE_REDFISH_PROPERTY(PropertyLocationType, std::string, "LocationType");
 DEFINE_REDFISH_PROPERTY(PropertyServiceLabel, std::string, "ServiceLabel");
 DEFINE_REDFISH_PROPERTY(PropertyReplaceable, bool, "Replaceable");
-DEFINE_REDFISH_PROPERTY(PropertyCorrectableECCErrorCount, int,
+DEFINE_REDFISH_PROPERTY(PropertyCorrectableECCErrorCount, int64_t,
                         "CorrectableECCErrorCount");
-DEFINE_REDFISH_PROPERTY(PropertyUncorrectableECCErrorCount, int,
+DEFINE_REDFISH_PROPERTY(PropertyUncorrectableECCErrorCount, int64_t,
                         "UncorrectableECCErrorCount");
-DEFINE_REDFISH_PROPERTY(PropertyIndetermineCorrectableErrorCount, int,
+DEFINE_REDFISH_PROPERTY(PropertyIndetermineCorrectableErrorCount, int64_t,
                         "IndeterminateCorrectableErrorCount");
-DEFINE_REDFISH_PROPERTY(PropertyIndetermineUncorrectableErrorCount, int,
+DEFINE_REDFISH_PROPERTY(PropertyIndetermineUncorrectableErrorCount, int64_t,
                         "IndeterminateUncorrectableErrorCount");
 DEFINE_REDFISH_PROPERTY(PropertyUserName, std::string, "UserName");
 DEFINE_REDFISH_PROPERTY(PropertyPassword, std::string, "Password");
@@ -530,8 +530,9 @@ DEFINE_REDFISH_PROPERTY(PropertySystemName, std::string, "SystemName");
 DEFINE_REDFISH_PROPERTY(PropertyTimeoutCount, int, "TimeoutCount");
 
 // OEM Google properties
-DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int, "Correctable");
-DEFINE_REDFISH_PROPERTY(OemGooglePropertyUncorrectable, int, "Uncorrectable");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyCorrectable, int64_t, "Correctable");
+DEFINE_REDFISH_PROPERTY(OemGooglePropertyUncorrectable, int64_t,
+                        "Uncorrectable");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyDomain, std::string, "Domain");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyBus, std::string, "Bus");
 DEFINE_REDFISH_PROPERTY(OemGooglePropertyDevice, std::string, "Device");
