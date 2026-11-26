@@ -49,6 +49,11 @@ namespace {
 constexpr LazyRE2 kPredicateRegexRelationalOperator = {
     R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(?:(!=|>|<|=|>=|<=|~>|<~|~>=|<~=))([a-zA-Z0-9._\+\-\:#\\ /']+)$)"};
 
+// Pattern for predicate formatted with regex operators:
+// Requires single quotes for RHS.
+constexpr LazyRE2 kPredicateRegexRegexOperator = {
+    R"(^([a-zA-Z#@][0-9a-zA-Z.\\]*)(=~|!~)('(?:[^'\\]|\\.)*')$)"};
+
 // Pattern for Redfish standard (ISO 8601) datetime string.
 // Example: 2022-03-16T15:52:00
 constexpr LazyRE2 kRedfishDatetimeRegex = {
@@ -65,11 +70,13 @@ constexpr absl::string_view kLeftParen = "(";
 constexpr absl::string_view kRightParen = ")";
 
 // Supported relational operators
-constexpr std::array<const char*, 10> kRelationsOperators = {
-    "<", ">", "!=", ">=", "<=", "=", "~>", "<~", "~>=", "<~="};
+constexpr std::array<const char*, 12> kRelationsOperators = {
+    "<", ">", "!=", ">=", "<=", "=", "~>", "<~", "~>=", "<~=", "=~", "!~"};
 
 constexpr std::array<absl::string_view, 4> kFuzzyStringComparisonOperators = {
     "~>", "<~", "~>=", "<~="};
+
+constexpr std::array<absl::string_view, 2> kRegexOperators = {"=~", "!~"};
 
 // Matchers for user supplied datetime formats in a predicate.
 // Redfish datetime is of Edm.DateTimeOffset type.
@@ -114,6 +121,23 @@ absl::StatusOr<bool> ApplyFuzzyStringComparisonFilter(const std::string& op,
          : op == "<~"  ? comparison_result < 0
          : op == "<~=" ? comparison_result <= 0
                        : false;
+}
+
+absl::StatusOr<bool> ApplyRegexFilter(const std::string& op,
+                                      const std::string& lhs,
+                                      absl::string_view test_value) {
+  absl::string_view regex_pattern = test_value;
+  if (regex_pattern.size() >= 2 && regex_pattern.front() == '\'' &&
+      regex_pattern.back() == '\'') {
+    regex_pattern = regex_pattern.substr(1, regex_pattern.size() - 2);
+  }
+  RE2 pattern(regex_pattern);
+  if (!pattern.ok()) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("Invalid regex pattern: ", regex_pattern));
+  }
+  bool matches = RE2::PartialMatch(lhs, pattern);
+  return op == "=~" ? matches : !matches;
 }
 
 absl::StatusOr<bool> ApplyNumberComparisonFilter(const std::string& op,
@@ -169,7 +193,9 @@ absl::StatusOr<bool> PredicateFilterByNodeComparison(
   std::string test_value;
   bool ret = false;
   if (!RE2::FullMatch(predicate, *kPredicateRegexRelationalOperator, &node_name,
-                      &op, &test_value)) {
+                      &op, &test_value) &&
+      !RE2::FullMatch(predicate, *kPredicateRegexRegexOperator, &node_name, &op,
+                      &test_value)) {
     return absl::InvalidArgumentError(
         absl::StrCat("Invalid node comparison: ", predicate));
   }
@@ -192,6 +218,13 @@ absl::StatusOr<bool> PredicateFilterByNodeComparison(
     return json_obj->is_string()
                ? ApplyFuzzyStringComparisonFilter(
                      op, json_obj->get<std::string>(), test_value)
+               : false;
+  }
+  // Regex comparison.
+  if (std::any_of(kRegexOperators.begin(), kRegexOperators.end(),
+                  [&](absl::string_view regex_op) { return regex_op == op; })) {
+    return json_obj->is_string()
+               ? ApplyRegexFilter(op, json_obj->get<std::string>(), test_value)
                : false;
   }
   // Number comparison.
