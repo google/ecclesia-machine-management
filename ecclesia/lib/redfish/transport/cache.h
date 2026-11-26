@@ -17,10 +17,12 @@
 #ifndef ECCLESIA_LIB_REDFISH_TRANSPORT_CACHE_H_
 #define ECCLESIA_LIB_REDFISH_TRANSPORT_CACHE_H_
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
@@ -107,14 +109,10 @@ class RedfishCachedGetterInterface {
   // public methods
   virtual OperationResult CachedGetInternal(
       absl::string_view path,
-      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr =
-          std::nullopt) = 0;
+      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) = 0;
   virtual OperationResult UncachedGetInternal(
-      absl::string_view path,
-      RedfishCachedGetterInterface::Relevance relevance =
-          RedfishCachedGetterInterface::Relevance::kRelevant,
-      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr =
-          std::nullopt) = 0;
+      absl::string_view path, RedfishCachedGetterInterface::Relevance relevance,
+      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) = 0;
   virtual OperationResult CachedPostInternal(absl::string_view path,
                                              absl::string_view payload,
                                              absl::Duration duration) = 0;
@@ -142,14 +140,10 @@ class NullCache : public RedfishCachedGetterInterface {
  protected:
   OperationResult CachedGetInternal(
       absl::string_view path,
-      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr =
-          std::nullopt) override;
+      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) override;
   OperationResult UncachedGetInternal(
-      absl::string_view path,
-      RedfishCachedGetterInterface::Relevance relevance =
-          RedfishCachedGetterInterface::Relevance::kNotRelevant,
-      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr =
-          std::nullopt) override;
+      absl::string_view path, RedfishCachedGetterInterface::Relevance relevance,
+      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) override;
   OperationResult CachedPostInternal(absl::string_view path,
                                      absl::string_view payload,
                                      absl::Duration duration) override;
@@ -189,27 +183,27 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
         deep_cache_(deep_cache),
         enable_blocklist_(enable_blocklist) {}
 
+  ~TimeBasedCache() override;
+
   size_t GetGetCacheSize() ABSL_LOCKS_EXCLUDED(get_cache_lock_) {
-    absl::MutexLock mu(&get_cache_lock_);
+    absl::MutexLock mu(get_cache_lock_);
     return get_cache_.size();
   }
 
  protected:
   OperationResult CachedGetInternal(
       absl::string_view path,
-      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr =
-          std::nullopt) override;
+      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) override;
   OperationResult UncachedGetInternal(
-      absl::string_view path,
-      RedfishCachedGetterInterface::Relevance relevance =
-          RedfishCachedGetterInterface::Relevance::kRelevant,
-      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr =
-          std::nullopt) override;
+      absl::string_view path, RedfishCachedGetterInterface::Relevance relevance,
+      std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) override;
   OperationResult CachedPostInternal(absl::string_view path,
                                      absl::string_view payload,
                                      absl::Duration duration) override;
 
  private:
+  class ScopedInFlightCall;
+
   // Each CacheNode owns its own result cache and previous update timestamp.
   class CacheNode {
    public:
@@ -250,7 +244,7 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
                                       timeout_mgr = std::nullopt) {
       std::unique_ptr<absl::Notification> local_notification = nullptr;
       {
-        absl::MutexLock mu(&mutex_);
+        absl::MutexLock mu(mutex_);
         // If the cache has a sufficiently recent value, return it.
         if (clock_->Now() < last_update_time_ + duration_) {
           return {result_, false};
@@ -269,7 +263,7 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
             std::nullopt) {
       std::unique_ptr<absl::Notification> local_notification = nullptr;
       {
-        absl::MutexLock mu(&mutex_);
+        absl::MutexLock mu(mutex_);
         local_notification = RegisterNotificationIfUpdateInProgress();
       }
       // No notification:
@@ -323,7 +317,7 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
 
       {
         // Update the result and notify all waiters.
-        absl::MutexLock mu(&mutex_);
+        absl::MutexLock mu(mutex_);
         result_ = result;
         last_update_time_ = update_time;
         for (auto* notification : notifications_) {
@@ -339,7 +333,7 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
         absl::Notification& local_notification) ABSL_LOCKS_EXCLUDED(mutex_) {
       local_notification.WaitForNotification();
       {
-        absl::MutexLock mu(&mutex_);
+        absl::MutexLock mu(mutex_);
         return {result_, true};
       }
     }
@@ -375,6 +369,9 @@ class TimeBasedCache : public RedfishCachedGetterInterface {
                                absl::string_view post_payload,
                                absl::Duration duration)
       ABSL_LOCKS_EXCLUDED(post_cache_lock_);
+
+  absl::Mutex in_flight_mutex_;
+  int in_flight_calls_ ABSL_GUARDED_BY(in_flight_mutex_) = 0;
 
   RedfishTransport* transport_;
   const Clock* clock_;

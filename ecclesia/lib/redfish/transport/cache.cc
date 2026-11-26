@@ -23,6 +23,7 @@
 #include <utility>
 #include <variant>
 
+#include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/log.h"
 #include "absl/strings/match.h"
@@ -69,6 +70,32 @@ RedfishCachedGetterInterface::OperationResult NullCache::CachedPostInternal(
   return {.result = transport_->Post(path, post_payload), .is_fresh = true};
 }
 
+class TimeBasedCache::ScopedInFlightCall {
+ public:
+  explicit ScopedInFlightCall(TimeBasedCache& cache) : cache_(cache) {
+    absl::MutexLock lock(cache_.in_flight_mutex_);
+    ++cache_.in_flight_calls_;
+  }
+  ~ScopedInFlightCall() {
+    absl::MutexLock lock(cache_.in_flight_mutex_);
+    --cache_.in_flight_calls_;
+  }
+  ScopedInFlightCall(const ScopedInFlightCall&) = delete;
+  ScopedInFlightCall& operator=(const ScopedInFlightCall&) = delete;
+
+ private:
+  TimeBasedCache& cache_;
+};
+
+TimeBasedCache::~TimeBasedCache() {
+  absl::MutexLock lock(in_flight_mutex_);
+  auto no_in_flight_calls =
+      [this]() ABSL_EXCLUSIVE_LOCKS_REQUIRED(in_flight_mutex_) {
+        return in_flight_calls_ == 0;
+      };
+  in_flight_mutex_.Await(absl::Condition(&no_in_flight_calls));
+}
+
 void TimeBasedCache::CacheNestedObjects(
     const RedfishTransport::Result& result) {
   std::queue<nlohmann::json> unprocessed_objects;
@@ -110,22 +137,22 @@ void TimeBasedCache::CacheNestedObjects(
         DLOG(INFO) << "Skipping deep cache for blocklisted path: " << id;
         continue;
       }
-      absl::MutexLock mu(&get_cache_lock_);
-      if (get_cache_.find(id) != get_cache_.end()) {
+      absl::MutexLock mu(get_cache_lock_);
+      std::unique_ptr<CacheNode>& node = get_cache_[id];
+      if (node != nullptr) {
         continue;
       }
       RedfishTransport::Result new_result = {
           .code = result.code, .body = current_obj, .headers = result.headers};
-      get_cache_.insert(std::make_pair(
-          id, std::make_unique<CacheNode>(id, std::move(new_result), transport_,
-                                          *clock_, get_max_age_)));
+      node = std::make_unique<CacheNode>(std::move(id), std::move(new_result),
+                                         transport_, *clock_, get_max_age_);
     }
   }
 }
 
 TimeBasedCache::CacheNode& TimeBasedCache::RetrieveCacheNode(
     absl::string_view path) {
-  absl::MutexLock mu(&get_cache_lock_);
+  absl::MutexLock mu(get_cache_lock_);
   // As per the Redfish spec -
   //  "When a URI includes a fragment ( frag ) to submit an operation, the
   //  server ignores the fragment."
@@ -135,36 +162,32 @@ TimeBasedCache::CacheNode& TimeBasedCache::RetrieveCacheNode(
   if (pos != std::string::npos) {
     path = path.substr(0, pos);
   }
-  auto val = get_cache_.find(path);
-  if (val != get_cache_.end()) {
-    return *val->second;
+  std::unique_ptr<CacheNode>& node = get_cache_[path];
+  if (node == nullptr) {
+    node = std::make_unique<CacheNode>(std::string(path), transport_, *clock_,
+                                       get_max_age_);
   }
-  auto map_return = get_cache_.insert(
-      std::make_pair(std::string(path),
-                     std::make_unique<CacheNode>(std::string(path), transport_,
-                                                 *clock_, get_max_age_)));
-  return *map_return.first->second;
+  return *node;
 }
 
 TimeBasedCache::CacheNode& TimeBasedCache::RetrieveCacheNode(
     absl::string_view path, absl::string_view post_payload,
     absl::Duration duration) {
-  absl::MutexLock mu(&post_cache_lock_);
-  auto key = std::make_pair(std::string(path), std::string(post_payload));
-  auto val = post_cache_.find(key);
-  if (val != post_cache_.end()) {
-    return *val->second;
+  absl::MutexLock mu(post_cache_lock_);
+  std::unique_ptr<CacheNode>& node =
+      post_cache_[std::make_pair(std::string(path), std::string(post_payload))];
+  if (node == nullptr) {
+    node = std::make_unique<CacheNode>(std::string(path),
+                                       std::string(post_payload), transport_,
+                                       *clock_, duration);
   }
-  auto map_return = post_cache_.insert(std::make_pair(
-      std::move(key),
-      std::make_unique<CacheNode>(std::string(path), std::string(post_payload),
-                                  transport_, *clock_, duration)));
-  return *map_return.first->second;
+  return *node;
 }
 
 RedfishCachedGetterInterface::OperationResult TimeBasedCache::CachedGetInternal(
     absl::string_view path,
     std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) {
+  ScopedInFlightCall in_flight(*this);
   // Check if the path is in the blocklist for caching.
   if (enable_blocklist_ && IsPathBlocklisted(path)) {
     DLOG(INFO) << "Skipping cache for blocklisted path: " << path;
@@ -182,6 +205,7 @@ RedfishCachedGetterInterface::OperationResult
 TimeBasedCache::UncachedGetInternal(
     absl::string_view path, RedfishCachedGetterInterface::Relevance relevance,
     std::optional<ecclesia::QueryTimeoutManager*> timeout_mgr) {
+  ScopedInFlightCall in_flight(*this);
   // Bypass cache node retrieval if caller has indicated cache irrelevance.
   if (relevance == RedfishCachedGetterInterface::Relevance::kNotRelevant) {
     return {.result = timeout_mgr.has_value()
@@ -199,6 +223,7 @@ RedfishCachedGetterInterface::OperationResult
 TimeBasedCache::CachedPostInternal(absl::string_view path,
                                    absl::string_view post_payload,
                                    absl::Duration duration) {
+  ScopedInFlightCall in_flight(*this);
   TimeBasedCache::CacheNode& store =
       RetrieveCacheNode(path, post_payload, duration);
   auto result = store.CachedRead();
