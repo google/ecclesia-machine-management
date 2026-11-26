@@ -125,6 +125,11 @@ class StubArbiter {
     return policy_(std::move(func), initial_stub);
   };
 
+  std::shared_ptr<T> GetActiveStub() {
+    absl::MutexLock lock(&stub_mutex_);
+    return active_stub_;
+  }
+
  private:
   StubArbiter(
       StubArbiterInfo::Type type,
@@ -227,88 +232,118 @@ class StubArbiter {
     StubArbiterInfo::PriorityLabel attempted_stub_label =
         StubArbiterInfo::PriorityLabel::kUnknown;
 
-    std::shared_ptr<T> local_stub;
-    StubArbiterInfo::PriorityLabel local_stub_label =
-        StubArbiterInfo::PriorityLabel::kUnknown;
+    while (true) {
+      std::shared_ptr<T> local_stub;
+      StubArbiterInfo::PriorityLabel local_stub_label =
+          StubArbiterInfo::PriorityLabel::kUnknown;
+      bool need_recreate = false;
 
-    {
-      absl::MutexLock lock(&stub_mutex_);
-      if (active_stub_ != nullptr &&
-          (clock_.Now() < (freshness_time_ + refresh_) ||
-           active_stub_label_ == StubArbiterInfo::PriorityLabel::kPrimary)) {
-        local_stub = active_stub_;
-        local_stub_label = active_stub_label_;
-        stub_path =
-            active_stub_label_ == StubArbiterInfo::PriorityLabel::kPrimary
-                ? "primary"
-                : "sticky";
-      }
-    }
-
-    if (local_stub != nullptr) {
-      metrics.overall_status =
-          execute_func(local_stub.get(), local_stub_label, stub_path);
-
-      if (metrics.overall_status.ok() ||
-          !failover_codes_.contains(metrics.overall_status.code())) {
-        return metrics;
-      }
-
-      stub_path = "";
-      if (local_stub_label == StubArbiterInfo::PriorityLabel::kSecondary) {
-        stub_path = "sticky-fallback";
-      }
-      attempted_stub_label = local_stub_label;
       {
         absl::MutexLock lock(&stub_mutex_);
-        // Only clear if the active stub hasn't changed since we started.
-        if (active_stub_ == local_stub) {
-          active_stub_ = nullptr;
-          active_stub_label_ = StubArbiterInfo::PriorityLabel::kUnknown;
+        while (active_stub_ == nullptr && is_recreating_) {
+          stub_mutex_.Await(
+              absl::Condition(+[](bool* r) { return !*r; }, &is_recreating_));
+        }
+
+        if (active_stub_ != nullptr &&
+            (clock_.Now() < (freshness_time_ + refresh_) ||
+             active_stub_label_ == StubArbiterInfo::PriorityLabel::kPrimary)) {
+          local_stub = active_stub_;
+          local_stub_label = active_stub_label_;
+          stub_path =
+              active_stub_label_ == StubArbiterInfo::PriorityLabel::kPrimary
+                  ? "primary"
+                  : "sticky";
+        } else {
+          is_recreating_ = true;
+          need_recreate = true;
         }
       }
-    }
 
-    for (StubArbiterInfo::PriorityLabel label = initial_stub;
-         label != StubArbiterInfo::PriorityLabel::kUnknown;
-         label = static_cast<StubArbiterInfo::PriorityLabel>(
-             static_cast<int>(label) + 1)) {
-      // Want to skip the attempted stub label.
-      if (label == attempted_stub_label) {
-        continue;
-      }
+      if (local_stub != nullptr) {
+        metrics.overall_status =
+            execute_func(local_stub.get(), local_stub_label, stub_path);
 
-      absl::StatusOr<std::unique_ptr<T>> stub = stub_factory_(label);
-
-      if (!stub.ok()) {
-        metrics.endpoint_metrics[label].status = stub.status();
-        metrics.overall_status = stub.status();
-        if (failover_codes_.contains(stub.status().code())) {
-          continue;
+        if (metrics.overall_status.ok() ||
+            !failover_codes_.contains(metrics.overall_status.code())) {
+          return metrics;
         }
-        break;
+
+        stub_path = "";
+        if (local_stub_label == StubArbiterInfo::PriorityLabel::kSecondary) {
+          stub_path = "sticky-fallback";
+        }
+        attempted_stub_label = local_stub_label;
+
+        {
+          absl::MutexLock lock(&stub_mutex_);
+          if (active_stub_ == local_stub) {
+            active_stub_ = nullptr;
+            active_stub_label_ = StubArbiterInfo::PriorityLabel::kUnknown;
+          }
+          local_stub = nullptr;  // Release early
+
+          if (is_recreating_) {
+            continue;
+          }
+          is_recreating_ = true;
+          need_recreate = true;
+        }
       }
 
-      // If the stub path is empty, then sticky behavior was skipped..
-      if (stub_path.empty()) {
-        stub_path = label == StubArbiterInfo::PriorityLabel::kPrimary
-                        ? "primary"
-                        : "fallback";
+      if (need_recreate) {
+        bool recreation_success = false;
+        std::unique_ptr<T> new_stub;
+        StubArbiterInfo::PriorityLabel new_stub_label =
+            StubArbiterInfo::PriorityLabel::kUnknown;
+
+        for (StubArbiterInfo::PriorityLabel label = initial_stub;
+             label != StubArbiterInfo::PriorityLabel::kUnknown;
+             label = static_cast<StubArbiterInfo::PriorityLabel>(
+                 static_cast<int>(label) + 1)) {
+          if (label == attempted_stub_label) {
+            continue;
+          }
+
+          absl::StatusOr<std::unique_ptr<T>> stub = stub_factory_(label);
+
+          if (!stub.ok()) {
+            metrics.endpoint_metrics[label].status = stub.status();
+            metrics.overall_status = stub.status();
+            if (failover_codes_.contains(stub.status().code())) {
+              continue;
+            }
+            break;
+          }
+
+          if (stub_path.empty()) {
+            stub_path = label == StubArbiterInfo::PriorityLabel::kPrimary
+                            ? "primary"
+                            : "fallback";
+          }
+          metrics.overall_status = execute_func(stub->get(), label, stub_path);
+          if (metrics.overall_status.ok() ||
+              !failover_codes_.contains(metrics.overall_status.code())) {
+            new_stub = std::move(*stub);
+            new_stub_label = label;
+            recreation_success = true;
+            break;
+          }
+          stub_path = "";
+        }
+
+        {
+          absl::MutexLock lock(&stub_mutex_);
+          if (recreation_success) {
+            active_stub_ = std::move(new_stub);
+            active_stub_label_ = new_stub_label;
+            freshness_time_ = clock_.Now();
+          }
+          is_recreating_ = false;
+        }
+        return metrics;
       }
-      metrics.overall_status = execute_func(stub->get(), label, stub_path);
-      // If the overall status is ok or the status code is not in the failover
-      // codes, then we can break out of the loop.
-      if (metrics.overall_status.ok() ||
-          !failover_codes_.contains(metrics.overall_status.code())) {
-        absl::MutexLock lock(&stub_mutex_);
-        active_stub_ = std::move(*stub);
-        active_stub_label_ = label;
-        freshness_time_ = clock_.Now();
-        break;
-      }
-      stub_path = "";
     }
-    return metrics;
   }
 
   absl::AnyInvocable<StubArbiterInfo::Metrics(
@@ -324,6 +359,7 @@ class StubArbiter {
   std::shared_ptr<T> active_stub_ ABSL_GUARDED_BY(stub_mutex_);
   StubArbiterInfo::PriorityLabel active_stub_label_
       ABSL_GUARDED_BY(stub_mutex_);
+  bool is_recreating_ ABSL_GUARDED_BY(stub_mutex_) = false;
   absl::Time freshness_time_ ABSL_GUARDED_BY(stub_mutex_);
   absl::Duration refresh_;
   std::optional<StubArbiterInfo::MetricsExporter> metrics_exporter_;
