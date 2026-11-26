@@ -587,6 +587,8 @@ DEFINE_REDFISH_PROPERTY(PropertyRampDownWattsPerSecond, double,
 DEFINE_REDFISH_PROPERTY(PropertyRampUpWattsPerSecond, double,
                         "RampUpWattsPerSecond");
 DEFINE_REDFISH_PROPERTY(PropertyTmpFloorPercent, double, "TMPFloorPercent");
+DEFINE_REDFISH_PROPERTY(PropertyMaxAllowedTmpFloorPercent, double,
+                        "MaxAllowedTMPFloorPercent");
 
 // OEM HFT properties
 DEFINE_REDFISH_PROPERTY(OemPropertyHftReading, std::string, "reading");
